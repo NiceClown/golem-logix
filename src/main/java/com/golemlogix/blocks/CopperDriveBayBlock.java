@@ -34,15 +34,15 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Дисковый шкаф — многоблок 2x2x1 (две клетки в ширину, две в высоту, одна в глубину). Ставится одним предметом, как дверь:
- * лицом к игроку, «нижняя левая» часть (если смотреть на шкаф спереди) там, куда ткнули, остальные — справа и выше.
- * Блок-сущность с дисками живёт только в «главной» нижней левой части; остальные части лишь проводят сеть и пересылают клики.
+ * Drive Cabinet, a 2x2x1 multiblock (two cells wide, two high, one deep). Placed with one item, like a door:
+ * facing the player, the "bottom left" part (looking at the cabinet from the front) where you clicked, the others to the right and above.
+ * The block entity with the disks lives only in the "main" bottom left part; the other parts only conduct the network and forward clicks.
  */
 public class CopperDriveBayBlock extends Block implements EntityBlock, GolemNode {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final EnumProperty<Part> PART = EnumProperty.create("part", Part.class);
 
-    /** Часть шкафа: right — сколько клеток правее главной (глазами зрителя спереди), up — сколько выше. */
+    /** Cabinet part: right = how many cells to the right of the main one (as seen from the front), up = how many above. */
     public enum Part implements StringRepresentable {
         BOTTOM_LEFT("bl", 0, 0),
         BOTTOM_RIGHT("br", 1, 0),
@@ -63,7 +63,7 @@ public class CopperDriveBayBlock extends Block implements EntityBlock, GolemNode
             return values()[(up << 1) | right];
         }
 
-        /** Часть, лежащая по горизонтали зеркально (для Mirror). */
+        /** The part mirrored horizontally (for Mirror). */
         public Part mirrored() {
             return of(1 - right, up);
         }
@@ -86,9 +86,9 @@ public class CopperDriveBayBlock extends Block implements EntityBlock, GolemNode
         builder.add(FACING, PART, GolemProperties.ACTIVE);
     }
 
-    // ------------------------------------------------------------------ геометрия многоблока
+    // ------------------------------------------------------------------ multiblock geometry
 
-    /** Куда от главной части отложена «правая» сторона шкафа (если смотреть на шкаф спереди). */
+    /** Which way from the main part the "right" side of the cabinet goes (looking at the cabinet from the front). */
     public static Direction rightOf(Direction facing) {
         return facing.getCounterClockWise();
     }
@@ -97,19 +97,19 @@ public class CopperDriveBayBlock extends Block implements EntityBlock, GolemNode
         return master.relative(rightOf(facing), part.right).above(part.up);
     }
 
-    /** Позиция главной части по позиции любой другой. */
+    /** Position of the main part from the position of any other part. */
     public static BlockPos masterOf(BlockPos pos, BlockState state) {
         Part part = state.getValue(PART);
         return pos.relative(rightOf(state.getValue(FACING)), -part.right).below(part.up);
     }
 
-    /** Блок-сущность шкафа по любой из его четырёх частей. */
+    /** Cabinet block entity from any of its four parts. */
     @Nullable
     public static CopperDriveBayBlockEntity entityOf(Level level, BlockPos pos, BlockState state) {
         return level.getBlockEntity(masterOf(pos, state)) instanceof CopperDriveBayBlockEntity bay ? bay : null;
     }
 
-    /** Ставит шкаф целиком (для команд, тестов и генераторов); главная часть — в master. */
+    /** Places the whole cabinet (for commands, tests and generators); the main part goes to master. */
     public static void place(LevelAccessor level, BlockPos master, Direction facing) {
         Block block = ModBlocks.COPPER_DRIVE_BAY.get();
         for (Part part : Part.values()) {
@@ -149,7 +149,7 @@ public class CopperDriveBayBlock extends Block implements EntityBlock, GolemNode
         }
     }
 
-    /** Часть без соседа-«напарника» по ребру разрушается — шкаф исчезает целиком. */
+    /** A part without its edge "partner" breaks: the whole cabinet disappears. */
     @Override
     protected BlockState updateShape(BlockState state, Direction direction, BlockState neighbor, LevelAccessor level,
                                      BlockPos pos, BlockPos neighborPos) {
@@ -169,7 +169,7 @@ public class CopperDriveBayBlock extends Block implements EntityBlock, GolemNode
     @Override
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide() && player.isCreative()) {
-            // в творческом режиме остальные части убираем тихо, чтобы предмет не выпал ещё раз
+            // in creative mode the other parts are removed quietly so the item does not drop again
             BlockPos master = masterOf(pos, state);
             for (Part part : Part.values()) {
                 BlockPos other = partPos(master, state.getValue(FACING), part);
@@ -193,18 +193,18 @@ public class CopperDriveBayBlock extends Block implements EntityBlock, GolemNode
         if (mirror == Mirror.NONE) {
             return state;
         }
-        // зеркало переворачивает «лево/право» шкафа: части меняются местами по горизонтали
+        // a mirror swaps the cabinet's "left/right": parts trade places horizontally
         return state.rotate(mirror.getRotation(state.getValue(FACING))).setValue(PART, state.getValue(PART).mirrored());
     }
 
-    // ------------------------------------------------------------------------------ сеть и окно
+    // ------------------------------------------------------------------------------ network and window
 
     @Override
     public int channelCost() {
         return 1;
     }
 
-    /** Канал занимает только главная часть. */
+    /** Only the main part takes a channel. */
     @Override
     public int channelCost(BlockState state) {
         return state.getValue(PART) == Part.BOTTOM_LEFT ? 1 : 0;
@@ -216,7 +216,7 @@ public class CopperDriveBayBlock extends Block implements EntityBlock, GolemNode
         return state.getValue(PART) == Part.BOTTOM_LEFT ? new CopperDriveBayBlockEntity(pos, state) : null;
     }
 
-    /** События блока (открыли окно — дверца витрины) передаются блок-сущности, иначе сервер не разошлёт их клиентам. */
+    /** Block events (the window was opened, the display door) go to the block entity, otherwise the server would not send them to clients. */
     @Override
     protected boolean triggerEvent(BlockState state, Level level, BlockPos pos, int id, int param) {
         super.triggerEvent(state, level, pos, id, param);
@@ -224,7 +224,7 @@ public class CopperDriveBayBlock extends Block implements EntityBlock, GolemNode
         return be != null && be.triggerEvent(id, param);
     }
 
-    /** Клиент: дверца витрины плавно открывается и закрывается. */
+    /** Client: the display door opens and closes smoothly. */
     @Nullable
     @Override
     public <T extends BlockEntity> net.minecraft.world.level.block.entity.BlockEntityTicker<T> getTicker(

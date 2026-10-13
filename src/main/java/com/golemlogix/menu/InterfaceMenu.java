@@ -18,24 +18,24 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Окно Интерфейса: ряд «держать в запасе» (призраки; количество — отдельным числом в окне настройки ячейки, шестерёнка под
- * ячейкой или клик пустой рукой), под ним ряд выдачи (что сейчас лежит в запасе) и ряд приёма (сюда можно положить предмет
- * руками — он сразу уйдёт в сеть). Справа — колонка апгрейдов, слева — режим редстоуна.
+ * Interface window: the "keep in stock" row (ghosts; the amount is a separate number in the slot settings window, the gear under the
+ * slot or a click with an empty hand), under it the output row (what is in stock now) and the input row (items can be put here
+ * by hand and go straight to the network). On the right the upgrade column, on the left the redstone mode.
  * <p>
- * Ячейки настройки нельзя ни крутить колесом, ни «тянуть»: любой клик, кроме клика предметом (поставить) и Shift-клика
- * (очистить), игнорируется — раньше моды прокрутки умудрялись вынимать оттуда предметы.
+ * Config slots can be neither scrolled with the wheel nor "dragged": any click except a click with an item (set) and a Shift-click
+ * (clear) is ignored; scrolling mods used to manage to pull items out of them.
  */
 public class InterfaceMenu extends GolemMenu {
     public static final int IMAGE_WIDTH = 176;
     public static final int IMAGE_HEIGHT = 214;
-    /** Ряд настройки, под ним — кнопки ячеек (шестерёнка и режим, TOGGLE_Y, высота 8), ряд запаса и ряд приёма. */
+    /** The config row, under it the slot buttons (gear and mode, TOGGLE_Y, height 8), the stock row and the input row. */
     public static final int CONFIG_Y = 28, TOGGLE_Y = 46, STOCK_Y = 68, INBOX_Y = 98;
-    /** Кнопки меню «переключить режим ячейки i»: BUTTON_MODE + i. */
+    /** Menu buttons "switch the mode of slot i": BUTTON_MODE + i. */
     public static final int BUTTON_MODE = 20;
 
     private final Container config;
     private final ContainerData data;
-    /** Сам интерфейс (на сервере): количество и предмет ячеек меняются через него. */
+    /** The interface itself (on the server): the amount and the item of the slots change through it. */
     @Nullable
     private final InterfaceBlockEntity be;
 
@@ -66,7 +66,7 @@ public class InterfaceMenu extends GolemMenu {
         addDataSlots(data);
     }
 
-    /** Ячейка, из которой игрок может только забрать (положить нельзя: запас набирает сам интерфейс). */
+    /** A slot the player can only take from (putting in is not allowed: the interface fills the stock itself). */
     static class TakeOnlySlot extends Slot {
         TakeOnlySlot(Container c, int i, int x, int y) {
             super(c, i, x, y);
@@ -86,47 +86,47 @@ public class InterfaceMenu extends GolemMenu {
         return RedstoneMode.byId(data.get(0));
     }
 
-    /** Ячейка i в режиме «предмет» (держит сами вёдра), а не «жидкость». */
+    /** Slot i is in "item" mode (keeps the buckets themselves), not "fluid". */
     public boolean itemMode(int i) {
         return (data.get(1) & (1 << i)) != 0;
     }
 
-    /** Ячейка настройки держит жидкость (в ней ёмкость с жидкостью и режим «жидкость»). */
+    /** The config slot keeps fluid (it holds a container with fluid and the mode is "fluid"). */
     public boolean isFluidSlot(int i) {
         return !itemMode(i) && !InterfaceBlockEntity.containedFluid(config.getItem(i)).isEmpty();
     }
 
-    /** Запас жидкости ячейки i, mB (с точностью до десятка). */
+    /** Fluid stock of slot i, mB (accurate to ten). */
     public int fluidAmount(int i) {
         return data.get(InterfaceBlockEntity.DATA_FLUID + i) * 10;
     }
 
-    /** Заданное количество ячейки: штуки или mB. */
+    /** The set amount of a slot: items or mB. */
     public int amount(int i) {
         return (data.get(InterfaceBlockEntity.DATA_AMOUNT_LO + i) & 0x7FFF) | ((data.get(InterfaceBlockEntity.DATA_AMOUNT_HI + i) & 0x7FFF) << 15);
     }
 
-    /** Предел количества ячейки: жидкость — до 256 вёдер в mB, предмет — стопка. */
+    /** The slot amount limit: up to 256 buckets in mB for fluid, a stack for an item. */
     public int maxAmount(int i) {
         ItemStack cfg = config.getItem(i);
         return cfg.isEmpty() ? 0 : isFluidSlot(i) ? InterfaceBlockEntity.MAX_FLUID : cfg.getMaxStackSize();
     }
 
-    /** Сервер: задать количество ячейки (пакет InterfaceAmountPayload из окна настройки). */
+    /** Server: set a slot amount (InterfaceAmountPayload packet from the settings window). */
     public void setAmount(int i, int value) {
         if (be != null && i >= 0 && i < InterfaceBlockEntity.SLOTS) {
             be.setAmount(i, value);
         }
     }
 
-    /** Сервер: очистить ячейку настройки. */
+    /** Server: clear a config slot. */
     public void clearSlot(int i) {
         if (be != null && i >= 0 && i < InterfaceBlockEntity.SLOTS) {
             be.setSlot(i, ItemStack.EMPTY, 0);
         }
     }
 
-    /** Количество по умолчанию для нового призрака: жидкость — ведро, предмет — столько, сколько в стопке курсора. */
+    /** Default amount for a new ghost: a bucket for fluid, for an item as many as in the cursor stack. */
     private int defaultAmount(int i, ItemStack stack) {
         boolean fluid = !itemMode(i) && !InterfaceBlockEntity.containedFluid(stack).isEmpty();
         return fluid ? stack.getCount() * InterfaceBlockEntity.MB_PER_BUCKET : stack.getCount();
@@ -161,10 +161,10 @@ public class InterfaceMenu extends GolemMenu {
             if (clickType == ClickType.QUICK_MOVE) {
                 clearSlot(i);
             } else if (clickType == ClickType.PICKUP && !carried.isEmpty() && be != null) {
-                // предмет в курсоре — поставить его (количество — по стопке курсора, потом его правят в окне настройки)
+                // an item on the cursor: set it (the amount follows the cursor stack, then it is edited in the settings window)
                 be.setSlot(i, carried, defaultAmount(i, carried));
             }
-            // всё остальное (колесо, перетаскивание, клик пустой рукой — он открывает окно настройки на клиенте) — мимо
+            // everything else (wheel, dragging, a click with an empty hand, which opens the settings window on the client) is skipped
             return;
         }
         super.clicked(slotId, button, clickType, player);
@@ -177,7 +177,7 @@ public class InterfaceMenu extends GolemMenu {
         if (!fromPlayer || stack.getItem() instanceof UpgradeItem) {
             return super.quickMoveStack(player, index);
         }
-        // шифт-клик из инвентаря — в ряд приёма: предмет сразу уйдёт в сеть (когда терминалы далеко)
+        // shift-click from the inventory goes to the input row: the item goes straight to the network (when terminals are far away)
         int inboxStart = InterfaceBlockEntity.SLOTS * 2;
         ItemStack copy = stack.copy();
         if (!moveItemStackTo(stack, inboxStart, inboxStart + InterfaceBlockEntity.SLOTS, false)) {

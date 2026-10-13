@@ -9,7 +9,7 @@ import net.minecraft.network.chat.Component;
 import java.util.function.Supplier;
 
 /**
- * Кнопка в стиле мода (латунная рамка); подпись может меняться динамически.
+ * A button in the mod's style (brass frame); its label may change dynamically.
  */
 public class GolemButton extends Button {
     private final Supplier<Component> label;
@@ -43,7 +43,7 @@ public class GolemButton extends Button {
         }
         var font = Minecraft.getInstance().font;
         int color = !active ? 0xFF7A6A55 : hover ? GolemGui.CYAN : GolemGui.PARCHMENT;
-        // длинная подпись уменьшается, чтобы не вылезать за рамку кнопки
+        // a long label is scaled down so it does not stick out of the button frame
         int textWidth = font.width(getMessage());
         float fit = Math.min(1f, (width - 6f) / Math.max(1, textWidth));
         g.pose().pushPose();

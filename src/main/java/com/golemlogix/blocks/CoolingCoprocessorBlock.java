@@ -15,8 +15,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Сопроцессор Охлаждения: каналов не занимает, ускоряет примыкающий Крио-Калькулятор.
- * Является узлом сети, чтобы трубы к нему тянулись, но канал не расходует. Рёбра радиатора рисует отрисовщик (анимация).
+ * Cooling Co-Processor: takes no channels, speeds up the adjacent Cryo-Calculator.
+ * It is a network node so pipes reach for it, but it uses no channel. The radiator fins are drawn by the renderer (animation).
  */
 public class CoolingCoprocessorBlock extends Block implements GolemNode, EntityBlock {
     public CoolingCoprocessorBlock(Properties properties) {

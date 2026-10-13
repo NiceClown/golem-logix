@@ -11,12 +11,12 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Монитор Рецептов: раз в секунду считает идущие в сети задачи (сколько перфокарт кружится в иллюминаторе).
+ * Recipe Monitor: once a second it counts the network's running jobs (how many punch cards swirl in the porthole).
  */
 public class RecipeMonitorBlockEntity extends BlockEntity {
     private int jobs = 0;
     private boolean online = false;
-    /** Клиент: плавное появление и исчезновение карт (0..число задач). */
+    /** Client: cards appear and disappear smoothly (0..number of jobs). */
     public float shownCards = 0f;
     public float shownCardsPrev = 0f;
 
@@ -62,14 +62,14 @@ public class RecipeMonitorBlockEntity extends BlockEntity {
         }
     }
 
-    /** Какая-то задача застряла (нет поставщика, Source или рецепт неверен) — лампа горит красным. */
+    /** Some job is stuck (no provider, no Source or a wrong recipe): the lamp glows red. */
     private boolean fault = false;
 
     public boolean fault() {
         return fault;
     }
 
-    /** Сигнал лампы: 0 — простой (фиолетовый), 1 — работа (мигает зелёным), 2 — авария или нет связи (красный). */
+    /** Lamp signal: 0 = idle (purple), 1 = working (blinks green), 2 = failure or no connection (red). */
     public int lampState() {
         if (!online || fault) {
             return 2;
@@ -77,7 +77,7 @@ public class RecipeMonitorBlockEntity extends BlockEntity {
         return jobs > 0 ? 1 : 0;
     }
 
-    /** Клиент: медный голем-фонарщик на крыше (гуляет в простое по площадке 4.5..11.5, мимо середины). */
+    /** Client: copper lamplighter golem on the roof (wanders over the 4.5..11.5 area when idle, around the middle). */
     public final LampWalker walker = new LampWalker(8f, 8f);
 
     private void walk(Level level) {
@@ -118,7 +118,7 @@ public class RecipeMonitorBlockEntity extends BlockEntity {
         return ClientboundBlockEntityDataPacket.create(this);
     }
 
-    /** Обновление блока несёт тот же тег, что и загрузка чанка (по умолчанию его читал бы loadAdditional и терял счётчик). */
+    /** A block update carries the same tag as chunk loading (by default loadAdditional would read it and lose the counter). */
     @Override
     public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider lookupProvider) {
         handleUpdateTag(pkt.getTag(), lookupProvider);

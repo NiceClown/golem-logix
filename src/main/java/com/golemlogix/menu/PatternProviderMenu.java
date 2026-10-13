@@ -16,13 +16,13 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Меню поставщика шаблонов: 9 ячеек под закодированные перфокарты, режим ожидания результата, ячейка Модуля Редстоуна.
+ * Pattern provider menu: 9 slots for encoded punch cards, the wait-for-result mode, a Redstone Module slot.
  */
 public class PatternProviderMenu extends GolemMenu {
     public static final int IMAGE_HEIGHT = 204;
     public static final int IMAGE_WIDTH = 176;
     public static final int BUTTON_BLOCKING = 11;
-    /** Следующая сторона подачи (все -> вниз -> вверх -> север -> юг -> запад -> восток -> все). */
+    /** Next feeding side (all -> down -> up -> north -> south -> west -> east -> all). */
     public static final int BUTTON_OUTPUT = 12;
 
     private final Container container;

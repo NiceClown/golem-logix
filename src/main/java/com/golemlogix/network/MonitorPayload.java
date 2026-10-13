@@ -14,21 +14,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Сервер -> клиент: состояние всех Крио-Калькуляторов сети для Монитора Рецептов.
+ * Server -> client: the state of all Cryo-Calculators of the network for the Recipe Monitor.
  *
- * @param error ключ ошибки доступа (пусто — всё хорошо)
+ * @param error access error key (empty = all is well)
  */
 public record MonitorPayload(int containerId, String error, List<Cpu> cpus) implements CustomPacketPayload {
     public static final Type<MonitorPayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "monitor"));
 
-    /** Один шаг задачи: что выходит и сколько ещё осталось изготовить. */
+    /** One job step: what comes out and how much is left to make. */
     public record Step(ItemStack item, long left) {
     }
 
     /**
-     * Калькулятор (или ядро мейнфрейма: core 1.., у отдельного калькулятора 0). state -1 — простаивает, иначе порядковый номер CraftingJob.Status.
-     * targets — заказанные предметы (count = заказано), steps — оставшиеся шаги, waiting — что ждём от машин.
+     * A calculator (or a mainframe core: core 1.., 0 for a standalone calculator). state -1 = idle, otherwise the ordinal of CraftingJob.Status.
+     * targets = ordered items (count = ordered), steps = remaining steps, waiting = what is expected from machines.
      */
     public record Cpu(BlockPos pos, int core, int state, int coprocessors, long done, long total, ItemStack current,
                       List<Step> targets, List<Step> steps, List<Step> waiting) {

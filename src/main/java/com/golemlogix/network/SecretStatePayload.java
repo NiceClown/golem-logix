@@ -9,7 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
- * Сервер -> клиент: какие испытания секретного рецепта пройдены (для книги и JEI).
+ * Server -> client: which secret recipe trials are passed (for the book and JEI).
  */
 public record SecretStatePayload(boolean wither, boolean dimension) implements CustomPacketPayload {
     public static final Type<SecretStatePayload> TYPE =

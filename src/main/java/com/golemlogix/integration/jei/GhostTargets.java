@@ -16,9 +16,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Перетаскивание ингредиентов из JEI в призрачные ячейки окон мода: фильтры шин, настройка Интерфейса, сетка кодировщика.
- * Можно настроить фильтр предметом, которого у игрока нет. Жидкость превращается в полную ёмкость (ведро): так её понимают
- * фильтры шин и Интерфейс.
+ * Dragging ingredients from JEI into the ghost slots of the mod's windows: bus filters, Interface settings, the encoder grid.
+ * A filter can be set with an item the player does not have. A fluid turns into a full container (a bucket): that is how bus
+ * filters and the Interface understand it.
  */
 public final class GhostTargets<T extends GolemScreen<?>> implements IGhostIngredientHandler<T> {
     @Override

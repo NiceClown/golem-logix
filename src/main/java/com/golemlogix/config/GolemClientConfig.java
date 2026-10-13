@@ -3,15 +3,15 @@ package com.golemlogix.config;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 /**
- * Клиентские настройки (golem_logix-client.toml): запоминаются выбранные игроком в окнах режимы.
+ * Client settings (golem_logix-client.toml): remembers the modes the player chose in windows.
  */
 public final class GolemClientConfig {
     public static final ModConfigSpec SPEC;
 
-    /** Высота окна терминалов: обычная, высокая или во весь экран (кнопка «Размер» в окне терминала). */
+    /** Height of the terminal windows: normal, tall or full screen (the "Size" button in the terminal window). */
     public static final ModConfigSpec.EnumValue<TerminalSize> TERMINAL_SIZE;
 
-    /** Поиск терминалов и JEI: не связаны, набранное в терминале уходит в JEI, или оба поиска следуют друг за другом. */
+    /** Terminal and JEI search: not linked, what is typed in a terminal goes to JEI, or both searches follow each other. */
     public static final ModConfigSpec.EnumValue<JeiSync> JEI_SYNC;
 
     public enum JeiSync {

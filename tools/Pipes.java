@@ -1,10 +1,10 @@
 import java.util.*;
 
 /**
- * Трубы мода (по референсу): базовая — прозрачная ледяная трубка со светлыми латунными поясами, плотная — глубокого синего
- * льда с тяжёлыми бронзовыми манжетами. Прямые участки — одна гладкая восьмигранная трубка на весь блок (с поясом посередине),
- * на развилках — ступица-куб и рукава с кольцами, у устройств — латунный рукав-заглушка (состояние направления none/pipe/device).
- * Модели смотрят на NORTH, остальные стороны — поворотами в блокстейте.
+ * The mod's pipes (from the reference): the basic one is a clear ice tube with light brass bands, the dense one deep blue
+ * ice with heavy bronze cuffs. Straight runs are one smooth octagonal tube over the whole block (with a band in the middle),
+ * at junctions a cube hub and sleeves with rings, at devices a brass cap sleeve (direction state none/pipe/device).
+ * The models face NORTH, the other sides come from rotations in the block state.
  */
 final class Pipes {
     static final int K = Forge2.K;
@@ -23,10 +23,10 @@ final class Pipes {
         return Paint.rgb(c);
     }
 
-    // ----------------------------------------------------------------------------------------- текстуры
+    // ----------------------------------------------------------------------------------------- textures
     /**
-     * Стекло трубки 16x16: поперёк (по u, если across=true; иначе по v) — тёмные кромки и блики, вдоль — однородно
-     * (поэтому на стыке блоков шва нет). seed влияет на редкие искорки инея, они периодичны по длине.
+     * 16x16 tube glass: across (along u if across=true, otherwise along v) dark edges and highlights, along it uniform
+     * (so there is no seam at block joints). seed affects the rare frost sparkles, they repeat along the length.
      */
     static Paint glass(boolean across, boolean dense, long seed) {
         Paint p = new Paint(16, 16, K);
@@ -39,7 +39,7 @@ final class Pipes {
             double t = across ? u / 16 : v / 16, a = across ? v / 16 : u / 16;
             double e = Math.abs(2 * t - 1);
             if (dense) {
-                // Глубокий сапфировый лед с высоким качеством прозрачности
+                // Deep sapphire ice with high-quality transparency
                 double base = 0.38 + 0.30 * (1 - e * e) + 0.05 * Math.sin(a * Math.PI * 4);
                 int c = Paint.ramp(BLUE, base);
                 if (e > 0.85) {
@@ -52,10 +52,10 @@ final class Pipes {
                 }
                 return argb(alpha, c & 0xFFFFFF);
             }
-            // Прозрачное гладкое пневматическое стекло Create с лазурным оттенком
+            // Clear smooth Create-style pneumatic glass with an azure tint
             int c = Paint.mix(rgb(0x9ee8f5), rgb(0x289cb8), Math.pow(e, 2.2));
             int alpha = (int) (48 + 115 * Math.pow(e, 3.2));
-            // Четкий яркий кристаллический блик стекла Create
+            // A sharp bright crystal glint of Create-style glass
             if (Math.abs(t - 0.22) < 0.03) {
                 c = rgb(0xFFFFFF);
                 alpha = 195;
@@ -72,7 +72,7 @@ final class Pipes {
         return p;
     }
 
-    /** Диагональные грани (узкие): светлая «полоса блика». */
+    /** Diagonal (narrow) faces: a light "highlight strip". */
     static Paint glassDiag(boolean dense) {
         Paint p = new Paint(16, 16, K);
         p.fill(0, 0, 16, 16, (u, v) -> {
@@ -85,7 +85,7 @@ final class Pipes {
         return p;
     }
 
-    /** Латунный/бронзовый пояс в стиле Create: продольное зерно, шестерёнчатые зубья, заклёпки и кинематографичный анимированный манометр. */
+    /** A brass/bronze band in the Create style: a lengthwise grain, gear teeth, rivets and a cinematic animated gauge. */
     static Paint band(boolean dense) {
         Paint p = new Paint(16, 16, K);
         p.animFrames = 24;
@@ -99,25 +99,25 @@ final class Pipes {
         p.rect(0, 5.0, 16, 5.5, at(ramp, 5.2));
         p.rect(0, 10.5, 16, 11.0, at(ramp, 5.2));
 
-        // Механические зубья шестерни Create по периметру обода
+        // Mechanical Create-style gear teeth around the rim
         for (double x = 1.0; x < 16; x += 3.0) {
             p.rect(x, 1.5, x + 1.2, 3.5, at(ramp, 4.4));
             p.rect(x, 12.5, x + 1.2, 14.5, at(ramp, 4.4));
         }
 
-        // Встроенный латунный манометр давления Create посередине пояса
+        // A built-in brass Create-style pressure gauge in the middle of the band
         double gx = 8.0, gy = 8.0;
         double rOuter = dense ? 1.65 : 1.25;
-        p.disc(gx, gy, rOuter + 0.12, at(ramp, 1.2)); // темная фаска обода
-        p.disc(gx, gy, rOuter, at(ramp, 4.8));        // полированный цельный латунный обод
-        p.disc(gx, gy, rOuter - 0.20, at(ramp, 2.0)); // внутренняя фаска
-        p.disc(gx, gy, rOuter - 0.32, rgb(0x0e1824)); // контрастный темный кант
-        p.disc(gx, gy, rOuter - 0.42, rgb(0xF8F3E8)); // чистый кремово-белый циферблат
+        p.disc(gx, gy, rOuter + 0.12, at(ramp, 1.2)); // dark rim bevel
+        p.disc(gx, gy, rOuter, at(ramp, 4.8));        // polished solid brass rim
+        p.disc(gx, gy, rOuter - 0.20, at(ramp, 2.0)); // inner bevel
+        p.disc(gx, gy, rOuter - 0.32, rgb(0x0e1824)); // contrasting dark trim
+        p.disc(gx, gy, rOuter - 0.42, rgb(0xF8F3E8)); // clean cream-white dial
 
-        // Четкая цветная шкала (сектора делений манометра):
-        // Зеленый сектор нормального давления (слева 180°..235°)
-        // Янтарно-желтый сектор высокого давления (вверху 235°..290°)
-        // Ярко-красный сектор критического перегруза (справа вверху 290°..355°)
+        // A clear coloured scale (gauge mark sectors):
+        // Green sector of normal pressure (left 180°..235°)
+        // Amber-yellow sector of high pressure (top 235°..290°)
+        // Bright red sector of critical overload (top right 290°..355°)
         double rTick0 = rOuter - 0.82;
         double rTick1 = rOuter - 0.48;
         for (int i = 0; i < 9; i++) {
@@ -129,44 +129,44 @@ final class Pipes {
             int tickColor = (i < 3) ? rgb(0x288C35) : (i < 5) ? rgb(0xDC9218) : rgb(0xD01818);
             p.line(x0, y0, x1, y1, 0.16, tickColor);
         }
-        // Выразительная дуга красной зоны перегруза
+        // An expressive arc of the red overload zone
         double rArc = rOuter - 0.54;
         for (double a = Math.toRadians(290); a <= Math.toRadians(350); a += Math.toRadians(5)) {
             p.line(gx + Math.cos(a) * rArc, gy + Math.sin(a) * rArc,
                    gx + Math.cos(a + 0.10) * rArc, gy + Math.sin(a + 0.10) * rArc, 0.20, rgb(0xD41818));
         }
 
-        // Кинематографичная анимированная стрелка манометра:
-        // Скачет и яростно бьется в красную зону перегруза на упоре, как в фильмах,
-        // сохраняя идеальную непрерывную гладкость за счет гармонических волн и интерполяции кадров.
+        // A cinematic animated gauge needle:
+        // it jumps and beats furiously into the red overload zone against the stop, as in films,
+        // keeping perfect continuous smoothness thanks to harmonic waves and frame interpolation.
         double rNeedle = rOuter - 0.48;
         p.animate(gx - rOuter - 0.2, gy - rOuter - 0.2, gx + rOuter + 0.2, gy + rOuter + 0.2, (fr, t) -> {
             double twoPi = 2.0 * Math.PI;
             double primary = Math.sin(twoPi * t);
             double surge = Math.sin(2.0 * twoPi * t + 0.7);
             double flutter = Math.sin(6.0 * twoPi * t) * 0.65 + Math.sin(10.0 * twoPi * t) * 0.35;
-            // Базовый уровень 328° (глубоко в красной зоне), бьется о максимум упора 354°
+            // Base level 328° (deep in the red zone), it beats against the 354° stop
             double deg = 328.0 + 14.5 * primary + 7.0 * surge + 4.5 * flutter;
             if (deg > 354.0) {
-                deg = 354.0 - (deg - 354.0) * 0.25; // пружинящий отскок от ограничителя
+                deg = 354.0 - (deg - 354.0) * 0.25; // a springy bounce off the stop
             }
             double angle = Math.toRadians(deg);
             double nx = gx + rNeedle * Math.cos(angle);
             double ny = gy + rNeedle * Math.sin(angle);
-            fr.line(gx, gy, nx, ny, 0.20, rgb(0xB81410)); // ярко-красная стрелка
-            fr.disc(gx, gy, 0.30, at(ramp, 1.2)); // латунный крепеж оси
-            fr.disc(gx, gy, 0.16, rgb(0x181818)); // центральный штифт
-            fr.line(gx - rOuter * 0.45, gy - rOuter * 0.45, gx - rOuter * 0.15, gy - rOuter * 0.45, 0.15, argb(170, 0xFFFFFF)); // стеклянный блик
+            fr.line(gx, gy, nx, ny, 0.20, rgb(0xB81410)); // bright red needle
+            fr.disc(gx, gy, 0.30, at(ramp, 1.2)); // brass axle mount
+            fr.disc(gx, gy, 0.16, rgb(0x181818)); // central pin
+            fr.line(gx - rOuter * 0.45, gy - rOuter * 0.45, gx - rOuter * 0.15, gy - rOuter * 0.45, 0.15, argb(170, 0xFFFFFF)); // glass highlight
         });
 
-        // Тяжёлые механические заклепки
+        // Heavy mechanical rivets
         for (double x : new double[]{2.5, 13.5}) {
             p.rivet(x, 8.0, dense ? 0.55 : 0.45, ramp);
         }
         return p;
     }
 
-    /** Фланец рукава-заглушки: латунь с болтами. */
+    /** Cap sleeve flange: brass with bolts. */
     static Paint flange() {
         Paint p = new Paint(16, 16, K);
         p.slab(0, 0, 16, 16, BRASS, 2.9, 1);
@@ -177,7 +177,7 @@ final class Pipes {
         return p;
     }
 
-    /** Торец трубки у развилки (плита ступицы): полупрозрачное стекло с тёмной окантовкой. */
+    /** The tube end at a junction (hub plate): translucent glass with a dark edging. */
     static Paint hubPlate(boolean dense) {
         Paint p = new Paint(16, 16, K);
         p.fill(0, 0, 16, 16, (u, v) -> {
@@ -191,8 +191,8 @@ final class Pipes {
     }
 
     /**
-     * Лицо заглушки: чистый латунный восьмигранный фланец — восемь болтов по кругу, гравированное кольцо, тёмная выемка под
-     * медную пробку (её объём даёт модель). Без мелких деталей «как попало»: всё симметрично относительно центра.
+     * Plug face: a clean octagonal brass flange: eight bolts in a circle, an engraved ring, a dark recess for the
+     * copper stopper (the model gives its volume). No random small details: everything is symmetrical around the centre.
      */
     static Paint plug() {
         Paint p = new Paint(16, 16, K);
@@ -215,8 +215,8 @@ final class Pipes {
     }
 
     /**
-     * Ворота складского дока (тупик со складом): стальная рольставня из горизонтальных ламелей в латунной раме, внизу —
-     * жёлто-чёрный отбойник, по центру ручка, над воротами — бирюзовый фонарь. Сразу видно, что это не обычная заглушка.
+     * Warehouse dock door (a dead end with a warehouse): a steel roller shutter of horizontal slats in a brass frame, at the bottom
+     * a yellow-black bumper, a handle in the middle, a teal lamp above the door. It is clear at once that this is not an ordinary plug.
      */
     static Paint dock() {
         Paint p = new Paint(16, 16, K);
@@ -228,13 +228,13 @@ final class Pipes {
             p.rect(2.6, y, 13.4, y + 0.25, at(IRON, 4.2));
             p.rect(2.6, y + 1.0, 13.4, y + 1.3, at(IRON, 0.6));
         }
-        // отбойник внизу ворот
+        // bumper at the bottom of the door
         for (int k = 0; k < 6; k++) {
             double x = 2.6 + k * 1.8;
             p.poly(new double[]{x, x + 0.9, x + 1.8, x + 0.9}, new double[]{14.0, 12.6, 12.6, 14.0}, rgb(0xE0B020));
         }
         p.rect(2.6, 12.4, 13.4, 12.6, at(IRON, 0.4));
-        // ручка и фонарь
+        // handle and lamp
         p.rect(6.6, 11.0, 9.4, 11.6, at(BRASS, 4.4));
         p.rect(6.6, 11.6, 9.4, 11.9, at(BRASS, 1.4));
         p.glowRect(6.4, 0.9, 9.6, 2.1, 0.5, at(CYAN, 5.6), 90);
@@ -259,7 +259,7 @@ final class Pipes {
         hubPlate(true).save(Forge2.tex("pipe_dense_hub"));
     }
 
-    // ----------------------------------------------------------------------------------------- модели
+    // ----------------------------------------------------------------------------------------- models
     static String[][] texList(boolean dense) {
         String p = dense ? "pipe_dense" : "pipe_glass";
         return new String[][]{{"su", p + "_u"}, {"sv", p + "_v"}, {"sd", p + "_d"}, {"band", dense ? "pipe_dense_band" : "pipe_band"},
@@ -270,15 +270,15 @@ final class Pipes {
     static final double[] UV = {0, 0, 16, 16};
 
     /**
-     * Трубка-восьмигранник: A (широкий брусок) даёт боковые плоскости east/west (поперёк — v), B — верх/низ (поперёк — u),
-     * пластины — диагонали. Развёртки поперёк разные, поэтому текстуры su/sv — транспонированные; вся текстура
-     * ложится поперёк грани, вдоль трубки узор однороден (стыков между блоками не видно).
+     * An octagonal tube: A (the wide box) gives the side planes east/west (across = v), B the top/bottom (across = u),
+     * the plates are the diagonals. The unwraps across differ, so the su/sv textures are transposed; the whole texture
+     * lies across the face, along the tube the pattern is uniform (no seams between blocks).
      */
     static void tube(List<Models.El> l, double lo, double hi, double z0, double z1, double c, String sideTex, String tbTex, String diagTex) {
         tube(l, lo, hi, z0, z1, c, sideTex, tbTex, diagTex, 0);
     }
 
-    /** glow > 0 — стекло светится (запитанная сеть): блок при этом свет не излучает, мобам спавниться не мешает. */
+    /** glow > 0 = the glass glows (a powered network): the block emits no light, so it does not stop mobs from spawning. */
     static void tube(List<Models.El> l, double lo, double hi, double z0, double z1, double c, String sideTex, String tbTex, String diagTex,
                      int glow) {
         Models.El a = Models.e(lo, lo + c, z0, hi, hi - c, z1);
@@ -289,16 +289,16 @@ final class Pipes {
         b.faces.put("up", Models.El.face("#" + tbTex, UV));
         b.faces.put("down", Models.El.face("#" + tbTex, UV));
         l.add(b.glow(glow));
-        // стеклянные грани фасок: тонкие пластины ровно по фаске, без щелей у рёбер
+        // glass bevel faces: thin plates exactly on the bevel, no gaps at the edges
         Models.octCorners(l, lo, lo, hi, hi, z0, z1, c, 0.4, "#" + diagTex, UV, null, null, glow);
     }
 
-    /** Свечение стекла запитанной трубы (уровень освещённости граней, сам блок свет не излучает). */
+    /** Glass glow of a powered pipe (the face light level; the block itself emits no light). */
     static final int GLOW = 11;
 
     /**
-     * Кольцо-пояс (полый восьмигранник вокруг оси Z) из восьми тонких пластин толщиной t: снаружи видна латунь, а внутри
-     * трубка остаётся прозрачной (нет «диафрагмы»).
+     * A ring band (a hollow octagon around the Z axis) of eight thin plates of thickness t: brass shows outside, while inside
+     * the tube stays transparent (no "diaphragm").
      */
     static void ring(List<Models.El> l, double lo, double hi, double z0, double z1, double c, String tex) {
         ring(l, lo, hi, z0, z1, c, tex, 0.75);
@@ -309,12 +309,12 @@ final class Pipes {
         l.add(Models.e(lo + c, lo, z0, hi - c, lo + t, z1).only("#" + tex, "down", "north", "south"));
         l.add(Models.e(lo, lo + c, z0, lo + t, hi - c, z1).only("#" + tex, "west", "north", "south"));
         l.add(Models.e(hi - t, lo + c, z0, hi, hi - c, z1).only("#" + tex, "east", "north", "south"));
-        // углы кольца — с торцами, иначе спереди кольцо выглядит четырьмя отдельными планками
+        // the ring corners have ends, otherwise from the front the ring looks like four separate strips
         Models.octCorners(l, lo, lo, hi, hi, z0, z1, c, t, "#" + tex, "#" + tex, 0);
     }
     /**
-     * Шайба: плоское восьмигранное кольцо между внешним восьмигранником (lo..hi, фаска c) и внутренним (inLo..inHi, фаска inC)
-     * на глубине z0..z1. Боковые бруски — по сторонам, повёрнутые на 45° плитки — по углам, посередине между фасками.
+     * A washer: a flat octagonal ring between an outer octagon (lo..hi, bevel c) and an inner one (inLo..inHi, bevel inC)
+     * at depth z0..z1. Side boxes go on the sides, tiles turned by 45° in the corners, halfway between the bevels.
      */
     static void washer(List<Models.El> l, double lo, double hi, double c, double inLo, double inHi, double inC,
                        double z0, double z1, String tex) {
@@ -328,8 +328,8 @@ final class Pipes {
         double th = (outer - inner) * Math.sqrt(2) + 0.2, len = c * Math.sqrt(2) * 0.98;
         for (int sx : new int[]{-1, 1}) {
             for (int sy : new int[]{-1, 1}) {
-                // торцы угловых плиток на 0.04 глубже брусков: плитки заходят в бруски и в углы кольца рукава (у тех торцы
-                // на 0.02), совпавшие грани мерцали бы
+                // the ends of the corner tiles are 0.04 deeper than the boxes: the tiles go into the boxes and into the corners of the sleeve ring (whose ends
+                // are at 0.02), coinciding faces would flicker
                 double d = (outer + inner) / 2, cx = mid + sx * d, cy = mid + sy * d;
                 l.add(Models.e(cx - len / 2, cy - th / 2, z0 + 0.04, cx + len / 2, cy + th / 2, z1 - 0.04).all(tex)
                         .rot("z", sx * sy > 0 ? -45 : 45, cx, cy, zm));
@@ -337,7 +337,7 @@ final class Pipes {
         }
     }
 
-    /** Модели одной стороны трубы, которые блокстейт рисует вместе: их грани не должны мерцать друг с другом. */
+    /** Models of one pipe side that the block state draws together: their faces must not flicker against each other. */
     private static final java.util.Map<String, List<Models.El>> PARTS = new java.util.LinkedHashMap<>();
 
     @SafeVarargs
@@ -356,7 +356,7 @@ final class Pipes {
         String particle = dense ? "pipe_dense_u" : "pipe_glass_u";
         PARTS.clear();
 
-        // прямая трубка на весь блок (и она же светящаяся — для запитанной сети)
+        // a straight tube over the whole block (also a glowing one, for a powered network)
         for (int glow : new int[]{0, GLOW}) {
             String sfx = glow > 0 ? "_lit" : "";
             List<Models.El> straight = new ArrayList<>();
@@ -364,35 +364,35 @@ final class Pipes {
             Models.model(name + "_straight" + sfx, true, particle, tex, straight.toArray(new Models.El[0]));
             PARTS.put("straight", straight);
 
-            // рукав к соседней трубе у развилки: трубка + кольцо у ступицы (кольцо — латунь, не светится)
+            // a sleeve to the neighbouring pipe at a junction: a tube + a ring at the hub (the ring is brass and does not glow)
             List<Models.El> arm = new ArrayList<>();
             tube(arm, lo, hi, 0, lo, c, "sv", "su", "sd", glow);
             ring(arm, rlo, rhi, lo - (dense ? 2.0 : 1.5), lo - (dense ? 0.4 : 0.2), rc, "band");
             Models.model(name + "_arm" + sfx, true, particle, tex, arm.toArray(new Models.El[0]));
             PARTS.put("arm", arm);
 
-            // торец ступицы там, где соединения нет (чуть внутрь, чтобы не совпадать с рёбрами каркаса)
+            // the hub end where there is no connection (slightly inwards, so it does not coincide with the frame edges)
             Models.El endPlate = Models.e(lo, lo, lo + 0.06, hi, hi, lo + 0.06).only("#hub", "north").glow(glow);
             Models.model(name + "_end" + sfx, true, particle, tex, endPlate);
         }
 
-        // пояс посередине прямого участка
+        // a band in the middle of a straight run
         List<Models.El> band = new ArrayList<>();
         ring(band, rlo, rhi, dense ? 5.8 : 6.4, dense ? 10.2 : 9.6, rc, "band");
         Models.model(name + "_band", true, particle, tex, band.toArray(new Models.El[0]));
         PARTS.put("band", band);
 
         if (dense) {
-            // стык с базовой трубой: латунная шайба-переходник закрывает торец плотной трубы вокруг тонкой — без щели.
-            // Шайба не шире самой трубы (1.9..14.1): кольцо рукава (1.1..1.85 и 14.15..14.9) остаётся снаружи, их передние грани
-            // в плоскости z=0 не перекрываются (иначе — мерцание); гильзу-заглушку на этой стороне блокстейт не ставит.
+            // a joint with a basic pipe: a brass adapter washer closes the dense pipe's end around the thin one, without a gap.
+            // The washer is no wider than the pipe itself (1.9..14.1): the sleeve ring (1.1..1.85 and 14.15..14.9) stays outside, their front faces
+            // in the z=0 plane do not overlap (otherwise flicker); the block state puts no cap sleeve on this side.
             List<Models.El> reducer = new ArrayList<>();
             washer(reducer, lo - 0.1, hi + 0.1, c - 0.05, 4.0, 12.0, 1.3, 0.0, 0.9, "#flange");
             Models.model(name + "_reducer", true, particle, tex, reducer.toArray(new Models.El[0]));
             PARTS.put("reducer", reducer);
         }
 
-        // каркас ступицы: двенадцать латунных рёбер и восемь угловых болтов-блоков
+        // hub frame: twelve brass edges and eight corner bolt blocks
         List<Models.El> hub = new ArrayList<>();
         double tb = dense ? 0.7 : 0.5, cs = dense ? 1.9 : 1.3;
         for (double a : new double[]{lo, hi - tb}) {
@@ -411,24 +411,24 @@ final class Pipes {
         }
         Models.model(name + "_hub", true, particle, tex, hub.toArray(new Models.El[0]));
 
-        // у устройства: базовая — латунная гильза и фланец; плотная — торец закрыт шайбой с отверстием точно под ободок
-        // мини-трубки шины (5.4..10.6), иначе тонкая трубка шины висела в широкой полой гильзе и сквозь щель было видно нутро
+        // at a device: the basic pipe gets a brass sleeve and a flange; on the dense one the end is closed by a washer with a hole exactly for the rim
+        // of the bus mini tube (5.4..10.6), otherwise the thin bus tube hung in a wide hollow sleeve and the inside showed through the gap
         List<Models.El> cap = new ArrayList<>();
         double clo = lo - (dense ? 1.2 : 1.0), chi = 16 - clo;
         if (dense) {
-            // сплошная восьмигранная заглушка-фланец по контуру трубы (без отверстия и повёрнутых плиток — щелей нет),
-            // в неё упирается мини-трубка шины или разъём устройства
+            // a solid octagonal cap flange along the pipe outline (no hole and no rotated tiles, so no gaps),
+            // the bus mini tube or the device socket rests against it
             Buses.oct(cap, lo - 0.1, lo - 0.1, 0.0, hi + 0.1, hi + 0.1, 0.9, c, "flange", "flange", "flange", "flange", "flange");
         } else {
-            // Сплошная восьмигранная заглушка-фланец (устраняет сквозные пустоты при стыковке с шинами и устройствами)
+            // A solid octagonal cap flange (removes see-through gaps when joining buses and devices)
             Buses.oct(cap, clo - 0.6, clo - 0.6, 0.0, chi + 0.6, chi + 0.6, 0.7, c + 1.0, "flange", "flange", "flange", "flange", "flange");
             ring(cap, clo, chi, 0.7, 3.0, c + 0.4, "band");
         }
         Models.model(name + "_cap", true, particle, tex, cap.toArray(new Models.El[0]));
 
-        // Заглушка стороны: восьмигранный латунный фланец (болты по кругу — текстура), по центру ступенчатая медная пробка
-        // с латунным кольцом и рукояткой-шпилем, над пробкой — маленький манометр прямо на фланце, снизу — три коротких
-        // сосульки. Всё симметрично и не выходит за контур фланца (кроме сосулек — они висят в пределах блока).
+        // Side plug: an octagonal brass flange (the bolts in a circle are the texture), in the middle a stepped copper stopper
+        // with a brass ring and a spire handle, above the stopper a small gauge right on the flange, below three short
+        // icicles. Everything is symmetrical and stays within the flange outline (except the icicles, which hang within the block).
         List<Models.El> plug = new ArrayList<>();
         double f0 = lo - 1.1, f1 = lo - 0.02;
         Buses.oct(plug, lo - 0.4, lo - 0.4, f0, hi + 0.4, hi + 0.4, f1, c + 0.3, "flange", "flange", "flange", "plug", "flange");
@@ -438,19 +438,19 @@ final class Pipes {
                 "brass", "brass", "brass", "brass", null);
         Buses.oct(plug, mid - bossR + 1.3, mid - bossR + 1.3, f0 - 1.05, mid + bossR - 1.3, mid + bossR - 1.3, f0 - 0.75, (bossR - 1.3) * 0.42,
                 "dark", "dark", "dark", "dark", null);
-        // смотровое крио-стекло по центру пробки
+        // a cryo sight glass in the middle of the stopper
         plug.add(Models.e(mid - 0.6, mid - 0.6, f0 - 1.35, mid + 0.6, mid + 0.6, f0 - 1.05).all("#ice").glow(12));
-        // манометр на фланце над пробкой
+        // a gauge on the flange above the stopper
         double gw = dense ? 1.2 : 0.9, gy = mid + bossR + (dense ? 1.5 : 1.15);
         plug.add(Models.e(mid - gw - 0.25, gy - gw - 0.25, f0 - 0.2, mid + gw + 0.25, gy + gw + 0.25, f0).all("#brass"));
         plug.add(Models.e(mid - gw, gy - gw, f0 - 0.26, mid + gw, gy + gw, f0 - 0.2).only("#dial", "north"));
-        // сосульки под фланцем
+        // icicles under the flange
         double iy = lo - 0.4;
         for (double[] ic : new double[][]{{mid - 0.3, dense ? 1.5 : 1.2}, {mid - (dense ? 2.6 : 1.9), dense ? 0.9 : 0.7}, {mid + (dense ? 2.0 : 1.3), dense ? 0.9 : 0.7}}) {
             plug.add(Models.e(ic[0], iy - ic[1], f0 + 0.15, ic[0] + 0.6, iy, f0 + 0.75).all("#ice"));
         }        Models.model(name + "_plug", false, particle, tex, plug.toArray(new Models.El[0]));
 
-        // ворота складского дока: тот же фланец, но с рольставней; рама-козырёк и бирюзовый фонарь над воротами
+        // warehouse dock door: the same flange, but with a roller shutter; a hood frame and a teal lamp above the door
         List<Models.El> dock = new ArrayList<>();
         Buses.oct(dock, lo - 0.4, lo - 0.4, f0, hi + 0.4, hi + 0.4, f1, c + 0.3, "flange", "flange", "flange", "dock", "flange");
         double dl = lo + (dense ? 1.2 : 0.8), dh = hi - (dense ? 1.2 : 0.8);
@@ -459,7 +459,7 @@ final class Pipes {
         dock.add(Models.e(dh, dl - 0.4, f0 - 0.3, dh + 0.5, dh - 0.1, f0).all("#brass"));
         Models.model(name + "_dock", false, particle, tex, dock.toArray(new Models.El[0]));
 
-        // что блокстейт рисует вместе в одной ориентации: прямая + пояс + гильза/шайба; ступица + рукав + гильза/шайба
+        // what the block state draws together in one orientation: straight + band + sleeve/washer; hub + sleeve + sleeve/washer
         checkTogether(name + " straight+band+cap", PARTS.get("straight"), band, cap);
         checkTogether(name + " hub+arm+cap", hub, PARTS.get("arm"), cap);
         if (dense) {
@@ -467,7 +467,7 @@ final class Pipes {
             checkTogether(name + " hub+arm+reducer", hub, PARTS.get("arm"), PARTS.get("reducer"));
         }
 
-        // предмет: прямая труба с поясом и заглушками на концах
+        // item: a straight pipe with a band and caps at the ends
         List<Models.El> item = new ArrayList<>();
         tube(item, lo, hi, 0, 16, c, "sv", "su", "sd");
         ring(item, rlo, rhi, dense ? 5.8 : 6.4, dense ? 10.2 : 9.6, rc, "band");
@@ -487,7 +487,7 @@ final class Pipes {
         return "{\"" + dir + "\": \"" + v + "\"}";
     }
 
-    /** Условие «труба не прямая» (ни по одной оси не вида «две противоположные связи и ничего больше»). */
+    /** The condition "the pipe is not straight" (along no axis is it "two opposite links and nothing else"). */
     static String notStraight() {
         String z = "{\"OR\": [" + c("north", "none") + ", " + c("south", "none") + ", " + c("east", LINKED) + ", " + c("west", LINKED) + ", "
                 + c("up", LINKED) + ", " + c("down", LINKED) + "]}";
@@ -504,8 +504,8 @@ final class Pipes {
     }
 
     /**
-     * Блокстейт трубы: стекло (прямой участок, рукава, торцы) — в двух видах: обычное и светящееся (active=true, сеть
-     * запитана); латунь (пояс, ступица, манжеты, шайба-переходник) от питания не зависит.
+     * Pipe block state: glass (straight run, sleeves, ends) in two kinds, normal and glowing (active=true, the network
+     * is powered); brass (band, hub, cuffs, adapter washer) does not depend on power.
      */
     static void blockstate(String name, boolean dense) throws Exception {
         String[][] rot = {{"north", ""}, {"east", ", \"y\": 90"}, {"south", ", \"y\": 180"}, {"west", ", \"y\": 270"},
@@ -513,7 +513,7 @@ final class Pipes {
         List<String> parts = new ArrayList<>();
         String[] power = {c("active", "false"), c("active", "true")};
         String[] lit = {"", "_lit"};
-        // прямые участки по трём осям и пояс посередине
+        // straight runs along three axes and a band in the middle
         String[][] axes = {
                 {"z", straight("north", "south", "east", "west", "up", "down"), ""},
                 {"x", straight("east", "west", "north", "south", "up", "down"), ", \"y\": 90"},
@@ -533,7 +533,7 @@ final class Pipes {
                 parts.add("    {\"when\": {\"AND\": [" + c(r[0], "none") + ", " + ns + ", " + power[p] + "]}, \"apply\": {\"model\": \""
                         + Forge2.NS + name + "_end" + lit[p] + "\"" + r[1] + "}}");
             }
-            // гильза только у устройства: на стыке с тонкой трубой её место занимает шайба-переходник
+            // a sleeve only at a device: at a joint with a thin pipe its place is taken by the adapter washer
             parts.add("    {\"when\": " + c(r[0], "device") + ", \"apply\": {\"model\": \"" + Forge2.NS + name + "_cap\"" + r[1] + "}}");
             if (dense) {
                 parts.add("    {\"when\": " + c(r[0], "reducer") + ", \"apply\": {\"model\": \"" + Forge2.NS + name + "_reducer\"" + r[1] + "}}");

@@ -11,15 +11,15 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Вечный Морозный Резонатор: вытягивает Source из эфирного вакуума и по эфиру же отправляет его в Портативные Хронометры,
- * привязанные к сети, к которой он приставлен, — их больше не нужно заряжать. Сеть он не питает и банки Ars Nouveau не наполняет.
+ * Eternal Frost Resonator: draws Source from the aetheric vacuum and sends it through the aether to the Portable Chronometers
+ * bound to the network it stands next to, so they no longer need charging. It does not power the network or fill Ars Nouveau jars.
  */
 public class EternalFrostResonatorBlockEntity extends BlockEntity {
     public EternalFrostResonatorBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.ETERNAL_FROST_RESONATOR.get(), pos, state);
     }
 
-    /** Приставлен ли резонатор к какой-нибудь сети (иначе ему некого питать). */
+    /** Whether the resonator stands next to some network (otherwise it has nobody to power). */
     public boolean linked() {
         if (level == null) {
             return false;
@@ -34,10 +34,10 @@ public class EternalFrostResonatorBlockEntity extends BlockEntity {
         return false;
     }
 
-    /** Клиент: стоит ли рядом узел сети (вихрь тогда крутится быстрее и ярче). */
+    /** Client: whether a network node is next to it (the vortex then spins faster and brighter). */
     public boolean clientLinked = false;
 
-    /** Клиент: снежинки кружат в стеклянной камере и вылетают из трубы-вытяжки. */
+    /** Client: snowflakes swirl in the glass chamber and fly out of the exhaust pipe. */
     public static void clientTick(Level level, BlockPos pos, BlockState state, EternalFrostResonatorBlockEntity be) {
         long t = level.getGameTime();
         if ((t + pos.asLong()) % 20 == 0) {
@@ -68,7 +68,7 @@ public class EternalFrostResonatorBlockEntity extends BlockEntity {
         if (t % 40 == 0 && level instanceof ServerLevel sl) {
             sl.sendParticles(ParticleTypes.SNOWFLAKE, pos.getX() + 0.5, pos.getY() + 1.1, pos.getZ() + 0.5,
                     3, 0.25, 0.1, 0.25, 0.01);
-            // искры «передачи» в эфир — только когда есть сеть, к Хронометрам которой идёт Source
+            // "transmission" sparks into the aether, only when there is a network whose Chronometers get Source
             if (be.linked()) {
                 sl.sendParticles(ParticleTypes.END_ROD, pos.getX() + 0.5, pos.getY() + 0.9, pos.getZ() + 0.5,
                         2, 0.08, 0.3, 0.08, 0.02);

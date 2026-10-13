@@ -44,15 +44,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Часть собранного Насыщателя Маны. Игрок такой блок не получает: он появляется на месте корпусов, стержня и трубы, когда
- * машина собрана, хранит прежний блок и возвращает его при разборе. Клетка (CELL) определяет, какой кусок общей модели
- * показывать. Нажатие по любой части работает как нажатие по хозяину; сеть подключается к разъёмам (по одному на каждой
- * стороне, кроме крыши). На вентиляционные решётки крыши ставятся Сопроцессоры Охлаждения (COOLER): каждый ускоряет пресс.
+ * Part of an assembled Mana Saturator. A player never gets this block: it appears in place of casings, the rod and the pipe when
+ * the machine is assembled, keeps the former block and returns it on disassembly. The cell (CELL) defines which piece of the shared
+ * model to show. Clicking any part works like clicking the owner; the network connects to the sockets (one on each
+ * side except the roof). Cooling Co-Processors (COOLER) go on the roof vent grilles: each one speeds up the press.
  */
 public class SaturatorPartBlock extends Block implements EntityBlock, GolemNode {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final IntegerProperty CELL = IntegerProperty.create("cell", 0, SaturatorStructure.CELLS - 1);
-    /** На решётке стоит Сопроцессор Охлаждения. */
+    /** A Cooling Co-Processor stands on the grille. */
     public static final BooleanProperty COOLER = BooleanProperty.create("cooler");
 
     public SaturatorPartBlock(Properties properties) {
@@ -71,8 +71,8 @@ public class SaturatorPartBlock extends Block implements EntityBlock, GolemNode 
         return SaturatorShapes.of(state.getValue(CELL), state.getValue(FACING));
     }
 
-    // ---------------------------------------------------------------------------------------------- сеть
-    /** Сеть подключается только к разъёмам (по одному на фасаде, сзади, на боковинах и снизу) и только к блокам вне машины. */
+    // ---------------------------------------------------------------------------------------------- network
+    /** The network connects only to the sockets (one on the front, at the back, on the sides and at the bottom) and only to blocks outside the machine. */
     @Override
     public boolean canLink(BlockState self, BlockState other, Direction toOther) {
         return other.getBlock() instanceof GolemNode && !(other.getBlock() instanceof SaturatorPartBlock)
@@ -89,7 +89,7 @@ public class SaturatorPartBlock extends Block implements EntityBlock, GolemNode 
         return false;
     }
 
-    // --------------------------------------------------------------------------------------- хозяин
+    // --------------------------------------------------------------------------------------- owner
     public static BlockPos controllerOf(BlockPos pos, BlockState state) {
         return SaturatorStructure.controllerOf(pos, state.getValue(FACING), state.getValue(CELL));
     }
@@ -97,7 +97,7 @@ public class SaturatorPartBlock extends Block implements EntityBlock, GolemNode 
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
                                               InteractionHand hand, BlockHitResult hit) {
-        // Сопроцессор Охлаждения — только сверху, на свободную вентиляционную решётку
+        // Cooling Co-Processor: only on top, on a free vent grille
         if (stack.is(ModBlocks.COOLING_COPROCESSOR.get().asItem()) && SaturatorStructure.isVent(state.getValue(CELL))) {
             if (hit.getDirection() != Direction.UP || state.getValue(COOLER)) {
                 if (!level.isClientSide()) {
@@ -131,7 +131,7 @@ public class SaturatorPartBlock extends Block implements EntityBlock, GolemNode 
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        // Shift+ПКМ пустой рукой по сопроцессору на крыше — снять его
+        // Shift + right-click with an empty hand on a roof coprocessor removes it
         if (player.isShiftKeyDown() && state.getValue(COOLER)) {
             if (!level.isClientSide()) {
                 level.setBlock(pos, state.setValue(COOLER, false), 3);
@@ -151,7 +151,7 @@ public class SaturatorPartBlock extends Block implements EntityBlock, GolemNode 
         return InteractionResult.PASS;
     }
 
-    // ------------------------------------------------------------------------------ разборка и добыча
+    // ------------------------------------------------------------------------------ disassembly and drops
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
         if (!state.is(newState.getBlock())) {
@@ -162,7 +162,7 @@ public class SaturatorPartBlock extends Block implements EntityBlock, GolemNode 
         }
     }
 
-    /** Выпадает прежний блок (корпус, стержень, труба), а не сама часть; стоявший на решётке сопроцессор — тоже. */
+    /** Drops the former block (casing, rod, pipe), not the part itself; a coprocessor that stood on the grille drops too. */
     @Override
     protected List<ItemStack> getDrops(BlockState state, LootParams.Builder params) {
         List<ItemStack> out = new ArrayList<>();

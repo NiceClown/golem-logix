@@ -13,7 +13,7 @@ public class BusScreen extends GolemScreen<BusMenu> {
     @Override
     protected void init() {
         super.init();
-        // у шин справа от сетки фильтра, у перископа (фильтра нет) — по центру
+        // on buses to the right of the filter grid, on the periscope (no filter) in the middle
         addPriorityPanel(menu.isPeriscope() ? 61 : BusMenu.FILTER_X + 56 + 8, 18, menu::getPriority);
         addRedstoneButton(menu::redstoneMode);
     }

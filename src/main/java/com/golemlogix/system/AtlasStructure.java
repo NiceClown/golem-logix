@@ -13,13 +13,13 @@ import java.util.List;
 import java.util.function.Supplier;
 
 /**
- * Решётка Атланта — многоблок 3x3x4. Ядро стоит в центре верхнего слоя.
+ * Atlas Array, a 3x3x4 multiblock. The core stands in the middle of the top layer.
  *
  * <pre>
- * слой 3 (верх):  casing casing casing / casing  CORE  casing / casing casing casing
- * слой 2:         атлант(верх) на углах, conduit в центре, casing или расширитель по сторонам
- * слой 1:         атлант(низ)  на углах, conduit в центре, casing или расширитель по сторонам
- * слой 0 (низ):   муфты на углах и в центре, conduit по сторонам
+ * layer 3 (top):  casing casing casing / casing  CORE  casing / casing casing casing
+ * layer 2:        atlant (upper) in the corners, conduit in the middle, casing or expander on the sides
+ * layer 1:        atlant (lower) in the corners, conduit in the middle, casing or expander on the sides
+ * layer 0 (base): bushings in the corners and in the middle, conduits on the sides
  * </pre>
  */
 public final class AtlasStructure {
@@ -29,10 +29,10 @@ public final class AtlasStructure {
     }
 
     /**
-     * @param missingPos     первая позиция, где блок не тот (null, если решётка собрана)
-     * @param expected       какой блок ожидался там (для подсказки игроку)
-     * @param expanders      обычных расширителей каналов в стенах
-     * @param quantumExpanders квантовых расширителей
+     * @param missingPos     the first position with a wrong block (null if the array is complete)
+     * @param expected       which block was expected there (for the player hint)
+     * @param expanders      ordinary channel expanders in the walls
+     * @param quantumExpanders quantum expanders
      */
     public record Result(boolean valid, @Nullable BlockPos missingPos, @Nullable Block expected,
                          int expanders, int quantumExpanders) {
@@ -47,7 +47,7 @@ public final class AtlasStructure {
         return dx != 0 && dz != 0 ? Cell.CORNER : Cell.EDGE;
     }
 
-    /** Блоки, допустимые в клетке, первый — «основной» (для подсказки). */
+    /** Blocks allowed in a cell; the first one is the "main" one (for the hint). */
     private static List<Supplier<? extends Block>> allowed(int dy, Cell cell) {
         return switch (dy) {
             case 0 -> cell == Cell.EDGE ? List.of(ModBlocks.ATLAS_CONDUIT) : List.of(ModBlocks.CABLE_BUSHING);
@@ -60,7 +60,7 @@ public final class AtlasStructure {
         };
     }
 
-    /** Разворачивает Атлантов лицом наружу: северные углы смотрят на север, южные — на юг. */
+    /** Turns the Atlants to face outwards: the north corners face north, the south ones south. */
     public static void orientAtlants(Level level, BlockPos corePos) {
         BlockPos origin = corePos.below(3);
         for (int dx = -1; dx <= 1; dx += 2) {
@@ -99,7 +99,7 @@ public final class AtlasStructure {
                         }
                     }
                     if (ok && dy >= 1 && dy <= 2 && cell == Cell.CORNER) {
-                        // атлант: на уровне 1 — нижняя половина, на уровне 2 — верхняя
+                        // atlant: the lower half on level 1, the upper one on level 2
                         DoubleBlockHalf half = state.getValue(AtlantBlock.HALF);
                         ok = half == (dy == 1 ? DoubleBlockHalf.LOWER : DoubleBlockHalf.UPPER);
                     }

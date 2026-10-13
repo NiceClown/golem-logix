@@ -11,10 +11,10 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
- * Клиент -> сервер: заказ автокрафта предмета.
+ * Client -> server: an autocraft order for an item.
  *
- * @param preview true — только показать план (без запуска)
- * @param request номер запроса окна: сервер возвращает его в CraftPlanPayload
+ * @param preview true = only show the plan (do not start)
+ * @param request the window's request number: the server returns it in CraftPlanPayload
  */
 public record CraftRequestPayload(int containerId, ItemStack key, int amount, boolean preview, int request) implements CustomPacketPayload {
     public static final Type<CraftRequestPayload> TYPE =

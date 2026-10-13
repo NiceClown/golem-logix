@@ -28,10 +28,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Поставщик шаблонов: хранит до 9 закодированных перфокарт и выгружает ингредиенты
- * в примыкающие машины (любой сосед, не являющийся узлом сети).
- * Режим ожидания результата: следующая порция не грузится, пока задача не получила выход предыдущей.
- * Модуль Редстоуна останавливает подачу по сигналу (или подаёт по одной порции на импульс).
+ * Pattern Provider: holds up to 9 encoded punch cards and unloads ingredients
+ * into adjacent machines (any neighbour that is not a network node).
+ * Wait-for-result mode: the next portion is not loaded until the job has received the output of the previous one.
+ * A Redstone Module stops feeding on a signal (or feeds one portion per pulse).
  */
 public class PatternProviderBlockEntity extends BlockEntity {
     public static final int SLOTS = 9;
@@ -72,7 +72,7 @@ public class PatternProviderBlockEntity extends BlockEntity {
         setChanged();
     }
 
-    /** Куда подаёт ингредиенты (свойство блока: по нему и стрелки на гранях). */
+    /** Where it feeds ingredients (a block property: the arrows on the faces follow it too). */
     public com.golemlogix.blocks.ProviderOutput output() {
         BlockState s = getBlockState();
         return s.hasProperty(com.golemlogix.blocks.PatternProviderBlock.OUTPUT)
@@ -85,7 +85,7 @@ public class PatternProviderBlockEntity extends BlockEntity {
         }
     }
 
-    /** Данные окна: 0 — режим ожидания (0/1), 1 — режим редстоуна, 2 — сторона подачи (ProviderOutput). */
+    /** Window data: 0 = wait mode (0/1), 1 = redstone mode, 2 = feeding side (ProviderOutput). */
     public ContainerData menuData() {
         return new ContainerData() {
             @Override
@@ -116,7 +116,7 @@ public class PatternProviderBlockEntity extends BlockEntity {
         };
     }
 
-    /** Разрешает ли редстоун выгрузить порцию; consume — израсходовать импульс (порция действительно выгружена). */
+    /** Whether redstone allows unloading a portion; consume = use up the pulse (the portion was really unloaded). */
     public boolean redstoneAllows(boolean consume) {
         if (level == null) {
             return true;
@@ -125,7 +125,7 @@ public class PatternProviderBlockEntity extends BlockEntity {
         return redstone.allows(installed, installed && level.hasNeighborSignal(worldPosition), consume);
     }
 
-    /** Каждый тик запоминает уровень сигнала: так короткий импульс между циклами калькулятора не теряется. */
+    /** Remembers the signal level every tick: this way a short pulse between calculator cycles is not lost. */
     public static void serverTick(Level level, BlockPos pos, BlockState state, PatternProviderBlockEntity be) {
         if (be.upgrades.has(UpgradeType.REDSTONE)) {
             be.redstone.observe(level.hasNeighborSignal(pos));
@@ -151,8 +151,8 @@ public class PatternProviderBlockEntity extends BlockEntity {
     }
 
     /**
-     * Пытается выгрузить ингредиенты одного выполнения шаблона в соседнюю машину.
-     * Возвращает список того, что не удалось принять (обычно пустой) или null, если машина не готова.
+     * Tries to unload the ingredients of one pattern execution into a neighbouring machine.
+     * Returns the list of what could not be accepted (usually empty), or null if the machine is not ready.
      */
     @Nullable
     public List<ItemStack> tryPush(PatternData pattern) {
@@ -166,13 +166,13 @@ public class PatternProviderBlockEntity extends BlockEntity {
             }
         }
 
-        // выбрана сторона — только в неё (когда машины стоят вплотную, видно, какую из них кормит поставщик)
+        // a side is selected: only into it (when machines stand side by side you can see which one the provider feeds)
         Direction only = output().direction();
         Direction[] dirs = only == null ? Direction.values() : new Direction[]{only};
         for (int k = 0; k < dirs.length; k++) {
             Direction dir = dirs[(lastDirection + 1 + k) % dirs.length];
             BlockPos target = worldPosition.relative(dir);
-            // в устройства сети не выгружаем; исключение — собранный Насыщатель Маны (его части тоже узлы сети)
+            // never unload into network devices; the exception is an assembled Mana Saturator (its parts are network nodes too)
             net.minecraft.world.level.block.Block block = level.isLoaded(target) ? level.getBlockState(target).getBlock() : null;
             if (block == null || (block instanceof GolemNode && !(block instanceof com.golemlogix.blocks.SaturatorPartBlock))) {
                 continue;
@@ -194,9 +194,9 @@ public class PatternProviderBlockEntity extends BlockEntity {
         return null;
     }
 
-    /** Все ингредиенты влезут (проверка по отдельности, потом общая проверка на реальных слотах). */
+    /** All ingredients will fit (each checked on its own, then a joint check on the real slots). */
     private static boolean canAcceptAll(IItemHandler handler, List<ItemStack> inputs) {
-        // проверяем каждый предмет симуляцией; для надёжности суммируем одинаковые
+        // check every item by simulation; to be safe, identical ones are summed
         for (ItemStack in : inputs) {
             ItemStack rest = ItemHandlerHelper.insertItem(handler, in.copy(), true);
             if (!rest.isEmpty()) {

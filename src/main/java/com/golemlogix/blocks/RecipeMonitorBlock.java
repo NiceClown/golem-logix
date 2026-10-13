@@ -27,8 +27,8 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Монитор Рецептов: латунный шкаф с круглым иллюминатором, за которым в фиолетовом вихре кружатся перфокарты — по одной на
- * каждую идущую задачу. ПКМ открывает пульт: все Крио-Калькуляторы сети, их заказы, ход, шаги и кнопка отмены.
+ * Recipe Monitor: a brass cabinet with a round porthole behind which punch cards swirl in a purple vortex, one for
+ * every running job. Right-click opens the console: all Cryo-Calculators of the network, their orders, progress, steps and a cancel button.
  */
 public class RecipeMonitorBlock extends Block implements GolemNode, EntityBlock {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;

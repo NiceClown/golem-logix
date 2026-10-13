@@ -3,7 +3,7 @@ package com.golemlogix.client.ghost;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 /**
- * Обёртка над буфером вершин: делает всё нарисованное полупрозрачным и подкрашивает (для «призраков»).
+ * A vertex buffer wrapper: makes everything drawn translucent and tints it (for "ghosts").
  */
 public final class GhostVertexConsumer implements VertexConsumer {
     private final VertexConsumer delegate;

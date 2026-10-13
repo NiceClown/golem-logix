@@ -12,9 +12,9 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import java.util.function.Predicate;
 
 /**
- * Контейнер, принадлежащий блок-сущности: помечает её изменённой и проверяет дистанцию до игрока.
- * Хранит номера ячеек (SimpleContainer.createTag их теряет и «сжимает» предметы к началу — фильтры шин и диски шкафа
- * после перезагрузки мира смещались бы).
+ * A container owned by a block entity: marks it changed and checks the distance to the player.
+ * Keeps slot numbers (SimpleContainer.createTag loses them and "squeezes" items to the front, so bus filters and cabinet
+ * disks would shift after a world reload).
  */
 public class OwnedContainer extends SimpleContainer {
     private final BlockEntity owner;
@@ -64,7 +64,7 @@ public class OwnedContainer extends SimpleContainer {
         return list;
     }
 
-    /** Читает и новый формат (с номером ячейки), и старый (без него: предметы идут подряд с начала). */
+    /** Reads both the new format (with the slot number) and the old one (without it: items go in a row from the start). */
     @Override
     public void fromTag(ListTag tag, HolderLookup.Provider registries) {
         clearContent();

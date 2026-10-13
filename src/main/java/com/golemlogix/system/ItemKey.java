@@ -3,7 +3,7 @@ package com.golemlogix.system;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Ключ типа предмета (предмет + компоненты, без количества). Годится как ключ в HashMap.
+ * Item type key (the item + components, without the count). Works as a HashMap key.
  */
 public final class ItemKey {
     private final ItemStack stack;
@@ -22,7 +22,7 @@ public final class ItemKey {
         return stack.copyWithCount(count);
     }
 
-    /** Эталонный стак с количеством 1. Не изменять! */
+    /** Reference stack with a count of 1. Do not modify! */
     public ItemStack stack() {
         return stack;
     }

@@ -18,9 +18,9 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.phys.AABB;
 
 /**
- * Голограмма Крио-концентратора схем: на круглом экране фасада медленно вращаются бирюзовые кольца со схемой; пока окно
- * открыто, из экрана выдвигаются веером светящиеся «перфокарты» и кольца крутятся быстрее. Всё — «глазами» (складывается
- * со светом, текстуры с чёрным фоном вместо прозрачного).
+ * Cryo Schematic Concentrator hologram: teal rings with a schematic slowly rotate on the round front screen; while the window
+ * is open, glowing "punch cards" fan out of the screen and the rings spin faster. Everything is drawn as "eyes" (added
+ * to the light, textures with a black background instead of transparency).
  */
 public class ConcentratorRenderer implements BlockEntityRenderer<SchematicConcentratorBlockEntity> {
     private static final ResourceLocation HOLO = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/concentrator_holo.png"),
@@ -46,14 +46,14 @@ public class ConcentratorRenderer implements BlockEntityRenderer<SchematicConcen
         float time = (be.getLevel() == null ? 0 : be.getLevel().getGameTime()) + partialTick;
         pose.pushPose();
         Quads.faceModel(pose, facing);
-        // центр экрана на фасаде (пиксели): x 8, y 9.3, чуть перед стеклом
+        // screen centre on the front (pixels): x 8, y 9.3, just in front of the glass
         pose.translate(8f / 16f, 9.3f / 16f, -0.05f / 16f);
         VertexConsumer vc = buffers.getBuffer(RenderType.eyes(HOLO));
         float bright = 0.55f + 0.45f * holo + 0.05f * Mth.sin(time * 0.15f);
-        // кольца схемы: два слоя, вращаются навстречу
+        // schematic rings: two layers rotating against each other
         disc(vc, pose, 5.0f, spin, bright, 0f);
         disc(vc, pose, 3.7f, -spin * 1.7f, bright * 0.7f, -0.12f);
-        // веер голографических карт перед экраном
+        // fan of holographic cards in front of the screen
         if (holo > 0.01f) {
             VertexConsumer cards = buffers.getBuffer(RenderType.eyes(CARD));
             for (int k = 0; k < 5; k++) {
@@ -79,7 +79,7 @@ public class ConcentratorRenderer implements BlockEntityRenderer<SchematicConcen
         pose.popPose();
     }
 
-    /** Квадрат лицом к -Z (к зрителю фасада), пиксели; яркость умножает цвет (у «глаз» нет прозрачности). */
+    /** A square facing -Z (towards someone looking at the front), in pixels; brightness multiplies the colour ("eyes" have no transparency). */
     private static void quad(VertexConsumer vc, PoseStack pose, float x0, float y0, float x1, float y1,
                              float u0, float v0, float u1, float v1, float bright) {
         int c = Math.max(0, Math.min(255, (int) (255 * bright)));

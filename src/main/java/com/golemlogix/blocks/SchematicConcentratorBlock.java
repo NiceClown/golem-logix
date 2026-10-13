@@ -28,8 +28,8 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Крио-концентратор схем: в одном окне — перфокарты всех Поставщиков Шаблонов сети (и Картотек), по категориям: верстачные
- * вместе, остальные — по машине, которую кормит поставщик. Как менеджер автокрафта RS или терминал доступа к шаблонам AE2.
+ * Cryo Schematic Concentrator: one window with the punch cards of all Pattern Providers of the network (and Catalogs), by category: crafting-table
+ * ones together, the rest by the machine the provider feeds. Like the RS autocrafting manager or the AE2 pattern access terminal.
  */
 public class SchematicConcentratorBlock extends HorizontalDirectionalBlock implements EntityBlock, GolemNode {
     public static final MapCodec<SchematicConcentratorBlock> CODEC = simpleCodec(SchematicConcentratorBlock::new);

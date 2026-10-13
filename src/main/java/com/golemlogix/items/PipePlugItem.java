@@ -18,16 +18,16 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Заглушка трубы: ПКМ по трубе закрывает её сторону, ближайшую к точке клика (по рукаву — тот рукав). Закрытая сторона
- * ни с чем не соединяется: так две трубы, идущие рядом, не сливаются в одну линию и каналы не смешиваются. ПКМ заглушкой
- * по закрытой стороне снимает её.
+ * Pipe Plug: right-click on a pipe closes its side closest to the click point (on a sleeve, that sleeve). A closed side
+ * connects to nothing: this way two pipes running side by side do not merge into one line and their channels do not mix. Right-clicking
+ * a closed side with a plug removes it.
  */
 public class PipePlugItem extends ModItemWithTooltip {
     public PipePlugItem(Properties properties) {
         super("tooltip.golem_logix.pipe_plug", properties);
     }
 
-    /** Сторона трубы, ближайшая к точке клика (по наибольшему смещению от центра блока). */
+    /** The side of the pipe closest to the click point (by the largest offset from the block centre). */
     public static Direction sideAt(BlockPos pos, Vec3 hit) {
         Vec3 d = hit.subtract(Vec3.atCenterOf(pos));
         return Direction.getNearest(d.x, d.y, d.z);
@@ -66,7 +66,7 @@ public class PipePlugItem extends ModItemWithTooltip {
         return InteractionResult.CONSUME;
     }
 
-    /** Поставить или снять заглушку и пересчитать связи трубы и её соседа. */
+    /** Add or remove a plug and recompute the links of the pipe and its neighbour. */
     public static void toggle(Level level, BlockPos pos, Direction side, boolean plug) {
         if (!(level.getBlockEntity(pos) instanceof PipeBlockEntity be) || !(level.getBlockState(pos).getBlock() instanceof SnowPipeBlock pipe)) {
             return;

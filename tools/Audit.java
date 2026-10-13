@@ -6,8 +6,8 @@ import java.util.regex.*;
 import java.util.stream.*;
 
 /**
- * Ревизия ресурсов мода: ссылки моделей/блокстейтов/предметов/Java на текстуры и модели, отсутствующие файлы и «осиротевшие»
- * текстуры и модели. Запуск из корня проекта: java tools/Audit.java
+ * Audit of the mod's resources: references from models/blockstates/items/Java to textures and models, missing files and "orphaned"
+ * textures and models. Run from the project root: java tools/Audit.java
  */
 public class Audit {
     static final Path ASSETS = Path.of("src/main/resources/assets/golem_logix");
@@ -21,7 +21,7 @@ public class Audit {
         }
     }
 
-    /** Плоский словарь "ключ": "значение" из json-файла перевода. */
+    /** A flat "key": "value" map from a translation json file. */
     static Map<String, String> jsonStrings(String json) {
         Map<String, String> out = new LinkedHashMap<>();
         Matcher m = Pattern.compile("\"([^\"\\\\]+)\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"").matcher(json);
@@ -55,13 +55,13 @@ public class Audit {
 
         for (Path p : files(ASSETS.resolve("models"), ".json")) {
             String s = read(p);
-            // родитель — модель, значения в "textures" — текстуры
+            // the parent is a model, the values in "textures" are textures
             Matcher pm = Pattern.compile("\"parent\"\\s*:\\s*\"golem_logix:([a-z0-9_/]+)\"").matcher(s);
             while (pm.find()) {
                 if (models.contains(pm.group(1))) {
                     usedModels.add(pm.group(1));
                 } else {
-                    problems.add(p.getFileName() + ": нет родительской модели " + pm.group(1));
+                    problems.add(p.getFileName() + ": missing parent model " + pm.group(1));
                 }
             }
             int ti = s.indexOf("\"textures\"");
@@ -72,7 +72,7 @@ public class Audit {
                     if (textures.contains(tm.group(1))) {
                         usedTex.add("textures/" + tm.group(1));
                     } else {
-                        problems.add(p.getFileName() + ": нет текстуры " + tm.group(1));
+                        problems.add(p.getFileName() + ": missing texture " + tm.group(1));
                     }
                 }
             }
@@ -84,11 +84,11 @@ public class Audit {
                 if (models.contains(r)) {
                     usedModels.add(r);
                 } else {
-                    problems.add("blockstate " + p.getFileName() + ": нет модели " + r);
+                    problems.add("blockstate " + p.getFileName() + ": missing model " + r);
                 }
             }
         }
-        // textures/... в Java и ресурсах (GUI, рендереры)
+        // textures/... in Java and resources (GUI, renderers)
         Pattern javaTex = Pattern.compile("\"(textures/[a-z0-9_/]+)\\.png\"|\"(textures/[a-z0-9_/]+/)\"\\s*\\+\\s*[a-zA-Z]");
         List<Path> sources = files(SRC, ".java");
         for (Path p : sources) {
@@ -105,10 +105,10 @@ public class Audit {
                 if (textures.contains(m2.group(1))) {
                     usedTex.add("textures/" + m2.group(1));
                 } else {
-                    problems.add(p.getFileName() + ": нет текстуры " + m2.group(1));
+                    problems.add(p.getFileName() + ": missing texture " + m2.group(1));
                 }
             }
-            // имена вида "bay_" + name или prefix[i] — считаем использованными по общему префиксу
+            // names like "bay_" + name or prefix[i] count as used by their common prefix
             Matcher m3 = Pattern.compile("\"((?:textures/)?(?:block|item|entity|gui/book)/)?([a-z0-9_]+_)\"\\s*\\+").matcher(s);
             while (m3.find()) {
                 for (String t : textures) {
@@ -118,7 +118,7 @@ public class Audit {
                 }
             }
         }
-        // книга и ресурсы прочие
+        // the book and other resources
         for (Path p : files(ASSETS.resolve("book"), ".json")) {
             Matcher m = Pattern.compile("\"(?:textures/)?((?:block|item|entity|gui)/[a-z0-9_/]+)(?:\\.png)?\"").matcher(read(p));
             while (m.find()) {
@@ -127,21 +127,21 @@ public class Audit {
                 }
             }
         }
-        // предметы: textures/item/<имя предмета>.png подхватывает модель item/<имя>.json через generated
-        System.out.println("=== текстуры без ссылок ===");
+        // items: textures/item/<item name>.png is picked up by the model item/<name>.json through generated
+        System.out.println("=== unreferenced textures ===");
         for (String t : textures) {
             if (!usedTex.contains("textures/" + t)) {
                 System.out.println("  textures/" + t);
             }
         }
-        System.out.println("=== модели без ссылок ===");
+        System.out.println("=== unreferenced models ===");
         for (String m : models) {
             boolean item = m.startsWith("item/");
             if (!usedModels.contains(m) && !item) {
                 System.out.println("  models/" + m);
             }
         }
-        System.out.println("=== размеры не кратны 16 (ограничивают mip-уровни) ===");
+        System.out.println("=== sizes not a multiple of 16 (limit mip levels) ===");
         for (String t : textures) {
             if (t.startsWith("gui/")) {
                 continue;
@@ -151,17 +151,17 @@ public class Audit {
                 System.out.println("  " + t + " " + img.getWidth() + "x" + img.getHeight());
             }
         }
-        // ключи перевода: совпадение ru/en и наличие ключей, на которые ссылается Java
-        System.out.println("=== переводы ===");
+        // translation keys: ru/en match and the presence of keys Java refers to
+        System.out.println("=== translations ===");
         Map<String, String> ru = jsonStrings(read(ASSETS.resolve("lang/ru_ru.json"))), en = jsonStrings(read(ASSETS.resolve("lang/en_us.json")));
         for (String k : en.keySet()) {
             if (!ru.containsKey(k)) {
-                System.out.println("  нет в ru: " + k);
+                System.out.println("  missing in ru: " + k);
             }
         }
         for (String k : ru.keySet()) {
             if (!en.containsKey(k)) {
-                System.out.println("  нет в en: " + k);
+                System.out.println("  missing in en: " + k);
             }
         }
         Pattern key = Pattern.compile("\"((?:gui|message|block|item|tooltip|key|subtitles|jei|config|jade)\\.golem_logix\\.[a-z0-9_.]+)\"");
@@ -174,20 +174,20 @@ public class Audit {
         }
         for (String k : referenced) {
             if (!en.containsKey(k)) {
-                System.out.println("  Java ссылается на отсутствующий ключ: " + k);
+                System.out.println("  Java refers to a missing key: " + k);
             }
         }
-        // ключи, у которых строится окончание динамически ("...status." + name), считаем по префиксу
+        // keys whose ending is built dynamically ("...status." + name) count by prefix
         for (String k : en.keySet()) {
             boolean used = referenced.contains(k) || referenced.stream().anyMatch(r -> r.endsWith(".") && k.startsWith(r))
                     || k.startsWith("block.golem_logix.") || k.startsWith("item.golem_logix.") || k.startsWith("tooltip.golem_logix.")
                     || k.startsWith("itemGroup.") || k.startsWith("key.");
             if (!used && !k.startsWith("gui.golem_logix.calc.status.")) {
-                System.out.println("  ключ без ссылок в Java (проверить): " + k);
+                System.out.println("  key not referenced in Java (check): " + k);
             }
         }
-        System.out.println("=== проблемы ===");
+        System.out.println("=== problems ===");
         problems.forEach(p -> System.out.println("  " + p));
-        System.out.println("текстур: " + textures.size() + ", моделей: " + models.size());
+        System.out.println("textures: " + textures.size() + ", models: " + models.size());
     }
 }

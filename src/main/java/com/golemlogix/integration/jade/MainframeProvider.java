@@ -13,7 +13,7 @@ import snownee.jade.api.IBlockComponentProvider;
 import snownee.jade.api.ITooltip;
 import snownee.jade.api.config.IPluginConfig;
 
-/** Строки над Крио-Мейнфреймом (любой его частью): ядра и сколько занято, калькуляторы, шагов за цикл на ядро. */
+/** Lines over a Cryo-Mainframe (any of its parts): cores and how many are busy, calculators, steps per cycle per core. */
 public enum MainframeProvider implements IBlockComponentProvider {
     INSTANCE;
 

@@ -26,9 +26,9 @@ import net.minecraft.world.phys.BlockHitResult;
 import java.util.List;
 
 /**
- * Часть собранного Крио-Мейнфрейма на месте стекла или Корпуса Атланта. Сама не рисуется (весь шкаф рисует отрисовщик
- * хозяина), нажатие передаёт хозяину, при поломке возвращает прежний блок и разбирает шкаф. Трубы сети можно подвести
- * к любой части: внутри шкафа все части связаны с хозяином.
+ * Part of an assembled Cryo-Mainframe in place of glass or Atlas Casing. It is not drawn itself (the owner's renderer draws
+ * the whole cabinet); clicks go to the owner; when broken it returns the former block and disassembles the cabinet. Network pipes can
+ * be brought to any part: inside the cabinet all parts are linked to the owner.
  */
 public class MainframePartBlock extends Block implements GolemNode {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
@@ -59,13 +59,13 @@ public class MainframePartBlock extends Block implements GolemNode {
         return MainframeStructure.controllerOf(pos, state.getValue(FACING), state.getValue(CELL));
     }
 
-    // ---------------------------------------------------------------------------------------------- сеть
+    // ---------------------------------------------------------------------------------------------- network
     @Override
     public boolean canLink(BlockState self, BlockState other, Direction toOther) {
         return other.getBlock() instanceof GolemNode;
     }
 
-    // --------------------------------------------------------------------------------------- хозяин
+    // --------------------------------------------------------------------------------------- owner
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
                                               InteractionHand hand, BlockHitResult hit) {
@@ -87,7 +87,7 @@ public class MainframePartBlock extends Block implements GolemNode {
         return InteractionResult.PASS;
     }
 
-    // ------------------------------------------------------------------------------ разборка и добыча
+    // ------------------------------------------------------------------------------ disassembly and drops
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
         if (!state.is(newState.getBlock())) {
@@ -98,13 +98,13 @@ public class MainframePartBlock extends Block implements GolemNode {
         }
     }
 
-    /** Выпадает прежний блок (стекло — целым, без шёлкового касания; атлант — один на обе половины), а не сама часть. */
+    /** Drops the former block (glass stays whole without Silk Touch; one atlant for both halves), not the part itself. */
     @Override
     protected List<ItemStack> getDrops(BlockState state, LootParams.Builder params) {
         return List.of(new ItemStack(MainframeStructure.original(state.getValue(CELL))));
     }
 
-    /** Атланты — железные статуи: часть шкафа на их месте звучит и ломается как они. */
+    /** Atlants are iron statues: the cabinet part in their place sounds and breaks like them. */
     @Override
     public SoundType getSoundType(BlockState state, LevelReader level, BlockPos pos, @org.jetbrains.annotations.Nullable net.minecraft.world.entity.Entity entity) {
         return MainframeStructure.isAtlant(state.getValue(CELL)) ? SoundType.ANVIL : SoundType.COPPER;

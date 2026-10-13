@@ -56,11 +56,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Проверки логики мода внутри настоящего сервера: многоблок, сеть, диски, шины, автокрафт.
- * Запуск: gradlew runGameTestServer
+ * Checks of the mod's logic inside a real server: multiblock, network, disks, buses, autocrafting.
+ * Run: gradlew runGameTestServer
  *
- * Раскладка: Решётка Атланта 3x3x4 с основанием в ORIGIN (ядро наверху в центре), Креативный Сосуд под центральной муфтой.
- * Наружу сеть выходит через муфты основания: BAY, CPU, PROV, TERM, BUS_IN, BUS_OUT — точки рядом с угловыми муфтами.
+ * Layout: a 3x3x4 Atlas Array with its base at ORIGIN (the core on top in the middle), a Creative Source Jar under the central bushing.
+ * The network leaves through the base bushings: BAY, CPU, PROV, TERM, BUS_IN, BUS_OUT are points next to the corner bushings.
  */
 @GameTestHolder(GolemLogixMod.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -77,13 +77,13 @@ public class GolemGameTests {
     private static final BlockPos BUS_IN = new BlockPos(3, 1, 4);
     private static final BlockPos BUS_OUT = new BlockPos(6, 1, 3);
 
-    // ------------------------------------------------------------ помощники
+    // ------------------------------------------------------------ helpers
 
     private static void put(GameTestHelper helper, BlockPos rel, Block block) {
         helper.setBlock(rel, block);
     }
 
-    /** Строит решётку целиком; expander/quantum — сколько боковых ячеек занять расширителями (до 8). */
+    /** Builds the whole array; expanders/quantum = how many side cells to fill with expanders (up to 8). */
     private static void buildArray(GameTestHelper helper, int expanders, int quantum) {
         int slot = 0;
         for (int dy = 0; dy <= 3; dy++) {
@@ -123,12 +123,12 @@ public class GolemGameTests {
         put(helper, JAR, ModBlocks.CREATIVE_SOURCE_JAR.get());
     }
 
-    /** Шкаф 2x2: главная часть в rel, лицом на юг — остальные части справа (на восток) и выше. */
+    /** A 2x2 cabinet: the main part at rel, facing south, the other parts to the right (east) and above. */
     private static void putBay(GameTestHelper helper, BlockPos rel) {
         CopperDriveBayBlock.place(helper.getLevel(), helper.absolutePos(rel), Direction.SOUTH);
     }
 
-    /** Полная сеть: решётка + сосуд + шкаф с диском 1k. */
+    /** A full network: array + jar + cabinet with a 1k disk. */
     private static BlockPos baseNetwork(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
@@ -139,8 +139,8 @@ public class GolemGameTests {
     }
 
     /**
-     * Игрок для проверок окон и кликов: FakePlayer NeoForge в начале площадки. «Манекен» GameTest входит в список игроков, и моды
-     * вроде Curios шлют ему пакеты, которые его соединение не принимает; FakePlayer пакеты молча глотает.
+     * A player for window and click checks: a NeoForge FakePlayer at the start of the test area. The GameTest "mock" player joins the player list, and mods
+     * like Curios send it packets its connection does not accept; a FakePlayer silently swallows packets.
      */
     private static ServerPlayer testPlayer(GameTestHelper helper) {
         var profile = new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "golem-logix-test");
@@ -154,7 +154,7 @@ public class GolemGameTests {
         return GolemNetwork.scan(helper.getLevel(), helper.absolutePos(rel));
     }
 
-    // ----------------------------------------------------------- многоблок
+    // ----------------------------------------------------------- multiblock
 
     @GameTest(template = T, timeoutTicks = 100)
     public static void arrayStructure(GameTestHelper helper) {
@@ -165,7 +165,7 @@ public class GolemGameTests {
             helper.assertTrue(r.valid(), "complete array must be valid, missing " + r.missingPos());
             helper.assertTrue(r.expanders() == 3 && r.quantumExpanders() == 2, "expanders counted: " + r.expanders() + "/" + r.quantumExpanders());
 
-            // убрали корпус -> решётка не валидна, подсказка указывает на дыру
+            // a casing was removed -> the array is not valid, the hint points at the hole
             BlockPos hole = ORIGIN.offset(1, 3, 0);
             helper.setBlock(hole, Blocks.AIR);
             AtlasStructure.Result broken = AtlasStructure.check(level, helper.absolutePos(CORE));
@@ -174,16 +174,16 @@ public class GolemGameTests {
             helper.assertTrue(broken.expected() == ModBlocks.ATLAS_CASING.get(), "hint names the casing");
             put(helper, hole, ModBlocks.ATLAS_CASING.get());
 
-            // Атлант нужной половиной на нужном уровне
+            // an Atlant with the right half at the right level
             BlockPos corner = ORIGIN.offset(1, 2, 1);
             helper.setBlock(corner, ModBlocks.ATLAS_ATLANT.get().defaultBlockState().setValue(AtlantBlock.HALF, DoubleBlockHalf.LOWER));
             helper.assertTrue(!AtlasStructure.check(level, helper.absolutePos(CORE)).valid(), "wrong atlant half is rejected");
-            // подмена половины разрушает пару, как у двери; ставим обе заново
+            // replacing one half breaks the pair, as with a door; place both again
             helper.setBlock(corner.below(), ModBlocks.ATLAS_ATLANT.get().defaultBlockState().setValue(AtlantBlock.HALF, DoubleBlockHalf.LOWER));
             helper.setBlock(corner, ModBlocks.ATLAS_ATLANT.get().defaultBlockState().setValue(AtlantBlock.HALF, DoubleBlockHalf.UPPER));
             helper.assertTrue(AtlasStructure.check(level, helper.absolutePos(CORE)).valid(), "fixed again");
 
-            // расширитель вне боковых ячеек (на углу) не годится
+            // an expander outside the side cells (in a corner) does not count
             helper.setBlock(ORIGIN.offset(1, 1, 1), ModBlocks.CHANNEL_EXPANDER.get().defaultBlockState());
             helper.assertTrue(!AtlasStructure.check(level, helper.absolutePos(CORE)).valid(), "expander cannot replace an atlant");
             helper.succeed();
@@ -215,7 +215,7 @@ public class GolemGameTests {
 
     @GameTest(template = T, timeoutTicks = 100)
     public static void bareTowerStart(GameTestHelper helper) {
-        // «башня» без решётки: ядро, две шины, центральная муфта — 8 каналов на старте
+        // a "tower" without the array: core, two conduits, central bushing = 8 channels at the start
         put(helper, CORE, ModBlocks.ATLAS_CORE.get());
         put(helper, ORIGIN.offset(0, 2, 0), ModBlocks.ATLAS_CONDUIT.get());
         put(helper, ORIGIN.offset(0, 1, 0), ModBlocks.ATLAS_CONDUIT.get());
@@ -237,7 +237,7 @@ public class GolemGameTests {
 
     @GameTest(template = T, timeoutTicks = 100)
     public static void storageNeedsChannel(GameTestHelper helper) {
-        // башня на 8 каналов: 8 терминалов заняли все, шкаф девятым остался без канала — хранилищем он не считается
+        // an 8-channel tower: 8 terminals took them all, the cabinet came ninth and got no channel, so it does not count as storage
         put(helper, CORE, ModBlocks.ATLAS_CORE.get());
         put(helper, ORIGIN.offset(0, 2, 0), ModBlocks.ATLAS_CONDUIT.get());
         put(helper, ORIGIN.offset(0, 1, 0), ModBlocks.ATLAS_CONDUIT.get());
@@ -255,7 +255,7 @@ public class GolemGameTests {
             helper.assertTrue(!n.isDeviceActive(helper.absolutePos(bay)), "the cabinet got no channel");
             helper.assertTrue(n.itemCapacity() == 0, "a cabinet without a channel adds no capacity, got " + n.itemCapacity());
             helper.assertTrue(n.insertItem(new ItemStack(Items.DIAMOND, 10), false).getCount() == 10, "nothing is stored without a channel");
-            // убрали один терминал -> канал освободился, шкаф заработал
+            // one terminal removed -> a channel is free, the cabinet works
             helper.setBlock(ORIGIN.east(8), ModBlocks.BASIC_SNOW_PIPE.get());
             GolemNetwork n2 = net(helper, ORIGIN);
             helper.assertTrue(n2.isDeviceActive(helper.absolutePos(bay)), "the cabinet works once a channel is free");
@@ -266,7 +266,7 @@ public class GolemGameTests {
 
     @GameTest(template = T, timeoutTicks = 40)
     public static void pipesAndBusesAreSteps(GameTestHelper helper) {
-        // трубы и шины — ступеньки: столкновения не выше половины блока (на них заходят без прыжка), рамка выделения прежняя
+        // pipes and buses are steps: collisions no higher than half a block (they can be walked onto without jumping), the selection box is unchanged
         BlockPos dense = new BlockPos(1, 1, 2), basic = dense.east(), bus = basic.east(), lone = new BlockPos(1, 1, 5);
         put(helper, dense, ModBlocks.DENSE_FROST_PIPE.get());
         put(helper, basic, ModBlocks.BASIC_SNOW_PIPE.get());
@@ -282,7 +282,7 @@ public class GolemGameTests {
                 helper.assertTrue(collision.max(Direction.Axis.Y) <= 0.5 + 1e-6, st.getBlock() + " collision top " + collision.max(Direction.Axis.Y));
                 helper.assertTrue(outline.max(Direction.Axis.Y) > 0.5, st.getBlock() + " outline keeps its full height");
             }
-            // шина без соседей сзади — в передней половине блока (сзади лишь короткий разъём)
+            // a bus with no neighbours behind it is in the front half of the block (only a short socket at the back)
             var shape = helper.getLevel().getBlockState(helper.absolutePos(lone)).getShape(helper.getLevel(), helper.absolutePos(lone));
             helper.assertTrue(shape.min(Direction.Axis.X) >= 0.42, "lone bus fits in the front half, starts at x=" + shape.min(Direction.Axis.X));
             helper.succeed();
@@ -291,7 +291,7 @@ public class GolemGameTests {
 
     @GameTest(template = T, timeoutTicks = 100)
     public static void onlyDevicesWithChannelLookActive(GameTestHelper helper) {
-        // башня на 8 каналов и 10 терминалов: девятый и десятый не должны «гореть» (раньше флаг получали все узлы)
+        // an 8-channel tower with 10 terminals: the ninth and tenth must not "light up" (before, every node got the flag)
         put(helper, CORE, ModBlocks.ATLAS_CORE.get());
         put(helper, ORIGIN.offset(0, 2, 0), ModBlocks.ATLAS_CONDUIT.get());
         put(helper, ORIGIN.offset(0, 1, 0), ModBlocks.ATLAS_CONDUIT.get());
@@ -318,7 +318,7 @@ public class GolemGameTests {
     public static void pipePlugSeparatesLines(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
-        // линия A: муфта-угол (4,1,4) -> труба (3,1,4) -> терминал; линия B касается A трубой (3,1,3) и ведёт к своему терминалу
+        // line A: corner bushing (4,1,4) -> pipe (3,1,4) -> terminal; line B touches A with a pipe (3,1,3) and leads to its own terminal
         BlockPos a = new BlockPos(3, 1, 4), b = new BlockPos(3, 1, 3);
         put(helper, a, ModBlocks.BASIC_SNOW_PIPE.get());
         put(helper, new BlockPos(2, 1, 4), ModBlocks.ANALOG_TERMINAL.get());
@@ -342,7 +342,7 @@ public class GolemGameTests {
 
     @GameTest(template = T, timeoutTicks = 100)
     public static void expanderFaceIsAnExit(GameTestHelper helper) {
-        // расширитель в стене (4,2,5): к его наружной грани — плотная труба и три терминала
+        // an expander in the wall (4,2,5): a dense pipe and three terminals at its outer face
         buildArray(helper, 1, 0);
         powered(helper);
         BlockPos expander = ORIGIN.offset(-1, 1, 0);
@@ -361,16 +361,16 @@ public class GolemGameTests {
 
     @GameTest(template = T, timeoutTicks = 100)
     public static void conduitsStayInside(GameTestHelper helper) {
-        // шина не соединяется с внешними блоками, труба рядом с ней не подключается
+        // a conduit does not connect to outside blocks, a pipe next to it is not connected
         buildArray(helper, 0, 0);
         powered(helper);
-        BlockPos outside = ORIGIN.offset(2, 0, 0); // рядом с боковой шиной основания
+        BlockPos outside = ORIGIN.offset(2, 0, 0); // next to a side conduit of the base
         put(helper, outside, ModBlocks.ANALOG_TERMINAL.get());
         helper.runAfterDelay(5, () -> {
             GolemNetwork n = net(helper, ORIGIN);
             helper.assertTrue(n.channelsUsed() == 0, "terminal touching a conduit is not connected, used " + n.channelsUsed());
             helper.assertTrue(!n.isDeviceActive(helper.absolutePos(outside)), "not part of the network");
-            // тот же терминал рядом с муфтой подключается
+            // the same terminal next to a bushing gets connected
             helper.setBlock(outside, Blocks.AIR);
             put(helper, ORIGIN.offset(2, 0, 1), ModBlocks.ANALOG_TERMINAL.get());
             GolemNetwork n2 = net(helper, ORIGIN);
@@ -388,7 +388,7 @@ public class GolemGameTests {
         helper.setBlock(pos.above(), lower.setValue(AtlantBlock.HALF, DoubleBlockHalf.UPPER));
         helper.runAfterDelay(2, () -> {
             helper.assertTrue(helper.getBlockState(pos.above()).is(ModBlocks.ATLAS_ATLANT.get()), "upper exists");
-            // убрали верхнюю половину -> нижняя исчезает сама
+            // the upper half was removed -> the lower one disappears by itself
             helper.setBlock(pos.above(), Blocks.AIR);
             helper.runAfterDelay(2, () -> {
                 helper.assertTrue(helper.getBlockState(pos).isAir(), "the lower half goes with the upper one");
@@ -397,7 +397,7 @@ public class GolemGameTests {
         });
     }
 
-    // ------------------------------------------------------- хранение и сеть
+    // ------------------------------------------------------- storage and network
 
     @GameTest(template = T, timeoutTicks = 200)
     public static void storageRoundTrip(GameTestHelper helper) {
@@ -435,7 +435,7 @@ public class GolemGameTests {
     public static void lineLimit(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
-        // два плотных трубопровода от одной угловой муфты (6,1,6): на восток и на юг, за каждым плита из 48 терминалов
+        // two dense pipelines from one corner bushing (6,1,6): east and south, each followed by a plate of 48 terminals
         put(helper, new BlockPos(7, 1, 6), ModBlocks.DENSE_FROST_PIPE.get());
         for (int x = 8; x <= 11; x++) for (int y = 1; y <= 4; y++) for (int z = 6; z <= 8; z++) put(helper, new BlockPos(x, y, z), ModBlocks.ANALOG_TERMINAL.get());
         put(helper, new BlockPos(6, 1, 7), ModBlocks.DENSE_FROST_PIPE.get());
@@ -446,7 +446,7 @@ public class GolemGameTests {
             helper.assertTrue(n.lineCapacity() == 64, "line 64");
             helper.assertTrue(n.channelsUsed() == 64, "one bushing line passes only 64 channels, got " + n.channelsUsed());
 
-            // два расширителя поднимают линию до 96 — через ту же муфту проходят все 96 устройств
+            // two expanders raise the line to 96: all 96 devices pass through the same bushing
             buildArray(helper, 2, 0);
             GolemNetwork n2 = net(helper, ORIGIN);
             helper.assertTrue(n2.lineCapacity() == 96, "line 96, got " + n2.lineCapacity());
@@ -474,14 +474,14 @@ public class GolemGameTests {
     @GameTest(template = T, timeoutTicks = 300)
     public static void busesMoveItems(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
-        // импорт: шина на муфте смотрит на запад в сундук (2,1,4)
+        // import: a bus on the bushing faces west into a chest (2,1,4)
         helper.setBlock(BUS_IN, ModBlocks.VACUUM_IMPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.WEST));
         BlockPos chest = new BlockPos(2, 1, 4);
         helper.setBlock(chest, Blocks.CHEST);
         Container c = (Container) helper.getBlockEntity(chest);
         c.setItem(0, new ItemStack(Items.COBBLESTONE, 20));
 
-        // экспорт: шина смотрит на север в другой сундук (6,1,2)
+        // export: a bus faces north into another chest (6,1,2)
         helper.setBlock(BUS_OUT, ModBlocks.INJECTOR_EXPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
         BusBlockEntity bus = (BusBlockEntity) helper.getBlockEntity(BUS_OUT);
         bus.getFilters().setItem(0, new ItemStack(Items.COBBLESTONE));
@@ -509,7 +509,7 @@ public class GolemGameTests {
         var be = (com.golemlogix.blockentity.InterfaceBlockEntity) helper.getBlockEntity(BUS_OUT);
         be.getConfig().setItem(0, new ItemStack(Items.IRON_INGOT, 10));
         helper.runAfterDelay(2, () -> net(helper, bay).insertItem(new ItemStack(Items.IRON_INGOT, 32), false));
-        // автоматика (как воронка или труба другого мода) видит интерфейс с любой стороны
+        // automation (like a hopper or another mod's pipe) sees the interface from any side
         var handler = helper.getLevel().getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK,
                 helper.absolutePos(BUS_OUT), Direction.UP);
         helper.assertTrue(handler != null, "interface exposes an item handler");
@@ -524,7 +524,7 @@ public class GolemGameTests {
             helper.assertTrue(handler.extractItem(9, 1, true).isEmpty(), "intake cannot be pulled back out");
             ItemStack taken = handler.extractItem(0, 4, false);
             helper.assertTrue(taken.getCount() == 4, "automation takes from stock");
-            // меньше держать — лишнее уходит обратно в сеть
+            // keep fewer: the excess goes back to the network
             be.getConfig().setItem(0, new ItemStack(Items.IRON_INGOT, 2));
             helper.runAfterDelay(40, () -> {
                 helper.assertTrue(be.getStock().getItem(0).getCount() == 2, "excess returned, stock " + be.getStock().getItem(0));
@@ -535,9 +535,9 @@ public class GolemGameTests {
     }
 
     /**
-     * Окно интерфейса: предмет в курсоре ставит призрака (сам предмет остаётся у игрока), количество задаётся числом и
-     * ограничено стопкой, клики пустой рукой и «колёсные» клики ничего не вынимают, Shift-клик очищает; жидкость —
-     * в mB, смена режима переводит единицы; шифт-клик из инвентаря кладёт в ряд приёма, и предмет уходит в сеть.
+     * Interface window: an item on the cursor sets a ghost (the item itself stays with the player), the amount is set as a number and
+     * limited to a stack, clicks with an empty hand and "wheel" clicks take nothing out, Shift-click clears; fluid is
+     * in mB, switching the mode converts the units; shift-click from the inventory puts into the input row, and the item goes to the network.
      */
     @GameTest(template = T, timeoutTicks = 300)
     public static void interfaceMenuAmounts(GameTestHelper helper) {
@@ -565,7 +565,7 @@ public class GolemGameTests {
         helper.assertTrue(menu.getCarried().isEmpty() && player.getInventory().isEmpty(), "nothing can be pulled out of a ghost slot");
         helper.assertTrue(be.getConfig().getItem(0).is(Items.IRON_INGOT) && be.amount(0) == 64, "stray clicks leave the slot alone");
         menu.setAmount(0, 6);
-        // жидкость из JEI: призрак-ведро, по умолчанию ведро (1000 mB), дальше — в mB
+        // fluid from JEI: a bucket ghost, a bucket (1000 mB) by default, then in mB
         menu.setGhost(player, 1, new ItemStack(Items.WATER_BUCKET));
         helper.assertTrue(menu.isFluidSlot(1) && be.amount(1) == 1000, "fluid ghost keeps 1000 mB, got " + be.amount(1));
         menu.setAmount(1, 5500);
@@ -576,7 +576,7 @@ public class GolemGameTests {
         helper.assertTrue(menu.isFluidSlot(1) && be.amount(1) == 1000, "back to mB, got " + be.amount(1));
         menu.clicked(1, 0, net.minecraft.world.inventory.ClickType.QUICK_MOVE, player);
         helper.assertTrue(be.getConfig().getItem(1).isEmpty(), "shift-click clears the slot");
-        // ряд приёма: шифт-клик из инвентаря
+        // input row: shift-click from the inventory
         player.getInventory().setItem(0, new ItemStack(Items.GOLD_INGOT, 7));
         int hotbar0 = -1;
         for (int k = 0; k < menu.slots.size(); k++) {
@@ -598,7 +598,7 @@ public class GolemGameTests {
         });
     }
 
-    /** Поставщик с выбранной стороной подачи кормит только машину с этой стороны; кнопка окна перебирает стороны. */
+    /** A provider with a selected feeding side feeds only the machine on that side; the window button cycles the sides. */
     @GameTest(template = T, timeoutTicks = 60)
     public static void providerOutputSide(GameTestHelper helper) {
         BlockPos prov = new BlockPos(3, 1, 3);
@@ -611,7 +611,7 @@ public class GolemGameTests {
         var menu = new com.golemlogix.menu.PatternProviderMenu(21, player.getInventory(), provider.getContainer(), provider.getUpgrades(),
                 provider.menuData());
         helper.assertTrue(provider.output() == com.golemlogix.blocks.ProviderOutput.ALL, "all sides by default");
-        // все -> вниз -> вверх -> север -> юг -> запад
+        // all -> down -> up -> north -> south -> west
         for (int i = 0; i < 5; i++) {
             menu.clickMenuButton(player, com.golemlogix.menu.PatternProviderMenu.BUTTON_OUTPUT);
         }
@@ -628,7 +628,7 @@ public class GolemGameTests {
         helper.succeed();
     }
 
-    /** Дисковый шкаф: пока его окно открыто, дверца витрины распахнута (считаются все смотрящие). */
+    /** Drive cabinet: while its window is open, the display door is open (all viewers count). */
     @GameTest(template = T, timeoutTicks = 60)
     public static void driveBayDoorFollowsWindow(GameTestHelper helper) {
         putBay(helper, BAY);
@@ -644,12 +644,12 @@ public class GolemGameTests {
         helper.succeed();
     }
 
-    /** Крио-Мейнфрейм лицом на север с хозяином в ctl: стекло, корпуса сзади и атланты по бокам. */
+    /** A north-facing Cryo-Mainframe with the owner at ctl: glass, casings at the back and atlants on the sides. */
     private static void buildMainframe(GameTestHelper helper, BlockPos ctl) {
         helper.setBlock(ctl, ModBlocks.CRYO_MAINFRAME.get().defaultBlockState()
                 .setValue(com.golemlogix.blocks.CryoMainframeBlock.FACING, Direction.NORTH));
         BlockPos abs = helper.absolutePos(ctl);
-        // атланты смотрят на восток: при сборке их направление не важно
+        // the atlants face east: their direction does not matter for assembly
         for (int i = 0; i < com.golemlogix.system.MainframeStructure.CELLS.length; i++) {
             BlockPos p = com.golemlogix.system.MainframeStructure.cellPos(abs, Direction.NORTH, i);
             helper.getLevel().setBlock(p, com.golemlogix.system.MainframeStructure.originalState(i, Direction.EAST), 3);
@@ -657,9 +657,9 @@ public class GolemGameTests {
     }
 
     /**
-     * Крио-Мейнфрейм: собирается из стекла, корпусов и двух атлантов; два калькулятора внутри дают четыре ядра, Сжатый
-     * Сопроцессор считается за два (9 шагов за цикл на ядро); весь шкаф занимает один канал; заказ идёт на ядро шкафа;
-     * окно распахивает двери; сломанная часть разбирает шкаф и возвращает остальные блоки.
+     * Cryo-Mainframe: assembled from glass, casings and two atlants; two calculators inside give four cores, a Compressed
+     * Co-Processor counts as two (9 steps per cycle per core); the whole cabinet takes one channel; an order goes to a cabinet core;
+     * the window opens the doors; a broken part disassembles the cabinet and returns the other blocks.
      */
     @GameTest(template = T, timeoutTicks = 400)
     public static void mainframeAssemblesAndCrafts(GameTestHelper helper) {
@@ -671,7 +671,7 @@ public class GolemGameTests {
         int[] channelsBefore = new int[1];
         helper.runAfterDelay(5, () -> {
             channelsBefore[0] = net(helper, bay).channelsUsed();
-            // труба от угловой муфты решётки к заднему ряду шкафа
+            // a pipe from the array's corner bushing to the back row of the cabinet
             put(helper, new BlockPos(4, 1, 3), ModBlocks.BASIC_SNOW_PIPE.get());
             buildMainframe(helper, ctl);
         });
@@ -695,7 +695,7 @@ public class GolemGameTests {
             var started = n.startCrafting(ItemKey.of(new ItemStack(Items.OAK_PLANKS)), 16);
             helper.assertTrue(started.type() == GolemNetwork.StartType.STARTED, "crafting starts on a mainframe core: " + started.type());
             helper.assertTrue(mf.busyCores() == 1, "one core is busy");
-            // окно: двери открываются, пока смотрят
+            // window: the doors open while someone looks
             ServerPlayer player = testPlayer(helper);
             var menu = new com.golemlogix.menu.MainframeMenu(91, player.getInventory(), mf, mf.getCalculators(), mf.getUpgrades(),
                     mf.menuData(), net.minecraft.world.inventory.ContainerLevelAccess.NULL);
@@ -710,7 +710,7 @@ public class GolemGameTests {
                     + n.itemCountOf(ItemKey.of(new ItemStack(Items.OAK_PLANKS))));
             var mf = (com.golemlogix.blockentity.CryoMainframeBlockEntity) helper.getBlockEntity(ctl);
             helper.assertTrue(mf.busyCores() == 0, "the core is free again");
-            // сломали стекло — шкаф разобран, остальные части снова стекло и корпуса
+            // the glass was broken: the cabinet is disassembled, the other parts are glass and casings again
             helper.getLevel().destroyBlock(helper.absolutePos(new BlockPos(4, 1, 1)), true);
             helper.assertTrue(!helper.getBlockState(ctl).getValue(com.golemlogix.blocks.CryoMainframeBlock.FORMED), "disassembled");
             helper.assertTrue(helper.getBlockState(new BlockPos(6, 1, 1)).is(Blocks.GLASS), "glass is back");
@@ -721,13 +721,13 @@ public class GolemGameTests {
             helper.assertTrue(lower.is(ModBlocks.ATLAS_ATLANT.get()) && lower.getValue(AtlantBlock.HALF) == DoubleBlockHalf.LOWER
                     && upper.is(ModBlocks.ATLAS_ATLANT.get()) && upper.getValue(AtlantBlock.HALF) == DoubleBlockHalf.UPPER,
                     "both halves of the atlant are back");
-            // стекло на место — шкаф снова собирается
+            // glass back in place: the cabinet assembles again
             helper.setBlock(new BlockPos(4, 1, 1), Blocks.GLASS);
         });
         helper.runAfterDelay(175, () -> {
             helper.assertTrue(helper.getBlockState(ctl).getValue(com.golemlogix.blocks.CryoMainframeBlock.FORMED), "reassembled");
             helper.killAllEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class);
-            // сломали верхнюю половину встроенного атланта: выпадает один атлант, нижняя половина исчезает
+            // the upper half of a built-in atlant was broken: one atlant drops, the lower half disappears
             helper.getLevel().destroyBlock(helper.absolutePos(new BlockPos(7, 2, 1)), true);
             helper.assertTrue(!helper.getBlockState(ctl).getValue(com.golemlogix.blocks.CryoMainframeBlock.FORMED), "disassembled again");
             helper.assertTrue(helper.getBlockState(new BlockPos(7, 1, 1)).isAir(), "the other half of that atlant is gone");
@@ -749,7 +749,7 @@ public class GolemGameTests {
                 net.minecraft.resources.ResourceLocation.withDefaultNamespace(prefix + "copper_golem_statue"));
     }
 
-    /** Картотека перфокарт лицом на север с хозяином в ctl: полки, медь сзади, постаменты и статуи (справа — окисленная). */
+    /** A north-facing Punch Card Catalog with the owner at ctl: shelves, copper at the back, pedestals and statues (the right one oxidized). */
     private static void buildCatalog(GameTestHelper helper, BlockPos ctl) {
         helper.setBlock(ctl, ModBlocks.CARD_CATALOG.get().defaultBlockState()
                 .setValue(com.golemlogix.blocks.CardCatalogBlock.FACING, Direction.NORTH));
@@ -764,10 +764,10 @@ public class GolemGameTests {
     }
 
     /**
-     * Картотека перфокарт: собирается из полок, меди и двух статуй медных големов; без поставщиков в ней нет мест, каждый
-     * поставщик даёт 27; принимает только верстачные перфокарты; забрать поставщиков, чьи места заняты, нельзя; поиск
-     * находит карту; её шаблон виден сети (шкаф — один канал), калькулятор крафтит по нему без поставщика; поломка части
-     * разбирает шкаф и возвращает прежние блоки (статуя — той же окисленности).
+     * Punch Card Catalog: assembled from shelves, copper and two copper golem statues; without providers it has no places, each
+     * provider gives 27; accepts only crafting-table punch cards; providers whose places are taken cannot be removed; search
+     * finds a card; its pattern is visible to the network (the cabinet is one channel), a calculator crafts by it without a provider; breaking a part
+     * disassembles the cabinet and returns the former blocks (the statue with the same oxidation).
      */
     @GameTest(template = T, timeoutTicks = 300)
     public static void catalogStoresCraftingCards(GameTestHelper helper) {
@@ -797,13 +797,13 @@ public class GolemGameTests {
             helper.assertTrue(menu.getSlot(0).mayPlace(plankCard), "now a crafting card fits");
             PatternData machine = new PatternData(false, List.of(new ItemStack(Items.IRON_ORE)), List.of(new ItemStack(Items.IRON_INGOT)));
             helper.assertTrue(!menu.getSlot(0).mayPlace(card(machine)), "machine patterns stay with providers at machines");
-            // карта в дальнее место — двух поставщиков забрать уже нельзя, третий — можно
+            // a card in a far place: two providers can no longer be taken, the third one can
             cat.getCards().setItem(30, plankCard);
             var provSlot = (com.golemlogix.menu.CardCatalogMenu.ProviderSlot) menu.getSlot(menu.providerSlot());
             helper.assertTrue(provSlot.removable() == 0 && !provSlot.mayPickup(player), "occupied places keep their providers");
             cat.getProviders().setItem(0, new ItemStack(ModBlocks.PATTERN_PROVIDER.get(), 3));
             helper.assertTrue(provSlot.removable() == 1, "the third provider is free to take, removable " + provSlot.removable());
-            // шифт-клик картой из инвентаря — в первое свободное место
+            // shift-click with a card from the inventory puts it into the first free place
             player.getInventory().setItem(0, card(craftingPattern(new ItemStack(Items.STICK, 4), new ItemStack(Items.OAK_PLANKS),
                     ItemStack.EMPTY, ItemStack.EMPTY, new ItemStack(Items.OAK_PLANKS))));
             int invSlot = -1;
@@ -814,7 +814,7 @@ public class GolemGameTests {
             }
             menu.quickMoveStack(player, invSlot);
             helper.assertTrue(!cat.getCards().getItem(0).isEmpty(), "shift-click puts the card into the first free place");
-            // поиск: гряда показывает только найденные карты
+            // search: the row shows only the cards found
             menu.view(0, "plank");
             helper.assertTrue(ItemStack.matches(menu.getSlot(0).getItem(), plankCard) && menu.getSlot(1).getItem().isEmpty(),
                     "the search shows the planks card first");
@@ -832,7 +832,7 @@ public class GolemGameTests {
         helper.runAfterDelay(160, () -> {
             GolemNetwork n = net(helper, bay);
             helper.assertTrue(n.itemCountOf(ItemKey.of(planks)) == 16, "the calculator crafted 16 planks, got " + n.itemCountOf(ItemKey.of(planks)));
-            // сломали полку — шкаф разобран, остальные блоки на месте, шаблоны пропали из сети
+            // a shelf was broken: the cabinet is disassembled, the other blocks are in place, the patterns are gone from the network
             helper.getLevel().destroyBlock(helper.absolutePos(new BlockPos(4, 1, 1)), true);
             helper.assertTrue(!helper.getBlockState(ctl).getValue(com.golemlogix.blocks.CardCatalogBlock.FORMED), "disassembled");
             helper.assertTrue(helper.getBlockState(new BlockPos(6, 2, 1)).is(Blocks.BOOKSHELF), "shelves are back");
@@ -846,8 +846,8 @@ public class GolemGameTests {
     }
 
     /**
-     * Крио-концентратор схем: показывает поставщиков сети по категориям (верстачные — «Верстак», остальные — по машине рядом),
-     * ячейки окна — настоящие ячейки поставщиков; шифт-клик кладёт машинную карту к машине; поиск оставляет нужную категорию.
+     * Cryo Schematic Concentrator: shows the network's providers by category (crafting-table ones under "Crafting Table", the others by the machine next to them),
+     * the window slots are the providers' real slots; shift-click puts a machine card next to the machine; search keeps the needed category.
      */
     @GameTest(template = T, timeoutTicks = 100)
     public static void concentratorGroupsProviders(GameTestHelper helper) {
@@ -870,7 +870,7 @@ public class GolemGameTests {
             helper.assertTrue(!menu.getSlot(0).isActive() && menu.getSlot(9).isActive(), "a header row has no slots, a provider row has nine");
             helper.assertTrue(ItemStack.matches(menu.getSlot(9).getItem(), planks), "crafting cards come first");
             helper.assertTrue(ItemStack.matches(menu.getSlot(27).getItem(), smelt), "then the furnace provider");
-            // машинная карта шифт-кликом — к машине, а не в верстачного поставщика
+            // a machine card by shift-click goes next to the machine, not into the crafting-table provider
             ItemStack blast = card(new PatternData(false, List.of(new ItemStack(Items.GOLD_ORE)), List.of(new ItemStack(Items.GOLD_INGOT))));
             player.getInventory().setItem(0, blast.copy());
             int invSlot = -1;
@@ -881,7 +881,7 @@ public class GolemGameTests {
             }
             menu.quickMoveStack(player, invSlot);
             helper.assertTrue(ItemStack.matches(furnaceProv.getContainer().getItem(1), blast), "the smelting card went to the furnace provider");
-            // карту можно вынуть прямо из окна
+            // a card can be taken right out of the window
             ItemStack taken = menu.getSlot(9).remove(1);
             helper.assertTrue(ItemStack.matches(taken, planks) && crafting.getContainer().getItem(0).isEmpty(), "taking a card empties the provider");
             crafting.getContainer().setItem(0, planks.copy());
@@ -971,7 +971,7 @@ public class GolemGameTests {
         BlockPos bay = baseNetwork(helper);
         helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
         helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
-        // «машина» — сундук за поставщиком
+        // the "machine" is a chest behind the provider
         BlockPos machine = PROV.east();
         helper.setBlock(machine, Blocks.CHEST);
         Container machineInv = (Container) helper.getBlockEntity(machine);
@@ -1016,14 +1016,14 @@ public class GolemGameTests {
             GolemNetwork n = net(helper, ORIGIN);
             helper.assertTrue(n.hasCore(), "core");
             if (!com.golemlogix.system.SourceHelper.sourceRequired()) {
-                // без Ars Nouveau сеть работает даром
+                // without Ars Nouveau the network works for free
                 helper.assertTrue(n.isOnline(), "without Ars Nouveau the network needs no Source");
                 helper.succeed();
                 return;
             }
             helper.assertTrue(!n.isOnline(), "no source => offline");
             helper.assertTrue("message.golem_logix.no_power".equals(n.accessError(null)), "access error");
-            // Резонатор питает только хронометры, не сеть
+            // the Resonator powers only chronometers, not the network
             put(helper, JAR, ModBlocks.ETERNAL_FROST_RESONATOR.get());
             helper.runAfterDelay(25, () -> {
                 GolemNetwork n2 = net(helper, ORIGIN);
@@ -1050,7 +1050,7 @@ public class GolemGameTests {
         });
     }
 
-    // --------------------------------------------------------------- диски
+    // --------------------------------------------------------------- disks
 
     @GameTest(template = T, timeoutTicks = 200)
     public static void fluidDisks(GameTestHelper helper) {
@@ -1098,7 +1098,7 @@ public class GolemGameTests {
         drive.getContainer().setItem(1, new ItemStack(ModItems.FLUID_DISK_16K.get()));
         helper.setBlock(BUS_OUT, ModBlocks.GOLEM_INTERFACE.get().defaultBlockState());
         var be = (com.golemlogix.blockentity.InterfaceBlockEntity) helper.getBlockEntity(BUS_OUT);
-        // ячейка 0: три ведра воды в режиме «жидкость» (по умолчанию); ячейка 1: ведро воды в режиме «предмет»
+        // slot 0: three water buckets in "fluid" mode (the default); slot 1: a water bucket in "item" mode
         be.getConfig().setItem(0, new ItemStack(Items.WATER_BUCKET, 3));
         be.getConfig().setItem(1, new ItemStack(Items.WATER_BUCKET, 1));
         be.toggleMode(1);
@@ -1120,8 +1120,8 @@ public class GolemGameTests {
     }
 
     /**
-     * Жидкости чужого мода (Mekanism, если загружен: gradle -Pmekanism): его вёдра и его бак в ячейке настройки распознаются как
-     * жидкость, интерфейс набирает её из сети и отдаёт трубам. Без Mekanism тест проходит пустым.
+     * Another mod's fluids (Mekanism, if loaded: gradle -Pmekanism): its buckets and its tank in a config slot are recognized as
+     * fluid, the interface fills it from the network and gives it to pipes. Without Mekanism the test passes empty.
      */
     @GameTest(template = T, timeoutTicks = 300)
     public static void interfaceModdedFluids(GameTestHelper helper) {
@@ -1133,12 +1133,12 @@ public class GolemGameTests {
         var fluidsReg = net.minecraft.core.registries.BuiltInRegistries.FLUID;
         ItemStack brineBucket = new ItemStack(items.get(net.minecraft.resources.ResourceLocation.parse("mekanism:brine_bucket")), 2);
         ItemStack heavyBucket = new ItemStack(items.get(net.minecraft.resources.ResourceLocation.parse("mekanism:heavy_water_bucket")), 1);
-        // переносной бак Mekanism, залитый серной кислотой через его же ёмкость-предмет
+        // a Mekanism portable tank filled with sulfuric acid through its own item container
         ItemStack tank = new ItemStack(items.get(net.minecraft.resources.ResourceLocation.parse("mekanism:basic_fluid_tank")));
         var acid = fluidsReg.get(net.minecraft.resources.ResourceLocation.parse("mekanism:sulfuric_acid"));
         var tankCap = tank.getCapability(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.ITEM);
         helper.assertTrue(tankCap != null, "Mekanism tank item exposes a fluid handler");
-        // Mekanism заливает в бак-предмет не больше ведра за раз — порциями
+        // Mekanism fills an item tank with at most a bucket at a time, so in portions
         int filled = 0;
         for (int k = 0; k < 8 && filled < 4000; k++) {
             filled += tankCap.fill(new FluidStack(acid, 4000 - filled), net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
@@ -1169,7 +1169,7 @@ public class GolemGameTests {
         helper.runAfterDelay(200, () -> {
             helper.assertTrue(be.fluidStock(0).getAmount() == 2000, "2 buckets of brine kept, has " + be.fluidStock(0).getAmount());
             helper.assertTrue(be.fluidStock(1).getAmount() == 1000, "1 bucket of heavy water kept, has " + be.fluidStock(1).getAmount());
-            // одна штука в ячейке = 1000 mB, хоть бак и вмещает больше
+            // one item in a slot = 1000 mB, even though the tank holds more
             helper.assertTrue(be.fluidStock(2).getAmount() == 1000 && be.fluidStock(2).is(acid), "acid by the tank kept, has " + be.fluidStock(2).getAmount());
             var cap = helper.getLevel().getCapability(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.BLOCK,
                     helper.absolutePos(BUS_OUT), Direction.NORTH);
@@ -1214,12 +1214,12 @@ public class GolemGameTests {
         helper.succeed();
     }
 
-    // ------------------------------------------------------------- меню
+    // ------------------------------------------------------------- menus
 
     /**
-     * Бегунок в трубах движется без скачков: в каждый момент его рисует ровно одна труба, соседние положения рядом, на
-     * развороте он стоит на месте и смотрит в одну сторону, сдаёт ровно тот груз, что нёс, и уходит с тем, что получил.
-     * Г-образная линия с ответвлением и вертикальным тупиком, а также одиночная труба между двумя устройствами.
+     * The pipe runner moves without jumps: at any moment exactly one pipe draws it, neighbouring positions are close, at a
+     * turn it stands still and looks one way, hands over exactly the cargo it carried and leaves with what it received.
+     * An L-shaped line with a branch and a vertical dead end, plus a single pipe between two devices.
      */
     @GameTest(template = T, timeoutTicks = 20)
     public static void pipeRunnerMovesContinuously(GameTestHelper helper) {
@@ -1238,7 +1238,7 @@ public class GolemGameTests {
         helper.setBlock(lonely.west(), ModBlocks.ANALOG_TERMINAL.get());
         helper.setBlock(lonely.east(), ModBlocks.ANALOG_TERMINAL.get());
         helper.setBlock(lonely, ModBlocks.BASIC_SNOW_PIPE.get());
-        // setBlock ставит трубу без расчёта связей: досчитываем их по соседям, как при обычной установке
+        // setBlock places a pipe without computing links: compute them from the neighbours, as a normal placement does
         List<BlockPos> all = new ArrayList<>(line);
         all.add(lonely);
         for (BlockPos p : all) {
@@ -1293,7 +1293,7 @@ public class GolemGameTests {
         }
     }
 
-    /** Планировщик заказа: создаваемое, взятое из сети и недостающее — по строкам, недостающее первым. */
+    /** Order planner: what is crafted, taken from the network and missing, row by row, missing ones first. */
     @GameTest(template = T, timeoutTicks = 40)
     public static void craftPlannerRows(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
@@ -1323,8 +1323,8 @@ public class GolemGameTests {
     }
 
     /**
-     * Насыщатель до сборки — наковальня: Кузнечный молот за четыре удара делает из блока железа одно ядро, каждый удар
-     * списывает заряд молота (если Source требуется); разряженный молот не бьёт; вручную куются только три базовые пластины.
+     * An unassembled Saturator is an anvil: the Forge Hammer turns an iron block into one core in four strikes, every strike
+     * spends the hammer's charge (if Source is required); a drained hammer does not strike; only the three base plates are forged by hand.
      */
     @GameTest(template = T, timeoutTicks = 120)
     public static void saturatorAnvilForgesByHand(GameTestHelper helper) {
@@ -1356,7 +1356,7 @@ public class GolemGameTests {
             helper.assertTrue(!source || com.golemlogix.items.ForgeHammerItem.getCharge(hammer) == 50,
                     "each strike spends the hammer's charge, left " + com.golemlogix.items.ForgeHammerItem.getCharge(hammer));
             helper.assertTrue(!helper.getBlockState(at).getValue(com.golemlogix.blocks.ManaSaturatorBlock.FORMED), "still an anvil");
-            // разряженный молот (когда Source нужен) не бьёт
+            // a drained hammer (when Source is needed) does not strike
             sat.takeFromAnvil();
             sat.placeOnAnvil(new ItemStack(Items.PACKED_ICE));
         });
@@ -1368,8 +1368,8 @@ public class GolemGameTests {
         });
     }
     /**
-     * Хронометр, через который открыт терминал, нельзя вынуть из его ячейки (клик, Shift, Q, обмен цифрой или F со второй
-     * рукой) — иначе окно закрылось бы; остальные предметы инвентаря двигаются как обычно.
+     * The Chronometer the terminal was opened through cannot be taken out of its slot (click, Shift, Q, number key swap or F with the
+     * offhand), otherwise the window would close; other inventory items move as usual.
      */
     @GameTest(template = T, timeoutTicks = 40)
     public static void chronometerSlotIsLocked(GameTestHelper helper) {
@@ -1406,7 +1406,7 @@ public class GolemGameTests {
         helper.assertTrue(menu.getCarried().is(Items.DIRT) && inv.getItem(0).is(ModItems.PORTABLE_CHRONOMETER.get()),
                 "nothing can be dropped onto the chronometer either");
         menu.setCarried(ItemStack.EMPTY);
-        // открыт со второй руки: обмен клавишей F (кнопка 40) не трогает её
+        // opened from the offhand: swapping with the F key (button 40) does not touch it
         inv.setItem(0, ItemStack.EMPTY);
         inv.setItem(1, new ItemStack(Items.DIRT, 5));
         inv.offhand.set(0, new ItemStack(ModItems.PORTABLE_CHRONOMETER.get()));
@@ -1504,7 +1504,7 @@ public class GolemGameTests {
     @GameTest(template = T, timeoutTicks = 100)
     public static void patternEncoder(GameTestHelper helper) {
         ServerPlayer player = testPlayer(helper);
-        // кодировщик хранит содержимое у себя: окно открываем на его блок-сущности
+        // the encoder keeps its contents itself: the window is opened on its block entity
         BlockPos encPos = new BlockPos(2, 1, 2);
         helper.setBlock(encPos, ModBlocks.PATTERN_ENCODER.get());
         var encoder = (com.golemlogix.blockentity.PatternEncoderBlockEntity) helper.getBlockEntity(encPos);
@@ -1519,11 +1519,11 @@ public class GolemGameTests {
         PatternData data = encoded.get(ModDataComponents.PATTERN.get());
         helper.assertTrue(data != null && data.crafting() && data.primaryOutput().is(Items.STICK), "pattern content");
         helper.assertTrue(menu.getContainer().getItem(PatternEncoderMenu.CARD_IN).getCount() == 2, "one blank consumed");
-        // чистые карты — стопкой до 64, записанная — штучная
+        // blank cards stack up to 64, a written one is single
         helper.assertTrue(new ItemStack(ModItems.COPPER_PUNCH_CARD.get()).getMaxStackSize() == 64, "blank cards stack to 64");
         helper.assertTrue(encoded.getMaxStackSize() == 1, "an encoded card does not stack");
 
-        // правка: записанная карта, положенная в ячейку готовой карты, открывает свой рецепт; «Выбить» перезаписывает её
+        // editing: a written card put into the finished card slot opens its recipe; "Stamp" overwrites it
         ItemStack card = menu.getContainer().removeItemNoUpdate(PatternEncoderMenu.CARD_OUT);
         menu.clickMenuButton(player, PatternEncoderMenu.BUTTON_CLEAR);
         menu.getSlot(PatternEncoderMenu.CARD_OUT).setByPlayer(card, ItemStack.EMPTY);
@@ -1534,12 +1534,12 @@ public class GolemGameTests {
         PatternData edited = menu.getContainer().getItem(PatternEncoderMenu.CARD_OUT).get(ModDataComponents.PATTERN.get());
         helper.assertTrue(edited != null && edited.primaryOutput().is(Items.OAK_PLANKS), "the same card now makes planks");
         helper.assertTrue(menu.getContainer().getItem(PatternEncoderMenu.CARD_IN).getCount() == 2, "no blank spent on a rewrite");
-        // закрыли окно — чистые карты остались в кодировщике
+        // the window was closed: the blank cards stayed in the encoder
         menu.removed(player);
         helper.assertTrue(encoder.getItems().getItem(PatternEncoderMenu.CARD_IN).getCount() == 2, "blank cards stay in the encoder");
         menu = new PatternEncoderMenu(80, player.getInventory(), encoder.getItems(), encoder.data(), ContainerLevelAccess.NULL);
 
-        // Shift+ПКМ с записанной картой в руке стирает её
+        // Shift + right-click with a written card in hand erases it
         player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, menu.getContainer().getItem(PatternEncoderMenu.CARD_OUT).copy());
         player.setShiftKeyDown(true);
         player.getMainHandItem().use(helper.getLevel(), player, net.minecraft.world.InteractionHand.MAIN_HAND);
@@ -1589,7 +1589,7 @@ public class GolemGameTests {
         });
     }
 
-    // ------------------------------------------------------------ данные
+    // ------------------------------------------------------------ data
 
     @GameTest(template = T, timeoutTicks = 100)
     public static void dataIsComplete(GameTestHelper helper) {
@@ -1640,7 +1640,7 @@ public class GolemGameTests {
         helper.succeed();
     }
 
-    // ------------------------------------------------------------- книга
+    // ------------------------------------------------------------- book
 
     private static void checkItem(GameTestHelper helper, String spec, String where) {
         String id = spec.contains("*") ? spec.substring(0, spec.indexOf('*')) : spec;
@@ -1745,7 +1745,7 @@ public class GolemGameTests {
         helper.succeed();
     }
 
-    // ------------------------------------------------- шкаф, муфта, насыщатель, терминал
+    // ------------------------------------------------- cabinet, bushing, saturator, terminal
 
     private static BlockPos[] bayCells() {
         return new BlockPos[]{BAY, BAY.east(), BAY.above(), BAY.east().above()};
@@ -1762,7 +1762,7 @@ public class GolemGameTests {
         helper.succeed();
     }
 
-    /** Шкаф занимает 2x2 клетки: части, направление, блок-сущность только в главной. */
+    /** The cabinet takes 2x2 cells: parts, direction, a block entity only in the main one. */
     @GameTest(template = T, timeoutTicks = 100)
     public static void cabinetIsTwoByTwo(GameTestHelper helper) {
         putBay(helper, BAY);
@@ -1781,7 +1781,7 @@ public class GolemGameTests {
         helper.succeed();
     }
 
-    /** Любая из четырёх частей ломается — исчезает весь шкаф, предмет выпадает один раз, диски не пропадают. */
+    /** Any of the four parts breaks: the whole cabinet disappears, the item drops once, the disks are not lost. */
     @GameTest(template = T, timeoutTicks = 200)
     public static void cabinetBreaksAsOne(GameTestHelper helper) {
         BlockPos[] cells = bayCells();
@@ -1799,11 +1799,11 @@ public class GolemGameTests {
         helper.succeed();
     }
 
-    /** Предметом игрока: ставится целиком там, где хватает места, и не ставится, если хоть одна клетка занята. */
+    /** By a player's item: placed whole where there is room, and not placed if even one cell is taken. */
     @GameTest(template = T, timeoutTicks = 100)
     public static void cabinetPlacementByPlayer(GameTestHelper helper) {
         ServerPlayer player = testPlayer(helper);
-        player.setYRot(180f);   // смотрит на север: шкаф обернётся лицом на юг
+        player.setYRot(180f);   // looks north: the cabinet will face south
         helper.setBlock(BAY.below(), Blocks.STONE);
         helper.setBlock(BAY.east().above(), Blocks.STONE);
         net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
@@ -1824,7 +1824,7 @@ public class GolemGameTests {
         helper.succeed();
     }
 
-    /** Шкаф — одно устройство сети (один канал), состояние active разлито на все части. */
+    /** The cabinet is one network device (one channel), the active state is spread to all parts. */
     @GameTest(template = T, timeoutTicks = 200)
     public static void cabinetCountsOnce(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
@@ -1840,7 +1840,7 @@ public class GolemGameTests {
         });
     }
 
-    /** Фильтры шины сохраняют свои ячейки (центральная ячейка не уезжает в первую при перезагрузке мира). */
+    /** Bus filters keep their slots (the central slot does not move to the first one on a world reload). */
     @GameTest(template = T, timeoutTicks = 100)
     public static void busFilterKeepsSlots(GameTestHelper helper) {
         BlockPos at = new BlockPos(2, 1, 2);
@@ -1858,7 +1858,7 @@ public class GolemGameTests {
         helper.succeed();
     }
 
-    /** Каждый блок, которому нужен инструмент, можно добыть киркой (иначе он «не дропался» бы никогда), и у каждого блока есть дроп и модель. */
+    /** Every block that needs a tool can be mined with a pickaxe (otherwise it would never drop), and every block has a drop and a model. */
     @GameTest(template = T, timeoutTicks = 100)
     public static void everyBlockIsHarvestable(GameTestHelper helper) {
         for (var entry : ModBlocks.BLOCKS.getEntries()) {
@@ -1871,7 +1871,7 @@ public class GolemGameTests {
             helper.assertTrue(GolemGameTests.class.getResource("/assets/golem_logix/blockstates/" + id + ".json") != null, id + " has a blockstate");
             if (block instanceof com.golemlogix.blocks.SaturatorPartBlock || block instanceof com.golemlogix.blocks.MainframePartBlock
                     || block instanceof com.golemlogix.blocks.CatalogPartBlock) {
-                continue; // блок-часть собранного многоблока: предмета, дропа и модели предмета у неё нет
+                continue; // a part block of an assembled multiblock: it has no item, drop or item model
             }
             helper.assertTrue(block.asItem() != Items.AIR, id + " has an item");
             var lootId = block.getLootTable();
@@ -1883,7 +1883,7 @@ public class GolemGameTests {
         helper.succeed();
     }
 
-    /** Труба стыкуется с трубой той же толщины «стеклом», с другой толщиной и с устройствами — латунным рукавом. */
+    /** A pipe joins a pipe of the same thickness with "glass", a pipe of another thickness and devices with a brass sleeve. */
     @GameTest(template = T, timeoutTicks = 100)
     public static void pipeLinksByKind(GameTestHelper helper) {
         BlockPos p = new BlockPos(2, 1, 2);
@@ -1905,7 +1905,7 @@ public class GolemGameTests {
         helper.succeed();
     }
 
-    /** Диски в шкафу не «сжимаются» к началу при сохранении, старый формат без номеров ячеек тоже читается. */
+    /** Disks in the cabinet do not "squeeze" to the front on save; the old format without slot numbers is read too. */
     @GameTest(template = T, timeoutTicks = 100)
     public static void bayKeepsSlotPositions(GameTestHelper helper) {
         putBay(helper, BAY);
@@ -1922,7 +1922,7 @@ public class GolemGameTests {
                     : i == 9 ? ModItems.COPPER_DISK_256K.get() : Items.AIR;
             helper.assertTrue(fresh.getDisks().get(i).getItem() == expect, "slot " + i + " keeps its disk, found " + fresh.getDisks().get(i));
         }
-        // старый формат: записи без Slot идут подряд с первой ячейки
+        // old format: entries without Slot go in a row from the first slot
         net.minecraft.nbt.ListTag old = new net.minecraft.nbt.ListTag();
         old.add(new ItemStack(ModItems.COPPER_DISK_4K.get()).save(registries));
         old.add(new ItemStack(ModItems.COPPER_DISK_16K.get()).save(registries));
@@ -1946,16 +1946,16 @@ public class GolemGameTests {
             GolemNetwork n = net(helper, ORIGIN);
             helper.assertTrue(n.loadAt(helper.absolutePos(bushing)) == 2, "bushing line carries both terminals, got " + n.loadAt(helper.absolutePos(bushing)));
             helper.assertTrue(n.loadAt(helper.absolutePos(new BlockPos(6, 1, 4))) == 0, "other lines are idle");
-            // терминалы включились вместе с сетью (анимация экрана)
+            // the terminals turned on together with the network (screen animation)
             helper.assertTrue(helper.getBlockState(TERM).getValue(com.golemlogix.blocks.GolemProperties.ACTIVE), "terminal must become active");
             helper.assertTrue(helper.getBlockEntity(TERM) instanceof com.golemlogix.blockentity.TerminalBlockEntity, "terminal has a block entity");
             helper.succeed();
         });
     }
 
-    // ------------------------------------------------------------ Насыщатель Маны (многоблок 3x3x2)
+    // ------------------------------------------------------------ Mana Saturator (3x3x2 multiblock)
 
-    /** Ставит все блоки машины вокруг хозяина (controllerRel), фасадом в сторону facing; хозяин с нужным FACING. */
+    /** Places all machine blocks around the owner (controllerRel), front towards facing; the owner with the right FACING. */
     private static void buildSaturator(GameTestHelper helper, BlockPos controllerRel, Direction facing) {
         var level = helper.getLevel();
         BlockPos at = helper.absolutePos(controllerRel);
@@ -1976,21 +1976,21 @@ public class GolemGameTests {
     public static void saturatorFillsFromNetwork(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
-        // машина лицом на север: «центральный ящик» (9,1,9), труба сети подходит к нему спереди (9,1,8) от угловой муфты
+        // the machine faces north: the "central box" (9,1,9), the network pipe comes to its front (9,1,8) from the corner bushing
         BlockPos near = new BlockPos(9, 3, 9);
         for (int x = 7; x <= 9; x++) {
             put(helper, new BlockPos(x, 1, 6), ModBlocks.BASIC_SNOW_PIPE.get());
         }
         put(helper, new BlockPos(9, 1, 7), ModBlocks.BASIC_SNOW_PIPE.get());
         put(helper, new BlockPos(9, 1, 8), ModBlocks.BASIC_SNOW_PIPE.get());
-        // отводы к остальным разъёмам: слева (восток), справа (запад), сзади (юг), снизу; и труба на крыше — к ней разъёма нет
+        // branches to the other sockets: left (east), right (west), back (south), bottom; and a pipe on the roof, which has no socket
         BlockPos leftStub = new BlockPos(11, 1, 10), rightStub = new BlockPos(7, 1, 10), backStub = new BlockPos(9, 1, 11),
                 bottomStub = new BlockPos(9, 0, 9), roofStub = new BlockPos(10, 4, 9);
         for (BlockPos stub : new BlockPos[]{leftStub, rightStub, backStub, bottomStub, roofStub}) {
             put(helper, stub, ModBlocks.BASIC_SNOW_PIPE.get());
         }
         buildSaturator(helper, near, Direction.NORTH);
-        BlockPos far = new BlockPos(2, 3, 9);     // сам по себе, источников нет
+        BlockPos far = new BlockPos(2, 3, 9);     // on its own, no sources
         buildSaturator(helper, far, Direction.NORTH);
         helper.runAfterDelay(100, () -> {
             helper.assertTrue(helper.getBlockState(near).getValue(com.golemlogix.blocks.ManaSaturatorBlock.FORMED), "networked saturator forms by itself");
@@ -2002,7 +2002,7 @@ public class GolemGameTests {
             } else {
                 helper.assertTrue(b.getSource() > 0, "without Ars Nouveau the saturator fills for free, got " + b.getSource());
             }
-            // труба видит только «центральный ящик»: рукав у порта есть, у крыла рядом — нет
+            // the pipe sees only the "central box": the port has a sleeve, the wing next to it does not
             var pipe = helper.getBlockState(new BlockPos(9, 1, 8));
             helper.assertTrue(com.golemlogix.blocks.SnowPipeBlock.link(pipe, Direction.SOUTH) == com.golemlogix.blocks.SnowPipeBlock.Link.DEVICE, "pipe attaches to the port");
             put(helper, new BlockPos(11, 1, 9), ModBlocks.BASIC_SNOW_PIPE.get());
@@ -2025,7 +2025,7 @@ public class GolemGameTests {
         buildSaturator(helper, ctl, Direction.WEST);
         var level = helper.getLevel();
         BlockPos abs = helper.absolutePos(ctl);
-        // перед сборкой всё стоит как обычные блоки
+        // before assembly everything stands as ordinary blocks
         helper.assertTrue(com.golemlogix.system.SaturatorStructure.check(level, abs, Direction.WEST).valid(), "complete machine passes the check");
         helper.runAfterDelay(40, () -> {
             helper.assertTrue(helper.getBlockState(ctl).getValue(com.golemlogix.blocks.ManaSaturatorBlock.FORMED), "machine forms");
@@ -2040,11 +2040,11 @@ public class GolemGameTests {
                 var be = (com.golemlogix.blockentity.SaturatorPartBlockEntity) level.getBlockEntity(p);
                 helper.assertTrue(be.getOriginal().is(com.golemlogix.system.SaturatorStructure.required(i)), "remembers the original block of cell " + i);
             }
-            // добыча части отдаёт прежний блок, а не часть
+            // mining a part gives the former block, not the part
             BlockPos rodPos = com.golemlogix.system.SaturatorStructure.cellPos(abs, Direction.WEST, com.golemlogix.system.SaturatorStructure.ROD);
             var drops = Block.getDrops(level.getBlockState(rodPos), level, rodPos, level.getBlockEntity(rodPos));
             helper.assertTrue(drops.size() == 1 && drops.get(0).is(Items.END_ROD), "a part drops its original block");
-            // сломали любую часть -> остальное вернулось в обычные блоки, хозяин снова «несобранный»
+            // any part broken -> the rest went back to ordinary blocks, the owner is "unassembled" again
             BlockPos wing = com.golemlogix.system.SaturatorStructure.cellPos(abs, Direction.WEST, com.golemlogix.system.SaturatorStructure.index(0, 1, 1));
             level.destroyBlock(wing, false);
             helper.assertTrue(!helper.getBlockState(ctl).getValue(com.golemlogix.blocks.ManaSaturatorBlock.FORMED), "machine unforms");
@@ -2064,12 +2064,12 @@ public class GolemGameTests {
     public static void saturatorCrafts(GameTestHelper helper) {
         BlockPos ctl = new BlockPos(5, 3, 5);
         buildSaturator(helper, ctl, Direction.NORTH);
-        // банка Source рядом с левым нижним углом машины
+        // a Source jar next to the bottom left corner of the machine
         put(helper, new BlockPos(7, 1, 5), ModBlocks.CREATIVE_SOURCE_JAR.get());
         helper.runAfterDelay(30, () -> {
             var sat = (com.golemlogix.blockentity.ManaSaturatorBlockEntity) helper.getBlockEntity(ctl);
             helper.assertTrue(helper.getBlockState(ctl).getValue(com.golemlogix.blocks.ManaSaturatorBlock.FORMED), "forms");
-            // ПКМ любой частью (боковой корпус) с блоком в руке кладёт блок на наковальню
+            // right-click on any part (a side casing) with a block in hand puts the block on the anvil
             var player = testPlayer(helper);
             ItemStack iron = new ItemStack(Items.IRON_BLOCK, 2);
             BlockPos partPos = com.golemlogix.system.SaturatorStructure.cellPos(helper.absolutePos(ctl), Direction.NORTH, com.golemlogix.system.SaturatorStructure.index(0, 0, 0));
@@ -2086,7 +2086,7 @@ public class GolemGameTests {
             helper.succeed();
         });
     }
-    /** Настоящая банка Source из Ars Nouveau питает сеть и расходуется (только с -PtestMods; без Ars Nouveau проверять нечего). */
+    /** A real Ars Nouveau Source jar powers the network and gets drained (only with -PtestMods; without Ars Nouveau there is nothing to check). */
     @GameTest(template = T, timeoutTicks = 200)
     public static void arsSourceJarPowersNetwork(GameTestHelper helper) {
         ResourceLocation jarId = ResourceLocation.fromNamespaceAndPath("ars_nouveau", "source_jar");
@@ -2100,7 +2100,7 @@ public class GolemGameTests {
         helper.assertTrue(supplier != null, "an Ars Nouveau jar is a Source supplier");
         helper.runAfterDelay(5, () -> {
             helper.assertTrue(!net(helper, ORIGIN).isOnline(), "an empty jar does not power the network");
-            // наполняем банку так же, как это делает Креативный Сосуд
+            // fill the jar the same way the Creative Source Jar does
             helper.setBlock(JAR.below(), ModBlocks.CREATIVE_SOURCE_JAR.get());
             helper.runAfterDelay(30, () -> {
                 helper.setBlock(JAR.below(), Blocks.STONE);
@@ -2115,7 +2115,7 @@ public class GolemGameTests {
         });
     }
 
-    /** Автоматика через любую часть насыщателя: кладётся только заготовка, забирается только готовый результат. */
+    /** Automation through any part of the saturator: only a blank goes in, only a finished result comes out. */
     @GameTest(template = T, timeoutTicks = 440)
     public static void saturatorAutomation(GameTestHelper helper) {
         BlockPos ctl = new BlockPos(5, 3, 5);
@@ -2134,16 +2134,16 @@ public class GolemGameTests {
         helper.runAfterDelay(400, () -> {
             var h = helper.getLevel().getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, side, null);
             ItemStack out = h.extractItem(1, 64, false);
-            // конвейер: подносчик приносит следующую заготовку, пока кузнец куёт, — за это время готовы все три
+            // conveyor: the bringer brings the next blank while the smith forges, so all three are done in that time
             helper.assertTrue(out.is(ModItems.FLATTENED_IRON_CORE.get()) && out.getCount() == 6, "six flattened cores come out, got " + out);
             helper.assertTrue(h.getStackInSlot(0).isEmpty(), "the queue is used up");
             helper.succeed();
         });
     }
 
-    // ------------------------------------------------------- ритуал наковальни
+    // ------------------------------------------------------- anvil ritual
 
-    /** Голем без ИИ с заданным здоровьем и наковальня в четырёх блоках над ним: она падает на землю сквозь голема. */
+    /** A golem without AI with the given health and an anvil four blocks above it: it falls to the ground through the golem. */
     @SuppressWarnings("unchecked")
     private static net.minecraft.world.entity.Mob ritual(GameTestHelper helper, net.minecraft.world.entity.EntityType<?> type, BlockPos at, float health) {
         var golem = helper.spawnWithNoFreeWill((net.minecraft.world.entity.EntityType<net.minecraft.world.entity.Mob>) type, at);
@@ -2173,7 +2173,7 @@ public class GolemGameTests {
         assertCrushed(helper, ritual(helper, net.minecraft.world.entity.EntityType.SNOW_GOLEM, at, 3f), at, ModItems.FLATTENED_CRYO_SUBSTRATE.get());
     }
 
-    /** Медный голем — из Copper Age Backport (minecraft:copper_golem), обязательной зависимости мода. */
+    /** The copper golem comes from Copper Age Backport (minecraft:copper_golem), a required dependency of the mod. */
     @GameTest(template = T, timeoutTicks = 100)
     public static void anvilRitualCopperGolem(GameTestHelper helper) {
         var id = ResourceLocation.withDefaultNamespace("copper_golem");
@@ -2194,9 +2194,9 @@ public class GolemGameTests {
         });
     }
 
-    // ------------------------------------------------- перископ, жидкости, приоритеты
+    // ------------------------------------------------- periscope, fluids, priorities
 
-    /** Тестовый «бак»: у Магнетита нет жидкостной ёмкости, поэтому даём её через capability, привязав бак к позиции. */
+    /** Test "tank": Magnetite has no fluid capacity, so we provide it through a capability bound to the tank position. */
     @net.neoforged.fml.common.EventBusSubscriber(modid = GolemLogixMod.MOD_ID, bus = net.neoforged.fml.common.EventBusSubscriber.Bus.MOD)
     public static final class TestCaps {
         static final java.util.Map<BlockPos, net.neoforged.neoforge.fluids.capability.templates.FluidTank> TANKS = new java.util.HashMap<>();
@@ -2266,7 +2266,7 @@ public class GolemGameTests {
             GolemNetwork n2 = net(helper, ORIGIN);
             helper.assertTrue(n2.insertItem(new ItemStack(Items.DIRT, 10), false).isEmpty(), "dirt fits");
             helper.assertTrue(count(a, Items.DIRT) == 10 && count(b, Items.DIRT) == 0, "after raising A above B, A gets the dirt");
-            // изымаем из наименее приоритетного хранилища первым
+            // extract from the lowest-priority storage first
             helper.assertTrue(n2.extractItem(new ItemStack(Items.STONE), 4, false).getCount() == 4 && count(b, Items.STONE) == 6, "extraction works");
             helper.succeed();
         });
@@ -2300,26 +2300,26 @@ public class GolemGameTests {
             helper.succeed();
         });
     }
-    // ------------------------------------------------- автокрафт: цепочки и граничные случаи
+    // ------------------------------------------------- autocrafting: chains and edge cases
 
     private static final BlockPos MACHINE_OUT = new BlockPos(2, 1, 4);
 
     private static void autocraftRig(GameTestHelper helper) {
         helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
         helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
-        helper.setBlock(PROV.east(), Blocks.CHEST);              // «вход машины»
+        helper.setBlock(PROV.east(), Blocks.CHEST);              // "machine input"
         helper.setBlock(BUS_IN, ModBlocks.VACUUM_IMPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.WEST));
-        helper.setBlock(MACHINE_OUT, Blocks.CHEST);              // «выход машины», его забирает шина импорта
+        helper.setBlock(MACHINE_OUT, Blocks.CHEST);              // "machine output", the import bus takes from it
     }
 
     /**
-     * Автокрафт через Насыщатель Маны: шаблон «железный блок -> 2 ядра», Поставщик вплотную к части машины сам кладёт блок на
-     * наковальню, шина импорта у другой части возвращает пластины задаче.
+     * Autocrafting through the Mana Saturator: an "iron block -> 2 cores" pattern, a Provider right against a machine part puts the block on
+     * the anvil itself, an import bus at another part returns the plates to the job.
      */
     @GameTest(template = T, timeoutTicks = 700)
     public static void autocraftThroughSaturator(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
-        // от угловой муфты (6,1,6): трубы на восток и к Поставщику; калькулятор у трубы
+        // from the corner bushing (6,1,6): pipes to the east and to the Provider; a calculator by the pipe
         for (int x = 7; x <= 9; x++) {
             put(helper, new BlockPos(x, 1, 6), ModBlocks.BASIC_SNOW_PIPE.get());
         }
@@ -2330,7 +2330,7 @@ public class GolemGameTests {
         put(helper, new BlockPos(10, 1, 8), ModBlocks.BASIC_SNOW_PIPE.get());
         BlockPos bus = new BlockPos(11, 1, 8);
         helper.setBlock(bus, ModBlocks.VACUUM_IMPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.SOUTH));
-        // машина лицом на юг: клетки x 9..11, y 1..3, z 9..10; Поставщик и шина касаются задних нижних клеток
+        // the machine faces south: cells x 9..11, y 1..3, z 9..10; the Provider and the bus touch the back bottom cells
         BlockPos ctl = new BlockPos(10, 3, 10);
         buildSaturator(helper, ctl, Direction.SOUTH);
         put(helper, new BlockPos(12, 1, 10), ModBlocks.CREATIVE_SOURCE_JAR.get());
@@ -2355,7 +2355,7 @@ public class GolemGameTests {
         });
     }
 
-    /** Сырое железо -> слиток (машина, 9 раз) -> железный блок (верстак 3x3): весь путь через шину импорта. */
+    /** Raw iron -> ingot (machine, 9 times) -> iron block (3x3 crafting table): the whole path through the import bus. */
     @GameTest(template = T, timeoutTicks = 600)
     public static void autocraftMachineThenCrafting(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
@@ -2386,7 +2386,7 @@ public class GolemGameTests {
             }
             helper.assertTrue(raw == 9, "machine received all 9 raw iron, got " + raw);
             machineIn.clearContent();
-            machineOut.setItem(0, new ItemStack(Items.IRON_INGOT, 9)); // «машина» отработала
+            machineOut.setItem(0, new ItemStack(Items.IRON_INGOT, 9)); // the "machine" has done its work
         });
         helper.runAfterDelay(300, () -> {
             GolemNetwork n = net(helper, bay);
@@ -2399,7 +2399,7 @@ public class GolemGameTests {
         });
     }
 
-    /** Хранилище забито доверху: выход машины всё равно принимается, а готовое доставляется, как только появится место. */
+    /** Storage is full to the top: the machine output is still accepted, and the finished item is delivered as soon as there is room. */
     @GameTest(template = T, timeoutTicks = 500)
     public static void autocraftWithFullStorage(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
@@ -2414,7 +2414,7 @@ public class GolemGameTests {
             GolemNetwork n = net(helper, bay);
             n.insertItem(new ItemStack(Items.RAW_IRON, 1), false);
             helper.assertTrue(n.startCrafting(ItemKey.of(new ItemStack(Items.IRON_INGOT)), 1).type() == GolemNetwork.StartType.STARTED, "started");
-            // забиваем диск до отказа
+            // fill the disk to the brim
             for (int i = 0; i < 20; i++) {
                 n.insertItem(new ItemStack(Items.STONE, 64), false);
             }
@@ -2428,7 +2428,7 @@ public class GolemGameTests {
             GolemNetwork n = net(helper, bay);
             helper.assertTrue(n.itemCountOf(ItemKey.of(new ItemStack(Items.IRON_INGOT))) == 0, "ingot waits inside the job");
             helper.assertTrue(!((CryoCalculatorBlockEntity) helper.getBlockEntity(CPU)).isIdle(), "job still delivering");
-            n.extractItem(new ItemStack(Items.STONE), 64, false);       // освободили место
+            n.extractItem(new ItemStack(Items.STONE), 64, false);       // made room
         });
         helper.runAfterDelay(200, () -> {
             GolemNetwork n = net(helper, bay);
@@ -2456,7 +2456,7 @@ public class GolemGameTests {
             var tower = AtlasBlueprint.requirements(AtlasBlueprint.Variant.TOWER);
             helper.assertTrue(tower.size() == 3 && tower.get(ModBlocks.ATLAS_CONDUIT.get().asItem()) == 2, "tower: core, 2 conduits, bushing");
 
-            // неверная половина Атланта и пустая клетка не совпадают с чертежом
+            // a wrong Atlant half and an empty cell do not match the blueprint
             AtlasBlueprint.Cell upper = cells.stream().filter(c -> c.dy() == 2 && c.dx() == 1 && c.dz() == 1).findFirst().get();
             helper.assertTrue(!upper.matches(ModBlocks.ATLAS_ATLANT.get().defaultBlockState().setValue(AtlantBlock.HALF, DoubleBlockHalf.LOWER)), "wrong half");
             helper.assertTrue(!upper.matches(Blocks.AIR.defaultBlockState()), "air does not match");
@@ -2464,7 +2464,7 @@ public class GolemGameTests {
         });
     }
 
-    /** Чертёж Насыщателя совпадает с тем, что требует сборка: 18 клеток, набор предметов, поворот по фасаду, части считаются верными. */
+    /** The Saturator blueprint matches what assembly requires: 18 cells, the item set, rotation by the front, parts count as correct. */
     @GameTest(template = T, timeoutTicks = 100)
     public static void saturatorBlueprint(GameTestHelper helper) {
         var need = AtlasBlueprint.requirements(AtlasBlueprint.Variant.SATURATOR);
@@ -2477,7 +2477,7 @@ public class GolemGameTests {
             helper.assertTrue(cells.size() == 18, "18 cells for " + facing);
             BlockPos at = new BlockPos(6, 3, 6);
             buildSaturator(helper, at, facing);
-            // чертёж привязан к «центральному ящику»: он на два блока ниже хозяина
+            // the blueprint is tied to the "central box": it is two blocks below the owner
             BlockPos port = at.below(2).relative(com.golemlogix.system.SaturatorStructure.right(facing), 0);
             for (AtlasBlueprint.Cell c : cells) {
                 BlockState actual = helper.getBlockState(port.offset(c.dx(), c.dy(), c.dz()));
@@ -2489,7 +2489,7 @@ public class GolemGameTests {
         helper.succeed();
     }
 
-    // ------------------------------------------------- апгрейды, редстоун, ожидание, прекрафт
+    // ------------------------------------------------- upgrades, redstone, waiting, precraft
 
     private static int count(Container c) {
         int n = 0;
@@ -2500,15 +2500,15 @@ public class GolemGameTests {
     }
 
     /**
-     * Шина не гоняет предметы по кругу: сундук, который читает перископ, для «своей» шины не хранилище. Пока другого хранилища
-     * нет, импорт ничего не берёт, а экспорт ничего не перекладывает (иначе предметы съезжали бы в первую ячейку и шина щёлкала бы
-     * без конца). Предметы из настоящего диска экспорт в этот сундук доставляет как обычно.
+     * A bus does not move items in circles: a chest read by a periscope is not storage for "its own" bus. While there is no other storage,
+     * import takes nothing and export moves nothing (otherwise items would slide into the first slot and the bus would click
+     * forever). Export delivers items from a real disk into this chest as usual.
      */
     @GameTest(template = T, timeoutTicks = 300)
     public static void busSkipsItsOwnContainer(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
-        // импорт (3,1,4) -> сундук (2,1,4); тот же сундук читает перископ (2,1,5), трубы от муфты (4,1,6)
+        // import (3,1,4) -> chest (2,1,4); the same chest is read by a periscope (2,1,5), pipes from the bushing (4,1,6)
         helper.setBlock(BUS_IN, ModBlocks.VACUUM_IMPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.WEST));
         BlockPos chest = new BlockPos(2, 1, 4);
         helper.setBlock(chest, Blocks.CHEST);
@@ -2521,7 +2521,7 @@ public class GolemGameTests {
         helper.runAfterDelay(60, () -> {
             helper.assertTrue(net(helper, ORIGIN).itemCountOf(cobble) == 20, "the periscope shows the chest");
             helper.assertTrue(c.getItem(5).getCount() == 20 && c.getItem(0).isEmpty(), "the import bus leaves its own chest alone");
-            // на месте импорта — экспорт с булыжником в фильтре
+            // in place of the import: an export with cobblestone in the filter
             helper.setBlock(BUS_IN, ModBlocks.INJECTOR_EXPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.WEST));
             ((BusBlockEntity) helper.getBlockEntity(BUS_IN)).getFilters().setItem(0, new ItemStack(Items.COBBLESTONE));
         });
@@ -2539,7 +2539,7 @@ public class GolemGameTests {
         });
     }
 
-    /** Шесть ячеек апгрейдов: до четырёх ускорителей, Модуль Автокрафта только у экспорта, по одному модулю; ускорители сохраняются. */
+    /** Six upgrade slots: up to four speed upgrades, an Autocraft Module only on export, one module of each kind; speed upgrades are saved. */
     @GameTest(template = T, timeoutTicks = 100)
     public static void busUpgradeSlots(GameTestHelper helper) {
         BlockPos at = new BlockPos(2, 1, 2);
@@ -2585,7 +2585,7 @@ public class GolemGameTests {
         helper.succeed();
     }
 
-    /** Крио-Калькулятор: до четырёх Сжатых Сопроцессоров в ячейках, каждый +4 шага за такт; вместе с приставленными складывается. */
+    /** Cryo-Calculator: up to four Compressed Co-Processors in the slots, each +4 steps per cycle; they add up with the placed ones. */
     @GameTest(template = T, timeoutTicks = 100)
     public static void calculatorCompressedCoprocessors(GameTestHelper helper) {
         BlockPos at = new BlockPos(4, 1, 4);
@@ -2612,7 +2612,7 @@ public class GolemGameTests {
         });
     }
 
-    /** Режимы Модуля Редстоуна — как у AE2/RS: с сигналом, без сигнала, одно действие на импульс; без модуля сигнал не важен. */
+    /** Redstone Module modes, as in AE2/RS: with signal, without signal, one action per pulse; without the module the signal does not matter. */
     @GameTest(template = T, timeoutTicks = 100)
     public static void redstoneModes(GameTestHelper helper) {
         var rc = new com.golemlogix.upgrade.RedstoneControl();
@@ -2636,7 +2636,7 @@ public class GolemGameTests {
         helper.assertTrue(com.golemlogix.upgrade.RedstoneMode.LOW.next(false) == com.golemlogix.upgrade.RedstoneMode.IGNORE,
                 "storage modes skip PULSE");
 
-        // шина импорта с модулем в режиме «с сигналом» стоит без сигнала и работает с ним
+        // an import bus with the module in "with signal" mode stands still without a signal and works with it
         BlockPos bay = baseNetwork(helper);
         helper.setBlock(BUS_IN, ModBlocks.VACUUM_IMPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.WEST));
         BusBlockEntity bus = (BusBlockEntity) helper.getBlockEntity(BUS_IN);
@@ -2656,7 +2656,7 @@ public class GolemGameTests {
         });
     }
 
-    /** Режим ожидания Поставщика: следующая порция не грузится в машину, пока результат прошлой не вернулся в задачу. */
+    /** Provider wait mode: the next portion is not loaded into the machine until the result of the previous one has come back to the job. */
     @GameTest(template = T, timeoutTicks = 500)
     public static void providerWaitsForResult(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
@@ -2677,7 +2677,7 @@ public class GolemGameTests {
             helper.assertTrue(count(machineIn) == 1, "while waiting only the first batch is loaded, got " + count(machineIn));
             helper.assertTrue(net(helper, bay).providerBusy(helper.absolutePos(PROV)), "the provider waits for the result");
             machineIn.clearContent();
-            machineOut.setItem(0, new ItemStack(Items.IRON_INGOT));    // «машина» отработала первую порцию
+            machineOut.setItem(0, new ItemStack(Items.IRON_INGOT));    // the "machine" has processed the first portion
         });
         helper.runAfterDelay(170, () -> {
             helper.assertTrue(machineOut.isEmpty(), "the bus returned the first ingot");
@@ -2693,7 +2693,7 @@ public class GolemGameTests {
         });
     }
 
-    /** Прекрафт (Ctrl+«+» в JEI): одна задача сразу на несколько предметов. */
+    /** Precraft (Ctrl + "+" in JEI): one job for several items at once. */
     @GameTest(template = T, timeoutTicks = 400)
     public static void precraftSeveralTargets(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
@@ -2731,13 +2731,13 @@ public class GolemGameTests {
         });
     }
 
-    // ------------------------------------------------- насыщатель: охлаждение и редстоун
+    // ------------------------------------------------- saturator: cooling and redstone
 
     private static BlockHitResult hitTop(BlockPos abs) {
         return new BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(abs).add(0, 0.5, 0), Direction.UP, abs, false);
     }
 
-    /** Сопроцессоры на решётках крыши: только сверху, по одному на решётку, ускоряют пресс, снимаются с Shift и не теряются при разборе. */
+    /** Coprocessors on the roof grilles: only on top, one per grille, they speed up the press, come off with Shift and are not lost on disassembly. */
     @GameTest(template = T, timeoutTicks = 200)
     public static void saturatorCoolers(GameTestHelper helper) {
         BlockPos ctl = new BlockPos(5, 3, 5);
@@ -2775,7 +2775,7 @@ public class GolemGameTests {
             level.getBlockState(p).useWithoutItem(level, player, hitTop(p));
             helper.assertTrue(!level.getBlockState(p).getValue(com.golemlogix.blocks.SaturatorPartBlock.COOLER), "Shift+click takes a cooler off");
             helper.assertTrue(player.getInventory().countItem(ModBlocks.COOLING_COPROCESSOR.get().asItem()) == 1, "and gives it back");
-            // разбор машины: четыре оставшихся сопроцессора выпадают предметами
+            // disassembling the machine: the four remaining coprocessors drop as items
             level.destroyBlock(satCell(helper, ctl, Direction.NORTH, com.golemlogix.system.SaturatorStructure.ROD), false);
             var box = new net.minecraft.world.phys.AABB(helper.absolutePos(ctl)).inflate(3);
             int dropped = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, box,
@@ -2785,7 +2785,7 @@ public class GolemGameTests {
         });
     }
 
-    /** Модуль Редстоуна в Насыщателе: ставится ПКМ, повторный ПКМ меняет режим; в режиме «с сигналом» без сигнала голем ждёт. */
+    /** Redstone Module in the Saturator: installed by right-click, another right-click changes the mode; in "with signal" mode without a signal the golem waits. */
     @GameTest(template = T, timeoutTicks = 400)
     public static void saturatorRedstoneModule(GameTestHelper helper) {
         BlockPos ctl = new BlockPos(5, 3, 5);
@@ -2829,15 +2829,15 @@ public class GolemGameTests {
         });
     }
 
-    /** Резонатор не питает сеть и не наполняет банки; но хронометр сети с резонатором всегда полон. */
+    /** The Resonator does not power the network or fill jars; but a chronometer of a network with a resonator is always full. */
     @GameTest(template = T, timeoutTicks = 200)
     public static void resonatorOnlyFeedsChronometers(GameTestHelper helper) {
         buildArray(helper, 0, 0);
-        BlockPos res = new BlockPos(3, 1, 6);     // вплотную к угловой муфте (4,1,6)
+        BlockPos res = new BlockPos(3, 1, 6);     // right against the corner bushing (4,1,6)
         put(helper, res, ModBlocks.ETERNAL_FROST_RESONATOR.get());
         ResourceLocation jarId = ResourceLocation.fromNamespaceAndPath("ars_nouveau", "source_jar");
         boolean ars = com.golemlogix.system.SourceHelper.arsNouveauLoaded() && net.minecraft.core.registries.BuiltInRegistries.BLOCK.containsKey(jarId);
-        BlockPos arsJar = new BlockPos(2, 1, 6);  // банка Ars Nouveau рядом с резонатором
+        BlockPos arsJar = new BlockPos(2, 1, 6);  // an Ars Nouveau jar next to the resonator
         if (ars) {
             helper.setBlock(arsJar, net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(jarId));
         }
@@ -2868,7 +2868,7 @@ public class GolemGameTests {
                 helper.assertTrue(Boolean.TRUE.equals(chrono.get(ModDataComponents.RESONATOR_LINK.get())), "the chronometer knows about the resonator");
             }
             player.closeContainer();
-            // без резонатора хронометр заряжается от банки Source
+            // without a resonator the chronometer charges from a Source jar
             ItemStack plain = new ItemStack(ModItems.PORTABLE_CHRONOMETER.get());
             player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, plain);
             BlockPos jar = helper.absolutePos(JAR);

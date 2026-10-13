@@ -15,7 +15,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 
-/** Насыщатель Маны: блок на наковальне, стрелка, две пластины; под стрелкой — цена в Source и время. */
+/** Mana Saturator: a block on the anvil, an arrow, two plates; under the arrow the Source cost and the time. */
 public class ManaSaturatorCategory implements IRecipeCategory<ManaSaturatorRecipe> {
     public static final RecipeType<ManaSaturatorRecipe> TYPE =
             RecipeType.create(GolemLogixMod.MOD_ID, "mana_saturator", ManaSaturatorRecipe.class);
@@ -57,7 +57,7 @@ public class ManaSaturatorCategory implements IRecipeCategory<ManaSaturatorRecip
         return H;
     }
 
-    /** Для старых версий JEI, где размер берётся только из фона. */
+    /** For older JEI versions where the size is taken only from the background. */
     @SuppressWarnings("removal")
     @Override
     public IDrawable getBackground() {

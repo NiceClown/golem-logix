@@ -7,8 +7,8 @@ import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Проводящая шина внутри Решётки Атланта. Связана только с другими частями решётки
- * (ядром, муфтами, такими же шинами), чтобы каналы выходили наружу лишь через Кабельные Муфты.
+ * Conducting bus inside the Atlas Array. It links only to other parts of the array
+ * (the core, bushings, other conduits), so channels leave the array only through Cable Bushings.
  */
 public class AtlasConduitBlock extends Block implements GolemNode, AtlasPart {
     public AtlasConduitBlock(Properties properties) {

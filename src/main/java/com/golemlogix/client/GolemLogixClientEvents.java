@@ -39,7 +39,7 @@ public class GolemLogixClientEvents {
         event.registerLayerDefinition(CopperGolemPuppet.LAYER, CopperGolemPuppet::createLayer);
     }
 
-    /** Подвижные детали из отдельных моделей: рёбра сопроцессора, турбины интерфейса, голова атланта, заглушки труб. */
+    /** Moving parts from separate models: coprocessor fins, interface turbines, atlant head, pipe plugs. */
     @SubscribeEvent
     public static void registerModels(ModelEvent.RegisterAdditional event) {
         event.register(CoolingCoprocessorRenderer.FIN);
@@ -54,11 +54,11 @@ public class GolemLogixClientEvents {
         event.register(SnowPipeRenderer.BAND_DENSE);
     }
 
-    /** Слои свечения рун поверх моделей мода. */
+    /** Rune glow layers on top of the mod's models. */
     @SubscribeEvent
     public static void wrapModels(ModelEvent.ModifyBakingResult event) {
         GlowModels.wrap(event.getModels());
-        // записанная перфокарта с зажатым Shift показывает свой результат
+        // a written punch card shows its result while Shift is held
         var card = net.minecraft.client.resources.model.ModelResourceLocation.inventory(
                 net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.golemlogix.GolemLogixMod.MOD_ID, "copper_punch_card"));
         event.getModels().computeIfPresent(card, (k, m) -> new PunchCardModel(m));

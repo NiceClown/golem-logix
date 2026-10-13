@@ -23,11 +23,11 @@ import net.minecraft.world.level.block.state.properties.EnumProperty;
 import javax.annotation.Nullable;
 
 /**
- * Атлант — двухблочная железная статуя голема: держит Решётку на углах многоблока.
- * Ставится как дверь: одним предметом, обе половины ломаются вместе.
+ * Atlant: a two-block iron golem statue that holds the Array at the corners of the multiblock.
+ * Placed like a door: with one item, both halves break together.
  */
 public class AtlantBlock extends HorizontalDirectionalBlock implements AtlasPart, net.minecraft.world.level.block.EntityBlock {
-    /** Блок-сущность только у верхней половины: её отрисовщик рисует голову, повёрнутую к игроку. */
+    /** Only the upper half has a block entity: its renderer draws the head turned towards the player. */
     @Nullable
     @Override
     public net.minecraft.world.level.block.entity.BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
@@ -89,7 +89,7 @@ public class AtlantBlock extends HorizontalDirectionalBlock implements AtlasPart
     @Override
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide() && player.isCreative() && state.getValue(HALF) == DoubleBlockHalf.UPPER) {
-            // в творческом режиме нижняя половина не должна выбрасывать предмет второй раз
+            // in creative mode the lower half must not drop the item a second time
             BlockPos lower = pos.below();
             BlockState lowerState = level.getBlockState(lower);
             if (lowerState.is(this) && lowerState.getValue(HALF) == DoubleBlockHalf.LOWER) {

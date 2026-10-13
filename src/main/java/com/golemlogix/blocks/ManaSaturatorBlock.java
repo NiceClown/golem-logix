@@ -35,17 +35,17 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Насыщатель Маны — «голова» многоблока 3x3x2 (см. {@link SaturatorStructure}): пресс с наковальней в верхнем центре
- * передней стенки. Поодиночке это компактный блок-пресс, который сам собирает машину вокруг себя, когда рядом правильно
- * стоят остальные блоки; собранная машина берёт Source из сети через «центральный ящик» (плотную морозную трубу) или из
- * банок рядом. Каналов не занимает.
+ * Mana Saturator, the "head" of a 3x3x2 multiblock (see {@link SaturatorStructure}): a press with an anvil in the upper middle
+ * of the front wall. On its own it is a compact anvil block that assembles the machine around itself when the other blocks
+ * stand correctly nearby; the assembled machine takes Source from the network through the "central box" (a dense frost pipe) or
+ * from jars nearby. Takes no channels.
  */
 public class ManaSaturatorBlock extends Block implements EntityBlock {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
-    /** Машина собрана: соседние блоки заменены частями, а модель этого блока — кусок общей модели. */
+    /** The machine is assembled: the neighbouring blocks are replaced by parts, and this block's model is a piece of the shared model. */
     public static final BooleanProperty FORMED = BooleanProperty.create("formed");
 
-    /** Компактная наковальня до сборки. */
+    /** Compact anvil before assembly. */
     private static final VoxelShape COMPACT_SHAPE = Block.box(0, 0, 2.5, 16, 15.2, 13.5);
 
     public ManaSaturatorBlock(Properties properties) {
@@ -88,7 +88,7 @@ public class ManaSaturatorBlock extends Block implements EntityBlock {
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
         BlockEntity be = level.getBlockEntity(pos);
         if (!state.getValue(FORMED)) {
-            // несобранная наковальня: заготовку — на площадку для ручной ковки (куют Кузнечным молотом, ЛКМ)
+            // unassembled anvil: a blank goes onto the face for forging by hand (struck with the Forge Hammer, left-click)
             if (be instanceof ManaSaturatorBlockEntity anvil && stack.getItem() instanceof com.golemlogix.items.ForgeHammerItem) {
                 if (!level.isClientSide()) {
                     player.displayClientMessage(Component.translatable(anvil.anvilItem().isEmpty()
@@ -117,7 +117,7 @@ public class ManaSaturatorBlock extends Block implements EntityBlock {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
         if (be instanceof ManaSaturatorBlockEntity saturator) {
-            // Модуль Редстоуна: первый раз ставится в машину, дальше ПКМ им же переключает режим
+            // Redstone Module: the first time it is installed into the machine, after that right-clicking with it cycles the mode
             if (stack.getItem() instanceof com.golemlogix.items.UpgradeItem up && up.type() == com.golemlogix.upgrade.UpgradeType.REDSTONE) {
                 if (!level.isClientSide()) {
                     boolean installed = saturator.installOrCycleRedstone();
@@ -132,10 +132,10 @@ public class ManaSaturatorBlock extends Block implements EntityBlock {
                 return ItemInteractionResult.sidedSuccess(level.isClientSide());
             }
             if (!ManaSaturatorBlockEntity.isInput(stack)) {
-                // трубу, факел и т. п. просто ставим рядом (например, трубу к патрубку), а не кладём на наковальню
+                // a pipe, a torch and the like are simply placed next to it (for example a pipe to the inlet), not put on the anvil
                 return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
             }
-            // заготовка — на левую палубу (очередь), её отнесёт медный голем-подносчик
+            // a blank goes to the left deck (the queue), the copper bringer golem will carry it
             if (!level.isClientSide()) {
                 if (saturator.roomInDeck(stack) > 0) {
                     saturator.addToDeck(stack.copyWithCount(1));
@@ -150,7 +150,7 @@ public class ManaSaturatorBlock extends Block implements EntityBlock {
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
 
-    /** Пустой рукой: забрать готовое с правой палубы, а если его нет — очередь заготовок с левой. */
+    /** With an empty hand: take the finished items from the right deck, and if there are none, the queue of blanks from the left one. */
     private static boolean giveBack(Level level, Player player, ManaSaturatorBlockEntity saturator) {
         ItemStack taken = saturator.takeFromDecks();
         if (taken.isEmpty()) {
@@ -173,7 +173,7 @@ public class ManaSaturatorBlock extends Block implements EntityBlock {
         }
         Direction facing = state.getValue(FACING);
         if (!state.getValue(FORMED) && !saturator.anvilItem().isEmpty()) {
-            // на наковальне лежит заготовка или готовая пластина: ПКМ пустой рукой — забрать
+            // a blank or a finished plate lies on the anvil: right-click with an empty hand takes it
             ItemStack taken = saturator.takeFromAnvil();
             if (!player.getInventory().add(taken)) {
                 Containers.dropItemStack(level, player.getX(), player.getY(), player.getZ(), taken);
@@ -181,7 +181,7 @@ public class ManaSaturatorBlock extends Block implements EntityBlock {
             return InteractionResult.CONSUME;
         }
         if (!state.getValue(FORMED)) {
-            // несобранная машина: собрать, если можно, иначе подсказать, чего не хватает
+            // unassembled machine: assemble it if possible, otherwise hint at what is missing
             SaturatorStructure.Result r = SaturatorStructure.check(level, pos, facing);
             if (r.valid()) {
                 SaturatorStructure.form((ServerLevel) level, pos, facing);
@@ -194,7 +194,7 @@ public class ManaSaturatorBlock extends Block implements EntityBlock {
             }
             return InteractionResult.CONSUME;
         }
-        // Shift+ПКМ пустой рукой — снять Модуль Редстоуна
+        // Shift + right-click with an empty hand removes the Redstone Module
         if (player.isShiftKeyDown() && saturator.removeRedstoneModule()) {
             ItemStack module = new ItemStack(com.golemlogix.init.ModItems.REDSTONE_MODULE.get());
             if (!player.getInventory().add(module)) {

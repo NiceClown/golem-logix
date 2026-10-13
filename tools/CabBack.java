@@ -1,11 +1,11 @@
 import java.util.Random;
 
 /**
- * Спинка шкафа — одна сплошная картина 32x32 юнита (а не четыре плитки), как её видит человек, стоящий сзади. Каркас повторяет
- * фасад (балка сверху, цоколь, стойки на тех же местах, но зеркально), а три «отсека» между стойками несут разные машины:
- * слева — крио-катушка (бирюзовая спираль в стеклянной колбе), в середине — янтарные экраны, вентилятор, жалюзи и рунная табличка,
- * справа — связка труб с манометром и вентилем. Светящиеся места дублируются рельефом (см. {@link #relief}).
- * Картина режется на четыре текстуры по клеткам: нижняя левая клетка модели (взгляд спереди) — это правая нижняя четверть картины.
+ * The back of the cabinet: one solid 32x32 unit picture (not four tiles), as someone standing behind it sees it. The frame repeats
+ * the front (a beam on top, a plinth, posts in the same places, but mirrored), and the three "bays" between the posts carry different machines:
+ * on the left a cryo coil (a teal spiral in a glass flask), in the middle amber screens, a fan, louvres and a rune plate,
+ * on the right a bundle of pipes with a gauge and a valve. Glowing places are doubled by relief (see {@link #relief}).
+ * The picture is cut into four textures per cell: the bottom left cell of the model (seen from the front) is the bottom right quarter of the picture.
  */
 final class CabBack {
     static final int K = Forge2.K;
@@ -25,13 +25,13 @@ final class CabBack {
         return Paint.argb(a, c);
     }
 
-    // отсеки между стойками (в координатах картины, взгляд сзади)
+    // bays between the posts (in picture coordinates, seen from behind)
     static final double AX0 = 2.5, AX1 = 6.5, BX0 = 8.5, BX1 = 24.5, CX0 = 26.5, CX1 = 29.5, FY0 = 4, FY1 = 28;
 
     static void field(Paint p, double x0, double x1, long seed) {
         p.slab(x0, FY0, x1, FY1, IRON, 1.25, 1);
         p.grain(x0, FY0, x1, FY1, 0.07, seed);
-        // «утопленность»: тёмная тень сверху и слева
+        // "recess": a dark shadow at the top and on the left
         p.rect(x0, FY0, x1, FY0 + 0.4, argb(255, 0x07090c));
         p.rect(x0, FY0, x0 + 0.3, FY1, argb(255, 0x07090c));
     }
@@ -48,7 +48,7 @@ final class CabBack {
     }
 
     static void frame(Paint p) {
-        // верхняя балка с фризом, угловыми блоками и рунной табличкой по центру
+        // the top beam with a frieze, corner blocks and a rune plate in the middle
         Forge2.beam(p, 0, 0, 32, 4, 2.9, true, 901);
         p.slab(3.5, 0.8, 28.5, 3.2, BRONZE, 1.6, 1);
         Forge2.frieze(p, 3.8, 28.2, 0.8, 3.2, 1.9);
@@ -62,7 +62,7 @@ final class CabBack {
         for (double[] c : new double[][]{{12.7, 0.75}, {19.3, 0.75}, {12.7, 3.25}, {19.3, 3.25}}) {
             p.rivet(c[0], c[1], 0.2, BRASS);
         }
-        // цоколь
+        // plinth
         Forge2.beam(p, 0, 28, 32, 32, 2.6, true, 911);
         p.slab(3.5, 28.9, 28.5, 31.1, BRONZE, 1.5, 1);
         Forge2.frieze(p, 3.8, 28.2, 28.9, 31.1, 1.9);
@@ -72,19 +72,19 @@ final class CabBack {
         p.slab(14.2, 28.9, 17.8, 31.1, IRON, 1.0, 1);
         p.glowRect(14.4, 29.0, 17.6, 31.0, 0.6, at(VIOLET, 3.5), 55);
         p.rune(15.2, 29.1, 1.9, 19, at(VIOLET, 5.2), at(VIOLET, 3.0));
-        // стойки: крайние и внутренние
+        // posts: outer and inner
         post(p, 0, 2.5, 921);
         post(p, 29.5, 32, 922);
         post(p, 6.5, 8.5, 923);
         post(p, 24.5, 26.5, 924);
     }
 
-    // ----------------------------------------------------------------------------------------------- отсек A: крио-катушка
+    // ----------------------------------------------------------------------------------------------- bay A: cryo coil
     static void coil(Paint p) {
         field(p, AX0, AX1, 931);
         p.slab(2.85, 4.9, 6.15, 27.1, BRASS, 2.6, 1);
         p.rect(3.35, 5.4, 5.65, 26.6, rgb(0x04141a));
-        // живая катушка: двойная медная спираль вращается (бежит вверх), жидкость переливается; бандажи и иней — поверх
+        // a living coil: a double copper spiral rotates (runs upwards), the fluid shimmers; bands and frost on top
         p.animate(2.85, 4.9, 6.15, 27.1, (q, t) -> {
             q.fill(3.6, 5.6, 5.4, 26.4, (u, v) -> {
                 double e = Math.abs(u - 4.5) / 0.9;
@@ -110,7 +110,7 @@ final class CabBack {
         });
     }
 
-    /** Огонёк i «в случайном порядке»: цикл делится на slots шагов, в каждом огонёк горит или нет по своему рисунку. */
+    /** Light i "in random order": the cycle is split into slots steps, in each one the light is on or off by its own pattern. */
     static boolean blink(double t, int i, int slots) {
         int s = (int) Math.floor(t * slots) % slots;
         long h = (i * 0x9E3779B97F4A7C15L) ^ (s * 0xC2B2AE3D27D4EB4FL);
@@ -120,17 +120,17 @@ final class CabBack {
         return (h & 7) < 5;
     }
 
-    /** Бегущая волна по светящимся вставкам трубы: яркость вставки i в доле цикла t (волна идёт вдоль трубы). */
+    /** A running wave over the glowing pipe inlays: brightness of inlay i at cycle fraction t (the wave goes along the pipe). */
     static double wave(double t, int i, int n) {
         return 0.5 + 0.5 * Math.cos(2 * Math.PI * (t - (double) i / n));
     }
 
-    // ----------------------------------------------------------------------------------------------- отсек C: трубы
+    // ----------------------------------------------------------------------------------------------- bay C: pipes
     static void pipes(Paint p) {
         field(p, CX0, CX1, 941);
         for (double x : new double[]{26.95, 28.15}) {
             p.slab(x, 4.4, x + 0.95, 27.6, BRASS, 2.4, 1);
-            // бирюзовые «импульсы энергии» в прорезях: волна бежит по трубе сверху вниз (во второй трубе — со сдвигом)
+            // teal "energy pulses" in the slots: a wave runs down the pipe (in the second pipe with an offset)
             final double px0 = x;
             final int shift = x > 27.5 ? 3 : 0;
             p.animate(x, 4.4, x + 0.95, 27.6, (q, t) -> {
@@ -148,7 +148,7 @@ final class CabBack {
         }
         p.gauge(28.0, 13.0, 1.15, 125, argb(255, 0xb02020));
         p.gauge(28.0, 19.2, 0.95, 60, argb(255, 0xb02020));
-        // вентиль: колесо со спицами медленно проворачивается
+        // valve: the spoked wheel turns slowly
         p.animate(26.8, 23.4, 29.2, 25.8, (q, t) -> {
             q.disc(28.0, 24.6, 1.15, at(BRASS, 1.2));
             q.ring(28.0, 24.6, 0.85, 1.12, at(BRASS, 4.5));
@@ -161,7 +161,7 @@ final class CabBack {
         p.frostLine(CX0, CX1, 26.9, 0.6, 942);
     }
 
-    // ----------------------------------------------------------------------------------------------- отсек B: экраны, вентиляция, руны
+    // ----------------------------------------------------------------------------------------------- bay B: screens, ventilation, runes
     static void screenBezel(Paint p, double x0, double y0, double x1, double y1) {
         p.slab(x0, y0, x1, y1, BRASS, 2.8, 1);
         p.rect(x0 + 0.5, y0 + 0.5, x1 - 0.5, y1 - 0.5, rgb(0x1d1004));
@@ -171,7 +171,7 @@ final class CabBack {
     }
 
     static void screens(Paint p) {
-        // экран 1: гистограмма
+        // screen 1: a histogram
         double x0 = 9.0, y0 = 4.6, x1 = 16.0, y1 = 11.2;
         screenBezel(p, x0, y0, x1, y1);
         Random r = new Random(951);
@@ -183,7 +183,7 @@ final class CabBack {
             ph[i] = r.nextDouble() * Math.PI * 2;
             freq[i] = 1 + r.nextInt(3);
         }
-        // живая гистограмма: столбики «дышат», у каждого свой целый темп (цикл замкнут)
+        // a living histogram: the bars "breathe", each at its own integer tempo (the cycle is closed)
         p.animate(x0 + 0.5, y0 + 0.5, x1 - 0.5, y1 - 0.5, (q, t) -> {
             q.fill(x0 + 0.5, y0 + 0.5, x1 - 0.5, y1 - 0.5, (u, v) -> Paint.ramp(AMBER, 0.06 + 0.06 * (1 - (v - y0) / (y1 - y0))));
             for (double gx = x0 + 1.0; gx < x1 - 0.5; gx += 1.0) {
@@ -200,7 +200,7 @@ final class CabBack {
             }
             q.glowRect(x0 + 0.6, y0 + 0.6, x1 - 0.6, y1 - 0.6, 0.5, at(AMBER, 3.0), 40);
         });
-        // экран 2: текст ползёт вверх построчно (12 строк по кругу — цикл замкнут), внизу мигает курсор
+        // screen 2: text crawls up line by line (12 lines in a circle, the cycle is closed), a cursor blinks at the bottom
         double ax0 = 17.0, ax1 = 24.0;
         screenBezel(p, ax0, y0, ax1, y1);
         double[][][] lines = new double[12][][];
@@ -229,7 +229,7 @@ final class CabBack {
         });
     }
 
-    /** Лопасти вентилятора в тёмном кожухе радиуса r, повёрнутые на rot; ступица — поверх. */
+    /** Fan blades in a dark housing of radius r, rotated by rot; the hub on top. */
     static void fanBlades(Paint q, double cx, double cy, double r, int blades, double rot) {
         q.disc(cx, cy, r, rgb(0x050607));
         for (int b = 0; b < blades; b++) {
@@ -247,20 +247,20 @@ final class CabBack {
     }
 
     static void fanAndVents(Paint p) {
-        // вентилятор в латунном квадрате
+        // a fan in a brass square
         double fx0 = 9.0, fy0 = 12.0, fx1 = 16.0, fy1 = 19.0, cx = 12.5, cy = 15.5;
         p.slab(fx0, fy0, fx1, fy1, BRASS, 2.6, 1);
         p.slab(fx0 + 0.5, fy0 + 0.5, fx1 - 0.5, fy1 - 0.5, IRON, 0.8, 1);
         p.disc(cx, cy, 3.05, at(BRASS, 1.2));
         p.ring(cx, cy, 2.7, 3.05, at(BRASS, 4.4));
-        // вентилятор крутится: за цикл — на две лопасти
+        // the fan turns: two blades per cycle
         p.animate(cx - 2.7, cy - 2.7, cx + 2.7, cy + 2.7, (q, t) -> fanBlades(q, cx, cy, 2.65, 6, t * 2 * Math.PI / 3));
         p.sphere(cx, cy, 0.55, BRASS, 0.3, 1.0);
         for (double[] c : new double[][]{{fx0 + 0.55, fy0 + 0.55}, {fx1 - 0.55, fy0 + 0.55}, {fx0 + 0.55, fy1 - 0.55}, {fx1 - 0.55, fy1 - 0.55}}) {
             p.screw(c[0], c[1], 0.32, BRASS, c[0]);
         }
         p.frostLine(fx0 + 0.4, fx1 - 0.4, fy0 + 0.5, 0.45, 961);
-        // жалюзи
+        // louvres
         double vx0 = 17.0, vy0 = 12.0, vx1 = 24.0, vy1 = 19.0;
         p.slab(vx0, vy0, vx1, vy1, BRASS, 2.6, 1);
         p.rect(vx0 + 0.5, vy0 + 0.5, vx1 - 0.5, vy1 - 0.5, rgb(0x050607));
@@ -275,11 +275,11 @@ final class CabBack {
     }
 
     static void lower(Paint p) {
-        // слева: две латунные трубы со светящимися вставками, манометр и вентиль
+        // on the left: two brass pipes with glowing inlays, a gauge and a valve
         double x0 = 9.0, x1 = 16.0;
         for (double y : new double[]{20.8, 25.4}) {
             p.slab(x0, y, x1, y + 1.0, BRASS, 2.4, 1);
-            // импульсы бегут по трубе слева направо
+            // pulses run along the pipe from left to right
             final double py = y;
             p.animate(x0, y - 0.2, x1, y + 1.2, (q, t) -> {
                 int i = 0;
@@ -297,7 +297,7 @@ final class CabBack {
         p.slab(12.2, 21.8, 12.8, 25.4, BRASS, 2.2, 1);
         p.gauge(10.6, 23.6, 1.25, 80, argb(255, 0xb02020));
         p.gauge(14.4, 23.6, 1.25, 140, argb(255, 0xb02020));
-        // справа: рунная табличка и ряд янтарных ламп
+        // on the right: a rune plate and a row of amber lamps
         double rx0 = 17.0, ry0 = 20.0, rx1 = 24.0, ry1 = 24.9;
         p.slab(rx0, ry0, rx1, ry1, BRASS, 3.0, 1);
         p.rect(rx0 + 0.5, ry0 + 0.5, rx1 - 0.5, ry1 - 0.5, rgb(0x0a0c10));
@@ -308,7 +308,7 @@ final class CabBack {
         }
         p.slab(rx0, 25.4, rx1, 27.4, BRASS, 2.6, 1);
         p.rect(rx0 + 0.45, 25.85, rx1 - 0.45, 26.95, rgb(0x1d1004));
-        // лампы перемигиваются: у каждой свой рисунок включений за цикл
+        // the lamps wink: each has its own on-pattern per cycle
         p.animate(rx0 + 0.45, 25.85, rx1 - 0.45, 26.95, (q, t) -> {
             q.rect(rx0 + 0.45, 25.85, rx1 - 0.45, 26.95, rgb(0x1d1004));
             for (int i = 0; i < 6; i++) {
@@ -334,7 +334,7 @@ final class CabBack {
         return p;
     }
 
-    /** Режет картину на четыре текстуры клеток (клетка bl — правая нижняя четверть картины и т.д.). */
+    /** Cuts the picture into four cell textures (cell bl is the bottom right quarter of the picture, and so on). */
     static void save(Paint p) throws Exception {
         p.crop(16, 16, 16, 16).save(Forge2.tex("cab_back_bl"));
         p.crop(0, 16, 16, 16).save(Forge2.tex("cab_back_br"));
@@ -343,22 +343,22 @@ final class CabBack {
         Files.deleteIfExists(Forge2.tex("cab_back").toPath());
     }
 
-    // ------------------------------------------------------------------------------------------------- рельеф и свечение
-    /** Выступ спинки по прямоугольнику картины (юниты, y вниз): лицо — та же картина, но светящаяся, бока — латунь. */
+    // ------------------------------------------------------------------------------------------------- relief and glow
+    /** A bump of the back over a picture rectangle (units, y down): the face is the same picture, but glowing, the sides are brass. */
     static void rel(BigModel m, double ix0, double iy0, double ix1, double iy1, int glow, BigModel.Face side) {
         BigModel.Face lit = glow > 0 ? BigModel.Face.of("back").glow(glow) : BigModel.Face.of("back");
         m.box(32 - ix1, 32 - iy1, Forge2.BACKZ, 32 - ix0, 32 - iy0, 16).back(lit).left(side).right(side).top(side).bottom(side);
     }
 
     static void relief(BigModel m, BigModel.Face brass) {
-        rel(m, 3.5, 5.5, 5.5, 26.5, 10, brass);          // колба катушки
-        rel(m, 9.5, 5.1, 15.5, 10.7, 13, brass);         // экран-гистограмма
-        rel(m, 17.5, 5.1, 23.5, 10.7, 13, brass);        // экран-текст
-        rel(m, 17.5, 20.5, 23.5, 24.4, 14, brass);       // рунная табличка
-        rel(m, 17.5, 25.9, 23.5, 26.9, 13, brass);       // янтарные лампы
-        rel(m, 26.95, 4.4, 27.9, 27.6, 0, brass);        // трубы справа
+        rel(m, 3.5, 5.5, 5.5, 26.5, 10, brass);          // coil flask
+        rel(m, 9.5, 5.1, 15.5, 10.7, 13, brass);         // histogram screen
+        rel(m, 17.5, 5.1, 23.5, 10.7, 13, brass);        // text screen
+        rel(m, 17.5, 20.5, 23.5, 24.4, 14, brass);       // rune plate
+        rel(m, 17.5, 25.9, 23.5, 26.9, 13, brass);       // amber lamps
+        rel(m, 26.95, 4.4, 27.9, 27.6, 0, brass);        // pipes on the right
         rel(m, 28.15, 4.4, 29.1, 27.6, 0, brass);
-        rel(m, 9.0, 20.8, 16.0, 21.8, 0, brass);         // горизонтальные трубы слева
+        rel(m, 9.0, 20.8, 16.0, 21.8, 0, brass);         // horizontal pipes on the left
         rel(m, 9.0, 25.4, 16.0, 26.4, 0, brass);
     }
 

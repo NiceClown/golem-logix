@@ -12,30 +12,30 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
- * Клиент -> сервер: действие игрока в терминале.
+ * Client -> server: a player action in the terminal.
  */
 public record TerminalActionPayload(int containerId, Action action, ItemStack key, FluidStack fluid) implements CustomPacketPayload {
     public static final Type<TerminalActionPayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "terminal_action"));
 
     public enum Action {
-        /** ЛКМ по предмету: взять стак. */
+        /** Left-click on an item: take a stack. */
         TAKE_STACK,
-        /** ПКМ по предмету: взять половину стака. */
+        /** Right-click on an item: take half a stack. */
         TAKE_HALF,
-        /** СКМ: взять один предмет. */
+        /** Middle click: take one item. */
         TAKE_ONE,
-        /** Shift+ЛКМ: стак сразу в инвентарь. */
+        /** Shift + left-click: the stack straight into the inventory. */
         TO_INVENTORY,
-        /** ЛКМ с предметом в курсоре по списку: положить всё. */
+        /** Left-click on the list with an item on the cursor: put all of it. */
         INSERT_ALL,
-        /** ПКМ с предметом в курсоре по списку: положить один. */
+        /** Right-click on the list with an item on the cursor: put one. */
         INSERT_ONE,
-        /** С ёмкостью в курсоре по жидкости: наполнить. */
+        /** With a container on the cursor on a fluid: fill it. */
         FLUID_FILL_CARRIED,
-        /** С полной ёмкостью в курсоре: слить в сеть. */
+        /** With a full container on the cursor: drain it into the network. */
         FLUID_DRAIN_CARRIED,
-        /** Положить предмет из сетки крафта обратно в сеть (кнопка). */
+        /** Put the items from the crafting grid back into the network (a button). */
         CLEAR_GRID
     }
 

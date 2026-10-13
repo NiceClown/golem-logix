@@ -33,10 +33,10 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * Портативный Хронометр: беспроводной терминал создания (с сеткой верстака) на базе карманных часов.
- * Привязывается к Ядру Атланта (Shift+ПКМ по ядру). Дальность: локальная / в пределах измерения /
- * межмерная (улучшается Квантово-Оккультной Матрицей). С Ars Nouveau тратит Source из собственного запаса — его заряжают
- * от банки (ПКМ по банке), а Вечный Морозный Резонатор, приставленный к сети, питает Хронометр на расстоянии.
+ * Portable Chronometer: a wireless crafting terminal (with a crafting grid) built into a pocket watch.
+ * Bound to an Atlas Core (Shift + right-click on the core). Range: local / within the dimension /
+ * interdimensional (upgraded with the Interdimensional Occult Matrix). With Ars Nouveau it spends Source from its own charge, which is
+ * refilled from a jar (right-click on the jar), and an Eternal Frost Resonator next to the network powers the Chronometer remotely.
  */
 public class PortableChronometerItem extends Item {
     public static final int MAX_CHARGE = 10_000;
@@ -117,7 +117,7 @@ public class PortableChronometerItem extends Item {
             }
             return InteractionResult.sidedSuccess(level.isClientSide());
         }
-        // зарядка от банки Source (или любого механизма Ars Nouveau с запасом Source)
+        // charging from a Source jar (or any Ars Nouveau device with a Source store)
         BlockEntity be = level.getBlockEntity(context.getClickedPos());
         SourceHelper.Supplier jar = be == null ? null : SourceHelper.asSupplier(be);
         if (jar != null && SourceHelper.sourceRequired()) {
@@ -150,7 +150,7 @@ public class PortableChronometerItem extends Item {
                     .withStyle(ChatFormatting.RED), true);
             return InteractionResultHolder.fail(stack);
         }
-        // попытка дотянуться до ядра из другого измерения — одно из испытаний секретного рецепта
+        // trying to reach the core from another dimension is one of the secret recipe trials
         if (level.dimension() != bound.dimension()) {
             ModTriggers.CHRONOMETER_DIMENSION.get().trigger(sp);
         }
@@ -174,7 +174,7 @@ public class PortableChronometerItem extends Item {
             sp.displayClientMessage(Component.translatable(err), true);
             return InteractionResultHolder.fail(stack);
         }
-        // питание: Резонатор сети шлёт Source сам, иначе нужен свой заряд
+        // power: the network's Resonator sends Source itself, otherwise the own charge is needed
         if (SourceHelper.sourceRequired()) {
             boolean resonator = net.hasResonator();
             setResonator(stack, resonator);
@@ -191,9 +191,9 @@ public class PortableChronometerItem extends Item {
         sp.displayClientMessage(Component.translatable("message.golem_logix.chronometer.accessing")
                 .withStyle(ChatFormatting.AQUA), true);
         BlockPos anchor = bound.pos();
-        // ячейка, где лежит Хронометр: пока окно открыто, она заперта (40 — вторая рука)
+        // the slot the Chronometer lies in is locked while the window is open (40 = offhand)
         int locked = hand == InteractionHand.MAIN_HAND ? sp.getInventory().selected : Inventory.SLOT_OFFHAND;
-        // в Хронометре сетка верстака есть всегда
+        // the Chronometer always has a crafting grid
         sp.openMenu(new SimpleMenuProvider(
                         (id, inv, p) -> new TerminalMenu(id, inv, netLevel, anchor, null, null, true, true, tier, locked),
                         Component.translatable("container.golem_logix.chronometer")),
@@ -206,8 +206,8 @@ public class PortableChronometerItem extends Item {
     }
 
     /**
-     * Заряд меняется каждую секунду, пока окно открыто, и при зарядке: рука не должна каждый раз «перехватывать» предмет
-     * (опускать и поднимать его заново) — это тот же хронометр, только с другим числом.
+     * The charge changes every second while the window is open, and when charging: the hand must not "re-grab" the item every time
+     * (lower and raise it again), it is the same chronometer, just with another number.
      */
     @Override
     public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
@@ -219,7 +219,7 @@ public class PortableChronometerItem extends Item {
         return !oldStack.is(newStack.getItem());
     }
 
-    // ------------------------------------------------------------------ полоса заряда
+    // ------------------------------------------------------------------ charge bar
 
     @Override
     public boolean isBarVisible(ItemStack stack) {

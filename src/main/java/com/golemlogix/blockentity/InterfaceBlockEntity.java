@@ -29,13 +29,13 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Интерфейс Голема — как интерфейс AE2/RS: одна точка сети на один канал, к которой автоматика подходит с любой стороны.
+ * Golem Interface, like the AE2/RS interface: one network point on one channel that automation can reach from any side.
  * <ul>
- * <li><b>Запас</b>: девять призрачных ячеек «держать N штук» — интерфейс сам достаёт из сети недостающее и возвращает
- * лишнее; из ячеек выдачи предметы забирают воронки, трубы других модов и машины.</li>
- * <li><b>Приём</b>: всё, что положили в интерфейс снаружи, уходит в сеть (сначала — задачам автокрафта, которые этого ждут).</li>
- * <li>Апгрейды как у шины экспорта: до четырёх Сжатых Сопроцессоров (чаще и больше за раз), Модуль Автокрафта (заказывает
- * недостающий запас у калькуляторов) и Модуль Редстоуна.</li>
+ * <li><b>Stock</b>: nine ghost slots "keep N of these": the interface itself takes what is missing from the network and returns
+ * the excess; hoppers, other mods' pipes and machines take items from the output slots.</li>
+ * <li><b>Input</b>: everything put into the interface from outside goes to the network (autocraft jobs waiting for it come first).</li>
+ * <li>Upgrades as on the export bus: up to four Compressed Co-Processors (more often and more at a time), an Autocraft Module (orders
+ * the missing stock from calculators) and a Redstone Module.</li>
  * </ul>
  */
 public class InterfaceBlockEntity extends BlockEntity {
@@ -44,26 +44,26 @@ public class InterfaceBlockEntity extends BlockEntity {
     private static final double[] INTERVAL_MULT = {1.0, 0.75, 0.5, 0.25, 0.125};
     private static final int CRAFT_REQUEST_COOLDOWN = 40;
     private static final int SOUND_COOLDOWN = 12;
-    /** Событие блока «интерфейс поработал» (параметр — число ускорителей): клиент качает метрономы и крутит турбины. */
+    /** Block event "the interface did some work" (parameter = number of speed upgrades): the client swings the metronomes and spins the turbines. */
     public static final int EVENT_WORK = 1;
     private static final int EVENT_COOLDOWN = 8;
 
-    /** Сколько держать: призрачные копии, число — желаемое количество. */
+    /** What to keep: ghost copies, the count is the wanted amount. */
     private final OwnedContainer config = new OwnedContainer(SLOTS, this, s -> true) {
-        /** Настройка — призрачные числа, а не предметы: ведро (стопка 1) можно указать до 64 раз. */
+        /** The config holds ghost numbers, not items: a bucket (stack size 1) can be set up to 64 times. */
         @Override
         public int getMaxStackSize(ItemStack stack) {
             return 64;
         }
     };
-    /** Ячейки выдачи (запас под ячейкой настройки с тем же номером). */
+    /** Output slots (stock under the config slot with the same number). */
     private final OwnedContainer stock = new OwnedContainer(SLOTS, this, s -> true);
-    /** Ячейки приёма: то, что положили снаружи, ждёт отправки в сеть. */
+    /** Input slots: what was put in from outside waits to be sent to the network. */
     private final OwnedContainer inbox = new OwnedContainer(SLOTS, this, s -> true);
     private final UpgradeContainer upgrades;
     private final RedstoneControl redstone = new RedstoneControl();
     private final Automation automation = new Automation();
-    /** Бак приёма жидкостей: то, что в интерфейс залили трубы или вёдра, уходит в сеть. */
+    /** Fluid input tank: what pipes or buckets poured into the interface goes to the network. */
     public static final int TANK = 16000;
     private final net.neoforged.neoforge.fluids.capability.templates.FluidTank tank =
             new net.neoforged.neoforge.fluids.capability.templates.FluidTank(TANK) {
@@ -82,12 +82,12 @@ public class InterfaceBlockEntity extends BlockEntity {
         return tank.getFluid();
     }
 
-    // ------------------------------------------------------------------ жидкости в запасе
-    /** Одно ведро в ячейке настройки = столько mB в запасе. */
+    // ------------------------------------------------------------------ fluids in stock
+    /** One bucket in a config slot = this many mB in stock. */
     public static final int MB_PER_BUCKET = 1000;
-    /** Запас жидкостей по ячейкам настройки (в режиме «жидкость»). */
+    /** Fluid stock per config slot (in "fluid" mode). */
     private final net.neoforged.neoforge.fluids.FluidStack[] fluidStock = new net.neoforged.neoforge.fluids.FluidStack[SLOTS];
-    /** Режим ячеек: бит i = 1 — держать сами предметы (вёдра), 0 — жидкость из ёмкости (по умолчанию). */
+    /** Slot modes: bit i = 1 keeps the items themselves (buckets), 0 keeps the fluid from the container (default). */
     private int itemModeMask = 0;
 
     {
@@ -105,14 +105,14 @@ public class InterfaceBlockEntity extends BlockEntity {
         setChanged();
     }
 
-    /** Жидкость ёмкости в ячейке настройки (пусто — там не ёмкость с жидкостью). */
+    /** Fluid of the container in a config slot (empty if it is not a container with fluid). */
     public static net.neoforged.neoforge.fluids.FluidStack containedFluid(ItemStack cfg) {
         return cfg.isEmpty() ? net.neoforged.neoforge.fluids.FluidStack.EMPTY
                 : net.neoforged.neoforge.fluids.FluidUtil.getFluidContained(cfg).filter(f -> !f.isEmpty())
                 .orElse(net.neoforged.neoforge.fluids.FluidStack.EMPTY);
     }
 
-    /** Ячейка держит жидкость: в настройке ёмкость с жидкостью и режим не «предмет». */
+    /** The slot keeps fluid: the config holds a container with fluid and the mode is not "item". */
     public boolean isFluidSlot(int i) {
         return !itemMode(i) && !containedFluid(config.getItem(i)).isEmpty();
     }
@@ -121,15 +121,15 @@ public class InterfaceBlockEntity extends BlockEntity {
         return fluidStock[i];
     }
 
-    /** Больше этого жидкости в одной ячейке не держим (256 вёдер). */
+    /** No more fluid than this is kept in one slot (256 buckets). */
     public static final int MAX_FLUID = 256_000;
     /**
-     * Сколько держать по ячейкам: штук (режим «предмет») или mB (режим «жидкость»); задаётся в окне настройки ячейки.
-     * 0 — не задано (миры прежних версий): берётся количество в ячейке настройки, для жидкости — вёдрами.
+     * How much to keep per slot: items ("item" mode) or mB ("fluid" mode); set in the slot settings window.
+     * 0 = not set (worlds of older versions): the count in the config slot is used, in buckets for fluids.
      */
     private final int[] amount = new int[SLOTS];
 
-    /** Заданное количество ячейки (штуки или mB) с учётом режима. */
+    /** The set amount of a slot (items or mB) depending on the mode. */
     public int amount(int i) {
         ItemStack cfg = config.getItem(i);
         if (cfg.isEmpty()) {
@@ -141,7 +141,7 @@ public class InterfaceBlockEntity extends BlockEntity {
         return Math.min(cfg.getMaxStackSize(), amount[i] > 0 ? amount[i] : cfg.getCount());
     }
 
-    /** Поставить в ячейку настройки предмет (призрак) и количество. */
+    /** Put an item (ghost) and an amount into a config slot. */
     public void setSlot(int i, ItemStack stack, int count) {
         if (stack.isEmpty()) {
             config.setItem(i, ItemStack.EMPTY);
@@ -153,7 +153,7 @@ public class InterfaceBlockEntity extends BlockEntity {
         setChanged();
     }
 
-    /** Задать количество ячейки (штуки или mB), в пределах режима. */
+    /** Set a slot amount (items or mB) within the mode's limits. */
     public void setAmount(int i, int value) {
         ItemStack cfg = config.getItem(i);
         if (cfg.isEmpty()) {
@@ -164,7 +164,7 @@ public class InterfaceBlockEntity extends BlockEntity {
         setChanged();
     }
 
-    /** Режимы ячеек сменились: количество переводится (вёдра <-> mB), чтобы не держать 3 mB вместо трёх вёдер. */
+    /** Slot modes changed: the amount is converted (buckets <-> mB), so 3 mB are not kept instead of three buckets. */
     private void modesChanged(int oldMask, int newMask) {
         for (int i = 0; i < SLOTS; i++) {
             int bit = 1 << i;
@@ -178,7 +178,7 @@ public class InterfaceBlockEntity extends BlockEntity {
         }
     }
 
-    /** Сколько mB держать в ячейке i. */
+    /** How many mB to keep in slot i. */
     public int wantedFluid(int i) {
         return isFluidSlot(i) ? amount(i) : 0;
     }
@@ -187,7 +187,7 @@ public class InterfaceBlockEntity extends BlockEntity {
         return GolemConfig.BUS_FLUID_PER_OPERATION.get() * AMOUNT_MULT[upgrades.count(UpgradeType.SPEED)];
     }
 
-    /** Запас жидкостей: чужое и лишнее — в сеть, недостающее — из сети. Возвращает перенесённые mB. */
+    /** Fluid stock: foreign and excess fluid goes to the network, the missing amount comes from it. Returns the mB moved. */
     private int restockFluids(GolemNetwork network) {
         int moved = 0, budget = fluidPerOperation();
         for (int i = 0; i < SLOTS; i++) {
@@ -233,7 +233,7 @@ public class InterfaceBlockEntity extends BlockEntity {
     }
 
     /**
-     * Жидкости с любой стороны: бак 0 — приём (только залить, уходит в сеть), баки 1..9 — запас по ячейкам (только слить).
+     * Fluids from any side: tank 0 is input (fill only, goes to the network), tanks 1..9 are stock per slot (drain only).
      */
     private final class FluidIntake implements net.neoforged.neoforge.fluids.capability.IFluidHandler {
         @Override
@@ -299,7 +299,7 @@ public class InterfaceBlockEntity extends BlockEntity {
         }
     }
 
-    /** Бак -> сеть (сколько влезло), возвращает перенесённые mB. */
+    /** Tank -> network (as much as fits), returns the mB moved. */
     private int flushTank(GolemNetwork network) {
         var f = tank.getFluid();
         if (f.isEmpty()) {
@@ -317,7 +317,7 @@ public class InterfaceBlockEntity extends BlockEntity {
     private long lastEvent = -1000;
     private long lastCraftRequest = -1000;
 
-    /** Клиент: когда интерфейс работал в последний раз и сколько у него ускорителей (для анимации). */
+    /** Client: when the interface last worked and how many speed upgrades it has (for the animation). */
     private long clientLastWork = -1000;
     private int clientSpeed = 0;
 
@@ -347,8 +347,8 @@ public class InterfaceBlockEntity extends BlockEntity {
     }
 
     /**
-     * Данные окна: 0 — режим редстоуна, 1 — режимы ячеек (биты), 2..10 — запас жидкости (десятки mB), 11..19 и 20..28 —
-     * заданное количество ячеек (младшие и старшие 15 бит: данные окна идут по сети шортами).
+     * Window data: 0 = redstone mode, 1 = slot modes (bits), 2..10 = fluid stock (tens of mB), 11..19 and 20..28 =
+     * set amounts of the slots (low and high 15 bits: window data goes over the network as shorts).
      */
     public static final int DATA_SIZE = 2 + 3 * SLOTS;
     public static final int DATA_FLUID = 2, DATA_AMOUNT_LO = 2 + SLOTS, DATA_AMOUNT_HI = 2 + 2 * SLOTS;
@@ -400,7 +400,7 @@ public class InterfaceBlockEntity extends BlockEntity {
         return GolemConfig.BUS_ITEMS_PER_OPERATION.get() * AMOUNT_MULT[upgrades.count(UpgradeType.SPEED)];
     }
 
-    /** Сколько предметов держать в ячейке i (не больше стопки; у ячейки в режиме «жидкость» — ни одного). */
+    /** How many items to keep in slot i (at most a stack; none for a slot in "fluid" mode). */
     public int wanted(int i) {
         ItemStack c = config.getItem(i);
         return c.isEmpty() || isFluidSlot(i) ? 0 : amount(i);
@@ -446,7 +446,7 @@ public class InterfaceBlockEntity extends BlockEntity {
         }
     }
 
-    /** Приём -> сеть: сначала то, чего ждут задачи автокрафта (даже при полном хранилище), остальное — на хранение. */
+    /** Input -> network: first what autocraft jobs are waiting for (even when storage is full), the rest goes to storage. */
     private int flushInbox(GolemNetwork net, int budget) {
         int moved = 0;
         for (int i = 0; i < SLOTS && budget > 0; i++) {
@@ -478,14 +478,14 @@ public class InterfaceBlockEntity extends BlockEntity {
         return moved;
     }
 
-    /** Запас: лишнее и чужое — обратно в сеть, недостающее — из сети; чего нет совсем — заказ с Модулем Автокрафта. */
+    /** Stock: excess and foreign items go back to the network, missing ones come from it; what is absent entirely is ordered with the Autocraft Module. */
     private int restock(Level level, GolemNetwork net, int budget) {
         int moved = 0;
         Map<ItemKey, Long> toCraft = new LinkedHashMap<>();
         for (int i = 0; i < SLOTS; i++) {
             ItemStack cfg = config.getItem(i);
             ItemStack have = stock.getItem(i);
-            // в ячейке другой предмет (настройку поменяли) или лишнее — вернуть в сеть
+            // another item is in the slot (the config changed) or there is too much: return it to the network
             if (!have.isEmpty()) {
                 int excess = cfg.isEmpty() || isFluidSlot(i) || !ItemStack.isSameItemSameComponents(cfg, have) ? have.getCount()
                         : have.getCount() - wanted(i);
@@ -502,7 +502,7 @@ public class InterfaceBlockEntity extends BlockEntity {
             }
             have = stock.getItem(i);
             if (!have.isEmpty() && !ItemStack.isSameItemSameComponents(cfg, have)) {
-                continue; // чужое ещё не ушло (сеть полна)
+                continue; // the foreign item has not left yet (the network is full)
             }
             int need = wanted(i) - have.getCount();
             if (need <= 0) {
@@ -553,12 +553,12 @@ public class InterfaceBlockEntity extends BlockEntity {
         return super.triggerEvent(id, param);
     }
 
-    /** Клиент: «разгон» 0..1, фаза метрономов (радианы) и угол турбин (градусы) — текущие и прошлого тика. */
+    /** Client: spin-up 0..1, metronome phase (radians) and turbine angle (degrees), current and previous tick. */
     public float activity, activityPrev, phase, phasePrev, spin, spinPrev;
 
     /**
-     * Клиентский тик: пока интерфейс работает, турбины в раструбах крутятся, маятники метрономов качаются; с ускорителями —
-     * быстрее. Разгон и выбег плавные, в покое маятники стоят отвесно.
+     * Client tick: while the interface works, the turbines in the horns spin and the metronome pendulums swing, faster with
+     * speed upgrades. Spin-up and run-down are smooth; at rest the pendulums hang straight down.
      */
     public static void clientTick(Level level, BlockPos pos, BlockState state, InterfaceBlockEntity be) {
         float target = be.sinceWork(level.getGameTime()) < 30 ? 1f : 0f;
@@ -571,12 +571,12 @@ public class InterfaceBlockEntity extends BlockEntity {
         be.spin += be.activity * (10f + 9f * be.clientSpeed);
     }
 
-    /** Клиент: тиков с последней работы (большое число — простаивает). */
+    /** Client: ticks since the last work (a big number means idle). */
     public long sinceWork(long now) {
         return now - clientLastWork;
     }
 
-    /** Клиент: ускорителей (темп метрономов). */
+    /** Client: speed upgrades (metronome tempo). */
     public int clientSpeed() {
         return clientSpeed;
     }
@@ -648,7 +648,7 @@ public class InterfaceBlockEntity extends BlockEntity {
         int[] am = tag.getIntArray("Amounts");
         java.util.Arrays.fill(amount, 0);
         System.arraycopy(am, 0, amount, 0, Math.min(am.length, SLOTS));
-        // миры прежних версий держали количество числом предметов в ячейке настройки: переносим в «Amounts»
+        // worlds of older versions kept the amount as the item count in the config slot: move it to "Amounts"
         for (int i = 0; i < SLOTS; i++) {
             ItemStack cfg = config.getItem(i);
             if (amount[i] == 0 && cfg.getCount() > 1) {
@@ -662,8 +662,8 @@ public class InterfaceBlockEntity extends BlockEntity {
     // ------------------------------------------------------------ automation
 
     /**
-     * Доступ автоматики с любой стороны: ячейки 0..8 — выдача (только забирать), 9..17 — приём (только класть, любые
-     * предметы). Забрать из приёма нельзя — иначе воронка под интерфейсом вытягивала бы обратно то, что в него положили.
+     * Automation access from any side: slots 0..8 are output (take only), 9..17 are input (insert only, any
+     * items). Taking from the input is not allowed, otherwise a hopper under the interface would pull back what was put in.
      */
     private final class Automation implements IItemHandler {
         @Override

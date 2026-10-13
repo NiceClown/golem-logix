@@ -17,7 +17,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 
 /**
- * Ритуал наковальни: слева «сцена» (наковальня падает на голема), справа имя голема и нужное здоровье, внизу стрелка к пластине.
+ * Anvil ritual: on the left a "scene" (an anvil falls on a golem), on the right the golem's name and the needed health, below an arrow to the plate.
  */
 public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
     public static final RecipeType<AnvilCrushRecipe> TYPE =
@@ -60,7 +60,7 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
         return H;
     }
 
-    /** Для старых версий JEI, где размер берётся только из фона. */
+    /** For older JEI versions where the size is taken only from the background. */
     @SuppressWarnings("removal")
     @Override
     public IDrawable getBackground() {
@@ -85,7 +85,7 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
         slot.draw(g, SCENE_X, ANVIL_Y);
         slot.draw(g, SCENE_X, GOLEM_Y);
         slot.draw(g, OUT_X, GOLEM_Y);
-        // наковальня падает: пунктир между слотами
+        // the anvil falls: a dotted line between the slots
         for (int y = ANVIL_Y + 20; y < GOLEM_Y - 1; y += 3) {
             g.fill(SCENE_X + 8, y, SCENE_X + 10, y + 2, 0xFF7A7A7A);
         }

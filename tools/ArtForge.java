@@ -6,15 +6,15 @@ import java.nio.file.Path;
 import java.util.*;
 
 /**
- * Генератор текстур 32x32 и 3D-моделей блоков Golem Logix (оккульт-аналоговый стиль:
- * тёмное железо, медь, латунь, бирюзовое свечение, иней).
- * Запуск: java tools/ArtForge.java   (из корня проекта, JDK 21)
+ * Generator of the 32x32 textures and 3D block models of Golem Logix (occult-analog style:
+ * dark iron, copper, brass, a teal glow, frost).
+ * Run: java tools/ArtForge.java   (from the project root, JDK 21)
  */
 public class ArtForge {
     static final Path RES = Path.of("src/main/resources/assets/golem_logix");
     static final int S = 32;
 
-    // ----------------------------------------------------------------- палитра
+    // ----------------------------------------------------------------- palette
     static final int IRON = 0x3b3e47, IRON_D = 0x22242a, IRON_L = 0x5d626e, IRON_XL = 0x7b8190;
     static final int COPPER = 0xb87333, COPPER_D = 0x6e3f18, COPPER_L = 0xe39a5c;
     static final int BRASS = 0xc99a2e, BRASS_D = 0x6f5012, BRASS_L = 0xf2d070;
@@ -42,7 +42,7 @@ public class ArtForge {
                 | ((int) (ag + (bg - ag) * t) << 8) | (int) (ab + (bb - ab) * t);
     }
 
-    // ------------------------------------------------------------------ холст
+    // ------------------------------------------------------------------ canvas
     static class Tex {
         final int[] px = new int[S * S];
 
@@ -57,7 +57,7 @@ public class ArtForge {
             if (x >= 0 && y >= 0 && x < S && y < S) px[y * S + x] = c < 0 || (c >>> 24) != 0 ? (((c >>> 24) == 0) ? rgb(c) : c) : c;
         }
 
-        /** Светящиеся пиксели (жилы, огоньки): по ним save пишет слой свечения {@code имя_glow.png}. */
+        /** Glowing pixels (veins, lights): save writes the glow layer {@code name_glow.png} from them. */
         final boolean[] lit = new boolean[S * S];
 
         void put(int x, int y, int c) {
@@ -86,7 +86,7 @@ public class ArtForge {
             }
         }
 
-        /** Скос: свет сверху-слева, тень снизу-справа. */
+        /** Bevel: light at the top left, shadow at the bottom right. */
         void bevel(int x, int y, int w, int h, int light, int dark) {
             for (int i = x; i < x + w; i++) {
                 put(i, y, light);
@@ -148,7 +148,7 @@ public class ArtForge {
                 }
         }
 
-        /** Светящийся пиксель с мягким ореолом. */
+        /** A glowing pixel with a soft halo. */
         void glow(int x, int y, int c) {
             for (int[] d : new int[][]{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
                 int nx = x + d[0], ny = y + d[1];
@@ -161,8 +161,8 @@ public class ArtForge {
         }
 
         /**
-         * Светящаяся руна w x h пикселей (глифы {@link Paint#RUNES}, сетка 4x6) с левым верхним углом (x, y): тёмная гравировка
-         * по краю и светлое ядро; ядро попадает в слой свечения.
+         * A glowing w x h pixel rune (glyphs {@link Paint#RUNES}, a 4x6 grid) with its top left corner at (x, y): a dark engraving
+         * at the edge and a light core; the core goes into the glow layer.
          */
         void rune(int x, int y, int w, int h, int glyph, int core, int edge) {
             double[][] segs = Paint.RUNES[Math.floorMod(glyph * 7 + x * 31 + y * 17, Paint.RUNES.length)];
@@ -204,8 +204,8 @@ public class ArtForge {
         }
 
         /**
-         * Глубокая выгравированная руна (оккультно-древний стиль по концепт-арту):
-         * тёмная выемка в броне, латунные фаски травления и яркое лазурное ядро с горящими узлами.
+         * A deep engraved rune (ancient occult style from the concept art):
+         * a dark groove in the armour, brass etching bevels and a bright azure core with burning nodes.
          */
         void engravedRune(int x, int y, int w, int h, int glyph) {
             double[][] segs = Paint.RUNES[Math.floorMod(glyph * 7 + x * 31 + y * 17, Paint.RUNES.length)];
@@ -228,7 +228,7 @@ public class ArtForge {
                     }
                 }
             }
-            // 1. Тёмная выемка-желобок вокруг руны
+            // 1. Dark groove around the rune
             for (int[] p : pts) {
                 for (int dx = -1; dx <= 1; dx++) {
                     for (int dy = -1; dy <= 1; dy++) {
@@ -239,21 +239,21 @@ public class ArtForge {
                     }
                 }
             }
-            // 2. Бронзово-латунный отблеск травления по кромкам
+            // 2. Bronze-brass etching sheen along the edges
             for (int[] p : pts) {
                 int nx = p[0] - 1, ny = p[1] - 1;
                 if (nx >= 0 && ny >= 0 && nx < S && ny < S && !lit[ny * S + nx]) {
                     px[ny * S + nx] = mix(px[ny * S + nx], 0xFF6A5530, 0.45);
                 }
             }
-            // 3. Лазурное сияющее ядро
+            // 3. Azure glowing core
             for (int[] p : pts) {
                 put(p[0], p[1], CYAN);
                 if (p[0] >= 0 && p[1] >= 0 && p[0] < S && p[1] < S) {
                     lit[p[1] * S + p[0]] = true;
                 }
             }
-            // 4. Бело-голубые горящие узлы в конечных и переломных точках
+            // 4. White-blue burning nodes at the end and break points
             for (double[] g : segs) {
                 int x0 = x + (int) Math.round(g[0] * (w - 1) / 4.0), y0 = y + (int) Math.round(g[1] * (h - 1) / 6.0);
                 int x1 = x + (int) Math.round(g[2] * (w - 1) / 4.0), y1 = y + (int) Math.round(g[3] * (h - 1) / 6.0);
@@ -273,7 +273,7 @@ public class ArtForge {
             File f = RES.resolve("textures/block/" + name + ".png").toFile();
             f.getParentFile().mkdirs();
             ImageIO.write(img, "png", f);
-            // слой свечения рун и жил (его рисует поверх модели клиент, см. GlowModels)
+            // glow layer of runes and veins (the client draws it over the model, see GlowModels)
             BufferedImage g = new BufferedImage(S, S, BufferedImage.TYPE_INT_ARGB);
             boolean any = false;
             for (int i = 0; i < S * S; i++) {
@@ -291,8 +291,8 @@ public class ArtForge {
         }
     }
 
-    // ------------------------------------------------------------ материалы
-    /** Панель из листового металла: скос, швы, заклёпки. */
+    // ------------------------------------------------------------ materials
+    /** A sheet metal panel: bevel, seams, rivets. */
     static Tex plate(int base, int hi, int lo, long seed, boolean seams, int rivetColor) {
         Tex t = new Tex(base);
         t.speckle(0, 0, S, S, 0.07, seed);
@@ -315,12 +315,12 @@ public class ArtForge {
         return plate(IRON, IRON_L, IRON_D, seed, seams, BRASS);
     }
 
-    // ============================================================ ТЕКСТУРЫ
+    // ============================================================ TEXTURES
     static void atlasCasing() throws Exception {
         Tex t = ironPlate(11, true);
-        // латунные уголки у шва и тонкая бирюзовая жила
+        // brass corners at the seam and a thin teal vein
         for (int[] c : new int[][]{{13, 13}, {18, 13}, {13, 18}, {18, 18}}) t.rivet(c[0], c[1], BRASS, BRASS_L);
-        // фиолетового знака на самой обшивке нет: у собранной решётки он один на грань и бродит по ней (AtlasCoreRenderer)
+        // no purple glyph on the plating itself: on an assembled array there is one per face and it wanders over it (AtlasCoreRenderer)
         t.save("atlas_casing");
         Paint glyph = new Paint(4, 4, 16);
         glyph.glowRect(1.2, 0.9, 2.8, 3.1, 1.0, Paint.at(Paint.VIOLET, 3.6), 110);
@@ -330,7 +330,7 @@ public class ArtForge {
 
     static void atlasCasingTop() throws Exception {
         Tex t = ironPlate(12, false);
-        // латунная инкрустация рамкой и рунный крест в центре
+        // brass inlay as a frame and a rune cross in the middle
         t.fill(4, 4, 24, 24, BRASS_D);
         t.fill(5, 5, 22, 22, IRON);
         t.speckle(5, 5, 22, 22, 0.06, 13);
@@ -348,7 +348,7 @@ public class ArtForge {
     }
 
     static void atlasConduit() throws Exception {
-        // тоннель из меди и бирюзовых импульсов по железной раме
+        // a tunnel of copper and teal pulses over an iron frame
         Tex t = ironPlate(21, false);
         t.fill(0, 11, S, 10, IRON_D);
         t.fill(0, 12, S, 8, shade(COPPER, 0.5));
@@ -361,8 +361,8 @@ public class ArtForge {
         }
         t.fill(0, 15, S, 2, CYAN_D);
         t.bevel(0, 0, S, S, IRON_L, IRON_D);
-        // анимация: синий огонёк бежит по жиле слева направо и оставляет за собой залитую строку; заполнив её, жила гаснет
-        // и всё начинается снова (кадры друг под другом, слой свечения — с теми же кадрами)
+        // animation: a blue light runs along the vein from left to right and leaves a filled line behind; once it is full, the vein goes out
+        // and everything starts again (frames one under another, the glow layer has the same frames)
         int frames = 40;
         BufferedImage img = new BufferedImage(S, S * frames, BufferedImage.TYPE_INT_ARGB);
         BufferedImage glowImg = new BufferedImage(S, S * frames, BufferedImage.TYPE_INT_ARGB);
@@ -393,7 +393,7 @@ public class ArtForge {
 
     static void expander(String name, int glow, int glowDark, int glowLight, int frame, int frameDark) throws Exception {
         Tex t = ironPlate(31, false);
-        // окно с решёткой и кристаллами
+        // a window with a grate and crystals
         t.fill(6, 6, 20, 20, frameDark);
         t.fill(7, 7, 18, 18, frame);
         t.fill(8, 8, 16, 16, 0xFF0B1620);
@@ -435,29 +435,29 @@ public class ArtForge {
     }
 
     static void atlant() throws Exception {
-        // Базовый металл: тяжелый тёмный оружейный чугун с благородным травлением
+        // Base metal: heavy dark gun cast iron with noble etching
         Tex body = new Tex(IRON);
         body.speckle(0, 0, S, S, 0.05, 51);
         body.bevel(0, 0, S, S, IRON_D, IRON_D);
         body.bevel(1, 1, S - 2, S - 2, IRON_L, shade(IRON_D, 1.2));
 
-        // Мощный рельеф нагрудника: центральный броневой щит с глубокими фасками
+        // Strong chest plate relief: a central armour shield with deep bevels
         body.fill(4, 4, 24, 24, IRON_D);
         body.bevel(4, 4, 24, 24, IRON_L, 0xFF14161C);
         body.fill(6, 6, 20, 20, 0xFF2A2D35);
         body.bevel(6, 6, 20, 20, IRON_L, IRON_D);
 
-        // Стальные заклепки по периметру нагрудника
+        // Steel rivets around the chest plate
         for (int x : new int[]{5, 26}) {
             for (int y = 6; y <= 26; y += 5) body.rivet(x, y, IRON_D, IRON_L);
         }
 
-        // Единое центрированное Оккультное Резонансное Ядро Атланта (симметричный реактор)
-        // Внешнее бронзовое кольцо/оправа ядра
+        // A single centred Occult Resonance Core of the Atlant (a symmetrical reactor)
+        // Outer bronze ring/mount of the core
         body.disc(16, 16, 5.5, 0xFF5A4A2C);
         body.disc(16, 16, 4.8, 0xFF1E2128);
         body.bevel(12, 12, 9, 9, 0xFF786438, 0xFF101216);
-        // Внутреннее тёмное крио-ложе и сияющий кристаллический фокус
+        // Inner dark cryo bed and a glowing crystal focus
         body.disc(16, 16, 3.2, 0xFF08141C);
         body.disc(16, 16, 2.0, CYAN_D);
         body.put(15, 15, CYAN_L);
@@ -465,7 +465,7 @@ public class ArtForge {
         body.put(15, 16, CYAN);
         body.put(16, 16, CYAN);
 
-        // Строгие контурные энергоканалы, идущие от ядра по швам брони
+        // Strict contour energy channels running from the core along the armour seams
         for (int y = 7; y <= 24; y++) {
             if (y < 12 || y > 19) {
                 body.put(15, y, CYAN_D);
@@ -478,18 +478,18 @@ public class ArtForge {
                 body.put(x, 16, CYAN);
             }
         }
-        // Бронзовые хомуты-муфты на концах энергоканалов
+        // Bronze clamp sleeves at the ends of the energy channels
         body.fill(7, 14, 2, 4, 0xFF5A4A2C);
         body.fill(23, 14, 2, 4, 0xFF5A4A2C);
 
-        // Сдержанный крио-иней по верхней кромке и в выемках брони
+        // Restrained cryo frost along the top edge and in the armour recesses
         for (int x = 2; x < 30; x++) {
             if ((x * 13 + 7) % 6 == 0) body.put(x, 2, 0xFF96B8C8);
             if ((x * 17 + 3) % 7 == 0) body.put(x, 3, 0xFF6D8C9C);
         }
         body.save("atlant_body");
 
-        // Чистая формованная оружейная бронепластина для анатомического рельефа (пресс, пекторали, бедра)
+        // A clean moulded gun armour plate for the anatomical relief (abs, pectorals, thighs)
         Tex plate = new Tex(0x282B32);
         plate.speckle(0, 0, S, S, 0.04, 55);
         plate.bevel(0, 0, S, S, IRON_D, 0xFF14161C);
@@ -501,19 +501,19 @@ public class ArtForge {
         plate.rivet(27, 27, IRON_D, IRON_L);
         plate.save("atlant_plate");
 
-        // Конечности: мощные сегментированные чугунные пластины с глубокими пазами (без хаотичных рун)
+        // Limbs: strong segmented cast iron plates with deep grooves (no chaotic runes)
         Tex limb = new Tex(0x282B32);
         limb.speckle(0, 0, S, S, 0.05, 52);
         limb.bevel(0, 0, S, S, IRON_D, IRON_D);
         limb.bevel(1, 1, S - 2, S - 2, IRON_L, shade(IRON_D, 1.2));
-        // Горизонтальные рельефные сегменты брони
+        // Horizontal relief armour segments
         for (int y = 6; y < S; y += 8) {
             limb.fill(2, y, 28, 2, 0xFF14161C);
             limb.fill(2, y + 2, 28, 1, IRON_L);
             limb.rivet(4, y - 2, IRON_D, IRON_L);
             limb.rivet(26, y - 2, IRON_D, IRON_L);
         }
-        // Темная медная трубка вдоль конечности
+        // A dark copper tube along the limb
         for (int y = 3; y < 29; y++) {
             limb.put(15, y, 0xFF3D2614);
             limb.put(16, y, 0xFF6D4526);
@@ -521,15 +521,15 @@ public class ArtForge {
         }
         limb.save("atlant_limb");
 
-        // Пояс и портупея: темная вороненая сталь с состаренной бронзой
+        // Belt and harness: dark blued steel with aged bronze
         Tex belt = plate(0x4A3E2A, 0x6E5E42, 0x2A2316, 53, false, 0);
         for (int x = 3; x < S; x += 8) belt.rivet(x, 14, 0x2A2316, 0x8A7654);
         belt.fill(0, 6, S, 2, 0xFF14161C);
         belt.fill(0, 24, S, 2, 0xFF14161C);
-        // Массивная центральная пряжка-кожух
+        // A massive central buckle housing
         belt.fill(10, 5, 12, 22, 0xFF22252C);
         belt.bevel(10, 5, 12, 22, 0xFF786438, 0xFF121418);
-        // Криогенный энергетический элемент
+        // A cryogenic energy cell
         belt.fill(13, 10, 6, 12, 0xFF0A1820);
         belt.bevel(13, 10, 6, 12, CYAN_D, 0xFF040E14);
         belt.fill(14, 12, 4, 8, CYAN);
@@ -537,20 +537,20 @@ public class ArtForge {
         belt.glow(16, 16, CYAN_L);
         belt.save("atlant_belt");
 
-        // Голова: монументальный водолазный шлем-автоматон
+        // Head: a monumental automaton diving helmet
         Tex head = new Tex(IRON);
         head.speckle(0, 0, S, S, 0.05, 54);
         head.bevel(0, 0, S, S, IRON_D, IRON_D);
         head.bevel(1, 1, S - 2, S - 2, IRON_L, shade(IRON_D, 1.2));
-        // Массивная броневая бровь
+        // A massive armoured brow
         head.fill(2, 6, 28, 4, 0xFF161820);
         head.bevel(2, 6, 28, 4, IRON_L, 0xFF101216);
         head.rivet(4, 7, 0xFF4A3E2A, 0xFF786438);
         head.rivet(26, 7, 0xFF4A3E2A, 0xFF786438);
 
-        // Горизонтальный моно-визор: глубокая тёмная глазница с сияющим лазурным окуляром
+        // A horizontal mono visor: a deep dark eye socket with a glowing azure eyepiece
         head.fill(7, 11, 18, 6, 0xFF0E1014);
-        head.bevel(7, 11, 18, 6, 0xFF524428, 0xFF080A0E); // темная бронзовая оправа
+        head.bevel(7, 11, 18, 6, 0xFF524428, 0xFF080A0E); // dark bronze mount
         head.fill(9, 12, 14, 4, 0xFF091720);
         head.fill(10, 13, 12, 2, CYAN);
         for (int x = 11; x <= 18; x++) {
@@ -558,7 +558,7 @@ public class ArtForge {
             head.glow(x, 14, CYAN);
         }
 
-        // Вентиляционная решетка дыхала
+        // Breather vent grate
         head.fill(10, 19, 12, 9, 0xFF14161C);
         head.bevel(10, 19, 12, 9, IRON_L, 0xFF0A0C0E);
         for (int y = 21; y <= 26; y += 2) {
@@ -571,7 +571,7 @@ public class ArtForge {
     }
 
     static void coreParts() throws Exception {
-        // кристалл ядра: огранка, свечение от центра
+        // core crystal: facets, glow from the centre
         Tex c = new Tex(CYAN_D);
         for (int j = 0; j < S; j++)
             for (int i = 0; i < S; i++) {
@@ -587,7 +587,7 @@ public class ArtForge {
     }
 
     static void terminalTrim() throws Exception {
-        // светящийся индикаторный экран для верхних граней терминалов не нужен; оставляем существующие
+        // a glowing indicator screen for the top faces of the terminals is not needed; keep the existing ones
     }
 
     static void brassPlate() throws Exception {
@@ -604,7 +604,7 @@ public class ArtForge {
         int frames = 24;
         BufferedImage out = new BufferedImage(S, S * frames, BufferedImage.TYPE_INT_ARGB);
 
-        // Базовая пластина: глубокий крио-металл, скос, иней
+        // Base plate: deep cryo metal, bevel, frost
         Tex base = plate(STEEL_BLUE, 0xFF6c93b8, 0xFF1b2a3b, 81, false, 0xFFBFD8E8);
         base.fill(5, 5, 22, 22, 0xFF0F1A27);
         base.bevel(5, 5, 22, 22, 0xFF1b2a3b, 0xFF6c93b8);
@@ -614,7 +614,7 @@ public class ArtForge {
             if ((x < 5 || x > 26) && (y < 5 || y > 26)) base.put(x, y, mix(base.get(x, y), rgb(FROST), 0.7));
         }
 
-        // Битовые потоки 6 горизонтальных строк (период 24 для бесшовной циклической анимации)
+        // Bit streams of 6 horizontal lines (period 24 for a seamless looping animation)
         int[][] stream = {
             {1, 1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1},
             {0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1},
@@ -628,7 +628,7 @@ public class ArtForge {
             Tex frame = new Tex();
             System.arraycopy(base.px, 0, frame.px, 0, S * S);
 
-            // Плавная синусоидальная пульсация боковых крио-рун
+            // Smooth sine pulsing of the side cryo runes
             for (int i = 0; i < 3; i++) {
                 double wavePhase = ((f + i * 8.0) / frames) * 2 * Math.PI;
                 double pulse = 0.5 + 0.5 * Math.sin(wavePhase);
@@ -637,7 +637,7 @@ public class ArtForge {
                 frame.rune(28, 8 + i * 6, 3, 5, i * 4 + 3, runeColor, 0xFF1b2a3b);
             }
 
-            // 6 плавно бегущих строк матрицы (четные вправо, нечетные влево) с мягкими затухающими шлейфами
+            // 6 smoothly running matrix lines (even ones to the right, odd ones to the left) with soft fading trails
             for (int i = 0; i < 6; i++) {
                 int y = 8 + i * 3;
                 int dir = (i % 2 == 0) ? 1 : -1;
@@ -648,9 +648,9 @@ public class ArtForge {
                     int pDist = Math.floorMod((x - 7) - shift * 2, 24);
                     int col;
                     if (pDist < 2) {
-                        col = argb(255, 0xE2FFFE); // яркая голова пакета
+                        col = argb(255, 0xE2FFFE); // bright packet head
                     } else if (pDist < 4) {
-                        col = mix(rgb(CYAN), argb(255, 0xE2FFFE), 0.5); // мягкий ореол
+                        col = mix(rgb(CYAN), argb(255, 0xE2FFFE), 0.5); // soft halo
                     } else if (bit == 1) {
                         col = mix(rgb(CYAN_D), rgb(CYAN), 0.7);
                     } else {
@@ -698,7 +698,7 @@ public class ArtForge {
     static void resonator() throws Exception {
         Tex r = plate(BRASS, BRASS_L, BRASS_D, 91, false, COPPER_D);
         for (int x = 4; x < S; x += 6) r.fill(x, 6, 1, 20, BRASS_D);
-        // руны мороза между рёбрами
+        // frost runes between the fins
         for (int i = 0; i < 4; i++) {
             r.rune(6 + i * 6, 13, 3, 6, i * 3 + 4, rgb(0xB6E0F2), BRASS_D);
         }
@@ -736,7 +736,7 @@ public class ArtForge {
         c.save("cork");
     }
 
-    // ===================================================== графика книги
+    // ===================================================== book graphics
     static void saveGui(BufferedImage img, String name) throws Exception {
         File f = RES.resolve("textures/gui/book/" + name + ".png").toFile();
         f.getParentFile().mkdirs();
@@ -745,7 +745,7 @@ public class ArtForge {
 
     static void bookArt() throws Exception {
         Random r = new Random(7);
-        // --- пергамент 256x256: волокна, пятна, затемнённые края
+        // --- 256x256 parchment: fibres, stains, darkened edges
         BufferedImage p = new BufferedImage(256, 256, BufferedImage.TYPE_INT_ARGB);
         for (int y = 0; y < 256; y++)
             for (int x = 0; x < 256; x++) {
@@ -762,7 +762,7 @@ public class ArtForge {
                 if (xx < 256 && yy < 256) p.setRGB(xx, yy, shade(p.getRGB(xx, yy), 0.95));
             }
         }
-        for (int i = 0; i < 9; i++) { // кофейные пятна
+        for (int i = 0; i < 9; i++) { // coffee stains
             double cx = r.nextInt(256), cy = r.nextInt(256), rad = 6 + r.nextInt(14);
             for (int y = 0; y < 256; y++)
                 for (int x = 0; x < 256; x++) {
@@ -772,7 +772,7 @@ public class ArtForge {
         }
         saveGui(p, "parchment");
 
-        // --- фон карты: тёмно-синяя бездна, сетка, звёзды
+        // --- map background: a dark blue abyss, a grid, stars
         BufferedImage m = new BufferedImage(256, 256, BufferedImage.TYPE_INT_ARGB);
         for (int y = 0; y < 256; y++)
             for (int x = 0; x < 256; x++) m.setRGB(x, y, rgb(mix(rgb(0x0B1620), rgb(0x10202D), ((x * 7 + y * 3) % 17) / 17.0)));
@@ -791,7 +791,7 @@ public class ArtForge {
         }
         saveGui(m, "map_bg");
 
-        // --- спрайты узлов 26x26: 0 обычный, 1 наведённый, 2 золотой (главная вехa), 3 непрочитанный отсвет
+        // --- 26x26 node sprites: 0 normal, 1 hovered, 2 golden (a main milestone), 3 unread glow
         BufferedImage n = new BufferedImage(26 * 4, 26, BufferedImage.TYPE_INT_ARGB);
         int[][] ringCols = {{BRASS, BRASS_D, BRASS_L}, {CYAN, CYAN_D, CYAN_L}, {GOLD, 0x7a5f12, 0xFFF3B0}, {CYAN_L, CYAN, 0xFFFFFFFF}};
         for (int s = 0; s < 4; s++) {
@@ -813,7 +813,7 @@ public class ArtForge {
         saveGui(n, "nodes");
     }
 
-    // ===================================================== анимация экранов терминалов
+    // ===================================================== terminal screen animation
     static void blit(BufferedImage img, String[] rows, int ox, int oy) {
         for (int y = 0; y < rows.length; y++)
             for (int x = 0; x < rows[y].length(); x++) {
@@ -831,13 +831,13 @@ public class ArtForge {
     }
 
     /**
-     * Лист 64x64 для TerminalRenderer: фоны экранов (0,0 и 16,0, по 14x14), голем 6x7 с ящиком (y=16) и без (y=24)
-     * по 4 кадра шагом 8, ящик 2x2 (32,16), белый пиксель (62,62), приветствие 14x14 по 4 кадра (y=32, шаг 16).
-     * Спрайты белые/серые: цвет (зелёный люминофор или янтарь) красит рендерер.
+     * 64x64 sheet for TerminalRenderer: screen backgrounds (0,0 and 16,0, 14x14 each), a 6x7 golem with a crate (y=16) and without (y=24)
+     * 4 frames each at a step of 8, a 2x2 crate (32,16), a white pixel (62,62), the 14x14 greeting in 4 frames (y=32, step 16).
+     * The sprites are white/grey: the renderer tints them (green phosphor or amber).
      */
     static void terminalAnim() throws Exception {
         BufferedImage img = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
-        // фон ЭЛТ: тёмный люминофор в круге, строчная развёртка и кольцо радара
+        // CRT background: dark phosphor in a circle, scanlines and a radar ring
         for (int y = 0; y < 14; y++)
             for (int x = 0; x < 14; x++) {
                 double d = Math.hypot(x + 0.5 - 7, y + 0.5 - 7);
@@ -847,7 +847,7 @@ public class ArtForge {
                 if (Math.abs(d - 4.6) < 0.5) c = mix(c, rgb(0x0f4a22), 0.7);
                 img.setRGB(x, y, c);
             }
-        // фон крафтового терминала: тёмный янтарь с редкой сеткой
+        // crafting terminal background: dark amber with a sparse grid
         for (int y = 0; y < 14; y++)
             for (int x = 0; x < 14; x++) {
                 int c = rgb(0x1d1004);
@@ -865,7 +865,7 @@ public class ArtForge {
         blit(img, new String[]{"cc", "ck"}, 32, 16);
         img.setRGB(62, 62, 0xFFFFFFFF);
 
-        // приветствие: голем анфас, правая рука машет; всё внутри круга радиуса 7, чтобы не вылезать за ЭЛТ
+        // greeting: the golem faces forward, its right hand waves; everything inside a circle of radius 7 so it does not stick out of the CRT
         int[][] hands = {{10, 2}, {11, 3}, {11, 4}, {11, 3}};
         for (int f = 0; f < 4; f++) {
             int ox = f * 16, oy = 32;
@@ -873,20 +873,20 @@ public class ArtForge {
             java.util.function.BiConsumer<int[], Integer> dot = (p, v) -> {
                 if (p[0] >= 0 && p[1] >= 0 && p[0] < 14 && p[1] < 14) wave[p[1]][p[0]] = v;
             };
-            for (int y = 1; y <= 4; y++) for (int x = 4; x <= 9; x++) dot.accept(new int[]{x, y}, 255);   // голова
+            for (int y = 1; y <= 4; y++) for (int x = 4; x <= 9; x++) dot.accept(new int[]{x, y}, 255);   // head
             dot.accept(new int[]{5, 2}, 95);
             dot.accept(new int[]{8, 2}, 95);
-            for (int x = 5; x <= 8; x++) dot.accept(new int[]{x, 4}, 170);                                  // улыбка-решётка
-            dot.accept(new int[]{3, 1}, 170);                                                              // «ушки»
+            for (int x = 5; x <= 8; x++) dot.accept(new int[]{x, 4}, 170);                                  // grille smile
+            dot.accept(new int[]{3, 1}, 170);                                                              // "ears"
             dot.accept(new int[]{10, 1}, 170);
             dot.accept(new int[]{6, 5}, 140);
-            dot.accept(new int[]{7, 5}, 140);                                                              // шея
-            for (int y = 6; y <= 11; y++) for (int x = 4; x <= 9; x++) dot.accept(new int[]{x, y}, 255);   // корпус
-            for (int y = 8; y <= 9; y++) for (int x = 6; x <= 7; x++) dot.accept(new int[]{x, y}, 95);     // нагрудная панель
-            for (int y = 7; y <= 10; y++) for (int x = 2; x <= 3; x++) dot.accept(new int[]{x, y}, 170);   // левая рука висит
-            for (int x = 5; x <= 6; x++) for (int y = 12; y <= 13; y++) dot.accept(new int[]{x, y}, 200);  // ноги
+            dot.accept(new int[]{7, 5}, 140);                                                              // neck
+            for (int y = 6; y <= 11; y++) for (int x = 4; x <= 9; x++) dot.accept(new int[]{x, y}, 255);   // body
+            for (int y = 8; y <= 9; y++) for (int x = 6; x <= 7; x++) dot.accept(new int[]{x, y}, 95);     // chest panel
+            for (int y = 7; y <= 10; y++) for (int x = 2; x <= 3; x++) dot.accept(new int[]{x, y}, 170);   // the left arm hangs
+            for (int x = 5; x <= 6; x++) for (int y = 12; y <= 13; y++) dot.accept(new int[]{x, y}, 200);  // legs
             for (int x = 7; x <= 8; x++) for (int y = 12; y <= 13; y++) dot.accept(new int[]{x, y}, 200);
-            // правая рука: от плеча (10,7) к кисти
+            // right arm: from the shoulder (10,7) to the hand
             int hx = hands[f][0], hy = hands[f][1];
             int x0 = 10, y0 = 7;
             int steps = Math.max(Math.abs(hx - x0), Math.abs(hy - y0)) + 1;
@@ -934,7 +934,7 @@ public class ArtForge {
         Items.all();
         Interface.all();
         Logo.make();
-        System.out.println("ArtForge: готово");
+        System.out.println("ArtForge: done");
     }
 }
 

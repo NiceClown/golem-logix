@@ -14,7 +14,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Меню дискового шкафа: 10 ячеек (2 столбца x 5 рядов, как кассеты в самом шкафу) под магнитные диски предметов и жидкостей.
+ * Drive cabinet menu: 10 slots (2 columns x 5 rows, like the cassettes in the cabinet itself) for magnetic item and fluid disks.
  */
 public class DriveBayMenu extends GolemMenu {
     public static final int COLS = 2;

@@ -5,8 +5,8 @@ import java.nio.file.Path;
 import java.util.*;
 
 /**
- * Второе поколение графики Golem Logix: шкаф 2x2, шины и трубы. Плотность — 4 текселя на юнит (64 пикселя на блок).
- * Дизайн-код: бронза и латунь с заклёпками, тёмное железо, бирюзовое свечение, фиолетовые руны, иней.
+ * The second generation of Golem Logix graphics: the 2x2 cabinet, buses and pipes. Density is 4 texels per unit (64 pixels per block).
+ * Design code: bronze and brass with rivets, dark iron, a teal glow, purple runes, frost.
  */
 public final class Forge2 {
     static final Path RES = Path.of("src/main/resources/assets/golem_logix");
@@ -33,7 +33,7 @@ public final class Forge2 {
         return RES.resolve("textures/block/" + name + ".png").toFile();
     }
 
-    /** Текстуры, которые рисуют только отрисовщики блок-сущностей: вне атласа блоков (иначе лишние mip-предупреждения и место в атласе). */
+    /** Textures drawn only by block entity renderers: outside the block atlas (otherwise extra mip warnings and atlas space). */
     static File entityTex(String name) {
         return RES.resolve("textures/entity/" + name + ".png").toFile();
     }
@@ -43,19 +43,19 @@ public final class Forge2 {
         Files.writeString(p, s, StandardCharsets.UTF_8);
     }
 
-    // ============================================================================================ шкаф
-    // раскладка фасада (юниты, y вниз): балка 0..4, цоколь 28..32, стойки и проёмы между ними
+    // ============================================================================================ cabinet
+    // front layout (units, y down): beam 0..4, plinth 28..32, posts and the openings between them
     static final double P0 = 2.5, M0 = 2.5, M1 = 5.5, P1 = 7.5, D0 = 7.5, D1 = 23.5, P2 = 25.5, G0 = 25.5, G1 = 29.5, P3 = 29.5;
     static final double BEAM = 4, PLINTH = 28;
 
-    /** Деревянная/бронзовая балка: плита с продольным зерном. */
+    /** A wooden/bronze beam: a slab with a lengthwise grain. */
     static void beam(Paint p, double x0, double y0, double x1, double y1, double mid, boolean horizontal, long seed) {
         p.slab(x0, y0, x1, y1, BRONZE, mid, 1);
         p.streaks(x0 + 0.25, y0 + 0.25, x1 - 0.25, y1 - 0.25, 0.09, seed, horizontal);
         p.grain(x0, y0, x1, y1, 0.04, seed + 1);
     }
 
-    /** Латунный блок с болтом. */
+    /** A brass block with a bolt. */
     static void brassBlock(Paint p, double x0, double y0, double x1, double y1, long seed) {
         p.slab(x0, y0, x1, y1, BRASS, 3.2, 2);
         p.grain(x0, y0, x1, y1, 0.05, seed);
@@ -67,7 +67,7 @@ public final class Forge2 {
         }
     }
 
-    /** Цепочка ромбов — резной фриз. */
+    /** A chain of rhombuses: a carved frieze. */
     static void frieze(Paint p, double x0, double x1, double y0, double y1, double period) {
         double cy = (y0 + y1) / 2, hh = (y1 - y0) / 2 - 0.15;
         for (double cx = x0 + period / 2; cx < x1; cx += period) {
@@ -85,13 +85,13 @@ public final class Forge2 {
     static Paint elevation() {
         Paint p = new Paint(32, 32, K);
 
-        // --- верхняя балка с резным фризом, латунными угловыми блоками и рунной табличкой
+        // --- the top beam with a carved frieze, brass corner blocks and a rune plate
         beam(p, 0, 0, 32, BEAM, 2.9, true, 11);
         p.slab(3.5, 0.8, 28.5, 3.2, BRONZE, 1.6, 1);
         frieze(p, 3.8, 28.2, 0.8, 3.2, 1.9);
         brassBlock(p, 0, 0, 3.5, BEAM, 12);
         brassBlock(p, 28.5, 0, 32, BEAM, 13);
-        // рунная табличка по центру
+        // rune plate in the middle
         p.slab(12.2, 0.3, 19.8, 3.7, BRASS, 3.0, 1);
         p.slab(13.0, 0.9, 19.0, 3.1, IRON, 1.0, 1);
         p.glowRect(13.4, 1.0, 18.6, 3.0, 0.7, at(VIOLET, 3.5), 60);
@@ -102,7 +102,7 @@ public final class Forge2 {
         p.rivet(12.7, 3.25, 0.2, BRASS);
         p.rivet(19.3, 3.25, 0.2, BRASS);
 
-        // --- цоколь
+        // --- plinth
         beam(p, 0, PLINTH, 32, 32, 2.6, true, 21);
         p.slab(3.5, 28.9, 28.5, 31.1, BRONZE, 1.5, 1);
         frieze(p, 3.8, 28.2, 28.9, 31.1, 1.9);
@@ -113,9 +113,9 @@ public final class Forge2 {
         p.glowRect(14.4, 29.0, 17.6, 31.0, 0.6, at(VIOLET, 3.5), 55);
         p.rune(15.2, 29.1, 1.9, 19, at(VIOLET, 5.2), at(VIOLET, 3.0));
 
-        // --- стойки: бронзовые, с латунными поясами и заклёпками
-        // стойки — там же, где коробки модели (cabinetGeometry): 0..P0, M1..P1, D1..P2, P3..32; иначе лицо стойки брало
-        // прозрачный участок картины и сквозь шкаф было видно небо
+        // --- posts: bronze, with brass bands and rivets
+        // the posts are where the model boxes are (cabinetGeometry): 0..P0, M1..P1, D1..P2, P3..32; otherwise a post face took
+        // a transparent area of the picture and the sky showed through the cabinet
         double[][] posts = {{0, P0}, {M1, P1}, {D1, P2}, {P3, 32}};
         long seed = 31;
         for (double[] ps : posts) {
@@ -126,11 +126,11 @@ public final class Forge2 {
                 p.rivet(ps[1] - 0.55, by + 0.65, 0.2, BRASS);
             }
         }
-        // внутренние стойки — с латунной окантовкой проёма
+        // the inner posts get a brass edging of the opening
         for (double x : new double[]{M1, D0, D1, G0}) {
             p.rect(x - 0.12, BEAM, x + 0.12, PLINTH, at(BRASS, 4.2));
         }
-        // иней на карнизах и углах
+        // frost on the cornices and corners
         p.frostLine(0, 32, 0, 0.55, 5);
         p.frostLine(0.3, 3.2, 28, 0.5, 6);
         p.frostLine(28.8, 31.8, 28, 0.5, 7);
@@ -140,20 +140,20 @@ public final class Forge2 {
         return p;
     }
 
-    /** Режет фасад на четыре картинки по клеткам и пишет их. */
+    /** Cuts the front into four pictures per cell and writes them. */
     static void saveElevation(Paint p) throws Exception {
-        // клетки: (колонка 0 = слева), ряд 0 = нижний. Холст — y вниз, поэтому нижний ряд — нижняя половина картинки.
+        // cells: (column 0 = left), row 0 = bottom. The canvas has y down, so the bottom row is the bottom half of the picture.
         p.crop(0, 16, 16, 16).save(tex("cab_front_bl"));
         p.crop(16, 16, 16, 16).save(tex("cab_front_br"));
         p.crop(0, 0, 16, 16).save(tex("cab_front_tl"));
         p.crop(16, 0, 16, 16).save(tex("cab_front_tr"));
     }
 
-    /** Боковая стенка шкафа 16 (вглубь) x 32 (в высоту) юнита. left: слева — розетки и манометры, справа — одна розетка. */
+    /** A cabinet side wall of 16 (deep) x 32 (high) units. left: sockets and gauges on the left, one socket on the right. */
     static Paint sideWall(boolean left, long seed) {
         Paint p = new Paint(16, 32, K);
         beam(p, 0, 0, 16, 32, 2.8, false, seed);
-        // латунные пояса на уровне фасадных поясов и торцов балок
+        // brass bands at the level of the front bands and the beam ends
         p.slab(0, 0, 16, 4, BRONZE, 2.3, 1);
         p.slab(0, 28, 16, 32, BRONZE, 2.3, 1);
         for (double by : new double[]{7.5, 24.0}) {
@@ -181,7 +181,7 @@ public final class Forge2 {
         return p;
     }
 
-    /** Латунная розетка под кабель с тёмным отверстием. */
+    /** A brass cable socket with a dark hole. */
     static void socket(Paint p, double cx, double cy) {
         p.slab(cx - 3.2, cy - 2.2, cx + 3.2, cy + 2.2, BRASS, 3.2, 1);
         p.sphere(cx, cy, 1.55, BRASS, 0.2, 0.95);
@@ -193,7 +193,7 @@ public final class Forge2 {
         p.rivet(cx + 2.5, cy + 1.5, 0.24, BRASS);
     }
 
-    /** Крыша: бронзовые листы, латунная окантовка, решётка вентиляции и иней. */
+    /** Roof: bronze sheets, a brass edging, a vent grate and frost. */
     static Paint roof() {
         Paint p = new Paint(16, 16, K);
         beam(p, 0, 0, 16, 16, 2.7, true, 61);
@@ -209,7 +209,7 @@ public final class Forge2 {
         return p;
     }
 
-    /** Спинка: бронзовые панели с заклёпками (бесшовная плитка). */
+    /** Back: bronze panels with rivets (a seamless tile). */
     static Paint backPanel() {
         Paint p = new Paint(16, 16, K);
         beam(p, 0, 0, 16, 16, 2.5, false, 71);
@@ -222,7 +222,7 @@ public final class Forge2 {
         return p;
     }
 
-    /** Задняя стенка витрины: тёмное железо, вертикальные швы, латунные трубопроводы и бирюзовые импульсы. */
+    /** The back wall of the display: dark iron, vertical seams, brass pipelines and teal pulses. */
     static Paint displayWall() {
         Paint p = new Paint(16, 24, K);
         p.slab(0, 0, 16, 24, IRON, 1.5, 1);
@@ -231,7 +231,7 @@ public final class Forge2 {
             p.rect(x - 0.1, 0.5, x + 0.1, 23.5, at(IRON, 0.2));
             p.rect(x + 0.1, 0.5, x + 0.25, 23.5, at(IRON, 2.6));
         }
-        // латунный трубопровод вдоль верха и по правой стороне, с бирюзовыми импульсами
+        // a brass pipeline along the top and down the right side, with teal pulses
         p.slab(0.5, 1.2, 15.5, 2.4, BRASS, 2.4, 1);
         for (double x : new double[]{3, 8.5, 13}) {
             p.rect(x, 1.55, x + 1.2, 2.05, at(CYAN, 4.6));
@@ -241,7 +241,7 @@ public final class Forge2 {
         for (double y : new double[]{6, 12, 18}) {
             p.slab(13.9, y, 15.7, y + 0.9, BRASS, 3.4, 1);
         }
-        // ряды: латунные риски на каждой полке и римские цифры
+        // rows: brass marks on every shelf and Roman numerals
         String[] numerals = {"I", "II", "III", "IV", "V"};
         for (int r = 0; r < 5; r++) {
             double y = 4.8 * (r + 1) - 0.1;
@@ -252,7 +252,7 @@ public final class Forge2 {
         return p;
     }
 
-    /** Доска полки. */
+    /** A shelf board. */
     static Paint shelfBoard() {
         Paint p = new Paint(16, 4, K);
         beam(p, 0, 0, 16, 4, 3.0, true, 91);
@@ -263,10 +263,10 @@ public final class Forge2 {
         return p;
     }
 
-    /** Решётка слева: тёмные провода в латунной рамке, дыры — прозрачные. */
+    /** The grate on the left: dark wires in a brass frame, the holes are transparent. */
     static Paint meshPanel() {
         Paint p = new Paint(4, 24, K);
-        // холст 4 юнита шириной растягивается на проём в 3 юнита (кратность 16 пикселей для mip-уровней)
+        // a canvas 4 units wide is stretched over a 3-unit opening (a multiple of 16 pixels for the mip levels)
         p.mesh(0, 0, 4, 24, 1.4, 0.45, at(IRON, 2.4), at(IRON, 4.4), 0);
         p.rect(0, 0, 4, 0.45, at(BRASS, 3.4));
         p.rect(0, 23.55, 4, 24, at(BRASS, 2.4));
@@ -278,7 +278,7 @@ public final class Forge2 {
     static Paint glass(double w, double h, int alpha, int tint, long seed) {
         Paint p = new Paint(w, h, K);
         p.tint(0, 0, w, h, argb(alpha, tint));
-        // диагональные блики
+        // diagonal highlights
         double s = Math.max(w, h);
         for (double off : new double[]{0.0, 5.0, 11.0}) {
             p.line(0.4 + off * w / 16, h * 0.30 + off, w * 0.9 + off * w / 16, 0.4 + off - 2, 0.28, argb(70, 0xFFFFFF));
@@ -291,7 +291,7 @@ public final class Forge2 {
         return p;
     }
 
-    /** Задняя панель правой дверцы: большой манометр, вентили и трубы. */
+    /** The back panel of the right door: a big gauge, valves and pipes. */
     static Paint machinePanel() {
         Paint p = new Paint(4, 24, K);
         p.slab(0, 0, 4, 24, IRON, 1.7, 1);
@@ -307,10 +307,10 @@ public final class Forge2 {
         return p;
     }
 
-    /** Стеклянная колба с бирюзовой жидкостью (вид сбоку). */
+    /** A glass flask with teal liquid (side view). */
     static Paint vial() {
         Paint p = new Paint(4, 20, K);
-        // колба шириной 1.4 юнита по центру холста в 4 юнита (грани модели берут её через uv)
+        // a flask 1.4 units wide in the middle of a 4-unit canvas (the model faces take it through uv)
         p.fill(1.3, 0, 2.7, 20, (u, v) -> {
             double t = (u - 2.0) / 0.7;
             double edge = Math.abs(t);
@@ -339,7 +339,7 @@ public final class Forge2 {
         return p;
     }
 
-    /** Бронзовая плитка общего назначения (внутренние грани стоек). */
+    /** A general-purpose bronze tile (inner faces of the posts). */
     static Paint beamTile() {
         Paint p = new Paint(16, 16, K);
         beam(p, 0, 0, 16, 16, 2.4, false, 121);
@@ -375,14 +375,14 @@ public final class Forge2 {
         return p;
     }
 
-    // ---------------------------------------------------------------- модель шкафа
-    /** Дверной проём в перегородке: высота от полки и глубина (от стекла до z = DOOR_Z1); см. DriveBayRenderer. */
+    // ---------------------------------------------------------------- cabinet model
+    /** A doorway in the partition: height above the shelf and depth (from the glass to z = DOOR_Z1); see DriveBayRenderer. */
     static final double DOOR_H = 3.4, DOOR_Z1 = 6.0;
 
-    /** Глубина корпуса сзади: последние 0,6 юнита занимает рельеф спинки (экраны, катушка, трубы). */
+    /** Body depth at the back: the last 0.6 units are taken by the relief of the back (screens, coil, pipes). */
     static final double BACKZ = 15.4;
 
-    /** withGlass — стёкла витрины и правой дверцы (только для иконки: в мире это распашные дверцы DriveBayRenderer). */
+    /** withGlass = the glass of the display and the right door (only for the icon: in the world these are DriveBayRenderer's swinging doors). */
     static BigModel cabinetGeometry(boolean withGlass) {
         BigModel m = new BigModel();
         BigModel.Face elev = BigModel.Face.of("elev"), beamF = BigModel.Face.of("beam"), backF = BigModel.Face.of("back"),
@@ -396,7 +396,7 @@ public final class Forge2 {
         BigModel.Face mesh = BigModel.Face.map("mesh", (x, y, z) -> new double[]{(x - M0) / 3 * 16, (28 - y) / 24 * 16});
         BigModel.Face vial = BigModel.Face.map("vial", (x, y, z) -> new double[]{5.2 + (x - 3.4) / 1.4 * 5.6, (26 - y) / 20 * 16});
 
-        // оболочка: цоколь, верхняя балка, четыре стойки
+        // shell: plinth, top beam, four posts
         m.box(0, 0, 0, 32, 4, 16).front(elev).back(backF).left(sideL).right(sideR).top(beamF).bottom(beamF);
         m.box(0, 28, 0, 32, 32, 16).front(elev).back(backF).left(sideL).right(sideR).top(topF).bottom(beamF);
         m.box(0, 4, 0, P0, 28, 16).front(elev).back(backF).left(sideL).right(beamF);
@@ -404,7 +404,7 @@ public final class Forge2 {
         m.box(D1, 4, 0, P2, 28, 16).front(elev).back(backF).left(beamF).right(beamF);
         m.box(P3, 4, 0, 32, 28, 16).front(elev).back(backF).left(beamF).right(sideR);
 
-        // левый отсек за сеткой: тёмная задняя стенка, светящаяся колба с медными кольцами
+        // the left bay behind the grate: a dark back wall, a glowing flask with copper rings
         m.box(M0, 4, 13.5, M1, 28, BACKZ).front(darkF).back(backF);
         m.box(M0, 4, 1.6, M1, 28, 1.6).front(mesh).back(mesh);
         m.box(3.4, 6, 6, 4.8, 26, 7.2).front(vial.glow(13)).left(vial.glow(13)).right(vial.glow(13)).back(vial.glow(13));
@@ -412,30 +412,30 @@ public final class Forge2 {
             m.box(3.2, y, 5.8, 5.0, y + 0.55, 7.4).sides(brassF).top(brassF);
         }
 
-        // витрина: задняя стенка, пять полок, перегородка между столбцами, стекло
+        // display: back wall, five shelves, a partition between the columns, glass
         m.box(D0, 4, 13.5, D1, 28, BACKZ).front(wall).back(backF);
         for (int r = 0; r < 5; r++) {
             double yb = 28 - 4.8 * (r + 1);
             m.box(D0, yb, 1.5, D1, yb + 0.5, 13.5).front(brassF).top(beamF).bottom(beamF).left(beamF).right(beamF);
         }
-        // перегородка между столбцами — с дверными проёмами в каждом ряду (через них ходят архивариусы; створки рисует
-        // DriveBayRenderer): позади проёма стенка во всю высоту ряда, над проёмом — латунная притолока
+        // the partition between the columns has a doorway in every row (the archivists walk through them; DriveBayRenderer draws
+        // the leaves): behind the doorway a wall of the full row height, above the doorway a brass lintel
         for (int r = 0; r < 5; r++) {
             double yb = 28 - 4.8 * (r + 1) + 0.5, yt = r == 0 ? 28 : yb + 4.3;
             m.box(15.25, yb, DOOR_Z1, 15.75, yt, 13.5).front(beamF).left(beamF).right(beamF).top(beamF);
             m.box(15.25, yb + DOOR_H, 2.5, 15.75, yt, DOOR_Z1).front(brassF).left(brassF).right(brassF).bottom(brassF);
             m.box(15.1, yb, 2.3, 15.9, yb + DOOR_H, 2.5).front(brassF).left(brassF).right(brassF);
         }
-        // стекло витрины — распашная дверца, её рисует DriveBayRenderer (открыта, пока окно шкафа открыто)
+        // the display glass is a swinging door drawn by DriveBayRenderer (open while the cabinet window is open)
         if (withGlass) {
             m.box(D0, 4, 0.8, D1, 28, 0.8).front(glassD).back(glassD);
             m.box(G0, 4, 0.8, G1, 28, 0.8).front(glassG).back(glassG);
         }
 
-        // правая дверца: стекло, панель с приборами, объёмный манометр
+        // right door: glass, a panel with gauges, a three-dimensional gauge
         m.box(G0, 4, 13.5, G1, 28, BACKZ).front(machine).back(backF);
         m.box(26.4, 16.2, 10.5, 28.6, 18.4, 13.5).front(beamF).sides(brassF);
-        // сосульки под верхней балкой
+        // icicles under the top beam
         for (double[] ic : new double[][]{{8.6, 1.6}, {11.4, 2.4}, {13.9, 1.2}, {17.6, 1.8}, {20.3, 2.6}, {22.4, 1.4}, {26.4, 1.5}, {28.3, 2.2}}) {
             m.box(ic[0], 28 - ic[1], 0.4, ic[0] + 0.55, 28, 0.95).all(BigModel.Face.of("ice"));
         }
@@ -443,7 +443,7 @@ public final class Forge2 {
         return m;
     }
 
-    /** Дописывает в готовую модель блок display (положение в инвентаре, руке, на земле). */
+    /** Adds the display block to a finished model (position in the inventory, the hand, on the ground). */
     static void addDisplay(String model, double guiYaw, double scale) throws Exception {
         Path p = RES.resolve("models/block/" + model + ".json");
         String s = Files.readString(p, StandardCharsets.UTF_8);
@@ -477,7 +477,7 @@ public final class Forge2 {
         return NS + "cab_" + var;
     }
 
-    /** Клетки в мире — cutout (рисуются до блок-сущностей, стеклянные дверцы ложатся поверх), иконка — translucent со стёклами. */
+    /** Cells in the world are cutout (drawn before block entities, the glass doors lie on top), the icon is translucent with the glass. */
     static String modelJson(BigModel.Cell cell, String cell2, String display, boolean translucent) {
         StringBuilder sb = new StringBuilder("{\n  \"parent\": \"minecraft:block/block\",\n  \"ambientocclusion\": false,\n");
         sb.append(translucent ? "  \"render_type\": \"minecraft:translucent\",\n" : "  \"render_type\": \"minecraft:cutout\",\n");
@@ -531,10 +531,10 @@ public final class Forge2 {
         Files.deleteIfExists(RES.resolve("models/block/copper_drive_bay.json"));
     }
 
-    // ----------------------------------------------------- динамическая часть шкафа (рисует DriveBayRenderer)
-    /** Катушка с шестью спицами; рендерер вращает. 2 x 2 юнита, прозрачна вне круга. */
+    // ----------------------------------------------------- the dynamic part of the cabinet (drawn by DriveBayRenderer)
+    /** A six-spoke reel; the renderer rotates it. 2 x 2 units, transparent outside the circle. */
     static Paint reel() {
-        // бобина: латунный обод, три спицы и ступица; между спицами прозрачно — видна намотка ленты под ней
+        // reel: a brass rim, three spokes and a hub; between the spokes it is transparent, so the tape winding under it shows
         Paint p = new Paint(2, 2, 16);
         p.ring(1, 1, 0.9, 0.99, at(BRASS, 1.4));
         p.ring(1, 1, 0.93, 0.97, at(BRASS, 4.6));
@@ -550,7 +550,7 @@ public final class Forge2 {
         return p;
     }
 
-    /** Намотка ленты: медная проволока с тёмными канавками; бирюзовое свечение — отдельным слоем {@link #tapeGlow()}. */
+    /** Tape winding: copper wire with dark grooves; the teal glow is a separate layer {@link #tapeGlow()}. */
     static Paint tapeDisc() {
         Paint p = new Paint(2, 2, 12);
         p.discFn(1, 1, 0.98, (u, v) -> {
@@ -564,7 +564,7 @@ public final class Forge2 {
         return p;
     }
 
-    /** Светящиеся витки: те же кольца, но только бирюзовая жила на прозрачном фоне (рисуется «глазами»). */
+    /** Glowing windings: the same rings, but only the teal vein on a transparent background (drawn as "eyes"). */
     static Paint tapeGlow() {
         Paint p = new Paint(2, 2, 12);
         p.discFn(1, 1, 0.98, (u, v) -> {
@@ -589,7 +589,7 @@ public final class Forge2 {
         Paint white = new Paint(1, 1, 8);
         white.rect(0, 0, 1, 1, rgb(0xFFFFFF));
         white.save(entityTex("bay_white"));
-        // свечение рун фасада: те же глифы, что на табличках, на прозрачном фоне
+        // glow of the front runes: the same glyphs as on the plates, on a transparent background
         Paint g = new Paint(32, 32, 4);
         g.rune(14.0, 1.2, 1.7, 16, at(VIOLET, 5.6), at(VIOLET, 3.4));
         g.rune(16.6, 1.2, 1.7, 0, at(VIOLET, 5.6), at(VIOLET, 3.4));
@@ -597,11 +597,11 @@ public final class Forge2 {
         g.save(entityTex("bay_runes_glow"));
     }
 
-    // ------------------------------------------------------------------------- поставщик шаблонов
-    /** Знаки стороны подачи поставщика: стрелки в плоскости грани, «к вам» (⊙), «от вас» (⊗) и «во все стороны» (солнце). */
+    // ------------------------------------------------------------------------- pattern provider
+    /** Provider feeding side signs: arrows in the face plane, "towards you" (⊙), "away from you" (⊗) and "all sides" (a sun). */
     static final String[] PROVIDER_SIGNS = {"sun", "left", "right", "up", "down", "out", "in"};
 
-    /** Знак sign с центром (cx, cy) и масштабом k (1 — высота знака около 2.4 пикселя). */
+    /** Sign sign centred at (cx, cy) with scale k (1 = a sign about 2.4 pixels high). */
     static void providerSign(Paint p, double cx, double cy, String sign, double k) {
         int c = at(BRASS, 4.4), dark = at(IRON, 0.15);
         switch (sign) {
@@ -623,7 +623,7 @@ public final class Forge2 {
                 p.line(cx - 0.6 * k, cy + 0.6 * k, cx + 0.6 * k, cy - 0.6 * k, 0.28 * k, c);
             }
             default -> {
-                // стрелка «вправо» (ось x), повёрнутая под нужную сторону
+                // an arrow "to the right" (the x axis), rotated to the needed side
                 double[][] shaft = {{-1.5, -0.25}, {0.5, -0.25}, {0.5, 0.25}, {-1.5, 0.25}};
                 double[][] head = {{0.3, -1.0}, {1.55, 0.0}, {0.3, 1.0}};
                 for (double[][] shape : new double[][][]{shaft, head}) {
@@ -652,28 +652,28 @@ public final class Forge2 {
         }
     }
 
-    /** Лицо поставщика: бронзовая рама, рунная планка, щель с перфокартой, гравированная стрелка «наружу», светодиоды. */
+    /** Provider face: a bronze frame, a rune strip, a slot with a punch card, an engraved "outwards" arrow, LEDs. */
     static Paint providerFace() {
         return providerFace("right");
     }
 
-    /** То же со знаком стороны подачи вместо стрелки (sign — см. PROVIDER_SIGNS). */
+    /** The same with the feeding side sign instead of the arrow (sign, see PROVIDER_SIGNS). */
     static Paint providerFace(String sign) {
         Paint p = new Paint(16, 16, K);
         p.slab(0, 0, 16, 16, BRONZE, 2.9, 1);
         p.streaks(0.3, 0.3, 15.7, 15.7, 0.08, 501, true);
         p.grain(0, 0, 16, 16, 0.04, 502);
-        // тёмная внутренняя панель с латунной окантовкой
+        // a dark inner panel with a brass edging
         p.slab(1.4, 1.4, 14.6, 14.6, BRASS, 2.6, 1);
         p.slab(2.0, 2.0, 14.0, 14.0, IRON, 1.2, 1);
         p.grain(2.0, 2.0, 14.0, 14.0, 0.07, 503);
-        // рунная планка
+        // rune strip
         p.glowRect(3.2, 2.8, 12.8, 4.6, 0.6, at(CYAN, 3.2), 50);
         int[] glyphs = {3, 12, 4, 12, 3};
         for (int i = 0; i < 5; i++) {
             p.rune(3.7 + i * 1.8, 2.9, 1.6, glyphs[i], at(CYAN, 5.2), 0);
         }
-        // щель подачи и перфокарта, торчащая наружу
+        // the feed slot and a punch card sticking out
         p.slab(3.0, 6.3, 13.0, 8.9, BRASS, 2.5, 1);
         p.rect(3.7, 6.9, 12.3, 8.3, rgb(0x050607));
         p.rect(4.6, 5.2, 11.4, 7.4, rgb(0xE6DCB8));
@@ -685,7 +685,7 @@ public final class Forge2 {
                 p.rect(5.0 + i * 0.5, y, 5.3 + i * 0.5, y + 0.3, rgb(0x3A2A18));
             }
         }
-        // знак стороны подачи (латунь): длинная стрелка вбок, остальные знаки — по центру полосы
+        // the feeding side sign (brass): a long arrow sideways, the other signs in the middle of the strip
         if (sign.equals("right") || sign.equals("left")) {
             boolean r = sign.equals("right");
             p.rect(r ? 4.2 : 5.2, 10.0, r ? 10.8 : 11.8, 10.5, at(BRASS, 4.4));
@@ -693,13 +693,13 @@ public final class Forge2 {
         } else {
             providerSign(p, 8.0, 10.75, sign, 1.22);
         }
-        // светодиоды
+        // LEDs
         int[] led = {0x3CE070, 0xF0C850, 0x45D6D2, 0xF03A2A};
         for (int i = 0; i < 4; i++) {
             p.disc(4.4 + i * 1.6, 13.05, 0.55, at(IRON, 0.2));
             p.disc(4.4 + i * 1.6, 13.05, 0.4, rgb(led[i]));
         }
-        // болты по углам
+        // bolts in the corners
         for (double[] c : new double[][]{{0.8, 0.8}, {15.2, 0.8}, {0.8, 15.2}, {15.2, 15.2}}) {
             p.screw(c[0], c[1], 0.5, BRASS, c[0] + c[1]);
         }
@@ -707,12 +707,12 @@ public final class Forge2 {
         return p;
     }
 
-    /** Верх и низ поставщика: бронзовая плита с вентиляционной решёткой. */
+    /** Provider top and bottom: a bronze plate with a vent grate. */
     static Paint providerTop() {
         return providerTop(null);
     }
 
-    /** Верх со знаком стороны подачи на латунной шайбе посреди решётки (null — без знака, для низа). */
+    /** The top with the feeding side sign on a brass washer in the middle of the grate (null = no sign, for the bottom). */
     static Paint providerTop(String sign) {
         Paint p = new Paint(16, 16, K);
         beam(p, 0, 0, 16, 16, 2.7, true, 511);
@@ -733,8 +733,8 @@ public final class Forge2 {
     }
 
     /**
-     * Модели поставщика по стороне подачи: на каждой боковой грани — стрелка в сторону подачи (как её видно снаружи), на
-     * грани, куда подаёт, — «к вам», на противоположной — «от вас»; во все стороны — «солнце» на всех гранях.
+     * Provider models by feeding side: on every side face an arrow towards the feeding side (as seen from outside), on
+     * the face it feeds "towards you", on the opposite one "away from you"; for all sides a "sun" on all faces.
      */
     static void providerModels() throws Exception {
         for (String s : PROVIDER_SIGNS) {
@@ -762,7 +762,7 @@ public final class Forge2 {
         write(RES.resolve("blockstates/pattern_provider.json"), bs.append("  }\n}\n").toString());
     }
 
-    /** Знак на боковой грани side при подаче out (стороны — как их видит зритель, стоящий перед этой гранью). */
+    /** The sign on side face side when feeding out (the sides as seen by a viewer standing in front of that face). */
     static String faceSign(String side, String out) {
         if (out.equals("all")) {
             return "sun";
@@ -782,7 +782,7 @@ public final class Forge2 {
         if (out.equals("up") || out.equals("down")) {
             return out;
         }
-        // слева у зрителя: перед северной гранью — восток, перед южной — запад, перед восточной — юг, перед западной — север
+        // on the viewer's left: in front of the north face it is east, the south face west, the east face south, the west face north
         String left = switch (side) {
             case "north" -> "east";
             case "south" -> "west";
@@ -792,7 +792,7 @@ public final class Forge2 {
         return out.equals(left) ? "left" : "right";
     }
 
-    /** Знак на верхней грани (верх текстуры — север, лево — запад). */
+    /** The sign on the top face (the top of the texture is north, the left is west). */
     static String topSign(String out) {
         return switch (out) {
             case "all" -> "sun";
@@ -825,6 +825,6 @@ public final class Forge2 {
 
     public static void main(String[] a) throws Exception {
         all();
-        System.out.println("Forge2: готово");
+        System.out.println("Forge2: done");
     }
 }

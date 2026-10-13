@@ -15,9 +15,9 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Операции с магнитными дисками. Содержимое хранится на сервере в DiskStore по UUID диска;
- * на самом диске лежат только UUID и счётчик STORED (для подсказки и полосы заполнения).
- * Диск хранит чистое количество, типов — сколько угодно.
+ * Operations with magnetic disks. The contents are stored on the server in DiskStore by the disk UUID;
+ * the disk itself only carries the UUID and the STORED counter (for the tooltip and the fill bar).
+ * A disk stores a plain amount, any number of types.
  */
 public final class DiskStorage {
     private DiskStorage() {
@@ -39,7 +39,7 @@ public final class DiskStorage {
         return disk.getItem() instanceof MagneticDiskItem d ? d.getCapacity() : 0;
     }
 
-    /** Хранилище дисков; только в потоке сервера (в одиночной игре клиентский поток не должен читать его в обход сети). */
+    /** The disk store; server thread only (in single player the client thread must not read it bypassing the network). */
     @Nullable
     private static DiskStore store() {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
@@ -51,7 +51,7 @@ public final class DiskStorage {
         return disk.get(ModDataComponents.DISK_ID.get());
     }
 
-    /** Выдаёт диску UUID, если его ещё нет (при первой записи). */
+    /** Gives the disk a UUID if it has none yet (on the first write). */
     private static UUID ensureId(ItemStack disk) {
         UUID id = id(disk);
         if (id == null) {
@@ -69,7 +69,7 @@ public final class DiskStorage {
         }
         DiskStore st = store();
         if (st == null) {
-            // В одиночной игре для визуальных эффектов (рендереров) читаем локальное хранилище сервера
+            // In single player the visual effects (renderers) read the server's local store
             MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
             if (server != null) {
                 st = DiskStore.get(server);
@@ -88,7 +88,7 @@ public final class DiskStorage {
 
     // ---------------------------------------------------------------- items
 
-    /** Что лежит на диске предметов (только чтение). */
+    /** What is on an item disk (read only). */
     public static Map<ItemKey, Integer> items(ItemStack disk) {
         if (!isItemDisk(disk)) {
             return Collections.emptyMap();
@@ -97,7 +97,7 @@ public final class DiskStorage {
         return d == null ? Collections.emptyMap() : Collections.unmodifiableMap(d.items);
     }
 
-    /** Сколько единиц записано на диск (предметов или mB). */
+    /** How many units are written to the disk (items or mB). */
     public static long storedItems(ItemStack disk) {
         DiskStore.Disk d = read(disk);
         if (d == null) {
@@ -111,7 +111,7 @@ public final class DiskStorage {
         return d != null && isItemDisk(disk) && d.items.containsKey(ItemKey.of(stack));
     }
 
-    /** Кладёт предметы на диск. Возвращает, сколько реально положено (при simulate диск не меняется). */
+    /** Puts items on the disk. Returns how many were actually put (with simulate the disk does not change). */
     public static int insertItem(ItemStack disk, ItemStack stack, boolean simulate) {
         if (!isItemDisk(disk) || stack.isEmpty()) {
             return 0;
@@ -133,7 +133,7 @@ public final class DiskStorage {
         return n;
     }
 
-    /** Достаёт предметы с диска. Возвращает, сколько реально достали. */
+    /** Takes items from the disk. Returns how many were actually taken. */
     public static int extractItem(ItemStack disk, ItemStack template, int max, boolean simulate) {
         if (!isItemDisk(disk) || template.isEmpty() || max <= 0) {
             return 0;
@@ -242,7 +242,7 @@ public final class DiskStorage {
         return 0;
     }
 
-    /** Копия списка жидкостей диска (для безопасной итерации). */
+    /** A copy of the disk's fluid list (for safe iteration). */
     public static List<FluidStack> fluidsCopy(ItemStack disk) {
         return new ArrayList<>(fluids(disk));
     }

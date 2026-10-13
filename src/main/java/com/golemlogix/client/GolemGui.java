@@ -3,8 +3,8 @@ package com.golemlogix.client;
 import net.minecraft.client.gui.GuiGraphics;
 
 /**
- * Примитивы отрисовки интерфейсов в оккульт-аналоговом стиле: тёмное дерево, латунные кромки,
- * бирюзовый акцент. Всё рисуется кодом — текстуры GUI не нужны.
+ * Primitives for drawing interfaces in the occult-analog style: dark wood, brass edges,
+ * a teal accent. Everything is drawn by code, no GUI textures are needed.
  */
 public final class GolemGui {
     public static final int WOOD_DARK = 0xFF1E140E;
@@ -26,18 +26,18 @@ public final class GolemGui {
     private GolemGui() {
     }
 
-    /** Основная панель окна. */
+    /** Main window panel. */
     public static void panel(GuiGraphics g, int x, int y, int w, int h) {
         g.fill(x, y, x + w, y + h, WOOD_DARK);
         g.fill(x + 1, y + 1, x + w - 1, y + h - 1, BRASS_DARK);
         g.fill(x + 2, y + 2, x + w - 2, y + h - 2, BRASS);
         g.fill(x + 3, y + 3, x + w - 3, y + h - 3, WOOD);
-        // внутренняя тень сверху-слева и свет снизу-справа
+        // inner shadow at the top left and light at the bottom right
         g.fill(x + 3, y + 3, x + w - 3, y + 4, WOOD_DARK);
         g.fill(x + 3, y + 3, x + 4, y + h - 3, WOOD_DARK);
         g.fill(x + 3, y + h - 4, x + w - 3, y + h - 3, WOOD_LIGHT);
         g.fill(x + w - 4, y + 3, x + w - 3, y + h - 3, WOOD_LIGHT);
-        // заклёпки по углам
+        // rivets in the corners
         rivet(g, x + 5, y + 5);
         rivet(g, x + w - 8, y + 5);
         rivet(g, x + 5, y + h - 8);
@@ -49,7 +49,7 @@ public final class GolemGui {
         g.fill(x, y, x + 1, y + 1, PARCHMENT);
     }
 
-    /** Углублённая рамка (под списки, статус). */
+    /** A sunken frame (for lists, status). */
     public static void inset(GuiGraphics g, int x, int y, int w, int h) {
         g.fill(x, y, x + w, y + h, SLOT_EDGE_DARK);
         g.fill(x + 1, y + 1, x + w - 1, y + h - 1, SLOT_BG);
@@ -57,7 +57,7 @@ public final class GolemGui {
         g.fill(x + w - 1, y, x + w, y + h, SLOT_EDGE_LIGHT);
     }
 
-    /** Фон ячейки инвентаря 18x18 (x, y — левый верхний угол ячейки, а не предмета). */
+    /** Background of an 18x18 inventory slot (x, y are the top left corner of the slot, not of the item). */
     public static void slot(GuiGraphics g, int x, int y) {
         inset(g, x, y, 18, 18);
     }
@@ -84,7 +84,7 @@ public final class GolemGui {
         return trim(n / 1_000_000_000.0) + "G";
     }
 
-    /** Объём жидкости в вёдрах (1000 mB = 1) для списка терминала: до тысячи — с десятыми, дальше сокращённо. */
+    /** Fluid volume in buckets (1000 mB = 1) for the terminal list: with tenths up to a thousand, abbreviated beyond. */
     public static String formatBuckets(long mb) {
         if (mb <= 0) {
             return "0";

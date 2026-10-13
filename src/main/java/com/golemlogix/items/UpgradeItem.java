@@ -2,7 +2,7 @@ package com.golemlogix.items;
 
 import com.golemlogix.upgrade.UpgradeType;
 
-/** Апгрейд машины: кладётся в ячейки апгрейдов (у Насыщателя — ПКМ по машине). */
+/** A machine upgrade: goes into the upgrade slots (for the Saturator, right-click on the machine). */
 public class UpgradeItem extends ModItemWithTooltip {
     private final UpgradeType type;
 

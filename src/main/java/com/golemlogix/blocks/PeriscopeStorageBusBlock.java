@@ -29,8 +29,8 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Перископ-«монокль»: подключает контейнер перед собой (сундук, бак с жидкостью) как хранилище сети.
- * ПКМ открывает окно приоритета.
+ * Monocle periscope: connects the container in front of it (a chest, a fluid tank) as network storage.
+ * Right-click opens the priority window.
  */
 public class PeriscopeStorageBusBlock extends DirectionalBlock implements GolemNode, EntityBlock {
     public static final MapCodec<PeriscopeStorageBusBlock> CODEC = simpleCodec(PeriscopeStorageBusBlock::new);
@@ -96,7 +96,7 @@ public class PeriscopeStorageBusBlock extends DirectionalBlock implements GolemN
         super.onRemove(state, level, pos, newState, isMoving);
     }
 
-    /** Сигнал редстоуна рядом мог включить или выключить хранилище — сеть пересчитается без кэша. */
+    /** A redstone signal nearby may have switched the storage on or off: the network is rescanned without the cache. */
     @Override
     protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean moving) {
         super.neighborChanged(state, level, pos, block, fromPos, moving);

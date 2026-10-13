@@ -19,16 +19,16 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Картотека перфокарт: медный шкаф 3 x 2 x 2 с ящиками-полками на фасаде, его держат два медных голема по бокам.
+ * Punch Card Catalog: a copper 3 x 2 x 2 cabinet with drawer shelves on the front, held by two copper golems on the sides.
  * <pre>
- *  вид спереди (фасад — куда смотрит хозяин):            сзади:
- *     S  B  B  B  S     B — книжная полка                    C  C  C      C — медный блок (любой степени окисления,
- *     C  B  K  B  C     K — хозяин (Картотека перфокарт)     C  C  C          вощёный тоже)
- *                       S — статуя медного голема (любая) на медном блоке C
+ *  front view (the front is where the owner faces):        back:
+ *     S  B  B  B  S     B = bookshelf                          C  C  C      C = copper block (any oxidation stage,
+ *     C  B  K  B  C     K = owner (Punch Card Catalog)         C  C  C          waxed too)
+ *                       S = copper golem statue (any) on copper block C
  * </pre>
- * Клетки — как у Крио-Мейнфрейма ({@link MainframeStructure#CELLS}): 0..4 полки фасада, 5..10 задний ряд, 11..14 бока
- * (11, 13 — постаменты, 12, 14 — статуи). При сборке все клетки становятся невидимыми частями, а прежние состояния блоков
- * хозяин запоминает и возвращает при разборке.
+ * Cells as in the Cryo-Mainframe ({@link MainframeStructure#CELLS}): 0..4 front shelves, 5..10 back row, 11..14 sides
+ * (11, 13 pedestals, 12, 14 statues). On assembly all cells become invisible parts, and the owner remembers the former
+ * block states and returns them on disassembly.
  */
 public final class CatalogStructure {
     public static final int[][] CELLS = MainframeStructure.CELLS;
@@ -49,16 +49,16 @@ public final class CatalogStructure {
         return MainframeStructure.controllerOf(part, facing, cell);
     }
 
-    /** Медные блоки всех степеней окисления, вощёные тоже. */
+    /** Copper blocks of all oxidation stages, waxed too. */
     public static final Set<Block> COPPER = Set.of(Blocks.COPPER_BLOCK, Blocks.EXPOSED_COPPER, Blocks.WEATHERED_COPPER, Blocks.OXIDIZED_COPPER,
             Blocks.WAXED_COPPER_BLOCK, Blocks.WAXED_EXPOSED_COPPER, Blocks.WAXED_WEATHERED_COPPER, Blocks.WAXED_OXIDIZED_COPPER);
 
-    /** Статуя медного голема (из Copper Age Backport, любая степень окисления). */
+    /** A copper golem statue (from Copper Age Backport, any oxidation stage). */
     public static boolean isStatue(BlockState s) {
         return BuiltInRegistries.BLOCK.getKey(s.getBlock()).getPath().endsWith("copper_golem_statue");
     }
 
-    /** Степень окисления статуи (0 — новая, 3 — окисленная): так окрашены големы собранной картотеки. */
+    /** Oxidation stage of a statue (0 new, 3 oxidized): the golems of the assembled catalog are coloured this way. */
     public static int oxidation(BlockState s) {
         String p = BuiltInRegistries.BLOCK.getKey(s.getBlock()).getPath();
         return p.contains("oxidized") ? 3 : p.contains("weathered") ? 2 : p.contains("exposed") ? 1 : 0;
@@ -72,7 +72,7 @@ public final class CatalogStructure {
         return cell >= MainframeStructure.FIRST_ATLANT && CELLS[cell][1] == 1;
     }
 
-    /** Подходит ли блок для клетки. */
+    /** Whether the block fits the cell. */
     public static boolean accepts(int cell, BlockState s) {
         if (isShelf(cell)) {
             return s.is(Blocks.BOOKSHELF);
@@ -83,7 +83,7 @@ public final class CatalogStructure {
         return COPPER.contains(s.getBlock());
     }
 
-    /** Что показать игроку, если клетки не хватает (и что вернуть, если прежнее состояние не запомнилось). */
+    /** What to show the player if a cell is missing (and what to return if the former state was not remembered). */
     public static Block fallback(int cell) {
         if (isShelf(cell)) {
             return Blocks.BOOKSHELF;
@@ -120,7 +120,7 @@ public final class CatalogStructure {
         return check(level, controller, facing).isEmpty();
     }
 
-    /** Собрать: запомнить прежние блоки в хозяине, все клетки — в части, хозяин — FORMED. */
+    /** Assemble: remember the former blocks in the owner, all cells become parts, the owner becomes FORMED. */
     public static void form(Level level, BlockPos controller, Direction facing) {
         if (!(level.getBlockEntity(controller) instanceof CardCatalogBlockEntity be)) {
             return;
@@ -148,7 +148,7 @@ public final class CatalogStructure {
         GolemNetwork.clearCache();
     }
 
-    /** Разобрать: части снова прежние блоки (кроме сломанной — она выпадет сама), хозяин — не собран. */
+    /** Disassemble: parts become the former blocks again (except the broken one, which drops by itself), the owner is unassembled. */
     public static void disassemble(Level level, BlockPos controller, Direction facing, @Nullable BlockPos broken) {
         CardCatalogBlockEntity be = level.getBlockEntity(controller) instanceof CardCatalogBlockEntity c ? c : null;
         restoring = true;

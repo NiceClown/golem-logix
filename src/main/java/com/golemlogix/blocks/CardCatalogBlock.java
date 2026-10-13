@@ -32,9 +32,9 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 /**
- * Картотека перфокарт — хозяин многоблока (см. {@link CatalogStructure}): хранит сотни перфокарт с верстачными рецептами,
- * чтобы не ставить ради них десятки поставщиков. Вместимость задают обычные Поставщики Шаблонов, сложенные в её ячейку
- * (каждый даёт 27 мест). Весь шкаф — одно устройство на одном канале.
+ * Punch Card Catalog, the owner of a multiblock (see {@link CatalogStructure}): stores hundreds of punch cards with crafting-table
+ * recipes, so dozens of providers are not needed for them. Capacity is set by ordinary Pattern Providers put into its slot
+ * (each gives 27 places). The whole cabinet is one device on one channel.
  */
 public class CardCatalogBlock extends HorizontalDirectionalBlock implements EntityBlock, GolemNode {
     public static final MapCodec<CardCatalogBlock> CODEC = simpleCodec(CardCatalogBlock::new);
@@ -90,7 +90,7 @@ public class CardCatalogBlock extends HorizontalDirectionalBlock implements Enti
         return (lvl, p, st, be) -> CardCatalogBlockEntity.serverTick(lvl, p, st, (CardCatalogBlockEntity) be);
     }
 
-    /** События блока (окно открыли — ящики выдвигаются) передаются блок-сущности, иначе сервер не разошлёт их клиентам. */
+    /** Block events (the window was opened, the drawers slide out) go to the block entity, otherwise the server would not send them to clients. */
     @Override
     protected boolean triggerEvent(BlockState state, Level level, BlockPos pos, int id, int param) {
         super.triggerEvent(state, level, pos, id, param);

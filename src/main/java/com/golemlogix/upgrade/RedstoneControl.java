@@ -3,8 +3,8 @@ package com.golemlogix.upgrade;
 import net.minecraft.nbt.CompoundTag;
 
 /**
- * Состояние управления редстоуном одной машины: выбранный режим, прошлый уровень сигнала и «накопленный» импульс.
- * Без Модуля Редстоуна машина сигнал не замечает.
+ * Redstone control state of one machine: the selected mode, the previous signal level and an "accumulated" pulse.
+ * Without a Redstone Module the machine ignores the signal.
  */
 public final class RedstoneControl {
     private RedstoneMode mode = RedstoneMode.HIGH;
@@ -20,7 +20,7 @@ public final class RedstoneControl {
         this.pulse = false;
     }
 
-    /** Отметить текущий уровень сигнала (раз в тик или при каждой проверке): фронт сигнала копит импульс. */
+    /** Record the current signal level (once a tick or on every check): a signal edge accumulates a pulse. */
     public void observe(boolean powered) {
         if (powered && !lastPowered) {
             pulse = true;
@@ -29,8 +29,8 @@ public final class RedstoneControl {
     }
 
     /**
-     * Можно ли машине работать сейчас. installed — стоит ли Модуль Редстоуна; consume — в режиме импульса
-     * израсходовать импульс (true там, где машина действительно делает действие).
+     * Whether the machine may work now. installed = whether a Redstone Module is installed; consume = in pulse mode,
+     * use up the pulse (true where the machine really performs an action).
      */
     public boolean allows(boolean installed, boolean powered, boolean consume) {
         observe(powered);

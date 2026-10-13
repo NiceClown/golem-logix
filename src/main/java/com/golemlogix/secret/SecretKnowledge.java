@@ -18,10 +18,10 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * Секретный рецепт (Схлопнувшаяся Плазма Визера и Квантово-Оккультная Матрица) открывается в книге и в JEI только после двух
- * испытаний в любом порядке: победить Визера и попытаться открыть Хронометр в другом измерении. Первое испытание даёт
- * достижение «Получено секретное знание» и страницу книги со вторым заданием; оба — полный рецепт.
- * Прогресс хранится в достижениях игрока (критерии killed_wither и dimension_signal).
+ * The secret recipe (Imploded Wither Plasma and Interdimensional Occult Matrix) opens in the book and in JEI only after two
+ * trials in any order: defeat the Wither and try to open a Chronometer in another dimension. The first trial gives
+ * the "Secret knowledge obtained" advancement and a book page with the second task; both give the full recipe.
+ * Progress is stored in the player's advancements (criteria killed_wither and dimension_signal).
  */
 @EventBusSubscriber(modid = GolemLogixMod.MOD_ID)
 public final class SecretKnowledge {
@@ -33,7 +33,7 @@ public final class SecretKnowledge {
     private SecretKnowledge() {
     }
 
-    /** Состояние игрока: [Визер побеждён, попытка из другого измерения]. */
+    /** Player state: [Wither defeated, attempt from another dimension]. */
     public static boolean[] state(ServerPlayer player) {
         AdvancementHolder holder = player.server.getAdvancements().get(REVEALED);
         if (holder == null) {
@@ -72,7 +72,7 @@ public final class SecretKnowledge {
         boolean[] s = state(sp);
         sync(sp);
         if (event.getProgressType() == AdvancementEvent.AdvancementProgressEvent.ProgressType.GRANT) {
-            // в книге открылась страница: щелчок по сообщению открывает её
+            // a page opened in the book: clicking the message opens it
             String entry = s[0] && s[1] ? "wither" : "secret_hint";
             Component link = Component.translatable("message.golem_logix.secret.open_book").withStyle(style -> style
                     .withColor(ChatFormatting.AQUA).withUnderlined(true)

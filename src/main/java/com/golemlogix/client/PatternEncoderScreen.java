@@ -33,7 +33,7 @@ public class PatternEncoderScreen extends GolemScreen<PatternEncoderMenu> {
     protected void renderOverlay(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
         g.drawString(font, "=>", leftPos + 94, topPos + 38, GolemGui.CYAN, false);
         if (menu.isCraftingMode()) {
-            // в режиме верстака доступен только первый выход
+            // in crafting table mode only the first output is available
             for (int i = 1; i < 3; i++) {
                 g.fill(leftPos + 118, topPos + 18 + i * 18, leftPos + 134, topPos + 34 + i * 18, 0xC0000000);
             }

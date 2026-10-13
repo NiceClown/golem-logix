@@ -17,10 +17,10 @@ import net.minecraft.world.phys.AABB;
 import org.joml.Vector3f;
 
 /**
- * Крио-Калькулятор за работой: на крыше бригада снеговиков разного роста собирает изделие — подбрасывает ледяные детали
- * в мини-модель того, что калькулятор делает прямо сейчас (выход текущего шага); в простое снеговики бездельничают.
- * Когда сопроцессоры на самом деле ускоряют работу, появляется бригадир с головой атланта (см. {@link SnowCrew}).
- * Бегущий «матричный дождь» на боковых панелях — это анимированная текстура модели в состоянии ACTIVE.
+ * Cryo-Calculator at work: on the roof a crew of snowmen of different heights assembles the item, tossing ice parts
+ * into a mini model of what the calculator is making right now (the output of the current step); when idle the snowmen loaf around.
+ * When the coprocessors really speed up the work, a foreman with an atlant head appears (see {@link SnowCrew}).
+ * The running "matrix rain" on the side panels is an animated texture of the model in the ACTIVE state.
  */
 public class CryoCalculatorRenderer implements BlockEntityRenderer<CryoCalculatorBlockEntity> {
     public CryoCalculatorRenderer(BlockEntityRendererProvider.Context context) {
@@ -51,7 +51,7 @@ public class CryoCalculatorRenderer implements BlockEntityRenderer<CryoCalculato
         Vector3f proj = new Vector3f(0.5f, 1.0f + 0.78f * appear + bob, 0.5f);
         SnowCrew.render(pose, buffers, light, time, be.getBlockPos().asLong(), 1.0f, spin, foreman, proj);
 
-        // мини-модель текущего изделия: выплывает над крышей, пока калькулятор работает (удерживается визуальным окном)
+        // mini model of the current item: floats above the roof while the calculator works (held by the visual window)
         ItemStack current = be.clientDisplayItem();
         if (!current.isEmpty() && appear > 0.005f) {
             float size = (current.getItem() instanceof BlockItem ? 0.5f : 0.42f) * appear;

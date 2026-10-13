@@ -14,9 +14,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Закодированный рецепт на медной перфокарте.
+ * An encoded recipe on a copper punch card.
  *
- * @param crafting true — рецепт верстака 3x3 (inputs всегда 9 позиций), false — обработка в машине
+ * @param crafting true = a 3x3 crafting table recipe (inputs always has 9 positions), false = processing in a machine
  */
 public record PatternData(boolean crafting, List<ItemStack> inputs, List<ItemStack> outputs) {
     public static final int GRID = 9;
@@ -46,7 +46,7 @@ public record PatternData(boolean crafting, List<ItemStack> inputs, List<ItemSta
         return List.copyOf(out);
     }
 
-    /** Суммарные ингредиенты (без пустых слотов) в порядке появления. */
+    /** Total ingredients (without empty slots) in order of appearance. */
     public Map<ItemKey, Integer> ingredientTotals() {
         return totals(inputs);
     }
@@ -65,7 +65,7 @@ public record PatternData(boolean crafting, List<ItemStack> inputs, List<ItemSta
         return map;
     }
 
-    /** Сколько единиц данного предмета рецепт даёт за одно выполнение. */
+    /** How many of the given item the recipe gives per execution. */
     public int outputCount(ItemKey key) {
         int n = 0;
         for (ItemStack s : outputs) {

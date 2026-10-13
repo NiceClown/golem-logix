@@ -13,12 +13,12 @@ import net.neoforged.neoforge.common.NeoForge;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * Стенд проверки горячих клавиш призрачной стройки: «чужая» привязка на клавише Y (как у другого мода) и эмуляция нажатия
- * ВНУТРИ игры (та же последовательность, что у KeyboardHandler: счётчик привязок + событие InputEvent.Key). Ввод ОС не затрагивается.
+ * Rig for checking the ghost build hotkeys: a "foreign" binding on the Y key (like another mod's) and emulation of a press
+ * INSIDE the game (the same sequence as KeyboardHandler: the binding counter + an InputEvent.Key event). OS input is not touched.
  */
 @EventBusSubscriber(modid = GolemLogixMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class DevKeys {
-    /** Чужая привязка на Y; считает, сколько раз она «сработала». */
+    /** Foreign binding on Y; counts how many times it "fired". */
     public static final KeyMapping CONFLICT = new KeyMapping("key.devshots.conflict", GLFW.GLFW_KEY_Y, "key.categories.devshots");
     public static int conflictClicks;
 
@@ -32,19 +32,19 @@ public final class DevKeys {
         }
     }
 
-    /** Нажать и отпустить клавишу с кодом GLFW key. */
+    /** Press and release the key with GLFW code key. */
     public static void press(int glfwKey) {
         Minecraft mc = Minecraft.getInstance();
         InputConstants.Key key = InputConstants.Type.KEYSYM.getOrCreate(glfwKey);
         KeyMapping.set(key, true);
         KeyMapping.click(key);
         NeoForge.EVENT_BUS.post(new InputEvent.Key(glfwKey, GLFW.glfwGetKeyScancode(glfwKey), GLFW.GLFW_PRESS, 0));
-        // в тике игра опросит привязки: считаем срабатывания чужой привязки здесь, как это сделал бы её владелец
+        // in the tick the game polls the bindings: count the foreign binding's fires here, as its owner would
         mc.execute(() -> {
         });
     }
 
-    /** Вызывается каждый тик клиента: чужая привязка забирает свои нажатия, как это делает чужой мод. */
+    /** Called every client tick: the foreign binding takes its presses, as another mod does. */
     public static void pollConflict() {
         while (CONFLICT.consumeClick()) {
             conflictClicks++;

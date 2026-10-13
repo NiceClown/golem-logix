@@ -17,15 +17,15 @@ import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Анимация на экранах терминалов (только пока сеть запитана): при включении сети голем машет рукой во весь экран,
- * потом по экрану ходит голем и таскает ящики к стопке. Спрайты — из одного листа {@code terminal_anim.png}
- * (координаты в текселях листа 64x64, см. tools/ArtForge.java), оттенок задаёт тип терминала.
- * Экран занимает на лицевой текстуре 14x14 текселей (x, y = 9..22 из 32).
+ * Animation on the terminal screens (only while the network is powered): when the network turns on a golem waves across the whole screen,
+ * then a golem walks across the screen carrying crates to a stack. Sprites come from one sheet {@code terminal_anim.png}
+ * (coordinates in texels of the 64x64 sheet, see tools/ArtForge.java), the tint depends on the terminal type.
+ * The screen takes 14x14 texels of the front texture (x, y = 9..22 of 32).
  */
 public class TerminalRenderer implements BlockEntityRenderer<TerminalBlockEntity> {
     private static final ResourceLocation SHEET = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/block/terminal_anim.png");
     private static final float SHEET_SIZE = 64f;
-    /** Размер экрана в текселях и размер текселя в долях блока (лицевая текстура 32x32). */
+    /** Screen size in texels and texel size in block fractions (the front texture is 32x32). */
     private static final int SCREEN = 14;
     private static final float TEXEL = 1f / 32f;
 
@@ -52,7 +52,7 @@ public class TerminalRenderer implements BlockEntityRenderer<TerminalBlockEntity
         BlockState state = be.getBlockState();
         boolean active = state.getValue(GolemProperties.ACTIVE);
         float time = be.getLevel().getGameTime() + partialTick;
-        // запуск сети: «выключено -> включено» на глазах у игрока (первое наблюдение показывает только состояние)
+        // network start: "off -> on" before the player's eyes (the first observation only shows the state)
         if (be.animInitialized && active && !be.lastActive) {
             be.waveStart = time;
         }
@@ -71,12 +71,12 @@ public class TerminalRenderer implements BlockEntityRenderer<TerminalBlockEntity
         PoseStack.Pose p = pose.last();
         final int full = LightTexture.FULL_BRIGHT;
 
-        // фон экрана (круг у ЭЛТ, квадрат у крафтового терминала)
+        // screen background (a circle on the CRT, a square on the crafting terminal)
         sprite(vc, p, 0, 0, SCREEN, SCREEN, crt ? 0 : 16, 0, SCREEN, SCREEN, false, 0xFFFFFFFF, full, 0);
 
         float sinceWave = time - be.waveStart;
         if (sinceWave >= 0 && sinceWave < WAVE_TICKS) {
-            // приветствие: голем во весь экран машет рукой; под конец мигает и исчезает
+            // greeting: a golem across the whole screen waves; at the end it blinks and disappears
             int frame = (int) (sinceWave / TICKS_PER_WAVE_FRAME) % 4;
             boolean blink = sinceWave > WAVE_TICKS - 12f && ((int) (sinceWave / 2f)) % 2 == 0;
             if (!blink) {
@@ -88,11 +88,11 @@ public class TerminalRenderer implements BlockEntityRenderer<TerminalBlockEntity
         pose.popPose();
     }
 
-    /** Будничная сценка: голем носит ящик от запаса слева к стопке справа и возвращается пустым. */
+    /** An everyday scene: a golem carries a crate from the stock on the left to the stack on the right and comes back empty. */
     private void scene(VertexConsumer vc, PoseStack.Pose p, float time, int tint, int light) {
         float t = time % CYCLE;
         int cycle = (int) (time / CYCLE);
-        // пол (чуть короче, чтобы помещался в круг)
+        // floor (a bit shorter so it fits in the circle)
         sprite(vc, p, 3, 11, 8, 1, 62, 62, 1, 1, false, tint, light, 1);
 
         boolean outward = t < WALK + PAUSE;
@@ -104,9 +104,9 @@ public class TerminalRenderer implements BlockEntityRenderer<TerminalBlockEntity
         }
         int frame = walking ? ((int) (leg / 4f)) % 4 : 1;
 
-        // запас слева: два ящика, один из них у голема в руках на пути туда
+        // stock on the left: two crates, one of them in the golem's hands on the way there
         int stock = outward && walking ? 1 : 2;
-        // стопка справа: растёт от 0 до 3 и сбрасывается; ящик появляется в ней, когда голем его донёс
+        // stack on the right: grows from 0 to 3 and resets; a crate appears in it when the golem has brought it
         boolean dropped = !(outward && walking);
         int pile = Math.min(3, cycle % 4 + (dropped ? 1 : 0));
         for (int i = 0; i < stock; i++) {
@@ -115,25 +115,25 @@ public class TerminalRenderer implements BlockEntityRenderer<TerminalBlockEntity
         for (int i = 0; i < pile; i++) {
             sprite(vc, p, 12, 9 - i * 2, 2, 2, 32, 16, 2, 2, false, tint, light, 1);
         }
-        // голем: с ящиком по пути туда, пустой — обратно; слева направо смотрит вправо
+        // golem: with a crate on the way there, empty on the way back; going left to right it looks right
         int gx = Math.round(x);
         boolean carry = outward && walking;
         sprite(vc, p, gx, 4, 6, 7, frame * 8, carry ? 16 : 24, 6, 7, !outward, tint, light, 2);
     }
 
     /**
-     * Спрайт: прямоугольник (sx, sy, w, h) в текселях экрана (от левого верхнего угла) показывает область листа
-     * (u, v, uw, vh). layer сдвигает плоскость наружу, чтобы слои не мерцали.
+     * Sprite: the rectangle (sx, sy, w, h) in screen texels (from the top left corner) shows the sheet area
+     * (u, v, uw, vh). layer pushes the plane outwards so the layers do not flicker.
      */
     private static void sprite(VertexConsumer vc, PoseStack.Pose p, int sx, int sy, int w, int h, int u, int v, int uw, int vh,
                                boolean flip, int argb, int light, int layer) {
-        // экран центрирован на лицевой грани; правая сторона зрителя — убывающий x модели
+        // the screen is centred on the front face; the viewer's right is decreasing model x
         float offX = sx + w / 2f - SCREEN / 2f;
         float offY = SCREEN / 2f - (sy + h / 2f);
         float cx = 0.5f - offX * TEXEL;
         float cy = 0.5f + offY * TEXEL;
         float z = -(0.002f + 0.0015f * layer);
-        // тонкий зазор в UV, чтобы фильтрация не цепляла соседние спрайты листа
+        // a thin UV gap so filtering does not catch neighbouring sprites of the sheet
         float e = 0.0005f;
         Quads.front(vc, p, cx, cy, z, w * TEXEL, h * TEXEL, 0f,
                 u / SHEET_SIZE + e, v / SHEET_SIZE + e, (u + uw) / SHEET_SIZE - e, (v + vh) / SHEET_SIZE - e, flip, argb, light);

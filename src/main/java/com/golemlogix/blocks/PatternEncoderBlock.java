@@ -25,7 +25,7 @@ public class PatternEncoderBlock extends HorizontalDirectionalBlock implements G
         return new com.golemlogix.blockentity.PatternEncoderBlockEntity(pos, state);
     }
 
-    /** Чистые и готовые перфокарты выпадают вместе с кодировщиком (рецепт в сетке — призрачный). */
+    /** Blank and finished punch cards drop together with the encoder (the recipe in the grid is a ghost). */
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof com.golemlogix.blockentity.PatternEncoderBlockEntity be) {

@@ -16,7 +16,7 @@ import snownee.jade.api.config.IPluginConfig;
 
 import java.util.Locale;
 
-/** Строки над Насыщателем Маны (любой его частью): сопроцессоры на крыше, скорость и режим Модуля Редстоуна. */
+/** Lines over a Mana Saturator (any of its parts): coprocessors on the roof, speed and the Redstone Module mode. */
 public enum SaturatorProvider implements IBlockComponentProvider {
     INSTANCE;
 

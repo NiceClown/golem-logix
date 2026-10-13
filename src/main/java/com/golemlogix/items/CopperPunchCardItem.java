@@ -13,8 +13,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Медная перфокарта: чистые складываются в стопку до 64, записанная — штучная (у каждой свой рецепт, и стопка из
- * одинаковых карт в поставщике запускала бы одну задачу — путаница).
+ * Copper punch card: blank ones stack up to 64, a written one is single (each has its own recipe, and a stack of
+ * identical cards in a provider would run one job, a mess).
  */
 public class CopperPunchCardItem extends Item {
     public CopperPunchCardItem(Properties properties) {
@@ -25,7 +25,7 @@ public class CopperPunchCardItem extends Item {
         return stack.has(ModDataComponents.PATTERN.get());
     }
 
-    /** Записанная карта: рецепт и стопка в одну штуку. */
+    /** A written card: the recipe and a stack size of one. */
     public static ItemStack written(Item card, PatternData data) {
         ItemStack s = new ItemStack(card, 1);
         s.set(ModDataComponents.PATTERN.get(), data);
@@ -33,7 +33,7 @@ public class CopperPunchCardItem extends Item {
         return s;
     }
 
-    /** Shift+ПКМ с записанной картой в руке стирает рецепт: карта снова чистая и складывается в стопку. */
+    /** Shift + right-click with a written card in hand erases the recipe: the card is blank again and stacks. */
     @Override
     public net.minecraft.world.InteractionResultHolder<ItemStack> use(net.minecraft.world.level.Level level,
                                                                        net.minecraft.world.entity.player.Player player,

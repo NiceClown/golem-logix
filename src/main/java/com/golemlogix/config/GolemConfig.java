@@ -3,7 +3,7 @@ package com.golemlogix.config;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 /**
- * Общие настройки мода (golem_logix-common.toml).
+ * Common mod settings (golem_logix-common.toml).
  */
 public final class GolemConfig {
     public static final ModConfigSpec SPEC;

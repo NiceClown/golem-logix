@@ -3,24 +3,24 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 
-/** Логотип мода (logo.png для списка модов): латунное кольцо с рунами, ледяной кристалл ядра и надпись. Запуск через ArtForge. */
+/** The mod logo (logo.png for the mod list): a brass ring with runes, an ice core crystal and the title. Run through ArtForge. */
 final class Logo {
     static void make() throws Exception {
         int S = 256;
         Paint p = new Paint(S, S, 1);
-        // фон: тёмное железо с мягким радиальным свечением
+        // background: dark iron with a soft radial glow
         p.fill(0, 0, S, S, (u, v) -> {
             double d = Math.hypot(u - 128, v - 112) / 180.0;
             return Paint.mix(Paint.rgb(0x1b2a36), Paint.rgb(0x07090c), Math.min(1, d));
         });
         p.grain(0, 0, S, S, 0.05, 901);
-        // рамка из латуни и угловые заклёпки
+        // a brass frame and corner rivets
         p.frame(3, 3, S - 3, S - 3, 5, Paint.at(Paint.BRASS, 3.2));
         p.frame(8, 8, S - 8, S - 8, 2, Paint.at(Paint.BRASS, 1.6));
         for (double[] c : new double[][]{{14, 14}, {S - 14, 14}, {14, S - 14}, {S - 14, S - 14}}) {
             p.screw(c[0], c[1], 6, Paint.BRASS, c[0] * 0.05);
         }
-        // кольцо с рунами вокруг ядра
+        // a ring of runes around the core
         double cx = 128, cy = 106;
         p.disc(cx, cy, 78, Paint.at(Paint.BRASS, 1.2));
         p.sphere(cx, cy, 76, Paint.BRASS, 0.25, 0.95);
@@ -32,7 +32,7 @@ final class Logo {
         p.disc(cx, cy, 40, Paint.at(Paint.BRASS, 1.4));
         p.sphere(cx, cy, 38, Paint.BRASS, 0.2, 0.9);
         p.disc(cx, cy, 31, Paint.at(Paint.IRON, 0.2));
-        // кристалл ядра: четыре грани
+        // the core crystal: four facets
         double[][][] tri = {{{0, -26}, {22, 0}, {0, 0}}, {{0, -26}, {0, 0}, {-22, 0}}, {{22, 0}, {0, 26}, {0, 0}}, {{-22, 0}, {0, 0}, {0, 26}}};
         double[] tone = {0.95, 0.72, 0.5, 0.32};
         for (int i = 0; i < 4; i++) {
@@ -42,7 +42,7 @@ final class Logo {
         }
         p.line(cx, cy - 26, cx, cy + 26, 1.2, Paint.argb(160, 0xFFFFFF));
         p.glowRect(cx - 4, cy - 4, cx + 4, cy + 4, 30, Paint.at(Paint.CYAN, 4.5), 120);
-        // иней по верхней рамке
+        // frost along the top frame
         p.frostLine(3, S - 3, 3, 4, 902);
         p.icicle(20, 8, 12, 5);
         p.icicle(S - 24, 8, 16, 5);

@@ -6,7 +6,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 /**
- * Ячейки апгрейдов машины: в каждой по одному апгрейду, машина принимает только свои типы и не больше лимита.
+ * A machine's upgrade slots: one upgrade in each, the machine accepts only its own types and no more than the limit.
  */
 public class UpgradeContainer extends OwnedContainer {
     private final UpgradeSpec spec;
@@ -32,13 +32,13 @@ public class UpgradeContainer extends OwnedContainer {
         return 1;
     }
 
-    /** Можно ли положить апгрейд в ячейку slot (учитывая то, что уже стоит в остальных). */
+    /** Whether an upgrade can go into slot slot (considering what is already in the others). */
     @Override
     public boolean canPlaceItem(int slot, ItemStack stack) {
         return accepts(spec, stack, this, slot);
     }
 
-    /** Общая проверка (её же использует клиентская копия меню). */
+    /** The shared check (the client copy of the menu uses it too). */
     public static boolean accepts(UpgradeSpec spec, ItemStack stack, net.minecraft.world.Container current, int slot) {
         if (!(stack.getItem() instanceof UpgradeItem up)) {
             return false;

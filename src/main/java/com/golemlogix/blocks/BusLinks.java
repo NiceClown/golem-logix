@@ -17,12 +17,12 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Общая часть всех шин: у каждой из шести сторон есть флаг «здесь подключена мини-трубка» (как у труб), по которому модель
- * рисует либо короткий разъём, либо мини-трубку до самого края блока; форма блока собирается из тела шины, устройства
- * подачи/выгрузки спереди и разъёмов.
+ * The part shared by all buses: each of the six sides has a "mini tube connected here" flag (as pipes do), by which the model
+ * draws either a short socket or a mini tube to the very edge of the block; the block shape is built from the bus body, the
+ * feeding/unloading device at the front and the sockets.
  */
 public final class BusLinks {
-    /** Рабочий узел спереди: раструб (импорт), сопло (экспорт) или монокль (перископ). */
+    /** The working node at the front: funnel (import), nozzle (export) or monocle (periscope). */
     public enum Device {FUNNEL, NOZZLE, LENS}
 
     public static final Map<Direction, BooleanProperty> PROPS = new EnumMap<>(Direction.class);
@@ -53,12 +53,12 @@ public final class BusLinks {
         return state;
     }
 
-    /** Соединяется ли шина в этом состоянии с соседним блоком в направлении dir: обе стороны должны быть согласны. */
+    /** Whether the bus in this state connects to the neighbouring block in direction dir: both sides must agree. */
     public static boolean connects(BlockState self, BlockState neighbor, Direction dir) {
         return GolemNode.linked(self, neighbor, dir);
     }
 
-    /** Все шесть флагов по соседям (при постановке блока). */
+    /** All six flags from the neighbours (when the block is placed). */
     public static BlockState connected(BlockState state, BlockGetter level, BlockPos pos) {
         for (Direction d : Direction.values()) {
             BlockPos n = pos.relative(d);
@@ -67,22 +67,22 @@ public final class BusLinks {
         return state;
     }
 
-    /** Сосед изменился: флаг стороны по связи с ним (заглушка на трубе-соседе связь закрывает). */
+    /** A neighbour changed: the side flag follows the link with it (a plug on the neighbouring pipe closes the link). */
     public static BlockState update(BlockState state, Direction direction, BlockState neighbor, BlockGetter level, BlockPos pos) {
         return state.setValue(PROPS.get(direction), GolemNode.linked(level, pos, state, pos.relative(direction), neighbor, direction));
     }
 
-    // ----------------------------------------------------------------------------------------------- формы
+    // ----------------------------------------------------------------------------------------------- shapes
     private static final Map<Long, VoxelShape> CACHE = new ConcurrentHashMap<>();
     private static final Map<Long, VoxelShape> COLLISION = new ConcurrentHashMap<>();
 
     /**
-     * Шина занимает переднюю половину блока (Z 0..8 «лицом на север»): рабочий узел 0..3.2, корпус 3.2..8. Боковые
-     * мини-трубки выходят из середины корпуса (Z = {@link #MID}), задняя — из его задней грани до края блока.
+     * The bus takes the front half of the block (Z 0..8 when facing north): working node 0..3.2, body 3.2..8. The side
+     * mini tubes come out of the middle of the body (Z = {@link #MID}), the back one from its back face to the block edge.
      */
     public static final double BODY_LO = 4.8, BODY_HI = 11.2, BODY_Z0 = 3.2, BODY_Z1 = 8, MID = 5.6;
 
-    /** Нижняя половина блока: шины и трубы работают как ступенька — на них заходят, не прыгая. */
+    /** Lower half of the block: buses and pipes work as a step, they can be walked onto without jumping. */
     public static final VoxelShape STEP = net.minecraft.world.level.block.Block.box(0, 0, 0, 16, 8, 16);
 
     public static VoxelShape shape(BlockState state, Device device) {
@@ -90,12 +90,12 @@ public final class BusLinks {
         return CACHE.computeIfAbsent(key, k -> build(state.getValue(DirectionalBlock.FACING), (int) (k & 0xFF), device));
     }
 
-    /** Форма столкновений: та же, но не выше половины блока. */
+    /** Collision shape: the same, but no higher than half a block. */
     public static VoxelShape collision(BlockState state, Device device) {
         return COLLISION.computeIfAbsent(key(state, device), k -> step(shape(state, device)));
     }
 
-    /** Обрезка формы по нижней половине блока; пустая (вся деталь сверху) — плоская ступенька-заглушка не нужна. */
+    /** Clips a shape to the lower half of the block; empty (the whole part is above) means no flat step plate is needed. */
     public static VoxelShape step(VoxelShape shape) {
         return Shapes.join(shape, STEP, net.minecraft.world.phys.shapes.BooleanOp.AND).optimize();
     }
@@ -112,7 +112,7 @@ public final class BusLinks {
     }
 
     private static VoxelShape build(Direction facing, int mask, Device device) {
-        // собираем в системе «лицом на север», потом поворачиваем на нужную сторону
+        // built in the north-facing frame, then rotated to the needed side
         double lo = BODY_LO, hi = BODY_HI, z0 = BODY_Z0, z1 = BODY_Z1, t0 = MID - 2, t1 = MID + 2;
         VoxelShape local = Shapes.or(box(lo, lo, z0, hi, hi, z1), box(5.5, hi, 3.6, 10.5, hi + 0.4, 7.6));
         local = Shapes.or(local, switch (device) {
@@ -122,11 +122,11 @@ public final class BusLinks {
         });
         for (Direction l : Direction.values()) {
             if (l == Direction.NORTH) {
-                continue; // спереди рабочий узел
+                continue; // the working node is at the front
             }
             boolean connected = (mask & (1 << rotate(l, facing).ordinal())) != 0;
             if (l == Direction.UP && !connected) {
-                continue; // на верхней стороне без трубы — рунная плита со звездой, разъёма нет
+                continue; // on the top side without a pipe: a rune plate with a star, no socket
             }
             double stub = 1.2;
             local = Shapes.or(local, switch (l) {
@@ -144,7 +144,7 @@ public final class BusLinks {
         return net.minecraft.world.level.block.Block.box(x0, y0, z0, x1, y1, z1);
     }
 
-    /** Куда смотрит локальное направление l после поворота «север -> facing» (так же, как поворачивает блокстейт). */
+    /** Where the local direction l points after the "north -> facing" rotation (the same way the block state rotates). */
     public static Direction rotate(Direction l, Direction facing) {
         int x = l.getStepX(), y = l.getStepY(), z = l.getStepZ();
         int rx = x, ry = y, rz = z;
@@ -177,7 +177,7 @@ public final class BusLinks {
         return Direction.getNearest(rx, ry, rz);
     }
 
-    /** Поворачивает форму, нарисованную «лицом на север», в сторону facing. */
+    /** Rotates a shape drawn facing north towards facing. */
     public static VoxelShape rotateShape(VoxelShape shape, Direction facing) {
         if (facing == Direction.NORTH) {
             return shape;
@@ -191,7 +191,7 @@ public final class BusLinks {
         return out[0].optimize();
     }
 
-    /** Точка блока (0..1) после поворота вокруг центра блока. */
+    /** A block point (0..1) after rotation around the block centre. */
     private static double[] point(double x, double y, double z, Direction facing) {
         double cx = x - 0.5, cy = y - 0.5, cz = z - 0.5;
         double rx = cx, ry = cy, rz = cz;

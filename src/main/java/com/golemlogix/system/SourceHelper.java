@@ -12,8 +12,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Универсальный помощник Source: безлимитные блоки мода (Креативный Сосуд, Резонатор)
- * и банки / тайлы Ars Nouveau (ISourceTile, через рефлексию — Ars Nouveau необязателен).
+ * Universal Source helper: the mod's unlimited blocks (Creative Source Jar, Resonator)
+ * and Ars Nouveau jars / tiles (ISourceTile, through reflection, so Ars Nouveau stays optional).
  */
 public class SourceHelper {
     private static Class<?> sourceTileClass = null;
@@ -46,20 +46,20 @@ public class SourceHelper {
     }
 
     /**
-     * Нужно ли платить Source. По настройке requireSource — да, но только если установлен Ars Nouveau: без него Source в выживании
-     * взять негде (Резонатор делается в Насыщателе, которому самому нужен Source), поэтому сеть и Насыщатель тогда работают даром.
+     * Whether Source has to be paid. By the requireSource setting yes, but only if Ars Nouveau is installed: without it there is nowhere to get
+     * Source in survival (the Resonator is made in the Saturator, which needs Source itself), so the network and the Saturator then work for free.
      */
     public static boolean sourceRequired() {
         return com.golemlogix.config.GolemConfig.REQUIRE_SOURCE.get() && arsNouveauLoaded();
     }
 
-    /** Источник Source, подключённый к сети. */
+    /** A Source supplier connected to the network. */
     public interface Supplier {
         boolean infinite();
 
         int available();
 
-        /** Снимает до amount, возвращает снятое. */
+        /** Takes up to amount, returns what was taken. */
         int drain(int amount);
     }
 
@@ -122,8 +122,8 @@ public class SourceHelper {
     }
 
     /**
-     * Возвращает поставщика Source, если блок-сущность является им. Вечный Морозный Резонатор поставщиком не считается:
-     * он не кормит сеть, а дистанционно питает Портативные Хронометры (см. {@link GolemNetwork#hasResonator()}).
+     * Returns the Source supplier if the block entity is one. The Eternal Frost Resonator does not count as a supplier:
+     * it does not feed the network but powers Portable Chronometers remotely (see {@link GolemNetwork#hasResonator()}).
      */
     public static Supplier asSupplier(BlockEntity be) {
         if (be instanceof CreativeSourceJarBlockEntity) {
@@ -139,7 +139,7 @@ public class SourceHelper {
         return null;
     }
 
-    /** Все поставщики Source, непосредственно примыкающие к позиции. */
+    /** All Source suppliers directly adjacent to the position. */
     public static List<Supplier> adjacentSuppliers(Level level, BlockPos pos) {
         List<Supplier> list = new ArrayList<>(0);
         for (Direction dir : Direction.values()) {
@@ -160,8 +160,8 @@ public class SourceHelper {
     }
 
     /**
-     * Старый API для блоков, питающихся рядом (Насыщатель Маны): проверяет/снимает Source
-     * в радиусе нескольких блоков.
+     * Old API for blocks that feed from nearby (the Mana Saturator): checks/takes Source
+     * within a radius of a few blocks.
      */
     public static boolean extractSource(Level level, BlockPos origin, int requiredSource, boolean simulate) {
         BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
@@ -196,8 +196,8 @@ public class SourceHelper {
     }
 
     /**
-     * Снимает до amount Source с поставщиков вокруг origin (та же область, что у {@link #extractSource}), можно частями.
-     * Возвращает, сколько снято; безлимитный поставщик отдаёт всё запрошенное.
+     * Takes up to amount Source from the suppliers around origin (the same area as {@link #extractSource}), possibly in parts.
+     * Returns how much was taken; an unlimited supplier gives everything requested.
      */
     public static int drainNearby(Level level, BlockPos origin, int amount) {
         int taken = 0;
@@ -225,8 +225,8 @@ public class SourceHelper {
     }
 
     /**
-     * Снимает до amount Source с поставщиков, примыкающих к области (набору позиций машины): сами позиции области пропускаются.
-     * Безлимитный поставщик отдаёт всё запрошенное.
+     * Takes up to amount Source from the suppliers adjacent to the area (the set of machine positions): the area positions themselves are skipped.
+     * An unlimited supplier gives everything requested.
      */
     public static int drainAround(Level level, java.util.Collection<BlockPos> region, int amount) {
         java.util.Set<BlockPos> inside = new java.util.HashSet<>(region);
@@ -255,7 +255,7 @@ public class SourceHelper {
         return taken;
     }
 
-    /** Заливает Source в соседние банки Ars Nouveau (для генераторов). Возвращает, сколько влито. */
+    /** Pours Source into neighbouring Ars Nouveau jars (for generators). Returns how much was poured. */
     public static int pushSourceToNeighbours(Level level, BlockPos pos, int amount) {
         initArsNouveau();
         if (sourceTileClass == null || amount <= 0) {

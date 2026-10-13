@@ -12,9 +12,9 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import java.util.Arrays;
 
 /**
- * Стенд разработчика по сети: /golemlogix_dev hook &lt;имя&gt; &lt;арг...&gt; выполняет на сервере те же сборщики сцен, что и
- * одиночный стенд кадров ({@link DevScenes}); ответы уходят игроку в чат с меткой «[dev]» — их записывает клиентский стенд.
- * Только для разработки: пакет devtest в релизный jar не входит.
+ * Developer rig over the network: /golemlogix_dev hook &lt;name&gt; &lt;args...&gt; runs on the server the same scene builders as
+ * the single-player screenshot rig ({@link DevScenes}); replies go to the player's chat marked "[dev]", and the client rig records them.
+ * Development only: the devtest package is not part of the release jar.
  */
 @EventBusSubscriber(modid = GolemLogixMod.MOD_ID)
 public final class DevServerCommand {

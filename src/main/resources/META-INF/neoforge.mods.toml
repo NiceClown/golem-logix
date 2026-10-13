@@ -33,7 +33,7 @@ file="META-INF/accesstransformer.cfg"
     ordering="NONE"
     side="BOTH"
 
-# медный голем для ритуала наковальни (первые Медные Матрицы) — в 1.21.1 его даёт только этот мод
+# the copper golem for the anvil ritual (the first Copper Matrices): in 1.21.1 only this mod provides it
 [[dependencies.golem_logix]]
     modId="copperagebackport"
     type="required"

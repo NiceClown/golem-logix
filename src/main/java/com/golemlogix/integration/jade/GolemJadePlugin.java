@@ -6,8 +6,8 @@ import snownee.jade.api.IWailaPlugin;
 import snownee.jade.api.WailaPlugin;
 
 /**
- * Подсказки Jade (необязательная зависимость): сколько каналов занято на линии Кабельной Муфты.
- * Класс подгружается только когда установлен Jade.
+ * Jade tooltips (an optional dependency): how many channels are used on a Cable Bushing line.
+ * The class is loaded only when Jade is installed.
  */
 @WailaPlugin
 public class GolemJadePlugin implements IWailaPlugin {
@@ -21,7 +21,7 @@ public class GolemJadePlugin implements IWailaPlugin {
         registration.registerBlockComponent(MainframeProvider.INSTANCE, com.golemlogix.blocks.MainframePartBlock.class);
         registration.registerBlockComponent(CatalogProvider.INSTANCE, com.golemlogix.blocks.CardCatalogBlock.class);
         registration.registerBlockComponent(CatalogProvider.INSTANCE, com.golemlogix.blocks.CatalogPartBlock.class);
-        // каналы у всех остальных узлов сети (устройства, трубы, шины, расширители): провайдер сам отбирает блоки мода
+        // channels on all other network nodes (devices, pipes, buses, expanders): the provider picks the mod's blocks itself
         registration.registerBlockComponent(ChannelProvider.INSTANCE, net.minecraft.world.level.block.Block.class);
     }
 }

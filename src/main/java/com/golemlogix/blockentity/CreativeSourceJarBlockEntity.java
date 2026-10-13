@@ -8,7 +8,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Креативный Сосуд: безлимитный Source. Заодно наполняет соседние банки Ars Nouveau.
+ * Creative Source Jar: unlimited Source. It also fills neighbouring Ars Nouveau jars.
  */
 public class CreativeSourceJarBlockEntity extends BlockEntity {
     public CreativeSourceJarBlockEntity(BlockPos pos, BlockState state) {

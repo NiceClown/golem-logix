@@ -14,8 +14,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Клиент -> сервер: прекрафт (Ctrl + «+» в JEI) — заказать автокрафтом недостающие ингредиенты рецепта.
- * Количество — отдельным числом (может быть больше стака).
+ * Client -> server: precraft (Ctrl + "+" in JEI), order the missing ingredients of a recipe through autocrafting.
+ * The amount is a separate number (it may exceed a stack).
  */
 public record PrecraftPayload(int containerId, List<ItemStack> items, List<Integer> counts) implements CustomPacketPayload {
     public static final int MAX_ITEMS = 9;

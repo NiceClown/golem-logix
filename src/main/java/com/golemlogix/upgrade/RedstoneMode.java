@@ -1,16 +1,16 @@
 package com.golemlogix.upgrade;
 
 /**
- * Режим Модуля Редстоуна — как у карты редстоуна AE2 и «режима редстоуна» Refined Storage.
+ * Redstone Module mode, like the AE2 redstone card and the Refined Storage "redstone mode".
  */
 public enum RedstoneMode {
-    /** Сигнал не важен. */
+    /** The signal does not matter. */
     IGNORE,
-    /** Работает, пока есть сигнал. */
+    /** Works while there is a signal. */
     HIGH,
-    /** Работает, пока сигнала нет. */
+    /** Works while there is no signal. */
     LOW,
-    /** Одно действие на каждый импульс (фронт сигнала). */
+    /** One action per pulse (signal edge). */
     PULSE;
 
     public static RedstoneMode byId(int id) {
@@ -18,7 +18,7 @@ public enum RedstoneMode {
         return all[Math.floorMod(id, all.length)];
     }
 
-    /** Следующий режим по кругу; без импульса — для хранилищ, где «одно действие» не имеет смысла. */
+    /** The next mode in a cycle; without pulse for storages, where "one action" makes no sense. */
     public RedstoneMode next(boolean allowPulse) {
         RedstoneMode n = byId(ordinal() + 1);
         return !allowPulse && n == PULSE ? IGNORE : n;

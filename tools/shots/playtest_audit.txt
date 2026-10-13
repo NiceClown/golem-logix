@@ -52,7 +52,7 @@ cmd fill 0 -60 0 16 -60 0 golem_logix:dense_frost_pipe
 cmd fill -4 -60 0 -1 -60 0 golem_logix:basic_snow_pipe
 hook plug 16 -60 0 east
 hook plug -4 -60 0 west
-# Две заглушки на расстоянии 2 блоков (< 5 блоков) для проверки правила "1 склад":
+# Two plugs 2 blocks apart (< 5 blocks) to check the "1 warehouse" rule:
 hook plug 8 -60 0 north
 hook plug 10 -60 0 north
 hook netput -10 -60 0 minecraft:iron_ingot 64
@@ -60,7 +60,7 @@ hook netput -10 -60 0 minecraft:gold_ingot 64
 hook netput -10 -60 0 minecraft:oak_log 64
 hook netfluidput -10 -60 0 minecraft:water 5000
 
-# Короткая ветка плотной трубы для фиксации разворота с медным големом:
+# A short branch of dense pipe to capture the turn with the copper golem:
 cmd setblock 2 -60 3 golem_logix:dense_frost_pipe
 hook plug 2 -60 3 east
 cmd setblock 1 -60 3 golem_logix:dense_frost_pipe

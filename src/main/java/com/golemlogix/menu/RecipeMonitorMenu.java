@@ -24,8 +24,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Пульт Монитора Рецептов: список всех Крио-Калькуляторов сети с заказами, ходом, шагами и ожиданиями. Слотов нет —
- * сервер раз в полсекунды присылает снимок, кнопка «Отменить» уходит как нажатие кнопки меню (100 + номер калькулятора).
+ * Recipe Monitor console: a list of all Cryo-Calculators of the network with orders, progress, steps and waits. There are no slots:
+ * the server sends a snapshot every half second, the "Cancel" button goes as a menu button press (100 + calculator number).
  */
 public class RecipeMonitorMenu extends GolemMenu {
     public static final int BUTTON_CANCEL_BASE = 100;
@@ -37,11 +37,11 @@ public class RecipeMonitorMenu extends GolemMenu {
     private final BlockPos pos;
     private final ContainerLevelAccess access;
     private final Player player;
-    /** Вычислители в порядке строк монитора: кнопка «отменить» строки i отменяет задачу sentOrder[i]. */
+    /** Processors in the order of the monitor rows: the "cancel" button of row i cancels the job of sentOrder[i]. */
     private List<CraftingCpu> sentOrder = List.of();
     private MonitorPayload lastSent;
 
-    /** Клиент: последний снимок. */
+    /** Client: the last snapshot. */
     @Nullable
     public MonitorPayload clientData;
     public int clientVersion = 0;
@@ -99,7 +99,7 @@ public class RecipeMonitorMenu extends GolemMenu {
         List<CraftingCpu> order = new ArrayList<>();
         if (err == null) {
             List<CraftingCpu> cpus = new ArrayList<>(net.cpus());
-            // сначала занятые, потом свободные; внутри — по координатам (порядок не скачет)
+            // busy ones first, then free ones; within that by coordinates (so the order does not jump)
             cpus.sort(Comparator.comparing((CraftingCpu c) -> c.isIdle()).thenComparingLong(c -> c.cpuPos().asLong()).thenComparingInt(CraftingCpu::core));
             for (CraftingCpu cpu : cpus) {
                 if (cpu.isRemoved()) {

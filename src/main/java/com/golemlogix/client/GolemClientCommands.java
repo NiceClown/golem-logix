@@ -10,8 +10,8 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 
 /**
- * Клиентская команда /golemlogix_book &lt;статья&gt;: открывает Гримуар на нужной статье (по ней щёлкают в сообщении
- * о новом секретном знании).
+ * Client command /golemlogix_book &lt;entry&gt;: opens the Grimoire at the given entry (it is clicked in the message
+ * about new secret knowledge).
  */
 @EventBusSubscriber(modid = GolemLogixMod.MOD_ID, value = Dist.CLIENT)
 public final class GolemClientCommands {
@@ -24,7 +24,7 @@ public final class GolemClientCommands {
                 .then(Commands.argument("entry", StringArgumentType.word()).executes(ctx -> {
                     String entry = StringArgumentType.getString(ctx, "entry");
                     Minecraft mc = Minecraft.getInstance();
-                    // после щелчка по чату окно чата ещё открыто: книгу открываем на следующем кадре
+                    // after a click in chat the chat screen is still open: the book is opened on the next frame
                     mc.tell(() -> mc.setScreen(com.golemlogix.client.book.BookScreen.openAt(entry)));
                     return 1;
                 })));

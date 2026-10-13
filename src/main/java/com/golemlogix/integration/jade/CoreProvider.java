@@ -10,7 +10,7 @@ import snownee.jade.api.IBlockComponentProvider;
 import snownee.jade.api.ITooltip;
 import snownee.jade.api.config.IPluginConfig;
 
-/** Строки над Ядром Атланта: питание, каналы, расход Source — из состояния, которое ядро и так рассылает клиентам. */
+/** Lines over the Atlas Core: power, channels, Source use, from the state the core sends to clients anyway. */
 public enum CoreProvider implements IBlockComponentProvider {
     INSTANCE;
 

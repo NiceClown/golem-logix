@@ -14,7 +14,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-/** Клиент -> сервер: игрок ударил кузнечным молотом (ЛКМ) по наковальне в pos. */
+/** Client -> server: the player struck the anvil at pos with the Forge Hammer (left-click). */
 public record AnvilStrikePayload(BlockPos pos) implements CustomPacketPayload {
     public static final Type<AnvilStrikePayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "anvil_strike"));
@@ -43,7 +43,7 @@ public record AnvilStrikePayload(BlockPos pos) implements CustomPacketPayload {
         });
     }
 
-    /** Удар и сообщение игроку над хотбаром. */
+    /** The strike and a message to the player above the hotbar. */
     public static void strike(ServerPlayer player, ManaSaturatorBlockEntity anvil, ItemStack hammer) {
         switch (anvil.strike(player.serverLevel(), anvil.getBlockPos(), player, hammer)) {
             case HIT -> player.displayClientMessage(Component.translatable("message.golem_logix.anvil.hit",

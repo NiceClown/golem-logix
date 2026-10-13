@@ -29,25 +29,25 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Лёгкое свечение рун на всех машинах. Генератор текстур рядом с текстурой X, на которой есть руны и светящиеся вставки,
- * кладёт слой {@code X_glow} (только светящиеся пиксели). Модели мода оборачиваются: поверх каждого четырёхугольника с
- * такой текстурой рисуется его копия со слоем свечения — без затенения и со своим светом, поэтому ночью руны видны, а днём
- * чуть ярче металла вокруг. Копия на волос сдвинута наружу по нормали, чтобы лечь поверх и полупрозрачных граней.
+ * A light glow of the runes on all machines. Next to a texture X that has runes and glowing inlays the texture generator
+ * puts a layer {@code X_glow} (only the glowing pixels). The mod's models are wrapped: on top of every quad with
+ * such a texture a copy with the glow layer is drawn, unshaded and with its own light, so the runes are visible at night and
+ * slightly brighter than the metal around them by day. The copy is pushed out a hair along the normal to lie over translucent faces too.
  */
 public final class GlowModels {
-    /** Свет копии (0..15): «лёгкое» свечение, не прожектор. */
+    /** Light of the copy (0..15): a "light" glow, not a floodlight. */
     private static final int GLOW_LIGHT = 12;
     private static final float LIFT = 0.0008f;
 
-    /** Текстура -> её слой свечения (пусто, если слоя нет). Ключ — сам спрайт: после перезагрузки ресурсов спрайты новые. */
+    /** Texture -> its glow layer (empty if there is none). The key is the sprite itself: after a resource reload the sprites are new. */
     private static final Map<TextureAtlasSprite, Optional<TextureAtlasSprite>> SPRITES = new ConcurrentHashMap<>();
-    /** Четырёхугольник -> его светящаяся копия (пусто, если текстура без свечения). */
+    /** Quad -> its glowing copy (empty if the texture has no glow). */
     private static final Map<BakedQuad, Optional<BakedQuad>> QUADS = new ConcurrentHashMap<>();
 
     private GlowModels() {
     }
 
-    /** Оборачивает модели мода (вызывается из ModelEvent.ModifyBakingResult). */
+    /** Wraps the mod's models (called from ModelEvent.ModifyBakingResult). */
     public static void wrap(Map<ModelResourceLocation, BakedModel> models) {
         SPRITES.clear();
         QUADS.clear();
@@ -108,7 +108,7 @@ public final class GlowModels {
         return out == null ? List.of() : out;
     }
 
-    /** Модель мода со слоем свечения. Свечение идёт в слой cutout, а у полупрозрачных моделей — в тот же translucent. */
+    /** A mod model with a glow layer. The glow goes into the cutout layer, and for translucent models into the same translucent one. */
     static final class Glowing extends BakedModelWrapper<BakedModel> {
         Glowing(BakedModel original) {
             super(original);
@@ -127,8 +127,8 @@ public final class GlowModels {
         @Override
         public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, RandomSource rand, ModelData data,
                                         @Nullable RenderType renderType) {
-            // без состояния (модель рисует отрисовщик блок-сущности в свой буфер) или без слоя — свечение не добавляем:
-            // копии с прозрачными пикселями в чужом, например сплошном, буфере легли бы чёрными пятнами
+            // without a state (a block entity renderer draws the model into its own buffer) or without a layer, no glow is added:
+            // copies with transparent pixels in someone else's buffer, for example a solid one, would show up as black spots
             if (renderType == null || state == null) {
                 return originalModel.getQuads(state, side, rand, data, renderType);
             }
@@ -137,7 +137,7 @@ public final class GlowModels {
             if (renderType != glowType(types)) {
                 return own;
             }
-            // слой свечения: копии всех граней модели (из всех её слоёв) поверх своих граней этого слоя
+            // glow layer: copies of all the model's faces (from all its layers) on top of its own faces of this layer
             List<BakedQuad> out = new ArrayList<>(own);
             for (RenderType t : types) {
                 out.addAll(glowing(t == renderType ? own : originalModel.getQuads(state, side, rand, data, t)));
@@ -153,7 +153,7 @@ public final class GlowModels {
         }
     }
 
-    /** Отдельный проход предмета: только светящиеся копии граней всех проходов, слой cutout. */
+    /** A separate item pass: only the glowing copies of the faces of all passes, in the cutout layer. */
     static final class ItemGlowPass extends BakedModelWrapper<BakedModel> {
         private final List<BakedModel> passes;
 

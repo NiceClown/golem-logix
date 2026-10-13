@@ -1,7 +1,7 @@
 package com.golemlogix.upgrade;
 
 /**
- * Апгрейды машин: ускорение (Сжатый Сопроцессор), автокрафт для шины экспорта и управление редстоуном.
+ * Machine upgrades: speed-up (Compressed Co-Processor), autocraft for the export bus, and redstone control.
  */
 public enum UpgradeType {
     SPEED, CRAFTING, REDSTONE

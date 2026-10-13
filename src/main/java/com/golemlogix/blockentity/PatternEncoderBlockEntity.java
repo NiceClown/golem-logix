@@ -11,8 +11,8 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Кодировщик хранит своё содержимое: запас чистых перфокарт, готовую карту и набранный рецепт (сетка и выходы) с режимом.
- * Раньше всё лежало в окне и возвращалось игроку при закрытии — стопку чистых карт приходилось носить с собой.
+ * The encoder keeps its contents: the stock of blank punch cards, the finished card and the entered recipe (grid and outputs) with its mode.
+ * Before, everything lived in the window and went back to the player on close, so the stack of blank cards had to be carried around.
  */
 public class PatternEncoderBlockEntity extends BlockEntity {
     private final OwnedContainer items = new OwnedContainer(PatternEncoderMenu.SLOT_COUNT, this, s -> true);
@@ -26,7 +26,7 @@ public class PatternEncoderBlockEntity extends BlockEntity {
         return items;
     }
 
-    /** Данные окна: 0 — режим (0 верстак, 1 обработка). */
+    /** Window data: 0 = mode (0 crafting table, 1 processing). */
     public ContainerData data() {
         return new ContainerData() {
             @Override

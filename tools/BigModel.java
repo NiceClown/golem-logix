@@ -2,23 +2,23 @@ import java.nio.file.Path;
 import java.util.*;
 
 /**
- * Большая модель (для многоблока 2x2) в «шкафных» координатах: X — слева направо глазами зрителя СПЕРЕДИ (0..32),
- * Y — вверх (0..32), Z — вглубь от фасада (0..16). Модель режется на четыре клетки блока (колонка 0 — слева, ряд 0 — внизу);
- * каждая клетка получает свой JSON с локальными координатами (модель блока смотрит на север, поворот делает блокстейт).
- * Лицевые грани можно красить «по клеткам» (текстура фасада режется на четыре картинки), остальные — любой проекцией.
+ * A big model (for the 2x2 multiblock) in "cabinet" coordinates: X left to right as seen from the FRONT (0..32),
+ * Y up (0..32), Z inwards from the front (0..16). The model is cut into four block cells (column 0 on the left, row 0 at the bottom);
+ * each cell gets its own JSON with local coordinates (the block model faces north, the block state rotates it).
+ * Front faces can be painted "per cell" (the front texture is cut into four pictures), the others with any projection.
  */
 public final class BigModel {
     static final double EPS = 1e-9;
 
-    /** Проекция: переводит точку на грани (в шкафных координатах) в координаты текстуры 0..16. */
+    /** Projection: turns a point on a face (in cabinet coordinates) into texture coordinates 0..16. */
     interface UvMap {
         double[] at(double x, double y, double z);
     }
 
     static final class Face {
-        final String tex;      // имя переменной текстуры, без '#'
-        final UvMap map;       // null = обычная раскладка (по клетке)
-        final int light;       // 0..15 — свечение грани
+        final String tex;      // texture variable name, without '#'
+        final UvMap map;       // null = the usual layout (per cell)
+        final int light;       // 0..15 = face glow
 
         Face(String tex, UvMap map, int light) {
             this.tex = tex;
@@ -34,7 +34,7 @@ public final class BigModel {
             return new Face(tex, map, 0);
         }
 
-        /** Картинка размером (w x h юнитов), левый верхний угол которой лежит в (ox, oy) плоскости грани. */
+        /** A picture of size (w x h units) whose top left corner lies at (ox, oy) of the face plane. */
         Face glow(int level) {
             return new Face(tex, map, level);
         }
@@ -96,7 +96,7 @@ public final class BigModel {
             return this;
         }
 
-        /** Поворот на 22.5/45 градусов вокруг оси (x/y/z) через точку (только для деталей внутри одной клетки). */
+        /** Rotation by 22.5/45 degrees around an axis (x/y/z) through a point (only for parts within one cell). */
         Box rot(String axis, double angle, double ox, double oy, double oz) {
             rotAxis = axis;
             rotAngle = angle;
@@ -124,15 +124,15 @@ public final class BigModel {
         return CELL[row * 2 + col];
     }
 
-    /** Результат нарезки одной клетки: элементы и набор использованных переменных текстур. */
+    /** Result of cutting one cell: the elements and the set of texture variables used. */
     static final class Cell {
         final List<String> elements = new ArrayList<>();
         final Set<String> vars = new LinkedHashSet<>();
     }
 
     /**
-     * Нарезает модель на клетку (col, row). Для модели предмета передают dx/dy — сдвиг элементов в общую модель 32x32,
-     * и cellVar=true, тогда переменная elev получает суффикс клетки.
+     * Cuts the model into cell (col, row). For an item model dx/dy are passed, the shift of elements into the shared 32x32 model,
+     * and cellVar=true, then the elev variable gets the cell suffix.
      */
     Cell slice(int col, int row, double dx, double dy, boolean cellVar) {
         Cell cell = new Cell();
@@ -148,7 +148,7 @@ public final class BigModel {
             boolean cutB = ay0 > b.y0 + EPS || (Math.abs(ay0 - cy0) < EPS && row == 1);
             boolean cutT = ay1 < b.y1 - EPS || (Math.abs(ay1 - cy1) < EPS && row == 0);
             if (b.rotAxis != null && (cutL || cutR || cutB || cutT)) {
-                throw new IllegalStateException("повёрнутая деталь пересекает границу клетки: " + b.x0 + "," + b.y0);
+                throw new IllegalStateException("a rotated part crosses a cell boundary: " + b.x0 + "," + b.y0);
             }
             double fx0 = 16.0 * (col + 1) - ax1 + dx, fx1 = 16.0 * (col + 1) - ax0 + dx;
             double fy0 = ay0 - cy0 + dy, fy1 = ay1 - cy0 + dy;
@@ -162,7 +162,7 @@ public final class BigModel {
             }
             sb.append("      \"faces\": {\n");
             List<String> faces = new ArrayList<>();
-            // в модели предмета элементы сдвинуты: «обычная» развёртка берётся по координатам внутри клетки, а не по сдвинутым
+            // in the item model the elements are shifted: the "usual" unwrap uses coordinates inside the cell, not the shifted ones
             double[][] local = dx == 0 && dy == 0 ? null
                     : new double[][]{{fx0 - dx, fy0 - dy, b.z0}, {fx1 - dx, fy1 - dy, b.z1}};
             addFace(faces, cell, "north", b.front, cellVar, col, row, new double[]{ax0, ay1, b.z0}, new double[]{ax1, ay0, b.z0}, local);
@@ -212,7 +212,7 @@ public final class BigModel {
         out.add(sb.append("}").toString());
     }
 
-    /** Ищет грани одного направления, лежащие в одной плоскости и перекрывающиеся по площади (мерцание z-fighting). */
+    /** Finds faces of one direction that lie in one plane and overlap in area (z-fighting flicker). */
     void lint(String name) {
         for (int i = 0; i < boxes.size(); i++) {
             for (int j = i + 1; j < boxes.size(); j++) {
@@ -236,7 +236,7 @@ public final class BigModel {
             return;
         }
         if (Math.min(a1, b1) - Math.max(a0, b0) > EPS && Math.min(c1, d1) - Math.max(c0, d0) > EPS) {
-            System.out.println("Z-FIGHT в " + name + ": детали " + i + " и " + j + ", грань " + face);
+            System.out.println("Z-FIGHT in " + name + ": parts " + i + " and " + j + ", face " + face);
         }
     }
 }

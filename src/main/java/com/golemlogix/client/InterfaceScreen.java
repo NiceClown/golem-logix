@@ -12,10 +12,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Окно Интерфейса. Под каждой занятой ячейкой «держать в запасе» — шестерёнка (окно настройки ячейки: количество, объём,
- * быстрые кнопки), у ёмкостей с жидкостью рядом с ней — переключатель режима: капля (держать жидкость, по умолчанию) или
- * квадрат (держать сами предметы). Клик по ячейке пустой рукой тоже открывает настройку; колесо мыши над ячейками ничего
- * не делает. В ряду запаса у ячейки-жидкости — ёмкость и сколько вёдер. В ряд приёма можно положить предмет руками.
+ * Interface window. Under every occupied "keep in stock" slot there is a gear (the slot settings window: amount, volume,
+ * quick buttons); containers with fluid also get a mode switch next to it: a drop (keep the fluid, the default) or a
+ * square (keep the items themselves). Clicking a slot with an empty hand also opens the settings; the mouse wheel over the slots does
+ * nothing. In the stock row a fluid slot shows the container and how many buckets. Items can be put into the input row by hand.
  */
 public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
     private static final int BOX = 8;
@@ -34,7 +34,7 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
         return !menu.configItem(i).isEmpty();
     }
 
-    /** Есть ли у ячейки переключатель: в настройке ёмкость с жидкостью. */
+    /** Whether the slot has a switch: the config holds a container with fluid. */
     private boolean hasToggle(int i) {
         return !InterfaceBlockEntity.containedFluid(menu.configItem(i)).isEmpty();
     }
@@ -70,7 +70,7 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
         return -1;
     }
 
-    /** Ячейка настройки под курсором (номер 0..8) или -1. */
+    /** Config slot under the cursor (number 0..8) or -1. */
     private int hoveredConfig() {
         return hoveredSlot != null && hoveredSlot.index < InterfaceBlockEntity.SLOTS ? hoveredSlot.index : -1;
     }
@@ -95,7 +95,7 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
         }
         int c = hoveredConfig();
         if (c >= 0 && menu.getCarried().isEmpty() && !hasShiftDown()) {
-            // пустой рукой по ячейке — окно настройки (на сервер клик не уходит: брать из призрачной ячейки нечего)
+            // an empty hand on a slot opens the settings window (the click does not go to the server: there is nothing to take from a ghost slot)
             if (hasGear(c) && (button == 0 || button == 1)) {
                 openSlot(c);
             }
@@ -106,7 +106,7 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
 
     @Override
     public boolean mouseScrolled(double mx, double my, double scrollX, double scrollY) {
-        // колесо над ячейками настройки ничего не меняет (и не даёт модам прокрутки двигать призраков)
+        // the wheel over config slots changes nothing (and keeps scrolling mods from moving the ghosts)
         if (hoveredConfig() >= 0) {
             return true;
         }
@@ -129,14 +129,14 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
                 int x = toggleX(i);
                 box(g, x, ty, toggleHover == i);
                 if (!menu.itemMode(i)) {
-                    // капля: синяя, с бликом
+                    // drop: blue, with a highlight
                     g.fill(x + 3, ty + 1, x + 5, ty + 2, 0xFF3E8CE6);
                     g.fill(x + 2, ty + 2, x + 6, ty + 4, 0xFF3E8CE6);
                     g.fill(x + 1, ty + 4, x + 7, ty + 6, 0xFF2A68C8);
                     g.fill(x + 2, ty + 6, x + 6, ty + 7, 0xFF2A68C8);
                     g.fill(x + 2, ty + 4, x + 3, ty + 6, 0xFFCFE4FF);
                 } else {
-                    // предмет: тёмный квадратик ячейки
+                    // item: the dark square of a slot
                     g.fill(x + 1, ty + 1, x + 7, ty + 7, 0xFF16222B);
                     g.fill(x + 2, ty + 2, x + 6, ty + 6, 0xFF9AA4B4);
                 }
@@ -149,7 +149,7 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
         g.fill(x + 1, y + 1, x + BOX - 1, y + BOX - 1, hover ? GolemGui.BRASS_L : GolemGui.BRASS_DARK);
     }
 
-    /** Шестерёнка 6×6: зубцы по углам и сторонам, дырка в центре. */
+    /** A 6x6 gear: teeth at the corners and sides, a hole in the middle. */
     private static void gear(GuiGraphics g, int x, int y, int color) {
         String[] rows = {"X.XX.X", ".XXXX.", "XX..XX", "XX..XX", ".XXXX.", "X.XX.X"};
         for (int r = 0; r < rows.length; r++) {
@@ -163,7 +163,7 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
 
     @Override
     protected void renderOverlay(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
-        // запас жидкости в ряду выдачи: ёмкость полупрозрачно и сколько вёдер
+        // fluid stock in the output row: the container drawn translucent and how many buckets
         for (int i = 0; i < InterfaceBlockEntity.SLOTS; i++) {
             if (!menu.isFluidSlot(i)) {
                 continue;
@@ -179,7 +179,7 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
         }
     }
 
-    /** Мелкая подпись в правом нижнем углу ячейки (поверх предмета). */
+    /** Small label in the bottom right corner of a slot (over the item). */
     private void small(GuiGraphics g, String text, int x, int y, int color) {
         g.pose().pushPose();
         g.pose().translate(0, 0, 300);
@@ -194,7 +194,7 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
         g.drawString(font, Component.translatable("gui.golem_logix.interface.keep"), 8, InterfaceMenu.CONFIG_Y - 11, GolemGui.CYAN, false);
         g.drawString(font, Component.translatable("gui.golem_logix.interface.stock"), 8, InterfaceMenu.STOCK_Y - 11, GolemGui.CYAN, false);
         g.drawString(font, Component.translatable("gui.golem_logix.interface.inbox"), 8, InterfaceMenu.INBOX_Y - 11, GolemGui.CYAN, false);
-        // сколько держать — числом на ячейке настройки (сам призрак всегда 1 шт.)
+        // how much to keep, as a number on the config slot (the ghost itself is always 1)
         for (int i = 0; i < InterfaceBlockEntity.SLOTS; i++) {
             if (menu.configItem(i).isEmpty()) {
                 continue;

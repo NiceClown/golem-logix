@@ -40,22 +40,22 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 /**
- * Стенд разработчика: делает кадры ИЗ САМОЙ ИГРЫ (кадровый буфер Minecraft), не трогая рабочий стол и ввод пользователя.
- * Включается системным свойством golemlogix.devshots=&lt;папка очереди&gt; (задача gradle runDevShots), в релизный jar не входит.
+ * Developer rig: takes shots FROM THE GAME ITSELF (the Minecraft framebuffer) without touching the desktop or the user's input.
+ * Turned on by the system property golemlogix.devshots=&lt;queue folder&gt; (gradle task runDevShots), not part of the release jar.
  *
- * Клиент сам создаёт плоский мир, затем следит за папкой очереди: каждый *.txt — сценарий, команды по одной в строке:
+ * The client creates a flat world itself, then watches the queue folder: every *.txt is a scenario, one command per line:
  * <pre>
- *   cmd &lt;команда сервера&gt;      cam x y z yaw pitch (глаза)   wait N (тиков)   shot имя   hook имя арг...
- *   use x y z   closeScreen   reload   gui on|off   fov N   log текст   quit
+ *   cmd &lt;server command&gt;      cam x y z yaw pitch (eyes)   wait N (ticks)   shot name   hook name args...
+ *   use x y z   closeScreen   reload   gui on|off   fov N   log text   quit
  * </pre>
- * Результат — рядом: имя.log (OK/ERR по каждой строке). Кадры падают в screenshots/ игровой папки.
+ * The result goes next to it: name.log (OK/ERR for every line). Shots land in screenshots/ of the game folder.
  */
 @EventBusSubscriber(modid = GolemLogixMod.MOD_ID, value = Dist.CLIENT)
 public final class DevShots {
     private static final String QUEUE = System.getProperty("golemlogix.devshots");
     /**
-     * Сетевой режим (gradle -PdevshotsServer=host:port runDevShots): клиент подключается к выделенному серверу вместо своего
-     * мира; cmd/hook/камера уходят на сервер командами (/golemlogix_dev hook ...), use/useitem — настоящими действиями игрока.
+     * Network mode (gradle -PdevshotsServer=host:port runDevShots): the client joins a dedicated server instead of its own
+     * world; cmd/hook/camera go to the server as commands (/golemlogix_dev hook ...), use/useitem as real player actions.
      */
     private static final String REMOTE = blankToNull(System.getProperty("golemlogix.devshots.server"));
 
@@ -64,7 +64,7 @@ public final class DevShots {
     }
 
     private interface Step {
-        /** @return true, когда шаг завершён (вызывается раз в тик клиента). */
+        /** @return true when the step is done (called once per client tick). */
         boolean run(Minecraft mc) throws Exception;
     }
 
@@ -96,12 +96,12 @@ public final class DevShots {
                 Files.writeString(logFile, text + System.lineSeparator(), StandardCharsets.UTF_8,
                         StandardOpenOption.CREATE, StandardOpenOption.APPEND);
             } catch (Exception ignored) {
-                // журнал необязателен
+                // the log is optional
             }
         }
     }
 
-    // -------------------------------------------------------------------------------------------- тики
+    // -------------------------------------------------------------------------------------------- ticks
 
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
@@ -120,7 +120,7 @@ public final class DevShots {
                 mc.setScreen(new TitleScreen());
             } else if (REMOTE != null && worldRequested && mc.screen instanceof net.minecraft.client.gui.screens.DisconnectedScreen
                     && reconnects < 3) {
-                // сеть: сервер оборвал вход — ещё попытка
+                // network: the server dropped the join, try again
                 reconnects++;
                 worldRequested = false;
                 log("disconnected, reconnect " + reconnects);
@@ -198,7 +198,7 @@ public final class DevShots {
         shotTaken = true;
     }
 
-    // ---------------------------------------------------------------------------------- подготовка
+    // ---------------------------------------------------------------------------------- setup
 
     private static void applyOptions(Minecraft mc) {
         optionsApplied = true;
@@ -245,7 +245,7 @@ public final class DevShots {
         });
     }
 
-    /** Сетевой режим: те же настройки мира, но командами на сервер (игрок — оператор), полёт — на клиенте. */
+    /** Network mode: the same world settings, but as commands to the server (the player is an operator), flight on the client. */
     private static void prepareRemote(Minecraft mc) {
         for (String c : new String[]{"gamemode creative", "gamerule doDaylightCycle false", "gamerule doWeatherCycle false",
                 "gamerule doMobSpawning false", "time set 6000", "weather clear"}) {
@@ -255,7 +255,7 @@ public final class DevShots {
         mc.player.onUpdateAbilities();
     }
 
-    /** Ответы сервера на /golemlogix_dev приходят в чат с меткой «[dev]» — в журнал сценария. */
+    /** Server replies to /golemlogix_dev come to chat marked "[dev]" and go into the scenario log. */
     @SubscribeEvent
     public static void onChat(net.neoforged.neoforge.client.event.ClientChatReceivedEvent.System event) {
         if (QUEUE == null) {
@@ -268,7 +268,7 @@ public final class DevShots {
         }
     }
 
-    /** Сетевой шаг: команда серверу (без «/»), затем пара тиков на ответ. */
+    /** Network step: a command to the server (without "/"), then a couple of ticks for the reply. */
     private static Step remoteCommand(String command) {
         boolean[] sent = {false};
         return mc -> {
@@ -281,12 +281,12 @@ public final class DevShots {
         };
     }
 
-    /** Сетевая камера: телепорт командой (глаза на высоте y), полёт включён на клиенте. */
+    /** Network camera: a teleport by command (eyes at height y), flight is enabled on the client. */
     private static Step remoteTeleport(double x, double y, double z, float yaw, float pitch) {
         return remoteCommand(String.format(Locale.ROOT, "tp @s %.4f %.4f %.4f %.3f %.3f", x, y - 1.62, z, yaw, pitch));
     }
 
-    // ------------------------------------------------------------------------------------ сценарии
+    // ------------------------------------------------------------------------------------ scenarios
 
     private static void pickScript() {
         if (tick % 10 != 0) {
@@ -350,7 +350,7 @@ public final class DevShots {
         };
     }
 
-    /** Выполнить задачу в потоке сервера; шаг завершается, когда она выполнена (и пересылает ошибку). */
+    /** Run a task on the server thread; the step finishes when it is done (and passes on an error). */
     private static Step onServer(ServerTask task) {
         CompletableFuture<Void>[] future = new CompletableFuture[1];
         return mc -> {
@@ -413,7 +413,7 @@ public final class DevShots {
                 });
             }
             case "look": {
-                // look tx ty tz dist yaw pitch: камера на расстоянии dist от точки, направленная на неё
+                // look tx ty tz dist yaw pitch: the camera at distance dist from the point, aimed at it
                 double tx = Double.parseDouble(t[1]), ty = Double.parseDouble(t[2]), tz = Double.parseDouble(t[3]);
                 double dist = Double.parseDouble(t[4]);
                 float yaw = Float.parseFloat(t[5]), pitch = Float.parseFloat(t[6]);
@@ -470,12 +470,12 @@ public final class DevShots {
                         return false;
                     }
                     f[0].join();
-                    // оверлей загрузки (логотип Mojang) гаснет не сразу
+                    // the loading overlay (Mojang logo) does not fade at once
                     return mc.getOverlay() == null && tick - stepStart >= 30;
                 };
             }
             case "book": {
-                // book <id статьи | -> [разворот] [раздел]: открывает книгу сразу на нужном месте
+                // book <entry id | -> [spread] [section]: opens the book right at the given place
                 String id = t.length > 1 && !t[1].equals("-") ? t[1] : "";
                 int spread = t.length > 2 ? Integer.parseInt(t[2]) : 0;
                 int category = t.length > 3 ? Integer.parseInt(t[3]) : 0;
@@ -510,7 +510,7 @@ public final class DevShots {
                 };
             }
             case "key": {
-                // key Y|N : нажатие внутри игры; потом через тик «чужая» привязка опрашивается как обычно
+                // key Y|N : a press inside the game; a tick later the "foreign" binding is polled as usual
                 int code = t[1].equalsIgnoreCase("Y") ? org.lwjgl.glfw.GLFW.GLFW_KEY_Y : org.lwjgl.glfw.GLFW.GLFW_KEY_N;
                 return mc -> {
                     DevKeys.press(code);
@@ -519,7 +519,7 @@ public final class DevShots {
                 };
             }
             case "check": {
-                // check <имя> <ожидаемое>
+                // check <name> <expected>
                 String what = t[1], expected = String.join(" ", java.util.Arrays.copyOfRange(t, 2, t.length));
                 return mc -> {
                     String actual = switch (what) {
@@ -553,8 +553,8 @@ public final class DevShots {
                 };
             }
             case "uiclick": {
-                // uiclick list <индекс> <кнопка> : клик мышью по списку терминала внутри самого экрана (без ввода ОС)
-                // индекс — число или name:<часть имени> (строка списка с таким именем, в том числе жидкость)
+                // uiclick list <index> <button> : a mouse click on the terminal list inside the screen itself (no OS input)
+                // index is a number or name:<part of the name> (the list row with that name, including a fluid)
                 String which = t[2];
                 int button = Integer.parseInt(t[3]);
                 return mc -> {
@@ -573,7 +573,7 @@ public final class DevShots {
                 };
             }
             case "uiscroll": {
-                // uiscroll <x> <y> <шагов> : колесо мыши в точке окна (от левого верхнего угла панели); шагов > 0 — вниз
+                // uiscroll <x> <y> <steps> : mouse wheel at a window point (from the top left corner of the panel); steps > 0 scroll down
                 double ux = Double.parseDouble(t[1]), uy = Double.parseDouble(t[2]);
                 int steps = Integer.parseInt(t[3]);
                 return mc -> {
@@ -587,7 +587,7 @@ public final class DevShots {
                 };
             }
             case "uiat": {
-                // uiat <x> <y> <кнопка> : клик в точке окна (от левого верхнего угла панели) открытого экрана-контейнера
+                // uiat <x> <y> <button> : a click at a window point (from the top left corner of the panel) of the open container screen
                 double ux = Double.parseDouble(t[1]), uy = Double.parseDouble(t[2]);
                 int button = Integer.parseInt(t[3]);
                 return mc -> {
@@ -601,7 +601,7 @@ public final class DevShots {
                 };
             }
             case "devshift": {
-                // devshift 1|0 : перфокарты в инвентаре показывают результат, как при зажатом Shift
+                // devshift 1|0 : punch cards in the inventory show their result, as with Shift held
                 boolean on = t[1].equals("1");
                 return mc -> {
                     com.golemlogix.client.PunchCardModel.devShift = on;
@@ -609,7 +609,7 @@ public final class DevShots {
                 };
             }
             case "uibutton": {
-                // uibutton <часть подписи> : нажать кнопку мода на открытом экране
+                // uibutton <part of the label> : press a mod button on the open screen
                 return mc -> {
                     for (var w : mc.screen.children()) {
                         if (w instanceof com.golemlogix.client.GolemButton b && b.getMessage().getString().contains(rest)) {
@@ -621,7 +621,7 @@ public final class DevShots {
                 };
             }
             case "slotclick": {
-                // slotclick <номер слота меню> <кнопка> : как клик по слоту открытого окна
+                // slotclick <menu slot number> <button> : like a click on a slot of the open window
                 int slot = Integer.parseInt(t[1]), button = Integer.parseInt(t[2]);
                 return mc -> {
                     if (mc.player == null || mc.gameMode == null || mc.player.containerMenu == null) {
@@ -633,7 +633,7 @@ public final class DevShots {
                 };
             }
             case "useheld": {
-                // useheld x y z : ПКМ предметом в руке по блоку, как игрок (клиентское useItemOn — пакет на сервер)
+                // useheld x y z : right-click on a block with the held item, like a player (client useItemOn, a packet to the server)
                 int ux = Integer.parseInt(t[1]), uy = Integer.parseInt(t[2]), uz = Integer.parseInt(t[3]);
                 return mc -> {
                     BlockPos pos = new BlockPos(ux, uy, uz);
@@ -644,7 +644,7 @@ public final class DevShots {
                 };
             }
             case "attack": {
-                // attack x y z : ЛКМ по блоку, как игрок (клиентское startDestroyBlock — с событиями LeftClickBlock)
+                // attack x y z : left-click on a block, like a player (client startDestroyBlock, with LeftClickBlock events)
                 int ax = Integer.parseInt(t[1]), ay = Integer.parseInt(t[2]), az = Integer.parseInt(t[3]);
                 return mc -> {
                     BlockPos pos = new BlockPos(ax, ay, az);
@@ -655,7 +655,7 @@ public final class DevShots {
                 };
             }
             case "planner": {
-                // planner <item> <количество> : открыть окно заказа с планировщиком поверх открытого терминала
+                // planner <item> <amount> : open the order window with the planner over the open terminal
                 String itemId = t[1];
                 int amount = Integer.parseInt(t[2]);
                 return mc -> {
@@ -672,7 +672,7 @@ public final class DevShots {
                 };
             }
             case "craftreq": {
-                // craftreq <item> <количество> : то же, что кнопка «Заказать» в окне заказа
+                // craftreq <item> <amount> : the same as the "Order" button in the order window
                 String itemId = t[1];
                 int amount = Integer.parseInt(t[2]);
                 return mc -> {
@@ -687,8 +687,8 @@ public final class DevShots {
                 };
             }
             case "jeitransfer": {
-                // jeitransfer <id рецепта> <ожидаемое: ok|COSMETIC|USER|INTERNAL> [max] [ctrl] : «+» JEI в открытом окне
-                // (ctrl — как Ctrl + «+»: заказать недостающее автокрафтом)
+                // jeitransfer <recipe id> <expected: ok|COSMETIC|USER|INTERNAL> [max] [ctrl] : JEI "+" in the open window
+                // (ctrl is like Ctrl + "+": order what is missing through autocrafting)
                 String recipe = t[1], expected = t[2];
                 java.util.List<String> flags = java.util.Arrays.asList(t).subList(3, t.length);
                 boolean max = flags.contains("max");
@@ -701,7 +701,7 @@ public final class DevShots {
                 };
             }
             case "jeifilter": {
-                // jeifilter <текст> : строка поиска JEI (например @golem_logix); пусто — сбросить
+                // jeifilter <text> : the JEI search line (for example @golem_logix); empty resets it
                 return mc -> {
                     if (!net.neoforged.fml.ModList.get().isLoaded("jei") || !com.golemlogix.integration.jei.GolemLogixJeiPlugin.setFilter(rest)) {
                         throw new IllegalStateException("JEI is not ready (start with -Mods)");
@@ -710,7 +710,7 @@ public final class DevShots {
                 };
             }
             case "jei": {
-                // jei <item> [uses] : окно рецептов JEI для предмета (нужен -PtestMods)
+                // jei <item> [uses] : the JEI recipe window for an item (needs -PtestMods)
                 var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(t[1]));
                 boolean uses = t.length > 2 && t[2].equals("uses");
                 return mc -> {
@@ -739,7 +739,7 @@ public final class DevShots {
             case "use": {
                 int x = Integer.parseInt(t[1]), y = Integer.parseInt(t[2]), z = Integer.parseInt(t[3]);
                 if (REMOTE != null) {
-                    // по сети — настоящий клик игрока: пакет на сервер, окно открывает ответ сервера
+                    // over the network it is a real player click: a packet to the server, the server's reply opens the window
                     return mc -> {
                         keepScreen = true;
                         BlockPos pos = new BlockPos(x, y, z);
@@ -762,8 +762,8 @@ public final class DevShots {
                 };
             }
             case "burst": {
-                // burst имя кадров [каждые N тиков] [orbit tx ty tz dist pitch yaw0 шагYaw] : серия кадров имя_000.. для GIF;
-                // с orbit камера перед каждым кадром облетает точку
+                // burst name frames [every N ticks] [orbit tx ty tz dist pitch yaw0 yawStep] : a series of shots name_000.. for a GIF;
+                // with orbit the camera flies around the point before every shot
                 String name = t[1];
                 int count = Integer.parseInt(t[2]);
                 int every = t.length > 3 ? Integer.parseInt(t[3]) : 2;
@@ -808,8 +808,8 @@ public final class DevShots {
                 };
             }
             case "jeiat": {
-                // jeiat <индекс | name:часть> [uses] : клавиша R (или U) JEI над ячейкой списка терминала — через тот же поиск
-                // ингредиента под курсором, который JEI спрашивает у окна (курсор ОС не двигается)
+                // jeiat <index | name:part> [uses] : the JEI R (or U) key over a terminal list slot, through the same lookup
+                // of the ingredient under the cursor that JEI asks the window for (the OS cursor does not move)
                 String which = t[1];
                 boolean uses = t.length > 2 && t[2].equals("uses");
                 return mc -> {
@@ -833,7 +833,7 @@ public final class DevShots {
                 };
             }
             case "jeicount": {
-                // jeicount anvil|saturator <n> : сколько рецептов категории видно в JEI (секретные прячутся)
+                // jeicount anvil|saturator <n> : how many recipes of the category JEI shows (secret ones are hidden)
                 boolean anvil = t[1].equals("anvil");
                 int expected = Integer.parseInt(t[2]);
                 return mc -> {
@@ -843,7 +843,7 @@ public final class DevShots {
                 };
             }
             case "useitem": {
-                // useitem : ПКМ предметом в руке (в воздух), как игрок
+                // useitem : right-click with the held item (into the air), like a player
                 if (REMOTE != null) {
                     return mc -> {
                         keepScreen = true;
@@ -864,7 +864,7 @@ public final class DevShots {
                 };
             }
             case "bookaudit": {
-                // bookaudit : вёрстка всех статей книги текущего языка (висячие строки, нет места тексту)
+                // bookaudit : layout of all book entries in the current language (widow lines, no room for text)
                 return mc -> {
                     var problems = com.golemlogix.client.book.BookScreen.auditLayout();
                     for (String p : problems) {
@@ -875,7 +875,7 @@ public final class DevShots {
                 };
             }
             case "lang": {
-                // lang <код> : язык игры (с перезагрузкой ресурсов)
+                // lang <code> : game language (with a resource reload)
                 String code = t[1];
                 CompletableFuture<Void>[] f = new CompletableFuture[1];
                 return mc -> {
@@ -893,7 +893,7 @@ public final class DevShots {
                 };
             }
             case "guiscale": {
-                // guiscale <n> : масштаб интерфейса (0 — авто); открытое окно перестраивается
+                // guiscale <n> : interface scale (0 = auto); the open window is rebuilt
                 int scale = Integer.parseInt(t[1]);
                 return mc -> {
                     mc.options.guiScale().set(scale);
@@ -902,7 +902,7 @@ public final class DevShots {
                 };
             }
             case "termsize": {
-                // termsize normal|tall|full : высота окна терминала (как кнопка «Размер»), открытое окно перестраивается
+                // termsize normal|tall|full : terminal window height (like the "Size" button), the open window is rebuilt
                 var size = com.golemlogix.config.GolemClientConfig.TerminalSize.valueOf(t[1].toUpperCase(Locale.ROOT));
                 return mc -> {
                     com.golemlogix.config.GolemClientConfig.TERMINAL_SIZE.set(size);

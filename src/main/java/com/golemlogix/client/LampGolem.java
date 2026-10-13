@@ -11,8 +11,8 @@ import net.minecraft.util.Mth;
 import org.joml.Vector3f;
 
 /**
- * Медный голем с сигнальной лампой на крыше машины (Монитор Рецептов, Насыщатель Маны). Лампа: 0 — простой (ровный
- * фиолетовый, голем гуляет), 1 — работа (мигает зелёным, голем стоит лицом к зрителю), 2 — авария (горит красным).
+ * Copper golem with a signal lamp on a machine roof (Recipe Monitor, Mana Saturator). Lamp: 0 = idle (steady
+ * purple, the golem wanders), 1 = working (blinks green, the golem faces the viewer), 2 = failure (glows red).
  */
 public final class LampGolem {
     private static final ResourceLocation WHITE = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/bay_white.png");
@@ -21,8 +21,8 @@ public final class LampGolem {
     }
 
     /**
-     * pose — уже в системе модели машины (лицом на север). Пиксели крыши (x, z) переводятся в доли блока как
-     * ((originX - x) / 16, y / 16, z / 16): x модели зеркален, как во всех отрисовщиках машин.
+     * pose is already in the machine model frame (facing north). Roof pixels (x, z) become block fractions as
+     * ((originX - x) / 16, y / 16, z / 16): the model's x is mirrored, as in all machine renderers.
      */
     public static void render(PoseStack pose, MultiBufferSource buffers, int light, LampWalker w, float partialTick, int state, float time,
                               float originX, float y) {
@@ -30,7 +30,7 @@ public final class LampGolem {
         float heading = w.headingPrev + Mth.wrapDegrees(w.heading - w.headingPrev) * partialTick;
         float stride = Mth.lerp(partialTick, w.stridePrev, w.stride);
         boolean walking = w.walking();
-        // стоя на месте при работе и аварии, голем смотрит на зрителя (на -Z модели)
+        // standing still while working or failing, the golem looks at the viewer (at the model's -Z)
         float yaw = walking || state == 0 ? heading : 180f;
         float fx = Mth.sin(yaw * Mth.DEG_TO_RAD), fz = Mth.cos(yaw * Mth.DEG_TO_RAD);
         Vector3f at = new Vector3f((originX - x) / 16f, y / 16f, z / 16f);

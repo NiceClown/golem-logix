@@ -37,13 +37,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Крио-Мейнфрейм: шкаф с Крио-Калькуляторами. Каждый калькулятор внутри даёт несколько независимых ядер (вычислителей
- * автокрафта, по задаче на ядро), каждый Сжатый Сопроцессор считается за несколько и ускоряет все ядра сразу. В сети
- * весь шкаф — одно устройство на одном канале. Двери шкафа открываются, пока его окно у кого-нибудь открыто.
+ * Cryo-Mainframe: a cabinet of Cryo-Calculators. Every calculator inside gives several independent cores (autocraft
+ * processors, one job per core), every Compressed Co-Processor counts as several and speeds up all cores at once. In the
+ * network the whole cabinet is one device on one channel. The cabinet doors open while someone has its window open.
  */
 public class CryoMainframeBlockEntity extends BlockEntity {
     public static final int CALC_SLOTS = 12;
-    /** Событие блока: сколько игроков смотрят в окно (клиенты открывают и закрывают двери). */
+    /** Block event: how many players look into the window (clients open and close the doors). */
     public static final int EVENT_VIEWERS = 1;
     private static final int BOOST_HOLD = 60;
 
@@ -67,19 +67,19 @@ public class CryoMainframeBlockEntity extends BlockEntity {
     private boolean active = false;
     private boolean boosted = false;
     private long boostUntil = 0;
-    /** Что последний раз разослано клиентам (чтобы слать только при смене). */
+    /** What was last sent to clients (so it is only sent on change). */
     private String sentSummary = "";
     private long lastSync = -100;
-    /** Витрины двух полок: даже мгновенный заказ ядра виден не меньше VisualHold.TICKS тиков (на крафт не влияет). */
+    /** Displays of the two shelves: even an instant core order stays visible for at least VisualHold.TICKS ticks (crafting is not slowed down). */
     private final VisualHold[] holds = {new VisualHold(), new VisualHold()};
 
-    // --- клиент
+    // --- client
     private int clientCores, clientBusy, clientCalcs, clientWorkers;
     private boolean clientBoosted, clientOpen;
     private final ItemStack[] clientCurrent = {ItemStack.EMPTY, ItemStack.EMPTY};
-    /** Раскрытие дверей 0..1, «раскрутка» работы 0..1 и бригадиры (как у калькулятора). */
+    /** Door opening 0..1, work spin-up 0..1 and foremen (as on the calculator). */
     public float doors, doorsPrev, spin, spinPrev, foreman, foremanPrev;
-    /** Сглаженные позы трёх медных големов (полки 0 и 1, крыша): x, y, z, рысканье, время последнего кадра, «уже есть». */
+    /** Smoothed poses of the three copper golems (shelves 0 and 1, roof): x, y, z, yaw, last frame time, "already set". */
     public final float[][] golemSmooth = new float[3][6];
 
     public CryoMainframeBlockEntity(BlockPos pos, BlockState state) {
@@ -121,7 +121,7 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         return GolemConfig.MAINFRAME_COPROCESSOR_MULTIPLIER.get();
     }
 
-    /** Шагов за цикл на каждое ядро: как у калькулятора, но каждый сопроцессор считается за несколько. */
+    /** Steps per cycle for each core: as on the calculator, but every coprocessor counts as several. */
     public int workersPerCore() {
         return CryoCalculatorBlockEntity.BASE_WORKERS
                 + CryoCalculatorBlockEntity.WORKERS_PER_COMPRESSED * upgrades.count(UpgradeType.SPEED) * coprocessorMultiplier();
@@ -137,7 +137,7 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         return n;
     }
 
-    /** Число ядер подгоняется под число калькуляторов; у лишних ядер задачи отменяются (содержимое — обратно в сеть). */
+    /** The number of cores follows the number of calculators; jobs of extra cores are cancelled (contents go back to the network). */
     private void syncCores(boolean refund) {
         int target = calculatorCount() * coresPerCalculator();
         while (cores.size() < target) {
@@ -151,8 +151,8 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         }
     }
 
-    // ------------------------------------------------------------------------------------------------ ядро
-    /** Ядро — самостоятельный вычислитель; у всех ядер один блок и один канал. */
+    // ------------------------------------------------------------------------------------------------ core
+    /** A core is an independent processor; all cores share one block and one channel. */
     public final class Core implements CraftingCpu {
         private final int index;
         @Nullable
@@ -245,8 +245,8 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         }
     }
 
-    // ------------------------------------------------------------------------------------------------ окно
-    /** Данные окна: 0 — режим редстоуна, 1 — ядер, 2 — занято, 3 — шагов на ядро, 4 — калькуляторов, 5 — множитель. */
+    // ------------------------------------------------------------------------------------------------ window
+    /** Window data: 0 = redstone mode, 1 = cores, 2 = busy, 3 = steps per core, 4 = calculators, 5 = multiplier. */
     public ContainerData menuData() {
         return new ContainerData() {
             @Override
@@ -277,12 +277,12 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         };
     }
 
-    /** Сколько игроков сейчас смотрят в окно (сервер). */
+    /** How many players are looking into the window now (server). */
     public int viewers() {
         return viewers;
     }
 
-    /** Игрок открыл окно: двери распахиваются. */
+    /** A player opened the window: the doors swing open. */
     public void startOpen() {
         viewers++;
         if (viewers == 1 && level != null) {
@@ -315,7 +315,7 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         return super.triggerEvent(id, param);
     }
 
-    /** Выбросить калькуляторы, сопроцессоры и содержимое задач (при разрушении хозяина). */
+    /** Drop the calculators, coprocessors and job contents (when the owner is broken). */
     public void dropContents() {
         if (level == null) {
             return;
@@ -348,7 +348,7 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         cores.clear();
     }
 
-    // ------------------------------------------------------------------------------------------------ работа
+    // ------------------------------------------------------------------------------------------------ work
     public static void serverTick(Level level, BlockPos pos, BlockState state, CryoMainframeBlockEntity be) {
         long time = level.getGameTime();
         Direction facing = state.getValue(CryoMainframeBlock.FACING);
@@ -380,7 +380,7 @@ public class CryoMainframeBlockEntity extends BlockEntity {
                     continue;
                 }
                 anyJob = true;
-                // первые два занятых ядра показываются на полках: витрина держит их изделие и после конца заказа
+                // the first two busy cores are shown on the shelves: the display keeps their item even after the order ends
                 int myShelf = shelf < be.holds.length ? shelf++ : -1;
                 if (myShelf >= 0) {
                     changed |= be.holds[myShelf].show(job.current().stack(), time);
@@ -471,7 +471,7 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         }
     }
 
-    // ------------------------------------------------------------------------------------------------ клиент
+    // ------------------------------------------------------------------------------------------------ client
     public int clientCores() {
         return clientCores;
     }
@@ -488,14 +488,14 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         return clientWorkers;
     }
 
-    /** Что делают первые два занятых ядра (проекции на полках шкафа). */
+    /** What the first two busy cores are making (projections on the cabinet shelves). */
     public ItemStack clientCurrent(int shelf) {
         return clientCurrent[shelf];
     }
 
-    // Визуальный таймер минимальной длительности работы (не менее 32 тиков = 1.6 секунды)
-    // Гарантирует, что при мгновенном крафте анимация полностью отыгрывает сборку изделия
-    // и плавно возвращается в покой, без резких исчезновений и телепортаций.
+    // Visual timer for the minimum work duration (at least 32 ticks = 1.6 seconds)
+    // Makes sure an instant craft still plays the whole assembly animation
+    // and returns smoothly to rest, without sudden disappearances or teleports.
     public int visualWorkTimer = 0;
     private final ItemStack[] visualItems = {ItemStack.EMPTY, ItemStack.EMPTY};
 
@@ -506,7 +506,7 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         return visualItems[shelf];
     }
 
-    /** Головы встроенных атлантов (слева, справа): {рысканье, наклон}, текущие и прошлого тика. */
+    /** Heads of the built-in atlants (left, right): {yaw, pitch}, current and previous tick. */
     public final float[][] heads = {{0f, 0f}, {0f, 0f}}, headsPrev = {{0f, 0f}, {0f, 0f}};
 
     public static void clientTick(Level level, BlockPos pos, BlockState state, CryoMainframeBlockEntity be) {
@@ -538,13 +538,13 @@ public class CryoMainframeBlockEntity extends BlockEntity {
 
         boolean activeVisually = on || be.visualWorkTimer > 0;
         if (activeVisually) {
-            // Энергичный разгон до максимума
+            // Energetic spin-up to the maximum
             be.spin += (1f - be.spin) * 0.14f;
             if (be.spin > 0.98f) {
                 be.spin = 1f;
             }
         } else {
-            // Плавное возвращение в состояние простоя (smooth return-to-idle)
+            // Smooth return to idle
             be.spin += (0f - be.spin) * 0.05f;
             if (be.spin < 0.005f) {
                 be.spin = 0f;
@@ -555,7 +555,7 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         be.foreman = Math.max(0f, Math.min(1f, be.foreman + (be.clientBoosted && be.spin > 0.4f ? 0.08f : -0.05f)));
     }
 
-    // ------------------------------------------------------------------------------------------------ сохранение
+    // ------------------------------------------------------------------------------------------------ saving
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
@@ -645,7 +645,7 @@ public class CryoMainframeBlockEntity extends BlockEntity {
                     shown++;
                 }
             }
-            // полки без занятого ядра показывают изделие из витрины, пока она не погасла
+            // shelves without a busy core show the item from the display until it fades
             for (int i = shown; i < 2; i++) {
                 ItemStack held = holds[i].item(now);
                 if (!held.isEmpty()) {
@@ -681,7 +681,7 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         return ClientboundBlockEntityDataPacket.create(this);
     }
 
-    /** Для подсказок Jade и проверок: сводка по шкафу. */
+    /** Summary of the cabinet for Jade tooltips and checks. */
     public Map<String, Integer> stats() {
         return Map.of("cores", cores.size(), "busy", busyCores(), "workers", workersPerCore(), "calcs", calculatorCount());
     }

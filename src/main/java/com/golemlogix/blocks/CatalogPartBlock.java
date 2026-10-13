@@ -29,8 +29,8 @@ import net.minecraft.world.phys.Vec3;
 import java.util.List;
 
 /**
- * Часть собранной Картотеки перфокарт (на месте полок, медных блоков и статуй). Сама не рисуется — весь шкаф с големами
- * рисует отрисовщик хозяина; нажатие передаёт хозяину; при поломке выпадает прежний блок, а шкаф разбирается.
+ * Part of an assembled Punch Card Catalog (in place of shelves, copper blocks and statues). It is not drawn itself: the owner's
+ * renderer draws the whole cabinet with the golems; clicks go to the owner; when broken it drops the former block and the cabinet is disassembled.
  */
 public class CatalogPartBlock extends Block implements GolemNode {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
@@ -97,7 +97,7 @@ public class CatalogPartBlock extends Block implements GolemNode {
         }
     }
 
-    /** Выпадает прежний блок (его помнит хозяин): полка, медный блок той же окисленности, статуя голема. */
+    /** Drops the former block (the owner remembers it): a shelf, a copper block of the same oxidation, a golem statue. */
     @Override
     protected List<ItemStack> getDrops(BlockState state, LootParams.Builder params) {
         int cell = state.getValue(CELL);

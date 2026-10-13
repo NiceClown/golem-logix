@@ -8,7 +8,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 
 /**
- * Клиентская копия прогресса секретного рецепта: книга показывает страницы, JEI — рецепты.
+ * Client copy of the secret recipe progress: the book shows the pages, JEI the recipes.
  */
 @EventBusSubscriber(modid = GolemLogixMod.MOD_ID, value = Dist.CLIENT)
 public final class ClientSecrets {
@@ -26,12 +26,12 @@ public final class ClientSecrets {
         return dimension;
     }
 
-    /** Хотя бы одно испытание пройдено: видна страница с подсказкой ко второму. */
+    /** At least one trial is passed: the page with a hint to the second one is visible. */
     public static boolean any() {
         return wither || dimension;
     }
 
-    /** Оба испытания пройдены: рецепт открыт целиком. */
+    /** Both trials are passed: the whole recipe is open. */
     public static boolean all() {
         return wither && dimension;
     }

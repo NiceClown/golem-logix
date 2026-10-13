@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Сервер -> клиент: заказ автокрафта готов (уведомление-«тост», как в AE2). Количество — в count стаков (может быть больше 99).
+ * Server -> client: an autocraft order is done (a "toast" notification, as in AE2). The amount is in the stack count (may be over 99).
  */
 public record CraftDonePayload(List<ItemStack> items) implements CustomPacketPayload {
     public static final Type<CraftDonePayload> TYPE =

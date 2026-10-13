@@ -6,9 +6,9 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Третье поколение графики Golem Logix: апгрейды машин (карточки-модули), экран Хронометра с фосфорным Визером,
- * Монитор Рецептов (иллюминатор с фиолетовым вихрем), «матричный дождь» Крио-Калькулятора, подвижные детали калькулятора и
- * сопроцессора, охладитель на крыше Насыщателя.
+ * The third generation of Golem Logix graphics: machine upgrades (module cards), the Chronometer screen with a phosphor Wither,
+ * the Recipe Monitor (a porthole with a purple vortex), the Cryo-Calculator "matrix rain", the moving parts of the calculator and
+ * the coprocessor, the cooler on the Saturator roof.
  */
 final class Gen3 {
     static final Path RES = Forge2.RES;
@@ -38,40 +38,40 @@ final class Gen3 {
         return RES.resolve("textures/item/" + name + ".png").toFile();
     }
 
-    // ============================================================================================ апгрейды
-    /** Карточка-модуль 32x32: пластина с латунной окантовкой, позолоченные контакты внизу, патина и заклепки. */
+    // ============================================================================================ upgrades
+    /** A 32x32 module card: a plate with a brass edging, gilded contacts at the bottom, patina and rivets. */
     static Paint card(int[] body, double mid, long seed) {
         Paint p = new Paint(16, 16, 2);
-        // Тень под картриджем
+        // Shadow under the cartridge
         p.tint(2.5, 3.5, 14.5, 14.5, argb(75, 0x000000));
-        // Латунная рамка
+        // Brass frame
         p.slab(1.4, 2.4, 14.2, 13.6, BRASS, 3.2, 1);
         p.slab(2.0, 3.0, 13.6, 13.0, body, mid, 1);
         p.grain(2.0, 3.0, 13.6, 13.0, 0.05, seed);
 
-        // Позолоченные контакты разъёма снизу
+        // Gilded connector contacts at the bottom
         for (double x = 2.8; x < 12.8; x += 1.3) {
             p.rect(x, 12.0, x + 0.8, 13.6, at(GOLD, 5.0));
             p.rect(x, 13.0, x + 0.8, 13.6, at(GOLD, 2.8));
         }
 
-        // Латунные заклепки на углах
+        // Brass rivets in the corners
         p.rivet(2.6, 3.6, 0.42, BRASS);
         p.rivet(13.0, 3.6, 0.42, BRASS);
         return p;
     }
 
-    /** Сжатый Сопроцессор: многосекционный крио-радиатор — медные ребра с патиной, золотые контакты, морозный крио-кондуит и светящееся бирюзовое ядро. */
+    /** Compressed Co-Processor: a multi-section cryo radiator: copper fins with patina, gold contacts, a frosty cryo conduit and a glowing teal core. */
     static Paint compressedCoprocessor() {
         Paint p = card(COPPER, 2.6, 3101);
-        // Окисленная медь с патиной на корпусе
+        // Oxidized copper with patina on the body
         p.disc(3.6, 5.0, 0.8, at(VERDIGRIS, 4.4));
         p.disc(12.0, 10.0, 0.7, at(VERDIGRIS, 4.2));
 
-        // Шахта радиатора
+        // Radiator shaft
         p.slab(3.0, 4.2, 12.6, 11.4, IRON, 0.9, 1);
 
-        // Стопка медных охлаждающих ребер
+        // A stack of copper cooling fins
         for (int i = 0; i < 6; i++) {
             double y = 4.8 + i * 1.05;
             p.rect(3.4, y, 12.2, y + 0.65, at(COPPER, 4.2));
@@ -81,99 +81,99 @@ final class Gen3 {
             }
         }
 
-        // Светящееся крио-ядро в центральном пазу
+        // A glowing cryo core in the central groove
         p.rect(6.8, 4.4, 8.8, 11.2, at(CYAN, 5.5));
         p.glowRect(6.6, 4.2, 9.0, 11.4, 1.4, at(CYAN, 4.2), 120);
 
-        // Морозный кондуит охлаждения, огибающий радиатор
+        // A frosty cooling conduit around the radiator
         p.line(2.4, 6.2, 2.4, 10.4, 0.6, at(FROST, 5.0));
         p.line(13.2, 5.4, 13.2, 9.8, 0.6, at(FROST, 5.0));
         p.frostLine(1.8, 13.8, 2.8, 0.7, 3102);
 
-        // Шестеренка на шасси
+        // A gear on the chassis
         p.gearStatic(12.0, 4.8, 1.0, 6, 0.18, BRASS, 3.8);
 
-        // Искры льда
+        // Ice sparks
         p.sparkle(4.0, 3.8, rgb(0xFFFFFF));
         p.sparkle(11.8, 10.8, rgb(0xFFFFFF));
         return p;
     }
 
-    /** Модуль Автокрафта: латунный картридж с наковальней, часовыми шестернями, вакуумными лампами со светящимися искрами и золотыми контактами. */
+    /** Autocraft Module: a brass cartridge with an anvil, clock gears, vacuum tubes with glowing sparks and gold contacts. */
     static Paint autocraftModule() {
         Paint p = card(BRONZE, 3.2, 3201);
-        // Медные пластины с патиной
+        // Copper plates with patina
         p.slab(2.8, 4.0, 12.8, 11.4, COPPER, 3.0, 1);
         p.disc(3.8, 4.8, 0.7, at(VERDIGRIS, 4.5));
 
-        // Полка механизма: шестереночный механизм справа
+        // Mechanism shelf: a gear train on the right
         p.gearStatic(10.8, 8.2, 1.6, 8, 0.25, BRASS, 4.2);
         p.gearStatic(11.4, 5.8, 1.2, 6, 0.2, IRON, 3.2);
 
-        // Плакетка с наковальней
+        // A plaque with an anvil
         p.slab(3.2, 4.6, 8.8, 10.8, BRASS, 3.6, 1);
         p.frame(3.2, 4.6, 8.8, 10.8, 0.3, at(BRASS, 1.8));
 
-        // Силуэт наковальни из вороненой стали
-        p.rect(4.0, 5.6, 8.0, 6.6, at(IRON, 1.2)); // верх
-        p.rect(4.8, 6.6, 7.2, 8.0, at(IRON, 1.6)); // талия
-        p.rect(4.2, 8.0, 7.8, 9.6, at(IRON, 1.0)); // основание
-        p.line(4.0, 5.6, 8.0, 5.6, 0.25, at(IRON, 4.0)); // блик наковальни
+        // An anvil silhouette of blued steel
+        p.rect(4.0, 5.6, 8.0, 6.6, at(IRON, 1.2)); // top
+        p.rect(4.8, 6.6, 7.2, 8.0, at(IRON, 1.6)); // waist
+        p.rect(4.2, 8.0, 7.8, 9.6, at(IRON, 1.0)); // base
+        p.line(4.0, 5.6, 8.0, 5.6, 0.25, at(IRON, 4.0)); // anvil highlight
 
-        // Вакуумные индикаторные лампы (янтарная и бирюзовая) с нитями накала
-        // Янтарная лампа сверху
+        // Vacuum indicator tubes (amber and teal) with filaments
+        // The amber tube on top
         p.rect(3.6, 3.4, 7.2, 4.4, at(IRON, 0.4));
         p.rect(4.0, 3.6, 6.8, 4.2, argb(220, 0xF8B830));
         p.glowRect(4.0, 3.6, 6.8, 4.2, 0.8, argb(255, 0xFFC040), 100);
 
-        // Бирюзовая лампа справа
+        // The teal tube on the right
         p.rect(8.8, 3.6, 12.4, 4.6, at(IRON, 0.4));
         p.rect(9.2, 3.8, 12.0, 4.4, at(CYAN, 5.4));
         p.glowRect(9.2, 3.8, 12.0, 4.4, 0.8, at(CYAN, 4.2), 110);
 
-        // Рычаг защелки
+        // Latch lever
         p.rect(3.4, 10.4, 6.8, 11.2, at(BRASS, 4.8));
         p.rivet(4.2, 10.8, 0.25, BRASS);
         return p;
     }
 
-    /** Модуль Редстоуна: тяжелый картридж из окисленной меди, центральный ограненный кристалл редстоуна, тумблеры, аналоговые шкалы и светящиеся шины. */
+    /** Redstone Module: a heavy oxidized copper cartridge, a central faceted redstone crystal, toggle switches, analog dials and glowing buses. */
     static Paint redstoneModule() {
         Paint p = card(COPPER, 2.8, 3301);
-        // Патина на медном корпусе
+        // Patina on the copper body
         p.disc(3.6, 4.8, 0.8, at(VERDIGRIS, 4.6));
         p.disc(12.0, 10.2, 0.7, at(VERDIGRIS, 4.4));
 
-        // Внутреннее углубление шасси
+        // The inner recess of the chassis
         p.slab(2.8, 4.0, 12.8, 11.4, IRON, 0.8, 1);
 
-        // Миниатюрные стрелочные циферблаты / потенциометры
+        // Miniature needle dials / potentiometers
         p.disc(4.6, 5.6, 1.1, at(BRASS, 3.6));
         p.disc(4.6, 5.6, 0.8, at(CREAM, 4.8));
-        p.line(4.6, 5.6, 5.2, 5.2, 0.25, at(RED, 4.5)); // красная стрелочка
+        p.line(4.6, 5.6, 5.2, 5.2, 0.25, at(RED, 4.5)); // a little red needle
 
         p.disc(11.0, 5.6, 1.1, at(BRASS, 3.6));
         p.disc(11.0, 5.6, 0.8, at(CREAM, 4.8));
         p.line(11.0, 5.6, 10.6, 5.1, 0.25, at(RED, 4.5));
 
-        // Тумблеры переключения снизу
+        // Toggle switches at the bottom
         p.rect(4.0, 9.4, 5.2, 10.8, at(BRASS, 4.2));
         p.rect(4.4, 9.0, 4.8, 10.2, at(IRON, 4.5));
 
         p.rect(10.4, 9.4, 11.6, 10.8, at(BRASS, 4.2));
         p.rect(10.8, 9.0, 11.2, 10.2, at(IRON, 4.5));
 
-        // Проводники редстоун-энергии с пульсацией
+        // Redstone energy conductors with pulsing
         p.line(4.6, 6.7, 6.8, 7.8, 0.35, at(RED, 5.0));
         p.line(11.0, 6.7, 8.8, 7.8, 0.35, at(RED, 5.0));
         p.line(6.8, 9.6, 8.8, 9.6, 0.35, at(RED, 5.0));
 
-        // Ограненный кристалл редстоуна в центре с рунами и свечением
+        // A faceted redstone crystal in the middle with runes and a glow
         p.poly(new double[]{7.8, 6.4, 7.8, 9.2}, new double[]{5.2, 7.6, 10.0, 7.6}, at(RED, 5.4));
         p.poly(new double[]{7.8, 6.8, 7.8, 8.8}, new double[]{5.8, 7.6, 9.4, 7.6}, at(RED, 6.0));
         p.glowRect(6.2, 5.2, 9.4, 10.0, 1.4, at(RED, 4.5), 130);
 
-        // Светящиеся редстоун-искры
+        // Glowing redstone sparks
         p.sparkle(6.2, 6.2, at(RED, 5.5));
         p.sparkle(9.4, 8.8, at(RED, 5.5));
         return p;
@@ -189,17 +189,17 @@ final class Gen3 {
         }
     }
 
-    // ============================================================================================ Хронометр-устройство
-    /** Кадры экрана предмета: 0-3 покой (3 — чуть ниже), 4-5 заряд, 6-8 череп летит в зрителя, 9 вспышка, 10-12 трещина. */
+    // ============================================================================================ Chronometer device
+    /** Item screen frames: 0-3 rest (3 slightly lower), 4-5 charge, 6-8 the skull flies at the viewer, 9 a flash, 10-12 a crack. */
     static final int CHRONO_FRAMES = 13;
-    /** Порядок кадров и их длительность (тики): долгий покой, быстрый залп, медленно гаснущая трещина. */
+    /** Frame order and duration (ticks): a long rest, a quick volley, a slowly fading crack. */
     static final int[][] CHRONO_TIMELINE = {{0, 12}, {1, 12}, {2, 12}, {3, 12}, {0, 10}, {4, 6}, {5, 6}, {6, 2}, {7, 2}, {8, 2},
             {9, 2}, {10, 8}, {11, 5}, {12, 6}};
 
     /**
-     * Портативный Хронометр — карманное латунное устройство (не склянка): заводная головка часов сверху, кнопки по бокам,
-     * зелёный экран в железной рамке, шкала Source и решётка динамика. На экране плоский Визер раз в несколько секунд
-     * заряжает залп, череп летит прямо в зрителя, стекло вспыхивает и трескается (анимированная текстура 32x32).
+     * Portable Chronometer: a brass pocket device (not a flask): a watch crown on top, buttons on the sides,
+     * a green screen in an iron frame, a Source gauge and a speaker grille. On the screen a flat Wither charges a volley every few seconds,
+     * the skull flies straight at the viewer, the glass flashes and cracks (an animated 32x32 texture).
      */
     static void chronometerItem() throws Exception {
         Paint strip = new Paint(32, 32 * CHRONO_FRAMES, 1);
@@ -219,50 +219,50 @@ final class Gen3 {
 
     static Paint chronoFrame(int f) {
         Paint p = new Paint(32, 32, 1);
-        // Заводная головка часов с насечкой и кольцом подвеса сверху
-        p.ring(16, 1.5, 2.5, 3.8, at(BRASS, 3.5)); // кольцо подвеса
+        // The watch crown with knurling and a hanging ring on top
+        p.ring(16, 1.5, 2.5, 3.8, at(BRASS, 3.5)); // hanging ring
         p.rect(14, 3, 18, 6, at(BRASS, 2.2));
         p.slab(12, 1, 20, 5, BRASS, 4.0, 1);
         for (int x = 13; x < 20; x += 2) {
             p.rect(x, 2, x + 1, 4, at(BRASS, 1.8));
         }
 
-        // Корпус: окисленная медь с бирюзовой патиной и латунной окантовкой
+        // Body: oxidized copper with teal patina and a brass edging
         p.slab(4, 5, 28, 31, COPPER, 3.4, 1);
         p.grain(4, 5, 28, 31, 0.05, 7301);
 
-        // Патина на корпусе хронометра
+        // Patina on the chronometer body
         p.disc(6, 8, 1.8, at(VERDIGRIS, 4.6));
         p.disc(26, 28, 1.8, at(VERDIGRIS, 4.4));
         p.disc(6, 27, 1.4, at(VERDIGRIS, 4.5));
 
-        // Скругленные скошенные углы корпуса (восьмигранник карманных часов)
+        // Rounded bevelled body corners (an octagon of a pocket watch)
         for (int[] c : new int[][]{{4, 5}, {5, 5}, {4, 6}, {27, 5}, {26, 5}, {27, 6},
                 {4, 30}, {5, 30}, {4, 29}, {27, 30}, {26, 30}, {27, 29}}) {
             p.px(c[0], c[1], 0);
         }
 
-        // Кнопки-толкатели по бокам хронометра
+        // Push buttons on the sides of the chronometer
         p.slab(1, 11, 4, 15, BRASS, 3.0, 1);
         p.slab(28, 11, 31, 15, BRASS, 3.0, 1);
 
-        // Латунный безель вокруг экрана
+        // A brass bezel around the screen
         p.rect(6, 7, 26, 24, at(BRASS, 4.2));
         p.frame(6, 7, 26, 24, 1, at(BRASS, 5.6));
 
-        // Рамка экрана и кинескоп
+        // The screen frame and the picture tube
         p.rect(7, 8, 25, 23, at(IRON, 0.6));
         p.frame(7, 8, 25, 23, 1, at(IRON, 2.4));
         p.rect(7, 22, 25, 23, at(BRASS, 4.8));
 
         screen(p, 8, 9, f);
 
-        // Заклёпки корпуса
+        // Body rivets
         for (double[] r : new double[][]{{5.5, 7.5}, {26.5, 7.5}, {5.5, 28.5}, {26.5, 28.5}}) {
             p.px((int) r[0], (int) r[1], at(BRASS, 5.8));
         }
 
-        // Шкала Source (фиолетовое стекло) и решётка динамика
+        // The Source gauge (purple glass) and the speaker grille
         p.rect(7, 25, 14, 28, at(IRON, 0.8));
         p.rect(8, 26, 12, 27, at(VIOLET, 4.5));
         p.px(8, 26, at(VIOLET, 6.0));
@@ -272,23 +272,23 @@ final class Gen3 {
             p.rect(17, y, 25, y + 1, at(BRASS, 1.4));
         }
 
-        // Иней на ободке
+        // Frost on the rim
         p.frostLine(7, 25, 7, 0.4, 7302);
         return p.outlined(rgb(0x1a1206));
     }
 
-    /** Зелёный экран 16x12 (левый верхний угол sx, sy): развёртка, Визер и кадр залпа. */
+    /** A 16x12 green screen (top left corner sx, sy): scanlines, the Wither and the volley frame. */
     static void screen(Paint p, int sx, int sy, int f) {
         int bg = at(PHOSPHOR, 1.0), scan = at(PHOSPHOR, 0.5);
         for (int y = 0; y < 12; y++) {
             p.rect(sx, sy + y, sx + 16, sy + y + 1, y % 2 == 0 ? bg : scan);
         }
-        // углы кинескопа скруглены
+        // the picture tube corners are rounded
         for (int[] c : new int[][]{{0, 0}, {15, 0}, {0, 11}, {15, 11}}) {
             p.px(sx + c[0], sy + c[1], at(IRON, 0.6));
         }
         if (f == 9) {
-            // вспышка удара: экран белеет
+            // the impact flash: the screen turns white
             p.rect(sx, sy, sx + 16, sy + 12, at(PHOSPHOR, 6.0));
             p.rect(sx + 3, sy + 2, sx + 13, sy + 10, rgb(0xFFFFFF));
             return;
@@ -297,13 +297,13 @@ final class Gen3 {
         int bob = f == 2 || f == 3 ? 1 : 0;
         witherPixels(p, sx, sy + bob, charge, f == 5, f == 1);
         if (f >= 6 && f <= 8) {
-            // череп вылетает из пасти и летит в зрителя: растёт и опускается к середине экрана
+            // the skull flies out of the mouth at the viewer: it grows and goes down to the middle of the screen
             int s = f == 6 ? 2 : f == 7 ? 4 : 8;
             int cy = sy + (f == 6 ? 5 : f == 7 ? 5 : 6);
             skullPixels(p, sx + 8 - s / 2, cy - s / 2, s);
         }
         if (f >= 10) {
-            // трещина из точки удара; с каждым кадром тусклее
+            // a crack from the impact point; dimmer with every frame
             int a = f == 10 ? 240 : f == 11 ? 180 : 110;
             crackPixels(p, sx, sy, argb(a, 0xF0FFF4));
             if (f == 11) {
@@ -315,37 +315,37 @@ final class Gen3 {
         }
     }
 
-    /** Визер анфас пикселями: три головы на плечевой балке, позвоночник с рёбрами, хвост. */
+    /** A front-facing pixel Wither: three heads on a shoulder beam, a spine with ribs, a tail. */
     static void witherPixels(Paint p, int sx, int sy, boolean charge, boolean open, boolean glance) {
         int body = at(PHOSPHOR, 4.4), edge = at(PHOSPHOR, 3.2), dark = at(PHOSPHOR, 0.2);
         int eye = charge ? at(PHOSPHOR, 6.0) : dark;
-        // плечевая балка
+        // shoulder beam
         p.rect(sx + 2, sy + 5, sx + 14, sy + 6, edge);
-        // боковые головы 3x3 (в «оглядке» глаза смещены)
+        // side heads 3x3 (when "glancing" the eyes are shifted)
         for (int hx : new int[]{1, 12}) {
             p.rect(sx + hx, sy + 3, sx + hx + 3, sy + 6, body);
             p.px(sx + hx + (glance ? 0 : 1), sy + 4, eye);
         }
-        // центральная голова 5x4 со скруглённой макушкой
+        // the central 5x4 head with a rounded crown
         p.rect(sx + 6, sy + 1, sx + 9, sy + 2, body);
         p.rect(sx + 5, sy + 2, sx + 10, sy + 5, body);
         p.px(sx + 6, sy + 3, eye);
         p.px(sx + 8, sy + 3, eye);
         p.px(sx + 7, sy + 4, open ? at(PHOSPHOR, 6.0) : dark);
-        // позвоночник, рёбра, хвост
+        // spine, ribs, tail
         p.rect(sx + 7, sy + 6, sx + 8, sy + 11, edge);
         p.rect(sx + 5, sy + 7, sx + 10, sy + 8, body);
         p.rect(sx + 5, sy + 9, sx + 10, sy + 10, body);
         p.px(sx + 8, sy + 11, edge);
         if (charge) {
-            // ореол заряда вокруг центральной головы
+            // a charge halo around the central head
             for (int[] g : new int[][]{{4, 2}, {10, 2}, {7, 0}, {4, 4}, {10, 4}}) {
                 p.over(sx + g[0], sy + g[1], argb(open ? 200 : 120, 0xC8FFD8));
             }
         }
     }
 
-    /** Череп-снаряд пиксельными рисунками (2, 4 или 8 пикселей): светлый, с тёмным контуром, глазницами и зубами. */
+    /** A skull projectile as pixel drawings (2, 4 or 8 pixels): light, with a dark outline, eye sockets and teeth. */
     static void skullPixels(Paint p, int x, int y, int s) {
         String[] art = switch (s) {
             case 2 -> new String[]{"##", "##"};
@@ -366,7 +366,7 @@ final class Gen3 {
         };
         int body = at(PHOSPHOR, 6.0), dark = at(PHOSPHOR, 0.2), rim = at(PHOSPHOR, 0.8);
         int n = art.length;
-        // тёмный контур отделяет череп от Визера позади
+        // a dark outline separates the skull from the Wither behind it
         for (int j = 0; j < n; j++) {
             for (int i = 0; i < art[j].length(); i++) {
                 if (art[j].charAt(i) == '#') {
@@ -388,7 +388,7 @@ final class Gen3 {
         }
     }
 
-    /** Трещина на стекле экрана: лучи из точки удара. */
+    /** A crack on the screen glass: rays from the impact point. */
     static void crackPixels(Paint p, int sx, int sy, int c) {
         int cx = sx + 8, cy = sy + 6;
         int[][] rays = {{-7, -5}, {7, -6}, {-8, 2}, {8, 3}, {-3, 6}, {4, 6}, {1, -6}};
@@ -396,7 +396,7 @@ final class Gen3 {
             int steps = Math.max(Math.abs(r[0]), Math.abs(r[1]));
             for (int i = 0; i <= steps; i++) {
                 int x = cx + Math.round((float) r[0] * i / steps), y = cy + Math.round((float) r[1] * i / steps);
-                // излом посередине луча
+                // a bend in the middle of a ray
                 if (i > steps / 2) {
                     y += (r[0] > 0 ? 1 : -1) * ((i - steps / 2) / 3);
                 }
@@ -408,10 +408,10 @@ final class Gen3 {
         p.over(cx, cy, rgb(0xFFFFFF));
     }
 
-    // ============================================================================================ матричный дождь
+    // ============================================================================================ matrix rain
     /**
-     * Боковая панель работающего калькулятора: та же рамка, что у cryo_panel, а на экране — бегущие сверху вниз столбцы
-     * бирюзовых «знаков» (яркая голова, гаснущий хвост). 22 кадра по 2 тика, цикл бесшовный.
+     * The side panel of a working calculator: the same frame as cryo_panel, and on the screen columns of teal "glyphs" running
+     * from top to bottom (a bright head, a fading tail). 22 frames of 2 ticks, a seamless loop.
      */
     static void calculatorMatrix() throws Exception {
         File base = RES.resolve("textures/block/cryo_panel.png").toFile();
@@ -440,7 +440,7 @@ final class Gen3 {
                     out.setRGB(x, f * S + y, panel.getRGB(x, y));
                 }
             }
-            // экран темнее, сетка «знакомест» еле видна
+            // the screen is darker, the grid of "character cells" barely visible
             for (int y = sy0; y < sy1; y++) {
                 for (int x = sx0; x < sx1; x++) {
                     out.setRGB(x, f * S + y, (x + y) % 2 == 0 ? 0xFF07121C : 0xFF0A1824);
@@ -453,7 +453,7 @@ final class Gen3 {
                 int hy = Math.floorMod(head[c] + f * speed[c], h);
                 for (int t = 0; t <= tail[c]; t++) {
                     int y = Math.floorMod(hy - t, h);
-                    // «знак» мерцает: часть пикселей хвоста гаснет по рисунку колонки
+                    // a "glyph" flickers: part of the tail pixels go out by the column pattern
                     if (t > 0 && glyph[c][y] == 0) {
                         continue;
                     }
@@ -469,15 +469,15 @@ final class Gen3 {
                 "{\n  \"animation\": {\n    \"frametime\": 2\n  }\n}\n");
     }
 
-    // ============================================================================================ Монитор Рецептов
-    /** Фасад: латунная рама, большой круглый иллюминатор (середина прозрачная — за ней вихрь), болты, манометры, иней. */
+    // ============================================================================================ Recipe Monitor
+    /** Front: a brass frame, a big round porthole (the middle is transparent, the vortex is behind it), bolts, gauges, frost. */
     static Paint monitorFront() {
         Paint p = new Paint(16, 16, K);
         Forge2.beam(p, 0, 0, 16, 16, 2.7, true, 6101);
         p.slab(0.6, 0.6, 15.4, 15.4, BRONZE, 2.4, 1);
         p.grain(0.6, 0.6, 15.4, 15.4, 0.05, 6102);
         double cx = 8, cy = 8.5;
-        // латунное кольцо иллюминатора с болтами
+        // the brass porthole ring with bolts
         p.disc(cx, cy, 6.6, at(BRASS, 1.2));
         p.sphere(cx, cy, 6.4, BRASS, 0.3, 0.95);
         p.ring(cx, cy, 5.2, 5.5, at(BRASS, 5.2));
@@ -487,13 +487,13 @@ final class Gen3 {
             double a = i * Math.PI / 5 + 0.3;
             p.screw(cx + Math.cos(a) * 5.95, cy + Math.sin(a) * 5.95, 0.32, BRASS, a);
         }
-        // скобы-зажимы по бокам кольца, как на референсе
+        // clamp brackets on the sides of the ring, as in the reference
         for (double[] c : new double[][]{{cx - 6.9, cy}, {cx + 6.9, cy}}) {
             p.slab(c[0] - 0.7, c[1] - 1.4, c[0] + 0.7, c[1] + 1.4, BRASS, 3.4, 1);
         }
         p.slab(cx - 1.4, cy - 7.4, cx + 1.4, cy - 6.0, BRASS, 3.4, 1);
         p.slab(cx - 1.4, cy + 6.0, cx + 1.4, cy + 7.2, BRASS, 3.4, 1);
-        // середина прозрачная: за ней утоплен вихрь
+        // the middle is transparent: the vortex is sunk behind it
         int ix0 = (int) Math.floor((cx - 4.6) * K), ix1 = (int) Math.ceil((cx + 4.6) * K);
         int iy0 = (int) Math.floor((cy - 4.6) * K), iy1 = (int) Math.ceil((cy + 4.6) * K);
         for (int j = iy0; j < iy1; j++) {
@@ -503,7 +503,7 @@ final class Gen3 {
                 }
             }
         }
-        // рунная табличка под иллюминатором и иней
+        // a rune plate under the porthole and frost
         Terminals.tag(p, 5.4, 14.6, 5.2, 1.1, 14, VIOLET);
         for (double[] c : new double[][]{{1.2, 1.2}, {14.8, 1.2}, {1.2, 14.8}, {14.8, 14.8}}) {
             p.rivet(c[0], c[1], 0.4, BRASS);
@@ -514,7 +514,7 @@ final class Gen3 {
         return p;
     }
 
-    /** Кадр вихря портала: спираль от фиолетового к голубому, в центре свет. */
+    /** A portal vortex frame: a spiral from purple to light blue, light in the middle. */
     static Paint portalFrame(int f, int frames) {
         Paint p = new Paint(16, 16, K);
         double rot = f * Math.PI * 2 / frames;
@@ -542,14 +542,14 @@ final class Gen3 {
 
     static Paint monitorSide(boolean left) {
         Paint p = Terminals.plate(left ? 6301 : 6302, BRONZE, 2.6);
-        // окно с шестернями и трубкой с инеем, как на боку референса
+        // a window with gears and a frosted tube, as on the side of the reference
         p.slab(2.4, 2.6, 13.6, 9.6, BRASS, 2.7, 1);
         p.slab(2.9, 3.1, 13.1, 9.1, IRON, 0.8, 1);
         p.gear(5.6, 6.3, 2.6, 10, 0.2, BRASS, 3.0);
         p.gear(9.8, 5.0, 1.7, 8, 0.5, COPPER, 3.0);
         p.gear(10.6, 8.0, 1.2, 7, 0.1, BRASS, 2.8);
         p.rect(2.9, 8.5, 13.1, 9.1, argb(120, 0xE0F4FF));
-        // манометры и ряд сигнальных огоньков между ними (перемигиваются)
+        // gauges and a row of signal lights between them (they wink)
         p.gauge(5.0, 12.3, 1.6, left ? 60 : 110, rgb(0xb02020));
         p.gauge(10.6, 12.3, 1.6, left ? 130 : 45, rgb(0xb02020));
         long salt = left ? 70 : 90;
@@ -574,14 +574,14 @@ final class Gen3 {
     }
 
     /**
-     * Настил на крыше монитора, по которому гуляет медный голем с лампой: рифлёная тёмная сталь (ромбики-насечки, как на
-     * трапе), латунная окантовка с заклёпками и тусклый руный круг в центре — место, где голем стоит в простое.
+     * The deck on the monitor roof the copper golem with a lamp walks on: ribbed dark steel (diamond notches, as on
+     * a gangway), a brass edging with rivets and a dim rune circle in the middle, the place where the golem stands when idle.
      */
     static Paint monitorDeck() {
         Paint p = new Paint(16, 16, K);
         p.slab(0, 0, 16, 16, IRON, 0.75, 1);
         p.grain(0, 0, 16, 16, 0.06, 6601);
-        // рифление: короткие насечки в шахматном порядке, через одну — в другую сторону
+        // ribbing: short notches in a checkerboard, every other one the other way
         for (int gy = 0; gy < 6; gy++) {
             for (int gx = 0; gx < 6; gx++) {
                 double cx = 2.6 + gx * 2.15, cy = 2.6 + gy * 2.15;
@@ -591,18 +591,18 @@ final class Gen3 {
                 p.line(cx - dx + 0.2, cy - 0.35, cx + dx + 0.2, cy + 0.75, 0.25, at(IRON, 0.25));
             }
         }
-        // руный круг посередине (тусклый — светится только руна-«стоянка»)
+        // the rune circle in the middle (dim: only the "parking" rune glows)
         p.ring(8, 8, 2.9, 3.5, at(BRASS, 1.4));
         p.ring(8, 8, 2.35, 2.75, argb(150, 0x8A5CE0));
         p.disc(8, 8, 2.3, at(IRON, 0.55));
         p.rune(7.4, 7.2, 1.6, 7, at(VIOLET, 4.6), at(VIOLET, 2.4));
-        // латунная окантовка и заклёпки
+        // brass edging and rivets
         p.frame(0, 0, 16, 16, 1.3, at(BRASS, 2.4));
         p.frame(1.3, 1.3, 14.7, 14.7, 0.35, at(BRASS, 0.8));
         for (double[] r : new double[][]{{1.9, 1.9}, {14.1, 1.9}, {1.9, 14.1}, {14.1, 14.1}, {8, 0.7}, {8, 15.3}, {0.7, 8}, {15.3, 8}}) {
             p.rivet(r[0], r[1], 0.55, BRASS);
         }
-        // иней по краю
+        // frost along the edge
         p.frostLine(0, 16, 0, 0.5, 6602);
         return p;
     }
@@ -627,7 +627,7 @@ final class Gen3 {
         monitorTop().save(Forge2.tex("monitor_top"));
         monitorBack().save(Forge2.tex("monitor_back"));
         monitorDeck().save(Forge2.tex("monitor_deck"));
-        // анимированный вихрь: кадры друг под другом
+        // animated vortex: frames one under another
         int frames = 16;
         Paint strip = new Paint(16, 16 * frames, K);
         for (int f = 0; f < frames; f++) {
@@ -636,25 +636,25 @@ final class Gen3 {
         strip.save(Forge2.tex("monitor_portal"));
         Forge2.write(RES.resolve("textures/block/monitor_portal.png.mcmeta"), "{\n  \"animation\": {\n    \"frametime\": 3\n  }\n}\n");
 
-        // модель: корпус, утопленный вихрь (светится), латунное основание и кристалл на крыше
+        // model: body, a sunk vortex (glowing), a brass base and a crystal on the roof
         List<Models.El> l = new ArrayList<>();
         Models.El body = Models.e(0, 0, 0, 16, 16, 16);
         body.face("north", "#front", 0, 0, 16, 16).face("south", "#back", 0, 0, 16, 16)
                 .face("west", "#side_l", 0, 0, 16, 16).face("east", "#side_r", 0, 0, 16, 16)
                 .face("up", "#top", 0, 0, 16, 16).face("down", "#bottom", 0, 0, 16, 16);
         l.add(body);
-        // окно иллюминатора на фасаде — круг с центром (8, 8.5) от ВЕРХА текстуры, то есть на высоте 16 - 8.5 = 7.5
-        // модели: вихрь и стенки колодца стоят ровно за ним (раньше были выше на юнит и выглядывали из-под рамы)
+        // the porthole window on the front is a circle centred at (8, 8.5) from the TOP of the texture, that is at height 16 - 8.5 = 7.5
+        // of the model: the vortex and the well walls stand right behind it (they used to be a unit higher and peeked out from under the frame)
         double pc = 7.5, ph = 4.6;
         l.add(Models.e(3.4, pc - ph, 1.2, 12.6, pc + ph, 1.2).face("north", "#portal", 0, 0, 16, 16).glow(15));
-        // стенки «колодца» иллюминатора, чтобы сбоку не просвечивал корпус
+        // walls of the porthole "well", so the body does not show through from the side
         l.add(Models.e(3.4, pc - ph, 0.02, 3.6, pc + ph, 1.2).only("#ring", "east"));
         l.add(Models.e(12.4, pc - ph, 0.02, 12.6, pc + ph, 1.2).only("#ring", "west"));
         l.add(Models.e(3.4, pc + ph - 0.2, 0.02, 12.6, pc + ph, 1.2).only("#ring", "down"));
         l.add(Models.e(3.4, pc - ph, 0.02, 12.6, pc - ph + 0.2, 1.2).only("#ring", "up"));
-        // на крыше — латунный настил-площадка: по ней гуляет медный голем с сигнальной лампой (RecipeMonitorRenderer)
+        // on the roof a brass deck platform: the copper golem with a signal lamp walks on it (RecipeMonitorRenderer)
         l.add(Models.e(3.5, 16, 3.5, 12.5, 16.4, 12.5).all("#brass").face("up", "#deck", 0, 0, 16, 16));
-        // манометры на крыше (как на референсе)
+        // gauges on the roof (as in the reference)
         l.add(Models.e(1.5, 16, 2.0, 4.5, 18.4, 3.0).all("#brass").face("north", "#gauge", 0, 0, 16, 16));
         l.add(Models.e(11.5, 16, 2.0, 14.5, 18.4, 3.0).all("#brass").face("north", "#gauge", 0, 0, 16, 16));
         Models.model("recipe_monitor", false, "monitor_side_l",
@@ -662,7 +662,7 @@ final class Gen3 {
                         {"top", "monitor_top"}, {"bottom", "sat_dark"}, {"portal", "monitor_portal"}, {"ring", "sat_brass"},
                         {"brass", "sat_brass"}, {"crystal", "sat_crystal"}, {"gauge", "monitor_gauge"}, {"deck", "monitor_deck"}},
                 l.toArray(new Models.El[0]));
-        // render_type cutout: середина фасада прозрачная
+        // render_type cutout: the middle of the front is transparent
         Path mp = RES.resolve("models/block/recipe_monitor.json");
         String s = Files.readString(mp);
         Files.writeString(mp, s.replace("\"ambientocclusion\": false,\n", "\"ambientocclusion\": false,\n  \"render_type\": \"minecraft:cutout\",\n"));
@@ -675,17 +675,17 @@ final class Gen3 {
         Forge2.addDisplay("recipe_monitor", 225, 0.625);
     }
 
-    // ============================================================================================ калькулятор и сопроцессор
+    // ============================================================================================ calculator and coprocessor
     static void calculatorAndCoprocessor() throws Exception {
         String[][] calcTex = {{"panel", "cryo_panel"}, {"ice", "ice_crystal"}, {"matrix", "cryo_panel_matrix"}};
-        // корпус без горок (горки рисует отрисовщик и двигает их)
+        // a body without slides (the renderer draws and moves the slides)
         Models.model("cryo_calculator", false, "cryo_panel", new String[][]{{"panel", "cryo_panel"}},
                 Models.e(0, 0, 0, 16, 16, 16).all("#panel"));
-        // работает: по бокам бежит «матрица»
+        // working: a "matrix" runs along the sides
         Models.model("cryo_calculator_active", false, "cryo_panel", calcTex,
                 Models.e(0, 0, 0, 16, 16, 16).face("north", "#matrix").face("south", "#matrix").face("east", "#matrix")
                         .face("west", "#matrix").face("up", "#panel").face("down", "#panel"));
-        // ледяных горок больше нет: на крыше работает бригада снеговиков (рисует отрисовщик); на иконке — три мини-снеговика
+        // there are no more ice slides: a crew of snowmen works on the roof (the renderer draws it); on the icon three mini snowmen
         for (String old : new String[]{"cryo_calculator_hill_a", "cryo_calculator_hill_b", "cryo_calculator_hill_c"}) {
             Files.deleteIfExists(RES.resolve("models/block/" + old + ".json"));
         }
@@ -700,7 +700,7 @@ final class Gen3 {
                         + "    \"active=true\": {\"model\": \"" + NS + "cryo_calculator_active\"}\n  }\n}\n");
         Models.item("cryo_calculator", "cryo_calculator_item");
 
-        // сопроцессор: основание, стойка, крышка; рёбра — отдельная модель, их качает отрисовщик
+        // coprocessor: base, post, lid; the fins are a separate model, the renderer swings them
         String[][] copTex = {{"panel", "cryo_panel"}, {"fin", "cryo_fin"}};
         Models.model("cooling_coprocessor", false, "cryo_panel", copTex,
                 Models.e(0, 0, 0, 16, 3, 16).all("#panel"),
@@ -719,10 +719,10 @@ final class Gen3 {
         Models.item("cooling_coprocessor", "cooling_coprocessor_item");
     }
 
-    // ============================================================================================ охладитель на крыше Насыщателя
+    // ============================================================================================ cooler on the Saturator roof
     /**
-     * Сопроцессор, поставленный на вентиляционную решётку: низкий радиатор 10x10 с рёбрами и бирюзовым сердечником поверх
-     * решётки (верх балки — y 12 клетки). Лопасти вентилятора сверху рисует отрисовщик.
+     * A coprocessor placed on a vent grille: a low 10x10 radiator with fins and a teal core on top of
+     * the grille (the top of the beam is y 12 of the cell). The renderer draws the fan blades on top.
      */
     static void saturatorCooler() throws Exception {
         List<Models.El> l = new ArrayList<>();
@@ -740,16 +740,16 @@ final class Gen3 {
                 l.toArray(new Models.El[0]));
     }
 
-    // ============================================================================================ Крио-Мейнфрейм
+    // ============================================================================================ Cryo-Mainframe
     /**
-     * Фасад несобранного Крио-Мейнфрейма (и иконка): бронзовая плита, латунная рама, за стеклом двустворчатых дверей —
-     * бирюзовая матрица и маленький снеговик, в углу красный вентиль.
+     * Front of the unassembled Cryo-Mainframe (and the icon): a bronze plate, a brass frame, behind the glass of the double doors
+     * a teal matrix and a small snowman, a red valve in the corner.
      */
     static Paint mainframeFront() {
         Paint p = Terminals.plate(7101, BRONZE, 2.4);
         p.slab(1.2, 1.2, 14.8, 14.8, BRASS, 2.7, 1);
         p.slab(2.2, 2.4, 13.8, 13.8, IRON, 0.45, 1);
-        // матрица за стеклом: бирюзовые точки разной яркости
+        // the matrix behind the glass: teal dots of different brightness
         java.util.Random r = new java.util.Random(7102);
         for (double y = 3.0; y < 13.2; y += 1.25) {
             for (double x = 2.9; x < 13.2; x += 1.3) {
@@ -757,18 +757,18 @@ final class Gen3 {
                 p.rect(x, y, x + 0.7, y + 0.45, at(CYAN, lv));
             }
         }
-        // снеговик внизу слева
+        // a snowman at the bottom left
         p.disc(5.2, 12.3, 1.05, rgb(0xEEF4F8));
         p.disc(5.2, 10.7, 0.75, rgb(0xF6FAFC));
         p.rect(4.9, 10.5, 5.05, 10.65, rgb(0x202020));
         p.rect(5.35, 10.5, 5.5, 10.65, rgb(0x202020));
-        // створки: латунный стык посередине, ручки и блики на стекле
+        // door leaves: a brass joint in the middle, handles and highlights on the glass
         p.rect(7.75, 2.4, 8.25, 13.8, at(BRASS, 2.2));
         p.rect(6.8, 7.0, 7.3, 9.2, at(BRASS, 3.4));
         p.rect(8.7, 7.0, 9.2, 9.2, at(BRASS, 3.4));
         p.line(3.0, 6.0, 6.0, 3.0, 0.35, argb(90, 0xE8F6FF));
         p.line(9.4, 9.0, 12.6, 5.8, 0.35, argb(70, 0xE8F6FF));
-        // красный вентиль в правом верхнем углу рамы
+        // a red valve in the top right corner of the frame
         p.ring(13.6, 2.4, 0.9, 1.35, rgb(0xC8432F));
         p.line(12.6, 2.4, 14.6, 2.4, 0.25, rgb(0xA8331F));
         p.line(13.6, 1.4, 13.6, 3.4, 0.25, rgb(0xA8331F));
@@ -789,7 +789,7 @@ final class Gen3 {
         Models.facing4("cryo_mainframe", "cryo_mainframe");
         Models.item("cryo_mainframe", "cryo_mainframe");
         Forge2.addDisplay("cryo_mainframe", 225, 0.625);
-        // части собранного шкафа не рисуются (весь шкаф — отрисовщик хозяина)
+        // parts of the assembled cabinet are not drawn (the owner's renderer draws the whole cabinet)
         Forge2.write(RES.resolve("blockstates/mainframe_part.json"),
                 "{\n  \"variants\": {\n    \"\": {\"model\": \"minecraft:block/air\"}\n  }\n}\n");
     }
@@ -798,7 +798,7 @@ final class Gen3 {
         upgrades();
         mainframe();
         chronometerItem();
-        // экран с Визером теперь на самом предмете, в окне его больше нет
+        // the screen with the Wither is now on the item itself, the window no longer has it
         Files.deleteIfExists(RES.resolve("textures/gui/chrono_crt.png"));
         calculatorMatrix();
         calculatorAndCoprocessor();

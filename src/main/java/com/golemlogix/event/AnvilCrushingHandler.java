@@ -32,13 +32,13 @@ import java.util.List;
 
 @EventBusSubscriber(modid = GolemLogixMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
 public class AnvilCrushingHandler {
-    /** Иссохший при появлении Визер неуязвим 220 тиков; наковальня «схлопывает» его в первые 4 секунды (80 тиков). */
+    /** A freshly spawned Wither is invulnerable for 220 ticks; the anvil "collapses" it during the first 4 seconds (80 ticks). */
     public static final int WITHER_SPAWN_TICKS = 220;
     public static final int WITHER_WINDOW_TICKS = 80;
 
     /**
-     * Пока Визер неуязвим (только что призван), он вообще не принимает урон, и событие урона не наступает.
-     * Поэтому ловим падающую наковальню по пересечению с его хитбоксом каждый тик окна.
+     * While the Wither is invulnerable (just summoned) it takes no damage at all, and no damage event happens.
+     * So the falling anvil is caught by intersecting its hitbox every tick of the window.
      */
     @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Pre event) {
@@ -128,7 +128,7 @@ public class AnvilCrushingHandler {
         float currentHealth = event.getEntity().getHealth();
         ServerLevel serverLevel = (ServerLevel) level;
 
-        // 1. Визер в окне спавна (на случай, если урон всё же дошёл)
+        // 1. The Wither in its spawn window (in case damage did get through)
         if (victim instanceof WitherBoss wither) {
             int invulTicks = wither.getInvulnerableTicks();
             if (invulTicks >= WITHER_SPAWN_TICKS - WITHER_WINDOW_TICKS) {
@@ -209,8 +209,8 @@ public class AnvilCrushingHandler {
     }
 
     /**
-     * Медный голем приходит из Copper Age Backport (minecraft:copper_golem, как в 1.21.9) или других модов: подходит любой голем,
-     * в id которого есть «copper».
+     * The copper golem comes from Copper Age Backport (minecraft:copper_golem, as in 1.21.9) or other mods: any golem
+     * with "copper" in its id will do.
      */
     private static boolean isCopperGolem(Entity entity) {
         String path = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).getPath();

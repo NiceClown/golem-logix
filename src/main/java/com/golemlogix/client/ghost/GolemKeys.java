@@ -6,9 +6,9 @@ import net.neoforged.neoforge.client.settings.KeyConflictContext;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * Клавиши управления проекцией стройки (переназначаются в настройках управления).
- * Y — зафиксировать (Yes), N — отменить (No). Пока проекция включена, эти клавиши
- * имеют приоритет над одноимёнными клавишами других модов (см. {@link GhostEvents#onKey}).
+ * Keys that control the build projection (rebindable in the controls settings).
+ * Y fixes it (Yes), N cancels it (No). While the projection is on, these keys
+ * take priority over the same keys of other mods (see {@link GhostEvents#onKey}).
  */
 public final class GolemKeys {
     public static final String CATEGORY = "key.categories.golem_logix";

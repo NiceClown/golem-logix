@@ -22,9 +22,9 @@ import java.util.function.BooleanSupplier;
 import java.util.function.IntSupplier;
 
 /**
- * Окно Картотеки перфокарт: прокручиваемая гряда 9 x 6 ячеек под перфокарты с верстачными рецептами, справа колонка
- * с Модулем Редстоуна и под ним ячейкой Поставщиков Шаблонов (до стака; каждый открывает ещё 27 мест).
- * Ячейки окна смотрят в «окно» картотеки, которое сервер сдвигает по строкам (пакет MenuScrollPayload).
+ * Punch Card Catalog window: a scrolling 9 x 6 row of slots for punch cards with crafting-table recipes, on the right a column
+ * with the Redstone Module and, under it, the Pattern Provider slot (up to a stack; each opens 27 more places).
+ * The window slots look into a "window" of the catalog that the server shifts by rows (MenuScrollPayload packet).
  */
 public class CardCatalogMenu extends GolemMenu implements ScrollableMenu {
     public static final int IMAGE_WIDTH = 190;
@@ -39,7 +39,7 @@ public class CardCatalogMenu extends GolemMenu implements ScrollableMenu {
     private final ContainerLevelAccess access;
     private final ContainerData data;
     private final int providerSlot;
-    /** Сервер: первая видимая строка, поиск и найденные места картотеки (null — без поиска, все места подряд). */
+    /** Server: the first visible row, the search and the catalog places found (null = no search, all places in a row). */
     private int row = 0;
     private String filter = "";
     @Nullable
@@ -69,7 +69,7 @@ public class CardCatalogMenu extends GolemMenu implements ScrollableMenu {
         addUpgradeSlots(upgrades, UpgradeSpec.REDSTONE_ONLY, IMAGE_WIDTH + 5, 8);
         providerSlot = this.slots.size();
         this.addSlot(new ProviderSlot(providers, 0, IMAGE_WIDTH + 5, 8 + 18, this::minProviders));
-        // колонка справа — модуль и поставщики; GolemScreen рисует под ней одну панель
+        // the column on the right is the module and the providers; GolemScreen draws one panel under it
         upgradeEnd = this.slots.size();
         addPlayerSlots(inv, 15, IMAGE_HEIGHT - 82);
         addDataSlots(data);
@@ -106,7 +106,7 @@ public class CardCatalogMenu extends GolemMenu implements ScrollableMenu {
         };
     }
 
-    /** Ячейки гряды смотрят в картотеку со сдвигом на первую видимую строку. */
+    /** The row slots look into the catalog shifted by the first visible row. */
     private final class Window implements Container {
         private final CardCatalogBlockEntity be;
 
@@ -180,7 +180,7 @@ public class CardCatalogMenu extends GolemMenu implements ScrollableMenu {
         }
     }
 
-    /** Ячейка гряды: перфокарта с верстачным рецептом, по одной; за пределами вместимости (и найденного поиском) — заперта. */
+    /** A row slot: a punch card with a crafting-table recipe, one at a time; beyond the capacity (and outside the search results) it is locked. */
     public static class CardSlot extends Slot {
         private final BooleanSupplier locked;
 
@@ -209,7 +209,7 @@ public class CardCatalogMenu extends GolemMenu implements ScrollableMenu {
         }
     }
 
-    /** Ячейка Поставщиков Шаблонов: до стака; забрать можно только тех, чьи места пусты. */
+    /** Pattern Provider slot: up to a stack; only providers whose places are empty can be taken. */
     public static class ProviderSlot extends Slot {
         private final IntSupplier min;
 
@@ -264,7 +264,7 @@ public class CardCatalogMenu extends GolemMenu implements ScrollableMenu {
         return be != null ? row : data.get(DATA_ROW);
     }
 
-    /** Место картотеки за k-й ячейкой прокручиваемой гряды (-1 — пусто: поиск нашёл меньше). */
+    /** Catalog place behind the k-th slot of the scrolling row (-1 = empty: the search found fewer). */
     private int absolute(int k) {
         return view == null ? k : k < view.length ? view[k] : -1;
     }
@@ -279,7 +279,7 @@ public class CardCatalogMenu extends GolemMenu implements ScrollableMenu {
         return v >= 0 ? k >= v : k >= capacity();
     }
 
-    /** Сколько мест прокручивает гряда: найденные поиском или вся вместимость. */
+    /** How many places the row scrolls through: the ones found by the search or the whole capacity. */
     private int shown() {
         int v = data.get(DATA_VIEW);
         return v >= 0 ? v : capacity();
@@ -289,7 +289,7 @@ public class CardCatalogMenu extends GolemMenu implements ScrollableMenu {
         return data.get(DATA_VIEW) >= 0;
     }
 
-    /** Строк, до которых можно прокрутить (округлённо вверх, но не меньше видимых). */
+    /** Rows that can be scrolled to (rounded up, but not fewer than the visible ones). */
     public int totalRows() {
         return Math.max(ROWS, (shown() + COLS - 1) / COLS);
     }
@@ -350,7 +350,7 @@ public class CardCatalogMenu extends GolemMenu implements ScrollableMenu {
 
     @Override
     public void clicked(int slotId, int button, ClickType clickType, Player player) {
-        // обмен с хотбаром (цифры) взял бы весь стак поставщиков, минуя ограничение — его не даём, пока места заняты
+        // a hotbar swap (number keys) would take the whole provider stack past the limit, so it is not allowed while places are taken
         if (slotId == providerSlot && clickType == ClickType.SWAP && minProviders() > 0) {
             return;
         }
@@ -383,7 +383,7 @@ public class CardCatalogMenu extends GolemMenu implements ScrollableMenu {
         if (index < containerSlotCount || (index >= upgradeStart && index < upgradeEnd)) {
             return super.quickMoveStack(player, index);
         }
-        // из инвентаря: поставщики — в их ячейку, перфокарты — в первое свободное место картотеки
+        // from the inventory: providers go to their slot, punch cards to the first free place of the catalog
         if (stack.is(ModBlocks.PATTERN_PROVIDER.get().asItem())) {
             if (!this.moveItemStackTo(stack, providerSlot, providerSlot + 1, false)) {
                 return ItemStack.EMPTY;

@@ -10,7 +10,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
- * Клиент -> сервер: окно настройки ячейки Интерфейса задало количество (штуки или mB). Отрицательное — очистить ячейку.
+ * Client -> server: the Interface slot settings window set an amount (items or mB). A negative one clears the slot.
  */
 public record InterfaceAmountPayload(int containerId, int slot, int amount) implements CustomPacketPayload {
     public static final Type<InterfaceAmountPayload> TYPE =

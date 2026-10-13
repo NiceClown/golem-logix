@@ -12,8 +12,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Чертёж Крио-Мейнфрейма для книги и «призраков» стройки. Смещения — от хозяина (низ фасада посередине); шкаф смотрит
- * фасадом в сторону facing. Собранные части ({@link ModBlocks#MAINFRAME_PART}) считаются правильными блоками.
+ * Cryo-Mainframe blueprint for the book and the build "ghosts". Offsets are from the owner (bottom middle of the front); the cabinet
+ * faces facing. Assembled parts ({@link ModBlocks#MAINFRAME_PART}) count as correct blocks.
  */
 public final class MainframeBlueprint {
     private MainframeBlueprint() {
@@ -34,7 +34,7 @@ public final class MainframeBlueprint {
         return out;
     }
 
-    /** Нужные предметы по типам (атлант — один на две клетки). */
+    /** Needed items by type (an atlant is one for two cells). */
     public static Map<Item, Integer> requirements() {
         Map<Item, Integer> need = new LinkedHashMap<>();
         need.put(ModBlocks.CRYO_MAINFRAME.get().asItem(), 1);

@@ -8,7 +8,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 
-/** Доступ автоматики к блокам мода. Насыщатель Маны: предмет на наковальню и готовые пластины — через любую часть машины. */
+/** Automation access to the mod's blocks. Mana Saturator: an item onto the anvil and the finished plates through any part of the machine. */
 @SuppressWarnings("removal")
 @EventBusSubscriber(modid = GolemLogixMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD)
 public final class ModCapabilities {
@@ -23,7 +23,7 @@ public final class ModCapabilities {
                 (level, pos, state, be, side) -> level.getBlockEntity(SaturatorPartBlock.controllerOf(pos, state))
                         instanceof ManaSaturatorBlockEntity saturator ? saturator.automation() : null,
                 ModBlocks.SATURATOR_PART.get());
-        // Интерфейс: выдача запаса и приём в сеть — с любой стороны
+        // Interface: handing out stock and taking into the network, from any side
         event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ModBlockEntities.INTERFACE.get(), (be, side) -> be.automation());
         event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ModBlockEntities.INTERFACE.get(), (be, side) -> be.fluids());
     }

@@ -13,14 +13,14 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Крио-концентратор схем: своего содержимого нет (окно показывает перфокарты всех поставщиков сети), блок-сущность нужна
- * для анимации — пока окно открыто, голограмма над экраном разворачивается и крутится быстрее.
+ * Cryo Schematic Concentrator: has no contents of its own (the window shows the punch cards of all providers in the network); the block
+ * entity is needed for the animation: while the window is open the hologram above the screen unfolds and spins faster.
  */
 public class SchematicConcentratorBlockEntity extends BlockEntity {
     public static final int EVENT_VIEWERS = 1;
     private int viewers = 0;
     private boolean clientOpen;
-    /** Развёрнутость голограммы 0..1 и угол её колец (клиент). */
+    /** How unfolded the hologram is 0..1 and the angle of its rings (client). */
     public float holo, holoPrev, spin, spinPrev;
 
     public SchematicConcentratorBlockEntity(BlockPos pos, BlockState state) {
@@ -69,7 +69,7 @@ public class SchematicConcentratorBlockEntity extends BlockEntity {
         be.spin += 1.2f + be.holo * 4.5f;
         if (level.getGameTime() % (be.clientOpen ? 5 : 31) == 0) {
             var r = level.random;
-            // пар из обмёрзшей трубы на крыше (её устье — в пикселях модели «лицом на север»: x 10.75, z 11.6)
+            // steam from the frosted pipe on the roof (its mouth in pixels of the north-facing model: x 10.75, z 11.6)
             Direction f = state.getValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING);
             double a = Math.toRadians(180 - f.toYRot()), dx = 10.75 / 16 - 0.5, dz = 11.6 / 16 - 0.5;
             double wx = dx * Math.cos(a) + dz * Math.sin(a), wz = -dx * Math.sin(a) + dz * Math.cos(a);

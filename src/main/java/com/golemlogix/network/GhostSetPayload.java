@@ -11,8 +11,8 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
- * Клиент -> сервер: предмет, перетащенный из JEI в призрачную ячейку окна (фильтр шины, настройка интерфейса, сетка
- * кодировщика). Сам предмет у игрока не нужен — ячейка хранит только «призрак».
+ * Client -> server: an item dragged from JEI into a ghost slot of a window (bus filter, interface settings, encoder
+ * grid). The player does not need the item itself: the slot keeps only a "ghost".
  */
 public record GhostSetPayload(int containerId, int slot, ItemStack stack) implements CustomPacketPayload {
     public static final Type<GhostSetPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "ghost_set"));

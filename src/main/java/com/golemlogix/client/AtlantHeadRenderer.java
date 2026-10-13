@@ -16,7 +16,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.neoforged.neoforge.client.model.data.ModelData;
 
-/** Голова Атланта: модель головы, повёрнутая вокруг шеи (8, 10, 8) — сперва по взгляду статуи, потом к игроку. */
+/** Atlant head: the head model rotated around the neck (8, 10, 8), first by the statue's facing, then towards the player. */
 public class AtlantHeadRenderer implements BlockEntityRenderer<AtlantHeadBlockEntity> {
     public static final ModelResourceLocation HEAD = ModelResourceLocation.standalone(
             ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/atlas_atlant_head"));
@@ -34,7 +34,7 @@ public class AtlantHeadRenderer implements BlockEntityRenderer<AtlantHeadBlockEn
         pose.pushPose();
         Quads.faceModel(pose, be.getBlockState().getValue(AtlantBlock.FACING));
         pose.translate(0.5, 10 / 16.0, 0.5);
-        // модель смотрит на север (-Z); положительный yaw — поворот к игроку справа налево, pitch — кивок вверх
+        // the model faces north (-Z); a positive yaw turns towards a player from right to left, pitch is a nod upwards
         pose.mulPose(Axis.YP.rotationDegrees(-yaw));
         pose.mulPose(Axis.XP.rotationDegrees(pitch));
         pose.translate(-0.5, -10 / 16.0, -0.5);

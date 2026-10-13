@@ -15,9 +15,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Чертёж Картотеки перфокарт для книги и «призраков» стройки. Смещения — от хозяина (низ фасада посередине); шкаф смотрит
- * фасадом в сторону facing. В клетке меди подходит медь любой окисленности, в клетке статуи — любая статуя медного голема;
- * собранные части ({@link ModBlocks#CATALOG_PART}) тоже считаются правильными.
+ * Punch Card Catalog blueprint for the book and the build "ghosts". Offsets are from the owner (bottom middle of the front); the cabinet
+ * faces facing. A copper cell accepts copper of any oxidation, a statue cell any copper golem statue;
+ * assembled parts ({@link ModBlocks#CATALOG_PART}) count as correct too.
  */
 public final class CatalogBlueprint {
     private CatalogBlueprint() {

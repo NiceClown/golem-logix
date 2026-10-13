@@ -13,9 +13,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Сервер -> клиент: состояние задачи Крио-Калькулятора.
+ * Server -> client: job state of a Cryo-Calculator.
  *
- * @param state -1 — простаивает, иначе порядковый номер CraftingJob.Status
+ * @param state -1 = idle, otherwise the ordinal of CraftingJob.Status
  */
 public record CalculatorStatusPayload(int containerId, int state, long done, long total, int coprocessors, int workers,
                                       long awaiting, boolean online, ItemStack target, long amount,

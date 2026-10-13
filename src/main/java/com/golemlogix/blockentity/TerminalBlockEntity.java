@@ -6,14 +6,14 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Блок-сущность терминалов: данных не хранит, нужна только для анимации экрана на клиенте
- * (включение сети -> голем машет рукой во весь экран, дальше голем таскает ящики).
+ * Terminal block entity: stores no data, only needed for the screen animation on the client
+ * (the network turns on -> a golem waves its hand across the whole screen, then the golem carries crates).
  */
 public class TerminalBlockEntity extends BlockEntity {
-    /** Клиентское состояние анимации (на сервере не используется). */
+    /** Client animation state (not used on the server). */
     public boolean animInitialized;
     public boolean lastActive;
-    /** Игровое время (в тиках с долями) начала приветствия. */
+    /** Game time (in ticks with fractions) when the greeting started. */
     public float waveStart = -1000f;
 
     public TerminalBlockEntity(BlockPos pos, BlockState state) {

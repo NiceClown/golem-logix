@@ -21,15 +21,15 @@ import org.lwjgl.glfw.GLFW;
 import java.util.List;
 
 /**
- * Игровая шина клиента: тик проекции, горячие клавиши и отрисовка призрачных блоков в мире.
+ * Client game bus: projection tick, hotkeys and rendering of ghost blocks in the world.
  */
 @EventBusSubscriber(modid = GolemLogixMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public class GhostEvents {
 
     /**
-     * Нажатие клавиши приходит сюда сразу после того, как игра отметила нажатие во всех привязках с этой клавишей,
-     * но раньше, чем их опросят в тике. Поэтому, пока проекция включена, мы сами выполняем действие
-     * и стираем нажатие у чужих привязок на той же клавише: приоритет всегда у нашего Y/N.
+     * A key press arrives here right after the game has marked the press in all bindings with this key,
+     * but before they are polled in the tick. So while the projection is on, we perform the action ourselves
+     * and erase the press from other bindings on the same key: our Y/N always takes priority.
      */
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onKey(InputEvent.Key event) {
@@ -46,19 +46,19 @@ public class GhostEvents {
         if (hit == null || !hit.getKeyModifier().isActive(hit.getKeyConflictContext())) {
             return;
         }
-        // отобрать нажатие у других привязок на той же клавише (в том числе из других модов)
+        // take the press away from other bindings on the same key (including ones from other mods)
         for (KeyMapping other : mc.options.keyMappings) {
             if (other != hit && other != GolemKeys.GHOST_CONFIRM && other != GolemKeys.GHOST_CANCEL
                     && other.getKey().equals(hit.getKey())) {
                 while (other.consumeClick()) {
-                    // сбросить счётчик нажатий
+                    // reset the press counter
                 }
                 other.setDown(false);
             }
         }
-        // чтобы наши привязки не сработали повторно в тике
+        // so our bindings do not fire again in the tick
         while (hit.consumeClick()) {
-            // сбросить счётчик нажатий
+            // reset the press counter
         }
         if (hit == GolemKeys.GHOST_CONFIRM) {
             GhostProjection.toggleLock();
@@ -71,12 +71,12 @@ public class GhostEvents {
     public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.screen == null && !GhostProjection.isActive()) {
-            // проекция выключена: опустошаем счётчики, чтобы старые нажатия не «выстрелили» позже
+            // the projection is off: drain the counters so old presses do not "fire" later
             while (GolemKeys.GHOST_CONFIRM.consumeClick()) {
-                // ничего
+                // nothing
             }
             while (GolemKeys.GHOST_CANCEL.consumeClick()) {
-                // ничего
+                // nothing
             }
         }
         GhostProjection.tick(mc);
@@ -101,7 +101,7 @@ public class GhostEvents {
         float pulse = 0.5f + 0.12f * (float) Math.sin((mc.level.getGameTime() + event.getPartialTick().getGameTimeDeltaPartialTick(false)) * 0.12);
 
         for (GhostProjection.GhostCell cell : cells) {
-            // ожидаемый блок — холодно-бирюзовый, мешающий чужой блок — красный
+            // the expected block is cold teal, a foreign block in the way is red
             float alpha = cell.wrong() ? 0.6f : pulse;
             float r = cell.wrong() ? 1.6f : 0.75f;
             float g = cell.wrong() ? 0.45f : 1.15f;

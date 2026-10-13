@@ -30,7 +30,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Общая основа обеих шин: направлена на контейнер, занимает 1 канал, хранит фильтр.
+ * Common base of both buses: faces a container, takes 1 channel, keeps a filter.
  */
 public abstract class AbstractBusBlock extends DirectionalBlock implements GolemNode, EntityBlock {
     protected AbstractBusBlock(Properties properties) {
@@ -40,7 +40,7 @@ public abstract class AbstractBusBlock extends DirectionalBlock implements Golem
 
     protected abstract boolean isExportBus();
 
-    /** Рабочий узел спереди (определяет форму блока). */
+    /** The working node at the front (defines the block shape). */
     protected abstract BusLinks.Device device();
 
     @Override
@@ -48,7 +48,7 @@ public abstract class AbstractBusBlock extends DirectionalBlock implements Golem
         return BusLinks.shape(state, device());
     }
 
-    /** Шина — ступенька: сталкиваемся только с её нижней половиной, на неё заходят без прыжка. */
+    /** A bus is a step: we collide only with its lower half, so it can be walked onto without jumping. */
     @Override
     protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return BusLinks.collision(state, device());
@@ -95,7 +95,7 @@ public abstract class AbstractBusBlock extends DirectionalBlock implements Golem
         return InteractionResult.CONSUME;
     }
 
-    /** Апгрейды выпадают вместе с шиной (фильтр — призрачный, ему выпадать нечему). */
+    /** Upgrades drop together with the bus (the filter is a ghost, nothing to drop there). */
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof BusBlockEntity bus) {

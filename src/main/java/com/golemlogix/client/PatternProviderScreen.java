@@ -16,13 +16,13 @@ public class PatternProviderScreen extends GolemScreen<PatternProviderMenu> {
     @Override
     protected void init() {
         super.init();
-        // режим ожидания результата: часы — ждёт, воронка — грузит без остановки
+        // wait-for-result mode: a clock means it waits, a hopper means it loads without stopping
         addSideButton(() -> new ItemStack(menu.isBlocking() ? Items.CLOCK : Items.HOPPER),
                 () -> Component.translatable(menu.isBlocking() ? "gui.golem_logix.provider.blocking_on" : "gui.golem_logix.provider.blocking_off")
                         .append("\n").append(Component.translatable("gui.golem_logix.provider.blocking_hint").withStyle(ChatFormatting.GRAY)),
                 () -> true, menu::isBlocking, PatternProviderMenu.BUTTON_BLOCKING);
-        // сторона подачи: подсолнух — во все стороны, стрелка — в одну (её же показывают стрелки на гранях блока);
-        // кнопка выше редстоуна: та видна только с модулем и не должна оставлять дыру
+        // feeding side: a sunflower means all sides, an arrow means one (the arrows on the block faces show it too);
+        // the button goes above the redstone one: that one is visible only with the module and must not leave a hole
         addSideButton(() -> new ItemStack(menu.output() == com.golemlogix.blocks.ProviderOutput.ALL ? Items.SUNFLOWER : Items.SPECTRAL_ARROW),
                 () -> Component.translatable("gui.golem_logix.provider.output").append("\n")
                         .append(Component.translatable(menu.output().key()).withStyle(ChatFormatting.AQUA)).append("\n")

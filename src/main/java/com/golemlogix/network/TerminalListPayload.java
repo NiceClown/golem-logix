@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Сервер -> клиент: часть списка предметов сети (список режется на куски, чтобы пакет не разрастался).
+ * Server -> client: part of the network item list (the list is cut into pieces so a packet does not grow too big).
  */
 public record TerminalListPayload(int containerId, boolean reset, List<Entry> entries) implements CustomPacketPayload {
     public static final Type<TerminalListPayload> TYPE =

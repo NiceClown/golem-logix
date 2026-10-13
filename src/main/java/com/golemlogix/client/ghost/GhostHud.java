@@ -11,7 +11,7 @@ import net.minecraft.world.item.ItemStack;
 import java.util.Map;
 
 /**
- * Подсказка в углу экрана, пока включена проекция: что осталось поставить и какие клавиши нажимать.
+ * A hint in the screen corner while the projection is on: what is left to place and which keys to press.
  */
 public final class GhostHud {
     private GhostHud() {

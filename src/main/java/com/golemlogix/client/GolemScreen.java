@@ -21,7 +21,7 @@ import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 /**
- * База экранов мода: панель, фон всех ячеек, подписи; колонка апгрейдов справа от окна и кнопки настроек слева.
+ * Base of the mod's screens: panel, background of all slots, labels; the upgrade column to the right of the window and settings buttons on the left.
  */
 public abstract class GolemScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> {
     protected GolemScreen(T menu, Inventory inv, Component title, int width, int height) {
@@ -36,8 +36,8 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
     protected final List<IconButton> sideButtonWidgets = new ArrayList<>();
 
     /**
-     * Панель приоритета (подпись, число и кнопки -10 -1 +1 +10 и сброс). Координаты — от левого верхнего угла окна;
-     * ширина 54. Вызывать из init() после super.init(). Действие идёт на сервер как нажатие кнопки меню.
+     * Priority panel (label, number, buttons -10 -1 +1 +10 and reset). Coordinates are from the top left corner of the window;
+     * width 54. Call from init() after super.init(). The action goes to the server as a menu button press.
      */
     protected void addPriorityPanel(int x, int y, IntSupplier value) {
         priorityValue = value;
@@ -58,7 +58,7 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
         }
     }
 
-    /** Кнопка настройки в колонке слева от окна (сверху вниз). */
+    /** A settings button in the column to the left of the window (top to bottom). */
     protected void addSideButton(Supplier<ItemStack> icon, Supplier<Component> tip, BooleanSupplier visible, BooleanSupplier lit, int menuButtonId) {
         IconButton button = new IconButton(leftPos - 21, topPos + 4 + sideButtons * 20, icon, tip, visible, lit, b -> menuButton(menuButtonId));
         sideButtonWidgets.add(button);
@@ -66,7 +66,7 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
         updateSideButtons();
     }
 
-    /** Кнопка режима редстоуна: видна, только когда в ячейках апгрейдов стоит Модуль Редстоуна. */
+    /** Redstone mode button: visible only when a Redstone Module sits in the upgrade slots. */
     protected void addRedstoneButton(Supplier<RedstoneMode> mode) {
         addSideButton(() -> new ItemStack(switch (mode.get()) {
                     case IGNORE -> Items.REDSTONE;
@@ -92,7 +92,7 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
         this.inventoryLabelY = this.imageHeight - 94;
     }
 
-    /** Пересчёт видимости и вертикальная упаковка боковых кнопок без зазоров. */
+    /** Recomputes visibility and packs the side buttons vertically without gaps. */
     protected void updateSideButtons() {
         int count = 0;
         for (IconButton b : sideButtonWidgets) {
@@ -111,7 +111,7 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
         updateSideButtons();
     }
 
-    /** Колонка апгрейдов (справа от окна), если у меню она есть: x, y, ширина, высота в экранных координатах. */
+    /** The upgrade column (to the right of the window), if the menu has one: x, y, width, height in screen coordinates. */
     protected Rect2i upgradePanel() {
         if (!(menu instanceof GolemMenu gm) || !gm.hasUpgradeSlots()) {
             return null;
@@ -121,7 +121,7 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
         return new Rect2i(leftPos + first.x - 5, topPos + first.y - 5, GolemMenu.UPGRADE_COLUMN, n * 18 + 8);
     }
 
-    /** Области вне окна, которые принадлежат ему (колонка апгрейдов, кнопки слева): JEI их обходит, клик по ним не «мимо окна». */
+    /** Areas outside the window that belong to it (upgrade column, buttons on the left): JEI avoids them, and a click on them is not "outside the window". */
     public List<Rect2i> extraAreas() {
         List<Rect2i> out = new ArrayList<>();
         Rect2i up = upgradePanel();
@@ -158,8 +158,8 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
             }
         }
         if (up != null && menu instanceof GolemMenu gm && gm.upgradeSpec() != null) {
-            // пустые ячейки апгрейдов: полупрозрачная «проекция» того, что сюда можно поставить (по одной на ячейку:
-            // сначала ускорители до лимита машины, потом модуль автокрафта и модуль редстоуна)
+            // empty upgrade slots: a translucent "projection" of what can go here (one per slot:
+            // speed upgrades up to the machine's limit first, then the autocraft module and the redstone module)
             List<ItemStack> hints = upgradeHints(gm.upgradeSpec());
             for (int i = gm.upgradeStart(); i < gm.upgradeEnd(); i++) {
                 Slot s = menu.slots.get(i);
@@ -177,7 +177,7 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
         renderOverlay(g, partialTick, mouseX, mouseY);
     }
 
-    /** Подсказки для ячеек апгрейдов по порядку: что принимает машина и сколько штук каждого. */
+    /** Hints for the upgrade slots in order: what the machine accepts and how many of each. */
     private static List<ItemStack> upgradeHints(com.golemlogix.upgrade.UpgradeSpec spec) {
         List<ItemStack> out = new ArrayList<>();
         for (int i = 0; i < spec.max(UpgradeType.SPEED); i++) {
@@ -192,11 +192,11 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
         return out;
     }
 
-    /** Рисуется ПОД рамками ячеек (врезки, фоновые элементы). */
+    /** Drawn UNDER the slot frames (insets, background elements). */
     protected void renderExtraBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
     }
 
-    /** Рисуется ПОВЕРХ рамок ячеек, но под предметами. */
+    /** Drawn ON TOP of the slot frames, but under the items. */
     protected void renderOverlay(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
     }
 

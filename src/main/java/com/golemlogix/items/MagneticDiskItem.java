@@ -47,7 +47,7 @@ public class MagneticDiskItem extends Item {
     @Override
     public int getBarColor(ItemStack stack) {
         float f = Math.max(0.0F, 1.0F - getStoredCount(stack) / (float) capacity);
-        // бирюза -> янтарь -> красный по мере заполнения
+        // teal -> amber -> red as it fills
         return Mth.hsvToRgb(0.5F * f, 0.8F, 0.95F);
     }
 

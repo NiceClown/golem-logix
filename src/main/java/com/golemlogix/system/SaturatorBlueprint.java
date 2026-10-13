@@ -13,9 +13,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Чертёж Насыщателя Маны для книги и «призраков» стройки. Смещения считаются от «центрального ящика» — клетки (1, 0, 0)
- * (плотная труба внизу фасада); машина смотрит фасадом в сторону facing. Собранные части ({@link ModBlocks#SATURATOR_PART})
- * считаются правильными блоками.
+ * Mana Saturator blueprint for the book and the build "ghosts". Offsets are counted from the "central box", cell (1, 0, 0)
+ * (the dense pipe at the bottom of the front); the machine faces facing. Assembled parts ({@link ModBlocks#SATURATOR_PART})
+ * count as correct blocks.
  */
 public final class SaturatorBlueprint {
     private SaturatorBlueprint() {
@@ -39,7 +39,7 @@ public final class SaturatorBlueprint {
         return out;
     }
 
-    /** Нужные предметы по типам (для списка материалов в книге и подсказки проекции). */
+    /** Needed items by type (for the material list in the book and the projection hint). */
     public static Map<Item, Integer> requirements() {
         Map<Item, Integer> need = new LinkedHashMap<>();
         for (int i = 0; i < SaturatorStructure.CELLS; i++) {

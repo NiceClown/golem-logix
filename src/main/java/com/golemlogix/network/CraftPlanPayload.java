@@ -13,19 +13,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Сервер -> клиент: план заказа автокрафта для планировщика в окне заказа (как экран подтверждения крафта AE2): что
- * возьмётся из сети, что будет создано, чего не хватает, и чем кончился запуск.
+ * Server -> client: an autocraft order plan for the planner in the order window (like the AE2 craft confirmation screen): what
+ * will be taken from the network, what will be crafted, what is missing, and how the start ended.
  *
- * @param request номер запроса окна (ответ на устаревший запрос окно пропускает)
+ * @param request the window's request number (the window skips an answer to an outdated request)
  */
 public record CraftPlanPayload(int containerId, int request, Status status, int steps, long executions,
                                List<Entry> entries) implements CustomPacketPayload {
     public static final Type<CraftPlanPayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "craft_plan"));
-    /** Больше строк план не шлёт (в окне — прокрутка; остальное в огромных заказах не важно). */
+    /** The plan sends no more rows than this (the window scrolls; the rest does not matter in huge orders). */
     public static final int MAX_ENTRIES = 256;
 
-    /** Итог: план готов / не хватает ресурсов / заказ запущен / причина, по которой запуск не удался. */
+    /** Outcome: plan ready / not enough resources / order started / the reason the start failed. */
     public enum Status {
         OK, MISSING, STARTED, NO_CPU, RESERVE_FAILED, OFFLINE, NO_PATTERN;
 
@@ -34,7 +34,7 @@ public record CraftPlanPayload(int containerId, int request, Status status, int 
         }
     }
 
-    /** Строка плана: предмет, сколько взять из сети, сколько создать, сколько не хватает. */
+    /** A plan row: the item, how much to take from the network, how much to craft, how much is missing. */
     public record Entry(ItemStack stack, long stored, long craft, long missing) {
     }
 

@@ -3,7 +3,7 @@ package com.golemlogix.blocks;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.level.block.DirectionalBlock;
 
-/** Инжекторная шина экспорта: выталкивает из сети в контейнер перед собой то, что записано в фильтре. */
+/** Injector Export Bus: pushes what is set in the filter from the network into the container in front of it. */
 public class InjectorExportBusBlock extends AbstractBusBlock {
     public static final MapCodec<InjectorExportBusBlock> CODEC = simpleCodec(InjectorExportBusBlock::new);
 

@@ -6,14 +6,14 @@ import net.minecraft.util.RandomSource;
 import java.util.function.Supplier;
 
 /**
- * Медный голем-фонарщик на крыше машины (только клиент): ходит между точками, пока машина простаивает, а при работе или
- * аварии возвращается «домой» и стоит с лампой. Координаты — пиксели крыши в системе модели машины.
+ * Copper lamplighter golem on a machine roof (client only): walks between points while the machine is idle, and when it works or
+ * fails it goes back "home" and stands with its lamp. Coordinates are roof pixels in the machine model's space.
  */
 public final class LampWalker {
     public float x, z, xPrev, zPrev, heading, headingPrev, stride, stridePrev;
     private float goalX, goalZ;
     private int pause;
-    /** Номер точки маршрута (для машин с маршрутом по кругу). */
+    /** Route point index (for machines with a circular route). */
     public int ring;
 
     public LampWalker(float x, float z) {
@@ -21,13 +21,13 @@ public final class LampWalker {
         this.z = this.zPrev = this.goalZ = z;
     }
 
-    /** Идёт ли сейчас (для анимации шага). */
+    /** Whether it is walking now (for the step animation). */
     public boolean walking() {
         return Math.abs(x - xPrev) + Math.abs(z - zPrev) > 0.01f;
     }
 
     /**
-     * Шаг: idle — гуляет (следующую точку даёт nextGoal), иначе — идёт домой (homeX, homeZ) и стоит там.
+     * Step: when idle it wanders (nextGoal gives the next point), otherwise it walks home (homeX, homeZ) and stands there.
      */
     public void tick(boolean idle, float homeX, float homeZ, RandomSource random, Supplier<float[]> nextGoal) {
         xPrev = x;

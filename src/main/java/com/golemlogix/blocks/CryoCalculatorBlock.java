@@ -23,7 +23,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Крио-Калькулятор. Свойство ACTIVE включает «матричный дождь» на боковых панелях, пока идёт задача.
+ * Cryo-Calculator. The ACTIVE property turns on the "matrix rain" on the side panels while a job runs.
  */
 public class CryoCalculatorBlock extends Block implements GolemNode, EntityBlock {
     public CryoCalculatorBlock(Properties properties) {

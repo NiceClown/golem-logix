@@ -5,8 +5,8 @@ import java.nio.file.Path;
 import java.util.*;
 
 /**
- * Генерация JSON-моделей, блокстейтов и моделей предметов (вызывается из ArtForge).
- * Все модели «лицом» смотрят на NORTH (-Z); поворот под FACING делают блокстейты.
+ * Generation of JSON block models, block states and item models (called from ArtForge).
+ * All models "face" NORTH (-Z); the block states rotate them by FACING.
  */
 public class Models {
     static final Path RES = Path.of("src/main/resources/assets/golem_logix");
@@ -21,7 +21,7 @@ public class Models {
         double[] rotOrigin = null;
         int light = 0;
 
-        /** Свечение граней элемента (0..15): в темноте деталь остаётся яркой, как светящийся камень. */
+        /** Glow of the element's faces (0..15): in the dark the part stays bright, like glowstone. */
         El glow(int level) {
             this.light = level;
             return this;
@@ -71,7 +71,7 @@ public class Models {
             for (Map.Entry<String, String> e : faces.entrySet()) {
                 String v = e.getValue();
                 if (!v.contains("\"uv\"")) {
-                    // деталь за пределами клетки (над крышей и т. п.): обычная развёртка вылезла бы за текстуру
+                    // a part outside the cell (above the roof and the like): the usual unwrap would stick out of the texture
                     double[] auto = autoUv(e.getKey(), f, t);
                     double[] u = fit(auto[0], auto[2]), w = fit(auto[1], auto[3]);
                     if (u[0] != auto[0] || u[1] != auto[2] || w[0] != auto[1] || w[1] != auto[3]) {
@@ -91,7 +91,7 @@ public class Models {
         return v == Math.floor(v) ? Long.toString((long) v) : String.format(Locale.ROOT, "%s", v);
     }
 
-    /** Развёртка, которую игра даёт грани без "uv" (как BlockElement.uvsByFace): u0, v0, u1, v1. */
+    /** The unwrap the game gives a face without "uv" (like BlockElement.uvsByFace): u0, v0, u1, v1. */
     static double[] autoUv(String dir, double[] f, double[] t) {
         return switch (dir) {
             case "down" -> new double[]{f[0], 16 - t[2], t[0], 16 - f[2]};
@@ -104,8 +104,8 @@ public class Models {
     }
 
     /**
-     * Отрезок развёртки [a, b], вылезающий за 0..16, переносится внутрь текстуры: сначала на целое число периодов (как будто
-     * текстура повторяется), а если он лежит на стыке — сдвигом к краю. Иначе грань брала бы пиксели соседних текстур атласа.
+     * An unwrap segment [a, b] sticking out of 0..16 is moved inside the texture: first by a whole number of periods (as if
+     * the texture repeated), and if it lies across the seam, by a shift to the edge. Otherwise the face would take pixels of neighbouring atlas textures.
      */
     static double[] fit(double a, double b) {
         if (a >= -1e-6 && b <= 16 + 1e-6) {
@@ -126,17 +126,17 @@ public class Models {
     }
 
     /**
-     * Угловые пластины восьмигранной призмы вдоль Z (прямоугольник x0..x1 × y0..y1 со срезанными на c углами). Наружная грань
-     * каждой пластины лежит точно на фаске, длина — во всю фаску, толщина t — внутрь: углы смыкаются со сторонами без щелей и
-     * выступов (раньше пластина стояла посередине фаски и была короче — вблизи кольца распадались на отдельные планки).
-     * endTex — торцы пластин (north/south) на 0.02 глубже торцов призмы: пластины заходят в стороны, совпавшие грани мерцали бы.
+     * Corner plates of an octagonal prism along Z (a rectangle x0..x1 × y0..y1 with corners cut by c). The outer face
+     * of each plate lies exactly on the bevel, the length is the whole bevel, the thickness t goes inwards: the corners meet the sides without gaps or
+     * bumps (before, the plate stood in the middle of the bevel and was shorter, and up close the rings fell apart into separate strips).
+     * endTex = plate ends (north/south) 0.02 deeper than the prism ends: the plates go into the sides, coinciding faces would flicker.
      */
     static void octCorners(List<El> l, double x0, double y0, double x1, double y1, double z0, double z1, double c, double t,
                            String faceTex, String endTex, int glow) {
         octCorners(l, x0, y0, x1, y1, z0, z1, c, t, faceTex, null, endTex, endTex, glow);
     }
 
-    /** faceUv — своя развёртка наружной и внутренней граней пластины (null — обычная); northTex/southTex — торцы (null — нет). */
+    /** faceUv = a custom unwrap of the plate's outer and inner faces (null = the usual one); northTex/southTex = the ends (null = none). */
     static void octCorners(List<El> l, double x0, double y0, double x1, double y1, double z0, double z1, double c, double t,
                            String faceTex, double[] faceUv, String northTex, String southTex, int glow) {
         double len = c * Math.sqrt(2) / 2, sh = t / 2 / Math.sqrt(2), mid = (z0 + z1) / 2;
@@ -162,8 +162,8 @@ public class Models {
         Files.writeString(p, s, StandardCharsets.UTF_8);
     }
 
-    /** Модель-«конструктор». textures: имя -> текстура (без namespace). */
-    /** Ищет грани одного направления, лежащие в одной плоскости и перекрывающиеся по площади (z-fighting). */
+    /** A "constructor" model. textures: name -> texture (without namespace). */
+    /** Finds faces of one direction that lie in one plane and overlap in area (z-fighting). */
     static void checkCoplanar(String name, El[] els) {
         String[] dirs = {"north", "south", "east", "west", "up", "down"};
         for (int i = 0; i < els.length; i++) {
@@ -173,7 +173,7 @@ public class Models {
                         continue;
                     }
                     int axis = d.equals("north") || d.equals("south") ? 2 : d.equals("east") || d.equals("west") ? 0 : 1;
-                    // повёрнутая деталь сохраняет плоскость только у граней, перпендикулярных оси поворота
+                    // a rotated part keeps its plane only for faces perpendicular to the rotation axis
                     double[][] fi = footprint(els[i], axis), fj = footprint(els[j], axis);
                     if (fi == null || fj == null) {
                         continue;
@@ -193,8 +193,8 @@ public class Models {
     }
 
     /**
-     * Четыре угла грани с нормалью вдоль axis в её плоскости (две другие координаты по порядку x, y, z) — с учётом поворота
-     * детали; null — грань повёрнута вне своей плоскости (деталь вращается вокруг другой оси).
+     * The four corners of a face with its normal along axis, in its plane (the other two coordinates in x, y, z order), counting the
+     * part's rotation; null = the face is rotated out of its plane (the part rotates around another axis).
      */
     static double[][] footprint(El e, int axis) {
         int a = axis == 0 ? 1 : 0, b = axis == 2 ? 1 : 2;
@@ -216,7 +216,7 @@ public class Models {
         return pts;
     }
 
-    /** Пересекаются ли два выпуклых четырёхугольника с ненулевой площадью (теорема о разделяющей оси). */
+    /** Whether two convex quadrilaterals with non-zero area intersect (the separating axis theorem). */
     static boolean overlaps(double[][] p, double[][] q) {
         for (double[][] poly : new double[][][]{p, q}) {
             for (int i = 0; i < poly.length; i++) {
@@ -247,7 +247,7 @@ public class Models {
         StringBuilder sb = new StringBuilder("{\n  \"parent\": \"minecraft:block/block\",\n  \"ambientocclusion\": false,\n");
         if (translucent) sb.append("  \"render_type\": \"minecraft:translucent\",\n");
         sb.append("  \"textures\": {\n    \"particle\": \"").append(NS).append(particle).append("\"");
-        // имя с пространством («minecraft:block/snow») — как есть, иначе текстура мода
+        // a name with a namespace ("minecraft:block/snow") as is, otherwise a mod texture
         for (String[] t : textures) sb.append(",\n    \"").append(t[0]).append("\": \"").append(t[1].contains(":") ? "" : NS).append(t[1]).append("\"");
         sb.append("\n  },\n  \"elements\": [\n");
         for (int i = 0; i < els.length; i++) sb.append(els[i].json()).append(i + 1 < els.length ? ",\n" : "\n");
@@ -269,7 +269,7 @@ public class Models {
                 "{\n  \"variants\": {\n    \"\": {\"model\": \"" + NS + model + "\"}\n  }\n}\n");
     }
 
-    /** Блокстейт по FACING (шесть направлений, модель смотрит на север). */
+    /** A block state by FACING (six directions, the model faces north). */
     static void facing6(String name, String model) throws Exception {
         String[][] v = {{"north", ""}, {"east", ", \"y\": 90"}, {"south", ", \"y\": 180"}, {"west", ", \"y\": 270"},
                 {"up", ", \"x\": 270"}, {"down", ", \"x\": 90"}};
@@ -292,7 +292,7 @@ public class Models {
     }
 
     static void generate() throws Exception {
-        // ============================================================ многоблок
+        // ============================================================ multiblock
         write(RES.resolve("models/block/atlas_casing.json"),
                 "{\n  \"parent\": \"minecraft:block/cube_bottom_top\",\n  \"textures\": {\n    \"top\": \"" + NS + "atlas_casing_top\",\n"
                         + "    \"bottom\": \"" + NS + "atlas_casing\",\n    \"side\": \"" + NS + "atlas_casing\"\n  }\n}\n");
@@ -314,7 +314,7 @@ public class Models {
         single("cable_bushing", "cable_bushing");
         item("cable_bushing", "cable_bushing");
 
-        // Ядро: рунный постамент, латунные прихваты и кристалл, торчащий над кольцом
+        // Core: a rune pedestal, brass clamps and a crystal sticking out above the ring
         model("atlas_core", false, "atlas_core",
                 new String[][]{{"rune", "atlas_core"}, {"casing", "atlas_casing"}, {"brass", "brass_plate"}, {"crystal", "core_crystal"}},
                 e(0, 0, 0, 16, 3, 16).all("#casing"),
@@ -326,81 +326,81 @@ public class Models {
         single("atlas_core", "atlas_core");
         item("atlas_core", "atlas_core");
 
-        // Атлант: мускулистый атлетический силуэт с тонким профилем по оси Z (глубина ~5-6 вокселей)
-        // Нижняя половина: поножи, рельефные икры, коленные чашечки, квадрицепсы, атлетический пояс
+        // Atlant: a muscular athletic silhouette with a thin profile along Z (depth ~5-6 voxels)
+        // Lower half: greaves, relief calves, knee caps, quadriceps, an athletic belt
         model("atlas_atlant_lower", false, "atlant_body",
                 new String[][]{{"body", "atlant_body"}, {"limb", "atlant_limb"}, {"belt", "atlant_belt"}, {"plate", "atlant_plate"}},
-                // сапоги-поножи (крепкая стойка, тонкий профиль Z 4.2..10.2)
+                // boot greaves (a firm stance, a thin profile Z 4.2..10.2)
                 e(2.8, 0, 4.2, 7.2, 2.0, 10.2).all("#belt"), e(8.8, 0, 4.2, 13.2, 2.0, 10.2).all("#belt"),
-                // рельефные икры (основа)
+                // relief calves (base)
                 e(3.2, 2.0, 5.0, 6.8, 6.5, 9.8).all("#limb"), e(9.2, 2.0, 5.0, 12.8, 6.5, 9.8).all("#limb"),
-                // рельеф икроножных мышц (передний выступ)
+                // calf muscle relief (front bulge)
                 e(3.6, 2.5, 4.3, 6.4, 5.5, 4.95).all("#plate"), e(9.6, 2.5, 4.3, 12.4, 5.5, 4.95).all("#plate"),
-                // рельефные коленные щитки/чашечки
+                // relief knee guards/caps
                 e(2.8, 5.5, 4.1, 7.2, 7.2, 4.9).all("#belt"), e(8.8, 5.5, 4.1, 13.2, 7.2, 4.9).all("#belt"),
-                // мускулистые квадрицепсы (бёдра)
+                // muscular quadriceps (thighs)
                 e(3.2, 6.5, 4.8, 6.8, 10.5, 9.8).all("#limb"), e(9.2, 6.5, 4.8, 12.8, 10.5, 9.8).all("#limb"),
-                // рельефная передняя пластина бедра
+                // the relief front plate of the thigh
                 e(3.5, 7.2, 4.2, 6.5, 10.2, 4.75).all("#plate"), e(9.5, 7.2, 4.2, 12.5, 10.2, 4.75).all("#plate"),
-                // атлетический пояс и пряжка (сужение в талии)
+                // athletic belt and buckle (narrowing at the waist)
                 e(2.5, 10.5, 4.8, 13.5, 13.5, 10.0).all("#belt"),
                 e(6.2, 10.8, 4.0, 9.8, 13.8, 5.0).all("#belt"),
-                // низ торса (V-образное сужение к талии)
+                // the lower torso (a V-shaped narrowing to the waist)
                 e(3.5, 13.5, 5.0, 12.5, 16.0, 9.8).all("#body"),
                 e(7.0, 13.5, 4.2, 9.0, 16.0, 4.95).all("#belt"));
-        // Верхняя половина: рельефный торс, 6 кубиков пресса, пекторали, широчайшие мышцы (V-крылья), дельтоиды, бицепсы, руки-опоры
+        // Upper half: a relief torso, a six-pack, pectorals, lats (V wings), deltoids, biceps, supporting arms
         model("atlas_atlant_upper", false, "atlant_body",
                 new String[][]{{"body", "atlant_body"}, {"limb", "atlant_limb"}, {"belt", "atlant_belt"}, {"head", "atlant_head"}, {"plate", "atlant_plate"}},
-                // нижняя часть торса (основа)
+                // the lower part of the torso (base)
                 e(3.8, 0, 4.8, 12.2, 3.5, 9.6).all("#body"),
-                // рельефный пресс: нижние кубики
+                // relief abs: the lower blocks
                 e(4.4, 0.4, 4.0, 7.6, 1.8, 4.75).all("#plate"),
                 e(8.4, 0.4, 4.0, 11.6, 1.8, 4.75).all("#plate"),
-                // рельефный пресс: средние кубики
+                // relief abs: the middle blocks
                 e(4.4, 2.0, 3.9, 7.6, 3.4, 4.75).all("#plate"),
                 e(8.4, 2.0, 3.9, 11.6, 3.4, 4.75).all("#plate"),
-                // широчайшие мышцы спины (V-образный силуэт)
+                // back lats (a V-shaped silhouette)
                 e(1.8, 2.5, 4.6, 3.4, 6.8, 9.2).all("#body"),
                 e(12.6, 2.5, 4.6, 14.2, 6.8, 9.2).all("#body"),
-                // мощный рельефный торс (грудная клетка с центральным Оккультным Ядром)
+                // a strong relief torso (the rib cage with the central Occult Core)
                 e(3.2, 3.5, 4.4, 12.8, 9.0, 9.6).all("#body"),
-                // выступающие пекторали (грудные мышцы)
+                // protruding pectorals (chest muscles)
                 e(3.6, 4.2, 3.4, 7.6, 8.4, 4.35).all("#plate"),
                 e(8.4, 4.2, 3.4, 12.4, 8.4, 4.35).all("#plate"),
-                // шейный воротник
+                // neck collar
                 e(5.0, 8.5, 5.5, 11.0, 10.0, 9.5).all("#belt"),
-                // широкие рельефные дельтовидные наплечники
+                // wide relief deltoid pauldrons
                 e(-0.8, 4.5, 3.8, 3.2, 9.5, 9.8).all("#belt"),
                 e(12.8, 4.5, 3.8, 16.8, 9.5, 9.8).all("#belt"),
-                // руки-бицепсы
+                // bicep arms
                 e(-0.2, 9.5, 4.2, 3.5, 14.0, 9.6).all("#limb"),
                 e(12.5, 9.5, 4.2, 16.2, 14.0, 9.6).all("#limb"),
-                // рельефный пик бицепса
+                // the relief peak of the bicep
                 e(0.2, 10.5, 3.5, 3.2, 13.0, 4.15).all("#plate"),
                 e(12.8, 10.5, 3.5, 15.8, 13.0, 4.15).all("#plate"),
-                // жест удержания матрицы: расширенные кисти-опоры на верхнем срезе Y 14..16
+                // the gesture of holding the matrix: widened supporting hands at the top cut Y 14..16
                 e(0, 14.0, 3.0, 4.0, 16.0, 10.5).all("#belt"),
                 e(12.0, 14.0, 3.0, 16.0, 16.0, 10.5).all("#belt"),
                 e(0, 15.0, 2.0, 4.0, 16.0, 2.95).all("#belt"),
                 e(12.0, 15.0, 2.0, 16.0, 16.0, 2.95).all("#belt"));
-        // голова — отдельно: её поворачивает к игроку отрисовщик (AtlantHeadRenderer), шея — в (8, 10, 8)
+        // the head is separate: the renderer (AtlantHeadRenderer) turns it to the player, the neck is at (8, 10, 8)
         model("atlas_atlant_head", false, "atlant_body",
                 new String[][]{{"body", "atlant_body"}, {"belt", "atlant_belt"}, {"head", "atlant_head"}},
                 e(4.8, 10, 5.0, 11.2, 15.5, 10.5).all("#body").face("north", "#head", 0, 0, 16, 16),
-                e(4.2, 13, 4.2, 11.8, 15.4, 4.95).all("#belt"), // надбровный рельеф шлема
+                e(4.2, 13, 4.2, 11.8, 15.4, 4.95).all("#belt"), // helmet brow relief
                 e(7.0, 15.5, 5.0, 9.0, 16.5, 10.5).all("#belt"));
         facing4Half("atlas_atlant");
         item("atlas_atlant", "atlas_atlant_lower");
 
-        // шкаф, шины и трубы строит второе поколение графики (tools/Forge2.java, Buses.java, Pipes.java)
+        // the cabinet, buses and pipes are built by the second generation of graphics (tools/Forge2.java, Buses.java, Pipes.java)
 
-        // ============================================================ крио-блоки
-        // Крио-Калькулятор (горки и «матрица») и Сопроцессор Охлаждения (рёбра-маховик) — в Gen3: их части движутся
+        // ============================================================ cryo blocks
+        // Cryo-Calculator (slides and the "matrix") and the Cooling Co-Processor (flywheel fins) are in Gen3: their parts move
         single("cooling_coprocessor", "cooling_coprocessor");
 
-        // резонатор строит tools/Resonator.java
+        // the resonator is built by tools/Resonator.java
 
-        // ============================================================== банка
+        // ============================================================== jar
         model("creative_source_jar", true, "jar_glass",
                 new String[][]{{"glass", "jar_glass"}, {"liquid", "jar_liquid"}, {"brass", "brass_plate"}, {"cork", "cork"}},
                 e(4, 1, 4, 12, 11, 12).all("#liquid"),
@@ -410,11 +410,11 @@ public class Models {
         single("creative_source_jar", "creative_source_jar");
         item("creative_source_jar", "creative_source_jar");
 
-        // поставщик шаблонов: модели по стороне подачи пишет Forge2.providerModels
+        // pattern provider: the models by feeding side are written by Forge2.providerModels
 
     }
 
-    /** Блокстейт Атланта: две половины, 4 направления. */
+    /** Atlant block state: two halves, 4 directions. */
     static void facing4Half(String name) throws Exception {
         String[][] v = {{"north", ""}, {"east", ", \"y\": 90"}, {"south", ", \"y\": 180"}, {"west", ", \"y\": 270"}};
         StringBuilder sb = new StringBuilder("{\n  \"variants\": {\n");

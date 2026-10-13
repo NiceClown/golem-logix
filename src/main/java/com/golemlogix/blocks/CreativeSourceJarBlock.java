@@ -17,7 +17,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 public class CreativeSourceJarBlock extends Block implements EntityBlock {
-    /** Реальные размеры банки с пробкой (как в модели), а не весь блок: рядом остаются доступны соседние блоки. */
+    /** The real size of the jar with its cork (as in the model), not the whole block: neighbouring blocks stay reachable. */
     private static final VoxelShape SHAPE = Block.box(3, 0, 3, 13, 15, 13);
 
     public CreativeSourceJarBlock(Properties properties) {

@@ -8,12 +8,12 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Холст для процедурной пиксельной графики Golem Logix. Все координаты — в «юнитах блока» (1/16 блока, y вниз),
- * плотность задаёт k (текселей на юнит): k=4 даёт 64 пикселя на блок. Палитры — рампы от тёмного к светлому,
- * свет всегда падает сверху-слева.
+ * A canvas for the procedural pixel graphics of Golem Logix. All coordinates are in "block units" (1/16 of a block, y down),
+ * the density is set by k (texels per unit): k=4 gives 64 pixels per block. Palettes are ramps from dark to light,
+ * the light always falls from the top left.
  */
 public final class Paint {
-    // ---------------------------------------------------------------- палитры (тёмный -> светлый)
+    // ---------------------------------------------------------------- palettes (dark -> light)
     static final int[] BRASS = {0x2a1d07, 0x523a0f, 0x7b5a1b, 0xa07a28, 0xc29b3c, 0xe0bc58, 0xf8e3a0};
     static final int[] BRONZE = {0x1c0e07, 0x35190c, 0x552b15, 0x74401f, 0x955828, 0xb97538, 0xdba066};
     static final int[] IRON = {0x0c0e11, 0x16191e, 0x23272e, 0x31353f, 0x444a56, 0x5d6573, 0x8089a0};
@@ -28,18 +28,18 @@ public final class Paint {
     final double k;
     final int[] px;
     /**
-     * Маска светящихся пикселей (руны, светящиеся вставки): по ней {@link #save} пишет слой {@code имя_glow.png}, который
-     * клиент рисует поверх грани со свечением. null — пока ничего светящегося не нарисовано.
+     * Mask of glowing pixels (runes, glowing inlays): {@link #save} writes the {@code name_glow.png} layer from it, which
+     * the client draws over the face with a glow. null = nothing glowing has been drawn yet.
      */
     boolean[] lit;
-    /** Сейчас рисуется светящееся (руна, свечение): пиксели попадают в маску. */
+    /** Something glowing is being drawn now (a rune, a glow): the pixels go into the mask. */
     private boolean glowing;
     /**
-     * Живые детали холста (стрелки манометров, шестерни, вентиляторы, экраны, огоньки): при сохранении текстура становится
-     * анимированной — каждый кадр это неподвижный слой {@link #stat} плюс все детали, нарисованные для своей доли цикла t.
+     * Living details of the canvas (gauge needles, gears, fans, screens, lights): on save the texture becomes
+     * animated, every frame is the still layer {@link #stat} plus all the details drawn for their cycle fraction t.
      */
     interface Animator {
-        /** Нарисовать деталь в доле цикла t (0..1, цикл замкнут: t = 1 совпадает с t = 0). */
+        /** Draw the detail at cycle fraction t (0..1, the cycle is closed: t = 1 matches t = 0). */
         void draw(Paint p, double t);
     }
 
@@ -47,20 +47,20 @@ public final class Paint {
     }
 
     final List<Anim> anims = new ArrayList<>();
-    /** Неподвижный слой: всё, кроме живых деталей (null — живых деталей нет). */
+    /** The still layer: everything except the living details (null = there are no living details). */
     private int[] stat;
-    /** Сейчас рисуется живая деталь (в неподвижный слой не попадает). */
+    /** A living detail is being drawn now (it does not go into the still layer). */
     private boolean inAnim;
-    /** Холст — кадр анимации: живые детали в нём рисуются сразу, без регистрации. */
+    /** The canvas is an animation frame: the living details are drawn in it right away, without registration. */
     private boolean frameCanvas;
-    /** Вырезка из большой картины: кадры берутся у неё (смещение — в пикселях картины). */
+    /** A crop of a big picture: the frames come from it (the offset is in picture pixels). */
     private Paint parent;
     private int offX, offY;
-    /** Размах стрелок манометров в текущих кадрах (по устройству, см. {@link #gaugeTempo}). */
+    /** The swing of the gauge needles in the current frames (by device, see {@link #gaugeTempo}). */
     static double gaugeAmp = 12;
     /**
-     * Свои параметры анимации (0 — по умолчанию): кадров в цикле, тиков на кадр и плавное смешивание кадров. Фигурки,
-     * которые ходят по текстуре, смешивать нельзя — двоились бы; шестерни и стрелки смешиваются плавно.
+     * Custom animation parameters (0 = default): frames per cycle, ticks per frame and smooth frame blending. Figures
+     * walking over the texture must not be blended, they would double; gears and needles blend smoothly.
      */
     int animFrames = 0, frameTime = 0;
     boolean interpolate = true;
@@ -73,8 +73,8 @@ public final class Paint {
     }
 
     /**
-     * Регистрирует живую деталь в прямоугольнике (юниты; в его пределах она двигается) и рисует её первый кадр. Всё, что
-     * нарисовано на холсте позже поверх этого места, в кадрах окажется под деталью.
+     * Registers a living detail in a rectangle (units; it moves within it) and draws its first frame. Everything
+     * drawn on the canvas later over this place ends up under the detail in the frames.
      */
     void animate(double ux0, double uy0, double ux1, double uy1, Animator fn) {
         if (frameCanvas) {
@@ -92,7 +92,7 @@ public final class Paint {
         inAnim = was;
     }
 
-    /** Кадр f из n (пиксели всей картины): неподвижный слой и живые детали. */
+    /** Frame f of n (pixels of the whole picture): the still layer and the living details. */
     private final java.util.Map<Integer, int[]> frames = new java.util.HashMap<>();
 
     private int[] frame(int f, int n) {
@@ -107,7 +107,7 @@ public final class Paint {
         });
     }
 
-    /** Есть ли живые детали, попадающие в этот холст (у вырезки — в её окно на картине). */
+    /** Whether there are living details that fall into this canvas (for a crop, into its window on the picture). */
     boolean animated() {
         Paint root = parent != null ? parent : this;
         for (Anim a : root.anims) {
@@ -119,7 +119,7 @@ public final class Paint {
         return false;
     }
 
-    /** Пиксели кадра f этого холста (у вырезки — её окно из кадра картины). */
+    /** Pixels of frame f of this canvas (for a crop, its window of the picture frame). */
     private int[] framePixels(int f, int n) {
         if (parent == null) {
             return frame(f, n);
@@ -134,7 +134,7 @@ public final class Paint {
         return out;
     }
 
-    /** Записать пиксель и в неподвижный слой (если это не живая деталь). */
+    /** Write a pixel into the still layer too (unless it is a living detail). */
     private void put(int i, int c) {
         px[i] = c;
         if (stat != null && !inAnim) {
@@ -151,7 +151,7 @@ public final class Paint {
         }
     }
 
-    // ------------------------------------------------------------------------- цвета
+    // ------------------------------------------------------------------------- colours
     static int rgb(int c) {
         return 0xFF000000 | (c & 0xFFFFFF);
     }
@@ -178,7 +178,7 @@ public final class Paint {
         return (a << 24) | (r << 16) | (g << 8) | b;
     }
 
-    /** Цвет из рампы: t в [0..1] (0 — самый тёмный), с интерполяцией. */
+    /** A colour from a ramp: t in [0..1] (0 = the darkest), interpolated. */
     static int ramp(int[] r, double t) {
         t = Math.max(0, Math.min(1, t)) * (r.length - 1);
         int i = (int) Math.floor(t);
@@ -188,12 +188,12 @@ public final class Paint {
         return mix(rgb(r[i]), rgb(r[i + 1]), t - i);
     }
 
-    /** Цвет из рампы по индексу (дробному). */
+    /** A colour from a ramp by a (fractional) index. */
     static int at(int[] r, double idx) {
         return ramp(r, idx / (r.length - 1));
     }
 
-    // --------------------------------------------------------------------- пиксели
+    // --------------------------------------------------------------------- pixels
     int tx(double u) {
         return (int) Math.round(u * k);
     }
@@ -209,7 +209,7 @@ public final class Paint {
         return x >= 0 && y >= 0 && x < w && y < h ? px[y * w + x] : 0;
     }
 
-    /** Накладывает цвет (с альфой) на то, что уже нарисовано. */
+    /** Lays a colour (with alpha) over what is already drawn. */
     void over(int x, int y, int c) {
         if (x < 0 || y < 0 || x >= w || y >= h) {
             return;
@@ -218,7 +218,7 @@ public final class Paint {
         if (a == 0) {
             return;
         }
-        // светящийся слой: заметная часть ореола тоже светится; плотная краска поверх гасит свечение
+        // glowing layer: a noticeable part of the halo glows too; dense paint on top puts the glow out
         if (glowing ? a >= 40 : a >= 128) {
             markLit(y * w + x, glowing);
         }
@@ -229,7 +229,7 @@ public final class Paint {
         }
     }
 
-    /** Цвет c с альфой поверх d. */
+    /** Colour c with alpha over d. */
     static int blend(int d, int c) {
         int a = c >>> 24;
         if (a == 255) {
@@ -252,7 +252,7 @@ public final class Paint {
         int at(double u, double v);
     }
 
-    /** Закрашивает прямоугольник (юниты) функцией цвета; 0 — не трогать. */
+    /** Fills a rectangle (units) with a colour function; 0 = leave untouched. */
     void fill(double x0, double y0, double x1, double y1, PixelFn f) {
         int ix0 = (int) Math.floor(x0 * k + 0.5), iy0 = (int) Math.floor(y0 * k + 0.5);
         int ix1 = (int) Math.floor(x1 * k + 0.5), iy1 = (int) Math.floor(y1 * k + 0.5);
@@ -270,7 +270,7 @@ public final class Paint {
         fill(x0, y0, x1, y1, (u, v) -> c);
     }
 
-    /** Накладывает полупрозрачный прямоугольник. */
+    /** Lays a translucent rectangle. */
     void tint(double x0, double y0, double x1, double y1, int c) {
         int ix0 = (int) Math.floor(x0 * k + 0.5), iy0 = (int) Math.floor(y0 * k + 0.5);
         int ix1 = (int) Math.floor(x1 * k + 0.5), iy1 = (int) Math.floor(y1 * k + 0.5);
@@ -298,7 +298,7 @@ public final class Paint {
         rect(x1 - width, y0 + width, x1, y1 - width, c);
     }
 
-    /** Линейный градиент по вертикали (сверху вниз): рампа от t0 до t1. */
+    /** A vertical linear gradient (top to bottom): the ramp from t0 to t1. */
     void gradV(double x0, double y0, double x1, double y1, int[] ramp, double t0, double t1) {
         fill(x0, y0, x1, y1, (u, v) -> ramp(ramp, t0 + (t1 - t0) * (v - y0) / (y1 - y0)));
     }
@@ -307,10 +307,10 @@ public final class Paint {
         fill(x0, y0, x1, y1, (u, v) -> ramp(ramp, t0 + (t1 - t0) * (u - x0) / (x1 - x0)));
     }
 
-    // ------------------------------------------------------------- объём: скос и зерно
+    // ------------------------------------------------------------- volume: bevel and grain
     /**
-     * Объёмная плита: основной тон mid (индекс рампы), светлая кромка сверху-слева, тёмная снизу-справа,
-     * толщина кромки bw текселей (по умолчанию 1).
+     * A three-dimensional slab: the main tone mid (a ramp index), a light edge at the top left, a dark one at the bottom right,
+     * the edge thickness bw texels (1 by default).
      */
     void slab(double x0, double y0, double x1, double y1, int[] ramp, double mid, int bw) {
         int ix0 = (int) Math.floor(x0 * k + 0.5), iy0 = (int) Math.floor(y0 * k + 0.5);
@@ -338,7 +338,7 @@ public final class Paint {
         }
     }
 
-    /** Шум яркости по прямоугольнику (только непрозрачные пиксели). */
+    /** Brightness noise over a rectangle (only opaque pixels). */
     void grain(double x0, double y0, double x1, double y1, double amount, long seed) {
         Random rnd = new Random(seed);
         int ix0 = (int) Math.floor(x0 * k + 0.5), iy0 = (int) Math.floor(y0 * k + 0.5);
@@ -353,7 +353,7 @@ public final class Paint {
         }
     }
 
-    /** Прожилки вдоль x (как у шлифованного металла или дерева): яркость строки + шум. */
+    /** Streaks along x (as on brushed metal or wood): line brightness + noise. */
     void streaks(double x0, double y0, double x1, double y1, double amount, long seed, boolean horizontal) {
         Random rnd = new Random(seed);
         int ix0 = (int) Math.floor(x0 * k + 0.5), iy0 = (int) Math.floor(y0 * k + 0.5);
@@ -374,7 +374,7 @@ public final class Paint {
         }
     }
 
-    // --------------------------------------------------------------------- фигуры
+    // --------------------------------------------------------------------- shapes
     void disc(double cx, double cy, double r, int c) {
         discFn(cx, cy, r, (u, v) -> c);
     }
@@ -408,7 +408,7 @@ public final class Paint {
         }
     }
 
-    /** Шар/диск с объёмным светом из левого верхнего угла. */
+    /** A ball/disc with volumetric light from the top left corner. */
     void sphere(double cx, double cy, double r, int[] ramp, double lo, double hi) {
         discFn(cx, cy, r, (u, v) -> {
             double dx = (u - cx) / r, dy = (v - cy) / r;
@@ -434,7 +434,7 @@ public final class Paint {
         }
     }
 
-    /** Закрашивает многоугольник (чётно-нечётное правило). */
+    /** Fills a polygon (even-odd rule). */
     void poly(double[] xs, double[] ys, int c) {
         double minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
         for (int i = 0; i < xs.length; i++) {
@@ -459,8 +459,8 @@ public final class Paint {
         }
     }
 
-    // -------------------------------------------------------------------- детали
-    /** Шляпка винта с крестообразным шлицем. */
+    // -------------------------------------------------------------------- details
+    /** A screw head with a cross slot. */
     void screw(double cx, double cy, double r, int[] ramp, double angle) {
         sphere(cx, cy, r, ramp, 0.25, 0.85);
         double c = Math.cos(angle), s = Math.sin(angle);
@@ -469,14 +469,14 @@ public final class Paint {
         line(cx + s * r * 0.75, cy - c * r * 0.75, cx - s * r * 0.75, cy + c * r * 0.75, Math.max(1.0 / k, r * 0.28), dark);
     }
 
-    /** Заклёпка: маленькая выпуклая шляпка. */
+    /** A rivet: a small domed head. */
     void rivet(double cx, double cy, double r, int[] ramp) {
         sphere(cx, cy, r, ramp, 0.3, 1.0);
     }
 
     /**
-     * Шестерня с чёткими зубьями, тёмным контуром, спицами и осью — живая: за цикл анимации поворачивается на целое число
-     * зубьев (стык цикла незаметен); соседние шестерни крутятся в разные стороны.
+     * A gear with sharp teeth, a dark outline, spokes and an axle, alive: over an animation cycle it turns by a whole number
+     * of teeth (the cycle seam is invisible); neighbouring gears turn in opposite directions.
      */
     void gear(double cx, double cy, double r, int teeth, double rot, int[] ramp, double mid) {
         int dir = Math.floorMod((long) Math.round(cx * 3 + cy * 5), 2L) == 0 ? 1 : -1;
@@ -485,7 +485,7 @@ public final class Paint {
                 (p, t) -> p.gearStatic(cx, cy, r, teeth, rot + dir * t * 2 * Math.PI * step / teeth, ramp, mid));
     }
 
-    /** Неподвижная шестерня (кадр). */
+    /** A still gear (a frame). */
     void gearStatic(double cx, double cy, double r, int teeth, double rot, int[] ramp, double mid) {
         Paint g = new Paint((double) w / k, (double) h / k, k);
         int n = teeth * 4;
@@ -501,7 +501,7 @@ public final class Paint {
             double lit = 0.5 + 0.5 * (-dx * 0.6 - dy * 0.8) / Math.max(r, 0.01);
             return at(ramp, mid - 1.0 + 2.0 * lit);
         });
-        // ступица, отверстия между спицами
+        // hub, holes between the spokes
         double body = r * 0.78;
         int hole = at(ramp, 0.3);
         g.disc(cx, cy, body * 0.86, at(ramp, mid - 0.9));
@@ -514,7 +514,7 @@ public final class Paint {
         paste(g.outlined(at(ramp, 0.2)), 0, 0);
     }
 
-    /** Закрашивает многоугольник функцией цвета. */
+    /** Fills a polygon with a colour function. */
     void polyFn(double[] xs, double[] ys, PixelFn f) {
         double minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
         for (int i = 0; i < xs.length; i++) {
@@ -542,7 +542,7 @@ public final class Paint {
         }
     }
 
-    /** Копия, у которой пограничные (рядом с прозрачным) непрозрачные пиксели перекрашены в цвет контура. */
+    /** A copy where the opaque border pixels (next to transparent ones) are repainted in the outline colour. */
     Paint outlined(int edge) {
         Paint p = new Paint((double) w / k, (double) h / k, k);
         for (int j = 0; j < h; j++) {
@@ -562,7 +562,7 @@ public final class Paint {
         return p;
     }
 
-    /** Манометр: латунный ободок, циферблат, деления, стрелка (angle — градусы, 0 = влево, 180 = вправо). */
+    /** A gauge: a brass rim, a dial, marks, a needle (angle in degrees, 0 = left, 180 = right). */
     void gauge(double cx, double cy, double r, double needleDeg, int needleColor) {
         sphere(cx, cy, r, BRASS, 0.2, 0.95);
         disc(cx, cy, r * 0.8, ramp(IRON, 0.1));
@@ -572,12 +572,12 @@ public final class Paint {
         });
         for (int i = 0; i <= 8; i++) {
             double a = Math.toRadians(180 + i * 22.5 + 0);
-            // дуга сверху: от 180° (влево) до 360° (вправо) идёт через верх
+            // the arc on top: from 180° (left) to 360° (right) it goes over the top
             double x0 = cx + Math.cos(a) * r * 0.5, y0 = cy + Math.sin(a) * r * 0.5;
             double x1 = cx + Math.cos(a) * r * 0.66, y1 = cy + Math.sin(a) * r * 0.66;
             line(x0, y0, x1, y1, Math.max(1.0 / k, r * 0.08), ramp(IRON, i > 6 ? 0.1 : 0.2));
         }
-        // стрелка живая: давление «дышит» вокруг исходного значения, с подрагиванием (размах — по устройству)
+        // the needle is alive: the pressure "breathes" around the starting value, with a tremble (the swing depends on the device)
         double phase = Math.floorMod((long) (cx * 37 + cy * 61 + needleDeg * 13), 628L) / 100.0;
         animate(cx - r, cy - r, cx + r, cy + r, (p, t) -> {
             double a = 2 * Math.PI * t;
@@ -586,7 +586,7 @@ public final class Paint {
         });
     }
 
-    /** Стрелка, ось и блик на стекле манометра. */
+    /** The needle, the axle and a highlight on the gauge glass. */
     private void needle(double cx, double cy, double r, double deg, int color) {
         double a = Math.toRadians(180 + deg);
         line(cx, cy, cx + Math.cos(a) * r * 0.62, cy + Math.sin(a) * r * 0.62, Math.max(1.0 / k, r * 0.12), color);
@@ -594,7 +594,7 @@ public final class Paint {
         line(cx - r * 0.45, cy - r * 0.5, cx + r * 0.1, cy - r * 0.62, Math.max(1.0 / k, r * 0.1), argb(150, 0xFFFFFF));
     }
 
-    /** Сетка-решётка (ромбы): провода wire на фоне bg, шаг pitch. */
+    /** A mesh grate (diamonds): wires wire on background bg, step pitch. */
     void mesh(double x0, double y0, double x1, double y1, double pitch, double wireWidth, int wireLo, int wireHi, int bg) {
         fill(x0, y0, x1, y1, (u, v) -> {
             double a = ((u - x0) + (v - y0)) / pitch, b = ((u - x0) - (v - y0)) / pitch;
@@ -607,8 +607,8 @@ public final class Paint {
         });
     }
 
-    // ----------------------------------------------------------------------- руны
-    /** Контуры рун старшего футарка в сетке 0..4 x 0..6 (отрезки). */
+    // ----------------------------------------------------------------------- runes
+    /** Outlines of Elder Futhark runes in a 0..4 x 0..6 grid (segments). */
     static final double[][][] RUNES = {
             {{0, 0, 0, 6}, {0, 4, 3, 2}, {0, 2, 3, 0}},                             // 0 fehu
             {{0, 0, 0, 6}, {0, 6, 2, 5}, {2, 5, 4, 1}, {4, 1, 4, 0}},              // 1 uruz
@@ -634,47 +634,47 @@ public final class Paint {
             {{2, 0, 2, 6}, {2, 2.5, 0, 0}, {2, 2.5, 4, 0}},                         // 21 algiz
             {{0, 0, 0, 6}, {4, 0, 4, 6}, {0, 0, 2, 2.5}, {2, 2.5, 4, 0}},           // 22 ehwaz
             {{2, 0, 4, 3}, {4, 3, 2, 6}, {2, 6, 0, 3}, {0, 3, 2, 0}},               // 23 ingwaz
-            // знаки «големской» алхимии
-            {{2, 0, 2, 6}, {0, 0, 0, 2}, {4, 0, 4, 2}, {0, 2, 4, 2}, {1, 6, 3, 6}}, // 24 трезубец
-            {{2, 0, 4, 5}, {4, 5, 0, 5}, {0, 5, 2, 0}, {2, 2.2, 2, 6}},             // 25 треугольник с осью
-            {{0, 3, 2, 1}, {2, 1, 4, 3}, {4, 3, 2, 5}, {2, 5, 0, 3}, {2, 2.6, 2, 3.4}}, // 26 око
-            {{0, 0, 4, 0}, {0, 0, 4, 6}, {4, 0, 0, 6}, {0, 6, 4, 6}},               // 27 песочные часы
-            {{2, 0, 2, 6}, {0, 4, 2, 6}, {4, 4, 2, 6}, {0, 1.5, 4, 1.5}},           // 28 якорь
-            {{0, 0, 4, 0}, {4, 0, 0, 6}, {0, 6, 4, 6}, {1, 3, 3, 3}},               // 29 молния-зет
-            // дополнительные руны старшего/младшего футарка, нортумбрийские и алхимические символы (50+ вариантов)
-            {{0, 0, 4, 0}, {2, 0, 2, 6}, {0, 3, 2, 1.5}, {4, 4.5, 2, 3}},           // 30 cweorth (жертвенный огонь)
-            {{0, 0, 0, 3}, {4, 0, 4, 3}, {0, 3, 4, 3}, {2, 3, 2, 6}},               // 31 calc (чаша)
-            {{2, 0, 2, 6}, {0, 3, 4, 3}, {2, 1.5, 0, 3}, {0, 3, 2, 4.5}, {2, 4.5, 4, 3}, {4, 3, 2, 1.5}}, // 32 stan (камень-кристалл)
-            {{2, 0, 2, 6}, {0, 0, 4, 0}, {0, 2, 4, 2}, {0, 2, 2, 0}, {4, 2, 2, 0}}, // 33 gar (копьё)
-            {{2, 0, 2, 6}, {2, 2, 0, 0}, {2, 2, 4, 0}, {2, 4, 0, 2}, {2, 4, 4, 2}}, // 34 ac (дуб познания)
-            {{2, 0, 2, 6}, {0, 2, 4, 2}, {0, 0, 0, 4}, {4, 0, 4, 4}},               // 35 yr (лук лучника)
-            {{0, 0, 0, 6}, {0, 5, 3, 3.5}, {0, 3.5, 3, 2}, {0, 2, 3, 0.5}},         // 36 os (божественное слово)
-            {{0, 0, 0, 6}, {4, 0, 4, 6}, {0, 3, 4, 3}, {0, 1, 4, 5}},               // 37 ior (мировой змей)
-            {{2, 0, 2, 6}, {2, 6, 0, 4}, {2, 6, 4, 4}, {0, 4, 0, 2}, {4, 4, 4, 2}}, // 38 ear (земля)
-            {{0, 0, 4, 0}, {4, 0, 4, 3}, {4, 3, 0, 3}, {0, 3, 0, 6}, {0, 6, 4, 6}}, // 39 sol (солнечное колесо)
-            {{0, 1, 4, 1}, {4, 1, 4, 5}, {4, 5, 0, 5}, {0, 5, 0, 1}, {0, 3, 4, 3}}, // 40 соль алхимии
-            {{2, 0, 0, 3}, {0, 3, 4, 3}, {4, 3, 2, 0}, {2, 3, 2, 6}, {0, 4.5, 4, 4.5}}, // 41 сера алхимии
-            {{2, 0, 0, 1.5}, {2, 0, 4, 1.5}, {2, 1.5, 2, 6}, {0, 3, 4, 3}, {0, 4.5, 4, 4.5}}, // 42 ртуть герметизма
-            {{2, 0, 2, 6}, {0, 3, 4, 3}, {1, 1, 3, 1}, {1, 5, 3, 5}, {0.5, 2.5, 0.5, 3.5}, {3.5, 2.5, 3.5, 3.5}}, // 43 агисхьяльм (шлем ужаса)
-            {{2, 0, 2, 6}, {0, 3, 4, 3}, {0.5, 1.5, 3.5, 4.5}, {3.5, 1.5, 0.5, 4.5}}, // 44 вегвизир (компас путей)
-            {{2, 0, 0, 2}, {0, 2, 2, 5}, {2, 5, 4, 2}, {4, 2, 2, 0}, {2, 0, 2, 5}}, // 45 сердце голема
-            {{0, 0, 4, 4}, {4, 0, 0, 4}, {0, 2, 4, 2}, {2, 0, 2, 6}, {0, 6, 4, 6}}, // 46 узел матричной ткани
-            {{2, 0, 2, 6}, {0, 1.5, 4, 4.5}, {0, 4.5, 4, 1.5}, {1, 3, 3, 3}},       // 47 морозный кристалл
-            {{2, 0, 3.5, 5}, {3.5, 5, 0, 2}, {0, 2, 4, 2}, {4, 2, 0.5, 5}, {0.5, 5, 2, 0}}, // 48 квинтэссенция
-            {{0, 0, 4, 0}, {0, 0, 1, 4}, {4, 0, 3, 4}, {1, 4, 3, 4}, {2, 4, 2, 6}, {0.5, 6, 3.5, 6}}, // 49 атанор
-            {{2, 0, 2, 6}, {2, 1, 0, 0}, {0, 0, 0, 3}, {0, 3, 2, 2}, {2, 1, 4, 0}, {4, 0, 4, 3}, {4, 3, 2, 2}}, // 50 лабрис
-            {{0, 1, 2, 0}, {2, 0, 4, 1}, {4, 1, 4, 5}, {4, 5, 2, 6}, {2, 6, 0, 5}, {0, 5, 0, 1}, {1, 3, 3, 3}}, // 51 уроборос
-            {{0, 0, 4, 0}, {0, 0, 0, 6}, {4, 0, 4, 6}, {1, 2, 3, 2}, {2, 2, 2, 6}}, // 52 врата архива
-            {{2, 0, 2, 6}, {0, 2, 4, 2}, {0, 4, 4, 4}, {1, 1, 3, 1}, {1, 5, 3, 5}}, // 53 астральная монада
-            {{2, 0, 0, 5}, {0, 5, 4, 5}, {4, 5, 2, 0}, {2, 2, 0, 2}, {2, 2, 4, 2}}, // 54 трикветр
-            {{0, 0, 4, 0}, {0, 6, 4, 6}, {0, 0, 4, 6}, {4, 0, 0, 6}, {1, 3, 3, 3}}, // 55 хронос
-            {{2, 0, 0, 6}, {2, 0, 4, 6}, {0, 6, 4, 6}, {1, 3.5, 3, 3.5}, {2, 2.5, 2, 4.5}} // 56 око провидения
+            // signs of "golem" alchemy
+            {{2, 0, 2, 6}, {0, 0, 0, 2}, {4, 0, 4, 2}, {0, 2, 4, 2}, {1, 6, 3, 6}}, // 24 trident
+            {{2, 0, 4, 5}, {4, 5, 0, 5}, {0, 5, 2, 0}, {2, 2.2, 2, 6}},             // 25 triangle with an axis
+            {{0, 3, 2, 1}, {2, 1, 4, 3}, {4, 3, 2, 5}, {2, 5, 0, 3}, {2, 2.6, 2, 3.4}}, // 26 eye
+            {{0, 0, 4, 0}, {0, 0, 4, 6}, {4, 0, 0, 6}, {0, 6, 4, 6}},               // 27 hourglass
+            {{2, 0, 2, 6}, {0, 4, 2, 6}, {4, 4, 2, 6}, {0, 1.5, 4, 1.5}},           // 28 anchor
+            {{0, 0, 4, 0}, {4, 0, 0, 6}, {0, 6, 4, 6}, {1, 3, 3, 3}},               // 29 zigzag bolt
+            // more Elder/Younger Futhark runes, Northumbrian and alchemical symbols (50+ variants)
+            {{0, 0, 4, 0}, {2, 0, 2, 6}, {0, 3, 2, 1.5}, {4, 4.5, 2, 3}},           // 30 cweorth (sacrificial fire)
+            {{0, 0, 0, 3}, {4, 0, 4, 3}, {0, 3, 4, 3}, {2, 3, 2, 6}},               // 31 calc (chalice)
+            {{2, 0, 2, 6}, {0, 3, 4, 3}, {2, 1.5, 0, 3}, {0, 3, 2, 4.5}, {2, 4.5, 4, 3}, {4, 3, 2, 1.5}}, // 32 stan (stone crystal)
+            {{2, 0, 2, 6}, {0, 0, 4, 0}, {0, 2, 4, 2}, {0, 2, 2, 0}, {4, 2, 2, 0}}, // 33 gar (spear)
+            {{2, 0, 2, 6}, {2, 2, 0, 0}, {2, 2, 4, 0}, {2, 4, 0, 2}, {2, 4, 4, 2}}, // 34 ac (oak of knowledge)
+            {{2, 0, 2, 6}, {0, 2, 4, 2}, {0, 0, 0, 4}, {4, 0, 4, 4}},               // 35 yr (archer's bow)
+            {{0, 0, 0, 6}, {0, 5, 3, 3.5}, {0, 3.5, 3, 2}, {0, 2, 3, 0.5}},         // 36 os (divine word)
+            {{0, 0, 0, 6}, {4, 0, 4, 6}, {0, 3, 4, 3}, {0, 1, 4, 5}},               // 37 ior (world serpent)
+            {{2, 0, 2, 6}, {2, 6, 0, 4}, {2, 6, 4, 4}, {0, 4, 0, 2}, {4, 4, 4, 2}}, // 38 ear (earth)
+            {{0, 0, 4, 0}, {4, 0, 4, 3}, {4, 3, 0, 3}, {0, 3, 0, 6}, {0, 6, 4, 6}}, // 39 sol (sun wheel)
+            {{0, 1, 4, 1}, {4, 1, 4, 5}, {4, 5, 0, 5}, {0, 5, 0, 1}, {0, 3, 4, 3}}, // 40 alchemical salt
+            {{2, 0, 0, 3}, {0, 3, 4, 3}, {4, 3, 2, 0}, {2, 3, 2, 6}, {0, 4.5, 4, 4.5}}, // 41 alchemical sulphur
+            {{2, 0, 0, 1.5}, {2, 0, 4, 1.5}, {2, 1.5, 2, 6}, {0, 3, 4, 3}, {0, 4.5, 4, 4.5}}, // 42 hermetic mercury
+            {{2, 0, 2, 6}, {0, 3, 4, 3}, {1, 1, 3, 1}, {1, 5, 3, 5}, {0.5, 2.5, 0.5, 3.5}, {3.5, 2.5, 3.5, 3.5}}, // 43 aegishjalmur (helm of awe)
+            {{2, 0, 2, 6}, {0, 3, 4, 3}, {0.5, 1.5, 3.5, 4.5}, {3.5, 1.5, 0.5, 4.5}}, // 44 vegvisir (wayfinder)
+            {{2, 0, 0, 2}, {0, 2, 2, 5}, {2, 5, 4, 2}, {4, 2, 2, 0}, {2, 0, 2, 5}}, // 45 golem heart
+            {{0, 0, 4, 4}, {4, 0, 0, 4}, {0, 2, 4, 2}, {2, 0, 2, 6}, {0, 6, 4, 6}}, // 46 matrix weave knot
+            {{2, 0, 2, 6}, {0, 1.5, 4, 4.5}, {0, 4.5, 4, 1.5}, {1, 3, 3, 3}},       // 47 frost crystal
+            {{2, 0, 3.5, 5}, {3.5, 5, 0, 2}, {0, 2, 4, 2}, {4, 2, 0.5, 5}, {0.5, 5, 2, 0}}, // 48 quintessence
+            {{0, 0, 4, 0}, {0, 0, 1, 4}, {4, 0, 3, 4}, {1, 4, 3, 4}, {2, 4, 2, 6}, {0.5, 6, 3.5, 6}}, // 49 athanor
+            {{2, 0, 2, 6}, {2, 1, 0, 0}, {0, 0, 0, 3}, {0, 3, 2, 2}, {2, 1, 4, 0}, {4, 0, 4, 3}, {4, 3, 2, 2}}, // 50 labrys
+            {{0, 1, 2, 0}, {2, 0, 4, 1}, {4, 1, 4, 5}, {4, 5, 2, 6}, {2, 6, 0, 5}, {0, 5, 0, 1}, {1, 3, 3, 3}}, // 51 ouroboros
+            {{0, 0, 4, 0}, {0, 0, 0, 6}, {4, 0, 4, 6}, {1, 2, 3, 2}, {2, 2, 2, 6}}, // 52 archive gate
+            {{2, 0, 2, 6}, {0, 2, 4, 2}, {0, 4, 4, 4}, {1, 1, 3, 1}, {1, 5, 3, 5}}, // 53 astral monad
+            {{2, 0, 0, 5}, {0, 5, 4, 5}, {4, 5, 2, 0}, {2, 2, 0, 2}, {2, 2, 4, 2}}, // 54 triquetra
+            {{0, 0, 4, 0}, {0, 6, 4, 6}, {0, 0, 4, 6}, {4, 0, 0, 6}, {1, 3, 3, 3}}, // 55 chronos
+            {{2, 0, 0, 6}, {2, 0, 4, 6}, {0, 6, 4, 6}, {1, 3.5, 3, 3.5}, {2, 2.5, 2, 4.5}} // 56 eye of providence
     };
 
     /**
-     * Руна высотой height юнитов с левым верхним углом (x, y); нужные тона: ядро и ореол. Номер глифа перемешивается с
-     * положением руны: одинаковые номера в разных местах дают разные знаки, а одно и то же место — всегда тот же знак
-     * (поэтому слои свечения, нарисованные отдельно по тем же координатам, совпадают с рисунком).
+     * A rune height units tall with its top left corner at (x, y); the needed tones are the core and the halo. The glyph number is mixed with
+     * the rune position: the same numbers in different places give different signs, and the same place always the same sign
+     * (so glow layers drawn separately at the same coordinates match the drawing).
      */
     void rune(double x, double y, double height, int glyph, int core, int halo) {
         double s = height / 6.0;
@@ -682,7 +682,7 @@ public final class Paint {
         double[][] segs = RUNES[Math.floorMod(glyph * 7 + mix, RUNES.length)];
         double wid = Math.max(1.0 / k, s * 0.36);
         boolean was = glowing;
-        // светится только яркая руна; тёмная — это гравировка
+        // only a bright rune glows; a dark one is an engraving
         int luma = (((core >> 16) & 255) * 299 + ((core >> 8) & 255) * 587 + (core & 255) * 114) / 1000;
         glowing = luma >= 100;
         if (halo != 0) {
@@ -696,8 +696,8 @@ public final class Paint {
         glowing = was;
     }
 
-    // ------------------------------------------------------------------- иней и лёд
-    /** Сосулька из точки (x, y) вниз длиной len, шириной у основания wd. */
+    // ------------------------------------------------------------------- frost and ice
+    /** An icicle from point (x, y) down, length len, width wd at the base. */
     void icicle(double x, double y, double len, double wd) {
         for (int j = 0; j < (int) (len * k); j++) {
             double t = j / (len * k);
@@ -713,7 +713,7 @@ public final class Paint {
         }
     }
 
-    /** Снежная шапка/иней вдоль горизонтального края: неровный белый слой сверху. */
+    /** A snow cap/frost along a horizontal edge: an uneven white layer on top. */
     void frostLine(double x0, double x1, double y, double depth, long seed) {
         Random r = new Random(seed);
         for (int i = (int) Math.round(x0 * k); i < (int) Math.round(x1 * k); i++) {
@@ -733,7 +733,7 @@ public final class Paint {
         over(cx, cy + 1, argb(130, c));
     }
 
-    /** Мягкое свечение вокруг прямоугольника (накладывается поверх). */
+    /** A soft glow around a rectangle (laid on top). */
     void glowRect(double x0, double y0, double x1, double y1, double spread, int c, int alpha) {
         int ix0 = (int) Math.floor((x0 - spread) * k), iy0 = (int) Math.floor((y0 - spread) * k);
         int ix1 = (int) Math.ceil((x1 + spread) * k), iy1 = (int) Math.ceil((y1 + spread) * k);
@@ -752,8 +752,8 @@ public final class Paint {
         glowing = was;
     }
 
-    // --------------------------------------------------------------------- ввод-вывод
-    /** Копия прямоугольной области (в юнитах). */
+    // --------------------------------------------------------------------- input/output
+    /** A copy of a rectangular area (in units). */
     Paint crop(double ux, double uy, double uw, double uh) {
         Paint p = new Paint(uw, uh, k);
         int ox = (int) Math.round(ux * k), oy = (int) Math.round(uy * k);
@@ -766,14 +766,14 @@ public final class Paint {
                 }
             }
         }
-        // живые детали остаются у картины: кадры вырезки — окна из её кадров
+        // the living details stay with the picture: the crop's frames are windows of its frames
         p.parent = parent != null ? parent : this;
         p.offX = (parent != null ? offX : 0) + ox;
         p.offY = (parent != null ? offY : 0) + oy;
         return p;
     }
 
-    /** Вставка другого холста в позицию (ux, uy). */
+    /** Pastes another canvas at position (ux, uy). */
     void paste(Paint src, double ux, double uy) {
         int ox = (int) Math.round(ux * k), oy = (int) Math.round(uy * k);
         boolean was = glowing;
@@ -802,13 +802,13 @@ public final class Paint {
         return p;
     }
 
-    /** Кадров в анимации манометров: шаг стрелки мал, с интерполяцией движение плавное. */
+    /** Frames in the gauge animation: the needle step is small, with interpolation the motion is smooth. */
     static final int GAUGE_FRAMES = 32;
 
     /**
-     * Темп манометров по устройству (префикс текстуры): {тиков на кадр, размах стрелки в градусах}. Насыщатель-кузня
-     * «дышит» часто и широко, архивный шкаф — медленно, монитор рецептов — в среднем темпе, интерфейс — бойко и с большим
-     * размахом (через него идёт весь поток).
+     * Gauge tempo by device (texture prefix): {ticks per frame, needle swing in degrees}. The forge saturator
+     * "breathes" often and widely, the archive cabinet slowly, the recipe monitor at a medium tempo, the interface briskly and with a big
+     * swing (the whole flow passes through it).
      */
     static int[] gaugeTempo(String name) {
         if (name.startsWith("sat_")) {
@@ -829,7 +829,7 @@ public final class Paint {
         return new int[]{3, 12};
     }
 
-    /** Текстура из атласа блоков (блоки и предметы): только для неё пишутся анимация манометров и слой свечения. */
+    /** A texture from the block atlas (blocks and items): only for these the gauge animation and the glow layer are written. */
     static boolean inBlockAtlas(File f) {
         String p = f.getPath().replace('\\', '/');
         return p.contains("textures/block/") || p.contains("textures/item/");
@@ -859,8 +859,8 @@ public final class Paint {
                 }
             }
             ImageIO.write(img, "png", f);
-            // размер кадра — явно: у неквадратных текстур игра иначе режет кадры квадратами (мигание, сплюснутые стрелки);
-            // раздел gauge — метка «анимацию написал Paint»: её можно стереть, когда живых деталей не станет
+            // the frame size is explicit: otherwise the game cuts frames of non-square textures into squares (flicker, squashed needles);
+            // the gauge section marks "the animation was written by Paint": it can be erased once there are no living details left
             Files.writeString(meta.toPath(), "{\n  \"animation\": {\n    \"frametime\": " + tempo[0] + ",\n    \"width\": " + w
                     + ",\n    \"height\": " + h + ",\n    \"interpolate\": " + root.interpolate + "\n  },\n  \"gauge\": {}\n}\n",
                     StandardCharsets.UTF_8);
@@ -881,7 +881,7 @@ public final class Paint {
         }
     }
 
-    /** Слой свечения: светящиеся пиксели в своём цвете, остальное прозрачно. Нет свечения — файла нет. */
+    /** The glow layer: glowing pixels in their own colour, the rest transparent. No glow means no file. */
     private void saveGlow(File g) throws Exception {
         boolean any = false;
         BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);

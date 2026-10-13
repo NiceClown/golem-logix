@@ -12,8 +12,8 @@ import snownee.jade.api.ITooltip;
 import snownee.jade.api.config.IPluginConfig;
 
 /**
- * Строка в подсказке над муфтой. Сеть считается на клиенте по видимым блокам (отдельный запрос к серверу не нужен),
- * результат на секунду запоминается, чтобы не обходить сеть каждый кадр.
+ * A line in the tooltip over a bushing. The network is computed on the client from the visible blocks (no separate request to the server),
+ * and the result is remembered for a second so the network is not walked every frame.
  */
 public enum BushingProvider implements IBlockComponentProvider {
     INSTANCE;
@@ -28,7 +28,7 @@ public enum BushingProvider implements IBlockComponentProvider {
         BlockPos pos = accessor.getPosition();
         long now = accessor.getLevel().getGameTime();
         if (!pos.equals(cachedPos) || now - cachedTime > 20 || now < cachedTime) {
-            // scan, а не get: общий кэш сетей нельзя засорять клиентскими объектами в одиночной игре
+            // scan, not get: the shared network cache must not be littered with client objects in single player
             GolemNetwork net = GolemNetwork.scan(accessor.getLevel(), pos);
             cachedText = net.hasCore()
                     ? Component.translatable("jade.golem_logix.bushing", net.loadAt(pos), net.lineCapacity(), net.channelsUsed(), net.channelCapacity())

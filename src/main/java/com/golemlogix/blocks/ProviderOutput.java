@@ -5,8 +5,8 @@ import net.minecraft.util.StringRepresentable;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Куда Поставщик Шаблонов подаёт ингредиенты: во все стороны (по умолчанию, как раньше) или в одну. Стрелки на гранях
- * блока показывают выбранную сторону, «солнце» — подачу во все стороны.
+ * Where the Pattern Provider feeds ingredients: to all sides (the default, as before) or to one. The arrows on the block
+ * faces show the selected side, the "sun" shows feeding to all sides.
  */
 public enum ProviderOutput implements StringRepresentable {
     ALL("all", null), DOWN("down", Direction.DOWN), UP("up", Direction.UP), NORTH("north", Direction.NORTH),
@@ -21,7 +21,7 @@ public enum ProviderOutput implements StringRepresentable {
         this.direction = direction;
     }
 
-    /** Сторона подачи; null — во все стороны. */
+    /** Feeding side; null means all sides. */
     @Nullable
     public Direction direction() {
         return direction;
@@ -47,7 +47,7 @@ public enum ProviderOutput implements StringRepresentable {
         return values()[Math.floorMod(id, values().length)];
     }
 
-    /** Ключ перевода для подсказок. */
+    /** Translation key for tooltips. */
     public String key() {
         return "gui.golem_logix.provider.output." + name;
     }

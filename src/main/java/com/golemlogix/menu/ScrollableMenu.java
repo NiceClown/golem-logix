@@ -6,16 +6,16 @@ import net.minecraft.world.item.ItemStack;
 import java.util.Locale;
 
 /**
- * Меню с прокручиваемой сеткой ячеек и поиском (картотека, концентратор): клиент присылает первую видимую строку и
- * строку поиска (пакет MenuScrollPayload), сервер сдвигает и фильтрует окно ячеек, а обычная синхронизация меню
- * присылает новые предметы.
+ * A menu with a scrolling grid of slots and search (catalog, concentrator): the client sends the first visible row and
+ * the search line (MenuScrollPayload packet), the server shifts and filters the slot window, and the usual menu sync
+ * sends the new items.
  */
 public interface ScrollableMenu {
     void view(int row, String filter);
 
     /**
-     * Подходит ли предмет под поиск: по названию (на языке сервера — в одиночной игре это язык игрока) и по id предмета;
-     * «@мод» — по моду.
+     * Whether an item matches the search: by name (in the server language, which in single player is the player's language) and by item id;
+     * "@mod" matches by mod.
      */
     static boolean matches(ItemStack stack, String filter) {
         if (filter.isEmpty()) {

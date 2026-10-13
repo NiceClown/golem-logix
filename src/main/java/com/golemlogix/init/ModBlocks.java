@@ -23,7 +23,7 @@ public class ModBlocks {
             "tooltip.golem_logix.mana_saturator",
             () -> new ManaSaturatorBlock(BlockBehaviour.Properties.of()));
 
-    /** Часть собранного Насыщателя: предмета у неё нет, появляется только при сборке машины. */
+    /** Part of an assembled Saturator: it has no item and appears only when the machine is assembled. */
     public static final DeferredBlock<SaturatorPartBlock> SATURATOR_PART = BLOCKS.register("saturator_part",
             () -> new SaturatorPartBlock(BlockBehaviour.Properties.of()));
 
@@ -96,25 +96,25 @@ public class ModBlocks {
             "tooltip.golem_logix.cooling_coprocessor",
             () -> new CoolingCoprocessorBlock(BlockBehaviour.Properties.of()));
 
-    /** Крио-Мейнфрейм: шкаф на много калькуляторов между двумя атлантами. */
+    /** Cryo-Mainframe: a cabinet for many calculators between two atlants. */
     public static final DeferredBlock<CryoMainframeBlock> CRYO_MAINFRAME = registerBlock("cryo_mainframe",
             "tooltip.golem_logix.cryo_mainframe",
             () -> new CryoMainframeBlock(BlockBehaviour.Properties.of()));
 
-    /** Часть собранного мейнфрейма (на месте стекла и корпусов): предмета нет. */
+    /** Part of an assembled mainframe (in place of glass and casings): no item. */
     public static final DeferredBlock<MainframePartBlock> MAINFRAME_PART = BLOCKS.register("mainframe_part",
             () -> new MainframePartBlock(BlockBehaviour.Properties.of()));
 
-    /** Картотека перфокарт: шкаф на сотни перфокарт с верстачными рецептами между двумя медными големами. */
+    /** Punch Card Catalog: a cabinet for hundreds of punch cards with crafting-table recipes between two copper golems. */
     public static final DeferredBlock<CardCatalogBlock> CARD_CATALOG = registerBlock("punch_card_catalog",
             "tooltip.golem_logix.punch_card_catalog",
             () -> new CardCatalogBlock(BlockBehaviour.Properties.of()));
 
-    /** Часть собранной картотеки (на месте полок, меди и статуй): предмета нет. */
+    /** Part of an assembled catalog (in place of shelves, copper and statues): no item. */
     public static final DeferredBlock<CatalogPartBlock> CATALOG_PART = BLOCKS.register("catalog_part",
             () -> new CatalogPartBlock(BlockBehaviour.Properties.of()));
 
-    /** Крио-концентратор схем: все перфокарты поставщиков сети в одном окне, по категориям машин. */
+    /** Cryo Schematic Concentrator: all punch cards of the network's providers in one window, by machine category. */
     public static final DeferredBlock<SchematicConcentratorBlock> SCHEMATIC_CONCENTRATOR = registerBlock("schematic_concentrator",
             "tooltip.golem_logix.schematic_concentrator",
             () -> new SchematicConcentratorBlock(BlockBehaviour.Properties.of()));

@@ -28,9 +28,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Выполняющаяся задача автокрафта. Живёт внутри Крио-Калькулятора:
- * хранит собственный инвентарь (зарезервированные сетевые предметы и промежуточные продукты),
- * исполняет шаги по мере готовности ингредиентов.
+ * A running autocraft job. It lives inside a Cryo-Calculator:
+ * keeps its own inventory (reserved network items and intermediate products)
+ * and runs steps as ingredients become ready.
  */
 public class CraftingJob {
     public static final class StepState {
@@ -43,7 +43,7 @@ public class CraftingJob {
         }
     }
 
-    /** Порция, выгруженная Поставщиком в машину: чего из неё ещё ждём (для режима ожидания результата). */
+    /** A portion unloaded into a machine by a Provider: what we still expect from it (for the wait-for-result mode). */
     public static final class InFlight {
         public final BlockPos provider;
         public final Map<ItemKey, Long> left = new LinkedHashMap<>();
@@ -72,13 +72,13 @@ public class CraftingJob {
     private long totalExecutions;
     private long doneExecutions;
     private Status status = Status.RUNNING;
-    /** Кто заказал (получит уведомление о готовности); null — заказ от машины. */
+    /** Who ordered it (gets the "ready" notification); null for an order from a machine. */
     @Nullable
     private UUID requester;
-    /** Шина экспорта с Модулем Автокрафта, заказавшая эту задачу (чтобы не заказывать повторно). */
+    /** The export bus with an Autocraft Module that ordered this job (so it does not order again). */
     @Nullable
     private BlockPos requesterBus;
-    /** Что делается прямо сейчас — для мини-модели над калькулятором. */
+    /** What is being made right now, for the mini model above the calculator. */
     @Nullable
     private ItemKey current;
 
@@ -100,7 +100,7 @@ public class CraftingJob {
         return this;
     }
 
-    /** Главный заказанный предмет. */
+    /** The main ordered item. */
     public ItemKey target() {
         return targets.keySet().iterator().next();
     }
@@ -123,7 +123,7 @@ public class CraftingJob {
         return requesterBus;
     }
 
-    /** Что изготавливается сейчас (выход последнего выполненного шага), иначе главный заказ. */
+    /** What is being made now (the output of the last executed step), otherwise the main order. */
     public ItemKey current() {
         return current != null ? current : target();
     }
@@ -160,7 +160,7 @@ public class CraftingJob {
         return status == Status.DONE;
     }
 
-    /** Сколько единиц этого предмета задача ещё ждёт от машин. */
+    /** How many of this item the job is still waiting for from machines. */
     public long wants(ItemKey key) {
         return awaiting.getOrDefault(key, 0L);
     }
@@ -173,7 +173,7 @@ public class CraftingJob {
         return n;
     }
 
-    /** Есть ли выгруженные этим Поставщиком порции, результат которых ещё не вернулся. */
+    /** Whether there are portions unloaded by this Provider whose result has not come back yet. */
     public boolean hasInFlight(BlockPos provider) {
         for (InFlight f : inFlight) {
             if (f.provider.equals(provider)) {
@@ -185,7 +185,7 @@ public class CraftingJob {
 
     // ----------------------------------------------------------------- absorb
 
-    /** Забирает у входящего стака то, чего ждёт задача. Возвращает остаток. */
+    /** Takes from the incoming stack what the job is waiting for. Returns the rest. */
     public ItemStack absorb(ItemStack stack) {
         if (awaiting.isEmpty() || stack.isEmpty()) {
             return stack;
@@ -205,7 +205,7 @@ public class CraftingJob {
         return stack.copyWithCount(stack.getCount() - take);
     }
 
-    /** Полученный результат закрывает порции по очереди (первая выгруженная — первая получена). */
+    /** A received result closes portions in order (first unloaded, first received). */
     private void settleInFlight(ItemKey key, long amount) {
         Iterator<InFlight> it = inFlight.iterator();
         while (it.hasNext() && amount > 0) {
@@ -230,7 +230,7 @@ public class CraftingJob {
     // ------------------------------------------------------------------- tick
 
     /**
-     * Один цикл работы. workers — сколько выполнений шаблонов можно сделать за цикл.
+     * One work cycle. workers = how many pattern executions can be done per cycle.
      */
     public void tick(GolemNetwork net, int workers) {
         if (status == Status.DONE) {
@@ -270,7 +270,7 @@ public class CraftingJob {
                         blocked = Status.NO_PROVIDER;
                         break;
                     }
-                    // режим ожидания: пока результат прошлой порции не вернулся, новую не грузим
+                    // wait mode: until the result of the previous portion has come back, no new one is loaded
                     if (provider.isBlocking() && net.providerBusy(provider.getBlockPos())) {
                         blocked = Status.WAITING_MACHINE;
                         break;
@@ -291,7 +291,7 @@ public class CraftingJob {
                     provider.redstoneAllows(true);
                     net.consumeSource(GolemConfig.CRAFT_STEP_SOURCE.get());
                     consume(s.pattern);
-                    // то, что машина не приняла, возвращается в инвентарь задачи
+                    // what the machine did not accept goes back into the job's inventory
                     for (ItemStack back : pushed) {
                         add(inventory, back);
                     }
@@ -364,7 +364,7 @@ public class CraftingJob {
         }
     }
 
-    /** Возвращает всё содержимое задачи в сеть, остаток, не влезший в хранилище, — в виде стаков. */
+    /** Returns all job contents to the network; the rest that did not fit into storage comes back as stacks. */
     public List<ItemStack> refundAll(@Nullable GolemNetwork net) {
         List<ItemStack> overflow = new ArrayList<>();
         for (Map.Entry<ItemKey, Long> e : inventory.entrySet()) {
@@ -413,7 +413,7 @@ public class CraftingJob {
         }
     }
 
-    /** Результат рецепта верстака + оставшиеся предметы (вёдра и т.п.) или null, если рецепта нет. */
+    /** Crafting table recipe result + the remaining items (buckets and the like), or null if there is no recipe. */
     @Nullable
     public static List<ItemStack> craftResult(Level level, PatternData pattern) {
         List<ItemStack> grid = new ArrayList<>(pattern.inputs());
@@ -443,7 +443,7 @@ public class CraftingJob {
 
     public CompoundTag save(HolderLookup.Provider provider) {
         CompoundTag tag = new CompoundTag();
-        // старый формат (один предмет) сохраняем ради совместимости, список заказов — рядом
+        // the old format (one item) is kept for compatibility, the list of orders is saved next to it
         tag.put("Target", target().toStack(1).save(provider));
         tag.putLong("Amount", amount());
         tag.put("Targets", saveMap(targets, provider));

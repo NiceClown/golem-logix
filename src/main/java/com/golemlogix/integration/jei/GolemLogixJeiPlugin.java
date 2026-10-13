@@ -39,8 +39,8 @@ public class GolemLogixJeiPlugin implements IModPlugin {
     private static IJeiRuntime runtime;
 
     /**
-     * Секретные рецепты: видны в JEI, только когда игрок прошёл оба испытания. Создаются лениво: JEI создаёт плагин ещё при
-     * загрузке модов, когда предметы мода не зарегистрированы.
+     * Secret recipes: visible in JEI only when the player has passed both trials. They are created lazily: JEI creates the plugin while
+     * mods are still loading, when the mod's items are not registered yet.
      */
     @Nullable
     private static AnvilCrushRecipe witherRitual;
@@ -72,7 +72,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
     public void onRuntimeAvailable(IJeiRuntime jeiRuntime) {
         runtime = jeiRuntime;
         applySecrets();
-        // поиск терминалов мода <-> строка поиска JEI
+        // the mod's terminal search <-> the JEI search line
         com.golemlogix.client.ClientHooks.jeiSetSearch = text -> {
             if (runtime != null && !text.equals(runtime.getIngredientFilter().getFilterText())) {
                 runtime.getIngredientFilter().setFilterText(text);
@@ -86,7 +86,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         runtime = null;
     }
 
-    /** Спрятать или показать секретные рецепты по прогрессу игрока. */
+    /** Hide or show the secret recipes by the player's progress. */
     public static void applySecrets() {
         if (runtime == null) {
             return;
@@ -101,7 +101,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         }
     }
 
-    /** Строка поиска списка ингредиентов JEI (для стенда разработчика: «@golem_logix» — все предметы мода). */
+    /** The search line of the JEI ingredient list (for the developer rig: "@golem_logix" shows all of the mod's items). */
     public static boolean setFilter(String text) {
         if (runtime == null) {
             return false;
@@ -110,7 +110,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         return true;
     }
 
-    /** Для стенда: сколько рецептов категории сейчас видно (проверка секретных рецептов). */
+    /** For the rig: how many recipes of the category are visible now (a check of the secret recipes). */
     public static int visibleRecipes(boolean anvil) {
         if (runtime == null) {
             return -1;
@@ -120,10 +120,10 @@ public class GolemLogixJeiPlugin implements IModPlugin {
     }
 
     /**
-     * Для стенда разработчика: нажать «+» JEI у рецепта (id рецепта игры, или id предмета печи для обработки) в открытом окне.
-     * Возвращает «ok», тип ошибки JEI или причину, почему перенос невозможен.
+     * For the developer rig: press JEI "+" for a recipe (a game recipe id, or a furnace item id for processing) in the open window.
+     * Returns "ok", the JEI error type, or the reason the transfer is impossible.
      */
-    /** То же, что devTransfer, но как будто зажат Ctrl: недостающее заказывается автокрафтом (прекрафт). */
+    /** The same as devTransfer, but as if Ctrl were held: what is missing is ordered through autocrafting (precraft). */
     public static String devTransfer(ResourceLocation recipeId, boolean max, boolean ctrl) {
         RecipeTransfers.devCtrl = ctrl;
         try {
@@ -160,7 +160,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         return error == null ? "ok" : error.getType().name();
     }
 
-    /** Открыть окно рецептов JEI (получение или применение предмета); false, если JEI ещё не готов. */
+    /** Open the JEI recipe window (recipes or uses of an item); false if JEI is not ready yet. */
     public static boolean showRecipes(ItemStack stack, boolean uses) {
         if (runtime == null) {
             return false;
@@ -170,7 +170,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         return true;
     }
 
-    /** Предмет или жидкость в ячейке как «кликабельный» ингредиент JEI. */
+    /** An item or fluid in a slot as a "clickable" JEI ingredient. */
     private static Optional<? extends IClickableIngredient<?>> clickable(IClickableIngredientFactory factory, Object ingredient, Rect2i area) {
         if (ingredient instanceof ItemStack stack && !stack.isEmpty()) {
             return factory.createBuilder(stack.copyWithCount(1)).buildWithArea(area);
@@ -183,7 +183,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
 
     @Override
     public void registerGuiHandlers(mezz.jei.api.registration.IGuiHandlerRegistration registration) {
-        // терминалы: кнопки сортировки справа от окна обходятся, а по ячейкам списка работают клавиши R и U
+        // terminals: the sort buttons to the right of the window are avoided, and the R and U keys work on the list slots
         registration.addGuiContainerHandler(TerminalScreen.class, new IGuiContainerHandler<TerminalScreen>() {
             @Override
             public List<Rect2i> getGuiExtraAreas(TerminalScreen screen) {
@@ -205,11 +205,11 @@ public class GolemLogixJeiPlugin implements IModPlugin {
                 return hit == null ? Optional.empty() : clickable(factory, hit[0], (Rect2i) hit[1]);
             }
         });
-        // ингредиенты из JEI — в призрачные ячейки (фильтры, настройка интерфейса, сетка кодировщика)
+        // ingredients from JEI into ghost slots (filters, interface settings, encoder grid)
         registration.addGhostIngredientHandler(com.golemlogix.client.BusScreen.class, new GhostTargets<>());
         registration.addGhostIngredientHandler(com.golemlogix.client.InterfaceScreen.class, new GhostTargets<>());
         registration.addGhostIngredientHandler(com.golemlogix.client.PatternEncoderScreen.class, new GhostTargets<>());
-        // колонка апгрейдов справа и кнопки настроек слева от окон машин
+        // the upgrade column on the right and the settings buttons on the left of machine windows
         registration.addGenericGuiContainerHandler(GolemScreen.class, new IGuiContainerHandler<GolemScreen<?>>() {
             @Override
             public List<Rect2i> getGuiExtraAreas(GolemScreen<?> screen) {
@@ -242,7 +242,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
 
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
-        // 1. Ритуал наковальни (рецепт Визера — секретный, прячется до раскрытия тайны)
+        // 1. Anvil ritual (the Wither recipe is secret and hidden until the secret is revealed)
         List<AnvilCrushRecipe> anvilRecipes = List.of(
                 new AnvilCrushRecipe(
                         new ItemStack(Blocks.IRON_BLOCK),
@@ -266,7 +266,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         );
         registration.addRecipes(AnvilCrushCategory.TYPE, anvilRecipes);
 
-        // 2. Насыщатель Маны
+        // 2. Mana Saturator
         List<ManaSaturatorRecipe> saturatorRecipes = List.of(
                 new ManaSaturatorRecipe(
                         new ItemStack(Blocks.IRON_BLOCK),

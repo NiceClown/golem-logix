@@ -13,8 +13,8 @@ import org.lwjgl.glfw.GLFW;
 import java.util.List;
 
 /**
- * Окно Крио-концентратора схем: список поставщиков сети по категориям (заголовок — значок и название машины, строки — значок
- * поставщика и девять его ячеек), полоса прокрутки и поиск по результатам перфокарт.
+ * Cryo Schematic Concentrator window: the network's providers by category (the header is the machine's icon and name, the rows are the
+ * provider's icon and its nine slots), a scroll bar and search by punch card results.
  */
 public class ConcentratorScreen extends GolemScreen<ConcentratorMenu> {
     private EditBox search;
@@ -94,7 +94,7 @@ public class ConcentratorScreen extends GolemScreen<ConcentratorMenu> {
             ConcentratorMenu.RowInfo info = rows.get(idx);
             int y = gy + r * 18;
             if (info.header()) {
-                // заголовок категории: латунная плашка во всю строку, значок машины и её название
+                // category header: a brass plate across the row, the machine's icon and its name
                 int x0 = leftPos + ConcentratorMenu.ICON_X - 2;
                 g.fill(x0, y + 1, gx + 9 * 18 - 1, y + 17, GolemGui.BRASS_DARK);
                 g.fill(x0, y + 1, gx + 9 * 18 - 1, y + 2, GolemGui.BRASS);

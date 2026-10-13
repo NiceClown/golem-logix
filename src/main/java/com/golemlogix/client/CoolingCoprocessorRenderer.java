@@ -16,13 +16,13 @@ import net.minecraft.util.Mth;
 import net.neoforged.neoforge.client.model.data.ModelData;
 
 /**
- * Рёбра Сопроцессора Охлаждения — «маховик»: пока соседний калькулятор работает, пять рёбер радиатора ритмично сжимаются к
- * середине и расходятся; разгон и выбег плавные (ход и размах нарастают и гаснут вместе).
+ * Cooling Co-Processor fins as a "flywheel": while the neighbouring calculator works, the five radiator fins rhythmically squeeze
+ * towards the middle and spread out; spin-up and run-down are smooth (stroke and amplitude grow and fade together).
  */
 public class CoolingCoprocessorRenderer implements BlockEntityRenderer<CoolingCoprocessorBlockEntity> {
     public static final ModelResourceLocation FIN = ModelResourceLocation.standalone(
             ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/cooling_coprocessor_fin"));
-    /** Покой рёбер (нижний край, пиксели) и центр, к которому они сжимаются. */
+    /** Rest position of the fins (bottom edge, pixels) and the centre they squeeze towards. */
     private static final float[] REST = {3.5f, 5.5f, 7.5f, 9.5f, 11.5f};
     private static final float CENTER = 7.5f;
 
@@ -33,13 +33,13 @@ public class CoolingCoprocessorRenderer implements BlockEntityRenderer<CoolingCo
     public void render(CoolingCoprocessorBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
         float speed = Mth.lerp(partialTick, be.speedPrev, be.speed);
         float phase = Mth.lerp(partialTick, be.phasePrev, be.phase);
-        // сжатие 0..1: (1 - cos)/2 — мягкий ход без рывков в крайних точках
+        // squeeze 0..1: (1 - cos)/2 gives a soft stroke without jerks at the extremes
         float squeeze = (1f - Mth.cos(phase)) * 0.5f * speed;
         BakedModel fin = Minecraft.getInstance().getModelManager().getModel(FIN);
         var renderer = Minecraft.getInstance().getBlockRenderer().getModelRenderer();
         for (int i = 0; i < REST.length; i++) {
             float y = REST[i] + (CENTER - REST[i]) * 0.7f * squeeze;
-            // крайние рёбра чуть отстают — волна по радиатору
+            // the outer fins lag a little: a wave across the radiator
             float lag = (Mth.sin(phase - i * 0.35f) * 0.35f) * speed;
             pose.pushPose();
             pose.translate(0, (y + lag) / 16f, 0);

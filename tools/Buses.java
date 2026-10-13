@@ -4,15 +4,15 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Три шины мода: узкое устройство, в центре блока. Спереди — рабочий узел подачи или выгрузки (по назначению), за ним технический
- * блок (латунный короб 8x8x6 с рунной плитой сверху), со всех остальных сторон — разъёмы под трубы. Когда рядом есть узел сети
- * (труба, другая шина, терминал), разъём вытягивается в мини-трубку до самого края блока.
+ * The mod's three buses: a narrow device in the middle of the block. At the front the working feed or unload node (by purpose), behind it the technical
+ * block (an 8x8x6 brass box with a rune plate on top), on all other sides sockets for pipes. When a network node is next to it
+ * (a pipe, another bus, a terminal), the socket stretches into a mini tube to the very edge of the block.
  * <ul>
- * <li>Вакуумная (импорт): раструб с турбиной, бирюзовая звезда на крыше;</li>
- * <li>Инжекторная (экспорт): длинный ствол-сопло, фиолетовая звезда;</li>
- * <li>Перископическая: линза-монокль, ледяная звезда.</li>
+ * <li>Vacuum (import): a funnel with a turbine, a teal star on the roof;</li>
+ * <li>Injector (export): a long nozzle barrel, a purple star;</li>
+ * <li>Periscope: a monocle lens, an ice star.</li>
  * </ul>
- * Модели смотрят на NORTH (-Z); поворот делает блокстейт (мультипарт по facing и по флагам соединений north..down).
+ * The models face NORTH (-Z); the block state rotates them (a multipart by facing and by the connection flags north..down).
  */
 final class Buses {
     static final int K = Forge2.K;
@@ -31,8 +31,8 @@ final class Buses {
         return Paint.argb(a, c);
     }
 
-    // ------------------------------------------------------------------------------------------- текстуры
-    /** Латунная плита-плитка 16x16 юнитов (общая обшивка). */
+    // ------------------------------------------------------------------------------------------- textures
+    /** A brass plate tile of 16x16 units (the shared plating). */
     static Paint brassPlate() {
         Paint p = new Paint(16, 16, K);
         p.slab(0, 0, 16, 16, BRASS, 3.0, 1);
@@ -52,7 +52,7 @@ final class Buses {
         return p;
     }
 
-    /** Восьмиконечная звезда (два квадрата под 45 градусов) с объёмом: светлее сверху-слева. */
+    /** An eight-pointed star (two squares at 45 degrees) with volume: lighter at the top left. */
     static void star(Paint p, double cx, double cy, double r, int[] ramp) {
         double[] xs = new double[16], ys = new double[16];
         for (int i = 0; i < 16; i++) {
@@ -74,7 +74,7 @@ final class Buses {
         p.sphere(cx, cy, r * 0.22, ramp, 0.8, 1.0);
     }
 
-    /** Крыша технического блока 6x6: тёмная рунная панель в латунной раме и латунная площадка со звездой по центру. */
+    /** The 6x6 roof of the technical block: a dark rune panel in a brass frame and a brass pad with a star in the middle. */
     static Paint top(int variant) {
         int[] ac = VIOLET, star = variant == 0 ? CYAN : variant == 1 ? VIOLET : FROST;
         Paint p = new Paint(6, 6, 8);
@@ -97,18 +97,18 @@ final class Buses {
         return p;
     }
 
-    /** Боковая панель технического блока 6x6: латунная рама, тёмное железо, гнездо под разъём по центру. */
+    /** A 6x6 side panel of the technical block: a brass frame, dark iron, a socket nest in the middle. */
     static Paint side(int variant) {
         Paint p = new Paint(6, 6, 8);
         p.slab(0, 0, 6, 6, BRASS, 3.0, 1);
         p.slab(0.5, 0.5, 5.5, 5.5, IRON, 1.5, 1);
         p.grain(0.5, 0.5, 5.5, 5.5, 0.07, 311 + variant);
         p.frame(0.85, 0.85, 5.15, 5.15, 0.1, at(IRON, 2.9));
-        // гнездо: разъём (4x4) закрывает середину, вокруг виден латунный ободок
+        // nest: the socket (4x4) covers the middle, a brass rim shows around it
         p.disc(3, 3, 2.55, at(BRASS, 1.2));
         p.ring(3, 3, 2.25, 2.55, at(BRASS, 4.6));
         p.disc(3, 3, 2.0, at(IRON, 0.3));
-        // индикаторы по углам
+        // indicators in the corners
         int[] led = variant == 0 ? CYAN : variant == 1 ? VIOLET : FROST;
         p.disc(1.05, 1.05, 0.22, at(led, 4.8));
         p.disc(4.95, 4.95, 0.22, at(led, 3.4));
@@ -118,7 +118,7 @@ final class Buses {
         return p;
     }
 
-    /** Торцевая заглушка-разъём (4x4): латунное кольцо вокруг тёмного отверстия. */
+    /** An end cap socket (4x4): a brass ring around a dark hole. */
     static Paint socket() {
         Paint p = new Paint(4, 4, 12);
         p.slab(0, 0, 4, 4, BRASS, 2.8, 1);
@@ -133,7 +133,7 @@ final class Buses {
         return p;
     }
 
-    /** Раструб вакуумной шины (12x12): тёмная воронка с лопастями турбины и бирюзовой ступицей. */
+    /** The vacuum bus funnel (12x12): a dark funnel with turbine blades and a teal hub. */
     static Paint funnel() {
         Paint p = new Paint(12, 12, 8);
         p.slab(0, 0, 12, 12, BRASS, 2.8, 1);
@@ -160,7 +160,7 @@ final class Buses {
         return p;
     }
 
-    /** Торец сопла инжектора (6x6): тёмное отверстие с фиолетовым отблеском. */
+    /** The end of the injector nozzle (6x6): a dark hole with a purple sheen. */
     static Paint nozzle() {
         Paint p = new Paint(6, 6, 8);
         p.slab(0, 0, 6, 6, BRASS, 2.6, 1);
@@ -174,7 +174,7 @@ final class Buses {
         return p;
     }
 
-    /** Монокль перископа (10x10): оправа с кольцом рун и прозрачная линза. */
+    /** The periscope monocle (10x10): a mount with a ring of runes and a clear lens. */
     static Paint lens() {
         Paint p = new Paint(10, 10, 6.4);
         p.slab(0, 0, 10, 10, BRASS, 2.4, 1);
@@ -198,7 +198,7 @@ final class Buses {
         return p;
     }
 
-    /** Полосатая сталь ствола. */
+    /** Striped barrel steel. */
     static Paint steel() {
         Paint p = new Paint(4, 16, K);
         p.slab(0, 0, 4, 16, IRON, 4.0, 1);
@@ -226,7 +226,7 @@ final class Buses {
         }
     }
 
-    // ---------------------------------------------------------------------------------------------- модели
+    // ---------------------------------------------------------------------------------------------- models
     static final double[] FULL_UV = {0, 0, 16, 16};
 
     static double[] sub(double[] uv, double fx, double fy) {
@@ -235,8 +235,8 @@ final class Buses {
     }
 
     /**
-     * Восьмиугольная призма вдоль Z: «плюс» из двух брусков и четыре диагональные пластины на углах. east/west — боковые панели,
-     * up/down — верх и низ, торцы — по необходимости (текстура целиком на описанный квадрат).
+     * An octagonal prism along Z: a "plus" of two boxes and four diagonal plates at the corners. east/west are side panels,
+     * up/down the top and bottom, the ends as needed (the whole texture on the bounding square).
      */
     static void oct(List<Models.El> l, double x0, double y0, double z0, double x1, double y1, double z1, double c,
                     String side, String topBottom, String diag, String endNorth, String endSouth) {
@@ -266,23 +266,23 @@ final class Buses {
             l.add(s2);
         }
         if (diag != null) {
-            // угловые пластины толщиной во весь срезанный угол (c/√2): закрывают и угловые треугольники торцов, где «плюс» из
-            // двух брусков оставлял сквозные дырочки
+            // corner plates as thick as the whole cut corner (c/√2): they also close the corner triangles of the ends, where the "plus" of
+            // two boxes left see-through holes
             Models.octCorners(l, x0, y0, x1, y1, z0, z1, c, c / Math.sqrt(2), "#" + diag, null,
                     endNorth != null ? "#" + diag : null, endSouth != null ? "#" + diag : null, 0);
         }
     }
 
-    // Шина занимает переднюю половину блока: рабочий узел Z 0..3.2, технический блок 6.4x6.4 на Z 3.2..8 (как BusLinks в Java).
+    // The bus takes the front half of the block: the working node Z 0..3.2, the 6.4x6.4 technical block at Z 3.2..8 (as BusLinks in Java).
     static final double LO = 4.8, HI = 11.2, Z0 = 3.2, Z1 = 8, MID = 5.6;
-    /** На сколько середина корпуса (и боковые трубки) сдвинута к лицу шины от середины блока. */
+    /** How far the middle of the body (and the side tubes) is shifted from the middle of the block towards the bus face. */
     static final double SHIFT = 8 - MID;
 
-    /** Общее тело: технический блок 6.4x6.4x4.8, рунная плита-крыша со звездой, кованые пояса. */
+    /** The shared body: a 6.4x6.4x4.8 technical block, a rune plate roof with a star, forged bands. */
     static List<Models.El> common() {
         List<Models.El> l = new ArrayList<>();
         oct(l, LO, LO, Z0, HI, HI, Z1, 0.8, "side", "plate", "plate", "plate", "plate");
-        // латунные пояса по краям тела (рельеф, как кованые обручи)
+        // brass bands along the body edges (relief, like forged hoops)
         Pipes.ring(l, LO - 0.3, HI + 0.3, Z0 + 0.2, Z0 + 0.8, 0.9, "plate", 0.6);
         Pipes.ring(l, LO - 0.3, HI + 0.3, Z1 - 0.8, Z1 - 0.2, 0.9, "plate", 0.6);
         Models.El pad = Models.e(5.6, HI, Z0 + 1.0, 10.4, HI + 0.4, Z1 - 1.0).only("#plate", "east", "west", "north", "south");
@@ -291,14 +291,14 @@ final class Buses {
         return l;
     }
 
-    /** Короткий разъём (3.2x3.2 юнита) у грани тела: toward-north, стоит у z = zFace и торчит на 1.2 юнита в сторону севера. */
+    /** A short socket (3.2x3.2 units) at a face of the body: toward-north, stands at z = zFace and sticks out 1.2 units to the north. */
     static Models.El stubBox(double zFace) {
         Models.El s = Models.e(6.4, 6.4, zFace - 1.2, 9.6, 9.6, zFace).only("#plate", "east", "west", "up", "down", "south");
         s.faces.put("north", Models.El.face("#socket", FULL_UV));
         return s;
     }
 
-    /** Разъёмы на четырёх сторонах (кроме лицевой и звезды) для модели предмета: боковые — посередине корпуса. */
+    /** Sockets on four sides (except the face and the star) for the item model: the side ones in the middle of the body. */
     static List<Models.El> itemStubs() {
         List<Models.El> l = new ArrayList<>();
         Models.El east = Models.e(HI, 6.4, MID - 1.6, HI + 1.2, 9.6, MID + 1.6).only("#plate", "north", "south", "up", "down", "west");
@@ -321,7 +321,7 @@ final class Buses {
                 {"sd", "pipe_glass_d"}, {"band", "pipe_band"}};
     }
 
-    /** Сдвиг элементов (вместе с центром поворота). */
+    /** Shifting the elements (together with the rotation centre). */
     static List<Models.El> shifted(List<Models.El> l, double dx, double dy, double dz) {
         for (Models.El e : l) {
             e.f[0] += dx;
@@ -337,7 +337,7 @@ final class Buses {
         return l;
     }
 
-    /** Мини-трубка «в сторону севера» от грани тела (z = zb) до края блока: ободок у тела, стекло, ободок у края. */
+    /** A mini tube "to the north" from the body face (z = zb) to the block edge: a rim at the body, glass, a rim at the edge. */
     static List<Models.El> arm(double zb) {
         List<Models.El> arm = new ArrayList<>();
         Pipes.tube(arm, 6, 10, 0, zb, 0.7, "sv", "su", "sd");
@@ -346,7 +346,7 @@ final class Buses {
         return arm;
     }
 
-    /** Сдвиги боковых разъёмов в модели «в сторону севера»: к середине корпуса, куда бы шина ни смотрела. */
+    /** Shifts of the side sockets in the "to the north" model: towards the middle of the body, wherever the bus faces. */
     static final String[] SHIFTS = {"px", "nx", "py", "ny"};
 
     static double[] shiftOf(String s) {
@@ -358,9 +358,9 @@ final class Buses {
         };
     }
 
-    /** Общие мини-трубки и разъёмы (для каждого направления отдельная модель «в сторону севера»). */
+    /** Shared mini tubes and sockets (a separate "to the north" model for each direction). */
     static void sharedModels() throws Exception {
-        // боковые: у грани тела (z = LO от края блока), со сдвигом к середине корпуса; задние — по оси, от задней грани (z = 8)
+        // the side ones: at the body face (z = LO from the block edge), shifted to the middle of the body; the back ones on the axis, from the back face (z = 8)
         for (String s : SHIFTS) {
             double[] d = shiftOf(s);
             Models.model("bus_stub_cross_" + s, false, "bus_plate", pipeTex(),
@@ -381,11 +381,11 @@ final class Buses {
                 new String[]{"plate", "bus_plate"}, new String[]{"side", "bus_side_" + variant},
                 new String[]{"top", "bus_top_" + variant}, new String[]{"socket", "bus_socket"}));
         tex.addAll(List.of(extraTex));
-        // тело и рабочий узел без разъёмов: разъёмы и мини-трубки добавляет блокстейт
+        // the body and the working node without sockets: the block state adds the sockets and mini tubes
         Models.model(name + "_body", false, "bus_plate", tex.toArray(new String[0][]), els.toArray(new Models.El[0]));
         List<Models.El> item = new ArrayList<>(els);
         item.addAll(itemStubs());
-        // в инвентаре — по центру (сама шина в передней половине блока); модель блока уже записана
+        // in the inventory it is centred (the bus itself is in the front half of the block); the block model is already written
         shifted(item, 0, 0, 8 - (Z1 + 1.2) / 2);
         Models.model(name + "_item", false, "bus_plate", tex.toArray(new String[0][]), item.toArray(new Models.El[0]));
         Models.item(name, name + "_item");
@@ -407,7 +407,7 @@ final class Buses {
         };
     }
 
-    /** Куда смотрит «верх» модели (сторона со звездой) при данном facing. */
+    /** Where the model's "up" (the side with the star) points for the given facing. */
     static String localUp(String facing) {
         return switch (facing) {
             case "up" -> "south";
@@ -417,8 +417,8 @@ final class Buses {
     }
 
     /**
-     * Мультипарт: тело по facing, а по каждому направлению — разъём или мини-трубка (у задней грани и у боковых разные длины).
-     * Сторона со звездой (верх модели) без трубы разъёма не имеет: там рунная плита, а подключённая труба выходит из неё.
+     * Multipart: the body by facing, and for each direction a socket or a mini tube (the back face and the sides have different lengths).
+     * The side with the star (the model's top) has no socket without a pipe: there is the rune plate, and a connected pipe comes out of it.
      */
     static void blockstate(String name) throws Exception {
         List<String> parts = new ArrayList<>();
@@ -435,7 +435,7 @@ final class Buses {
                     parts.add("    {\"when\": {\"AND\": [{\"facing\": \"" + back + "\"}, {\"" + d[0] + "\": \"" + link + "\"}]}, \"apply\": {\"model\": \""
                             + Forge2.NS + "bus_" + kind + "_back\"" + d[1] + "}}");
                 }
-                // боковые: своя модель со сдвигом к лицу шины для каждой пары (сторона, куда смотрит шина)
+                // the side ones: their own model shifted towards the bus face for each pair (side, where the bus faces)
                 for (String[] f : ROT) {
                     if (f[0].equals(d[0]) || f[0].equals(back) || (!arm && localUp(f[0]).equals(d[0]))) {
                         continue;
@@ -460,7 +460,7 @@ final class Buses {
         };
     }
 
-    /** Поворот блокстейта: сначала x (90: y,z -> z,-y), потом y (90: x,z -> -z,x) — как у моделей с "x"/"y". */
+    /** Block state rotation: first x (90: y,z -> z,-y), then y (90: x,z -> -z,x), as for models with "x"/"y". */
     static int[] rotate(int[] v, int x, int y) {
         int[] r = v.clone();
         for (int i = 0; i < x / 90; i++) {
@@ -473,8 +473,8 @@ final class Buses {
     }
 
     /**
-     * Модель бокового разъёма и поворот для стороны d у шины, смотрящей в f: «север» модели должен уйти в d, а сдвиг модели
-     * (к середине корпуса) — в сторону f. Возвращает {суффикс модели, строку поворота}.
+     * The side socket model and the rotation for side d of a bus facing f: the model's "north" must go to d, and the model's shift
+     * (towards the middle of the body) towards f. Returns {model suffix, rotation string}.
      */
     static String[] crossRotation(String d, String f) {
         for (String s : SHIFTS) {
@@ -496,15 +496,15 @@ final class Buses {
             Files.deleteIfExists(Forge2.RES.resolve("models/block/" + old + ".json"));
         }
 
-        // Рабочие узлы — на Z 0..3.2, вся шина в передней половине блока.
-        // --- Вакуумная шина (импорт): плоский раструб с турбиной, сужающийся к телу
+        // The working nodes are at Z 0..3.2, the whole bus is in the front half of the block.
+        // --- Vacuum bus (import): a flat funnel with a turbine, narrowing towards the body
         List<Models.El> vac = new ArrayList<>();
         oct(vac, 2.5, 2.5, 0, 13.5, 13.5, 1.2, 2.4, "plate", "plate", "plate", "funnel", "plate");
         oct(vac, 3.6, 3.6, 1.2, 12.4, 12.4, 2.2, 1.9, "plate", "plate", "plate", null, "plate");
         oct(vac, 4.6, 4.6, 2.2, 11.4, 11.4, Z0, 1.4, "plate", "plate", "plate", null, null);
         bus("vacuum_import_bus", 0, vac, new String[][]{{"funnel", "bus_funnel"}});
 
-        // --- Инжекторная шина (экспорт): короткий ствол-сопло с кольцами
+        // --- Injector bus (export): a short nozzle barrel with rings
         List<Models.El> inj = new ArrayList<>();
         oct(inj, 5.2, 5.2, 0.4, 10.8, 10.8, Z0, 0.9, "steel", "steel", "steel", null, null);
         oct(inj, 4.6, 4.6, 1.0, 11.4, 11.4, 1.5, 1.2, "plate", "plate", "plate", "plate", "plate");
@@ -512,7 +512,7 @@ final class Buses {
         oct(inj, 5.2, 5.2, 0, 10.8, 10.8, 0.4, 0.9, "plate", "plate", "plate", "nozzle", "plate");
         bus("injector_export_bus", 1, inj, new String[][]{{"nozzle", "bus_nozzle"}, {"steel", "bus_steel"}});
 
-        // --- Перископическая шина: линза-монокль на коротком горле
+        // --- Periscope bus: a monocle lens on a short neck
         List<Models.El> per = new ArrayList<>();
         oct(per, 3, 3, 0, 13, 13, 1.4, 2.2, "plate", "plate", "plate", "lens", "plate");
         oct(per, 5, 5, 1.4, 11, 11, Z0, 1.2, "plate", "plate", "plate", null, null);

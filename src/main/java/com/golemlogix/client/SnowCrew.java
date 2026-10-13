@@ -10,14 +10,14 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.joml.Vector3f;
 
 /**
- * Бригада снеговиков-сборщиков на площадке 16x16 (крыша Крио-Калькулятора, полка Крио-Мейнфрейма). За работой каждый
- * в своём ритме нагибается за ледяной деталью, поднимает её над головой и подбрасывает в проекцию изделия, а потом радостно
- * подпрыгивает. В простое занимаются милыми глупостями: оглядываются, прыгают по кругу, машут, дремлют.
- * Бригадир с чёрной головой атланта появляется, только когда сопроцессоры на самом деле ускоряют работу, и подгоняет
- * остальных: машет рукой-палкой и кивает.
+ * A crew of snowman assemblers on a 16x16 platform (the Cryo-Calculator roof, a Cryo-Mainframe shelf). At work each one
+ * in its own rhythm bends down for an ice part, lifts it over its head and tosses it into the item projection, then happily
+ * hops. When idle they do cute silly things: look around, hop in circles, wave, doze.
+ * The foreman with a black atlant head appears only when the coprocessors really speed up the work, and urges
+ * the others on: waves its stick arm and nods.
  */
 public final class SnowCrew {
-    /** Рабочий: место на площадке (пиксели), масштаб модели (разный рост) и длина своего рабочего такта (тики). */
+    /** A worker: place on the platform (pixels), model scale (different heights) and the length of its own work beat (ticks). */
     private record Worker(float x, float z, float scale, float period) {
     }
 
@@ -26,7 +26,7 @@ public final class SnowCrew {
             new Worker(12.6f, 5.8f, 0.18f, 34f),
             new Worker(7.0f, 12.2f, 0.12f, 26f)};
     private static final BlockState PART = Blocks.PACKED_ICE.defaultBlockState();
-    /** Деталь в руках — доля «пикселя модели × 16»: 0.3 ≈ 5 пикселей модели. */
+    /** A part in the hands, as a fraction of "model pixel × 16": 0.3 ≈ 5 model pixels. */
     private static final float PART_SIZE = 0.3f;
     private static final Vector3f UP_LEFT = new Vector3f(3f, 27f, 5f), UP_RIGHT = new Vector3f(-3f, 27f, 5f);
     private static final Vector3f UP_CENTER = new Vector3f(0f, 27.5f, 5f);
@@ -41,8 +41,8 @@ public final class SnowCrew {
     }
 
     /**
-     * pose — в системе блока (0..1). floorY — высота площадки, work — насколько бригада «в работе» (0 — простой,
-     * 1 — работа), foreman — появление бригадира 0..1, proj — центр проекции изделия (куда летят детали).
+     * pose is in the block frame (0..1). floorY = platform height, work = how much the crew is "at work" (0 = idle,
+     * 1 = working), foreman = foreman appearance 0..1, proj = centre of the item projection (where the parts fly).
      */
     public static void render(PoseStack pose, MultiBufferSource buffers, int light, float time, long seed, float floorY, float work,
                               float foreman, Vector3f proj) {
@@ -94,7 +94,7 @@ public final class SnowCrew {
         Vector3f lh, rh, box = null;
         float bob = 0f, squash = 0f, pitch, boxSize = PART_SIZE;
         if (f < 0.15f) {
-            // нагнулся за деталью
+            // bent down for a part
             float k = f / 0.15f, dip = Mth.sin(k * Mth.PI);
             squash = 0.14f * dip;
             pitch = 25f;
@@ -105,7 +105,7 @@ public final class SnowCrew {
                 boxSize = PART_SIZE * (k - 0.5f) * 2f;
             }
         } else if (f < 0.45f) {
-            // поднимает над головой
+            // lifts it over its head
             float k = ease((f - 0.15f) / 0.3f);
             pitch = Mth.lerp(k, 10f, -30f);
             lh = lerp(SnowmanPuppet.HOLD_LEFT, UP_LEFT, k);
@@ -113,7 +113,7 @@ public final class SnowCrew {
             box = lerp(SnowmanPuppet.HOLD_CENTER, UP_CENTER, k);
             bob = 0.6f * k;
         } else if (f < 0.75f) {
-            // подбросил — деталь летит в проекцию, руки опускаются
+            // tossed it: the part flies into the projection, the arms go down
             float k = (f - 0.45f) / 0.3f;
             pitch = -35f;
             lh = lerp(UP_LEFT, SnowmanPuppet.REST_LEFT, ease(k));
@@ -122,7 +122,7 @@ public final class SnowCrew {
                 flyingPart(pose, buffers, light, pos, yaw, w.scale, proj, k, (blend - 0.25f) / 0.75f);
             }
         } else {
-            // доволен: подпрыгнул
+            // pleased: hopped
             float k = (f - 0.75f) / 0.25f;
             bob = 1.6f * Mth.sin(k * Mth.PI);
             pitch = -10f;
@@ -132,7 +132,7 @@ public final class SnowCrew {
         return new WorkData(new SnowmanPuppet.Pose(bob, squash, 0f, pitch, lh, rh), box, boxSize);
     }
 
-    /** Деталь в полёте от поднятых рук к проекции: дугой, уменьшаясь. */
+    /** A part in flight from the raised hands to the projection: in an arc, shrinking. */
     private static void flyingPart(PoseStack pose, MultiBufferSource buffers, int light, Vector3f pos, float yaw, float scale,
                                    Vector3f proj, float k, float blendScale) {
         float rad = yaw * Mth.DEG_TO_RAD;
@@ -156,32 +156,32 @@ public final class SnowCrew {
         long h = seed * 6364136223846793005L + i * 1442695040888963407L + window * 0x9E3779B97F4A7C15L;
         int activity = (int) Math.floorMod(h >>> 33, 4L);
         float local = t - window * 120f;
-        // в начале и конце «занятия» — плавный вход и выход
+        // a smooth start and end of each "activity"
         float fade = Mth.clamp(Math.min(local, 120f - local) / 15f, 0f, 1f);
         float yaw = toCenter;
         SnowmanPuppet.Pose p;
         switch (activity) {
             case 0 -> {
-                // оглядывается по сторонам
+                // looks around
                 yaw = toCenter + 60f * Mth.sin(t * 0.04f) * fade;
                 p = new SnowmanPuppet.Pose(0f, 0f, 35f * Mth.sin(t * 0.09f) * fade, -5f, SnowmanPuppet.REST_LEFT, SnowmanPuppet.REST_RIGHT);
             }
             case 1 -> {
-                // скачет по кругу на месте
+                // hops in a circle on the spot
                 yaw = toCenter + local * 3f * fade;
                 float hop = Math.abs(Mth.sin(t * 0.3f)) * fade;
                 p = new SnowmanPuppet.Pose(2.2f * hop, 0.12f * (1f - hop) * fade, 0f, -10f,
                         new Vector3f(9f, 18f + 6f * hop, 2f), new Vector3f(-9f, 18f + 6f * hop, 2f));
             }
             case 2 -> {
-                // отвернулся от центра и машет
+                // turned away from the centre and waves
                 yaw = toCenter + 180f * fade;
                 float wave = Mth.sin(t * 0.5f);
                 p = new SnowmanPuppet.Pose(0f, 0f, 0f, -15f * fade, SnowmanPuppet.REST_LEFT,
                         lerp(SnowmanPuppet.REST_RIGHT, new Vector3f(-9f + 2f * wave, 27f, 3f + 3f * wave), fade));
             }
             default -> {
-                // дремлет: голова клюёт, дышит
+                // dozes: the head droops, it breathes
                 float nod = 0.5f + 0.5f * Mth.sin(t * 0.05f);
                 p = new SnowmanPuppet.Pose(0f, 0.04f * Mth.sin(t * 0.08f) * fade, 0f, (20f + 12f * nod) * fade,
                         SnowmanPuppet.REST_LEFT, SnowmanPuppet.REST_RIGHT);
@@ -190,14 +190,14 @@ public final class SnowCrew {
         return new IdleData(p, yaw);
     }
 
-    /** Бригадир с головой атланта у переднего края: машет рукой, кивает, подпрыгивает в такт — подгоняет. */
+    /** The foreman with an atlant head at the front edge: waves, nods, hops to the beat, urging the crew on. */
     private static void foreman(PoseStack pose, MultiBufferSource buffers, int light, float time, float floorY, float appear) {
         float pop = easeOutBack(appear);
         float beat = time / 14f * Mth.TWO_PI;
         float pump = 0.5f + 0.5f * Mth.sin(beat);
         Vector3f right = lerp(new Vector3f(-8f, 17f, 7f), new Vector3f(-6f, 28f, 5f), pump);
         Vector3f left = new Vector3f(7.5f, 12f, 1.5f);
-        // раз в несколько тактов показывает обеими руками на проекцию: «туда, туда!»
+        // once every few beats it points at the projection with both hands: "there, there!"
         if (Mth.sin(time * 0.021f) > 0.85f) {
             left = new Vector3f(3f, 24f, 9f);
             right = new Vector3f(-3f, 24f, 9f);

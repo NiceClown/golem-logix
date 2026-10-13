@@ -23,7 +23,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 public class PatternProviderBlock extends Block implements GolemNode, EntityBlock {
-    /** Куда подавать ингредиенты: во все стороны или в одну (стрелки на гранях показывают выбор). */
+    /** Where to feed ingredients: to all sides or to one (the arrows on the faces show the choice). */
     public static final net.minecraft.world.level.block.state.properties.EnumProperty<ProviderOutput> OUTPUT =
             net.minecraft.world.level.block.state.properties.EnumProperty.create("output", ProviderOutput.class);
 
@@ -37,7 +37,7 @@ public class PatternProviderBlock extends Block implements GolemNode, EntityBloc
         builder.add(OUTPUT);
     }
 
-    /** Повороты и отражения структур поворачивают и сторону подачи. */
+    /** Rotating and mirroring structures also rotates the feeding side. */
     @Override
     protected BlockState rotate(BlockState state, net.minecraft.world.level.block.Rotation rotation) {
         var d = state.getValue(OUTPUT).direction();

@@ -10,7 +10,7 @@ import net.minecraft.server.level.ServerPlayer;
 import java.util.Optional;
 
 /**
- * Критерий достижения: игрок попытался открыть Портативный Хронометр в другом измерении, чем его ядро.
+ * Advancement criterion: the player tried to open a Portable Chronometer in a dimension other than its core's.
  */
 public class ChronometerDimensionTrigger extends SimpleCriterionTrigger<ChronometerDimensionTrigger.TriggerInstance> {
     @Override

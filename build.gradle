@@ -37,7 +37,7 @@ base {
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
 neoForge {
-    // собираем и проверяем на свежей 21.1.x: с ней работают актуальные Ars Nouveau и JEI (мод совместим и со старыми 21.1)
+    // build and test against a recent 21.1.x: current Ars Nouveau and JEI work with it (the mod also runs on older 21.1)
     version = '21.1.256'
 
     parchment {
@@ -51,12 +51,12 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', 'golem_logix'
         }
 
-        // стенд кадров для разработчика: клиент сам создаёт мир и снимает кадры по сценариям из run/devshots/queue
+        // developer screenshot rig: the client creates a world itself and takes shots from the scenarios in run/devshots/queue
         devShots {
             client()
             gameDirectory = file('run/devshots')
             systemProperty 'golemlogix.devshots', file('run/devshots/queue').getAbsolutePath()
-            // сетевой режим стенда: gradle -PdevshotsServer=localhost:25565 runDevShots (клиент заходит на выделенный сервер)
+            // network mode of the rig: gradle -PdevshotsServer=localhost:25565 runDevShots (the client joins a dedicated server)
             if (project.hasProperty('devshotsServer')) {
                 systemProperty 'golemlogix.devshots.server', project.property('devshotsServer').toString()
             }
@@ -91,18 +91,18 @@ neoForge {
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 dependencies {
-    // необязательные интеграции: компилируем против API, в игре они подхватываются, только если установлены
+    // optional integrations: compiled against their APIs, picked up in game only when installed
     compileOnly 'mezz.jei:jei-1.21.1-neoforge-api:19.44.0.403'
     compileOnly 'maven.modrinth:jade:15.10.6+neoforge'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.2'
 
-    // id версий Modrinth, а не номера: у одинаковых номеров бывают сборки под Fabric.
-    // Copper Age Backport — обязательная зависимость (медный голем для ритуала наковальни), нужен в каждом dev-запуске.
+    // Modrinth version ids, not version numbers: the same number sometimes has Fabric builds.
+    // Copper Age Backport is a required dependency (copper golem for the anvil ritual), needed in every dev run.
     runtimeOnly 'maven.modrinth:backport-copper-age:ZyjDScTQ'      // 1.21.1-0.1.5.1-pre neoforge
 
-    // проверка с настоящими модами в dev-запусках: gradle -PtestMods runClient / runDevShots / runGameTestServer
-    // (Source из банок Ars Nouveau, JEI, Jade). В релизный jar не попадают.
+    // testing with the real mods in dev runs: gradle -PtestMods runClient / runDevShots / runGameTestServer
+    // (Source from Ars Nouveau jars, JEI, Jade). They do not go into the release jar.
     if (project.hasProperty('testMods')) {
         runtimeOnly 'maven.modrinth:ars-nouveau:yWDnir1o'          // 5.13.3
         runtimeOnly 'maven.modrinth:geckolib:Grwn5rUB'             // 4.9.3 neoforge
@@ -110,7 +110,7 @@ dependencies {
         runtimeOnly 'mezz.jei:jei-1.21.1-neoforge:19.44.0.403'
         runtimeOnly 'maven.modrinth:jade:15.10.6+neoforge'
     }
-    // совместимость с жидкостями крупных модов: gradle -Pmekanism ... (вёдра и баки Mekanism в Интерфейсе)
+    // compatibility with fluids of big mods: gradle -Pmekanism ... (Mekanism buckets and tanks in the Interface)
     if (project.hasProperty('mekanism')) {
         runtimeOnly 'maven.modrinth:mekanism:5KzzycBT'             // 10.7.19.85 (1.21.1 neoforge)
     }
@@ -120,7 +120,7 @@ test {
     useJUnitPlatform()
 }
 
-// игровые тесты нужны только для runGameTestServer (он берёт классы из build/classes, а не из jar)
+// game tests are only needed for runGameTestServer (it takes classes from build/classes, not from the jar)
 tasks.named('jar') {
     exclude 'com/golemlogix/gametest/**'
     exclude 'com/golemlogix/devtest/**'
@@ -136,7 +136,7 @@ tasks.named('jar') {
     }
 }
 
-// версия в neoforge.mods.toml берётся из gradle (${mod_version})
+// the version in neoforge.mods.toml comes from gradle (${mod_version})
 tasks.named('processResources', ProcessResources) {
     var replaceProperties = [mod_version: project.version]
     inputs.properties replaceProperties

@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-/** Сборщики сцен для стенда кадров (только для разработки, в релизный jar не входит). */
+/** Scene builders for the screenshot rig (development only, not part of the release jar). */
 final class DevScenes {
     private DevScenes() {
     }
@@ -46,7 +46,7 @@ final class DevScenes {
             }
             case "time" -> log.accept("gameTime=" + level.getGameTime());
             case "rig" -> {
-                // rig x y z : массив + линия труб на восток; терминал, калькулятор и поставщик с шаблонами сбоку, шкаф с одним диском на конце
+                // rig x y z : array + a pipe line to the east; terminal, calculator and provider with patterns on the side, a cabinet with one disk at the end
                 BlockPos b = pos(a, 0);
                 for (AtlasBlueprint.Cell c : AtlasBlueprint.cells(AtlasBlueprint.Variant.FULL)) {
                     level.setBlock(b.offset(c.dx(), c.dy(), c.dz()), c.state(), 3);
@@ -78,21 +78,21 @@ final class DevScenes {
                 log.accept("rig built at " + b);
             }
             case "netput" -> {
-                // netput x y z <item> <count>: положить в сеть (рядом с блоком)
+                // netput x y z <item> <count>: put into the network (next to the block)
                 com.golemlogix.system.GolemNetwork network = com.golemlogix.system.GolemNetwork.scan(level, pos(a, 0));
                 var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[3]));
                 ItemStack rest = network.insertItem(new ItemStack(item, Integer.parseInt(a[4])), false);
                 log.accept("netput " + a[3] + " x" + a[4] + " -> rest " + rest.getCount());
             }
             case "netcheck" -> {
-                // netcheck x y z <item> <ожидаемое количество>
+                // netcheck x y z <item> <expected count>
                 com.golemlogix.system.GolemNetwork network = com.golemlogix.system.GolemNetwork.scan(level, pos(a, 0));
                 var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[3]));
                 long actual = network.itemCountOf(com.golemlogix.system.ItemKey.of(new ItemStack(item)));
                 log.accept((actual == Long.parseLong(a[4]) ? "OK" : "ERR") + " netcheck " + a[3] + " = " + actual + " (expected " + a[4] + ")");
             }
             case "baycheck" -> {
-                // baycheck x y z <слот> <item|empty>
+                // baycheck x y z <slot> <item|empty>
                 BlockEntity be = level.getBlockEntity(pos(a, 0));
                 if (!(be instanceof CopperDriveBayBlockEntity bay)) {
                     throw new IllegalStateException("no cabinet");
@@ -109,13 +109,13 @@ final class DevScenes {
                 log.accept("netfluidput " + a[3] + " -> " + filled);
             }
             case "carry" -> {
-                // carry <item> <count>: предмет на курсор открытого окна (с синхронизацией)
+                // carry <item> <count>: an item on the cursor of the open window (synced)
                 var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[0]));
                 player.containerMenu.setCarried(new ItemStack(item, Integer.parseInt(a[1])));
                 player.containerMenu.broadcastChanges();
             }
             case "netfluid" -> {
-                // netfluid x y z <fluid> <ожидаемые mB>
+                // netfluid x y z <fluid> <expected mB>
                 com.golemlogix.system.GolemNetwork network = com.golemlogix.system.GolemNetwork.scan(level, pos(a, 0));
                 var fluid = net.minecraft.core.registries.BuiltInRegistries.FLUID.get(net.minecraft.resources.ResourceLocation.parse(a[3]));
                 long actual = 0;
@@ -127,7 +127,7 @@ final class DevScenes {
                 log.accept((actual == Long.parseLong(a[4]) ? "OK" : "ERR") + " netfluid " + a[3] + " = " + actual + " (expected " + a[4] + ")");
             }
             case "buscheck" -> {
-                // buscheck x y z <слот фильтра> <item|empty>
+                // buscheck x y z <filter slot> <item|empty>
                 BlockEntity be = level.getBlockEntity(pos(a, 0));
                 if (!(be instanceof com.golemlogix.blockentity.BusBlockEntity bus)) {
                     throw new IllegalStateException("no bus");
@@ -137,12 +137,12 @@ final class DevScenes {
                 log.accept((actual.equals(a[4]) ? "OK" : "ERR") + " buscheck slot " + a[3] + " = " + actual + " (expected " + a[4] + ")");
             }
             case "give" -> {
-                // give <item> <count> [слот]
+                // give <item> <count> [slot]
                 var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[0]));
                 player.getInventory().setItem(a.length > 2 ? Integer.parseInt(a[2]) : 0, new ItemStack(item, Integer.parseInt(a[1])));
             }
             case "fillnet" -> {
-                // fillnet x y z: кладёт в сеть (рядом с блоком) разнообразные предметы и жидкости для окон терминалов
+                // fillnet x y z: puts various items and fluids into the network (next to the block) for terminal windows
                 com.golemlogix.system.GolemNetwork network = com.golemlogix.system.GolemNetwork.scan(level, pos(a, 0));
                 Item[] items = {Items.IRON_INGOT, Items.GOLD_INGOT, Items.DIAMOND,
                         Items.EMERALD, Items.COPPER_INGOT, Items.REDSTONE,
@@ -167,7 +167,7 @@ final class DevScenes {
                 player.onUpdateAbilities();
             }
             case "giveall" -> {
-                // giveall <смещение>: 36 предметов мода в инвентарь, начиная с номера <смещение>
+                // giveall <offset>: 36 mod items into the inventory, starting from number <offset>
                 int offset = a.length > 0 ? Integer.parseInt(a[0]) : 0;
                 player.getInventory().clearContent();
                 var entries = new java.util.ArrayList<>(com.golemlogix.init.ModItems.ITEMS.getEntries());
@@ -179,7 +179,7 @@ final class DevScenes {
             case "refresh" -> refresh(level, pos(a, 0));
             case "stock" -> stock(level, pos(a, 0));
             case "bay" -> {
-                // bay x y z facing [stock]: шкаф 2x2, главная часть в (x, y, z)
+                // bay x y z facing [stock]: a 2x2 cabinet, the main part at (x, y, z)
                 BlockPos at = pos(a, 0);
                 net.minecraft.core.Direction facing = net.minecraft.core.Direction.byName(a[3]);
                 com.golemlogix.blocks.CopperDriveBayBlock.place(level, at, facing);
@@ -188,7 +188,7 @@ final class DevScenes {
                 }
             }
             case "saturator" -> {
-                // saturator x y z facing [jar]: все блоки машины вокруг хозяина в (x, y, z); jar — банка Source сбоку
+                // saturator x y z facing [jar]: all machine blocks around the owner at (x, y, z); jar = a Source jar on the side
                 BlockPos at = pos(a, 0);
                 net.minecraft.core.Direction facing = net.minecraft.core.Direction.byName(a[3]);
                 for (int i = 0; i < com.golemlogix.system.SaturatorStructure.CELLS; i++) {
@@ -207,12 +207,12 @@ final class DevScenes {
                 log.accept("saturator built at " + at + " facing " + facing);
             }
             case "mainframe" -> {
-                // mainframe x y z facing [калькуляторов] [сопроцессоров]: шкаф, стекло, корпуса, атланты; содержимое внутрь
+                // mainframe x y z facing [calculators] [coprocessors]: the cabinet, glass, casings, atlants; contents inside
                 BlockPos at = pos(a, 0);
                 net.minecraft.core.Direction facing = net.minecraft.core.Direction.byName(a[3]);
                 level.setBlock(at, ModBlocks.CRYO_MAINFRAME.get().defaultBlockState()
                         .setValue(com.golemlogix.blocks.CryoMainframeBlock.FACING, facing), 3);
-                // по порядку клеток: у атлантов нижняя половина ставится раньше верхней
+                // in cell order: for atlants the lower half is placed before the upper one
                 for (int i = 0; i < com.golemlogix.system.MainframeStructure.CELLS.length; i++) {
                     level.setBlock(com.golemlogix.system.MainframeStructure.cellPos(at, facing, i),
                             com.golemlogix.system.MainframeStructure.originalState(i, facing), 3);
@@ -231,7 +231,7 @@ final class DevScenes {
                 log.accept("mainframe built at " + at + " facing " + facing);
             }
             case "bayopen" -> {
-                // bayopen x y z 1|0: распахнуть или закрыть дверцу дискового шкафа, как будто окно открыто
+                // bayopen x y z 1|0: open or close the drive cabinet door, as if the window were open
                 BlockState bs = level.getBlockState(pos(a, 0));
                 CopperDriveBayBlockEntity bay = bs.getBlock() instanceof com.golemlogix.blocks.CopperDriveBayBlock
                         ? com.golemlogix.blocks.CopperDriveBayBlock.entityOf(level, pos(a, 0), bs) : null;
@@ -246,7 +246,7 @@ final class DevScenes {
                 log.accept("bay at " + bay.getBlockPos() + " viewers " + bay.viewers());
             }
             case "catalog" -> {
-                // catalog x y z facing [карт] [поставщиков]: полки, медь, статуи (справа окисленная); карты с верстачными рецептами внутрь
+                // catalog x y z facing [cards] [providers]: shelves, copper, statues (the right one oxidized); cards with crafting recipes inside
                 BlockPos at = pos(a, 0);
                 net.minecraft.core.Direction facing = net.minecraft.core.Direction.byName(a[3]);
                 level.setBlock(at, ModBlocks.CARD_CATALOG.get().defaultBlockState()
@@ -283,7 +283,7 @@ final class DevScenes {
                 log.accept("catalog built at " + at + " facing " + facing);
             }
             case "catalogopen" -> {
-                // catalogopen x y z 1|0: выдвинуть или задвинуть ящики, как будто окно открыто
+                // catalogopen x y z 1|0: slide the drawers out or in, as if the window were open
                 if (level.getBlockEntity(pos(a, 0)) instanceof com.golemlogix.blockentity.CardCatalogBlockEntity cat) {
                     if (a[3].equals("1")) {
                         cat.startOpen();
@@ -302,7 +302,7 @@ final class DevScenes {
                 }
             }
             case "provfill" -> {
-                // provfill x y z smelt|craft: перфокарты в поставщик (плавка руд или верстачные)
+                // provfill x y z smelt|craft: punch cards into a provider (ore smelting or crafting table ones)
                 if (level.getBlockEntity(pos(a, 0)) instanceof com.golemlogix.blockentity.PatternProviderBlockEntity prov) {
                     Item[][] smelt = {{Items.IRON_ORE, Items.IRON_INGOT}, {Items.GOLD_ORE, Items.GOLD_INGOT}, {Items.COPPER_ORE, Items.COPPER_INGOT},
                             {Items.SAND, Items.GLASS}, {Items.COBBLESTONE, Items.STONE}};
@@ -325,14 +325,14 @@ final class DevScenes {
                 }
             }
             case "anvilput" -> {
-                // anvilput x y z <item>: положить заготовку на наковальню несобранного насыщателя
+                // anvilput x y z <item>: put a blank on the anvil of an unassembled saturator
                 if (level.getBlockEntity(pos(a, 0)) instanceof com.golemlogix.blockentity.ManaSaturatorBlockEntity sat) {
                     var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[3]));
                     sat.placeOnAnvil(new ItemStack(item));
                 }
             }
             case "anvilstrike" -> {
-                // anvilstrike x y z: один удар ручной ковки (как ПКМ пустой рукой)
+                // anvilstrike x y z: one strike of forging by hand (as a Forge Hammer left-click)
                 if (level.getBlockEntity(pos(a, 0)) instanceof com.golemlogix.blockentity.ManaSaturatorBlockEntity sat) {
                     ItemStack hammer = new ItemStack(com.golemlogix.init.ModItems.FORGE_HAMMER.get());
                     com.golemlogix.items.ForgeHammerItem.setCharge(hammer, com.golemlogix.items.ForgeHammerItem.MAX_CHARGE);
@@ -340,7 +340,7 @@ final class DevScenes {
                 }
             }
             case "mainframeopen" -> {
-                // mainframeopen x y z 1|0: распахнуть или закрыть двери, как будто окно открыто
+                // mainframeopen x y z 1|0: open or close the doors, as if the window were open
                 if (level.getBlockEntity(pos(a, 0)) instanceof com.golemlogix.blockentity.CryoMainframeBlockEntity mf) {
                     if (a[3].equals("1")) {
                         mf.startOpen();
@@ -350,24 +350,24 @@ final class DevScenes {
                 }
             }
             case "mainframework" -> {
-                // mainframework x y z 1|0 [item1] [item2]: включить или выключить визуальную работу шкафа
+                // mainframework x y z 1|0 [item1] [item2]: turn the cabinet's visual work on or off
                 if (level.getBlockEntity(pos(a, 0)) instanceof com.golemlogix.blockentity.CryoMainframeBlockEntity mf) {
                     mf.setVisualWorkForDev(a[3].equals("1"), a.length > 4 ? a[4] : null, a.length > 5 ? a[5] : null);
                 }
             }
             case "calcwork" -> {
-                // calcwork x y z 1|0 [item]: включить или выключить визуальную работу калькулятора
+                // calcwork x y z 1|0 [item]: turn the calculator's visual work on or off
                 if (level.getBlockEntity(pos(a, 0)) instanceof com.golemlogix.blockentity.CryoCalculatorBlockEntity calc) {
                     calc.setVisualWorkForDev(a[3].equals("1"), a.length > 4 ? a[4] : null);
                 }
             }
             case "saturatorput" -> {
-                // saturatorput x y z <item>: положить предмет на наковальню (как ПКМ предметом)
+                // saturatorput x y z <item>: put an item on the anvil (as a right-click with the item)
                 BlockEntity be = level.getBlockEntity(pos(a, 0));
                 if (!(be instanceof com.golemlogix.blockentity.ManaSaturatorBlockEntity sat)) {
                     throw new IllegalStateException("no saturator");
                 }
-                // заготовка — на левую палубу (её отнесут големы), minecraft:air — очистить наковальню и палубы
+                // a blank goes to the left deck (the golems will carry it), minecraft:air clears the anvil and the decks
                 var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[3]));
                 ItemStack stack = new ItemStack(item, a.length > 4 ? Integer.parseInt(a[4]) : 1);
                 if (stack.isEmpty()) {
@@ -381,7 +381,7 @@ final class DevScenes {
                 }
             }
             case "saturatorheld" -> {
-                // saturatorheld x y z <item> <count>: что лежит на наковальне и сколько Source в колоннах
+                // saturatorheld x y z <item> <count>: what lies on the anvil and how much Source is in the columns
                 BlockEntity be = level.getBlockEntity(pos(a, 0));
                 if (!(be instanceof com.golemlogix.blockentity.ManaSaturatorBlockEntity sat)) {
                     throw new IllegalStateException("no saturator");
@@ -410,7 +410,7 @@ final class DevScenes {
                 }
             }
             case "tower" -> {
-                // tower x y z [full]: стартовая башня (или вся решётка) без источника Source; ядро в (x, y+3, z) / (x, y+3, z) для решётки
+                // tower x y z [full]: the starter tower (or the whole array) without a Source source; the core at (x, y+3, z) / (x, y+3, z) for the array
                 BlockPos base = pos(a, 0);
                 var variant = a.length > 3 && a[3].equals("full") ? AtlasBlueprint.Variant.FULL : AtlasBlueprint.Variant.TOWER;
                 for (AtlasBlueprint.Cell c : AtlasBlueprint.cells(variant)) {
@@ -419,7 +419,7 @@ final class DevScenes {
                 log.accept(variant + " built at " + base);
             }
             case "corecheck" -> {
-                // corecheck x y z on|off: запитано ли ядро
+                // corecheck x y z on|off: whether the core is powered
                 BlockPos at = pos(a, 0);
                 refresh(level, at);
                 String actual = level.getBlockEntity(at) instanceof AtlasCoreBlockEntity c ? (c.isPowered() ? "on" : "off") : "missing";
@@ -429,7 +429,7 @@ final class DevScenes {
                 log.accept((actual.equals(a[3]) ? "OK" : "ERR") + " corecheck = " + actual + " (expected " + a[3] + ")" + extra);
             }
             case "sourcecheck" -> {
-                // sourcecheck x y z <gt|lt|eq> <n>: сколько Source отдаёт поставщик (банка Ars Nouveau и т. п.) в точке
+                // sourcecheck x y z <gt|lt|eq> <n>: how much Source the provider (an Ars Nouveau jar and the like) at the point gives
                 BlockEntity be = level.getBlockEntity(pos(a, 0));
                 var s = be == null ? null : com.golemlogix.system.SourceHelper.asSupplier(be);
                 long actual = s == null ? -1 : s.available();
@@ -443,7 +443,7 @@ final class DevScenes {
                         + " = " + actual + " (expected " + a[3] + " " + n + ")");
             }
             case "itemnear" -> {
-                // itemnear x y z r <item> <ожидаемое количество>: выпавшие предметы рядом с точкой
+                // itemnear x y z r <item> <expected count>: dropped items near the point
                 BlockPos at = pos(a, 0);
                 double r = Double.parseDouble(a[3]);
                 var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[4]));
@@ -456,7 +456,7 @@ final class DevScenes {
                 log.accept((n == Integer.parseInt(a[5]) ? "OK" : "ERR") + " itemnear " + a[4] + " = " + n + " (expected " + a[5] + ")");
             }
             case "mobcheck" -> {
-                // mobcheck x y z r <entity> <ожидаемое количество> [hp]: живые мобы рядом (и их здоровье)
+                // mobcheck x y z r <entity> <expected count> [hp]: living mobs nearby (and their health)
                 BlockPos at = pos(a, 0);
                 double r = Double.parseDouble(a[3]);
                 var type = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(net.minecraft.resources.ResourceLocation.parse(a[4]));
@@ -468,7 +468,7 @@ final class DevScenes {
                 log.accept((list.size() == Integer.parseInt(a[5]) ? "OK" : "ERR") + " mobcheck " + a[4] + " = " + list.size() + " (expected " + a[5] + ")" + hp);
             }
             case "coolers" -> {
-                // coolers x y z n: Сопроцессоры Охлаждения на первые n решёток крыши Насыщателя (хозяин в x y z)
+                // coolers x y z n: Cooling Co-Processors on the first n roof grilles of the Saturator (owner at x y z)
                 BlockPos at = pos(a, 0);
                 var facing = level.getBlockState(at).getValue(com.golemlogix.blocks.ManaSaturatorBlock.FACING);
                 int n = Integer.parseInt(a[3]);
@@ -483,7 +483,7 @@ final class DevScenes {
                 log.accept("coolers on the roof: " + n);
             }
             case "craft" -> {
-                // craft x y z <item> <count>: заказ автокрафта от имени игрока (по готовности придёт уведомление)
+                // craft x y z <item> <count>: an autocraft order on behalf of the player (a notification comes when it is ready)
                 com.golemlogix.system.GolemNetwork network = com.golemlogix.system.GolemNetwork.scan(level, pos(a, 0));
                 var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[3]));
                 java.util.Map<com.golemlogix.system.ItemKey, Long> targets = new java.util.LinkedHashMap<>();
@@ -492,19 +492,19 @@ final class DevScenes {
                 log.accept((r.type() == com.golemlogix.system.GolemNetwork.StartType.STARTED ? "OK" : "ERR") + " craft " + a[3] + " x" + a[4] + " -> " + r.type());
             }
             case "netfluidcheck" -> {
-                // netfluidcheck x y z <fluid> <минимум mB>: сколько жидкости в сети
+                // netfluidcheck x y z <fluid> <minimum mB>: how much fluid is in the network
                 var fluid = net.minecraft.core.registries.BuiltInRegistries.FLUID.get(net.minecraft.resources.ResourceLocation.parse(a[3]));
                 var network = com.golemlogix.system.GolemNetwork.scan(level, pos(a, 0));
                 int n = network.extractFluid(new net.neoforged.neoforge.fluids.FluidStack(fluid, 1), Integer.MAX_VALUE, true).getAmount();
                 log.accept((n >= Integer.parseInt(a[4]) ? "OK" : "ERR") + " netfluidcheck " + a[3] + " = " + n + " (at least " + a[4] + ")");
             }
             case "nbt" -> {
-                // nbt x y z: данные блок-сущности (для настройки блоков других модов в сценариях)
+                // nbt x y z: block entity data (for setting up other mods' blocks in scenarios)
                 BlockEntity be = level.getBlockEntity(pos(a, 0));
                 log.accept("nbt " + (be == null ? "none" : be.saveWithoutMetadata(level.registryAccess()).toString()));
             }
             case "fillfluid" -> {
-                // fillfluid x y z <fluid> <mB>: налить жидкость в блок (бак другого мода) через его обработчик жидкостей
+                // fillfluid x y z <fluid> <mB>: pour fluid into a block (another mod's tank) through its fluid handler
                 var fluid = net.minecraft.core.registries.BuiltInRegistries.FLUID.get(net.minecraft.resources.ResourceLocation.parse(a[3]));
                 var h = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.BLOCK, pos(a, 0),
                         net.minecraft.core.Direction.UP);
@@ -513,7 +513,7 @@ final class DevScenes {
                 log.accept("fillfluid " + a[3] + " -> " + n);
             }
             case "fluidcheck" -> {
-                // fluidcheck x y z <fluid> <минимум mB>: сколько этой жидкости в блоке (во всех его баках)
+                // fluidcheck x y z <fluid> <minimum mB>: how much of this fluid is in the block (in all its tanks)
                 var fluid = net.minecraft.core.registries.BuiltInRegistries.FLUID.get(net.minecraft.resources.ResourceLocation.parse(a[3]));
                 var h = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.BLOCK, pos(a, 0), null);
                 int total = 0;
@@ -525,7 +525,7 @@ final class DevScenes {
                 log.accept((total >= Integer.parseInt(a[4]) ? "OK" : "ERR") + " fluidcheck " + a[3] + " = " + total + " (at least " + a[4] + ")");
             }
             case "iface" -> {
-                // iface x y z <слот> <item> <сколько держать>: настройка запаса Интерфейса
+                // iface x y z <slot> <item> <how many to keep>: Interface stock setting
                 if (!(level.getBlockEntity(pos(a, 0)) instanceof com.golemlogix.blockentity.InterfaceBlockEntity be)) {
                     throw new IllegalStateException("no interface at " + pos(a, 0));
                 }
@@ -534,7 +534,7 @@ final class DevScenes {
                 log.accept("iface slot " + a[3] + " keeps " + a[5] + " " + a[4]);
             }
             case "ifacecheck" -> {
-                // ifacecheck x y z <слот> <ожидаемое количество в запасе>
+                // ifacecheck x y z <slot> <expected stock count>
                 if (!(level.getBlockEntity(pos(a, 0)) instanceof com.golemlogix.blockentity.InterfaceBlockEntity be)) {
                     throw new IllegalStateException("no interface at " + pos(a, 0));
                 }
@@ -542,7 +542,7 @@ final class DevScenes {
                 log.accept((actual == Integer.parseInt(a[4]) ? "OK" : "ERR") + " ifacecheck slot " + a[3] + " = " + actual + " (expected " + a[4] + ")");
             }
             case "upgrades" -> {
-                // upgrades x y z <item>...: апгрейды в ячейки машины (шина, перископ, поставщик, калькулятор) по порядку
+                // upgrades x y z <item>...: upgrades into the machine slots (bus, periscope, provider, calculator) in order
                 BlockEntity be = level.getBlockEntity(pos(a, 0));
                 com.golemlogix.upgrade.UpgradeContainer c;
                 if (be instanceof com.golemlogix.blockentity.BusBlockEntity b) {
@@ -565,14 +565,14 @@ final class DevScenes {
                 log.accept("upgrades set: " + (a.length - 3));
             }
             case "light" -> {
-                // light x y z <n>: свет от блоков в точке и собственное свечение блока там (трубы светятся, но свет не дают)
+                // light x y z <n>: light from blocks at the point and the block's own emission there (pipes glow but give no light)
                 BlockPos at = pos(a, 0);
                 int actual = level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, at);
                 log.accept((actual == Integer.parseInt(a[3]) ? "OK" : "ERR") + " light at " + at.toShortString() + " = " + actual
                         + " (expected " + a[3] + "), block emits " + level.getBlockState(at).getLightEmission(level, at));
             }
             case "chrono" -> {
-                // chrono x y z [заряд]: Хронометр, привязанный к ядру в x y z, в руку
+                // chrono x y z [charge]: a Chronometer bound to the core at x y z, into the hand
                 ItemStack c = new ItemStack(ModItems.PORTABLE_CHRONOMETER.get());
                 c.set(com.golemlogix.init.ModDataComponents.BOUND_CORE.get(), net.minecraft.core.GlobalPos.of(level.dimension(), pos(a, 0)));
                 if (a.length > 3) {
@@ -581,7 +581,7 @@ final class DevScenes {
                 player.getInventory().setItem(player.getInventory().selected, c);
             }
             case "flat" -> {
-                // площадка: тёмный пол и стена-фон
+                // platform: dark floor and a backdrop wall
                 BlockPos from = pos(a, 0), to = pos(a, 3);
                 for (BlockPos p : BlockPos.betweenClosed(from, to)) {
                     level.setBlock(p, p.getY() == from.getY() ? Blocks.DEEPSLATE_TILES.defaultBlockState() : Blocks.AIR.defaultBlockState(), 2);
@@ -598,7 +598,7 @@ final class DevScenes {
         }
     }
 
-    /** Кладёт в шкаф набор разных дисков. */
+    /** Puts a set of different disks into the cabinet. */
     private static void stock(ServerLevel level, BlockPos at) {
         BlockEntity be = level.getBlockEntity(at);
         if (!(be instanceof CopperDriveBayBlockEntity bay)) {

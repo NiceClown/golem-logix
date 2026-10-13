@@ -7,8 +7,8 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
 /**
- * Сервер: ЛКМ кузнечным молотом по наковальне не начинает её ломать (удар приходит отдельным пакетом AnvilStrikePayload,
- * его шлёт клиент — см. client.HammerClientEvents).
+ * Server: a left-click with the Forge Hammer on the anvil does not start breaking it (the strike comes in a separate AnvilStrikePayload
+ * packet sent by the client, see client.HammerClientEvents).
  */
 @EventBusSubscriber(modid = GolemLogixMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
 public final class HammerEvents {

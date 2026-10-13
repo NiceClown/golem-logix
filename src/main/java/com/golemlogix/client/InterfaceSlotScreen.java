@@ -16,9 +16,9 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Окно настройки одной ячейки Интерфейса (шестерёнка под ячейкой или клик по ней пустой рукой): что держать, сколько
- * (штуки или mB), быстрые кнопки шагов и готовые значения, режим жидкость/предмет, очистка. Число можно и ввести:
- * для жидкости — в mB или вёдрами с буквой B («16B»). Enter — применить, Esc — назад без изменений.
+ * Settings window for one Interface slot (the gear under the slot or a click on it with an empty hand): what to keep, how much
+ * (items or mB), quick step buttons and preset values, fluid/item mode, clearing. The number can also be typed:
+ * for fluids in mB or in buckets with the letter B ("16B"). Enter applies, Esc goes back without changes.
  */
 public class InterfaceSlotScreen extends Screen {
     private static final int W = 176, H = 150;
@@ -28,10 +28,10 @@ public class InterfaceSlotScreen extends Screen {
     private final int slot;
     private EditBox amount;
     private int left, top;
-    /** Режим, в котором открыто окно: сменился — число на сервере пересчитали, через пару тиков берём новое. */
+    /** The mode the window was opened in: if it changed, the server recomputed the number, and it is picked up a couple of ticks later. */
     private boolean fluid;
     private int reloadIn = -1;
-    /** Последнее число с сервера: пока игрок его не правил, поле следует за ним. */
+    /** Last number from the server: until the player edits it, the field follows it. */
     private int synced;
 
     public InterfaceSlotScreen(InterfaceScreen parent, InterfaceMenu menu, int slot) {
@@ -73,7 +73,7 @@ public class InterfaceSlotScreen extends Screen {
         GolemButton mode = addRenderableWidget(new GolemButton(left + 8, top + 126, 70, 16,
                 () -> Component.translatable(menu.itemMode(slot) ? "gui.golem_logix.interface.mode_item" : "gui.golem_logix.interface.mode_fluid"),
                 () -> Component.translatable("gui.golem_logix.interface.toggle_mode"), () -> false, b -> toggleMode()));
-        // режим есть только у ёмкостей с жидкостью
+        // only containers with fluid have a mode
         mode.visible = container;
         addRenderableWidget(new GolemButton(left + 80, top + 126, 42, 16, Component.translatable("gui.golem_logix.interface.clear"), b -> {
             PacketDistributor.sendToServer(new InterfaceAmountPayload(menu.containerId, slot, -1));
@@ -99,7 +99,7 @@ public class InterfaceSlotScreen extends Screen {
         return mb % 1000 == 0 ? mb / 1000 + "B" : String.format(Locale.ROOT, "%.1fB", mb / 1000f);
     }
 
-    /** Готовые значения: для жидкости — ведро … 256 вёдер, для предмета — от 1 до стопки. */
+    /** Preset values: for fluids a bucket ... 256 buckets, for items from 1 to a stack. */
     private List<Integer> presets() {
         List<Integer> out = new ArrayList<>();
         int max = Math.max(1, menu.maxAmount(slot));
@@ -112,7 +112,7 @@ public class InterfaceSlotScreen extends Screen {
         return out;
     }
 
-    /** Введённое число (буква B — вёдра), в пределах ячейки. */
+    /** The entered number (the letter B, Latin or Cyrillic, means buckets), within the slot's limits. */
     private int value() {
         String s = amount.getValue();
         int mult = 1;
@@ -138,7 +138,7 @@ public class InterfaceSlotScreen extends Screen {
     private void change(int delta) {
         int step = Math.abs(delta);
         int v = value();
-        // шаг «+64» с 1 даёт 64, а не 65: круглые числа удобнее
+        // the "+64" step from 1 gives 64, not 65: round numbers are handier
         int next = delta > 0 ? (v == 1 && step > 1 ? step : v + delta) : v + delta;
         set(next);
     }
@@ -163,7 +163,7 @@ public class InterfaceSlotScreen extends Screen {
             return;
         }
         if (reloadIn > 0 && --reloadIn == 0) {
-            // режим сменился: сервер пересчитал число в новые единицы — пересобираем окно (кнопки шагов другие)
+            // the mode changed: the server converted the number into the new units, so the window is rebuilt (the step buttons differ)
             reloadIn = -1;
             rebuildWidgets();
             return;
@@ -184,7 +184,7 @@ public class InterfaceSlotScreen extends Screen {
         }
     }
 
-    /** Фон: размытие мира (Screen.render вызывает его сам) и панель — до кнопок и надписей, чтобы размытие их не задело. */
+    /** Background: the world blur (Screen.render calls it itself) and the panel, before buttons and labels so the blur does not touch them. */
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.renderBackground(g, mouseX, mouseY, partialTick);

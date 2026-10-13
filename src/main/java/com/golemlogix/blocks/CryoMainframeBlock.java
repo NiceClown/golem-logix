@@ -32,10 +32,10 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 /**
- * Крио-Мейнфрейм — хозяин многоблочного шкафа (см. {@link MainframeStructure}). Внутрь кладутся Крио-Калькуляторы
- * (каждый даёт несколько независимых ядер) и Сжатые Сопроцессоры (каждый считается за несколько и ускоряет все ядра).
- * Весь шкаф занимает в сети один канал. Собранный рисуется целиком отрисовщиком: стеклянные двери открываются, пока
- * кто-то смотрит в его окно.
+ * Cryo-Mainframe, the owner of a multiblock cabinet (see {@link MainframeStructure}). Cryo-Calculators go inside
+ * (each gives several independent cores) together with Compressed Co-Processors (each counts as several and speeds up all cores).
+ * The whole cabinet takes one channel in the network. Once assembled it is drawn entirely by the renderer: the glass doors open while
+ * someone looks into its window.
  */
 public class CryoMainframeBlock extends HorizontalDirectionalBlock implements EntityBlock, GolemNode {
     public static final MapCodec<CryoMainframeBlock> CODEC = simpleCodec(CryoMainframeBlock::new);
@@ -65,7 +65,7 @@ public class CryoMainframeBlock extends HorizontalDirectionalBlock implements En
 
     @Override
     protected RenderShape getRenderShape(BlockState state) {
-        // собранный шкаф рисует отрисовщик целиком
+        // the renderer draws the whole assembled cabinet
         return state.getValue(FORMED) ? RenderShape.ENTITYBLOCK_ANIMATED : RenderShape.MODEL;
     }
 
@@ -92,7 +92,7 @@ public class CryoMainframeBlock extends HorizontalDirectionalBlock implements En
         return (lvl, p, st, be) -> CryoMainframeBlockEntity.serverTick(lvl, p, st, (CryoMainframeBlockEntity) be);
     }
 
-    /** События блока (окно открыли или закрыли — двери) передаются блок-сущности, иначе сервер не разошлёт их клиентам. */
+    /** Block events (the window was opened or closed: the doors) go to the block entity, otherwise the server would not send them to clients. */
     @Override
     protected boolean triggerEvent(BlockState state, Level level, BlockPos pos, int id, int param) {
         super.triggerEvent(state, level, pos, id, param);

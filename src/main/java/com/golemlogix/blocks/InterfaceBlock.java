@@ -22,7 +22,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Интерфейс Голема: со всех шести сторон — раструб приёма и разъём сети, один канал на выдачу запаса и приём в сеть.
+ * Golem Interface: on all six sides an input funnel and a network socket; one channel for handing out stock and taking items into the network.
  */
 public class InterfaceBlock extends Block implements GolemNode, EntityBlock {
     public InterfaceBlock(Properties properties) {
@@ -51,14 +51,14 @@ public class InterfaceBlock extends Block implements GolemNode, EntityBlock {
                 : (lvl, p, st, be) -> InterfaceBlockEntity.serverTick(lvl, p, st, (InterfaceBlockEntity) be);
     }
 
-    /** Событие «интерфейс поработал» доходит до клиентской блок-сущности (анимация). */
+    /** The "interface did some work" event reaches the client block entity (animation). */
     @Override
     protected boolean triggerEvent(BlockState state, Level level, BlockPos pos, int id, int param) {
         BlockEntity be = level.getBlockEntity(pos);
         return be != null && be.triggerEvent(id, param);
     }
 
-    /** Ведро (или любая ёмкость) по интерфейсу — жидкость выливается в его бак и уходит в сеть. */
+    /** A bucket (or any container) used on the interface: the fluid is poured into its tank and goes to the network. */
     @Override
     protected net.minecraft.world.ItemInteractionResult useItemOn(net.minecraft.world.item.ItemStack stack, BlockState state, Level level,
                                                                    BlockPos pos, Player player, net.minecraft.world.InteractionHand hand,

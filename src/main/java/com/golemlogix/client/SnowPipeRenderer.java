@@ -43,8 +43,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Снеговичок в тыквенной голове с коробкой, бегущий по запитанным трубам. На всю связную сеть труб он один
- * (см. {@link PipeRunners}); в базовой трубе виден лишь он головой (тело не влезает), в плотной — целиком.
+ * A snowman with a pumpkin head and a crate running through powered pipes. There is one per connected pipe network
+ * (see {@link PipeRunners}); in a basic pipe only its head is visible (the body does not fit), in a dense one the whole snowman.
  */
 public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
     public SnowPipeRenderer(BlockEntityRendererProvider.Context context) {
@@ -54,7 +54,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
     public static final net.minecraft.client.resources.model.ModelResourceLocation PLUG_DENSE = plugModel("dense_frost_pipe_plug");
     public static final net.minecraft.client.resources.model.ModelResourceLocation BAND_BASIC = plugModel("basic_snow_pipe_band");
     public static final net.minecraft.client.resources.model.ModelResourceLocation BAND_DENSE = plugModel("dense_frost_pipe_band");
-    /** Ворота складского дока: тупик со складом закрыт не заглушкой, а рольставней с фонарём. */
+    /** Warehouse dock door: a dead end with a warehouse is closed not by a plug but by a roller shutter with a lamp. */
     public static final net.minecraft.client.resources.model.ModelResourceLocation DOCK_BASIC = plugModel("basic_snow_pipe_dock");
     public static final net.minecraft.client.resources.model.ModelResourceLocation DOCK_DENSE = plugModel("dense_frost_pipe_dock");
 
@@ -94,10 +94,10 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
     private static long lastCacheClearTime = 0;
 
     /**
-     * Возвращает направления тупиков/терминалов для данной трубы:
-     * 1. Любая сторона с установленной заглушкой (isPlugged).
-     * 2. Любой открытый тупик линии (если у трубы ровно 1 соединение типа PIPE, а противоположная сторона свободна Link.NONE).
-     * 3. Одиночная труба (без связей) получает терминал на северной стороне.
+     * Returns the dead end / terminal directions of this pipe:
+     * 1. Any side with a plug installed (isPlugged).
+     * 2. Any open dead end of the line (if the pipe has exactly 1 PIPE connection and the opposite side is free, Link.NONE).
+     * 3. A single pipe (no links) gets a terminal on its north side.
      */
     public static List<Direction> getTerminalDirections(PipeBlockEntity be, BlockState state) {
         List<Direction> terminals = new ArrayList<>(2);
@@ -120,7 +120,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
                 terminals.add(deadEnd);
             }
         } else if (pipeLinks == 0) {
-            // одиночная труба: заглушка — только на глухом конце, если выход у неё один (иначе она бы закрыла устройство)
+            // a single pipe: a plug only on the blind end, if it has one exit (otherwise it would close off a device)
             Direction only = null;
             int links = 0;
             for (Direction d : Direction.values()) {
@@ -138,10 +138,10 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
     }
 
     /**
-     * Проверяет, является ли данный тупик трубы Складом.
-     * Правило: склады не должны нагромождаться вплотную (в радиусе 3 блоков не более 1 склада).
-     * На разных ветках сети (на расстоянии >= 4 блоков) каждая ветка получает полноценный склад.
-     * В остальных случаях (когда склад уже есть в радиусе 3 блоков) остаётся латунная заглушка с манометром.
+     * Checks whether this dead end of the pipe is a Warehouse.
+     * Rule: warehouses must not pile up next to each other (at most 1 warehouse within 3 blocks).
+     * On different branches of the network (4 or more blocks apart) every branch gets a full warehouse.
+     * Otherwise (when there is already a warehouse within 3 blocks) the brass plug with a gauge stays.
      */
     public static boolean isWarehouse(Level level, BlockPos pos, Direction dir) {
         if (!dir.getAxis().isHorizontal()) {
@@ -161,7 +161,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
         long myScore = getWarehouseScore(pos, dir);
         boolean isSmallest = true;
 
-        // Проверяем другие стороны того же блока (если на одном блоке несколько тупиков)
+        // Check the other sides of the same block (if one block has several dead ends)
         if (level.getBlockEntity(pos) instanceof PipeBlockEntity thisBe) {
             List<Direction> myTerminals = getTerminalDirections(thisBe, thisBe.getBlockState());
             for (Direction otherDir : myTerminals) {
@@ -172,7 +172,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
             }
         }
 
-        // Радиус поиска конкурентов r = 3 блока (предотвращает слипание складов на параллельных соседних трубах)
+        // Search radius for competitors r = 3 blocks (keeps warehouses from sticking together on parallel neighbouring pipes)
         final int r = 3;
         BlockPos.MutableBlockPos mpos = new BlockPos.MutableBlockPos();
         for (int dx = -r; dx <= r && isSmallest; dx++) {
@@ -207,15 +207,15 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
     }
 
     /**
-     * Декорации Склада Викторианской эпохи внутри тупика трубы (Victorian Industrial Warehouse):
-     * - Деревянный дощатый настил платформы (темный дуб)
-     * - Кованые арочные чугунные/латунные нервюры и стойки фермы на стеклянных стенах с верхними стяжками
-     * - Настенный промышленный стеллаж: бухгалтерские книги, гроссбухи, картотечные папки и алхимические колбы
-     * - Настенный медный распределительный манометр на правой стене
-     * - Подвесной викторианский латунный фонарь на цепочке с теплым светом
-     * - Штабели грузов на платформе: дубовые бочонки с обручами, посылочный сундук, медные упаковочные контейнеры, весы
-     * - Двойной потолочный монорельс вдоль всего блока с кареткой
-     * - При этом центральный проход свободен, а стекло трубы остаётся полупрозрачным!
+     * Victorian warehouse decorations inside a pipe dead end (Victorian Industrial Warehouse):
+     * - Wooden plank platform deck (dark oak)
+     * - Wrought arched cast iron/brass ribs and truss posts on the glass walls with top ties
+     * - Industrial wall rack: ledgers, account books, filing folders and alchemical flasks
+     * - Copper distribution pressure gauge on the right wall
+     * - Hanging Victorian brass lantern on a chain with a warm light
+     * - Stacks of cargo on the platform: hooped oak kegs, a parcel chest, copper packing crates, scales
+     * - Double ceiling monorail along the whole block with a carriage
+     * - The central passage stays free, and the pipe glass stays translucent!
      */
     private static void renderWarehouseDecorations(PoseStack pose, BlockRenderDispatcher dispatcher, MultiBufferSource buffers,
                                                    boolean dense, int light) {
@@ -224,33 +224,33 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
         float leftX = dense ? 0.15f : 0.28f;
         float rightX = dense ? 0.85f : 0.72f;
 
-        int warmLight = 0xF000F0; // Максимальная яркость для фонаря и освещенных витрин
+        int warmLight = 0xF000F0; // Maximum brightness for the lantern and lit displays
 
-        // 1. Деревянный дощатый настил платформы викторианского склада
+        // 1. Wooden plank deck of the Victorian warehouse platform
         float deckWidth = dense ? 0.60f : 0.30f;
         box(pose, dispatcher, buffers, Blocks.DARK_OAK_PLANKS.defaultBlockState(),
                 0.50f, floorY + 0.01f, 0.54f, deckWidth, 0.02f, 0.54f, light, OverlayTexture.NO_OVERLAY);
 
-        // 2. Кованые викторианские арочные фермы и нервюры на стенах
+        // 2. Wrought Victorian arched trusses and ribs on the walls
         float pillarThick = dense ? 0.04f : 0.028f;
         float pillarH = ceilY - floorY;
         float pillarMidY = (floorY + ceilY) / 2f;
         BlockState ironRib = Blocks.CUT_COPPER_SLAB.defaultBlockState();
 
-        // Пара стоек 1 (внутри склада Z = 0.28f, без пересечения заглушки)
+        // Pair of posts 1 (inside the warehouse at Z = 0.28f, not crossing the plug)
         box(pose, dispatcher, buffers, ironRib, leftX + pillarThick / 2f, pillarMidY, 0.28f, pillarThick, pillarH, pillarThick, light, OverlayTexture.NO_OVERLAY);
         box(pose, dispatcher, buffers, ironRib, rightX - pillarThick / 2f, pillarMidY, 0.28f, pillarThick, pillarH, pillarThick, light, OverlayTexture.NO_OVERLAY);
         box(pose, dispatcher, buffers, ironRib, 0.50f, ceilY - 0.02f, 0.28f, deckWidth, 0.03f, pillarThick, light, OverlayTexture.NO_OVERLAY);
 
-        // Пара стоек 2 (вдоль склада Z = 0.68f)
+        // Pair of posts 2 (along the warehouse at Z = 0.68f)
         box(pose, dispatcher, buffers, ironRib, leftX + pillarThick / 2f, pillarMidY, 0.68f, pillarThick, pillarH, pillarThick, light, OverlayTexture.NO_OVERLAY);
         box(pose, dispatcher, buffers, ironRib, rightX - pillarThick / 2f, pillarMidY, 0.68f, pillarThick, pillarH, pillarThick, light, OverlayTexture.NO_OVERLAY);
         box(pose, dispatcher, buffers, ironRib, 0.50f, ceilY - 0.02f, 0.68f, deckWidth, 0.03f, pillarThick, light, OverlayTexture.NO_OVERLAY);
 
-        // 3. Викторианский промышленный стеллаж на левой стене
+        // 3. Victorian industrial rack on the left wall
         float rackDepth = dense ? 0.09f : 0.05f;
         float rackX = leftX + rackDepth / 2f;
-        // Полка 1 (нижняя) с гроссбухами и архивом
+        // Shelf 1 (bottom) with ledgers and the archive
         box(pose, dispatcher, buffers, Blocks.DARK_OAK_SLAB.defaultBlockState(),
                 rackX, floorY + 0.12f, 0.46f, rackDepth, 0.02f, 0.32f, light, OverlayTexture.NO_OVERLAY);
         box(pose, dispatcher, buffers, Blocks.BOOKSHELF.defaultBlockState(),
@@ -259,7 +259,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
                 rackX, floorY + 0.07f, 0.52f, rackDepth * 0.9f, 0.09f, 0.14f, light, OverlayTexture.NO_OVERLAY);
 
         if (dense) {
-            // Полка 2 (средняя, только в плотной трубе) с алхимическими эликсирами и приборами
+            // Shelf 2 (middle, only in a dense pipe) with alchemical elixirs and instruments
             box(pose, dispatcher, buffers, Blocks.DARK_OAK_SLAB.defaultBlockState(),
                     rackX, floorY + 0.26f, 0.46f, rackDepth, 0.02f, 0.32f, light, OverlayTexture.NO_OVERLAY);
             box(pose, dispatcher, buffers, Blocks.AMETHYST_CLUSTER.defaultBlockState(),
@@ -268,22 +268,22 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
                     rackX, floorY + 0.28f, 0.52f, rackDepth * 0.8f, 0.02f, 0.12f, light, OverlayTexture.NO_OVERLAY);
         }
 
-        // 4. Правая стена: викторианский манометр и распределительная арматура
+        // 4. Right wall: Victorian pressure gauge and distribution fittings
         float rightWallDist = dense ? 0.06f : 0.04f;
         box(pose, dispatcher, buffers, Blocks.COPPER_BLOCK.defaultBlockState(),
                 rightX - rightWallDist / 2f, floorY + (dense ? 0.28f : 0.16f), 0.42f, rightWallDist, dense ? 0.18f : 0.12f, 0.14f, light, OverlayTexture.NO_OVERLAY);
         box(pose, dispatcher, buffers, Blocks.LIGHTNING_ROD.defaultBlockState(),
                 rightX - rightWallDist / 2f, floorY + (dense ? 0.42f : 0.26f), 0.42f, 0.025f, dense ? 0.10f : 0.06f, 0.025f, light, OverlayTexture.NO_OVERLAY);
 
-        // 5. Подвесной викторианский латунный фонарь на цепочке
+        // 5. Hanging Victorian brass lantern on a chain
         float lanternY = ceilY - (dense ? 0.15f : 0.10f);
         box(pose, dispatcher, buffers, Blocks.CHAIN.defaultBlockState(),
                 0.50f, ceilY - (dense ? 0.05f : 0.03f), 0.32f, 0.025f, dense ? 0.06f : 0.04f, 0.025f, warmLight, OverlayTexture.NO_OVERLAY);
         box(pose, dispatcher, buffers, Blocks.LANTERN.defaultBlockState(),
                 0.50f, lanternY, 0.32f, dense ? 0.10f : 0.07f, dense ? 0.12f : 0.08f, dense ? 0.10f : 0.07f, warmLight, OverlayTexture.NO_OVERLAY);
 
-        // 6. Штабели викторианских грузов на платформе
-        // Правый угол: викторианские дубовые бочонки
+        // 6. Stacks of Victorian cargo on the platform
+        // Right corner: Victorian oak kegs
         box(pose, dispatcher, buffers, Blocks.BARREL.defaultBlockState(),
                 rightX - (dense ? 0.12f : 0.08f), floorY + (dense ? 0.10f : 0.06f), 0.28f, dense ? 0.16f : 0.10f, light, OverlayTexture.NO_OVERLAY);
         if (dense) {
@@ -291,35 +291,35 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
                     rightX - 0.11f, floorY + 0.07f, 0.44f, 0.13f, light, OverlayTexture.NO_OVERLAY);
         }
 
-        // Левый угол: посылочный сундук и медный ящик
+        // Left corner: parcel chest and copper crate
         box(pose, dispatcher, buffers, Blocks.CHEST.defaultBlockState(),
                 leftX + (dense ? 0.12f : 0.08f), floorY + (dense ? 0.08f : 0.05f), 0.28f, dense ? 0.15f : 0.09f, light, OverlayTexture.NO_OVERLAY);
         box(pose, dispatcher, buffers, Blocks.RAW_COPPER_BLOCK.defaultBlockState(),
                 leftX + (dense ? 0.11f : 0.07f), floorY + (dense ? 0.20f : 0.12f), 0.28f, dense ? 0.09f : 0.05f, light, OverlayTexture.NO_OVERLAY);
 
-        // Платформенные чугунные весы
+        // Cast iron platform scales
         box(pose, dispatcher, buffers, Blocks.HEAVY_CORE.defaultBlockState(),
                 leftX + (dense ? 0.12f : 0.08f), floorY + 0.04f, 0.65f, dense ? 0.08f : 0.05f, dense ? 0.05f : 0.03f, dense ? 0.08f : 0.05f, light, OverlayTexture.NO_OVERLAY);
 
-        // 7. Сдвоенный потолочный монорельс склада со стопором (Ceiling Monorail with Stopper)
+        // 7. Double ceiling monorail of the warehouse with a stopper (Ceiling Monorail with Stopper)
         float railSpan = dense ? 0.09f : 0.055f;
         float railY = ceilY - 0.035f;
         float railThick = dense ? 0.035f : 0.022f;
-        // Рельсы начинаются строго от Z = 0.27f и никогда не пересекают заглушку!
+        // The rails start exactly at Z = 0.27f and never cross the plug!
         box(pose, dispatcher, buffers, Blocks.CUT_COPPER_SLAB.defaultBlockState(),
                 0.50f - railSpan, railY, 0.54f, railThick, railThick, 0.54f, light, OverlayTexture.NO_OVERLAY);
         box(pose, dispatcher, buffers, Blocks.CUT_COPPER_SLAB.defaultBlockState(),
                 0.50f + railSpan, railY, 0.54f, railThick, railThick, 0.54f, light, OverlayTexture.NO_OVERLAY);
-        // Медный буфер-стопор на конце монорельса
+        // Copper buffer stopper at the end of the monorail
         box(pose, dispatcher, buffers, Blocks.COPPER_BLOCK.defaultBlockState(),
                 0.50f, railY - 0.005f, 0.26f, railSpan * 2f + railThick * 1.5f, railThick * 1.4f, 0.04f, light, OverlayTexture.NO_OVERLAY);
 
-        // Потолочная каретка манипулятора на рельсе
+        // Ceiling carriage of the manipulator on the rail
         box(pose, dispatcher, buffers, Blocks.COPPER_BLOCK.defaultBlockState(),
                 0.50f, railY - 0.02f, 0.40f, dense ? 0.14f : 0.09f, dense ? 0.04f : 0.025f, dense ? 0.12f : 0.08f, light, OverlayTexture.NO_OVERLAY);
     }
 
-    /** Заглушки на закрытых сторонах и тупиках труб: модель «лицом на север», повёрнутая к своей стороне. */
+    /** Plugs on closed sides and pipe dead ends: a north-facing model turned towards its side. */
     private static void plugs(PipeBlockEntity be, BlockState state, PoseStack pose, MultiBufferSource buffers, int light) {
         List<Direction> terminals = getTerminalDirections(be, state);
         if (terminals.isEmpty()) {
@@ -349,7 +349,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
             renderer.renderModel(pose.last(), buffers.getBuffer(RenderType.cutout()), null, model, 1f, 1f, 1f, light,
                     OverlayTexture.NO_OVERLAY, net.neoforged.neoforge.client.model.data.ModelData.EMPTY, RenderType.cutout());
 
-            // Если тупик выбран Складом (не более 1 склада в радиусе 3 блоков) — рендерим викторианские декорации склада
+            // If the dead end is chosen as a Warehouse (at most 1 warehouse within 3 blocks), render the Victorian warehouse decorations
             if (warehouse) {
                 renderWarehouseDecorations(pose, dispatcher, buffers, dense, light);
             }
@@ -359,8 +359,8 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
     }
 
     /**
-     * Опорные кронштейны с манометром: рендерятся строго с ритмом в 4 блока (интервал 4 блока вдоль трассы).
-     * Прямые участки между ними — гладкие бесшовные стеклянные трубы без лишних колец.
+     * Support brackets with a gauge: rendered strictly every 4 blocks (a 4-block interval along the run).
+     * The straight sections between them are smooth seamless glass tubes without extra rings.
      */
     private static void brackets(PipeBlockEntity be, BlockState state, PoseStack pose, MultiBufferSource buffers, int light) {
         net.minecraft.core.BlockPos pos = be.getBlockPos();
@@ -435,7 +435,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
         boolean turning = spot.isTurning();
         float tripProgress = spot.tripProgress();
 
-        // Выбор предметов доставки из сети
+        // Choosing delivery items from the network
         ItemStack inItem = getCargoItem(spot.incomingCargo(), be.getLevel(), be.getBlockPos());
         ItemStack outItem = getCargoItem(spot.outgoingCargo(), be.getLevel(), be.getBlockPos());
         BlockState carriedBox = getCargoBox(spot.outgoingCargo());
@@ -448,7 +448,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
             case EAST -> 270f;
             case SOUTH -> 180f;
             case WEST -> 90f;
-            case UP, DOWN -> 180f; // Стабильная ориентация лицом вперед (Юг) в вертикальных трубах
+            case UP, DOWN -> 180f; // Stable orientation facing forward (south) in vertical pipes
         };
 
         boolean vertical = spot.heading().getAxis() == Direction.Axis.Y;
@@ -456,19 +456,19 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
         float step = (float) Math.sin(time * 0.55f);
 
         if (turning) {
-            // Подвесная механическая рука с монорельсом и медным големом сверху на всех разворотах (со складом и без)
-            // Ориентируется строго вдоль оси трубы (baseYaw)
+            // Hanging mechanical arm with a monorail and a copper golem on top at every turn (with or without a warehouse)
+            // Oriented strictly along the pipe axis (baseYaw)
             pose.pushPose();
             pose.mulPose(Axis.YP.rotationDegrees(baseYaw));
             renderMechanicalArmAndGolem(pose, dispatcher, buffers, itemRenderer, be.getLevel(), outItem, dense, turn, time, light, overlay, spot.heading());
             pose.popPose();
 
-            // Во время спокойного разворота снеговика (turn in 0..1):
-            // 0.00..0.35: сгружает старый предмет на пол платформы (он исчезает)
-            // 0.35..0.65: плавный пустой разворот на 180 градусов с опущенными руками
-            // 0.65..0.80: медный голем сверху разжимает руки и роняет новый предмет, голем ловит его
-            // 0.80..1.00: амортизация удара, предмет зафиксирован в руках/на голове, готов к пути
-            // на станции бегунок смотрит туда, откуда пришёл, и плавно разворачивается к выходу (в вертикальной трубе — нет)
+            // During the snowman's calm turn (turn in 0..1):
+            // 0.00..0.35: unloads the old item onto the platform floor (it disappears)
+            // 0.35..0.65: smooth empty-handed 180-degree turn with lowered arms
+            // 0.65..0.80: the copper golem above opens its hands and drops the new item, the snowman catches it
+            // 0.80..1.00: absorbing the impact, the item is fixed in the hands/on the head, ready for the road
+            // at the station the runner looks where it came from and smoothly turns to the exit (not in a vertical pipe)
             if (vertical || turn < 0.35f) {
                 yaw = baseYaw;
             } else if (turn <= 0.65f) {
@@ -481,7 +481,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
         }
 
         pose.mulPose(Axis.YP.rotationDegrees(yaw));
-        // лёгкая покачивающаяся походка во время бега
+        // a light swaying gait while running
         if (!turning) {
             pose.mulPose(Axis.ZP.rotationDegrees(step * 3f));
             pose.translate(0, Math.abs(step) * 0.012, 0);
@@ -489,16 +489,16 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
 
         boolean isVertical = spot.heading().getAxis() == Direction.Axis.Y;
         if (dense) {
-            // целый снеговик: модель снежного голема, голова-тыква; руки-палки
+            // a whole snowman: the snow golem model with a pumpkin head; stick arms
             final float s = 0.2f;
             final float feet = isVertical ? -0.16f : -0.355f;
-            final float boxSize = 0.42f; // в координатах куклы голема
+            final float boxSize = 0.42f; // in the golem puppet's coordinates
 
             if (!turning) {
-                // Обычный бег: морфинг предмета в ящик прямо в руках на середине пути (tripProgress ~ 0.5)
-                // 0.00..0.44: несёт сам предмет в руках
-                // 0.44..0.56: предмет прямо в руках превращается в ящик
-                // 0.56..1.00: несёт закрытый ящик
+                // Normal run: the item morphs into a crate right in the hands in the middle of the path (tripProgress ~ 0.5)
+                // 0.00..0.44: carries the item itself in its hands
+                // 0.44..0.56: the item turns into a crate right in the hands
+                // 0.56..1.00: carries a closed crate
                 float morphStart = 0.44f, morphEnd = 0.56f;
                 boolean beforeMorph = tripProgress < morphStart;
                 boolean afterMorph = tripProgress > morphEnd;
@@ -524,9 +524,9 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
                             }
                         });
             } else {
-                // Плавная анимация на станции: опускание старого -> пустой разворот -> сброс медным големом и ловля
+                // Smooth animation at the station: putting down the old item -> empty turn -> drop by the copper golem and the catch
                 if (turn < 0.35f) {
-                    // ФАЗА 1: Плавное опускание старого предмета на пол платформы
+                    // PHASE 1: Smoothly lowering the old item onto the platform floor
                     float pDown = turn / 0.35f;
                     float handY = Mth.lerp(pDown, 13.5f, 3.5f);
                     float handZ = Mth.lerp(pDown, 9.0f, 11.5f);
@@ -536,7 +536,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
 
                     float cargoY = Mth.lerp(pDown, 0f, -0.60f);
                     float cargoZ = Mth.lerp(pDown, 0f, 0.12f);
-                    // При касании пола предмет растворяется в станции
+                    // When it touches the floor the item dissolves into the station
                     float itemScale = pDown > 0.75f ? (1f - (pDown - 0.75f) / 0.25f) * 0.44f : 0.44f;
 
                     SnowmanPuppet.render(pose, buffers, light, new Vector3f(0f, feet, 0f), 180f, s, SnowmanPuppet.Head.PUMPKIN,
@@ -547,12 +547,12 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
                                 }
                             });
                 } else if (turn < 0.65f) {
-                    // ФАЗА 2: Разворот с пустыми руками (старый предмет сдан, новый пока у медного голема сверху)
+                    // PHASE 2: Turning with empty hands (the old item is handed over, the new one is still with the copper golem above)
                     SnowmanPuppet.Pose turnPose = new SnowmanPuppet.Pose(0f, 0f, 0f, 0f, SnowmanPuppet.REST_LEFT, SnowmanPuppet.REST_RIGHT);
                     SnowmanPuppet.render(pose, buffers, light, new Vector3f(0f, feet, 0f), 180f, s, SnowmanPuppet.Head.PUMPKIN,
                             turnPose, null);
                 } else if (turn < 0.80f) {
-                    // ФАЗА 3a: Снеговик вскидывает руки навстречу падающему сверху предмету
+                    // PHASE 3a: The snowman throws its arms up towards the item falling from above
                     float pReach = (turn - 0.65f) / 0.15f;
                     float handY = Mth.lerp(pReach, 9.0f, 18.0f);
                     float handZ = Mth.lerp(pReach, 1.5f, 7.5f);
@@ -560,7 +560,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
                     SnowmanPuppet.render(pose, buffers, light, new Vector3f(0f, feet, 0f), 180f, s, SnowmanPuppet.Head.PUMPKIN,
                             reachPose, null);
                 } else {
-                    // ФАЗА 3b: Поймал! Пружинящая амортизация удара и приведение предмета в руки
+                    // PHASE 3b: Caught it! Springy absorption of the impact and settling the item into the hands
                     float pSettle = (turn - 0.80f) / 0.20f;
                     float squash = (float) Math.sin((1f - pSettle) * Math.PI) * 0.14f;
                     float handY = Mth.lerp(pSettle, 18.0f, 13.5f);
@@ -573,12 +573,12 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
                 }
             }
         } else {
-            // Базовая труба: тыквенная голова
+            // Basic pipe: pumpkin head
             final float smallBoxScale = 0.11f;
 
             if (!turning) {
                 box(pose, dispatcher, buffers, Blocks.CARVED_PUMPKIN.defaultBlockState(), 0, 0, 0, 0.19f, light, overlay);
-                // Обычный бег: морфинг предмета в ящик прямо на голове
+                // Normal run: the item morphs into a crate right on the head
                 float morphStart = 0.44f, morphEnd = 0.56f;
                 boolean beforeMorph = tripProgress < morphStart;
                 boolean afterMorph = tripProgress > morphEnd;
@@ -600,9 +600,9 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
                     }
                 }
             } else {
-                // Разворот маленького снеговика: прыжком скидывает предмет с головы -> разворачивается -> ловит новый от медного голема
+                // Small snowman turn: a hop throws the item off its head -> turns around -> catches a new one from the copper golem
                 if (turn < 0.35f) {
-                    // ФАЗА 1: Задорный прыжок со сбросом предмета с головы вперед-вниз на пол
+                    // PHASE 1: A perky hop that drops the item from the head forward and down onto the floor
                     float pDown = turn / 0.35f;
                     float hop = (float) Math.sin(pDown * Math.PI) * 0.03f;
                     box(pose, dispatcher, buffers, Blocks.CARVED_PUMPKIN.defaultBlockState(), 0, hop, 0, 0.19f, light, overlay);
@@ -615,13 +615,13 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
                         renderItem(itemRenderer, buffers, be.getLevel(), inItem, pose, 0, flingY, flingZ, sc, time * 3f + flingP * 120f, light, overlay);
                     }
                 } else if (turn < 0.65f) {
-                    // ФАЗА 2: Пустой плавный разворот
+                    // PHASE 2: Empty smooth turn
                     box(pose, dispatcher, buffers, Blocks.CARVED_PUMPKIN.defaultBlockState(), 0, 0, 0, 0.19f, light, overlay);
                 } else if (turn < 0.80f) {
-                    // ФАЗА 3a: Тыква ожидает сброса предмета сверху
+                    // PHASE 3a: The pumpkin waits for the item to drop from above
                     box(pose, dispatcher, buffers, Blocks.CARVED_PUMPKIN.defaultBlockState(), 0, 0, 0, 0.19f, light, overlay);
                 } else {
-                    // ФАЗА 3b: Предмет пойман на макушку тыквы с мягкой амортизацией
+                    // PHASE 3b: The item is caught on top of the pumpkin with a soft cushioning
                     float pSettle = (turn - 0.80f) / 0.20f;
                     float squashHop = (float) -Math.sin((1f - pSettle) * Math.PI) * 0.03f;
                     box(pose, dispatcher, buffers, Blocks.CARVED_PUMPKIN.defaultBlockState(), 0, squashHop, 0, 0.19f, light, overlay);
@@ -633,11 +633,11 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
     }
 
     /**
-     * Подвесная механическая рука с монорельсом и медным големом на развороте бегунка:
-     * - Сдвоенный потолочный монорельс вдоль оси Z под потолком трубы.
-     * - Потолочная каретка манипулятора.
-     * - Телескопическая штанга и медный голем строго внутри внутреннего объема трубы.
-     * - Медный голем держит новый груз и роняет его с ускорением свободного падения снеговику в руки / на тыкву.
+     * Hanging mechanical arm with a monorail and a copper golem at the runner's turn:
+     * - Double ceiling monorail along the Z axis under the pipe ceiling.
+     * - Ceiling carriage of the manipulator.
+     * - Telescopic rod and the copper golem strictly within the pipe's inner volume.
+     * - The copper golem holds the new cargo and drops it with free-fall acceleration into the snowman's hands / onto the pumpkin.
      */
     private static void renderMechanicalArmAndGolem(PoseStack pose, BlockRenderDispatcher dispatcher, MultiBufferSource buffers,
                                                    ItemRenderer itemRenderer, @Nullable Level level, ItemStack outItem,
@@ -652,12 +652,12 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
         float railY = ceilingY + 0.02f;
         float railThick = dense ? 0.035f : 0.022f;
 
-        // Компактный потолочный фланец крепления каретки манипулятора
+        // Compact ceiling flange mounting the manipulator carriage
         float bracketSize = dense ? 0.18f : 0.12f;
         box(pose, dispatcher, buffers, Blocks.CUT_COPPER_SLAB.defaultBlockState(),
                 0, ceilingY + 0.02f, 0, bracketSize, railThick, bracketSize, light, overlay);
 
-        // 2. Выдвижение механической руки из каретки потолка
+        // 2. The mechanical arm extends from the ceiling carriage
         float ext;
         if (turn < 0.28f) {
             ext = Mth.clamp(turn / 0.28f, 0f, 1f);
@@ -670,11 +670,11 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
 
         float currentFeetY = Mth.lerp(ext, retractedFeetY, targetFeetY);
 
-        // 3. Потолочная каретка монорельса
+        // 3. Ceiling carriage of the monorail
         box(pose, dispatcher, buffers, Blocks.COPPER_BLOCK.defaultBlockState(),
                 0, ceilingY, 0, dense ? 0.13f : 0.08f, dense ? 0.035f : 0.022f, dense ? 0.11f : 0.07f, light, overlay);
 
-        // 4. Телескопическая штанга / полиспаст
+        // 4. Telescopic rod / pulley block
         float rodTop = ceilingY - 0.015f;
         float rodBottom = currentFeetY + golemScale * 1.15f;
         if (rodTop > rodBottom) {
@@ -683,11 +683,11 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
                     0, (rodTop + rodBottom) / 2f, 0, dense ? 0.035f : 0.022f, rodH, dense ? 0.035f : 0.022f, light, overlay);
         }
 
-        // 5. Медный манипулятор-захват (люлька)
+        // 5. Copper manipulator grab (cradle)
         box(pose, dispatcher, buffers, Blocks.RAW_COPPER_BLOCK.defaultBlockState(),
                 0, currentFeetY + golemScale * 1.15f, 0, dense ? 0.06f : 0.038f, 0.02f, dense ? 0.06f : 0.038f, light, overlay);
 
-        // 6. Медный голем на подвесе (Copper Golem Puppet)
+        // 6. Hanging copper golem (Copper Golem Puppet)
         boolean holding = turn < 0.70f;
         CopperGolemPuppet.Anim golemAnim = new CopperGolemPuppet.Anim(time * 0.1f, false, holding, 0.12f);
         CopperGolemPuppet.Arms arms = holding ? null : new CopperGolemPuppet.Arms(0.1f, -0.55f, 0.1f, 0.55f, 0f);
@@ -698,16 +698,16 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
 
         CopperGolemPuppet.render(pose, buffers, light, golemPos, forward, up, golemScale, golemAnim, 0,
                 hp -> {
-                    // Груз в руках медного голема до момента сброса
+                    // Cargo in the copper golem's hands until the drop
                     float cargoScale = dense ? 0.28f : 0.16f;
                     renderItem(itemRenderer, buffers, level, outItem, hp, 0, 0, 0, cargoScale, time * 3f, light, overlay);
                 },
                 arms);
 
-        // 7. Падающий груз в момент сброса (turn in 0.70 .. 0.82)
+        // 7. Falling cargo at the moment of the drop (turn in 0.70 .. 0.82)
         if (turn >= 0.70f && turn < 0.82f) {
             float dropP = (turn - 0.70f) / 0.12f;
-            float dropCurve = dropP * dropP; // ускорение свободного падения
+            float dropCurve = dropP * dropP; // free-fall acceleration
 
             float startY = currentFeetY + golemScale * 0.60f;
             float targetY = dense ? 0.00f : -0.02f;
@@ -719,7 +719,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
         }
     }
 
-    // Набор доступных транспортировочных ящиков курьерской службы
+    // The set of available courier transport crates
     private static BlockState getCargoBox(int cargoId) {
         final BlockState[] BOX_TEMPLATES = {
                 Blocks.BARREL.defaultBlockState(),
@@ -825,7 +825,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
             netFluids = pool.fluids;
         }
 
-        // 1 раз из 10 - ведро с жидкостью из сети (ровно 10% шанс)
+        // 1 time in 10: a bucket with a fluid from the network (exactly a 10% chance)
         boolean fluidRoll = (Math.floorMod(cargoId, 10) == 7);
         if (fluidRoll) {
             if (netFluids != null && !netFluids.isEmpty()) {
@@ -834,7 +834,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
             return FLUID_BUCKETS.get(Math.floorMod(cargoId / 10, FLUID_BUCKETS.size()));
         }
 
-        // В остальных 9 случаях - реальный предмет из сети
+        // In the other 9 cases: a real item from the network
         if (netItems != null && !netItems.isEmpty()) {
             return netItems.get(Math.floorMod(cargoId, netItems.size()));
         }
@@ -854,13 +854,13 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
         pose.popPose();
     }
 
-    /** Кубик размера size с центром в (x, y, z) относительно текущей точки. */
+    /** A cube of size size centred at (x, y, z) relative to the current point. */
     private static void box(PoseStack pose, BlockRenderDispatcher dispatcher, MultiBufferSource buffers, BlockState state,
                             double x, double y, double z, float size, int light, int overlay) {
         box(pose, dispatcher, buffers, state, x, y, z, size, size, size, light, overlay);
     }
 
-    /** Параллелепипед размеров (sx, sy, sz) с центром в (x, y, z) относительно текущей точки. */
+    /** A box of size (sx, sy, sz) centred at (x, y, z) relative to the current point. */
     private static void box(PoseStack pose, BlockRenderDispatcher dispatcher, MultiBufferSource buffers, BlockState state,
                             double x, double y, double z, float sx, float sy, float sz, int light, int overlay) {
         pose.pushPose();

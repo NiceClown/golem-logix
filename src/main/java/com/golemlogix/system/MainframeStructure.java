@@ -18,26 +18,26 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Крио-Мейнфрейм: шкаф 3 x 2 x 2 и два атланта по бокам, которые держат над ним общий карниз.
+ * Cryo-Mainframe: a 3 x 2 x 2 cabinet and two atlants on the sides that hold a shared cornice above it.
  * <pre>
- *  вид спереди (фасад — сторона, куда смотрит хозяин):     сзади (второй ряд):
- *     A  G  G  G  A        G — стекло                         C  C  C        C — Корпус Атланта
- *     A  G  M  G  A        M — хозяин (Крио-Мейнфрейм)       C  C  C
- *                          A — Атлант (двухблочный)
+ *  front view (the front is the side the owner faces):    back (second row):
+ *     A  G  G  G  A        G = glass                          C  C  C        C = Atlas Casing
+ *     A  G  M  G  A        M = owner (Cryo-Mainframe)         C  C  C
+ *                          A = Atlant (two blocks tall)
  * </pre>
- * Координаты клетки: a — вбок (+ — по часовой от фасада), h — вверх, d — вглубь (от фасада назад). При сборке все клетки,
- * включая атлантов, становятся невидимыми частями: многоблок целиком рисует отрисовщик хозяина (атланты встроены в него
- * и держат карниз). Разбор возвращает прежние блоки.
+ * Cell coordinates: a = sideways (+ is clockwise from the front), h = up, d = depth (from the front backwards). On assembly all cells,
+ * atlants included, become invisible parts: the owner's renderer draws the whole multiblock (the atlants are built into it
+ * and hold the cornice). Disassembly returns the former blocks.
  */
 public final class MainframeStructure {
-    /** Клетки-части: {a, h, d}. 0..4 — стекло фасада, 5..10 — корпуса заднего ряда, 11..14 — атланты (низ, верх; слева, справа). */
+    /** Part cells: {a, h, d}. 0..4 front glass, 5..10 back row casings, 11..14 atlants (lower, upper; left, right). */
     public static final int[][] CELLS = {
             {-1, 0, 0}, {1, 0, 0}, {-1, 1, 0}, {0, 1, 0}, {1, 1, 0},
             {-1, 0, 1}, {0, 0, 1}, {1, 0, 1}, {-1, 1, 1}, {0, 1, 1}, {1, 1, 1},
             {-2, 0, 0}, {-2, 1, 0}, {2, 0, 0}, {2, 1, 0}};
     public static final int GLASS_CELLS = 5;
     public static final int FIRST_ATLANT = 11;
-    /** Атланты: по бокам фасадного ряда (нижняя половина на уровне хозяина). */
+    /** Atlants: on the sides of the front row (the lower half at the owner's level). */
     public static final int[] ATLANTS = {-2, 2};
 
     private static boolean restoring = false;
@@ -53,7 +53,7 @@ public final class MainframeStructure {
         return cell >= FIRST_ATLANT;
     }
 
-    /** Вторая половина того же атланта. */
+    /** The other half of the same atlant. */
     public static int partner(int cell) {
         return cell % 2 == 1 ? cell + 1 : cell - 1;
     }
@@ -72,12 +72,12 @@ public final class MainframeStructure {
         return part.relative(facing.getClockWise(), -c[0]).below(c[1]).relative(facing.getOpposite(), -c[2]);
     }
 
-    /** Какой блок нужен в клетке-части до сборки (и возвращается при разборе). */
+    /** Which block is needed in a part cell before assembly (and is returned on disassembly). */
     public static Block original(int cell) {
         return isAtlant(cell) ? ModBlocks.ATLAS_ATLANT.get() : cell < GLASS_CELLS ? Blocks.GLASS : ModBlocks.ATLAS_CASING.get();
     }
 
-    /** Состояние прежнего блока: атлант — нужной половиной и лицом к фасаду шкафа. */
+    /** The state of the former block: an atlant with the right half and facing the cabinet front. */
     public static BlockState originalState(int cell, Direction facing) {
         Block b = original(cell);
         if (!isAtlant(cell)) {
@@ -87,7 +87,7 @@ public final class MainframeStructure {
                 .setValue(AtlantBlock.HALF, CELLS[cell][1] == 0 ? DoubleBlockHalf.LOWER : DoubleBlockHalf.UPPER);
     }
 
-    /** Чего не хватает: позиция и нужный блок. */
+    /** What is missing: the position and the needed block. */
     public record Missing(BlockPos pos, Block block) {
     }
 
@@ -107,7 +107,7 @@ public final class MainframeStructure {
         for (int i = 0; i < CELLS.length; i++) {
             BlockPos p = cellPos(controller, facing, i);
             if (isAtlant(i)) {
-                // атлант — один предмет на две клетки: проверяем по нижней половине (11, 13) вместе с верхней
+                // an atlant is one item for two cells: check by the lower half (11, 13) together with the upper one
                 if (CELLS[i][1] == 0 && !(matches(level.getBlockState(p), i, facing)
                         && matches(level.getBlockState(p.above()), partner(i), facing))) {
                     out.add(new Missing(p, original(i)));
@@ -124,8 +124,8 @@ public final class MainframeStructure {
     }
 
     /**
-     * Собрать: все клетки — в части, хозяин — FORMED. Атлантов заменяем без обновления формы соседей (иначе вторая половина
-     * статуи, оставшись без пары, сама исчезнет), а соседей оповещаем в конце.
+     * Assemble: all cells become parts, the owner FORMED. Atlants are replaced without updating the neighbours' shapes (otherwise the second half
+     * of the statue, left without its pair, would disappear by itself), and the neighbours are notified at the end.
      */
     public static void form(Level level, BlockPos controller, Direction facing) {
         restoring = true;
@@ -147,8 +147,8 @@ public final class MainframeStructure {
     }
 
     /**
-     * Разобрать: части снова стекло, корпуса и атланты (кроме сломанной — она выпадет сама; у сломанного атланта исчезает
-     * и вторая половина, предмет выпадает один), хозяин — не собран.
+     * Disassemble: parts become glass, casings and atlants again (except the broken one, which drops by itself; for a broken atlant
+     * the other half disappears too and one item drops), the owner is unassembled.
      */
     public static void disassemble(Level level, BlockPos controller, Direction facing, @Nullable BlockPos broken) {
         int brokenCell = -1;
@@ -183,7 +183,7 @@ public final class MainframeStructure {
         GolemNetwork.clearCache();
     }
 
-    /** Оповестить соседей всех клеток (трубы пересчитают стыки), когда весь шкаф уже заменён. */
+    /** Notify the neighbours of all cells (pipes recompute their joints) once the whole cabinet has been replaced. */
     private static void notifyAll(Level level, BlockPos controller, Direction facing) {
         for (int i = 0; i < CELLS.length; i++) {
             BlockPos p = cellPos(controller, facing, i);

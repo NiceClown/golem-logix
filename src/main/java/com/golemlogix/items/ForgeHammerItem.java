@@ -21,9 +21,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import java.util.List;
 
 /**
- * Кузнечный молот: им куют заготовки на наковальне (несобранном Насыщателе Маны) — ЛКМ по наковальне. Каждый удар тратит
- * Source из собственного запаса молота; запас пополняют, как у Хронометра, — ПКМ молотом по банке Source. Без Ars Nouveau
- * (или с requireSource=false) молот работает без заряда.
+ * Forge Hammer: forges blanks on the anvil (an unassembled Mana Saturator) with a left-click on the anvil. Every strike spends
+ * Source from the hammer's own charge; the charge is refilled as for the Chronometer, by right-clicking a Source jar with the hammer. Without Ars Nouveau
+ * (or with requireSource=false) the hammer works without a charge.
  */
 public class ForgeHammerItem extends Item {
     public static final int MAX_CHARGE = 4000;
@@ -41,19 +41,19 @@ public class ForgeHammerItem extends Item {
         stack.set(ModDataComponents.SOURCE_CHARGE.get(), Math.max(0, Math.min(MAX_CHARGE, charge)));
     }
 
-    /** Хватит ли заряда на удар (без Source — всегда). */
+    /** Whether the charge is enough for a strike (always, without Source). */
     public static boolean canStrike(ItemStack stack) {
         return !SourceHelper.sourceRequired() || getCharge(stack) >= STRIKE_COST;
     }
 
-    /** Списать заряд за удар. */
+    /** Spend the charge for a strike. */
     public static void spendStrike(ItemStack stack) {
         if (SourceHelper.sourceRequired()) {
             setCharge(stack, getCharge(stack) - STRIKE_COST);
         }
     }
 
-    /** Наковальня — несобранный Насыщатель: по ней молот бьёт, а не ломает её. */
+    /** The anvil is an unassembled Saturator: the hammer strikes it instead of breaking it. */
     public static boolean isAnvil(BlockState state) {
         return state.getBlock() instanceof ManaSaturatorBlock && !state.getValue(ManaSaturatorBlock.FORMED);
     }
@@ -63,7 +63,7 @@ public class ForgeHammerItem extends Item {
         return !isAnvil(state);
     }
 
-    /** ПКМ по банке Source (или другому механизму Ars Nouveau с запасом) — зарядить молот. */
+    /** Right-click on a Source jar (or another Ars Nouveau device with a store) charges the hammer. */
     @Override
     public InteractionResult useOn(UseOnContext context) {
         Level level = context.getLevel();

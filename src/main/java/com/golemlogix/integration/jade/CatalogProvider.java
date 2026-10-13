@@ -13,7 +13,7 @@ import snownee.jade.api.IBlockComponentProvider;
 import snownee.jade.api.ITooltip;
 import snownee.jade.api.config.IPluginConfig;
 
-/** Строки над Картотекой перфокарт (любой её частью): сколько карт и мест. */
+/** Lines over a Punch Card Catalog (any of its parts): how many cards and places. */
 public enum CatalogProvider implements IBlockComponentProvider {
     INSTANCE;
 

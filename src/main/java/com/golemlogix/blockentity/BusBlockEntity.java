@@ -40,21 +40,21 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Общая блок-сущность обеих шин мира.
- * Вакуумная шина импорта забирает из контейнера перед собой в сеть (фильтр необязателен),
- * Инжекторная шина экспорта выгружает из сети в контейнер только то, что записано в фильтре.
- * Ячейка фильтра с ведром (любым контейнером жидкости) задаёт жидкость.
- * Шесть ячеек апгрейдов: до четырёх Сжатых Сопроцессоров (быстрее и больше за раз), Модуль Автокрафта (экспорт заказывает
- * недостающее у калькуляторов) и Модуль Редстоуна.
+ * Shared block entity of both world buses.
+ * The Vacuum Import Bus pulls from the container in front of it into the network (the filter is optional),
+ * the Injector Export Bus unloads from the network into the container only what is set in the filter.
+ * A filter slot holding a bucket (any fluid container) selects a fluid.
+ * Six upgrade slots: up to four Compressed Co-Processors (faster and more at a time), an Autocraft Module (export orders
+ * what is missing from the calculators) and a Redstone Module.
  */
 public class BusBlockEntity extends BlockEntity {
     public static final int FILTER_SLOTS = 9;
-    /** Множители «предметов за раз» и интервала по числу ускорителей (0..4). */
+    /** Multipliers of "items at a time" and of the interval by the number of speed upgrades (0..4). */
     private static final int[] AMOUNT_MULT = {1, 2, 4, 6, 8};
     private static final double[] INTERVAL_MULT = {1.0, 0.75, 0.5, 0.25, 0.125};
-    /** Как часто шина с Модулем Автокрафта может заказывать крафт (тики). */
+    /** How often a bus with an Autocraft Module may order a craft (ticks). */
     private static final int CRAFT_REQUEST_COOLDOWN = 40;
-    /** Не чаще раза в полсекунды звук работы (с ускорителями шина работает почти каждый тик). */
+    /** Work sound at most once every half second (with speed upgrades the bus works almost every tick). */
     private static final int SOUND_COOLDOWN = 10;
 
     private final OwnedContainer filters = new OwnedContainer(FILTER_SLOTS, this, s -> true);
@@ -62,7 +62,7 @@ public class BusBlockEntity extends BlockEntity {
     private final RedstoneControl redstone = new RedstoneControl();
 
     private int moved = 0;
-    /** Приоритет шины: шины с большим числом в одной сети работают раньше (первыми получают доступ к предметам). */
+    /** Bus priority: buses with a bigger number in one network work earlier (they get access to items first). */
     private int priority = 0;
     private long lastSound = -1000;
     private long lastCraftRequest = -1000;
@@ -89,7 +89,7 @@ public class BusBlockEntity extends BlockEntity {
         return redstone;
     }
 
-    /** Данные окна: 0 — приоритет, 1 — режим редстоуна. */
+    /** Window data: 0 = priority, 1 = redstone mode. */
     public ContainerData menuData() {
         return new ContainerData() {
             @Override
@@ -122,7 +122,7 @@ public class BusBlockEntity extends BlockEntity {
         return getBlockState().getBlock() instanceof InjectorExportBusBlock;
     }
 
-    /** Тиков между операциями с учётом ускорителей. */
+    /** Ticks between operations, counting speed upgrades. */
     public int interval() {
         int n = upgrades.count(UpgradeType.SPEED);
         return Math.max(1, (int) Math.round(GolemConfig.BUS_INTERVAL_TICKS.get() * INTERVAL_MULT[n]));
@@ -172,7 +172,7 @@ public class BusBlockEntity extends BlockEntity {
             be.doImport(level, pos, net, target, items, fluids);
         }
         if (be.moved > 0) {
-            // импульсный режим: одно действие на импульс
+            // pulse mode: one action per pulse
             be.redstone.allows(hasRedstone, powered, true);
             long now = level.getGameTime();
             if (now - be.lastSound >= SOUND_COOLDOWN) {
@@ -230,8 +230,8 @@ public class BusBlockEntity extends BlockEntity {
                 if (sim.isEmpty()) {
                     continue;
                 }
-                // то, чего ждёт задача автокрафта, принимается даже при полном хранилище (иначе задача зависнет);
-                // обратно в тот же контейнер (если он подключён перископом) предметы не кладутся
+                // what an autocraft job is waiting for is accepted even when storage is full (otherwise the job would hang);
+                // items are never put back into the same container (if a periscope connects it)
                 int wanted = Math.min(sim.getCount(), net.machineWants(sim));
                 ItemStack restSim = net.insertItem(sim.copyWithCount(sim.getCount() - wanted), true, target);
                 int accepted = wanted + (sim.getCount() - wanted - restSim.getCount());
@@ -317,13 +317,13 @@ public class BusBlockEntity extends BlockEntity {
                 boolean nothingInNetwork = false;
                 while (itemBudget - moved > 0) {
                     int ask = Math.min(itemBudget - moved, perStack);
-                    // из того же контейнера в него же не перекладываем (перископ на том же сундуке)
+                    // do not move from a container into the same container (a periscope on the same chest)
                     ItemStack sim = net.extractItem(want, ask, true, target);
                     if (sim.isEmpty()) {
                         nothingInNetwork = moved == 0;
                         break;
                     }
-                    // сначала доливаем в уже начатые стопки (как воронка), потом в пустые ячейки
+                    // top up stacks already started first (like a hopper), then empty slots
                     ItemStack restSim = ItemHandlerHelper.insertItemStacked(items, sim, true);
                     int accepted = sim.getCount() - restSim.getCount();
                     if (accepted <= 0) {
@@ -346,7 +346,7 @@ public class BusBlockEntity extends BlockEntity {
                 this.moved += moved;
                 if (nothingInNetwork && upgrades.has(UpgradeType.CRAFTING)) {
                     ItemKey key = ItemKey.of(want);
-                    // заказываем, только если контейнер вообще примет этот предмет
+                    // order only if the container accepts this item at all
                     if (ItemHandlerHelper.insertItemStacked(items, want, true).isEmpty() && net.canCraft(key)
                             && !net.busCraftPending(worldPosition, key)) {
                         toCraft.put(key, (long) Math.min(perStack, itemsPerOperation()));
@@ -381,7 +381,7 @@ public class BusBlockEntity extends BlockEntity {
             }
         }
 
-        // Модуль Автокрафта: того, чего нет в сети, — заказ калькулятору (по предмету за раз, не чаще раза в 2 секунды)
+        // Autocraft Module: what the network lacks is ordered from a calculator (one item at a time, at most once every 2 seconds)
         long now = level.getGameTime();
         if (!toCraft.isEmpty() && now - lastCraftRequest >= CRAFT_REQUEST_COOLDOWN) {
             lastCraftRequest = now;

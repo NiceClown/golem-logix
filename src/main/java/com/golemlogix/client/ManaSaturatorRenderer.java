@@ -32,17 +32,17 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 
 /**
- * Живая часть собранного Насыщателя: две стеклянные колонны наполняются Source, в камере на наковальне стоит маленький
- * железный голем и пятью ударами расплющивает заготовку в пластины (без заготовки протягивает мак), на крыше крутятся
- * вентиляторы установленных Сопроцессоров Охлаждения. Все размеры — в «машинных» координатах (X слева направо глазами
- * зрителя спереди, Y вверх, Z вглубь, клетка = 16), как в модели; хозяин стоит в клетке (1, 2, 0), то есть X 16..32,
+ * The living part of the assembled Saturator: two glass columns fill with Source, in the chamber on the anvil a small
+ * iron golem flattens the blank into plates in five strikes (without a blank it offers a poppy), on the roof the fans
+ * of the installed Cooling Co-Processors spin. All sizes are in "machine" coordinates (X left to right as seen
+ * from the front, Y up, Z inwards, a cell = 16), as in the model; the owner stands in cell (1, 2, 0), that is X 16..32,
  * Y 32..48, Z 0..16.
  */
 public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorBlockEntity> {
     private static final ResourceLocation LIQUID = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/saturator_liquid.png");
     private static final ResourceLocation PRESS = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/saturator_press.png");
     private static final ResourceLocation GOLEM = ResourceLocation.withDefaultNamespace("textures/entity/iron_golem/iron_golem.png");
-    /** Голем ростом ~8.6 юнита (вся камера — 9.5): ноги на наковальне за заготовкой, лицом к фасаду. */
+    /** A golem about 8.6 units tall (the whole chamber is 9.5): feet on the anvil behind the blank, facing the front. */
     private static final float GOLEM_SCALE = 0.2f;
     private static final float ANVIL_TOP = 29.5f;
     private static final float GOLEM_Z = 11.2f;
@@ -56,7 +56,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
         this.golem = context.bakeLayer(ModelLayers.IRON_GOLEM);
     }
 
-    /** Машинные координаты -> доли блока-хозяина (лицом на север; x зеркален: растёт влево от зрителя). */
+    /** Machine coordinates -> fractions of the owner block (facing north; x is mirrored: it grows to the viewer's left). */
     private static float lx(float x) {
         return (32f - x) / 16f;
     }
@@ -69,7 +69,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
         return z / 16f;
     }
 
-    /** Собранная машина занимает 3x3x2 блока: отрисовку нельзя отсекать по одному блоку хозяина. */
+    /** The assembled machine takes 3x3x2 blocks: rendering must not be culled by the single owner block. */
     @Override
     public AABB getRenderBoundingBox(ManaSaturatorBlockEntity entity) {
         BlockPos pos = entity.getBlockPos();
@@ -100,10 +100,10 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
         }
         Direction facing = entity.getBlockState().getValue(ManaSaturatorBlock.FACING);
         float time = level.getGameTime() + partialTick;
-        // свет берём над машиной: сам хозяин стоит внутри и свой воздух не освещает
+        // the light is taken above the machine: the owner itself stands inside and does not light its own air
         int light = LevelRenderer.getLightColor(level, entity.getBlockPos().above());
         light = LightTexture.pack(Math.max(LightTexture.block(light), 10), Math.max(LightTexture.sky(light), 6));
-        // ход ритуала между тиками — плавно (сервер шлёт только начало и конец)
+        // ritual progress between ticks, smoothly (the server only sends the start and the end)
         float progress = entity.isCrafting()
                 ? Math.min(1f, entity.getProgressFraction() + partialTick * entity.speed() / (float) ManaSaturatorBlockEntity.MAX_PROGRESS)
                 : 0f;
@@ -115,12 +115,12 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
         renderItem(entity, pose, buffers, light, packedOverlay, time, progress);
         renderCarriers(entity, pose, buffers, light, packedOverlay, time, partialTick);
         renderFans(entity, level, facing, pose, buffers, light, time);
-        // голем с лампой на крыше: верх балки — Y 44 машины, то есть 12 пикселей клетки хозяина
+        // golem with a lamp on the roof: the top of the beam is machine Y 44, that is 12 pixels of the owner cell
         LampGolem.render(pose, buffers, light, entity.walker, partialTick, entity.lampState(), time, 32f, 12f);
         pose.popPose();
     }
 
-    /** Две колонны: уровень Source, бегущая рябь по текстуре жидкости. */
+    /** Two columns: Source level, ripples running over the fluid texture. */
     private void renderColumns(ManaSaturatorBlockEntity entity, MultiBufferSource buffers, PoseStack.Pose p, float time) {
         if (entity.getSource() <= 0) {
             return;
@@ -136,14 +136,14 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
         }
     }
 
-    /** Фаза удара 0..1 внутри одного из пяти ударов за ритуал. */
+    /** Strike phase 0..1 within one of the five strikes of a ritual. */
     private static float strikePhase(float progress) {
         return (progress * 5f) % 1f;
     }
 
     /**
-     * Железный голем: замах (руки поднимаются), резкий удар по заготовке и короткая пауза — пять раз за ритуал. Без работы стоит
-     * спокойно и чуть покачивает головой; без заготовки протягивает мак, как настоящий железный голем.
+     * Iron golem: a swing (arms go up), a sharp strike on the blank and a short pause, five times per ritual. When idle it stands
+     * calmly and sways its head a little; without a blank it offers a poppy, like a real iron golem.
      */
     private void renderGolem(ManaSaturatorBlockEntity entity, PoseStack pose, MultiBufferSource buffers, int light, float time, float progress) {
         ModelPart head = golem.getChild("head");
@@ -153,7 +153,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
         ModelPart leftLeg = golem.getChild("left_leg");
         rightLeg.xRot = 0f;
         leftLeg.xRot = 0f;
-        // на наковальне что-то есть или заготовку уже несут — кузнец ждёт; пусто и нечего ждать — протягивает мак
+        // something is on the anvil or a blank is already being carried: the smith waits; empty with nothing to wait for: it offers a poppy
         boolean hasItem = !entity.getHeldItem().isEmpty() || !entity.bringer.hands.isEmpty();
         boolean flower = false;
         if (entity.isCrafting()) {
@@ -178,7 +178,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
             head.xRot = 0.4f;
             head.yRot = Mth.sin(time * 0.04f) * 0.25f;
         } else {
-            // нечего ковать — голем протягивает мак (как железные големы деревенским детям)
+            // nothing to forge: the golem offers a poppy (like iron golems to village children)
             flower = true;
             rightArm.xRot = -0.8f + 0.025f * Mth.sin(time * 0.09f);
             leftArm.xRot = 0f;
@@ -197,7 +197,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
         if (flower) {
             pose.pushPose();
             rightArm.translateAndRotate(pose);
-            // как слой цветка у ванильного железного голема (IronGolemFlowerLayer): мак в кисти правой руки
+            // like the flower layer of the vanilla iron golem (IronGolemFlowerLayer): a poppy in the right hand
             pose.translate(-1.1875f, 1.0625f, -0.9375f);
             pose.translate(0.5f, 0.5f, 0.5f);
             pose.scale(0.5f, 0.5f, 0.5f);
@@ -210,7 +210,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
         pose.popPose();
     }
 
-    /** Заготовка лежит на наковальне перед големом; с каждым ударом сплющивается, к концу ритуала почти пластина. */
+    /** The blank lies on the anvil in front of the golem; it gets flatter with every strike and is almost a plate by the end of the ritual. */
     private void renderItem(ManaSaturatorBlockEntity entity, PoseStack pose, MultiBufferSource buffers, int light, int overlay,
                             float time, float progress) {
         ItemStack held = entity.getHeldItem();
@@ -232,7 +232,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
             pose.mulPose(Axis.YP.rotationDegrees(entity.isCrafting() ? 0f : 18f + Mth.sin(time * 0.05f) * 6f));
             pose.scale(size, size, size);
         } else {
-            // плоские предметы (пластины, плазма) лежат на наковальне
+            // flat items (plates, plasma) lie on the anvil
             pose.translate(lx(24f), ly(ANVIL_TOP) + 0.02f, lz(ITEM_Z));
             pose.mulPose(Axis.XP.rotationDegrees(90f));
             pose.mulPose(Axis.ZP.rotationDegrees(15f));
@@ -242,18 +242,18 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
         pose.popPose();
     }
 
-    // ============================================================================ медные големы-носильщики и палубы
-    /** Голем-носильщик ростом ~4.5 юнита: проходит между стеклянной колонной и камерой пресса. */
+    // ============================================================================ copper carrier golems and decks
+    /** A carrier golem about 4.5 units tall: it passes between the glass column and the press chamber. */
     private static final float CARRIER_SCALE = 0.28f;
-    /** Путь подносчика с левой задней палубы на наковальню (машинные координаты x, y, z): мимо колонны, шаг на плиту. */
+    /** The bringer's path from the left back deck to the anvil (machine coordinates x, y, z): past the column, a step onto the plate. */
     private static final float[][] PATH_IN = {{11.4f, 28f, 21.2f}, {14.8f, 28f, 16.0f}, {14.8f, 28f, 9.4f}, {16.5f, 28.9f, 8.3f},
             {19.3f, 29.5f, 7.8f}};
-    /** Путь уносчика — зеркальный, с правой палубы. */
+    /** The taker's path: mirrored, from the right deck. */
     private static final float[][] PATH_OUT = mirror(PATH_IN);
-    /** Где лежат заготовка (левая палуба) и готовый предмет (правая), на рунных кругах палуб. */
+    /** Where the blank (left deck) and the finished item (right deck) lie, on the rune circles of the decks. */
     private static final float[] SPOT_IN = {7.6f, 28f, 23.4f}, SPOT_OUT = {40.4f, 28f, 23.4f};
     private static final float[] SPOT_ANVIL = {24f, ANVIL_TOP, ITEM_Z};
-    /** Сколько тиков в начале шага голем наклоняется (берёт или кладёт). */
+    /** How many ticks at the start of a step the golem bows (takes or puts down). */
     private static final float BOW_TICKS = 5f;
 
     private static float[][] mirror(float[][] path) {
@@ -264,7 +264,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
         return out;
     }
 
-    /** Точка на ломаной path при доле пути f (0 — начало, 1 — конец): x, y, z и направление (dx, dz). */
+    /** A point on the polyline path at path fraction f (0 = start, 1 = end): x, y, z and direction (dx, dz). */
     private static float[] along(float[][] path, float f) {
         float total = 0f;
         float[] seg = new float[path.length - 1];
@@ -294,9 +294,9 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
     }
 
     /**
-     * Медный голем-носильщик по его фазе (см. ManaSaturatorBlockEntity.Carrier): дома — стоит у своей палубы и поглядывает
-     * то на неё, то на кузнеца; к наковальне и обратно — идёт по пути (в начале шага наклоняется: берёт или кладёт); у
-     * наковальни — ждёт за кузнецом. deck — его палуба, toAnvilForward — путь от палубы к наковальне.
+     * Copper carrier golem by its phase (see ManaSaturatorBlockEntity.Carrier): at home it stands at its deck and glances
+     * now at it, now at the smith; to the anvil and back it walks along the path (bowing at the start of a step to take or put down); at
+     * the anvil it waits behind the smith. deck = its deck, toAnvilForward = the path from the deck to the anvil.
      */
     private void carrier(ManaSaturatorBlockEntity entity, ManaSaturatorBlockEntity.Carrier c, float[][] path, float[] deck, PoseStack pose,
                          MultiBufferSource buffers, int light, int overlay, float time, float pt, int variant, float lookPhase) {
@@ -315,7 +315,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
                 dist = f * len;
                 float since = walkT - left;
                 if (since < BOW_TICKS) {
-                    // только что поднял с палубы
+                    // has just picked it up from the deck
                     bow = Mth.sin((1f - since / BOW_TICKS) * Mth.HALF_PI) * 0.8f;
                 }
             }
@@ -333,7 +333,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
                 dist = (1f - f) * len;
                 float since = walkT - left;
                 if (since < BOW_TICKS) {
-                    // только что положил на наковальню или снял с неё
+                    // has just put it on the anvil or taken it off
                     bow = Mth.sin((1f - since / BOW_TICKS) * Mth.HALF_PI) * 0.8f;
                 }
                 if (!walking) {
@@ -354,7 +354,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
         if (Math.abs(fx) + Math.abs(fz) < 1e-4f) {
             fz = 1f;
         }
-        // x модели зеркален: направление по машинному X в позе — со знаком минус
+        // the model's x is mirrored: the direction along machine X goes into the pose with a minus sign
         org.joml.Vector3f forward = new org.joml.Vector3f(-fx, 0f, fz);
         CopperGolemPuppet.Anim anim = new CopperGolemPuppet.Anim(walking ? dist * 1.3f : time * 0.1f, walking, hold, Mth.clamp(bow, 0f, 1f));
         CopperGolemPuppet.render(pose, buffers, light, p, forward, new org.joml.Vector3f(0f, 1f, 0f), CARRIER_SCALE, anim, variant,
@@ -370,7 +370,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
                                 float time, float pt) {
         carrier(entity, entity.bringer, PATH_IN, SPOT_IN, pose, buffers, light, overlay, time, pt, 1, 0f);
         carrier(entity, entity.taker, PATH_OUT, SPOT_OUT, pose, buffers, light, overlay, time, pt, 2, 2f);
-        // очередь заготовок на левой палубе (до трёх штук стопкой) и готовые пластины на правой — медленно поворачиваются
+        // the queue of blanks on the left deck (up to three in a stack) and the finished plates on the right one slowly turn
         ItemStack in = entity.inputDeck();
         for (int i = 0; i < Math.min(3, in.getCount()); i++) {
             deckItem(pose, buffers, light, overlay, entity, in, new float[]{SPOT_IN[0] + (i % 2) * 1.6f - 0.8f * (i / 2), SPOT_IN[1] + i * 0.02f,
@@ -385,7 +385,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
         }
     }
 
-    /** Направление (dx, dz) из точки from в точку to (машинные координаты). */
+    /** Direction (dx, dz) from point from to point to (machine coordinates). */
     private static float[] toward(float[] from, float[] to) {
         return new float[]{to[0] - from[0], to[2] - from[2]};
     }
@@ -409,7 +409,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
         pose.popPose();
     }
 
-    /** Лопасти вентиляторов на установленных Сопроцессорах Охлаждения: при работе машины крутятся быстро, без неё — лениво. */
+    /** Fan blades on the installed Cooling Co-Processors: they spin fast while the machine works and lazily without it. */
     private void renderFans(ManaSaturatorBlockEntity entity, Level level, Direction facing, PoseStack pose, MultiBufferSource buffers,
                             int light, float time) {
         BlockPos controller = entity.getBlockPos();
@@ -441,8 +441,8 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
     }
 
     /**
-     * Наковальня до сборки: заготовка лежит на ударной площадке и сплющивается с каждым ударом ручной ковки; готовые
-     * пластины лежат плашмя и чуть покачиваются.
+     * The anvil before assembly: the blank lies on the striking face and gets flatter with every strike of forging by hand; finished
+     * plates lie flat and sway a little.
      */
     private static void renderAnvilItem(ManaSaturatorBlockEntity entity, float partialTick, PoseStack pose, MultiBufferSource buffers, Level level) {
         ItemStack item = entity.anvilItem();

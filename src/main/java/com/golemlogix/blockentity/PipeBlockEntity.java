@@ -11,9 +11,9 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Блок-сущность трубы: заглушки на сторонах (сторона с заглушкой ни с чем не соединяется — так разделяют соседние линии,
- * чтобы каналы не смешивались) и отрисовка бегающих снеговичков. Заглушки хранятся здесь, а не в состоянии блока: шесть
- * флагов умножили бы число состояний трубы в 64 раза.
+ * Pipe block entity: plugs on the sides (a plugged side connects to nothing, which is how neighbouring lines are kept apart
+ * so their channels do not mix) and the running snowmen. Plugs are stored here and not in the block state: six
+ * flags would multiply the number of pipe states by 64.
  */
 public class PipeBlockEntity extends BlockEntity {
     private int plugs;
@@ -45,7 +45,7 @@ public class PipeBlockEntity extends BlockEntity {
         }
     }
 
-    /** Закрыта ли сторона dir у блока в pos заглушкой (у не-трубы заглушек нет). */
+    /** Whether side dir of the block at pos is closed by a plug (a non-pipe has no plugs). */
     public static boolean plugged(BlockGetter level, BlockPos pos, Direction dir) {
         return level.getBlockEntity(pos) instanceof PipeBlockEntity be && be.isPlugged(dir);
     }

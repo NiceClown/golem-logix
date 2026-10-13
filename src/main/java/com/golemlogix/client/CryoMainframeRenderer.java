@@ -36,12 +36,12 @@ import net.minecraft.world.phys.AABB;
 import org.joml.Vector3f;
 
 /**
- * Собранный Крио-Мейнфрейм целиком: бронзовый шкаф 3 x 2 x 2 в латунной раме, за стеклянными двустворчатыми дверями —
- * светящаяся бирюзовая матрица и две полки с калькуляторами, на которых бригады снеговиков собирают изделия; наверху —
- * латунный гребень с манометром и красным вентилем-штурвалом. По бокам шкаф держат атланты (это настоящие блоки).
- * Пока окно шкафа у кого-то открыто, двери распахиваются наружу.
+ * The whole assembled Cryo-Mainframe: a bronze 3 x 2 x 2 cabinet in a brass frame; behind double glass doors
+ * a glowing teal matrix and two shelves of calculators on which snowman crews assemble items; on top
+ * a brass crest with a pressure gauge and a red valve wheel. Atlants hold the cabinet at the sides (they are real blocks).
+ * While someone has the cabinet window open, the doors swing outwards.
  * <p>
- * Координаты — в пикселях системы хозяина «лицом на север»: X -16..32 (три клетки вбок), Y 0..32, Z 0..32 (фасад — Z 0).
+ * Coordinates are pixels in the owner's north-facing frame: X -16..32 (three cells across), Y 0..32, Z 0..32 (front = Z 0).
  */
 public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeBlockEntity> {
     private static final ResourceLocation BRONZE = tex("sat_bronze"), BRASS = tex("sat_brass"), DARK = tex("sat_dark"),
@@ -96,13 +96,13 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         PoseStack.Pose p = pose.last();
         int white = 0xFFFFFFFF;
 
-        // корпус: цоколь, задняя стенка, боковины, крыша
+        // body: plinth, back wall, sides, roof
         box(vc, p, -16, 0, 0, 32, 2, 32, DARK, white, light);
         box(vc, p, -15, 2, 29, 31, 30, 32, BRONZE, white, light);
         box(vc, p, -16, 2, 2, -14, 30, 32, BRONZE, white, light);
         box(vc, p, 30, 2, 2, 32, 30, 32, BRONZE, white, light);
         box(vc, p, -16, 30, 0, 32, 32, 32, BRONZE, white, light);
-        // латунная рама фасада и рёбра
+        // brass front frame and ribs
         box(vc, p, -16, 2, -0.5f, -14, 30, 2, BRASS, white, light);
         box(vc, p, 30, 2, -0.5f, 32, 30, 2, BRASS, white, light);
         box(vc, p, -16, 28, -0.5f, 32, 30, 2, BRASS, white, light);
@@ -110,13 +110,13 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         for (float x : new float[]{-16.3f, 31.3f}) {
             box(vc, p, x, 0, 30.7f, x + 1f, 32.3f, 32.3f, BRASS, white, light);
         }
-        // внутри: светящаяся матрица во всю заднюю стенку и латунная полка посередине
+        // inside: a glowing matrix over the whole back wall and a brass shelf in the middle
         wall(vc, p, -14, 3, 30, 28, 28.9f, MATRIX, white, LightTexture.FULL_BRIGHT);
         box(vc, p, -14, 15, 3, 30, 16, 29, BRASS, white, light);
         box(vc, p, -14, 3, 3, 30, 3.2f, 29, DECK, 0xFF9AA4B0, light);
         box(vc, p, -14, 16, 3, 30, 16.2f, 29, DECK, 0xFF9AA4B0, light);
 
-        // калькуляторы на полках (сколько вставлено), у задней стенки
+        // calculators on the shelves (as many as are inserted), at the back wall
         int calcs = be.clientCalcs();
         BlockState calc = ModBlocks.CRYO_CALCULATOR.get().defaultBlockState().setValue(GolemProperties.ACTIVE, spin > 0.5f);
         var dispatcher = Minecraft.getInstance().getBlockRenderer();
@@ -129,7 +129,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
             pose.popPose();
         }
 
-        // бригады снеговиков на полках: собирают то, что делают ядра; бригадир — внизу, когда сопроцессоры помогают
+        // snowman crews on the shelves assemble what the cores are making; the foreman is below when the coprocessors help
         long seed = be.getBlockPos().asLong();
         for (int shelf = 0; shelf < 2; shelf++) {
             float floor = shelf == 0 ? 3.2f : 16.2f;
@@ -154,15 +154,15 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
             pose.popPose();
         }
 
-        // атланты встроены в шкаф: торсы выходят из боковин, одна рука обхватывает угол фасада и держится за стойку, другая
-        // лежит на крыше; головы у верхних углов следят за игроком; внизу из кожуха вьются обмёрзшие трубы
+        // the atlants are built into the cabinet: torsos come out of the sides, one arm wraps the front corner and holds the post, the other
+        // rests on the roof; heads at the top corners follow the player; at the bottom frosted pipes wind out of the housing
         shelfGolems(be, pose, buffers, light, time, spin);
         for (int k = 0; k < 2; k++) {
             embeddedAtlant(be, pose, buffers, light, partialTick, k, time, spin);
         }
         vc = buffers.getBuffer(RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS));
         p = pose.last();
-        // фриз над дверями: ряд бирюзовых огоньков — бегут, пока шкаф работает, и тихо мерцают в простое
+        // frieze above the doors: a row of teal lights that run while the cabinet works and flicker quietly when idle
         box(vc, p, -16, 32, -0.5f, 32, 34, 3, BRONZE, white, light);
         for (int k = 0; k < 14; k++) {
             float lx = -12.6f + k * 3f;
@@ -170,7 +170,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
             int c = 0xFF000000 | ((int) (0x30 * glow) << 16) | ((int) (0xF0 * glow) << 8) | (int) (0xE8 * glow);
             box(vc, p, lx, 32.5f, -0.9f, lx + 1.4f, 33.6f, -0.5f, PANEL, c, LightTexture.FULL_BRIGHT);
         }
-        // гребень над шкафом: манометр и красный вентиль-штурвал (его крутит медный голем на крыше)
+        // crest above the cabinet: pressure gauge and red valve wheel (the copper golem on the roof turns it)
         box(vc, p, -16.5f, 34, -1.5f, 32.5f, 37.4f, 16, BRASS, white, light);
         box(vc, p, -15.5f, 37.4f, -0.8f, 31.5f, 38.4f, 15, BRONZE, white, light);
         box(vc, p, -15, 34.6f, -1.8f, 31, 36.8f, -1.5f, BRONZE, white, light);
@@ -179,13 +179,13 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         valve(pose, vc, 24.5f, 36f, -2.6f, 3.4f, time * (spin > 0.01f ? 2.5f : 0.3f), light);
         roofGolem(be, pose, buffers, light, time, spin);
         vc = buffers.getBuffer(RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS));
-        p = pose.last();        // медные трубы по крыше и вниз по задней стенке
+        p = pose.last();        // copper pipes over the roof and down the back wall
         box(vc, p, -15, 32, 20, 31, 33.6f, 21.6f, COPPER, white, light);
         box(vc, p, -15, 32, 25, 31, 33.6f, 26.6f, COPPER, white, light);
         box(vc, p, 27, 4, 32, 28.6f, 33.6f, 33.6f, COPPER, white, light);
         box(vc, p, -12.6f, 4, 32, -11, 33.6f, 33.6f, COPPER, white, light);
 
-        // двери: створки на петлях у боковых стоек, распахиваются наружу
+        // doors: leaves hinged at the side posts, swing outwards
         float open = doors * doors * (3 - 2 * doors) * 95f;
         door(pose, buffers, -14f, 8f, open, light);
         door(pose, buffers, 30f, 8f, -open, light);
@@ -197,17 +197,17 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
             ICE = tex("sat_ice");
 
     /**
-     * Атлант, встроенный в боковину (k = 0 — слева, 1 — справа): медный кожух у подножия с обмёрзшими трубами, торс выходит
-     * из стенки шкафа, наружная рука опускается и обхватывает угол фасада (ладонь — на латунной стойке), внутренняя поднята
-     * и лежит на гребне крыши, голова у верхнего угла поворачивается к игроку. Координаты левого — в пикселях; правый —
-     * зеркально относительно середины шкафа (x = 8).
+     * Atlant built into a side (k = 0 left, 1 right): a copper housing at its foot with frosted pipes, the torso comes out
+     * of the cabinet wall, the outer arm goes down and wraps the front corner (palm on the brass post), the inner one is raised
+     * and rests on the roof crest, the head at the top corner turns to the player. Coordinates of the left one are in pixels; the right one is
+     * mirrored around the middle of the cabinet (x = 8).
      */
     private static void embeddedAtlant(CryoMainframeBlockEntity be, PoseStack pose, MultiBufferSource buffers, int light, float pt, int k,
                                        float time, float spin) {
         boolean right = k == 1;
         VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS));
         int white = 0xFFFFFFFF;
-        // кожух-постамент у боковины и трубы из него
+        // pedestal housing at the side and the pipes out of it
         mbox(vc, pose, right, -25, 0, 0.5f, -16, 11, 15.5f, CASING, white, light);
         mbox(vc, pose, right, -25.5f, 10.5f, 0, -15.5f, 12, 16, BRASS, white, light);
         for (float z : new float[]{3.2f, 10.0f}) {
@@ -216,25 +216,25 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
             mbox(vc, pose, right, -29.8f, 6.4f, z - 0.6f, -26.2f, 7.2f, z + 3.4f, ICE, white, light);
             mbox(vc, pose, right, -28.4f, 0.6f, z + 1.0f, -27.8f, 2.2f, z + 1.6f, ICE, white, light);
         }
-        // торс: примыкает к стенке шкафа (X <= -16), пояс и наплечники
+        // torso: adjoins the cabinet wall (X <= -16), belt and shoulder plates
         float breathe = 0.25f * Mth.sin(time * 0.05f + k * 2f);
         mbox(vc, pose, right, -26, 12, 2.5f, -16f, 26 + breathe, 13.5f, ATLANT_BODY, white, light);
         mbox(vc, pose, right, -26.5f, 11.5f, 2, -16f, 13.5f, 14, ATLANT_BELT, white, light);
         mbox(vc, pose, right, -29, 22 + breathe, 1.5f, -24.5f, 27 + breathe, 14.5f, ATLANT_BELT, white, light);
         mbox(vc, pose, right, -26.5f, 25.5f + breathe, 2.5f, -16f, 27.5f + breathe, 13.5f, ATLANT_BELT, white, light);
-        // наружная рука: плечо -> локоть у переднего угла -> ладонь на стойке фасада
+        // outer arm: shoulder -> elbow at the front corner -> palm on the front post
         float grip = spin > 0.01f ? 0.4f * Mth.sin(time * 0.3f + k) : 0f;
         Vector3f shoulder = mv(right, -27.5f, 24.5f + breathe, 6), elbow = mv(right, -28.5f, 16f, -1.5f),
                 hand = mv(right, -17.5f, 17.5f + grip, -1.8f);
         limb(vc, pose, shoulder, elbow, 4.2f, ATLANT_LIMB, light);
         limb(vc, pose, elbow, hand, 3.6f, ATLANT_LIMB, light);
         mbox(vc, pose, right, -18.5f, 15.5f + grip, -3.0f, -16.0f, 20 + grip, -0.6f, ATLANT_BELT, white, light);
-        // внутренняя рука: поднята, ладонь лежит на карнизе крыши у угла
+        // inner arm: raised, the palm rests on the roof cornice at the corner
         Vector3f s2 = mv(right, -22, 26 + breathe, 12), e2 = mv(right, -23.5f, 33.5f, 11), h2 = mv(right, -16.8f, 37.2f, 8);
         limb(vc, pose, s2, e2, 3.8f, ATLANT_LIMB, light);
         limb(vc, pose, e2, h2, 3.4f, ATLANT_LIMB, light);
         mbox(vc, pose, right, -18.0f, 36.8f, 5.6f, -16.0f, 38.2f, 10.4f, ATLANT_BELT, white, light);
-        // голова у верхнего угла: модель головы атланта (крупнее), поворачивается к игроку
+        // head at the top corner: the atlant head model (bigger), turns to the player
         float yaw = be.headsPrev[k][0] + Mth.wrapDegrees(be.heads[k][0] - be.headsPrev[k][0]) * pt;
         float pitch = Mth.lerp(pt, be.headsPrev[k][1], be.heads[k][1]);
         Vector3f neck = mv(right, -21.5f, 27.5f + breathe, 8);
@@ -251,19 +251,19 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         pose.popPose();
     }
 
-    /** Точка левого атланта или её зеркало для правого (пиксели). */
+    /** A point of the left atlant, or its mirror for the right one (pixels). */
     static Vector3f mv(boolean mirror, float x, float y, float z) {
         return new Vector3f(mirror ? 16f - x : x, y, z);
     }
 
-    /** Коробка левого атланта или её зеркало для правого. */
+    /** A box of the left atlant, or its mirror for the right one. */
     static void mbox(VertexConsumer vc, PoseStack pose, boolean mirror, float x0, float y0, float z0, float x1, float y1, float z1,
                              ResourceLocation tex, int color, int light) {
         float a = mirror ? 16f - x1 : x0, b = mirror ? 16f - x0 : x1;
         box(vc, pose.last(), a, y0, z0, b, y1, z1, tex, color, light);
     }
 
-    /** Конечность — брусок толщиной t от точки from до точки to (пиксели). */
+    /** A limb: a bar of thickness t from point from to point to (pixels). */
     static void limb(VertexConsumer vc, PoseStack pose, Vector3f from, Vector3f to, float t, ResourceLocation tex, int light) {
         Vector3f d = new Vector3f(to).sub(from);
         float len = d.length();
@@ -278,8 +278,8 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         pose.popPose();
     }
 
-    // ------------------------------------------------------------------------------------------------ медные големы
-    /** Вещь в руке голема: маленький предмет, повёрнутый ладонью. */
+    // ------------------------------------------------------------------------------------------------ copper golems
+    /** A thing in the golem's hand: a small item turned with the palm. */
     private static Consumer<PoseStack> held(ItemStack stack, float scale, float rotX, int light, MultiBufferSource buffers) {
         return hp -> {
             hp.scale(scale, scale, scale);
@@ -291,17 +291,17 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         };
     }
 
-    /** Поза голема на этот момент: где стоит (блоки), куда смотрит, анимация, руки, что держит перед грудью. */
+    /** The golem's pose at this moment: where it stands (blocks), where it looks, animation, arms, what it holds in front of its chest. */
     private record GolemPose(Vector3f at, Vector3f forward, CopperGolemPuppet.Anim anim, CopperGolemPuppet.Arms arms,
                              Consumer<PoseStack> chest) {
     }
 
-    /** Точка на полу полки (x, z — пиксели) в блоках. */
+    /** A point on the shelf floor (x, z in pixels) in blocks. */
     private static Vector3f spot(float x, float floor, float z) {
         return new Vector3f(x / 16f, floor, z / 16f);
     }
 
-    /** Переход между двумя точками полки за долю t (0..1): идёт, глядя по ходу. */
+    /** Moving between two shelf points over the fraction t (0..1): walks looking ahead. */
     private static GolemPose walk(float t, float x0, float z0, float x1, float z1, float floor, float time,
                                   @org.jetbrains.annotations.Nullable Consumer<PoseStack> inHand) {
         float e = t * t * (3f - 2f * t);
@@ -315,8 +315,8 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
     }
 
     /**
-     * Голем рисуется со сглаживанием положения и поворота: когда шкаф переходит от простоя к работе (и обратно), сцена
-     * меняется, но голем не перескакивает, а доходит до новой точки (пока догоняет — перебирает ногами).
+     * The golem is drawn with smoothed position and rotation: when the cabinet goes from idle to work (and back), the scene
+     * changes, but the golem does not jump; it walks to the new point (and moves its legs while catching up).
      */
     private static void renderSmooth(CryoMainframeBlockEntity be, int idx, PoseStack pose, MultiBufferSource buffers, int light, float time,
                                      GolemPose g, float scale, int variant) {
@@ -348,8 +348,8 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
     }
 
     /**
-     * Медный голем на крыше: пока шкаф работает, крутит вентиль-штурвал; в простое обходит гребень — постукивает по
-     * манометру, протирает штурвал тряпкой, потягивается и оглядывается.
+     * Copper golem on the roof: while the cabinet works it turns the valve wheel; when idle it walks around the crest, taps the
+     * gauge, wipes the wheel with a rag, stretches and looks around.
      */
     private static void roofGolem(CryoMainframeBlockEntity be, PoseStack pose, MultiBufferSource buffers, int light, float time, float spin) {
         float floor = 38.4f / 16f;
@@ -362,14 +362,14 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
             ItemStack rag = new ItemStack(net.minecraft.world.item.Items.PAPER);
             float cyc = ((time + be.getBlockPos().asLong() % 97) / 520f) % 1f;
             if (cyc < 0.26f) {
-                // у манометра: наклонился и постукивает пальцем по стеклу
+                // at the gauge: leans over and taps the glass with a finger
                 float tap = Math.max(0f, Mth.sin(time * 0.9f));
                 g = new GolemPose(spot(-10.5f, floor, 3.4f), new Vector3f(0f, 0f, -1f), new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.28f),
                         new CopperGolemPuppet.Arms(-1.25f - 0.12f * tap, 0.1f, -0.2f, -0.1f, 0.15f * Mth.sin(time * 0.05f), null, null), null);
             } else if (cyc < 0.36f) {
                 g = walk((cyc - 0.26f) / 0.10f, -10.5f, 3.4f, 24.5f, 3.2f, floor, time, null);
             } else if (cyc < 0.68f) {
-                // протирает штурвал: рука ходит по кругу
+                // wipes the wheel: the hand moves in a circle
                 float a = time * 0.35f;
                 g = new GolemPose(spot(24.5f, floor, 3.2f), new Vector3f(0f, 0f, -1f), new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.12f),
                         new CopperGolemPuppet.Arms(-1.35f + 0.22f * Mth.sin(a), 0.25f + 0.2f * Mth.cos(a), -0.3f, -0.1f, 0f,
@@ -377,7 +377,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
             } else if (cyc < 0.78f) {
                 g = walk((cyc - 0.68f) / 0.10f, 24.5f, 3.2f, 6.5f, 8f, floor, time, null);
             } else {
-                // потягивается и оглядывается
+                // stretches and looks around
                 float t = (cyc - 0.78f) / 0.22f;
                 float up = Mth.clamp(Mth.sin(t * Mth.PI) * 1.4f, 0f, 1f);
                 g = new GolemPose(spot(6.5f, floor, 8f), new Vector3f(0f, 0f, -1f), new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0f),
@@ -388,12 +388,12 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
     }
 
     /**
-     * Медные големы на полках шкафа.
-     * Полка 0 — главный крио-инженер: в работе калибрует калькулятор ключом, крутит вентиль коллектора и сверяет
-     * перфокарту; в простое протирает стекло дверей, смазывает калькуляторы из маслёнки, подметает иней щёткой и читает
-     * журнал смены.
-     * Полка 1 — оператор сопроцессоров: в работе носит сжатый сопроцессор к сборщикам и вставляет перфокарты в считыватель;
-     * в простое полирует светящуюся матрицу, раскладывает перфокарты по стопкам, заводит хронометр и потягивается.
+     * Copper golems on the cabinet shelves.
+     * Shelf 0 is the chief cryo engineer: at work it calibrates a calculator with a wrench, turns the manifold valve and checks a
+     * punch card; when idle it wipes the door glass, oils the calculators from an oil can, sweeps frost with a brush and reads the
+     * shift log.
+     * Shelf 1 is the coprocessor operator: at work it carries a compressed coprocessor to the assemblers and feeds punch cards into the reader;
+     * when idle it polishes the glowing matrix, sorts punch cards into stacks, winds the chronometer and stretches.
      */
     private static void shelfGolems(CryoMainframeBlockEntity be, PoseStack pose, MultiBufferSource buffers, int light, float time, float spin) {
         renderSmooth(be, 0, pose, buffers, light, time, shelf0Pose(be, buffers, light, time, spin), 0.24f, 1);
@@ -407,7 +407,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         if (spin <= 0.05f) {
             float cyc = ((time + be.getBlockPos().asLong() % 131) / 720f) % 1f;
             if (cyc < 0.20f) {
-                // протирает стекло дверей изнутри: рука с тряпкой выводит круги
+                // wipes the door glass from inside: the hand with a rag draws circles
                 float a = time * 0.4f;
                 return new GolemPose(spot(-9f, floor, 5.5f), new Vector3f(0f, 0f, -1f), new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.04f),
                         new CopperGolemPuppet.Arms(-1.75f + 0.25f * Mth.sin(a), 0.3f + 0.25f * Mth.cos(a), -0.25f, -0.1f, 0.1f * Mth.sin(time * 0.05f),
@@ -417,7 +417,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
                 return walk((cyc - 0.20f) / 0.06f, -9f, 5.5f, -5.3f, 18.5f, floor, time, null);
             }
             if (cyc < 0.46f) {
-                // смазывает калькулятор: наклонился, маслёнка в руке «качает»
+                // oils a calculator: leans over, the oil can in its hand "pumps"
                 float pump = Mth.sin(time * 0.8f);
                 return new GolemPose(spot(-5.3f, floor, 18.5f), new Vector3f(0f, 0f, 1f), new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.32f),
                         new CopperGolemPuppet.Arms(-0.95f + 0.12f * pump, 0.12f, -0.5f, -0.12f, 0.1f * pump,
@@ -427,7 +427,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
                 return walk((cyc - 0.46f) / 0.06f, -5.3f, 18.5f, 12f, 17f, floor, time, null);
             }
             if (cyc < 0.74f) {
-                // подметает иней щёткой: медленно ходит вдоль полки, руки метут
+                // sweeps frost with a brush: walks slowly along the shelf, the hands sweep
                 float t = (cyc - 0.52f) / 0.22f;
                 float x = 12f + 9f * (0.5f - 0.5f * Mth.cos(t * Mth.PI * 2f));
                 float dir = Mth.sin(t * Mth.PI * 2f) >= 0f ? 1f : -1f;
@@ -439,14 +439,14 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
             if (cyc < 0.80f) {
                 return walk((cyc - 0.74f) / 0.06f, 12f, 17f, 2f, 17.5f, floor, time, null);
             }
-            // читает журнал смены: книга в руках, голова наклонена, изредка перелистывает
+            // reads the shift log: a book in its hands, head bowed, turns a page now and then
             float flip = Math.max(0f, Mth.sin(time * 0.05f) - 0.9f) * 10f;
             return new GolemPose(spot(2f, floor, 17.5f), new Vector3f(0f, 0f, -1f), new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.12f),
                     new CopperGolemPuppet.Arms(-0.95f - 0.5f * flip, 0.18f, -0.95f, -0.18f, 0.12f * Mth.sin(time * 0.02f),
                             held(new ItemStack(net.minecraft.world.item.Items.WRITABLE_BOOK), 0.34f, 0f, light, buffers), null), null);
         }
 
-        // работа: калибровка калькулятора, вентиль коллектора, сверка перфокарты
+        // work: calculator calibration, manifold valve, punch card check
         float cycle = ((time / 160f) + 0.12f) % 1.0f;
         if (cycle < 0.40f) {
             float ratchet = Mth.sin(time * 0.75f);
@@ -476,7 +476,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         if (spin <= 0.05f) {
             float cyc = ((time + be.getBlockPos().asLong() % 113) / 760f + 0.5f) % 1f;
             if (cyc < 0.22f) {
-                // полирует светящуюся матрицу на задней стенке: рука высоко, водит тряпкой из стороны в сторону
+                // polishes the glowing matrix on the back wall: the hand is high and moves a rag from side to side
                 float a = time * 0.3f;
                 return new GolemPose(spot(-2f, floor, 25.5f), new Vector3f(0f, 0f, 1f), new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0f),
                         new CopperGolemPuppet.Arms(-2.35f + 0.1f * Mth.cos(a), 0.45f * Mth.sin(a), -0.3f, -0.1f, 0.2f * Mth.sin(a),
@@ -486,7 +486,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
                 return walk((cyc - 0.22f) / 0.06f, -2f, 25.5f, 20f, 23.5f, floor, time, null);
             }
             if (cyc < 0.50f) {
-                // раскладывает перфокарты по стопкам: тянется то правой, то левой рукой
+                // sorts punch cards into stacks: reaches out with the right hand, then the left
                 float sw = Mth.sin(time * 0.3f);
                 return new GolemPose(spot(20f, floor, 23.5f), new Vector3f(0.6f, 0f, 0.8f), new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.2f),
                         new CopperGolemPuppet.Arms(-0.8f - 0.35f * Math.max(0f, sw), 0.15f, -0.8f - 0.35f * Math.max(0f, -sw), -0.15f, 0.3f * sw,
@@ -496,7 +496,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
                 return walk((cyc - 0.50f) / 0.06f, 20f, 23.5f, 8f, 18f, floor, time, null);
             }
             if (cyc < 0.78f) {
-                // заводит хронометр: часы в левой руке у груди, правая крутит головку
+                // winds the chronometer: the watch in the left hand at the chest, the right one turns the crown
                 float a = time * 0.5f;
                 return new GolemPose(spot(8f, floor, 18f), new Vector3f(0f, 0f, -1f), new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.1f),
                         new CopperGolemPuppet.Arms(-1.05f + 0.1f * Mth.sin(a), 0.35f + 0.1f * Mth.cos(a), -1.05f, -0.2f, -0.15f, null,
@@ -505,14 +505,14 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
             if (cyc < 0.84f) {
                 return walk((cyc - 0.78f) / 0.06f, 8f, 18f, -9f, 19f, floor, time, null);
             }
-            // потягивается и оглядывает матрицу
+            // stretches and looks over the matrix
             float t = (cyc - 0.84f) / 0.16f;
             float up = Mth.clamp(Mth.sin(t * Mth.PI) * 1.4f, 0f, 1f);
             return new GolemPose(spot(-9f, floor, 19f), new Vector3f(0f, 0f, -1f), new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0f),
                     new CopperGolemPuppet.Arms(-2.9f * up, 0.3f * up, -2.9f * up, -0.3f * up, 0.5f * Mth.sin(time * 0.05f), null, null), null);
         }
 
-        // работа: сопроцессор к сборщикам, передача, перфокарта в считыватель
+        // work: a coprocessor to the assemblers, the handover, a punch card into the reader
         float cycle = ((time / 160f) + 0.62f) % 1.0f;
         if (cycle < 0.42f) {
             float t = cycle / 0.42f;
@@ -533,7 +533,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
                 new CopperGolemPuppet.Arms(-1.3f + 0.25f * slide, 0.08f, -0.6f, -0.15f, 0f, card, null), null);
     }
 
-    /** Створка: петля в x = hinge, свободный край в x = edge; angle — поворот вокруг петли (градусы). */
+    /** Door leaf: the hinge at x = hinge, the free edge at x = edge; angle = rotation around the hinge (degrees). */
     private static void door(PoseStack pose, MultiBufferSource buffers, float hinge, float edge, float angle, int light) {
         float w = edge - hinge;
         pose.pushPose();
@@ -543,16 +543,16 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         PoseStack.Pose p = pose.last();
         int white = 0xFFFFFFFF;
         float x0 = Math.min(0, w), x1 = Math.max(0, w);
-        // рама створки
+        // door leaf frame
         box(vc, p, x0, 3, -0.6f, x1, 4.4f, 0.6f, BRASS, white, light);
         box(vc, p, x0, 26.6f, -0.6f, x1, 28, 0.6f, BRASS, white, light);
         box(vc, p, x0, 4.4f, -0.6f, x0 + 1.4f, 26.6f, 0.6f, BRASS, white, light);
         box(vc, p, x1 - 1.4f, 4.4f, -0.6f, x1, 26.6f, 0.6f, BRASS, white, light);
         box(vc, p, x0 + 1.4f, 15f, -0.4f, x1 - 1.4f, 16f, 0.4f, BRASS, white, light);
-        // ручка у свободного края
+        // handle at the free edge
         float hx = w > 0 ? x1 - 3.2f : x0 + 2.2f;
         box(vc, p, hx, 13f, -1.6f, hx + 1f, 18f, -0.6f, BRASS, 0xFFFFE6A0, light);
-        // стекло
+        // glass
         VertexConsumer glass = buffers.getBuffer(RenderType.entityTranslucent(InventoryMenu.BLOCK_ATLAS));
         PoseStack.Pose gp = pose.last();
         wall(glass, gp, x0 + 1.4f, 4.4f, x1 - 1.4f, 15f, 0f, GLASS, 0xB0DDF6FF, light);
@@ -560,7 +560,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         pose.popPose();
     }
 
-    /** Красный вентиль-штурвал: обод из сегментов, четыре спицы и ступица; крутится, пока шкаф работает. */
+    /** Red valve wheel: a rim of segments, four spokes and a hub; it turns while the cabinet works. */
     static void valve(PoseStack pose, VertexConsumer vc, float cx, float cy, float z, float r, float rot, int light) {
         int red = 0xFFC8432F, hub = 0xFFFFE6A0;
         pose.pushPose();
@@ -582,12 +582,12 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         pose.popPose();
     }
 
-    // ------------------------------------------------------------------------------------------ квадраты
+    // ------------------------------------------------------------------------------------------ quads
     static TextureAtlasSprite sprite(ResourceLocation id) {
         return Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(id);
     }
 
-    /** Плоская стенка в плоскости z (лицом к -Z), с плиткой текстуры по 16 пикселей. */
+    /** A flat wall in the z plane (facing -Z), with the texture tiled every 16 pixels. */
     static void wall(VertexConsumer vc, PoseStack.Pose p, float x0, float y0, float x1, float y1, float z,
                              ResourceLocation tex, int color, int light) {
         TextureAtlasSprite s = sprite(tex);
@@ -603,7 +603,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         }
     }
 
-    /** Стенка лицом к -Z с текстурой целиком, сжатой под её размер (циферблаты, таблички). */
+    /** A wall facing -Z with the whole texture squeezed to its size (dials, plates). */
     static void fitWall(VertexConsumer vc, PoseStack.Pose p, float x0, float y0, float x1, float y1, float z,
                                 ResourceLocation tex, int color, int light) {
         TextureAtlasSprite s = sprite(tex);
@@ -611,17 +611,17 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
                 s.getU0(), s.getV0(), s.getU1(), s.getV1(), color, light, 0, 0, -1);
     }
 
-    /** Коробка (пиксели); каждая грань берёт кусок текстуры по своему размеру (больше 16 — тянется по плиткам). */
+    /** A box (pixels); every face takes a piece of the texture by its own size (over 16 it tiles). */
     static void box(VertexConsumer vc, PoseStack.Pose p, float x0, float y0, float z0, float x1, float y1, float z1,
                             ResourceLocation tex, int color, int light) {
         TextureAtlasSprite s = sprite(tex);
-        // север (-Z) и юг (+Z)
+        // north (-Z) and south (+Z)
         tile(vc, p, s, color, light, x1 - x0, y1 - y0, (a, b) -> new float[]{x1 - a, y0 + b, z0}, 0, 0, -1);
         tile(vc, p, s, color, light, x1 - x0, y1 - y0, (a, b) -> new float[]{x0 + a, y0 + b, z1}, 0, 0, 1);
-        // запад (-X) и восток (+X)
+        // west (-X) and east (+X)
         tile(vc, p, s, color, light, z1 - z0, y1 - y0, (a, b) -> new float[]{x0, y0 + b, z0 + a}, -1, 0, 0);
         tile(vc, p, s, color, light, z1 - z0, y1 - y0, (a, b) -> new float[]{x1, y0 + b, z1 - a}, 1, 0, 0);
-        // верх и низ
+        // top and bottom
         tile(vc, p, s, color, light, x1 - x0, z1 - z0, (a, b) -> new float[]{x0 + a, y1, z1 - b}, 0, 1, 0);
         tile(vc, p, s, color, light, x1 - x0, z1 - z0, (a, b) -> new float[]{x0 + a, y0, z0 + b}, 0, -1, 0);
     }
@@ -630,7 +630,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         float[] at(float a, float b);
     }
 
-    /** Грань w x h (пиксели) плитками по 16: at(a, b) — точка грани, a вправо, b вверх (как смотрит зритель снаружи). */
+    /** A w x h face (pixels) in tiles of 16: at(a, b) is a point of the face, a to the right, b up (as seen from outside). */
     private static void tile(VertexConsumer vc, PoseStack.Pose p, TextureAtlasSprite s, int color, int light, float w, float h, Map2 at,
                              float nx, float ny, float nz) {
         for (float a = 0; a < w - 1e-3f; a += 16f) {
@@ -644,7 +644,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         }
     }
 
-    /** a — левый низ, b — правый низ, c — правый верх, d — левый верх (снаружи); координаты в пикселях. */
+    /** a = bottom left, b = bottom right, c = top right, d = top left (from outside); coordinates in pixels. */
     static void quad(VertexConsumer vc, PoseStack.Pose p, float[] a, float[] b, float[] c, float[] d,
                              float u0, float v0, float u1, float v1, int color, int light, float nx, float ny, float nz) {
         vertex(vc, p, a, u0, v1, color, light, nx, ny, nz);

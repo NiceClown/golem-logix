@@ -16,14 +16,14 @@ import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Меню шины: 3x3 призрачных ячейки фильтра (у перископа фильтра нет), приоритет, ячейки апгрейдов справа от окна
- * и режим редстоуна (кнопка слева, когда стоит Модуль Редстоуна).
+ * Bus menu: 3x3 ghost filter slots (the periscope has no filter), priority, upgrade slots to the right of the window
+ * and the redstone mode (a button on the left when a Redstone Module is installed).
  */
 public class BusMenu extends GolemMenu {
     public static final int IMAGE_HEIGHT = 212;
     public static final int IMAGE_WIDTH = 176;
 
-    /** Левый край рамки сетки фильтра: сетка и панель приоритета (54) стоят симметрично по окну. */
+    /** Left edge of the filter grid frame: the grid and the priority panel (54) stand symmetrically in the window. */
     public static final int FILTER_X = 29;
 
     public static final int KIND_IMPORT = 0;
@@ -114,7 +114,7 @@ public class BusMenu extends GolemMenu {
     public ItemStack quickMoveStack(Player player, int index) {
         ItemStack stack = this.slots.get(index).getItem();
         boolean fromPlayer = index >= playerStart && index < playerEnd;
-        // апгрейды — в свои ячейки (и обратно), всё остальное из инвентаря — копией в фильтр
+        // upgrades go into their slots (and back), everything else from the inventory is copied into the filter
         if (!fromPlayer || stack.getItem() instanceof UpgradeItem) {
             return super.quickMoveStack(player, index);
         }

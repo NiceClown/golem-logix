@@ -8,9 +8,9 @@ import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Расширитель Каналов: вставляется в боковые ячейки двух средних слоёв Решётки Атланта и увеличивает ёмкость каждой линии
- * Кабельных Муфт. Его наружная грань — ещё один выход сети: к ней подключают трубу, и она пропускает 64 канала (квантовый —
- * 128), чтобы не перестраивать базу под каждую новую линию. Внутрь решётки он связан с шиной-проводником.
+ * Channel Expander: goes into the side cells of the two middle layers of the Atlas Array and raises the capacity of every
+ * Cable Bushing line. Its outer face is one more network exit: a pipe connects to it and carries 64 channels (the quantum one
+ * 128), so the base does not have to be rebuilt for every new line. Inside the array it links to the conduit.
  */
 public class ChannelExpanderBlock extends Block implements AtlasPart, GolemNode {
     private final boolean quantum;
@@ -24,7 +24,7 @@ public class ChannelExpanderBlock extends Block implements AtlasPart, GolemNode 
         return quantum;
     }
 
-    /** Внутри решётки — только со своими частями, снаружи — с любыми узлами сети (трубы, шины, устройства). */
+    /** Inside the array only with its own parts, outside with any network nodes (pipes, buses, devices). */
     @Override
     public boolean canLink(BlockState self, BlockState other, Direction toOther) {
         return other.getBlock() instanceof GolemNode;

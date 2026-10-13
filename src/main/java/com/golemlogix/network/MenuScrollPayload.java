@@ -10,8 +10,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
- * Клиент -> сервер: окно с прокручиваемой сеткой ячеек (картотека, концентратор) прокрутили до строки row или изменили
- * поиск. Ячейки меню на сервере сдвигаются, и обычная синхронизация меню присылает новые предметы.
+ * Client -> server: a window with a scrolling slot grid (catalog, concentrator) was scrolled to row row, or its search
+ * changed. The menu slots on the server shift, and the usual menu sync sends the new items.
  */
 public record MenuScrollPayload(int containerId, int row, String filter) implements CustomPacketPayload {
     public static final Type<MenuScrollPayload> TYPE =

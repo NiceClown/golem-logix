@@ -9,8 +9,8 @@ import net.minecraft.world.item.ItemStack;
 import java.util.List;
 
 /**
- * «Заказ готов»: латунная табличка в углу экрана с предметом и количеством (как уведомление о готовом крафте в AE2).
- * Несколько заказанных предметов сменяют друг друга.
+ * "Order ready": a brass plate in the corner of the screen with the item and the count (like the finished craft notification in AE2).
+ * Several ordered items take turns.
  */
 public class CraftDoneToast implements Toast {
     private static final long SHOW_MS = 5000L;

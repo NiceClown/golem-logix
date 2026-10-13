@@ -21,8 +21,8 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Данные книги «Оккультный Гримуар Логистики»: разделы, статьи, страницы.
- * Загружаются из assets/golem_logix/book/&lt;язык&gt;.json (запасной язык — en_us, затем ru_ru).
+ * Data of the "Occult Logistics Grimoire" book: sections, entries, pages.
+ * Loaded from assets/golem_logix/book/&lt;language&gt;.json (fallback language en_us, then ru_ru).
  */
 public final class BookModel {
     public static final class Category {
@@ -41,7 +41,7 @@ public final class BookModel {
             this.color = color;
         }
 
-        /** Раздел виден, если видна хоть одна его статья (раздел «Тайное знание» появляется после первого испытания). */
+        /** A section is visible if at least one of its entries is visible (the "Secret Knowledge" section appears after the first trial). */
         public boolean visible() {
             for (Entry e : entries) {
                 if (e.visible()) {
@@ -61,10 +61,10 @@ public final class BookModel {
         public final boolean gold;
         public final List<String> parents;
         public final List<JsonObject> pages;
-        /** Секретная статья: "partial" — видна после первого испытания, "full" — только когда рецепт открыт целиком. */
+        /** Secret entry: "partial" = visible after the first trial, "full" = only when the recipe is fully open. */
         public final String secret;
         public Category category;
-        /** Всё содержимое в нижнем регистре — для поиска. */
+        /** All content in lower case, for search. */
         public final String searchText;
 
         Entry(String id, String title, ItemStack icon, int x, int y, boolean gold, List<String> parents, List<JsonObject> pages,
@@ -85,7 +85,7 @@ public final class BookModel {
             this.searchText = sb.toString();
         }
 
-        /** Видна ли статья сейчас (секретные — по прогрессу испытаний игрока). */
+        /** Whether the entry is visible now (secret ones depend on the player's trial progress). */
         public boolean visible() {
             if (showAll) {
                 return true;
@@ -122,7 +122,7 @@ public final class BookModel {
 
     private static BookModel cached;
     private static String cachedLang;
-    /** Только для проверки вёрстки (стенд разработчика): все статьи и страницы видны, как будто тайна раскрыта. */
+    /** Only for layout checks (developer rig): all entries and pages are visible, as if the secret were revealed. */
     static boolean showAll;
 
     public static BookModel get() {
@@ -134,7 +134,7 @@ public final class BookModel {
         return cached;
     }
 
-    /** Сбросить кэш (при перезагрузке ресурсов). */
+    /** Reset the cache (on resource reload). */
     public static void invalidate() {
         cached = null;
     }
@@ -197,8 +197,8 @@ public final class BookModel {
     }
 
     /**
-     * Показывать ли страницу: поле "when" — "wither" / "dimension" (это испытание пройдено), "!wither" / "!dimension"
-     * (ещё нет), "both" (оба), "one" (ровно одно).
+     * Whether to show a page: the "when" field is "wither" / "dimension" (that trial is passed), "!wither" / "!dimension"
+     * (not yet), "both" (both), "one" (exactly one).
      */
     public static boolean pageVisible(JsonObject page) {
         if (!page.has("when") || showAll) {

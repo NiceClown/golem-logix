@@ -16,11 +16,11 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Монитор Рецептов: в фиолетовом вихре иллюминатора по кругу плывут перфокарты — по одной на каждую идущую в сети задачу
- * (до шести), как карточки в окне портала на референсе. Карты появляются и исчезают плавно.
+ * Recipe Monitor: in the purple vortex of the porthole punch cards float in a circle, one for every job running in the network
+ * (up to six), like the cards in the portal window of the reference. Cards appear and disappear smoothly.
  */
 public class RecipeMonitorRenderer implements BlockEntityRenderer<RecipeMonitorBlockEntity> {
-    /** Центр иллюминатора на фасаде (пиксели модели) и радиус орбиты карт. */
+    /** Centre of the porthole on the front (model pixels) and the radius of the card orbit. */
     private static final float CX = 8f, CY = 8.5f, RADIUS = 3.6f;
 
     private ItemStack card;
@@ -46,12 +46,12 @@ public class RecipeMonitorRenderer implements BlockEntityRenderer<RecipeMonitorB
         pose.pushPose();
         Quads.faceModel(pose, be.getBlockState().getValue(RecipeMonitorBlock.FACING));
         for (int i = 0; i < count; i++) {
-            // последняя карта «проявляется» по мере роста shown
+            // the last card "develops" as shown grows
             float alive = Math.min(1f, shown - i);
             float a = (float) Math.toRadians(time * 2.4f + i * 360f / Math.max(1, count));
             float x = CX + Mth.cos(a) * RADIUS, y = CY + Mth.sin(a) * RADIUS;
             pose.pushPose();
-            // перед вихрем (он утоплен в рамку), «север» модели — фасад
+            // in front of the vortex (it is sunk into the frame); the model's "north" is the front
             pose.translate(1f - x / 16f, y / 16f, 0.9f / 16f);
             pose.mulPose(Axis.YP.rotationDegrees(180f + Mth.sin(time * 0.08f + i) * 25f));
             pose.mulPose(Axis.ZP.rotationDegrees(Mth.sin(time * 0.05f + i * 1.7f) * 20f));
@@ -65,8 +65,8 @@ public class RecipeMonitorRenderer implements BlockEntityRenderer<RecipeMonitorB
     }
 
     /**
-     * Медный голем-фонарщик на крыше: в простое лампа ровно светится фиолетовым, а голем бродит по площадке; пока идёт крафт —
-     * стоит посередине, лампа мигает зелёным; авария или нет связи — горит красным.
+     * Copper lamplighter golem on the roof: when idle the lamp glows steady purple and the golem wanders over the platform; while crafting
+     * it stands in the middle and the lamp blinks green; on a failure or with no connection it glows red.
      */
     private void lampGolem(RecipeMonitorBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light) {
         pose.pushPose();

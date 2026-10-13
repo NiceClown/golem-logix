@@ -24,9 +24,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Каналы в подсказке Jade для всех узлов сети мода (кроме ядра и муфты — у них свои строки): у устройства — есть ли у него
- * канал и почему нет; у трубы — сколько каналов через неё идёт и какие стороны закрыты заглушками; у расширителя — загрузка
- * его выхода. Сеть считается на клиенте и запоминается на секунду.
+ * Channels in the Jade tooltip for all network nodes of the mod (except the core and the bushing, which have their own lines): for a device,
+ * whether it has a channel and why not; for a pipe, how many channels pass through it and which sides are plugged; for an expander,
+ * the load of its output. The network is computed on the client and remembered for a second.
  */
 public enum ChannelProvider implements IBlockComponentProvider {
     INSTANCE;

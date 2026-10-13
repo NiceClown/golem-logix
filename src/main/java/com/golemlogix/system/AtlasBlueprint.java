@@ -14,15 +14,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Чертёж Решётки Атланта для книги и «призраков» стройки: список ячеек относительно центральной муфты основания
- * (0, 0, 0) и список нужных предметов. Вариант TOWER — стартовая башня на 8 каналов, FULL — вся решётка 3x3x4.
+ * Atlas Array blueprint for the book and the build "ghosts": a list of cells relative to the central bushing of the base
+ * (0, 0, 0) and the list of needed items. The TOWER variant is the 8-channel starter tower, FULL the whole 3x3x4 array.
  */
 public final class AtlasBlueprint {
     public enum Variant {TOWER, FULL, SATURATOR, MAINFRAME, CATALOG}
 
     /**
-     * @param state    состояние, которое нужно поставить (для призрака)
-     * @param accepted какие блоки считаются правильными в этой ячейке
+     * @param state    the state to place (for the ghost)
+     * @param accepted which blocks count as correct in this cell
      */
     public record Cell(int dx, int dy, int dz, BlockState state, List<Block> accepted) {
         public boolean matches(BlockState actual) {
@@ -92,7 +92,7 @@ public final class AtlasBlueprint {
         return out;
     }
 
-    /** Нужные предметы (Атлант считается один раз на два блока). */
+    /** Needed items (an Atlant counts once for two blocks). */
     public static Map<Item, Integer> requirements(Variant variant) {
         if (variant == Variant.SATURATOR) {
             return SaturatorBlueprint.requirements();
@@ -111,7 +111,7 @@ public final class AtlasBlueprint {
             }
             need.merge(b.asItem(), 1, Integer::sum);
         }
-        // порядок для читателя: ядро, муфты, шины, атланты, корпус
+        // order for the reader: core, bushings, conduits, atlants, casing
         Map<Item, Integer> sorted = new LinkedHashMap<>();
         for (Block b : new Block[]{ModBlocks.ATLAS_CORE.get(), ModBlocks.CABLE_BUSHING.get(), ModBlocks.ATLAS_CONDUIT.get(),
                 ModBlocks.ATLAS_ATLANT.get(), ModBlocks.ATLAS_CASING.get()}) {

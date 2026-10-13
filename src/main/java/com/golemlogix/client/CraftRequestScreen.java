@@ -15,10 +15,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Окно заказа автокрафта с планировщиком ресурсов (как экран подтверждения крафта AE2 / RS): при открытии и при каждом
- * изменении количества сервер присылает план — что возьмётся из сети, что будет создано, чего не хватает (красным).
- * Пока чего-то не хватает, запустить заказ нельзя; если запуск не удался (нет свободного калькулятора, сеть без питания),
- * причина видна здесь же, а не в чате. Запущенный заказ закрывает окно.
+ * Autocraft order window with a resource planner (like the AE2 / RS craft confirmation screen): on open and on every
+ * amount change the server sends a plan: what will be taken from the network, what will be crafted, what is missing (in red).
+ * While something is missing the order cannot be started; if starting failed (no free calculator, the network is unpowered),
+ * the reason shows right here, not in chat. A started order closes the window.
  */
 public class CraftRequestScreen extends Screen {
     private static final int W = 232;
@@ -35,9 +35,9 @@ public class CraftRequestScreen extends Screen {
     private int left;
     private int top;
     private int scroll = 0;
-    /** Номер последнего отправленного запроса плана и запроса запуска (-1 — запуска не было). */
+    /** Number of the last plan request sent and of the start request (-1 = no start yet). */
     private int lastRequest = -1, startRequest = -1;
-    /** Через сколько тиков отправить предпросмотр после правки количества (-1 — не надо). */
+    /** In how many ticks to send a preview after the amount was edited (-1 = not needed). */
     private int previewIn = -1;
     private int lastAmount = -1;
 
@@ -81,7 +81,7 @@ public class CraftRequestScreen extends Screen {
         }
     }
 
-    /** Для стенда кадров: задать количество (план пересчитается). */
+    /** For the screenshot rig: set the amount (the plan is recomputed). */
     public void setAmountForDev(int n) {
         amount.setValue(Integer.toString(n));
     }
@@ -105,7 +105,7 @@ public class CraftRequestScreen extends Screen {
         PacketDistributor.sendToServer(new CraftRequestPayload(menu.containerId, key, value(), true, lastRequest));
     }
 
-    /** Свежий план (ответ на последний запрос) или null, пока сервер считает. */
+    /** Fresh plan (the answer to the last request), or null while the server is computing. */
     private CraftPlanPayload plan() {
         CraftPlanPayload p = menu.clientPlan;
         if (p == null) {
@@ -142,7 +142,7 @@ public class CraftRequestScreen extends Screen {
                 onClose();
                 return;
             }
-            // запуск не удался: остаёмся в окне с причиной; новый запуск — после нового предпросмотра
+            // the start failed: stay in the window with the reason; a new start only after a new preview
             startRequest = -1;
         }
     }
@@ -157,7 +157,7 @@ public class CraftRequestScreen extends Screen {
         return Math.max(0, rows - ROWS);
     }
 
-    /** Фон: размытие мира (Screen.render вызывает его сам) и панель — до кнопок и надписей, чтобы размытие их не задело. */
+    /** Background: the world blur (Screen.render calls it itself) and the panel, before buttons and labels so the blur does not touch them. */
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.renderBackground(g, mouseX, mouseY, partialTick);
@@ -249,7 +249,7 @@ public class CraftRequestScreen extends Screen {
         }
     }
 
-    /** Две строки ячейки: сначала нехватка, затем создание, затем взятое из сети. */
+    /** Two lines for a cell: the shortage first, then crafting, then what is taken from the network. */
     private static List<Component> cellLines(CraftPlanPayload.Entry e) {
         List<Component> out = new ArrayList<>(3);
         if (e.missing() > 0) {

@@ -17,7 +17,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Перископ: приоритет подключённого им внешнего хранилища и Модуль Редстоуна, которым хранилище можно включать и выключать.
+ * Periscope: the priority of the external storage it connects, and a Redstone Module that can switch that storage on and off.
  */
 public class PeriscopeBlockEntity extends BlockEntity {
     private int priority = 0;
@@ -41,7 +41,7 @@ public class PeriscopeBlockEntity extends BlockEntity {
         return upgrades;
     }
 
-    /** Подключено ли хранилище сейчас (с Модулем Редстоуна — по сигналу; импульсный режим тут не имеет смысла). */
+    /** Whether the storage is connected now (with a Redstone Module, by signal; pulse mode makes no sense here). */
     public boolean storageEnabled() {
         if (level == null || !upgrades.has(UpgradeType.REDSTONE)) {
             return true;
@@ -54,7 +54,7 @@ public class PeriscopeBlockEntity extends BlockEntity {
         };
     }
 
-    /** Данные окна: 0 — приоритет, 1 — режим редстоуна. */
+    /** Window data: 0 = priority, 1 = redstone mode. */
     public ContainerData menuData() {
         return new ContainerData() {
             @Override

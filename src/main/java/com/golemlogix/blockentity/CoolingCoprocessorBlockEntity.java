@@ -8,11 +8,11 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Сопроцессор Охлаждения: данных не хранит, нужен только для анимации-«маховика». Пока соседний калькулятор работает,
- * рёбра радиатора ритмично сжимаются и разжимаются; ход набирается и гаснет плавно, как у тяжёлого маховика.
+ * Cooling Co-Processor: stores no data, it is only needed for the flywheel animation. While the neighbouring calculator works,
+ * the radiator fins rhythmically squeeze and release; the motion builds up and fades smoothly, like a heavy flywheel.
  */
 public class CoolingCoprocessorBlockEntity extends BlockEntity {
-    /** Набранный ход 0..1 и фаза качания (радианы); prev — для сглаживания между тиками. */
+    /** Built-up motion 0..1 and swing phase (radians); prev values are for smoothing between ticks. */
     public float speed = 0f;
     public float speedPrev = 0f;
     public float phase = 0f;
@@ -25,7 +25,7 @@ public class CoolingCoprocessorBlockEntity extends BlockEntity {
     public static void clientTick(Level level, BlockPos pos, BlockState state, CoolingCoprocessorBlockEntity be) {
         boolean driven = false;
         for (Direction d : Direction.values()) {
-            // состояние ACTIVE соседнего калькулятора или его визуальное окно работы
+            // the neighbouring calculator's ACTIVE state or its visual work window
             BlockPos np = pos.relative(d);
             BlockState ns = level.getBlockState(np);
             if (ns.getBlock() instanceof com.golemlogix.blocks.CryoCalculatorBlock) {
@@ -41,7 +41,7 @@ public class CoolingCoprocessorBlockEntity extends BlockEntity {
         }
         be.speedPrev = be.speed;
         be.phasePrev = be.phase;
-        // разгон быстрее, выбег медленнее: тяжёлый маховик
+        // spins up faster than it runs down: a heavy flywheel
         float target = driven ? 1f : 0f;
         be.speed += (target - be.speed) * (driven ? 0.035f : 0.018f);
         if (be.speed < 0.003f && !driven) {

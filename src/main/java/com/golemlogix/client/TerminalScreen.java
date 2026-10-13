@@ -36,16 +36,16 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Экран терминала: поиск, сортировка, прокрутка; в варианте «Создания» ещё сетка 3x3. Высота окна — по кнопке «Размер»:
- * обычная, высокая или во весь экран (больше строк списка). В Портативном Хронометре справа от сетки — зелёный экран,
- * где Визер пытается выстрелить прямо в стекло, и запас Source.
- * По умолчанию в одном списке и предметы, и жидкости (комбинированный режим): жидкость считается ведрами,
- * то есть 1000 mB в списке — это «один предмет».
+ * Terminal screen: search, sorting, scrolling; the "Crafting" variant also has a 3x3 grid. The window height follows the "Size" button:
+ * normal, tall or full screen (more list rows). In the Portable Chronometer, to the right of the grid there is a green screen
+ * where a Wither tries to shoot right into the glass, and the Source charge.
+ * By default items and fluids are in one list (combined mode): fluid is counted in buckets,
+ * that is 1000 mB in the list is "one item".
  */
 public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     private enum SortMode {NAME, COUNT, MOD}
 
-    /** Что показывает список: всё вместе (по умолчанию), только предметы или только жидкости. */
+    /** What the list shows: everything together (the default), only items or only fluids. */
     private enum ViewMode {ALL, ITEMS, FLUIDS}
 
     private static SortMode sortMode = SortMode.NAME;
@@ -53,7 +53,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     private static ViewMode viewMode = ViewMode.ALL;
     private static boolean craftableOnly = false;
     private static String lastSearch = "";
-    /** Последняя виденная строка поиска JEI: изменилась в JEI — подхватываем её сюда. */
+    /** Last JEI search line seen: if it changed in JEI, it is picked up here. */
     private String lastJei;
 
     @Override
@@ -66,19 +66,19 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         }
     }
 
-    /** Строка списка: либо предмет с количеством, либо жидкость (тогда fluid не пуст). */
+    /** A list row: either an item with a count or a fluid (then fluid is not empty). */
     private record Row(ItemStack stack, long count, boolean craftable, FluidStack fluid, String name, String namespace) {
         boolean isFluid() {
             return !fluid.isEmpty();
         }
 
-        /** Количество «в штуках»: у жидкости — вёдра. */
+        /** Count "in units": buckets for a fluid. */
         double units() {
             return isFluid() ? fluid.getAmount() / 1000.0 : count;
         }
     }
 
-    /** Ингредиент под курсором для JEI (клавиши R и U): ItemStack или FluidStack и его место на экране. */
+    /** Ingredient under the cursor for JEI (R and U keys): an ItemStack or FluidStack and its place on the screen. */
     public record Hit(Object ingredient, Rect2i area) {
     }
 
@@ -119,7 +119,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         }
     }
 
-    /** Сколько строк списка показать при выбранном размере и высоте экрана. */
+    /** How many list rows to show for the selected size and screen height. */
     private int wantedRows() {
         int base = TerminalMenu.defaultRows(crafting);
         int fixed = TerminalMenu.imageHeight(crafting, 0);
@@ -146,8 +146,8 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         search.setMaxLength(48);
         search.setTextColor(GolemGui.PARCHMENT);
         search.setHint(Component.translatable("gui.golem_logix.search").withStyle(ChatFormatting.DARK_GRAY));
-        // поиск общий с JEI: при открытии берём строку JEI (если он есть), набранное здесь уходит в JEI
-        // режим выбирается кнопкой «JEI» справа: без связи, только в JEI, в обе стороны
+        // search is shared with JEI: on open the JEI line is taken (if JEI is there), what is typed here goes to JEI
+        // the mode is chosen with the "JEI" button on the right: no link, only to JEI, both ways
         String jei = jeiSync().readsFromJei() ? ClientHooks.jeiGetSearch.get() : null;
         search.setValue(jei != null ? jei : lastSearch);
         lastJei = jei;
@@ -202,7 +202,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
                     GolemClientConfig.TERMINAL_SIZE.save();
                     rebuildWidgets();
                 }));
-        // синхронизация поиска с JEI (кнопка видна, только если JEI установлен)
+        // search sync with JEI (the button is visible only when JEI is installed)
         if (ClientHooks.jeiGetSearch.get() != null) {
             addRenderableWidget(new GolemButton(bx, by + 90, 36, 16,
                     () -> Component.translatable("gui.golem_logix.jei_sync." + jeiSync().name().toLowerCase(Locale.ROOT)),
@@ -274,7 +274,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         scroll = Math.max(0, Math.min(scroll, maxScroll()));
     }
 
-    /** Для проверок стенда: индекс строки списка по части имени (-1, если такой нет). */
+    /** For rig checks: index of a list row by part of its name (-1 if there is none). */
     public int indexOfName(String part) {
         if (dirty || builtVersion != menu.clientVersion) {
             rebuild();
@@ -337,10 +337,10 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         }
         GolemGui.panel(g, leftPos, topPos, imageWidth, imageHeight);
 
-        // поле поиска
+        // search field
         GolemGui.inset(g, leftPos + 91, topPos + 5, 80, 15);
 
-        // список
+        // list
         int lx = leftPos + TerminalMenu.LIST_X;
         int ly = topPos + TerminalMenu.LIST_Y;
         for (int r = 0; r < rows(); r++) {
@@ -349,7 +349,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
             }
         }
 
-        // полоса прокрутки
+        // scroll bar
         int sbX = lx + TerminalMenu.COLS * 18 + 3;
         int sbH = rows() * 18;
         g.fill(sbX, ly, sbX + 5, ly + sbH, GolemGui.SLOT_BG);
@@ -362,13 +362,13 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
             g.fill(sbX, ly, sbX + 5, ly + sbH, GolemGui.BRASS_DARK);
         }
 
-        // инфо-строка
+        // info line
         renderInfo(g, mouseX, mouseY);
 
         for (Slot slot : menu.slots) {
             GolemGui.slot(g, leftPos + slot.x - 1, topPos + slot.y - 1);
         }
-        // ячейка Хронометра, через который открыто окно, заперта — её обводит бирюзовая рамка
+        // the slot of the Chronometer the window was opened through is locked: a teal frame outlines it
         if (menu.lockedMenuSlot() >= 0) {
             Slot lock = menu.slots.get(menu.lockedMenuSlot());
             int x = leftPos + lock.x - 1, y = topPos + lock.y - 1;
@@ -389,12 +389,12 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         renderEntries(g, mouseX, mouseY);
     }
 
-    /** У Хронометра (если Source нужен) справа от результата — шкала заряда. */
+    /** For the Chronometer (if Source is needed) a charge gauge to the right of the result. */
     private boolean hasChargeGauge() {
         return menu.wireless && crafting && menu.clientInfo != null && menu.clientInfo.charge() >= 0;
     }
 
-    /** Вертикальная колба заряда Source: фиолетовый столбик в латунной оправе; от Резонатора — полная и мерцает. */
+    /** Vertical Source charge flask: a purple column in a brass mount; fed by the Resonator it is full and shimmers. */
     private void renderChargeGauge(GuiGraphics g, int x, int y, int h) {
         TerminalInfoPayload info = menu.clientInfo;
         boolean resonator = info.resonator();
@@ -408,7 +408,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
             g.fill(x + 1, top, x + 9, y + h - 1, 0xFF6A4FC8);
             g.fill(x + 1, top, x + 3, y + h - 1, 0xFF9E80F8);
             if (resonator) {
-                // эфирный поток от Резонатора: бегущая светлая полоска
+                // aether stream from the Resonator: a running light stripe
                 int band = top + (int) ((y + h - 1 - top) * t);
                 g.fill(x + 1, band, x + 9, Math.min(y + h - 1, band + 3), 0xFFE2D6FF);
             }
@@ -435,7 +435,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         double fluidFrac = info.fluidsCapacity() <= 0 ? 0 : (double) info.fluidsUsed() / info.fluidsCapacity();
         String left;
         if (viewMode == ViewMode.ALL) {
-            // две полоски: предметы сверху, жидкости снизу; цифры — предметы и вёдра
+            // two bars: items on top, fluids below; the numbers are items and buckets
             int wi = (int) Math.round(160 * Math.min(1.0, itemFrac));
             int wf = (int) Math.round(160 * Math.min(1.0, fluidFrac));
             if (wi > 0) {
@@ -444,7 +444,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
             if (wf > 0) {
                 g.fill(ix + 1, iy + 6, ix + 1 + wf, iy + 11, fluidFrac > 0.9 ? GolemGui.RED : 0xFF2A6FC8);
             }
-            // предметы, затем капля и вёдра жидкостей; каналы справа, если хватает места (иначе они в подсказке)
+            // items, then a drop and the fluid buckets; channels on the right if there is room (otherwise they are in the tooltip)
             String items = GolemGui.formatCount(info.itemsUsed()) + "/" + GolemGui.formatCount(info.itemsCapacity());
             String buckets = GolemGui.formatBuckets(info.fluidsUsed()) + "/" + GolemGui.formatBuckets(info.fluidsCapacity());
             g.drawString(font, items, ix + 4, iy + 2, GolemGui.PARCHMENT, true);
@@ -468,7 +468,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         drawChannels(g, info, ix + 4 + font.width(left) + 6, ix, iy);
     }
 
-    /** «Ch 9/320» у правого края строки состояния — если не налезает на текст слева (from — где он кончается). */
+    /** "Ch 9/320" at the right edge of the status line, if it does not overlap the text on the left (from = where that text ends). */
     private void drawChannels(GuiGraphics g, TerminalInfoPayload info, int from, int ix, int iy) {
         String right = Component.translatable("gui.golem_logix.channels_short", info.channelsUsed(), info.channelCapacity()).getString();
         int x = ix + 158 - font.width(right);
@@ -477,7 +477,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         }
     }
 
-    /** Капля 5x6 перед числом вёдер в строке состояния. */
+    /** A 5x6 drop before the bucket count in the status line. */
     private void drawDropAt(GuiGraphics g, int x, int y) {
         int edge = 0xFF0B2A52, body = 0xFF9FE8FF;
         g.fill(x + 1, y, x + 4, y + 1, edge);
@@ -487,7 +487,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         g.fill(x + 1, y + 2, x + 4, y + 5, body);
     }
 
-    /** Кнопки сортировки и вида стоят справа от окна: JEI должен обходить их, а не закрывать своей панелью. */
+    /** The sort and view buttons sit to the right of the window: JEI must avoid them, not cover them with its panel. */
     public List<Rect2i> extraAreas() {
         return List.of(new Rect2i(leftPos + imageWidth, topPos + 2, 40, 110));
     }
@@ -538,7 +538,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         g.pose().popPose();
     }
 
-    /** Маленькая капля в углу ячейки: отличает жидкость от предмета в общем списке. */
+    /** A small drop in the slot corner: tells a fluid from an item in the combined list. */
     private void drawDrop(GuiGraphics g, int x, int y) {
         if (viewMode == ViewMode.FLUIDS) {
             return;
@@ -582,7 +582,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         return idx < totalEntries() ? idx : -1;
     }
 
-    /** Для JEI (клавиши R и U, закладки): что лежит в ячейке списка под курсором. */
+    /** For JEI (R and U keys, bookmarks): what is in the list slot under the cursor. */
     @Nullable
     public Hit ingredientAt(double mouseX, double mouseY) {
         int idx = hoveredIndex(mouseX, mouseY);
@@ -673,7 +673,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // полоса прокрутки
+        // scroll bar
         int lx = leftPos + TerminalMenu.LIST_X;
         int ly = topPos + TerminalMenu.LIST_Y;
         int sbX = lx + TerminalMenu.COLS * 18 + 3;
@@ -704,7 +704,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         boolean fullContainer = handler != null && !handler.drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.SIMULATE).isEmpty();
 
         if (viewMode == ViewMode.FLUIDS) {
-            // в списке жидкостей любой клик ёмкостью: полная — слить в сеть, пустая — набрать выбранную жидкость
+            // in the fluid list any click with a container: a full one empties into the network, an empty one takes the selected fluid
             if (handler == null) {
                 return true;
             }
@@ -718,7 +718,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
 
         if (!carried.isEmpty()) {
             if (row != null && row.isFluid() && handler != null) {
-                // клик ёмкостью по строке жидкости в общем списке
+                // a click with a container on a fluid row in the combined list
                 if (fullContainer) {
                     send(Action.FLUID_DRAIN_CARRIED, ItemStack.EMPTY, FluidStack.EMPTY);
                 } else {
@@ -726,7 +726,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
                 }
                 return true;
             }
-            // ПКМ полным ведром (любым контейнером жидкости) по списку — вылить жидкость в сеть
+            // right-click with a full bucket (any fluid container) on the list pours the fluid into the network
             if (button == 1 && fullContainer) {
                 send(Action.FLUID_DRAIN_CARRIED, ItemStack.EMPTY, FluidStack.EMPTY);
                 return true;

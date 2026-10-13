@@ -36,12 +36,12 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * Книга «Оккультный Гримуар Логистики».
- * Режим карты: разделы слева, «карта исследований» с узлами-статьями и линиями зависимостей (двигается мышью).
- * Режим статьи: разворот из двух пергаментных страниц с текстом, рецептами, схемами и иллюстрациями.
+ * The "Occult Logistics Grimoire" book.
+ * Map mode: sections on the left, a "research map" with entry nodes and dependency lines (dragged with the mouse).
+ * Entry mode: a spread of two parchment pages with text, recipes, schematics and illustrations.
  */
 public class BookScreen extends Screen {
-    // размеры в «книжных» координатах (масштабируются под экран)
+    // sizes in "book" coordinates (scaled to the screen)
     private static final int W = 380;
     private static final int H = 240;
     private static final int PAGE_W = 160;
@@ -65,9 +65,9 @@ public class BookScreen extends Screen {
     private static final int INK_GOLD = 0xFF8A5A0B;
     private static final int INK_DIM = 0xFF7A6446;
 
-    // ---------------------------------------------------------------- состояние
+    // ---------------------------------------------------------------- state
 
-    /** Состояние на момент закрытия книги: раздел, статья (id или пусто), разворот. Живёт до выхода из игры, потом берётся из файла. */
+    /** State at the moment the book was closed: section, entry (id or empty), spread. Lives until the game exits, then it is read from a file. */
     private static String[] lastState = null;
 
     private final BookModel book = BookModel.get();
@@ -87,7 +87,7 @@ public class BookScreen extends Screen {
     private EditBox search;
     private final Set<String> visited = new HashSet<>();
 
-    // трансформация «книжных» координат в экранные
+    // transformation of "book" coordinates into screen coordinates
     private float k = 1f;
     private int ox, oy;
     private ItemStack hoverStack = ItemStack.EMPTY;
@@ -106,13 +106,13 @@ public class BookScreen extends Screen {
         restoreState();
     }
 
-    // ---------------------------------------------- последняя открытая страница
+    // ---------------------------------------------- last opened page
 
     private Path stateFile() {
         return Minecraft.getInstance().gameDirectory.toPath().resolve("golem_logix_book_state.txt");
     }
 
-    /** Вспоминает раздел, статью и разворот, на которых игрок закрыл книгу (в памяти или из файла). */
+    /** Recalls the section, entry and spread where the player closed the book (from memory or from a file). */
     private void restoreState() {
         String[] saved = lastState;
         if (saved == null) {
@@ -142,7 +142,7 @@ public class BookScreen extends Screen {
         }
     }
 
-    /** Книга, открытая сразу на статье (щелчок по сообщению о секретном знании); неизвестная статья — карта. */
+    /** The book opened right at an entry (a click on the secret knowledge message); an unknown entry opens the map. */
     public static BookScreen openAt(String entryId) {
         BookModel.Entry e = BookModel.get().byId.get(entryId);
         if (e != null && e.visible()) {
@@ -165,7 +165,7 @@ public class BookScreen extends Screen {
         super.removed();
     }
 
-    // ------------------------------------------------------------ прогресс чтения
+    // ------------------------------------------------------------ reading progress
 
     private Path progressFile() {
         return Minecraft.getInstance().gameDirectory.toPath().resolve("golem_logix_book.txt");
@@ -193,7 +193,7 @@ public class BookScreen extends Screen {
     private BookModel.Category category() {
         BookModel.Category c = book.categories.get(Mth.clamp(categoryIndex, 0, book.categories.size() - 1));
         if (!c.visible() && !book.categories.isEmpty()) {
-            // раздел скрыт (тайна ещё не открыта или снова закрыта) — показываем первый
+            // the section is hidden (the secret is not open yet, or closed again): show the first one
             categoryIndex = 0;
             c = book.categories.get(0);
         }
@@ -240,7 +240,7 @@ public class BookScreen extends Screen {
         }
     }
 
-    // ----------------------------------------------------- построение страниц
+    // ----------------------------------------------------- building pages
 
     private enum Kind {TEXT, CRAFTING, IMAGE, RITUAL, BLUEPRINT, TABLE, SPOTLIGHT, CHECKLIST, TASKS}
 
@@ -251,8 +251,8 @@ public class BookScreen extends Screen {
     }
 
     /**
-     * Текст с кодами «§» (в книге пишут «&») → компонент из кусков со своими стилями. Перенос строк такого компонента не
-     * теряет и не путает начертание (у строки с кодами внутри жирный текст «перетекал» за &r, а ширина считалась не та).
+     * Text with "§" codes (the book uses "&") -> a component of pieces with their own styles. Wrapping such a component does not
+     * lose or mix up the formatting (in a line with codes inside, bold text "leaked" past &r and the width was measured wrong).
      */
     static net.minecraft.network.chat.MutableComponent styled(String s) {
         net.minecraft.network.chat.MutableComponent out = Component.empty();
@@ -279,7 +279,7 @@ public class BookScreen extends Screen {
         return out;
     }
 
-    /** Разбивает абзацы на строки страницы; возвращает порции, помещающиеся по высоте. */
+    /** Splits paragraphs into page lines; returns the portions that fit by height. */
     private List<List<Line>> flow(List<String> paras, int startY, int limitY, int firstLimitY) {
         List<List<Line>> chunks = new ArrayList<>();
         List<Line> cur = new ArrayList<>();
@@ -350,7 +350,7 @@ public class BookScreen extends Screen {
             if (kind == Kind.RITUAL && p.has("condition")) {
                 condLines = font.split(styled("\u00a7o" + p.get("condition").getAsString().replace('&', '\u00a7')), PAGE_W - 16).size();
             }
-            // с какой высоты идёт текст после графики
+            // at which height the text starts after the graphics
             int start = switch (kind) {
                 case TEXT -> hh > 0 ? hh + 2 : 8;
                 case CRAFTING -> hh + 6 + 54 + 12;
@@ -381,9 +381,9 @@ public class BookScreen extends Screen {
     }
 
     /**
-     * Для стенда разработчика: раскладывает все статьи книги текущего языка (все страницы, как будто тайна раскрыта) и
-     * сообщает о неудачной вёрстке: «висячая» страница с одной-двумя перенесёнными строками или графика, не оставившая места
-     * тексту своей страницы.
+     * For the developer rig: lays out all book entries of the current language (all pages, as if the secret were revealed) and
+     * reports bad layout: a "widow" page with one or two wrapped lines, or graphics that left no room
+     * for the text of its page.
      */
     public static List<String> auditLayout() {
         BookScreen s = new BookScreen();
@@ -404,7 +404,7 @@ public class BookScreen extends Screen {
                         if (continuation && v.lines().size() <= 2) {
                             out.add(e.id + " page " + (i + 1) + " " + which + ": only " + v.lines().size() + " line(s) carried over");
                         }
-                        // список материалов решётки занимает страницу целиком, его текст нарочно идёт на соседнюю
+                        // the array's material list takes a whole page, its text deliberately goes to the next one
                         if (!continuation && v.kind() != Kind.CHECKLIST && v.lines().isEmpty() && !BookModel.strings(v.data(), "text").isEmpty()) {
                             out.add(e.id + " page " + (i + 1) + " " + which + ": no room for text after the picture");
                         }
@@ -417,7 +417,7 @@ public class BookScreen extends Screen {
         return out;
     }
 
-    /** Страница для отчёта: тип, заголовок или рецепт и начало текста. */
+    /** A page for the report: type, title or recipe, and the start of the text. */
     private static String auditName(JsonObject p) {
         String type = p.has("type") ? p.get("type").getAsString() : "?";
         String name = p.has("title") ? p.get("title").getAsString() : p.has("recipe") ? p.get("recipe").getAsString() : "";
@@ -426,7 +426,7 @@ public class BookScreen extends Screen {
         return "[" + type + (name.isEmpty() ? "" : " \"" + name + "\"") + " / " + (start.length() > 40 ? start.substring(0, 40) + "…" : start) + "]";
     }
 
-    // ----------------------------------------------------------------- открытие
+    // ----------------------------------------------------------------- opening
 
     private void open(BookModel.Entry entry) {
         openEntry = entry;
@@ -445,7 +445,7 @@ public class BookScreen extends Screen {
         return Math.max(1, views.size() / 2);
     }
 
-    // ------------------------------------------------------------------ рендер
+    // ------------------------------------------------------------------ rendering
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partial) {
@@ -458,7 +458,7 @@ public class BookScreen extends Screen {
         g.pose().translate(ox, oy, 0);
         g.pose().scale(k, k, 1f);
 
-        // вкладки-закладки раньше переплёта: обложка ложится поверх их корешков, а не наоборот
+        // the bookmark tabs before the binding: the cover lies over their spines, not the other way round
         drawTabs(g, (int) bx, (int) by);
         drawCover(g);
         if (openEntry == null) {
@@ -482,14 +482,14 @@ public class BookScreen extends Screen {
     }
 
     private void drawCover(GuiGraphics g) {
-        // кожаный переплёт
+        // leather binding
         g.fill(-6, -6, W + 6, H + 6, 0xFF1A0F08);
         g.fill(-4, -4, W + 4, H + 4, 0xFF4A2E1A);
         g.fill(-3, -3, W + 3, H + 3, 0xFF5E3B22);
         g.fill(0, 0, W, H, 0xFF3A2314);
     }
 
-    /** Латунные уголки переплёта — поверх всего содержимого, чтобы интерфейс не залезал на обложку. */
+    /** Brass corners of the binding, on top of all content so the interface does not overlap the cover. */
     private void drawCorners(GuiGraphics g) {
         g.pose().pushPose();
         g.pose().translate(0, 0, 400);
@@ -502,7 +502,7 @@ public class BookScreen extends Screen {
         g.pose().popPose();
     }
 
-    /** Разделы, у которых есть вкладка: только те, где видна хоть одна статья. */
+    /** Sections that have a tab: only those where at least one entry is visible. */
     private List<Integer> tabs() {
         List<Integer> out = new ArrayList<>();
         for (int i = 0; i < book.categories.size(); i++) {
@@ -515,7 +515,7 @@ public class BookScreen extends Screen {
 
     private static final int TAB_STEP = 25;
 
-    /** Есть ли в разделе видимые, но ещё не прочитанные статьи. */
+    /** Whether the section has visible but not yet read entries. */
     private boolean hasUnread(BookModel.Category c) {
         for (BookModel.Entry e : c.entries) {
             if (e.visible() && !visited.contains(e.id)) {
@@ -525,14 +525,14 @@ public class BookScreen extends Screen {
         return false;
     }
 
-    /** Шаг вкладок: все закладки умещаются между латунными уголками переплёта. */
+    /** Tab spacing: all bookmarks fit between the brass corners of the binding. */
     private int tabStep(int count) {
         return Math.max(18, Math.min(TAB_STEP, (H - 2 * TAB_TOP) / Math.max(1, count)));
     }
 
     private static final int TAB_TOP = 15;
 
-    /** Левый край вкладки: закладка торчит из-под переплёта, выбранная выдвинута дальше. */
+    /** Left edge of a tab: the bookmark sticks out from under the binding, the selected one sticks out further. */
     private int tabX(int i) {
         return i == categoryIndex ? -34 : -30;
     }
@@ -547,14 +547,14 @@ public class BookScreen extends Screen {
             int x = tabX(i);
             int y = TAB_TOP + j * step;
             boolean hover = mx >= x && mx < -6 && my >= y && my < y + th;
-            // закладка уходит под переплёт (обложка рисуется поверх её правого края)
+            // the bookmark goes under the binding (the cover is drawn over its right edge)
             g.fill(x, y, 2, y + th, 0xFF1A0F08);
             g.fill(x + 1, y + 1, 2, y + th - 1, hover ? GolemGui.BRASS_L : (i == categoryIndex ? GolemGui.BRASS : GolemGui.BRASS_DARK));
             g.fill(x + 3, y + 3, 2, y + th - 3, 0xFF16222B);
             g.fill(x + 3, y + 3, x + 5, y + th - 3, c.color);
             g.renderItem(c.icon, x + 7, y + (th - 16) / 2);
             if (hasUnread(c)) {
-                // непрочитанное в разделе: пульсирующий огонёк в углу вкладки
+                // unread entries in the section: a pulsing light in the tab corner
                 int a = (int) (140 + 115 * Math.sin(time * 0.2 + j));
                 g.fill(x + 21, y + 3, x + 25, y + 7, (Math.max(0, Math.min(255, a)) << 24) | 0x38D9D6);
             }
@@ -564,7 +564,7 @@ public class BookScreen extends Screen {
         }
     }
 
-    // ------------------------------------------------------------------- карта
+    // ------------------------------------------------------------------- map
 
     private int nodeX(BookModel.Entry e, int cx) {
         return cx + (int) Math.round((e.x * SPACING + panX[categoryIndex]) * zoom[categoryIndex]);
@@ -577,17 +577,17 @@ public class BookScreen extends Screen {
     private void drawMap(GuiGraphics g, int mx, int my, float partial) {
         BookModel.Category cat = category();
         int ax = 8, ay = 30, aw = W - 16, ah = H - 40;
-        // шапка
+        // header
         g.drawString(font, "§l" + cat.title, 12, 10, GolemGui.BRASS_L, false);
         g.drawString(font, cat.blurb, 12 + font.width("§l" + cat.title) + 8, 10, 0xFF9A8E78, false);
-        // поле поиска
+        // search field
         g.fill(W - 130, 6, W - 16, 22, 0xFF1A0F08);
         g.fill(W - 129, 7, W - 17, 21, 0xFF0B1620);
         search.setX(Math.round(ox + (W - 126) * k));
         search.setY(Math.round(oy + 9 * k));
         search.setWidth(Math.round(106 * k));
 
-        // фон карты, плиткой 256x256
+        // map background, tiled 256x256
         g.enableScissor(Math.round(ox + ax * k), Math.round(oy + ay * k), Math.round(ox + (ax + aw) * k), Math.round(oy + (ay + ah) * k));
         int shiftX = (int) Math.floorMod((long) Math.round(panX[categoryIndex] * zoom[categoryIndex]), 256L);
         int shiftY = (int) Math.floorMod((long) Math.round(panY[categoryIndex] * zoom[categoryIndex]), 256L);
@@ -596,7 +596,7 @@ public class BookScreen extends Screen {
                 g.blit(MAP_BG, tx, ty, 0, 0, 256, 256, 256, 256);
             }
         }
-        // тёмная виньетка по краям
+        // dark vignette at the edges
         for (int i = 0; i < 14; i++) {
             int a = (int) (150 * (1 - i / 14f)) << 24;
             g.fill(ax + i, ay, ax + i + 1, ay + ah, a);
@@ -606,7 +606,7 @@ public class BookScreen extends Screen {
         }
 
         int cx = ax + aw / 2, cy = ay + ah / 2;
-        // линии зависимостей
+        // dependency lines
         for (BookModel.Entry e : cat.entries) {
             if (!e.visible()) {
                 continue;
@@ -624,7 +624,7 @@ public class BookScreen extends Screen {
                 g.fill(x2 - 2, y1 - 2, x2 + 2, y1 + 2, c);
             }
         }
-        // узлы
+        // nodes
         BookModel.Entry hovered = null;
         long time = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0;
         float z = (float) zoom[categoryIndex];
@@ -655,7 +655,7 @@ public class BookScreen extends Screen {
             g.pose().popPose();
         }
         g.disableScissor();
-        // масштаб карты
+        // map zoom
         String zoomText = Component.translatable("gui.golem_logix.book.zoom", Math.round(zoom[categoryIndex] * 100)).getString();
         g.drawString(font, zoomText, ax + aw - 6 - font.width(zoomText), ay + ah - 12, 0xFF6FA5B5, true);
         if (hovered != null) {
@@ -717,11 +717,11 @@ public class BookScreen extends Screen {
         }
     }
 
-    // ----------------------------------------------------------------- статья
+    // ----------------------------------------------------------------- entry
 
     private void drawArticle(GuiGraphics g, int mx, int my) {
         clickables.clear();
-        // спинка и страницы
+        // spine and pages
         g.fill(LEFT_PAGE_X - 2, PAGES_Y - 2, RIGHT_PAGE_X + PAGE_W + 2, PAGES_Y + PAGE_H + 2, 0xFF1A0F08);
         g.blit(PARCHMENT, LEFT_PAGE_X, PAGES_Y, 0, 0, PAGE_W, PAGE_H, 256, 256);
         g.blit(PARCHMENT, RIGHT_PAGE_X, PAGES_Y, 0, 40, PAGE_W, PAGE_H, 256, 256);
@@ -740,7 +740,7 @@ public class BookScreen extends Screen {
             drawView(g, views.get(li + 1), RIGHT_PAGE_X, PAGES_Y, mx, my, li + 2);
         }
 
-        // навигация
+        // navigation
         navButton(g, mx, my, LEFT_PAGE_X, "◀", spread > 0, Component.translatable("gui.golem_logix.book.prev"));
         navButton(g, mx, my, RIGHT_PAGE_X + PAGE_W - 40, "▶", spread < spreads() - 1, Component.translatable("gui.golem_logix.book.next"));
         navButton(g, mx, my, W / 2 - 20, "☰", true, Component.translatable("gui.golem_logix.book.map"));
@@ -800,7 +800,7 @@ public class BookScreen extends Screen {
         g.fill(x + 6, yy, x + PAGE_W - 6, yy + 1, 0x80804A0A);
     }
 
-    // ---------------------------------------------------------------- рецепты
+    // ---------------------------------------------------------------- recipes
 
     private record Grid(ItemStack[][] cells, ItemStack result) {
     }
@@ -868,13 +868,13 @@ public class BookScreen extends Screen {
                 }
             }
         }
-        // стрелка
+        // arrow
         int ax = x0 + 58, ay = y0 + 25;
         g.fill(ax, ay, ax + 14, ay + 3, INK_GOLD);
         for (int i = 0; i < 4; i++) {
             g.fill(ax + 14 + i, ay - 3 + i, ax + 15 + i, ay + 6 - i, INK_GOLD);
         }
-        // результат
+        // result
         int rx = x0 + 80, ry = y0 + 18;
         GolemGui.slot(g, rx - 1, ry - 1);
         if (!grid.result().isEmpty()) {
@@ -886,7 +886,7 @@ public class BookScreen extends Screen {
         }
     }
 
-    // ----------------------------------------------------------- ритуал, станция
+    // ----------------------------------------------------------- ritual, station
 
     private static ItemStack parseStack(String spec) {
         int star = spec.indexOf('*');
@@ -960,7 +960,7 @@ public class BookScreen extends Screen {
         }
     }
 
-    // ---------------------------------------------------------- схема решётки
+    // ---------------------------------------------------------- array schematic
 
     private void drawBlueprint(GuiGraphics g, View v, int x, int y, int mx, int my) {
         JsonObject d = v.data();
@@ -995,7 +995,7 @@ public class BookScreen extends Screen {
         }
     }
 
-    // ---------------------------------------------------------------- таблица
+    // ---------------------------------------------------------------- table
 
     private void drawTable(GuiGraphics g, View v, int x, int y) {
         JsonObject d = v.data();
@@ -1008,7 +1008,7 @@ public class BookScreen extends Screen {
         var rows = d.has("rows") ? d.getAsJsonArray("rows") : new com.google.gson.JsonArray();
         int cols = Math.max(1, header.size());
         int[] widths = columnWidths(d, cols);
-        // заголовки и ячейки переносятся внутри своего столбца, строка таблицы растёт по самой длинной ячейке
+        // headers and cells wrap inside their column, a table row grows to its longest cell
         int xx = x + 6;
         int hl = 1;
         for (int c = 0; c < header.size(); c++) {
@@ -1045,7 +1045,7 @@ public class BookScreen extends Screen {
         }
     }
 
-    /** Текст ячейки таблицы, перенесённый по ширине столбца (заголовок — жирным). */
+    /** Table cell text wrapped to the column width (the header in bold). */
     private List<FormattedCharSequence> cellLines(String text, int width, boolean bold) {
         net.minecraft.network.chat.MutableComponent c = styled(text.replace('&', '§'));
         if (bold) {
@@ -1054,7 +1054,7 @@ public class BookScreen extends Screen {
         return font.split(c, width);
     }
 
-    /** Высота таблицы без заголовка страницы: шапка и строки с учётом переносов. */
+    /** Table height without the page title: the header and the rows with their wraps. */
     private int tableHeight(JsonObject d) {
         var header = BookModel.strings(d, "header");
         int cols = Math.max(1, header.size());
@@ -1086,8 +1086,8 @@ public class BookScreen extends Screen {
     }
 
     /**
-     * Для проверки вёрстки: таблица целиком помещается на странице, столбцы не шире страницы, а каждое слово — в свой столбец
-     * (иначе перенос разрежет его посередине).
+     * For layout checks: the whole table fits on the page, the columns are not wider than the page, and every word fits its column
+     * (otherwise wrapping would cut it in the middle).
      */
     private List<String> auditTable(String id, JsonObject d, int hh) {
         List<String> out = new ArrayList<>();
@@ -1130,7 +1130,7 @@ public class BookScreen extends Screen {
         return out;
     }
 
-    // ----------------------------------------------- список материалов + призраки
+    // ----------------------------------------------- material list + ghosts
 
     private record Clickable(int x, int y, int w, int h, Runnable action) {
     }
@@ -1153,7 +1153,7 @@ public class BookScreen extends Screen {
         return AtlasBlueprint.requirements(var).size() + (var == AtlasBlueprint.Variant.FULL ? 1 : 0);
     }
 
-    /** Сколько таких предметов в инвентаре игрока (основной, хотбар, вторая рука). */
+    /** How many of these items the player has in the inventory (main, hotbar, offhand). */
     private static int have(Item item) {
         var player = Minecraft.getInstance().player;
         if (player == null) {
@@ -1229,12 +1229,12 @@ public class BookScreen extends Screen {
             }
             yy += 20;
         }
-        // итог
+        // total
         drawCheck(g, x + 8, yy + 4, all);
         g.drawString(font, Component.translatable(all ? "gui.golem_logix.book.have_all" : "gui.golem_logix.book.have_not_all"),
                 x + 24, yy + 5, all ? 0xFF2E7D32 : 0xFF9B2C2C, false);
         yy += 18;
-        // кнопка призраков
+        // ghost button
         boolean showing = GhostProjection.isShowing(var);
         int bx = x + 8, bw = PAGE_W - 16, bh = 16;
         boolean hover = mx >= bx && mx < bx + bw && my >= yy && my < yy + bh;
@@ -1253,7 +1253,7 @@ public class BookScreen extends Screen {
         }));
     }
 
-    // ------------------------------------------------- испытания секретного знания
+    // ------------------------------------------------- secret knowledge trials
 
     private static boolean taskDone(String id) {
         return switch (id) {
@@ -1274,7 +1274,7 @@ public class BookScreen extends Screen {
         return h;
     }
 
-    /** Список испытаний с отметками: пройдено — зелёная галочка и зачёркнутый текст, нет — пустая латунная рамка. */
+    /** The list of trials with marks: passed = a green tick and struck-through text, not yet = an empty brass frame. */
     private void drawTasks(GuiGraphics g, View v, int x, int y, int mx, int my) {
         if (v.title() != null) {
             heading(g, v.title(), x, y);
@@ -1301,7 +1301,7 @@ public class BookScreen extends Screen {
         }
     }
 
-    // ---------------------------------------------------------- иллюстрации
+    // ---------------------------------------------------------- illustrations
 
     private void drawImage(GuiGraphics g, View v, int x, int y) {
         JsonObject d = v.data();
@@ -1317,13 +1317,13 @@ public class BookScreen extends Screen {
         g.blit(tex, ix, top, size, size, 0, 0, 288, 288, 288, 288);
     }
 
-    // ----------------------------------------------------------------- ввод
+    // ----------------------------------------------------------------- input
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         double bx = (mouseX - ox) / k, by = (mouseY - oy) / k;
 
-        // вкладки разделов
+        // section tabs
         List<Integer> tabs = tabs();
         int step = tabStep(tabs.size());
         for (int j = 0; j < tabs.size(); j++) {
@@ -1339,7 +1339,7 @@ public class BookScreen extends Screen {
             return clickArticle(bx, by) || super.mouseClicked(mouseX, mouseY, button);
         }
 
-        // результаты поиска
+        // search results
         List<BookModel.Entry> res = searchResults();
         int y = 24;
         for (BookModel.Entry e : res) {
@@ -1357,7 +1357,7 @@ public class BookScreen extends Screen {
         }
         search.setFocused(false);
 
-        // карта: начало перетаскивания / клик по узлу
+        // map: start of a drag / click on a node
         int ax = 8, ay = 30, aw = W - 16, ah = H - 40;
         if (bx >= ax && bx < ax + aw && by >= ay && by < ay + ah) {
             dragging = true;
@@ -1440,7 +1440,7 @@ public class BookScreen extends Screen {
                 int cx = ax + aw / 2, cy = ay + ah / 2;
                 double z1 = zoom[categoryIndex];
                 double z2 = Mth.clamp(z1 * Math.pow(1.15, Math.signum(scrollY)), MIN_ZOOM, MAX_ZOOM);
-                // точка карты под курсором остаётся на месте
+                // the map point under the cursor stays in place
                 double wx = (bx - cx) / z1 - panX[categoryIndex], wy = (by - cy) / z1 - panY[categoryIndex];
                 zoom[categoryIndex] = z2;
                 panX[categoryIndex] = (bx - cx) / z2 - wx;

@@ -13,9 +13,9 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Планировщик: разворачивает дерево рецептов перфокарт для нужного предмета
- * и раскладывает его в линейный список шагов (обход в глубину, шаг добавляется после своих зависимостей —
- * топологический порядок).
+ * Planner: unfolds the punch card recipe tree for the wanted item
+ * and lays it out as a linear list of steps (depth-first, a step is added after its dependencies,
+ * topological order).
  */
 public final class CraftingPlanner {
     public static final long MAX_EXECUTIONS = 200_000L;
@@ -43,7 +43,7 @@ public final class CraftingPlanner {
         return plan(net, one);
     }
 
-    /** План сразу на несколько предметов (прекрафт недостающего): общий склад и общие излишки на всех. */
+    /** A plan for several items at once (precrafting what is missing): shared stock and shared leftovers for all of them. */
     public static CraftingPlan plan(GolemNetwork net, Map<ItemKey, Long> targets) {
         CraftingPlanner p = new CraftingPlanner(net);
         for (Map.Entry<ItemKey, Long> t : targets.entrySet()) {
@@ -58,7 +58,7 @@ public final class CraftingPlanner {
         return new CraftingPlan(new LinkedHashMap<>(targets), p.fromStorage, list, p.missing);
     }
 
-    /** useStock = false для запрошенного предмета: крафт всегда делает заказанное количество, а не берёт со склада. */
+    /** useStock = false for the requested item: crafting always makes the ordered amount instead of taking it from stock. */
     private void resolve(ItemKey key, long need, int depth, boolean useStock) {
         if (need <= 0) {
             return;
@@ -94,7 +94,7 @@ public final class CraftingPlanner {
             return;
         }
 
-        // побочные продукты и излишки доступны для следующих потребителей
+        // by-products and leftovers are available to the following consumers
         for (Map.Entry<ItemKey, Integer> out : pattern.outputTotals().entrySet()) {
             long produced = crafts * out.getValue();
             if (out.getKey().equals(key)) {

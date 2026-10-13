@@ -36,9 +36,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Картотека перфокарт: хранилище перфокарт с верстачными рецептами (их выполняют сами Крио-Калькуляторы, машина не нужна).
- * Вместимость — по Поставщикам Шаблонов в отдельной ячейке: каждый даёт {@link #slotsPerProvider()} мест, до 64 поставщиков.
- * Модуль Редстоуна может включать и выключать шаблоны картотеки по сигналу. Прежние блоки собранного шкафа хранятся здесь.
+ * Punch Card Catalog: storage for punch cards with crafting-table recipes (the Cryo-Calculators run them themselves, no machine needed).
+ * Capacity comes from the Pattern Providers in a separate slot: each gives {@link #slotsPerProvider()} places, up to 64 providers.
+ * A Redstone Module can switch the catalog's patterns on and off by signal. The former blocks of the assembled cabinet are kept here.
  */
 public class CardCatalogBlockEntity extends BlockEntity {
     public static final int MAX_PROVIDERS = 64, MAX_SLOTS = MAX_PROVIDERS * 27;
@@ -83,18 +83,18 @@ public class CardCatalogBlockEntity extends BlockEntity {
     private long lastSync = -100;
     private String sentSummary = "";
 
-    // --- клиент
+    // --- client
     private int clientCards, clientCapacity;
     private boolean clientOpen;
     private final int[] clientGolems = {0, 0};
-    /** Выдвинутые ящики 0..1 и поворот буквенных барабанов на крыше (клиент). */
+    /** Pulled-out drawers 0..1 and rotation of the letter drums on the roof (client). */
     public float drawers, drawersPrev, drums, drumsPrev;
 
     public CardCatalogBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.CARD_CATALOG.get(), pos, state);
     }
 
-    /** Карта с верстачным рецептом (машинные рецепты нужны поставщику у машины — в картотеку их не кладут). */
+    /** A card with a crafting-table recipe (machine recipes need a provider next to the machine, they do not go into the catalog). */
     public static boolean isCraftingCard(ItemStack stack) {
         PatternData data = stack.get(ModDataComponents.PATTERN.get());
         return data != null && data.isValid() && data.crafting();
@@ -121,7 +121,7 @@ public class CardCatalogBlockEntity extends BlockEntity {
         return s.hasProperty(CardCatalogBlock.FORMED) && s.getValue(CardCatalogBlock.FORMED);
     }
 
-    /** Сколько мест под карты сейчас (по числу поставщиков). */
+    /** How many card places there are now (by the number of providers). */
     public int capacity() {
         return Math.min(MAX_SLOTS, providers.getItem(0).getCount() * slotsPerProvider());
     }
@@ -136,7 +136,7 @@ public class CardCatalogBlockEntity extends BlockEntity {
         return n;
     }
 
-    /** Меньше стольких поставщиков оставить нельзя: иначе занятые места окажутся за пределами вместимости. */
+    /** Fewer providers than this cannot be left: otherwise occupied places would end up beyond the capacity. */
     public int minProviders() {
         int last = -1;
         for (int i = cards.getContainerSize() - 1; i >= 0; i--) {
@@ -148,7 +148,7 @@ public class CardCatalogBlockEntity extends BlockEntity {
         return last < 0 ? 0 : last / slotsPerProvider() + 1;
     }
 
-    /** Шаблоны картотеки для сети: только в пределах вместимости, собранной и разрешённой редстоуном. */
+    /** Catalog patterns for the network: only within capacity, when assembled and allowed by redstone. */
     public List<PatternData> patterns() {
         if (!formed() || !enabled) {
             return List.of();
@@ -177,7 +177,7 @@ public class CardCatalogBlockEntity extends BlockEntity {
         return cell >= 0 && cell < originals.length ? originals[cell] : null;
     }
 
-    /** Окисленность голема с этой стороны (0 — слева, 1 — справа), по статуе, из которой он собран. */
+    /** Oxidation of the golem on this side (0 = left, 1 = right), taken from the statue it was built from. */
     public int golemOxidation(int side) {
         if (level != null && level.isClientSide()) {
             return clientGolems[side];
@@ -186,7 +186,7 @@ public class CardCatalogBlockEntity extends BlockEntity {
         return s == null ? 0 : CatalogStructure.oxidation(s);
     }
 
-    /** Данные окна: 0 — вместимость, 1 — карт, 2 — режим редстоуна. */
+    /** Window data: 0 = capacity, 1 = cards, 2 = redstone mode. */
     public ContainerData menuData() {
         return new ContainerData() {
             @Override
@@ -305,9 +305,9 @@ public class CardCatalogBlockEntity extends BlockEntity {
         be.drawersPrev = be.drawers;
         be.drawers = Math.max(0f, Math.min(1f, be.drawers + (be.clientOpen ? 0.08f : -0.06f)));
         be.drumsPrev = be.drums;
-        // барабаны щёлкают на букву раз в полторы секунды; пока окно открыто — быстро перебирают
+        // the drums click to the next letter every second and a half; while the window is open they flip quickly
         be.drums += be.clientOpen ? 0.12f : ((level.getGameTime() + pos.asLong()) % 30 < 6 ? 0.05f : 0f);
-        // пар из трубы на крыше: пока окно открыто — клубами, в простое — изредка
+        // steam from the roof pipe: in puffs while the window is open, now and then when idle
         if (be.formed() && level.getGameTime() % (be.clientOpen ? 4 : 23) == 0) {
             var r = level.random;
             Direction f = state.getValue(CardCatalogBlock.FACING);

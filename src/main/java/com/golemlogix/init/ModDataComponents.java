@@ -17,31 +17,31 @@ public class ModDataComponents {
     public static final DeferredRegister.DataComponents COMPONENTS =
             DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, GolemLogixMod.MOD_ID);
 
-    /** Идентификатор диска: содержимое хранится на сервере в DiskStore. */
+    /** Disk id: the contents are stored on the server in DiskStore. */
     public static final Supplier<DataComponentType<UUID>> DISK_ID = COMPONENTS.registerComponentType(
             "disk_id", b -> b.persistent(UUIDUtil.CODEC).networkSynchronized(UUIDUtil.STREAM_CODEC));
 
-    /** Сколько единиц (предметов / mB) записано на диск — синхронизируется для подсказок и полосы заполнения. */
+    /** How many units (items / mB) are written to the disk, synced for tooltips and the fill bar. */
     public static final Supplier<DataComponentType<Integer>> STORED = COMPONENTS.registerComponentType(
             "stored", b -> b.persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT));
 
-    /** Закодированный рецепт перфокарты. */
+    /** The encoded recipe of a punch card. */
     public static final Supplier<DataComponentType<PatternData>> PATTERN = COMPONENTS.registerComponentType(
             "pattern", b -> b.persistent(PatternData.CODEC).networkSynchronized(PatternData.STREAM_CODEC));
 
-    /** Привязка Портативного Хронометра к Ядру Атланта. */
+    /** Binding of a Portable Chronometer to an Atlas Core. */
     public static final Supplier<DataComponentType<GlobalPos>> BOUND_CORE = COMPONENTS.registerComponentType(
             "bound_core", b -> b.persistent(GlobalPos.CODEC).networkSynchronized(GlobalPos.STREAM_CODEC));
 
-    /** Уровень дальности Хронометра: 0 локальный, 1 в пределах измерения, 2 межмерный. */
+    /** Chronometer range tier: 0 local, 1 within the dimension, 2 interdimensional. */
     public static final Supplier<DataComponentType<Integer>> WIRELESS_TIER = COMPONENTS.registerComponentType(
             "wireless_tier", b -> b.persistent(Codec.intRange(0, 2)).networkSynchronized(ByteBufCodecs.VAR_INT));
 
-    /** Запас Source в Хронометре. */
+    /** Source charge of the Chronometer. */
     public static final Supplier<DataComponentType<Integer>> SOURCE_CHARGE = COMPONENTS.registerComponentType(
             "source_charge", b -> b.persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT));
 
-    /** Хронометр последний раз питался от Вечного Морозного Резонатора своей сети (для подсказки). */
+    /** The Chronometer was last powered by the Eternal Frost Resonator of its network (for the tooltip). */
     public static final Supplier<DataComponentType<Boolean>> RESONATOR_LINK = COMPONENTS.registerComponentType(
             "resonator_link", b -> b.persistent(Codec.BOOL).networkSynchronized(ByteBufCodecs.BOOL));
 }

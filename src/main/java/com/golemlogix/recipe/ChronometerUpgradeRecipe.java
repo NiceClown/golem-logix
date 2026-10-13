@@ -14,9 +14,9 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.Level;
 
 /**
- * Улучшение дальности Портативного Хронометра с сохранением привязки к Ядру:
- * Хронометр + Око Эндера + Сплющенная Медная Матрица -> уровень «измерение»;
- * Хронометр (уровень «измерение») + Квантово-Оккультная Матрица -> «межпространственный».
+ * Range upgrade of the Portable Chronometer that keeps its binding to the Core:
+ * Chronometer + Eye of Ender + Flattened Copper Matrix -> "dimension" tier;
+ * Chronometer ("dimension" tier) + Interdimensional Occult Matrix -> "interdimensional".
  */
 public class ChronometerUpgradeRecipe extends CustomRecipe {
     public ChronometerUpgradeRecipe(CraftingBookCategory category) {

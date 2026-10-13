@@ -26,11 +26,11 @@ import org.jetbrains.annotations.Nullable;
 
 public class AtlasCoreBlock extends Block implements GolemNode, EntityBlock, AtlasPart {
     public AtlasCoreBlock(Properties properties) {
-        // частичная модель (пьедестал и кристалл): без noOcclusion блок считался бы глухим кубом и его грани были бы чёрными
+        // partial model (pedestal and crystal): without noOcclusion the block would count as a solid cube and its faces would be black
         super(properties.sound(SoundType.ANVIL).strength(6.0f).requiresCorrectToolForDrops().noOcclusion().lightLevel(state -> 10));
     }
 
-    /** Ядро связано только с частями решётки: устройства подключаются через Кабельные Муфты. */
+    /** The core links only to parts of the array: devices connect through Cable Bushings. */
     @Override
     public boolean canLink(BlockState other) {
         return other.getBlock() instanceof AtlasPart;
@@ -51,7 +51,7 @@ public class AtlasCoreBlock extends Block implements GolemNode, EntityBlock, Atl
         return null;
     }
 
-    /** ПКМ по ядру — сводка сети; если решётка не достроена, показывает, чего не хватает. */
+    /** Right-click on the core shows a network summary; if the array is not complete, it shows what is missing. */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (level.isClientSide()) {

@@ -25,9 +25,9 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 /**
- * «Кукла» медного голема для отрисовщиков блок-сущностей (орбиты вокруг ядра, кольцо на верхней грани решётки).
- * Модель и текстуры взяты из мода Copper Age Backport (CC0): тело 8x6x6, широкая голова, антенна-шарик, длинные руки.
- * Кукла стоит в «прямой» системе координат: ноги в (0,0,0), голова вверх (+Y), лицо смотрит вперёд (+Z).
+ * Copper golem "puppet" for block entity renderers (orbits around the core, the ring on the top face of the array).
+ * The model and textures come from the Copper Age Backport mod (CC0): an 8x6x6 body, a wide head, a ball antenna, long arms.
+ * The puppet stands in an "upright" frame: feet at (0,0,0), head up (+Y), face looking forward (+Z).
  */
 public final class CopperGolemPuppet {
     public static final ModelLayerLocation LAYER =
@@ -49,7 +49,7 @@ public final class CopperGolemPuppet {
     private CopperGolemPuppet() {
     }
 
-    /** Чертёж модели (координаты и текстурные смещения — как у оригинала). */
+    /** Model blueprint (coordinates and texture offsets as in the original). */
     public static LayerDefinition createLayer() {
         MeshDefinition mesh = new MeshDefinition();
         PartDefinition root = mesh.getRoot();
@@ -85,12 +85,12 @@ public final class CopperGolemPuppet {
         return root;
     }
 
-    /** Сбросить кэш при перезагрузке ресурсов. */
+    /** Reset the cache on resource reload. */
     public static void invalidate() {
         root = null;
     }
 
-    /** Поза голема: phase — фаза шага (радианы), walking — идёт ли, carrying — держит ли ящик, bow — наклон (0..1). */
+    /** Golem pose: phase = step phase (radians), walking = whether it walks, carrying = whether it holds a crate, bow = lean (0..1). */
     public record Anim(float phase, boolean walking, boolean carrying, float bow) {
         public static Anim idle(float time) {
             return new Anim(time * 0.1f, false, false, 0f);
@@ -98,8 +98,8 @@ public final class CopperGolemPuppet {
     }
 
     /**
-     * Рисует голема. pos — положение ног, forward — куда смотрит лицо, up — куда направлена макушка (оба в системе
-     * текущей позы), scale — масштаб (1 = рост блока, у настоящего голема ~1 блок без антенны), variant 0..3 — степень окисления.
+     * Draws the golem. pos = feet position, forward = where the face looks, up = where the top of the head points (both in the
+     * current pose frame), scale = scale (1 = one block tall; a real golem is ~1 block without the antenna), variant 0..3 = oxidation stage.
      */
     public static void render(PoseStack pose, MultiBufferSource buffers, int light, Vector3f pos, Vector3f forward, Vector3f up,
                               float scale, Anim anim, int variant) {
@@ -107,8 +107,8 @@ public final class CopperGolemPuppet {
     }
 
     /**
-     * То же, но в руках (при carrying) вместо ящика — своя вещь: held рисует её в системе «перед грудью», где 1 — рост
-     * голема, начало — середина хвата, Y вверх, Z вперёд.
+     * The same, but when carrying it holds its own thing instead of a crate: held draws it in the "in front of the chest" frame, where 1 is the
+     * golem's height, the origin is the middle of the grip, Y up, Z forward.
      */
     public static void render(PoseStack pose, MultiBufferSource buffers, int light, Vector3f pos, Vector3f forward, Vector3f up,
                               float scale, Anim anim, int variant, @org.jetbrains.annotations.Nullable java.util.function.Consumer<PoseStack> held) {
@@ -116,8 +116,8 @@ public final class CopperGolemPuppet {
     }
 
     /**
-     * Своя поза рук и головы (радианы, как у ModelPart: xRot < 0 — рука вперёд-вверх, zRot > 0 у правой и < 0 у левой —
-     * в сторону от тела; headYaw > 0 — голова влево). Также поддерживает отрисовку предметов прямо в кистях рук.
+     * Custom pose of arms and head (radians, as in ModelPart: xRot < 0 moves an arm forward and up, zRot > 0 on the right one and < 0 on the left
+     * moves it away from the body; headYaw > 0 turns the head left). Also supports drawing items right in the hands.
      */
     public record Arms(float rightX, float rightZ, float leftX, float leftZ, float headYaw,
                        @org.jetbrains.annotations.Nullable java.util.function.Consumer<PoseStack> heldRight,
@@ -142,7 +142,7 @@ public final class CopperGolemPuppet {
         pose.scale(scale, scale, scale);
 
         if (anim.carrying) {
-            // ящик в вытянутых руках перед грудью (в прямой системе: Z вперёд, Y вверх; 16 пикселей = 1)
+            // a crate in outstretched arms in front of the chest (in the upright frame: Z forward, Y up; 16 pixels = 1)
             BlockRenderDispatcher dispatcher = Minecraft.getInstance().getBlockRenderer();
             float lift = Mth.sin(anim.phase * 2f) * 0.01f;
             pose.pushPose();
@@ -157,7 +157,7 @@ public final class CopperGolemPuppet {
             pose.popPose();
         }
 
-        // из «прямой» системы в систему модели (Y вниз, лицо к -Z): поворот на 180° вокруг X
+        // from the "upright" frame into the model frame (Y down, face to -Z): a 180° turn around X
         pose.mulPose(Axis.XP.rotationDegrees(180f));
 
         ModelPart m = model();

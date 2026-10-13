@@ -26,12 +26,12 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Клиентская «голограмма» стройки Решётки Атланта: призрачные блоки показывают, куда и что ставить.
- * Пока проекция не зафиксирована, она следует за блоком, на который вы смотрите; если рядом уже стоит
- * Ядро Атланта, проекция сама привязывается к нему.
+ * Client-side "hologram" of the Atlas Array build: ghost blocks show what to place and where.
+ * Until the projection is fixed it follows the block you look at; if an Atlas Core already stands
+ * nearby, the projection snaps to it by itself.
  */
 public final class GhostProjection {
-    /** Одна ячейка, где ещё нужно поставить блок. wrong — там стоит чужой блок, мешающий постройке. */
+    /** One cell where a block still has to be placed. wrong = a foreign block stands there and blocks the build. */
     public record GhostCell(BlockPos pos, BlockState state, boolean wrong) {
     }
 
@@ -40,7 +40,7 @@ public final class GhostProjection {
     @Nullable
     private static BlockPos anchor;
     private static boolean locked;
-    /** Куда смотрит фасадом Насыщатель (следует за игроком, пока проекция не зафиксирована). */
+    /** Where the Saturator's front faces (follows the player until the projection is fixed). */
     private static Direction facing = Direction.SOUTH;
     private static int completeTicks;
     @Nullable
@@ -128,7 +128,7 @@ public final class GhostProjection {
         }
     }
 
-    /** Если рядом уже стоит Ядро (или «голова» Насыщателя) — проекция встаёт точно по нему и фиксируется. */
+    /** If a Core (or the Saturator "head") already stands nearby, the projection lines up exactly with it and gets fixed. */
     private static void snapToNearbyCore(Minecraft mc, BlockPos around) {
         BlockPos best = null;
         double bestDist = Double.MAX_VALUE;
@@ -161,7 +161,7 @@ public final class GhostProjection {
         }
     }
 
-    /** Все ячейки, которые ещё не соответствуют чертежу. */
+    /** All cells that do not match the blueprint yet. */
     public static List<GhostCell> missing(Level level) {
         List<GhostCell> out = new ArrayList<>();
         if (anchor == null) {
@@ -179,7 +179,7 @@ public final class GhostProjection {
         return out;
     }
 
-    /** Сколько каких предметов ещё нужно поставить (Атлант — один предмет на две ячейки). */
+    /** How many of which items still have to be placed (an Atlant is one item for two cells). */
     public static Map<Item, Integer> missingItems(Level level) {
         Map<Item, Integer> out = new LinkedHashMap<>();
         if (anchor == null) {

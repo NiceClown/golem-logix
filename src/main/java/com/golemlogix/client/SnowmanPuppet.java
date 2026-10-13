@@ -19,29 +19,29 @@ import org.joml.Vector3f;
 import java.util.function.Consumer;
 
 /**
- * «Кукла» снеговика из настоящей модели снежного голема (два снежных шара, голова, руки-палки) для отрисовщиков: бегуны в
- * трубах, сборщики на калькуляторах, бригадир с головой атланта. Руки не торчат в стороны, как у голема, а тянутся к
- * заданным точкам — например, обхватывают ящик перед грудью.
+ * A snowman "puppet" built from the real snow golem model (two snowballs, a head, stick arms) for renderers: runners in
+ * pipes, assemblers on calculators, the foreman with an atlant head. The arms do not stick out sideways as on the golem but reach for
+ * given points, for example wrapping a crate in front of the chest.
  * <p>
- * Кукла стоит в «прямой» системе: ноги в (0, 0, 0), макушка вверх (+Y), лицо вперёд (+Z); точки рук и ящика — в пикселях
- * модели этой системы (рост снеговика без головы — 24, плечи на высоте 18).
+ * The puppet stands in an "upright" frame: feet at (0, 0, 0), top of the head up (+Y), face forward (+Z); hand and crate points are in
+ * model pixels of this frame (the snowman's height without the head is 24, shoulders at height 18).
  */
 public final class SnowmanPuppet {
     private static final ResourceLocation TEXTURE = ResourceLocation.withDefaultNamespace("textures/entity/snow_golem.png");
-    /** Плечи (левое — +X: лицом к +Z левая рука снеговика смотрит на +X). */
+    /** Shoulders (the left one is +X: facing +Z, the snowman's left arm points to +X). */
     private static final Vector3f LEFT_SHOULDER = new Vector3f(5f, 18f, 0f), RIGHT_SHOULDER = new Vector3f(-5f, 18f, 0f);
-    /** Руки обхватывают ящик перед грудью: кисти по бокам ящика. */
+    /** The hands wrap a crate in front of the chest: palms on the sides of the crate. */
     public static final Vector3f HOLD_LEFT = new Vector3f(3.2f, 13.5f, 9f), HOLD_RIGHT = new Vector3f(-3.2f, 13.5f, 9f);
-    /** Середина ящика в руках. */
+    /** Middle of the crate in the hands. */
     public static final Vector3f HOLD_CENTER = new Vector3f(0f, 13.5f, 9.5f);
-    /** Руки опущены вдоль тела (чуть в стороны). */
+    /** Arms lowered along the body (a little to the sides). */
     public static final Vector3f REST_LEFT = new Vector3f(9f, 9f, 1.5f), REST_RIGHT = new Vector3f(-9f, 9f, 1.5f);
 
     public enum Head { SNOW, PUMPKIN, ATLANT }
 
     /**
-     * Поза: bob — подскок (пиксели), squash — сплющивание (0 — нет, 0.2 — заметно), headYaw/headPitch — градусы,
-     * leftHand/rightHand — куда тянутся кисти.
+     * Pose: bob = hop (pixels), squash = flattening (0 = none, 0.2 = noticeable), headYaw/headPitch in degrees,
+     * leftHand/rightHand = where the hands reach.
      */
     public record Pose(float bob, float squash, float headYaw, float headPitch, Vector3f leftHand, Vector3f rightHand) {
         public static Pose holding(float bob) {
@@ -65,15 +65,15 @@ public final class SnowmanPuppet {
         return root;
     }
 
-    /** Сбросить кэш при перезагрузке ресурсов. */
+    /** Reset the cache on resource reload. */
     public static void invalidate() {
         root = null;
     }
 
     /**
-     * Рисует снеговика. pos — ноги (в системе текущей позы), yawDeg — поворот вокруг вертикали (0 — лицом к +Z текущей
-     * позы), scale — масштаб модели (1 — ванильный снежный голем ~1.75 блока). held — что в руках, рисуется в «прямой»
-     * системе с началом в HOLD_CENTER (1 = пиксель модели / 16).
+     * Draws the snowman. pos = feet (in the current pose frame), yawDeg = rotation around the vertical (0 = facing +Z of the current
+     * pose), scale = model scale (1 = the vanilla snow golem, ~1.75 blocks). held = what is in its hands, drawn in the "upright"
+     * frame with the origin at HOLD_CENTER (1 = model pixel / 16).
      */
     public static void render(PoseStack pose, MultiBufferSource buffers, int light, Vector3f pos, float yawDeg, float scale, Head head,
                               Pose p, @Nullable Consumer<PoseStack> held) {
@@ -94,7 +94,7 @@ public final class SnowmanPuppet {
         }
         VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
 
-        // руки: в «прямой» системе от плеча к кисти (палка модели лежит вдоль +X)
+        // arms: in the "upright" frame from the shoulder to the hand (the model's stick lies along +X)
         arm(pose, vc, light, leftArm, LEFT_SHOULDER, p.leftHand());
         arm(pose, vc, light, rightArm, RIGHT_SHOULDER, p.rightHand());
         if (held != null) {
@@ -104,7 +104,7 @@ public final class SnowmanPuppet {
             pose.popPose();
         }
 
-        // тело и голова: в системе модели (Y вниз, лицо к -Z, ноги на y = 24)
+        // body and head: in the model frame (Y down, face to -Z, feet at y = 24)
         pose.pushPose();
         pose.mulPose(Axis.XP.rotationDegrees(180f));
         pose.translate(0f, -1.5f, 0f);
@@ -128,7 +128,7 @@ public final class SnowmanPuppet {
                 mc.getBlockRenderer().renderSingleBlock(Blocks.CARVED_PUMPKIN.defaultBlockState(), pose, buffers, light,
                         OverlayTexture.NO_OVERLAY);
             } else {
-                // чёрная голова атланта (модель 8x6x8, шея в (8, 10, 8)): чуть крупнее снежной, на её месте
+                // black atlant head (an 8x6x8 model, neck at (8, 10, 8)): a little bigger than the snow one, in its place
                 pose.scale(1.15f, 1.15f, 1.15f);
                 pose.translate(-0.5f, -13f / 16f, -0.5f);
                 mc.getBlockRenderer().getModelRenderer().renderModel(pose.last(), buffers.getBuffer(RenderType.cutout()), null,

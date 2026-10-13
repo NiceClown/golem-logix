@@ -15,8 +15,8 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Ядро Атланта: раз в секунду пересчитывает сеть и снимает с неё питание Source.
- * Нет Source — вся сеть отключена.
+ * Atlas Core: once a second it rescans the network and draws Source to power it.
+ * No Source means the whole network is off.
  */
 public class AtlasCoreBlockEntity extends BlockEntity {
     private boolean powered = false;
@@ -29,7 +29,7 @@ public class AtlasCoreBlockEntity extends BlockEntity {
     private boolean wasDuplicate = false;
     private boolean formed = false;
     private boolean initialized = false;
-    /** Клиентская анимация электронов. */
+    /** Client electron animation. */
     public float orbit = 0;
 
     public AtlasCoreBlockEntity(BlockPos pos, BlockState state) {
@@ -60,7 +60,7 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         return infiniteSource;
     }
 
-    /** Решётка Атланта достроена (синхронизируется на клиент для рендера). */
+    /** The Atlas Array is complete (synced to the client for rendering). */
     public boolean isFormed() {
         return formed;
     }
@@ -80,7 +80,7 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         be.refresh(level, pos);
     }
 
-    /** Принудительный пересчёт (первый тик, ПКМ по ядру). */
+    /** Forced rescan (first tick, right-click on the core). */
     public void refresh(Level level, BlockPos pos) {
         GolemNetwork net = GolemNetwork.scan(level, pos);
 
@@ -88,7 +88,7 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         int cost = 0;
         duplicate = net.corePos() != null && !net.corePos().equals(pos);
         if (duplicate) {
-            // второе ядро в той же сети не работает
+            // a second core in the same network does not work
             newPowered = false;
         } else {
             cost = GolemConfig.CORE_SOURCE_PER_SECOND.get()

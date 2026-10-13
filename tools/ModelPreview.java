@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.regex.*;
 
 /**
- * Офлайн-превью JSON-моделей блоков (изометрия, z-буфер). Не зависит от Minecraft.
- * Запуск: java -cp <out> ModelPreview <выходной.png> <угол: 0 = с СВ, 1 = с СЗ> имя1 имя2 ...
+ * Offline preview of block JSON models (isometric, z-buffer). Does not depend on Minecraft.
+ * Run: java -cp <out> ModelPreview <output.png> <angle: 0 = from NE, 1 = from NW> name1 name2 ...
  */
 public class ModelPreview {
     static final Path RES = Path.of("src/main/resources/assets/golem_logix");
@@ -61,7 +61,7 @@ public class ModelPreview {
         ImageIO.write(sheet, "png", new File(out));
     }
 
-    // ------------------------------------------------------------------ JSON (минимальный разбор)
+    // ------------------------------------------------------------------ JSON (minimal parsing)
     static Object parse(String s) {
         return new P(s).value();
     }
@@ -132,7 +132,7 @@ public class ModelPreview {
         return raster(facesOf(name), angle, size, size / 32.0);
     }
 
-    /** Сцена из блоков: "модель@x,y,z@поворотY" через пробел. */
+    /** A scene of blocks: "model@x,y,z@rotationY" separated by spaces. */
     static BufferedImage scene(String spec, int angle, int size, double scale) throws Exception {
         List<Face> all = new ArrayList<>();
         for (String part : spec.split(" ")) {
@@ -275,7 +275,7 @@ public class ModelPreview {
     }
 
     static BufferedImage raster(List<Face> faces, int angle, int size, double scale) {
-        // камера: сзади-справа сверху; angle 0: видим north+east+up, 1: north+west+up
+        // camera: behind, right and above; angle 0 sees north+east+up, 1 north+west+up
         double[] d = angle == 0 ? new double[]{1, 1.1, -1} : new double[]{-1, 1.1, -1};
         double len = Math.sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
         for (int i = 0; i < 3; i++) d[i] /= len;
@@ -287,7 +287,7 @@ public class ModelPreview {
         double[] u = {(-d[1]) * r[2] - (-d[2]) * r[1], (-d[2]) * r[0] - (-d[0]) * r[2], (-d[0]) * r[1] - (-d[1]) * r[0]};
         double offX = 0, offY = 0;
         if (scale <= 0) {
-            // автоподгонка: вписать проекцию всех граней в кадр
+            // auto-fit: fit the projection of all faces into the frame
             double minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
             for (Face f : faces) {
                 for (double[] c : f.corners) {
@@ -306,7 +306,7 @@ public class ModelPreview {
         BufferedImage img = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
         double[] zbuf = new double[size * size];
         Arrays.fill(zbuf, -1e9);
-        // непрозрачные сначала, прозрачные после
+        // opaque first, transparent after
         for (int pass = 0; pass < 2; pass++) {
             for (Face f : faces) {
                 boolean translucent = hasAlpha(f.tex);

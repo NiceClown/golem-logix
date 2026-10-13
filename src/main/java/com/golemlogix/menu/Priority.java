@@ -7,8 +7,8 @@ import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 
 /**
- * Приоритет хранилища / шины: целое число, которое меняют кнопками меню (-1, +1, -10, +10, сброс).
- * Чем БОЛЬШЕ число, тем раньше устройство получает предметы (и позже отдаёт их).
+ * Storage / bus priority: an integer changed by menu buttons (-1, +1, -10, +10, reset).
+ * The BIGGER the number, the earlier the device gets items (and the later it gives them away).
  */
 public final class Priority {
     public static final int MAX = 999;
@@ -21,7 +21,7 @@ public final class Priority {
     private Priority() {
     }
 
-    /** Данные меню (одно число), синхронизируемые на клиент стандартным механизмом контейнера. */
+    /** Menu data (one number), synced to the client by the standard container mechanism. */
     public static ContainerData data(IntSupplier getter, IntConsumer setter) {
         return new ContainerData() {
             @Override
@@ -41,7 +41,7 @@ public final class Priority {
         };
     }
 
-    /** Применяет нажатие кнопки. Возвращает true, если id принадлежит приоритету. */
+    /** Applies a button press. Returns true if the id belongs to the priority. */
     public static boolean handle(ContainerData data, int id) {
         int v = data.get(0);
         switch (id) {

@@ -38,11 +38,11 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * Окно Крио-концентратора схем: перфокарты всех Поставщиков Шаблонов сети (и мест Картотек) одним прокручиваемым списком.
- * Строки сгруппированы по категориям: «Верстак» (поставщики только с верстачными картами, пустые без машины и картотеки),
- * затем по машине, которую кормит поставщик (по названию её блока), в конце — поставщики с машинными картами без машины.
- * Ячейки окна — настоящие ячейки поставщиков: карты можно вынимать и класть; сервер сдвигает окно по строкам и присылает
- * раскладку (заголовки, значки, подписи) пакетом ConcentratorLayoutPayload.
+ * Cryo Schematic Concentrator window: the punch cards of all Pattern Providers of the network (and Catalog places) in one scrolling list.
+ * Rows are grouped by category: "Crafting Table" (providers with only crafting-table cards, empty ones without a machine, and catalogs),
+ * then by the machine the provider feeds (by its block name), and at the end providers with machine cards but no machine.
+ * The window slots are the providers' real slots: cards can be taken out and put in; the server shifts the window by rows and sends
+ * the layout (headers, icons, labels) in a ConcentratorLayoutPayload packet.
  */
 public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
     public static final int IMAGE_WIDTH = 210;
@@ -52,11 +52,11 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
     public static final int SCROLL_X = GRID_X + COLS * 18 + 4, INFO_Y = GRID_Y + ROWS * 18 + 3;
     public static final int DATA_ROW = 0, DATA_SIZE = 1;
 
-    /** Строка раскладки: заголовок категории или строка ячеек (count — сколько ячеек в ней действуют). */
+    /** A layout row: a category header or a row of slots (count = how many slots in it are active). */
     public record RowInfo(boolean header, ItemStack icon, Component title, int count) {
     }
 
-    /** Строка на сервере: откуда берутся ячейки. */
+    /** A row on the server: where its slots come from. */
     private record Entry(RowInfo info, @Nullable Container container, @Nullable BlockEntity owner, int start, boolean crafting, String key) {
     }
 
@@ -72,7 +72,7 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
     private int row = 0;
     private String filter = "";
     private int rebuildIn = 0;
-    // клиент
+    // client
     private List<RowInfo> clientRows = List.of();
     public int clientVersion = 0;
 
@@ -116,9 +116,9 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
         }
     }
 
-    // ------------------------------------------------------------------ строки
+    // ------------------------------------------------------------------ rows
 
-    /** Машина, которую кормит поставщик (первая подходящая сторона), — как предмет для значка и названия; пусто, если нет. */
+    /** The machine the provider feeds (the first suitable side), as an item for the icon and the name; empty if there is none. */
     public static ItemStack machineOf(Level level, PatternProviderBlockEntity p) {
         Direction only = p.output().direction();
         for (Direction d : only == null ? Direction.values() : new Direction[]{only}) {
@@ -172,7 +172,7 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
             return List.of();
         }
         GolemNetwork net = GolemNetwork.get(level, pos);
-        // ключи упорядочивают категории: верстак, машины по названию, без машины
+        // the keys order the categories: crafting table, machines by name, no machine
         Map<String, Category> cats = new TreeMap<>();
         Component craftTitle = Component.translatable("gui.golem_logix.concentrator.crafting");
         List<PatternProviderBlockEntity> providers = new ArrayList<>(net.providers());
@@ -241,7 +241,7 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
         return e != null && e.container != null && e.owner != null && !e.owner.isRemoved();
     }
 
-    /** Ячейки окна смотрят в строки списка со сдвигом на первую видимую строку. */
+    /** The window slots look into the list rows shifted by the first visible row. */
     private final class Window implements Container {
         @Nullable
         private Entry at(int i) {
@@ -310,7 +310,7 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
         }
     }
 
-    /** Ячейка списка: действует только в строке ячеек (в заголовке и за концом строки её нет). */
+    /** A list slot: active only in a row of slots (not in a header and not past the end of a row). */
     public static class CardSlot extends Slot {
         private final ConcentratorMenu menu;
 
@@ -348,7 +348,7 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
         }
     }
 
-    /** Действует ли ячейка окна i (на сервере — по строкам, на клиенте — по присланной раскладке). */
+    /** Whether window slot i is active (on the server by the rows, on the client by the layout it received). */
     boolean slotActive(int i) {
         int r = row() + i / COLS;
         if (level != null) {
@@ -359,7 +359,7 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
         return info != null && !info.header() && i % COLS < info.count();
     }
 
-    /** Ячейка картотеки: только верстачные карты. */
+    /** A catalog slot: crafting-table cards only. */
     boolean craftingOnly(int i) {
         if (level == null) {
             return false;
@@ -413,7 +413,7 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
     @Override
     public void broadcastChanges() {
         if (level != null && --rebuildIn <= 0) {
-            // поставщики появляются и пропадают, карты переносят — раскладка пересобирается раз в секунду
+            // providers appear and disappear, cards get moved: the layout is rebuilt once a second
             rebuildIn = 20;
             entries = build();
             row = Math.max(0, Math.min(maxRow(), row));
@@ -434,7 +434,7 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
         }
         ItemStack copy = stack.copy();
         boolean crafting = CardCatalogBlockEntity.isCraftingCard(stack);
-        // верстачная карта — в первую свободную ячейку категории «Верстак», машинная — в первую ячейку у машины
+        // a crafting-table card goes to the first free slot of the "Crafting Table" category, a machine card to the first slot at its machine
         for (int pass = 0; pass < 2 && !stack.isEmpty(); pass++) {
             for (Entry e : entries) {
                 if (!live(e) || stack.isEmpty() || (e.owner instanceof CardCatalogBlockEntity && !crafting)) {

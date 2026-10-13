@@ -51,10 +51,10 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Меню терминала сети. Список предметов не лежит в слотах: сервер присылает его пакетами,
- * клиент рисует (поиск и сортировка на клиенте), а действия игрока приходят обратно пакетами.
- * В варианте «Терминал Создания» (и в Портативном Хронометре) добавляется сетка 3x3 с авто-пополнением из сети.
- * Высоту списка выбирает игрок (кнопка «Размер»): положение слотов на клиенте пересчитывает {@link #relayout(int)}.
+ * Network terminal menu. The item list does not live in slots: the server sends it in packets,
+ * the client draws it (search and sorting happen on the client), and the player's actions come back in packets.
+ * The "Crafting Terminal" variant (and the Portable Chronometer) adds a 3x3 grid that refills from the network.
+ * The player chooses the list height (the "Size" button): {@link #relayout(int)} recomputes the slot positions on the client.
  */
 public class TerminalMenu extends GolemMenu {
     public static final int LIST_X = 10;
@@ -64,15 +64,15 @@ public class TerminalMenu extends GolemMenu {
 
     public static final int CRAFT_GRID_X = 36;
     public static final int RESULT_X = 130;
-    /** Хронометр: шкала заряда Source справа от результата. */
+    /** Chronometer: the Source charge gauge to the right of the result. */
     public static final int GAUGE_X = 160;
 
-    /** Строк списка у окна по умолчанию. */
+    /** Default number of list rows of the window. */
     public static int defaultRows(boolean crafting) {
         return crafting ? 3 : 5;
     }
 
-    /** Строка состояния (12 px) сразу под списком. */
+    /** The status line (12 px) right under the list. */
     public static int infoY(int rows) {
         return LIST_Y + rows * 18 + 3;
     }
@@ -82,8 +82,8 @@ public class TerminalMenu extends GolemMenu {
     }
 
     /**
-     * Верх инвентаря игрока; у обычного терминала над ним (invY - 11) подпись «Инвентарь». У терминала крафта подписи нет:
-     * так окно (236 px) помещается в экран 1280x720 при масштабе интерфейса 3.
+     * Top of the player inventory; the normal terminal has an "Inventory" label above it (invY - 11). The crafting terminal has no label:
+     * this way the window (236 px) fits a 1280x720 screen at GUI scale 3.
      */
     public static int invY(boolean crafting, int rows) {
         return crafting ? craftY(rows) + 54 + 5 : infoY(rows) + 26;
@@ -94,19 +94,19 @@ public class TerminalMenu extends GolemMenu {
     }
 
 
-    // --- общее состояние
+    // --- shared state
     public final boolean crafting;
     public final boolean wireless;
     /**
-     * Ячейка инвентаря с Хронометром, через который открыт терминал (0..8 — хотбар, 40 — вторая рука; -1 — нет). Пока окно
-     * открыто, Хронометр в ней не двигается: иначе он ушёл бы из инвентаря (в курсор, в сеть, на землю) и окно закрылось бы.
+     * Inventory slot with the Chronometer the terminal was opened through (0..8 hotbar, 40 offhand; -1 none). While the window
+     * is open the Chronometer in it does not move: otherwise it would leave the inventory (to the cursor, the network, the ground) and the window would close.
      */
     public final int lockedSlot;
     private int lockedMenuSlot = -1;
-    /** Сколько строк списка показано (клиент; сервер не зависит от раскладки). */
+    /** How many list rows are shown (client; the server does not depend on the layout). */
     public int rows;
 
-    // --- серверная сторона
+    // --- server side
     @Nullable
     private final Level netLevel;
     @Nullable
@@ -121,12 +121,12 @@ public class TerminalMenu extends GolemMenu {
     private TerminalInfoPayload lastInfo = null;
     private boolean forceSync = true;
 
-    // --- крафт
+    // --- crafting
     private final CraftingContainer craftSlots;
     private final ResultContainer resultSlots = new ResultContainer();
     private final Player player;
 
-    // --- клиентская сторона
+    // --- client side
     public final List<TerminalListPayload.Entry> clientEntries = new ArrayList<>();
     public TerminalInfoPayload clientInfo = null;
     public int clientVersion = 0;
@@ -171,7 +171,7 @@ public class TerminalMenu extends GolemMenu {
             this.containerSlotCount = 10;
         }
         addPlayerSlots(inv, LIST_X, invY(crafting, rows));
-        // ячейка хотбара с Хронометром — запертая (из второй руки его вынул бы только обмен клавишей F — его тоже не даём)
+        // the hotbar slot with the Chronometer is locked (from the offhand only an F key swap could take it, and that is not allowed either)
         if (lockedSlot >= 0 && lockedSlot < Inventory.getSelectionSize()) {
             for (int i = playerStart; i < playerEnd; i++) {
                 Slot s = this.slots.get(i);
@@ -185,7 +185,7 @@ public class TerminalMenu extends GolemMenu {
         }
     }
 
-    /** Ячейка с Хронометром открытого терминала: его не взять, не заменить и не выбросить. */
+    /** The slot with the Chronometer of the open terminal: it cannot be taken, replaced or thrown out. */
     public static final class LockedSlot extends Slot {
         LockedSlot(net.minecraft.world.Container container, int slot, int x, int y) {
             super(container, slot, x, y);
@@ -202,7 +202,7 @@ public class TerminalMenu extends GolemMenu {
         }
     }
 
-    /** Номер запертой ячейки в меню (-1 — нет): экран рисует на ней рамку. */
+    /** Number of the locked menu slot (-1 = none): the screen draws a frame on it. */
     public int lockedMenuSlot() {
         return lockedMenuSlot;
     }
@@ -210,7 +210,7 @@ public class TerminalMenu extends GolemMenu {
     @Override
     public void clicked(int slotId, int button, net.minecraft.world.inventory.ClickType clickType, Player player) {
         if (lockedSlot >= 0) {
-            // любые клики по ячейке Хронометра и обмен с ней цифрой хотбара (или F — со второй рукой) ничего не делают
+            // any clicks on the Chronometer slot and swapping with it by a hotbar number (or F with the offhand) do nothing
             if (slotId >= 0 && slotId == lockedMenuSlot) {
                 return;
             }
@@ -221,7 +221,7 @@ public class TerminalMenu extends GolemMenu {
         super.clicked(slotId, button, clickType, player);
     }
 
-    /** Клиент: новая высота списка — слоты сетки и инвентаря переезжают вниз или вверх. */
+    /** Client: a new list height; the grid and inventory slots move down or up. */
     public void relayout(int newRows) {
         this.rows = newRows;
         if (crafting) {
@@ -445,8 +445,8 @@ public class TerminalMenu extends GolemMenu {
     }
 
     /**
-     * Рецепт из JEI («+»): содержимое сетки возвращается в сеть, затем каждая клетка заполняется первым вариантом ингредиента,
-     * который есть в сети (или, если нет, в инвентаре игрока). max — по полному стаку, иначе по одному.
+     * A recipe from JEI ("+"): the grid contents go back to the network, then every cell is filled with the first ingredient option
+     * that is in the network (or, if not, in the player's inventory). max = by full stacks, otherwise one each.
      */
     public void fillGrid(ServerPlayer sp, List<List<ItemStack>> options, boolean max) {
         if (!crafting || netLevel == null) {
@@ -544,7 +544,7 @@ public class TerminalMenu extends GolemMenu {
 
     @Override
     public void slotsChanged(net.minecraft.world.Container container) {
-        // как у ванильного верстака: super не вызываем, иначе каждое изменение сетки форсирует рассылку
+        // as with the vanilla crafting table: super is not called, otherwise every grid change forces a broadcast
         if (!crafting || container != craftSlots) {
             return;
         }
@@ -574,9 +574,9 @@ public class TerminalMenu extends GolemMenu {
     // ------------------------------------------------------------------ craft requests
 
     /**
-     * Заказ из окна заказа: предпросмотр — план уходит в планировщик окна (CraftPlanPayload: что взять из сети, что
-     * создать, чего не хватает); запуск — итог туда же (окно закрывается, если заказ запущен, иначе показывает причину).
-     * Нехватка больше не пишется в чат.
+     * An order from the order window: a preview sends the plan to the window's planner (CraftPlanPayload: what to take from the network, what to
+     * craft, what is missing); a start sends the outcome there too (the window closes if the order started, otherwise it shows the reason).
+     * Shortages are no longer written to chat.
      */
     public void handleCraftRequest(ServerPlayer sp, CraftRequestPayload p) {
         if (netLevel == null || p.key().isEmpty()) {
@@ -622,14 +622,14 @@ public class TerminalMenu extends GolemMenu {
         forceSync = true;
     }
 
-    /** План заказа — в планировщик окна заказа: недостающее, создаваемое и взятое из сети (в таком порядке). */
+    /** The order plan goes to the order window's planner: missing, crafted and taken from the network (in that order). */
     private void sendPlan(ServerPlayer sp, int request, CraftPlanPayload.Status status, @Nullable CraftingPlan plan) {
         List<CraftPlanPayload.Entry> entries = plan == null ? List.of() : planEntries(plan);
         PacketDistributor.sendToPlayer(sp, new CraftPlanPayload(containerId, request, status, plan == null ? 0 : plan.steps().size(),
                 plan == null ? 0 : plan.totalExecutions(), entries));
     }
 
-    /** Строки планировщика: по предмету — сколько взять из сети, сколько создать, сколько не хватает. */
+    /** Planner rows: per item, how much to take from the network, how much to craft, how much is missing. */
     public static List<CraftPlanPayload.Entry> planEntries(CraftingPlan plan) {
         Map<ItemKey, long[]> rows = new LinkedHashMap<>();
         for (Map.Entry<ItemKey, Long> e : plan.missing().entrySet()) {
@@ -651,7 +651,7 @@ public class TerminalMenu extends GolemMenu {
         entries.sort(java.util.Comparator.comparingInt(e -> e.missing() > 0 ? 0 : e.craft() > 0 ? 1 : 2));
         return entries.size() > CraftPlanPayload.MAX_ENTRIES ? new ArrayList<>(entries.subList(0, CraftPlanPayload.MAX_ENTRIES)) : entries;
     }
-    /** Клиент: последний присланный план заказа (для планировщика окна заказа). */
+    /** Client: the last order plan received (for the order window's planner). */
     @Nullable
     public CraftPlanPayload clientPlan;
 
@@ -659,8 +659,8 @@ public class TerminalMenu extends GolemMenu {
         clientPlan = p;
     }
     /**
-     * Прекрафт (Ctrl + «+» в JEI): одна задача на все недостающие ингредиенты, у которых есть шаблоны.
-     * Чего создать нельзя — перечисляется в чате.
+     * Precraft (Ctrl + "+" in JEI): one job for all missing ingredients that have patterns.
+     * What cannot be crafted is listed in chat.
      */
     public void handlePrecraft(ServerPlayer sp, List<ItemStack> items, List<Integer> counts) {
         if (netLevel == null) {
@@ -737,9 +737,9 @@ public class TerminalMenu extends GolemMenu {
         }
     }
 
-    // ------------------------------------------------------------------ wireless: заряд Хронометра
+    // ------------------------------------------------------------------ wireless: Chronometer charge
 
-    /** Хронометр игрока, через который открыт этот терминал (привязанный к нашему ядру). */
+    /** The player's Chronometer this terminal was opened through (bound to our core). */
     @Nullable
     private ItemStack chronometer() {
         if (lockedSlot >= 0 && player.getInventory().getItem(lockedSlot).getItem() instanceof PortableChronometerItem) {
@@ -759,7 +759,7 @@ public class TerminalMenu extends GolemMenu {
         return null;
     }
 
-    /** Раз в секунду, пока окно открыто: Хронометр тратит Source (если его не питает Резонатор сети). */
+    /** Once a second while the window is open: the Chronometer spends Source (unless the network's Resonator powers it). */
     private void drainCharge(ServerPlayer sp, GolemNetwork net) {
         ItemStack chrono = chronometer();
         if (chrono == null || !SourceHelper.sourceRequired()) {
@@ -910,14 +910,14 @@ public class TerminalMenu extends GolemMenu {
         ItemStack copy = stack.copy();
 
         if (crafting && index == 0) {
-            // как в верстаке: результат переносится в инвентарь, внешний цикл повторяет до исчерпания
+            // as in the crafting table: the result moves to the inventory, the outer loop repeats until it runs out
             stack.getItem().onCraftedBy(stack, player.level(), player);
             if (!this.moveItemStackTo(stack, playerStart, playerEnd, true)) {
                 return ItemStack.EMPTY;
             }
             slot.onQuickCraft(stack, copy);
         } else if (crafting && index >= 1 && index < 10) {
-            // из сетки — в сеть (на сервере), иначе в инвентарь
+            // from the grid into the network (on the server), otherwise into the inventory
             if (player.level().isClientSide()) {
                 return ItemStack.EMPTY;
             }
@@ -934,7 +934,7 @@ public class TerminalMenu extends GolemMenu {
                 return ItemStack.EMPTY;
             }
         } else {
-            // инвентарь игрока -> сеть
+            // player inventory -> network
             if (player.level().isClientSide() || netLevel == null) {
                 return ItemStack.EMPTY;
             }
@@ -1013,7 +1013,7 @@ public class TerminalMenu extends GolemMenu {
         }
     }
 
-    /** Для клиента: типовой ключ для действия. */
+    /** For the client: the type key for an action. */
     public static ItemStack keyOf(ItemStack stack) {
         return stack.copyWithCount(1);
     }

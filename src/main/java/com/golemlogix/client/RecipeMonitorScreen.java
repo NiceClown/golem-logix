@@ -16,8 +16,8 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Пульт Монитора Рецептов: слева — все Крио-Калькуляторы сети (что делают, ход, состояние), справа — подробности выбранного:
- * заказ, что делается сейчас, оставшиеся шаги, ожидаемые от машин предметы и кнопка отмены.
+ * Recipe Monitor console: on the left all Cryo-Calculators of the network (what they make, progress, state), on the right details of the selected one:
+ * the order, what is being made now, the remaining steps, the items expected from machines and a cancel button.
  */
 public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
     private static final int W = 256;
@@ -28,10 +28,10 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
     private int scroll = 0;
     @Nullable
     private BlockPos selected = null;
-    /** Номер ядра выбранной строки (у ядер мейнфрейма один блок). */
+    /** Core number of the selected row (mainframe cores share one block). */
     private int selectedCore = 0;
     private GolemButton cancel;
-    /** Предмет под курсором (для подсказки и для клавиш R/U JEI). */
+    /** Item under the cursor (for the tooltip and the JEI R/U keys). */
     private ItemStack hoverStack = ItemStack.EMPTY;
     private Rect2i hoverArea = null;
 
@@ -71,7 +71,7 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
         return i < 0 ? null : cpus().get(i);
     }
 
-    // ---------------------------------------------------------------------------------- рисование
+    // ---------------------------------------------------------------------------------- drawing
 
     @Override
     protected void renderExtraBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
@@ -147,7 +147,7 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
         }
     }
 
-    /** Где вычислитель: координаты блока, у ядра мейнфрейма — ещё и номер ядра. */
+    /** Where the processor is: block coordinates, plus the core number for a mainframe core. */
     private static String where(MonitorPayload.Cpu c) {
         return c.core() > 0 ? c.pos().toShortString() + " #" + c.core() : c.pos().toShortString();
     }
@@ -157,7 +157,7 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
         g.drawString(font, font.plainSubstrByWidth(Component.translatable("gui.golem_logix.monitor.cpu", where(c)).getString(), w),
                 x, y, GolemGui.CYAN_DARK, false);
         y += 11;
-        // сопроцессоры калькулятора — значок с числом у правого края (под ним строка заказа)
+        // the calculator's coprocessors: an icon with a number at the right edge (the order line is under it)
         String cop = "×" + c.coprocessors();
         int copX = x + w - 18 - font.width(cop);
         if (c.state() < 0) {
@@ -165,7 +165,7 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
             g.drawWordWrap(font, Component.translatable("gui.golem_logix.calc.idle"), x, y + 19, copX - x - 2, GolemGui.CYAN);
             return;
         }
-        // заказ: предметы и сколько
+        // order: items and how many
         int ix = x;
         for (MonitorPayload.Step t : c.targets()) {
             if (ix + 18 > copX - 2) {
@@ -269,7 +269,7 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
         }
     }
 
-    /** Для JEI (клавиши R и U): предмет под курсором и его место на экране. */
+    /** For JEI (R and U keys): the item under the cursor and its place on the screen. */
     @Nullable
     public Object[] ingredientAt(double mouseX, double mouseY) {
         if (hoverArea != null && !hoverStack.isEmpty() && hoverArea.contains((int) mouseX, (int) mouseY)) {
@@ -278,7 +278,7 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
         return null;
     }
 
-    // ---------------------------------------------------------------------------------- ввод
+    // ---------------------------------------------------------------------------------- input
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {

@@ -18,8 +18,8 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Окно Крио-Мейнфрейма: две полки по шесть ячеек под Крио-Калькуляторы, сводка ядер и ускорения, колонка Сжатых
- * Сопроцессоров и Модуля Редстоуна справа. Пока окно открыто, стеклянные двери шкафа распахнуты.
+ * Cryo-Mainframe window: two shelves of six slots for Cryo-Calculators, a summary of cores and speed-up, a column of Compressed
+ * Co-Processors and the Redstone Module on the right. While the window is open, the cabinet's glass doors stand open.
  */
 public class MainframeMenu extends GolemMenu {
     public static final int IMAGE_WIDTH = 176;
@@ -54,7 +54,7 @@ public class MainframeMenu extends GolemMenu {
         }
     }
 
-    /** Ячейка полки: только Крио-Калькулятор, по одному. */
+    /** A shelf slot: only a Cryo-Calculator, one at a time. */
     public static class CalculatorSlot extends Slot {
         CalculatorSlot(Container c, int i, int x, int y) {
             super(c, i, x, y);

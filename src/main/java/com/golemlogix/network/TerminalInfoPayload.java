@@ -13,8 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Сервер -> клиент: сводка сети для терминала (питание, каналы, ёмкость, процессоры, жидкости), а для Хронометра — его
- * заряд Source (-1 — заряд не нужен) и питает ли его Резонатор.
+ * Server -> client: a network summary for the terminal (power, channels, capacity, processors, fluids), and for a Chronometer its
+ * Source charge (-1 = no charge needed) and whether the Resonator powers it.
  */
 public record TerminalInfoPayload(int containerId, String error, int channelsUsed, int channelCapacity,
                                   long itemsUsed, long itemsCapacity, long fluidsUsed, long fluidsCapacity,

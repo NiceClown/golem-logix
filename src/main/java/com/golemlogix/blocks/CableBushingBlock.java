@@ -14,8 +14,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
 /**
- * Кабельная Муфта: «выход» каналов из Решётки Атланта наружу. Ёмкость линии задаёт достроенная решётка
- * (см. GolemNetwork), поэтому сама муфта лимита не хранит. ПКМ — сколько каналов занято на этой линии.
+ * Cable Bushing: the "exit" of channels out of the Atlas Array. The line capacity is set by the completed array
+ * (see GolemNetwork), so the bushing itself stores no limit. Right-click shows how many channels this line uses.
  */
 public class CableBushingBlock extends Block implements GolemNode, AtlasPart {
     public CableBushingBlock(Properties properties) {
@@ -31,7 +31,7 @@ public class CableBushingBlock extends Block implements GolemNode, AtlasPart {
         return InteractionResult.CONSUME;
     }
 
-    /** Текст «занято X из Y» для чата и подсказок. */
+    /** The text "X of Y used" for chat and tooltips. */
     public static Component describe(GolemNetwork net, BlockPos pos) {
         if (!net.hasCore()) {
             return Component.translatable("message.golem_logix.bushing.no_core");

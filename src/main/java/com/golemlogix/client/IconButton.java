@@ -10,8 +10,8 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 /**
- * Квадратная латунная кнопка 18x18 с иконкой-предметом (кнопки настроек слева от окна: редстоун, режим ожидания).
- * Иконка и подсказка меняются вместе с режимом; кнопка может прятаться (например, без Модуля Редстоуна).
+ * A square 18x18 brass button with an item icon (settings buttons to the left of the window: redstone, wait mode).
+ * The icon and the tooltip change with the mode; the button can hide (for example without a Redstone Module).
  */
 public class IconButton extends Button {
     private final Supplier<ItemStack> icon;

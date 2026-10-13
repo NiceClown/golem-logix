@@ -12,7 +12,7 @@ public final class ModTriggers {
     public static final DeferredRegister<CriterionTrigger<?>> TRIGGERS =
             DeferredRegister.create(Registries.TRIGGER_TYPE, GolemLogixMod.MOD_ID);
 
-    /** Хронометр открыт (или открывался) в чужом для его ядра измерении. */
+    /** A Chronometer is (or was) opened in a dimension other than its core's. */
     public static final Supplier<ChronometerDimensionTrigger> CHRONOMETER_DIMENSION =
             TRIGGERS.register("chronometer_dimension", ChronometerDimensionTrigger::new);
 

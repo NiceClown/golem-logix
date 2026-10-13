@@ -24,8 +24,8 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Вечный Морозный Резонатор: медный корпус с циферблатом на фасаде, стеклянная камера со снежным вихрем (его рисует
- * отрисовщик) и труба-вытяжка. Фасад при установке смотрит на игрока.
+ * Eternal Frost Resonator: a copper body with a dial on the front, a glass chamber with a snow vortex (drawn by the
+ * renderer) and an exhaust pipe. When placed, the front faces the player.
  */
 public class EternalFrostResonatorBlock extends Block implements EntityBlock {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;

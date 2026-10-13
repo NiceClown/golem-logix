@@ -17,8 +17,8 @@ import org.lwjgl.glfw.GLFW;
 import java.util.List;
 
 /**
- * Окно Картотеки перфокарт: прокручиваемая гряда перфокарт с полосой прокрутки и поиском по результату рецепта.
- * Места за пределами вместимости заперты (решётка); справа — Модуль Редстоуна и ячейка Поставщиков Шаблонов.
+ * Punch Card Catalog window: a scrolling row of punch cards with a scroll bar and search by recipe result.
+ * Places beyond the capacity are locked (a grate); on the right are the Redstone Module and the Pattern Provider slot.
  */
 public class CardCatalogScreen extends GolemScreen<CardCatalogMenu> {
     private static final ItemStack PROVIDER = new ItemStack(ModBlocks.PATTERN_PROVIDER.get());
@@ -63,7 +63,7 @@ public class CardCatalogScreen extends GolemScreen<CardCatalogMenu> {
     @Override
     protected void containerTick() {
         super.containerTick();
-        // вместимость могла уменьшиться (забрали поставщиков) — сервер уже поправил строку, подстраиваемся
+        // the capacity may have shrunk (providers were taken out): the server already fixed the row, follow it
         if (row > menu.maxRow()) {
             row = menu.maxRow();
         }
@@ -73,7 +73,7 @@ public class CardCatalogScreen extends GolemScreen<CardCatalogMenu> {
     protected void renderExtraBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
         int gx = leftPos + CardCatalogMenu.GRID_X, gy = topPos + CardCatalogMenu.GRID_Y;
         GolemGui.inset(g, gx - 3, gy - 3, CardCatalogMenu.COLS * 18 + 4, CardCatalogMenu.ROWS * 18 + 4);
-        // полоса прокрутки
+        // scroll bar
         int sx = leftPos + CardCatalogMenu.SCROLL_X, h = CardCatalogMenu.ROWS * 18;
         GolemGui.inset(g, sx - 1, gy - 1, 8, h + 2);
         int max = menu.maxRow();
@@ -86,7 +86,7 @@ public class CardCatalogScreen extends GolemScreen<CardCatalogMenu> {
         } else {
             g.fill(sx, gy, sx + 6, gy + h, GolemGui.BRASS_DARK);
         }
-        // поле поиска
+        // search field
         GolemGui.inset(g, leftPos + 101, topPos + CardCatalogMenu.INFO_Y, 80, 13);
     }
 
@@ -96,7 +96,7 @@ public class CardCatalogScreen extends GolemScreen<CardCatalogMenu> {
             if (menu.slots.get(i) instanceof CardCatalogMenu.CardSlot s && s.locked() && !s.hasItem()) {
                 int x = leftPos + s.x, y = topPos + s.y;
                 g.fill(x - 1, y - 1, x + 17, y + 17, 0xE0120B07);
-                // решётка запертого места
+                // grate of a locked place
                 for (int k = 2; k < 16; k += 5) {
                     g.fill(x + k, y + 1, x + k + 1, y + 15, 0xFF4A3322);
                 }

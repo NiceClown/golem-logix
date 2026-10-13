@@ -3,15 +3,15 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Насыщатель Маны — многоблок 3x3x2 (48x48x32 юнита): по концепту — латунная машина с рунными панелями, стеклянными колоннами
- * Source, прессом над наковальней и кристаллом на верхней балке. Фасад, спинка и боковины — большие «картины», нарезанные
- * по клеткам блоков; поверх — объёмные детали (колонны, стойки, наковальня, кристалл). Пресс, уровень Source в колоннах и
- * предмет рисует {@code ManaSaturatorRenderer}. Форму клеток в Java ({@code SaturatorShapes}) нужно держать в соответствии с
- * коробками {@link #geometry()}.
+ * Mana Saturator, a 3x3x2 multiblock (48x48x32 units): from the concept, a brass machine with rune panels, glass columns
+ * of Source, a press over an anvil and a crystal on the top beam. The front, back and sides are big "pictures" cut
+ * by block cells; on top of them three-dimensional details (columns, posts, the anvil, the crystal). The press, the Source level in the columns and
+ * the item are drawn by {@code ManaSaturatorRenderer}. The cell shapes in Java ({@code SaturatorShapes}) must be kept in line with
+ * the boxes of {@link #geometry()}.
  *
  * <pre>
- * высоты (Y): цоколь 0..3, крылья 3..28, колонны и камера пресса 28..39, верхняя балка 39..44, кристалл 44..48
- * глубина (Z): 0..32; камера пресса и пьедестал — в передней половине (Z 2..14), задняя половина центра — глухая стенка
+ * heights (Y): plinth 0..3, wings 3..28, columns and press chamber 28..39, top beam 39..44, crystal 44..48
+ * depth (Z): 0..32; the press chamber and the pedestal are in the front half (Z 2..14), the back half of the middle is a blind wall
  * </pre>
  */
 final class Saturator {
@@ -32,7 +32,7 @@ final class Saturator {
         return Paint.argb(a, c);
     }
 
-    // ================================================================================================ детали-«кирпичики»
+    // ================================================================================================ detail "bricks"
     static void runeTablet(Paint p, double x0, double y0, double x1, double y1, int[] glyphs) {
         p.slab(x0, y0, x1, y1, BRASS, 3.0, 1);
         p.slab(x0 + 0.6, y0 + 0.6, x1 - 0.6, y1 - 0.6, IRON, 0.8, 1);
@@ -46,14 +46,14 @@ final class Saturator {
         }
     }
 
-    /** Окно с шестернями и медным големом, работающим за стеклом. */
+    /** A window with gears and a copper golem working behind the glass. */
     static void golemWindow(Paint p, double x0, double y0, double x1, double y1) {
         p.slab(x0, y0, x1, y1, BRASS, 2.8, 1);
         p.slab(x0 + 0.5, y0 + 0.5, x1 - 0.5, y1 - 0.5, IRON, 0.7, 1);
         double cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
         p.gear(x0 + 1.5, y0 + 1.7, 1.1, 8, 0.2, BRASS, 3.0);
         p.gear(x1 - 1.6, y0 + 2.0, 1.4, 9, 0.4, COPPER, 3.0);
-        // голем: квадратная голова с антенной, тело, руки
+        // golem: a square head with an antenna, a body, arms
         double gx = cx - 0.2, gy = y1 - 3.4;
         p.slab(gx - 0.7, gy, gx + 0.7, gy + 1.0, COPPER, 3.4, 1);
         p.rect(gx - 0.1, gy - 0.5, gx + 0.1, gy, at(COPPER, 4.5));
@@ -66,22 +66,22 @@ final class Saturator {
         p.line(x0 + 0.7, y1 - 1.6, x0 + 2.0, y0 + 0.9, 0.18, argb(70, 0xFFFFFF));
     }
 
-    /** Левая и правая панели: большой рунный квадрат в резной раме. */
+    /** Left and right panels: a big rune square in a carved frame. */
     static void wingPanel(Paint p, double x0, int glyph, long seed) {
         double x1 = x0 + 16, y0 = 20, y1 = 45;
         Forge2.beam(p, x0, y0, x1, y1, 2.5, false, seed);
         p.grain(x0, y0, x1, y1, 0.04, seed + 1);
-        // карниз-верхняя кромка
+        // cornice, the top edge
         p.slab(x0, y0, x1, y0 + 1.7, BRASS, 3.2, 1);
         for (double x = x0 + 1.3; x < x1; x += 2.9) {
             p.rivet(x, y0 + 0.85, 0.2, BRASS);
         }
-        // рама
+        // frame
         p.slab(x0 + 2.0, y0 + 3.0, x1 - 2.0, y1 - 5.4, BRASS, 2.7, 1);
         p.slab(x0 + 2.7, y0 + 3.7, x1 - 2.7, y1 - 6.1, IRON, 0.8, 1);
         p.grain(x0 + 2.7, y0 + 3.7, x1 - 2.7, y1 - 6.1, 0.07, seed + 2);
         double cx = x0 + 8, cy = (y0 + 3.7 + y1 - 6.1) / 2;
-        // резной узор: ромб из тонких светлых линий и кольцо
+        // carved pattern: a rhombus of thin light lines and a ring
         double r = 4.4;
         for (int i = 0; i < 4; i++) {
             double a0 = i * Math.PI / 2 + Math.PI / 4, a1 = a0 + Math.PI / 2;
@@ -90,7 +90,7 @@ final class Saturator {
         p.ring(cx, cy, 3.4, 3.55, at(IRON, 3.0));
         p.glowRect(cx - 1.6, cy - 3.0, cx + 1.6, cy + 3.0, 1.6, at(VIOLET, 3.4), 80);
         p.rune(cx - 1.6, cy - 3.0, 6.0, glyph, at(VIOLET, 5.8), at(VIOLET, 3.2));
-        // угловые болты рамы и нижняя плашка с манометром
+        // corner bolts of the frame and a bottom plate with a gauge
         for (double[] c : new double[][]{{x0 + 3.3, y0 + 4.3}, {x1 - 3.3, y0 + 4.3}, {x0 + 3.3, y1 - 6.7}, {x1 - 3.3, y1 - 6.7}}) {
             p.screw(c[0], c[1], 0.45, BRASS, c[0]);
         }
@@ -98,13 +98,13 @@ final class Saturator {
         p.slab(x0 + 2.6, y1 - 3.8, x1 - 2.6, y1 - 1.2, IRON, 0.9, 1);
         p.gauge(cx - 2.3, y1 - 2.5, 1.0, glyph * 7 % 100 + 40, RED);
         p.gauge(cx + 2.3, y1 - 2.5, 1.0, 130 - glyph * 5 % 60, RED);
-        // иней на карнизе и сосульки
+        // frost on the cornice and icicles
         p.frostLine(x0, x1, y0 - 0.1, 0.7, seed + 3);
         p.icicle(x0 + 3.0, y0 + 1.7, 1.3, 0.55);
         p.icicle(x1 - 4.0, y0 + 1.7, 1.7, 0.55);
     }
 
-    /** Центральный ящик (плотная труба): патрубок под трубу сети, окно с големом, манометры. */
+    /** The central box (a dense pipe): an inlet for the network pipe, a window with a golem, gauges. */
     static void crate(Paint p) {
         double x0 = 16, x1 = 32, y0 = 32, y1 = 45;
         Forge2.beam(p, x0, y0, x1, y1, 2.4, true, 1101);
@@ -113,8 +113,8 @@ final class Saturator {
         for (double x = x0 + 1.2; x < x1; x += 2.6) {
             p.rivet(x, y0 + 0.75, 0.2, BRASS);
         }
-        // патрубок: латунное кольцо с бирюзовой кромкой и тёмным отверстием (сюда подключается труба сети)
-        // патрубок компактный (6.4 юнита): окно с големом слева и манометры справа остаются открытыми
+        // inlet: a brass ring with a teal rim and a dark hole (the network pipe connects here)
+        // the inlet is compact (6.4 units): the window with the golem on the left and the gauges on the right stay open
         double cx = 24, cy = 40;
         p.disc(cx, cy, 3.2, at(BRASS, 1.1));
         p.sphere(cx, cy, 3.05, BRASS, 0.25, 0.95);
@@ -127,12 +127,12 @@ final class Saturator {
             double a = i * Math.PI / 4;
             p.screw(cx + Math.cos(a) * 2.7, cy + Math.sin(a) * 2.7, 0.22, BRASS, a);
         }
-        // окно и приборы по бокам
+        // window and instruments on the sides
         golemWindow(p, x0 + 0.9, y0 + 3.2, x0 + 4.7, y1 - 2.0);
         p.gauge(x1 - 2.6, y0 + 5.6, 1.35, 60, RED);
         p.gauge(x1 - 2.6, y0 + 9.7, 1.1, 130, RED);
         p.slab(x1 - 4.1, y1 - 2.6, x1 - 1.2, y1 - 1.5, BRASS, 3.0, 1);
-        // угловые накладки
+        // corner plates
         for (double[] c : new double[][]{{x0, y1 - 2.0}, {x1 - 2.0, y1 - 2.0}}) {
             Forge2.brassBlock(p, c[0], c[1], c[0] + 2.0, c[1] + 2.0, (long) c[0]);
         }
@@ -146,7 +146,7 @@ final class Saturator {
         Forge2.frieze(p, 4.6, 43.4, y0 + 0.9, y1 - 0.9, 2.1);
         Forge2.brassBlock(p, 0, y0, 4.4, y1, 1002);
         Forge2.brassBlock(p, 43.6, y0, 48, y1, 1003);
-        // манометры на концах и рунная табличка по центру
+        // gauges at the ends and a rune plate in the middle
         p.slab(7.2, y0 + 0.2, 13.0, y1 - 0.2, BRASS, 3.0, 1);
         p.gauge(10.1, (y0 + y1) / 2, 2.0, 72, RED);
         p.slab(35.0, y0 + 0.2, 40.8, y1 - 0.2, BRASS, 3.0, 1);
@@ -183,13 +183,13 @@ final class Saturator {
         return p;
     }
 
-    // ================================================================================================ спинка
+    // ================================================================================================ back
     static void fan(Paint p, double cx, double cy, double r) {
         p.slab(cx - r - 0.9, cy - r - 0.9, cx + r + 0.9, cy + r + 0.9, BRASS, 2.6, 1);
         p.slab(cx - r - 0.4, cy - r - 0.4, cx + r + 0.4, cy + r + 0.4, IRON, 0.8, 1);
         p.disc(cx, cy, r, at(BRASS, 1.2));
         p.ring(cx, cy, r - 0.45, r, at(BRASS, 4.4));
-        // крыльчатка крутится: за цикл — на две лопасти из семи
+        // the impeller turns: two of seven blades per cycle
         p.animate(cx - r + 0.5, cy - r + 0.5, cx + r - 0.5, cy + r - 0.5, (q, t) -> {
             q.disc(cx, cy, r - 0.5, rgb(0x050607));
             for (int b = 0; b < 7; b++) {
@@ -211,7 +211,7 @@ final class Saturator {
         }
     }
 
-    /** Латунная труба со светящимися окошками: окошки мигают в случайном порядке (у каждой трубы — свой рисунок). */
+    /** A brass pipe with glowing windows: the windows blink in random order (every pipe has its own pattern). */
     static void pipeRun(Paint p, double x, double y0, double y1, long seed) {
         p.slab(x, y0, x + 1.3, y1, BRASS, 2.4, 1);
         Random r = new Random(seed);
@@ -237,8 +237,8 @@ final class Saturator {
     }
 
     /**
-     * Разъём сети, нарисованный прямо на стенке (сзади и на боковинах): латунный квадрат 10x10 с кольцом, бирюзовой кромкой
-     * и тёмным отверстием — как патрубок фасада, только заподлицо.
+     * A network socket drawn right on the wall (at the back and on the sides): a 10x10 brass square with a ring, a teal rim
+     * and a dark hole, like the front inlet, only flush.
      */
     static void portAt(Paint p, double cx, double cy) {
         double s = 10.0 / 16.0;
@@ -267,17 +267,17 @@ final class Saturator {
         p.rect(18.5, 4.3, 29.5, 8.7, rgb(0x0a0c10));
         runeTablet(p, 18.5, 4.3, 29.5, 8.7, new int[]{13, 4, 17, 0});
         plinthFront(p);
-        // каркас-стойки по краям и между секциями
+        // frame posts at the edges and between the sections
         for (double x : new double[]{0, 15.8, 31.2, 46.8}) {
             Forge2.beam(p, x, 9, x + 1.2, 45, 2.9, false, (long) (1210 + x));
         }
-        // левая секция: большой вентилятор над решёткой, шестерни наверху
+        // left section: a big fan over a grate, gears on top
         p.gear(8.0, 14.4, 4.4, 14, 0.1, BRASS, 3.0);
         p.gear(12.8, 18.2, 2.2, 9, 0.35, COPPER, 3.0);
         p.gear(3.3, 18.0, 1.7, 8, 0.2, COPPER, 2.8);
         fan(p, 8.0, 31.0, 5.4);
         Terminals.vent(p, 2.8, 40.0, 13.4, 43.4, 3);
-        // центр: жалюзи, рунная плита, янтарный экран — выше, внизу разъём сети
+        // middle: louvres, a rune plate, an amber screen higher up, the network socket at the bottom
         p.slab(17.6, 10.0, 30.4, 18.2, BRASS, 2.6, 1);
         p.rect(18.2, 10.6, 29.8, 17.6, rgb(0x050607));
         for (int i = 0; i < 5; i++) {
@@ -285,9 +285,9 @@ final class Saturator {
             p.slab(18.2, y + 0.2, 29.8, y + 0.2 + 7.0 / 5 * 0.6, IRON, 3.2, 1);
         }
         runeTablet(p, 18.0, 19.2, 30.0, 24.2, new int[]{0, 12, 16, 8, 3});
-        // янтарный экран и ряд ламп
+        // amber screen and a row of lamps
         p.slab(18.0, 25.2, 30.0, 31.6, BRASS, 2.8, 1);
-        // янтарный экран «считает»: столбики пляшут, у каждого свой целый темп; лампы под ним перемигиваются
+        // the amber screen "counts": the bars dance, each at its own integer tempo; the lamps under it wink
         Random r = new Random(1221);
         double[] base = new double[14], amp = new double[14], ph = new double[14];
         int[] fq = new int[14];
@@ -310,7 +310,7 @@ final class Saturator {
             }
         });
         portAt(p, 24.0, 39.5);
-        // правая секция: три трубы с бирюзовой энергией, манометры, вентиль
+        // right section: three pipes with teal energy, gauges, a valve
         for (double x : new double[]{34.2, 38.4, 42.6}) {
             pipeRun(p, x, 10.0, 44.0, (long) x);
         }
@@ -327,8 +327,8 @@ final class Saturator {
         return p;
     }
 
-    // ================================================================================================ боковины (картина 32 x 48)
-    /** Боковина слева: u растёт к фасаду, то есть левый край картины — зад машины. */
+    // ================================================================================================ sides (a 32 x 48 picture)
+    /** The left side: u grows towards the front, so the left edge of the picture is the back of the machine. */
     static Paint sideLeft() {
         Paint p = new Paint(32, 48, K);
         p.slab(0, 0, 32, 48, IRON, 1.4, 1);
@@ -336,7 +336,7 @@ final class Saturator {
         p.slab(1.0, 4.9, 31.0, 8.1, BRONZE, 1.6, 1);
         Forge2.frieze(p, 1.2, 30.8, 4.9, 8.1, 2.1);
         Forge2.beam(p, 0, 45, 32, 48, 2.6, true, 1302);
-        // крыло: рама с решёткой и манометрами выше, в задней половине внизу — разъём сети
+        // wing: a frame with a grate and gauges higher up, the network socket at the bottom of the back half
         Forge2.beam(p, 0, 20, 32, 45, 2.5, true, 1303);
         p.grain(0, 20, 32, 45, 0.04, 1304);
         p.slab(0, 20, 32, 21.7, BRASS, 3.2, 1);
@@ -345,7 +345,7 @@ final class Saturator {
         Terminals.vent(p, 4.0, 25.0, 20.0, 31.0, 5);
         p.gauge(23.6, 28.0, 1.6, 70, RED);
         p.gauge(27.4, 28.0, 1.4, 120, RED);
-        // задний край: латунная стойка и участок задней стенки над крылом (Z 28..32 справа налево от 0)
+        // back edge: a brass post and a piece of the back wall above the wing (Z 28..32 right to left from 0)
         p.slab(0, 9, 4.0, 20, IRON, 1.0, 1);
         p.gear(2.0, 14.0, 1.8, 8, 0.2, BRASS, 3.0);
         portAt(p, 8.0, 39.5);
@@ -356,7 +356,7 @@ final class Saturator {
         return p;
     }
 
-    /** Боковина справа: u растёт к зад, левый край картины — фасад. */
+    /** The right side: u grows towards the back, the left edge of the picture is the front. */
     static Paint sideRight() {
         Paint p = new Paint(32, 48, K);
         p.slab(0, 0, 32, 48, IRON, 1.4, 1);
@@ -369,7 +369,7 @@ final class Saturator {
         p.slab(0, 20, 32, 21.7, BRASS, 3.2, 1);
         p.slab(2.0, 23.0, 30.0, 33.0, BRASS, 2.7, 1);
         p.slab(2.7, 23.7, 29.3, 32.3, IRON, 0.8, 1);
-        // рунные плиты и трубы выше, в задней половине внизу — разъём сети
+        // rune plates and pipes higher up, the network socket at the bottom of the back half
         runeTablet(p, 4.0, 24.2, 14.0, 27.8, new int[]{4, 11});
         runeTablet(p, 4.0, 28.4, 14.0, 32.0, new int[]{16, 0});
         for (double x : new double[]{17.0, 21.0, 25.0}) {
@@ -385,7 +385,7 @@ final class Saturator {
         return p;
     }
 
-    // ================================================================================================ общие плитки
+    // ================================================================================================ shared tiles
     static Paint brassTile() {
         Paint p = Forge2.brassTile();
         return p;
@@ -408,7 +408,7 @@ final class Saturator {
         return p;
     }
 
-    /** Палуба крыльев (верх): латунная плита с рунным кругом и снегом по краю. */
+    /** Wing deck (top): a brass plate with a rune circle and snow along the edge. */
     static Paint deckTile() {
         Paint p = new Paint(16, 16, K);
         p.slab(0, 0, 16, 16, BRASS, 2.8, 1);
@@ -423,7 +423,7 @@ final class Saturator {
         return p;
     }
 
-    /** Верх балки: бронзовые листы, вентиляционные прорези, иней. */
+    /** Top of the beam: bronze sheets, vent slots, frost. */
     static Paint topTile() {
         Paint p = new Paint(16, 16, K);
         Forge2.beam(p, 0, 0, 16, 16, 2.7, true, 1431);
@@ -437,7 +437,7 @@ final class Saturator {
         return p;
     }
 
-    /** Наковальня: латунная плита с фиолетовым кольцом рун и тёмным центром под предметом. */
+    /** Anvil: a brass plate with a purple ring of runes and a dark centre under the item. */
     static Paint anvilTop() {
         Paint p = new Paint(16, 16, K);
         p.slab(0, 0, 16, 16, BRASS, 2.8, 1);
@@ -453,7 +453,7 @@ final class Saturator {
         for (double[] c : new double[][]{{1.0, 1.0}, {15.0, 1.0}, {1.0, 15.0}, {15.0, 15.0}}) {
             p.rivet(c[0], c[1], 0.4, BRASS);
         }
-        // холодная кромка: синеватый налёт по раме и иней, наросший с краёв
+        // cold edge: a bluish film over the frame and frost grown from the edges
         p.tint(0, 0, 16, 1.0, argb(110, 0x9fd4f0));
         p.tint(0, 15.0, 16, 16, argb(110, 0x9fd4f0));
         p.tint(0, 1.0, 1.0, 15.0, argb(110, 0x9fd4f0));
@@ -464,12 +464,12 @@ final class Saturator {
         return p;
     }
 
-    /** Иней-«звёздочки»: короткие белые крестики с голубым ореолом, у краёв прямоугольника гуще. */
+    /** Rime "stars": short white crosses with a light blue halo, thicker near the edges of the rectangle. */
     static void rime(Paint p, long seed, double x0, double y0, double x1, double y1, int count) {
         Random r = new Random(seed);
         for (int i = 0; i < count; i++) {
             double t = r.nextDouble(), s = 0.35 + r.nextDouble() * 0.45;
-            // ближе к кромке: выбираем сторону и прижимаемся к ней
+            // closer to the edge: pick a side and press against it
             double x, y;
             switch (r.nextInt(4)) {
                 case 0 -> {
@@ -496,7 +496,7 @@ final class Saturator {
         }
     }
 
-    /** Стержень пьедестала: тёмное железо, столбец светящихся рун в латунной рамке, бирюзовые жилы и иней. */
+    /** The pedestal rod: dark iron, a column of glowing runes in a brass frame, teal veins and frost. */
     static Paint pedestal() {
         Paint p = new Paint(16, 16, K);
         p.slab(0, 0, 16, 16, IRON, 1.3, 1);
@@ -517,7 +517,7 @@ final class Saturator {
         return p;
     }
 
-    /** Верх основания пьедестала: бронза, кольцо рун вокруг стержня, латунные болты. */
+    /** Top of the pedestal base: bronze, a ring of runes around the rod, brass bolts. */
     static Paint pedestalBase() {
         Paint p = new Paint(16, 16, K);
         p.slab(0, 0, 16, 16, BRONZE, 2.4, 1);
@@ -535,7 +535,7 @@ final class Saturator {
         return p;
     }
 
-    /** Крио-трубка: заиндевелое стекло, бирюзовая жила по оси, ледяные кольца. */
+    /** Cryo tube: frosted glass, a teal vein along the axis, ice rings. */
     static Paint cryoTube() {
         Paint p = new Paint(16, 16, K);
         p.fill(0, 0, 16, 16, (u, v) -> {
@@ -549,13 +549,13 @@ final class Saturator {
         return p;
     }
 
-    /** Бока наковальни: холодная сталь с синевой, кованые грани, иней по верхней кромке и пятна изморози. */
+    /** Anvil sides: cold bluish steel, forged faces, frost along the top edge and rime spots. */
     static Paint anvilSide() {
         Paint p = new Paint(16, 16, K);
         p.fill(0, 0, 16, 16, (u, v) -> Paint.mix(Paint.ramp(IRON, 0.62 - 0.22 * v / 16), Paint.ramp(FROST, 0.1), 0.32));
         p.streaks(0, 0, 16, 16, 0.08, 1481, true);
         p.grain(0, 0, 16, 16, 0.05, 1482);
-        // кованые фаски: светлая верхняя кромка, тёмная нижняя, следы молота
+        // forged bevels: a light top edge, a dark bottom one, hammer marks
         p.rect(0, 0, 16, 0.6, Paint.mix(at(IRON, 5.4), at(FROST, 3.0), 0.5));
         p.rect(0, 15.4, 16, 16, at(IRON, 0.6));
         Random r = new Random(1483);
@@ -568,7 +568,7 @@ final class Saturator {
         return p;
     }
 
-    /** Цоколь наковальни: тёмный сланец, латунный кант сверху и снизу, одна тонкая бирюзовая рунная линия. */
+    /** Anvil plinth: dark slate, a brass trim at the top and bottom, one thin teal rune line. */
     static Paint satAnvilBase() {
         Paint p = new Paint(16, 16, K);
         p.slab(0, 0, 16, 16, IRON, 1.1, 1);
@@ -583,7 +583,7 @@ final class Saturator {
         return p;
     }
 
-    /** Талия наковальни: состаренная бронза, латунные обручи и бирюзовый рунный пояс посередине. */
+    /** Anvil waist: aged bronze, brass hoops and a teal rune belt in the middle. */
     static Paint satAnvilCasing() {
         Paint p = new Paint(16, 16, K);
         p.slab(0, 0, 16, 16, BRONZE, 2.2, 1);
@@ -598,10 +598,10 @@ final class Saturator {
         return p;
     }
 
-    /** Кованая сталь тела, рога и пятки: тёмная, с бликом по верхней кромке и следами ковки. */
+    /** Forged steel of the body, horn and heel: dark, with a highlight along the top edge and forging marks. */
     static Paint satAnvilSteel() {
         Paint p = new Paint(16, 16, K);
-        // Paint.at — по номеру ступени палитры (0..6); тёмная кованая сталь со светлой верхней кромкой
+        // Paint.at takes a palette step (0..6); dark forged steel with a light top edge
         p.fill(0, 0, 16, 16, (u, v) -> at(IRON, 1.6 + 1.3 * (1.0 - v / 16.0) + 0.2 * Math.sin(u * 1.3 + v * 0.4)));
         p.streaks(0.3, 0.3, 15.7, 15.7, 0.07, 1881, true);
         p.rect(0, 0, 16, 0.8, at(IRON, 3.4));
@@ -613,21 +613,21 @@ final class Saturator {
         }
         return p;
     }
-    /** Ударная площадка наковальни: вороненая сталь со следами ковки, скошенными фасками и рунной микрогравировкой. */
+    /** The anvil striking face: blued steel with forging marks, bevelled edges and a fine rune engraving. */
     static Paint satAnvilFace() {
         Paint p = new Paint(16, 16, K);
-        // Темная кованая сталь с металлическим блеском
+        // Dark forged steel with a metallic shine
         p.slab(0, 0, 16, 16, IRON, 1.6, 1);
         p.streaks(0.5, 0.5, 15.5, 15.5, 0.08, 1871, true);
         p.grain(0, 0, 16, 16, 0.05, 1872);
 
-        // Фаски по периметру
+        // Bevels around the edges
         p.rect(0, 0, 16, 0.8, at(IRON, 4.2));
         p.rect(0, 15.2, 16, 16, at(IRON, 0.6));
         p.rect(0, 0, 0.8, 16, at(IRON, 3.8));
         p.rect(15.2, 0, 16, 16, at(IRON, 0.8));
 
-        // Следы ударов молота и крестообразные насечки
+        // Hammer marks and cross notches
         Random r = new Random(1873);
         for (int i = 0; i < 6; i++) {
             double x = 2.5 + r.nextDouble() * 11, y = 2.5 + r.nextDouble() * 11;
@@ -635,7 +635,7 @@ final class Saturator {
             p.line(x - 0.8, y + 1.0, x + 0.8, y - 1.0, 0.14, at(IRON, 0.8));
         }
 
-        // Рунный оккультный узор в центре
+        // An occult rune pattern in the middle
         p.glowRect(6.0, 6.0, 10.0, 10.0, 0.5, at(CYAN, 3.2), 45);
         p.ring(8, 8, 2.4, 2.65, at(CYAN, 4.8));
         p.rune(6.8, 6.8, 2.4, 5, at(CYAN, 5.4), at(CYAN, 3.0));
@@ -644,7 +644,7 @@ final class Saturator {
         return p;
     }
 
-    /** Полупрозрачный граненый кристаллический лед глубокого сапфирово-лазурного оттенка. */
+    /** Translucent faceted crystal ice of a deep sapphire-azure tint. */
     static Paint ice() {
         Paint p = new Paint(4, 4, K);
         p.fill(0, 0, 4, 4, (u, v) -> {
@@ -654,7 +654,7 @@ final class Saturator {
             int alpha = (int) (155 + 85 * Math.pow(edge, 1.5));
             return argb(alpha, base & 0xFFFFFF);
         });
-        // Кристаллические грани и световые блики
+        // Crystal facets and light highlights
         p.line(0.2, 0.2, 3.8, 3.8, 0.35, argb(230, 0xFFFFFF));
         p.line(0.4, 0.2, 0.4, 3.8, 0.25, argb(200, 0xE8F8FF));
         p.line(3.6, 0.2, 3.6, 3.8, 0.25, argb(180, 0x2878A0));
@@ -662,12 +662,12 @@ final class Saturator {
         return p;
     }
 
-    /** Задняя стенка камеры пресса (16 x 24): тёмное железо, светящийся рунный круг за предметом, трубы по краям. */
+    /** The back wall of the press chamber (16 x 24): dark iron, a glowing rune circle behind the item, pipes at the edges. */
     static Paint chamberWall() {
         Paint p = new Paint(16, 24, K);
         p.slab(0, 0, 16, 24, IRON, 1.0, 1);
         p.grain(0, 0, 16, 24, 0.07, 1441);
-        // стенка видна с Y 40 (v = 0) вниз: круг рун на уровне предмета (Y ~ 34) — это v = (40 - 34) * 16 / 24 ~ 4 юнита картины
+        // the wall is visible from Y 40 (v = 0) downwards: the rune circle at the item level (Y ~ 34) is at v = (40 - 34) * 16 / 24 ~ 4 picture units
         double cx = 8, cy = 9.0;
         p.glowRect(cx - 3, cy - 3, cx + 3, cy + 3, 4.0, at(VIOLET, 3.0), 90);
         p.ring(cx, cy, 5.2, 5.5, at(VIOLET, 5.2));
@@ -686,7 +686,7 @@ final class Saturator {
         return p;
     }
 
-    /** Стенка над крыльями (16 x 16) — видна сквозь стеклянные колонны: шестерни и трубка. */
+    /** The wall above the wings (16 x 16), visible through the glass columns: gears and a tube. */
     static Paint wallTile() {
         Paint p = new Paint(16, 16, K);
         p.slab(0, 0, 16, 16, IRON, 1.0, 1);
@@ -698,7 +698,7 @@ final class Saturator {
         return p;
     }
 
-    /** Патрубок для трубы сети: латунный квадрат, кольцо, бирюзовая кромка и тёмное отверстие. 10x10 юнитов на текстуре 16x16. */
+    /** An inlet for the network pipe: a brass square, a ring, a teal rim and a dark hole. 10x10 units on a 16x16 texture. */
     static Paint port() {
         Paint p = new Paint(16, 16, K);
         p.slab(0, 0, 16, 16, BRASS, 2.8, 1);
@@ -746,18 +746,18 @@ final class Saturator {
         return p;
     }
 
-    // ================================================================================================ динамические текстуры
-    /** Жидкость колонн (рисует рендерер): сплошная бирюза с мягкими бесшовными переливами, без пикселей-искр. */
+    // ================================================================================================ dynamic textures
+    /** Column liquid (drawn by the renderer): solid teal with soft seamless shimmer, no spark pixels. */
     static Paint liquid() {
         Paint p = new Paint(16, 16, K);
         double t = 2 * Math.PI / 16;
-        // только целые гармоники периода 16 — текстура плитками не «шьётся» в квадраты
+        // only whole harmonics of period 16, so the texture does not "stitch" into squares when tiled
         p.fill(0, 0, 16, 16, (u, v) -> Paint.ramp(CYAN, 0.5 + 0.045 * Math.sin(u * t + v * t) + 0.035 * Math.cos(2 * v * t - u * t)
                 + 0.02 * Math.sin(3 * u * t)));
         return p;
     }
 
-    /** Латунь пресса (плита и шток): гладкая с зерном и заклёпками по краю. */
+    /** Press brass (plate and rod): smooth with grain and rivets along the edge. */
     static Paint press() {
         Paint p = new Paint(16, 16, K);
         p.slab(0, 0, 16, 16, BRASS, 3.0, 1);
@@ -771,8 +771,8 @@ final class Saturator {
         return p;
     }
 
-    // ================================================================================================ модель
-    /** Рельефная рамка на фасаде: четыре латунных бруска толщиной th по периметру прямоугольника (в картине: x0..x1, y0..y1, y вниз). */
+    // ================================================================================================ model
+    /** A relief frame on the front: four brass bars of thickness th around a rectangle (in the picture: x0..x1, y0..y1, y down). */
     static void frameRect(Big3 m, Big3.Face brass, double x0, double y0, double x1, double y1, double th, double z1) {
         double yt = 48 - y1, yb = 48 - y0;
         m.box(x0, yb - th, 0, x1, yb, z1).all(brass);
@@ -781,7 +781,7 @@ final class Saturator {
         m.box(x1 - th, yt + th, 0, x1, yb - th, z1).all(brass);
     }
 
-    /** Выступ на фасаде по прямоугольнику картины (y вниз): лицо — та же картина, бока — латунь. */
+    /** A bump on the front over a picture rectangle (y down): the face is the same picture, the sides are brass. */
     static void raised(Big3 m, Big3.Face brass, Big3.Face face, double x0, double y0, double x1, double y1, double zFront) {
         m.box(x0, 48 - y1, zFront, x1, 48 - y0, 1).front(face).left(brass).right(brass).top(brass).bottom(brass);
     }
@@ -798,8 +798,8 @@ final class Saturator {
         Big3.Face port = Big3.Face.map("sat_port", (x, y, z) -> new double[]{(x - 20.8) * 2.5, (11.2 - y) * 2.5});
         Big3.Face litFront = front.glow(12);
 
-        // цоколь выступает вперёд ступенькой; корпус крыльев, ящика и балки отодвинут на 1 юнит под рельеф.
-        // Снизу под центральным ящиком — разъём сети (цоколь разрезан, чтобы у него было своё дно)
+        // the plinth sticks forward as a step; the bodies of the wings, the box and the beam are moved back 1 unit for the relief.
+        // Below the central box is the network socket (the plinth is cut so it has its own bottom)
         Big3.Face portBottom = Big3.Face.map("sat_port", (x, y, z) -> new double[]{(29 - x) * 1.6, (z - 3) * 1.6});
         m.box(0, 0, 0, 19, 3, 32).front(front).back(back).left(left).top(deck).bottom(dark);
         m.box(29, 0, 0, 48, 3, 32).front(front).back(back).right(right).top(deck).bottom(dark);
@@ -808,13 +808,13 @@ final class Saturator {
         m.box(19, 0, 13, 29, 3, 32).back(back).top(deck).bottom(dark);
         m.box(0, 3, 1, 16, 28, 32).front(front).back(back).left(left).right(bronze).top(deck);
         m.box(32, 3, 1, 48, 28, 32).front(front).back(back).left(bronze).right(right).top(deck);
-        // центральный ящик (подключается труба сети), глухая задняя половина колонны
+        // the central box (the network pipe connects to it), the blind back half of the column
         m.box(16, 3, 1, 32, 16, 16).front(front).top(deck);
         m.box(16, 3, 16, 32, 16, 32).back(back);
         m.box(16, 16, 16, 32, 39, 32).back(back).front(chamber);
-        // пьедестал: основание, стержень (пресс стоит на стержне Края), наковальня
-        // пьедестал: бронзовое основание с кольцом рун, тёмный стержень с рунным столбцом, латунные обоймы и четыре
-        // крио-трубки по углам (светящаяся бирюзовая жила в инее)
+        // pedestal: base, rod (the press stands on an End Rod), anvil
+        // pedestal: a bronze base with a ring of runes, a dark rod with a rune column, brass holders and four
+        // cryo tubes in the corners (a glowing teal vein in frost)
         Big3.Face baseTop = Big3.Face.map("sat_pedestal_base", (x, y, z) -> new double[]{(x - 19) * 1.6, (z - 3) * 1.6}).glow(9);
         Big3.Face stemX = Big3.Face.map("sat_pedestal", (x, y, z) -> new double[]{(x - 21) * 16 / 6, (27 - y) * 16 / 9});
         Big3.Face stemZ = Big3.Face.map("sat_pedestal", (x, y, z) -> new double[]{(z - 5) * 16 / 6, (27 - y) * 16 / 9});
@@ -827,7 +827,7 @@ final class Saturator {
         for (double[] c : new double[][]{{20.2, 4.2}, {27.0, 4.2}, {20.2, 11.0}, {27.0, 11.0}}) {
             m.box(c[0], 18.8, c[1], c[0] + 0.8, 26.2, c[1] + 0.8).sides(tube);
         }
-        // наковальня: опора, шейка, рабочая плита с рогом и пяткой; холодная синеватая сталь, иней и сосульки по переднему краю
+        // anvil: support, neck, the working plate with a horn and a heel; cold bluish steel, frost and icicles along the front edge
         Big3.Face anvilSide = Big3.Face.of("sat_anvil_side"), ice = Big3.Face.of("sat_ice");
         m.box(18.5, 27, 3, 29.5, 27.7, 13).all(anvilSide);
         m.box(20.5, 27.7, 4.5, 27.5, 28.4, 11.5).all(anvilSide);
@@ -837,16 +837,16 @@ final class Saturator {
         for (double[] ic : new double[][]{{18.3, 0.9}, {21.4, 0.55}, {24.6, 1.1}, {28.2, 0.7}}) {
             m.box(ic[0], 28.4 - ic[1], 2.15, ic[0] + 0.45, 28.4, 2.6).all(ice);
         }
-        // стойки камеры пресса
+        // press chamber posts
         for (double x : new double[]{17, 29}) {
             for (double z : new double[]{2, 12}) {
                 m.box(x, 29.5, z, x + 2, 39, z + 2).all(brass);
             }
         }
-        // стенки над крыльями (видны сквозь колонны)
+        // walls above the wings (visible through the columns)
         m.box(0, 28, 28, 16, 39, 32).front(wall).back(back).left(left).right(bronze);
         m.box(32, 28, 28, 48, 39, 32).front(wall).back(back).left(bronze).right(right);
-        // стеклянные колонны Source (жидкость рисует рендерер): стекло, три пояса и угловые стяжки
+        // glass Source columns (the renderer draws the liquid): glass, three bands and corner ties
         for (double x : new double[]{3, 35}) {
             m.box(x, 28, 3, x + 10, 39, 13).sides(glass);
             m.box(x - 0.6, 28, 2.4, x + 10.6, 29.4, 13.6).all(brass);
@@ -858,22 +858,22 @@ final class Saturator {
                 }
             }
         }
-        // верхняя балка
+        // top beam
         m.box(0, 39, 1, 48, 44, 32).front(front).back(back).left(left).right(right).top(top).bottom(bronze);
-        // рельеф фасада: рамы рунных панелей, светящиеся вставки, патрубок, окно, манометры, рунная табличка
+        // front relief: frames of the rune panels, glowing inlays, the inlet, the window, gauges, a rune plate
         for (double x0 : new double[]{0, 32}) {
             frameRect(m, brass, x0 + 2.0, 23.0, x0 + 14.0, 39.6, 0.7, 1);
             raised(m, brass, litFront, x0 + 2.7, 23.7, x0 + 13.3, 38.9, 0.3);
             frameRect(m, brass, x0 + 2.0, 40.6, x0 + 14.0, 44.4, 0.5, 1);
         }
-        // патрубок сети: небольшой (6.4x6.4) и неглубокий, не наезжает на окно с големом и манометры ящика
+        // network inlet: small (6.4x6.4) and shallow, it does not overlap the golem window and the gauges of the box
         m.box(20.8, 4.8, 0.4, 27.2, 11.2, 1).front(port).left(brass).right(brass).top(brass).bottom(brass);
         raised(m, brass, front, 16.9, 35.2, 20.7, 43.0, 0.2);
         for (double[] g : new double[][]{{7.2, 13.0}, {35.0, 40.8}}) {
             raised(m, brass, front, g[0], 4.2, g[1], 8.8, 0.2);
         }
         raised(m, brass, litFront, 18.5, 4.3, 29.5, 8.7, 0.2);
-        // кристалл на балке: латунное основание и ступенчатый самоцвет
+        // crystal on the beam: a brass base and a stepped gem
         m.box(19.5, 44, 3.5, 28.5, 45, 12.5).all(brass);
         m.box(21, 45, 5, 27, 46.5, 11).all(crystalF).rot("y", 45, 24, 45, 8);
         m.box(22.2, 46.5, 6.2, 25.8, 47.5, 9.8).all(crystalF).rot("y", 45, 24, 46.5, 8);
@@ -900,31 +900,31 @@ final class Saturator {
     static final String[] FACING = {"north", "east", "south", "west"};
 
     /**
-     * Насыщатель до сборки (и предмет) — магическая наковальня: сланцевый цоколь с рунной линией, расставленное стальное
-     * основание, узкая бронзовая талия с бирюзовым рунным поясом, широкое плоское тело с ударной площадкой, длинный рог на
-     * запад и пятка на восток. На площадке куют заготовки вручную (см. ManaSaturatorBlockEntity).
+     * The Saturator before assembly (and the item) is a magic anvil: a slate plinth with a rune line, a splayed steel
+     * base, a narrow bronze waist with a teal rune belt, a wide flat body with a striking face, a long horn to
+     * the west and a heel to the east. Blanks are forged on the face by hand (see ManaSaturatorBlockEntity).
      */
     static void pressModel() throws Exception {
         List<Models.El> l = new ArrayList<>();
-        // цоколь и расставленное основание
+        // plinth and splayed base
         l.add(Models.e(1.0, 0.0, 2.5, 15.0, 1.6, 13.5).all("#anvil_base").glow(9));
         l.add(Models.e(2.0, 1.6, 3.5, 14.0, 3.4, 12.5).all("#anvil_steel"));
         l.add(Models.e(3.4, 3.4, 4.5, 12.6, 4.8, 11.5).all("#anvil_steel"));
-        // узкая талия с рунным поясом и латунные стяжки по углам
+        // narrow waist with a rune belt and brass ties at the corners
         Models.El waist = Models.e(5.0, 4.8, 5.5, 11.0, 9.6, 10.5).all("#anvil_steel").glow(8);
         for (String side : new String[]{"north", "south", "east", "west"}) {
             waist.face(side, "#anvil_casing", 0, 0, 16, 16);
         }
         l.add(waist);
-        // расширение под тело
+        // widening under the body
         l.add(Models.e(3.6, 9.6, 4.5, 12.4, 10.8, 11.5).all("#anvil_steel"));
-        // тело наковальни и ударная площадка
+        // the anvil body and the striking face
         l.add(Models.e(2.4, 10.8, 3.6, 13.0, 14.3, 12.4).all("#anvil_steel"));
         l.add(Models.e(2.6, 14.3, 3.9, 12.8, 14.9, 12.1).all("#anvil_steel").face("up", "#anvil_face", 0, 0, 16, 16).glow(5));
-        // рог: сужается к западу
+        // horn: narrows to the west
         l.add(Models.e(1.0, 11.6, 5.0, 2.4, 14.3, 11.0).all("#anvil_steel"));
         l.add(Models.e(0.2, 12.6, 6.4, 1.0, 14.1, 9.6).all("#anvil_steel"));
-        // пятка с квадратным отверстием наверху
+        // heel with a square hole on top
         l.add(Models.e(13.0, 12.2, 4.6, 15.4, 14.3, 11.4).all("#anvil_steel"));
         l.add(Models.e(13.6, 14.3, 7.0, 14.6, 14.32, 9.0).only("#anvil_base", "up"));
         Models.model("mana_saturator_press", false, "sat_anvil_steel",
@@ -933,7 +933,7 @@ final class Saturator {
         Models.item("mana_saturator", "mana_saturator_press");
         Forge2.addDisplay("mana_saturator_press", 135, 1.0);
     }
-    /** Решётки крыши, на которые ставятся Сопроцессоры Охлаждения: верхний ряд, кроме хозяина (1, 2, 0). */
+    /** Roof grilles for Cooling Co-Processors: the top row, except the owner (1, 2, 0). */
     static boolean isVent(int col, int row, int dep) {
         return row == 2 && !(col == 1 && dep == 0);
     }
@@ -941,7 +941,7 @@ final class Saturator {
     static void models() throws Exception {
         Big3 m = geometry();
         m.lint("mana_saturator");
-        // мультипарт: клетка по (facing, cell) и, на решётках крыши, охладитель при cooler=true
+        // multipart: the cell by (facing, cell) and, on the roof grilles, a cooler when cooler=true
         List<String> parts = new ArrayList<>();
         for (int dep = 0; dep < 2; dep++) {
             for (int row = 0; row < 3; row++) {
@@ -963,7 +963,7 @@ final class Saturator {
         }
         Forge2.write(Forge2.RES.resolve("blockstates/saturator_part.json"),
                 "{\n  \"multipart\": [\n" + String.join(",\n", parts) + "\n  ]\n}\n");
-        // хозяин: до сборки — компактный пресс, после — клетка (1, 2, 0)
+        // owner: a compact press before assembly, cell (1, 2, 0) after
         StringBuilder ctl = new StringBuilder("{\n  \"variants\": {\n");
         for (int f = 0; f < 4; f++) {
             ctl.append("    \"facing=").append(FACING[f]).append(",formed=false\": {\"model\": \"").append(Forge2.NS).append("mana_saturator_press\"").append(ROT_Y[f]).append("},\n");
@@ -975,7 +975,7 @@ final class Saturator {
         java.nio.file.Files.deleteIfExists(Forge2.RES.resolve("models/block/mana_saturator.json"));
     }
 
-    // ================================================================================================ запись
+    // ================================================================================================ writing
     static void textures() throws Exception {
         Paint front = frontElevation();
         Paint back = backElevation();
@@ -988,7 +988,7 @@ final class Saturator {
             for (int r = 0; r < 3; r++) {
                 int y0 = 16 * (2 - r);
                 if (c != 1 || r != 1) {
-                    front.crop(16 * c, y0, 16, 16).save(Forge2.tex("sat_f_" + c + r));   // клетка (1, 1) спереди открыта (пьедестал)
+                    front.crop(16 * c, y0, 16, 16).save(Forge2.tex("sat_f_" + c + r));   // cell (1, 1) is open at the front (the pedestal)
                 }
                 back.crop(32 - 16 * c, y0, 16, 16).save(Forge2.tex("sat_b_" + c + r));
             }

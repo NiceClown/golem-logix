@@ -15,19 +15,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Клиент -> сервер: рецепт из JEI (кнопка «+»).
- * В терминале крафта — разложить по сетке: inputs[i] — варианты для клетки i (берётся первый, который есть в сети или инвентаре).
- * В кодировщике — записать в призрачные слоты: inputs[i] — один предмет (первый вариант), outputs — выходы обработки.
+ * Client -> server: a recipe from JEI (the "+" button).
+ * In the crafting terminal it is laid out on the grid: inputs[i] = the options for cell i (the first one found in the network or inventory is taken).
+ * In the encoder it is written into the ghost slots: inputs[i] = one item (the first option), outputs = processing outputs.
  *
- * @param crafting рецепт верстака 3x3 (иначе — обработка в машине, только для кодировщика)
- * @param max      Shift+«+»: в терминале крафта класть по полному стаку
+ * @param crafting a 3x3 crafting table recipe (otherwise processing in a machine, encoder only)
+ * @param max      Shift + "+": in the crafting terminal put full stacks
  */
 public record RecipeFillPayload(int containerId, boolean crafting, boolean max, List<List<ItemStack>> inputs,
                                 List<ItemStack> outputs) implements CustomPacketPayload {
     public static final Type<RecipeFillPayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "recipe_fill"));
 
-    /** Ограничения против раздутых пакетов. */
+    /** Limits against bloated packets. */
     public static final int MAX_SLOTS = 9, MAX_OPTIONS = 16, MAX_OUTPUTS = 3;
 
     public static final StreamCodec<RegistryFriendlyByteBuf, RecipeFillPayload> STREAM_CODEC = StreamCodec.of(

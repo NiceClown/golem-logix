@@ -10,8 +10,8 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Окно Крио-Мейнфрейма: две полки калькуляторов (пустые ячейки показывают полупрозрачный калькулятор), под ними сводка:
- * сколько ядер и сколько занято, шагов за цикл на ядро и во сколько раз считаются сопроцессоры.
+ * Cryo-Mainframe window: two shelves of calculators (empty slots show a translucent calculator), with a summary below:
+ * how many cores and how many are busy, steps per cycle per core and how many times the coprocessors count.
  */
 public class MainframeScreen extends GolemScreen<MainframeMenu> {
     private static final ItemStack CALC = new ItemStack(ModBlocks.CRYO_CALCULATOR.get());

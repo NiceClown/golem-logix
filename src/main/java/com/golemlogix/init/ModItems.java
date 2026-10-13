@@ -34,11 +34,11 @@ public class ModItems {
     public static final DeferredItem<CopperPunchCardItem> COPPER_PUNCH_CARD = ITEMS.register("copper_punch_card",
             () -> new CopperPunchCardItem(new Item.Properties()));
 
-    /** Заглушка трубы: закрывает сторону трубы, чтобы соседние линии не сливались. */
+    /** Pipe Plug: closes a side of a pipe so neighbouring lines do not merge. */
     public static final DeferredItem<PipePlugItem> PIPE_PLUG = ITEMS.register("pipe_plug",
             () -> new PipePlugItem(new Item.Properties().stacksTo(64)));
 
-    /** Кузнечный молот: им куют пластины на наковальне (несобранном Насыщателе); заряжается Source от банки. */
+    /** Forge Hammer: forges plates on the anvil (an unassembled Saturator); charged with Source from a jar. */
     public static final DeferredItem<com.golemlogix.items.ForgeHammerItem> FORGE_HAMMER = ITEMS.register("forge_hammer",
             () -> new com.golemlogix.items.ForgeHammerItem(new Item.Properties()));
 

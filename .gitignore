@@ -18,7 +18,7 @@
 *.7z
 /STATUS_REPORT_*.md
 /CHANGES_PLAN*.md
-/ФАЗЫ_*.md
+/PHASES_*.md
 /github_export/
 
 # local-only tools (machine-specific paths, third-party binaries, promo pipelines)

@@ -23,8 +23,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Кодировщик шаблонов: 3x3 призрачных входа, до 3 призрачных выходов, чистая перфокарта на входе,
- * закодированная на выходе. Режимы: верстак (рецепт определяется сам) и обработка (любая машина).
+ * Pattern encoder: 3x3 ghost inputs, up to 3 ghost outputs, a blank punch card at the input,
+ * the encoded one at the output. Modes: crafting table (the recipe is found by itself) and processing (any machine).
  */
 public class PatternEncoderMenu extends GolemMenu {
     public static final int IMAGE_HEIGHT = 214;
@@ -53,7 +53,7 @@ public class PatternEncoderMenu extends GolemMenu {
                 ContainerLevelAccess.NULL);
     }
 
-    /** container и data — у блок-сущности кодировщика (на клиенте — пустые копии, их заполняет синхронизация окна). */
+    /** container and data belong to the encoder block entity (on the client they are empty copies filled by window sync). */
     public PatternEncoderMenu(int id, Inventory inv, Container container, net.minecraft.world.inventory.ContainerData data,
                               ContainerLevelAccess access) {
         super(ModMenus.PATTERN_ENCODER.get(), id);
@@ -74,8 +74,8 @@ public class PatternEncoderMenu extends GolemMenu {
                 return stack.getItem() instanceof CopperPunchCardItem;
             }
         });
-        // в ячейку готовой карты можно положить уже записанную перфокарту: её рецепт откроется в сетке для правки, «Выбить»
-        // перезапишет эту же карту (чистая не тратится)
+        // an already written punch card can be put into the finished card slot: its recipe opens in the grid for editing, "Stamp"
+        // overwrites the same card (no blank card is spent)
         this.addSlot(new Slot(container, CARD_OUT, 118, 84) {
             @Override
             public boolean mayPlace(ItemStack stack) {
@@ -116,7 +116,7 @@ public class PatternEncoderMenu extends GolemMenu {
     @Override
     public void clicked(int slotId, int button, ClickType clickType, Player player) {
         if (handleGhostClick(slotId, button, clickType)) {
-            // выход рецепта верстака вычисляется сам и вручную не меняется
+            // the crafting table recipe output is computed by itself and cannot be changed by hand
             if (isCraftingMode() && slotId >= OUT_START && slotId < OUT_START + 3) {
                 refreshCraftingResult();
             }
@@ -201,8 +201,8 @@ public class PatternEncoderMenu extends GolemMenu {
     }
 
     /**
-     * Рецепт из JEI («+»): верстак — девять клеток по местам (по одному предмету), обработка в машине — входы подряд
-     * (одинаковые складываются) и до трёх выходов. Слоты призрачные: предметы ниоткуда не берутся.
+     * A recipe from JEI ("+"): crafting table = nine cells in place (one item each), processing in a machine = inputs in a row
+     * (identical ones are summed) and up to three outputs. The slots are ghosts: items are not taken from anywhere.
      */
     public void fillFromRecipe(boolean craftingRecipe, List<List<ItemStack>> inputs, List<ItemStack> outputs) {
         updating = true;
@@ -265,7 +265,7 @@ public class PatternEncoderMenu extends GolemMenu {
         loadPattern(fromIn != null ? fromIn : fromOut);
     }
 
-    /** Открыть рецепт карты в сетке (для правки). */
+    /** Open the card's recipe in the grid (for editing). */
     void loadPattern(PatternData pattern) {
         if (pattern == null) {
             return;
@@ -288,7 +288,7 @@ public class PatternEncoderMenu extends GolemMenu {
 
     private void encode(Player player) {
         ItemStack card = container.getItem(CARD_IN);
-        // в выходной ячейке лежит записанная карта — её перезаписываем (правка рецепта), чистая карта не нужна
+        // a written card lies in the output slot: overwrite it (recipe editing), no blank card is needed
         boolean rewrite = CopperPunchCardItem.hasPattern(container.getItem(CARD_OUT));
         if (!rewrite && (card.isEmpty() || !(card.getItem() instanceof CopperPunchCardItem))) {
             player.displayClientMessage(Component.translatable("message.golem_logix.encoder.no_card"), true);
@@ -359,7 +359,7 @@ public class PatternEncoderMenu extends GolemMenu {
                 return ItemStack.EMPTY;
             }
         } else if (stack.getItem() instanceof CopperPunchCardItem) {
-            // записанная карта — в ячейку правки (если свободна), чистая — в запас чистых
+            // a written card goes to the editing slot (if it is free), a blank one to the blank stock
             if (CopperPunchCardItem.hasPattern(stack) && container.getItem(CARD_OUT).isEmpty()) {
                 ItemStack one = stack.split(1);
                 this.slots.get(CARD_OUT).setByPlayer(one, ItemStack.EMPTY);
@@ -380,7 +380,7 @@ public class PatternEncoderMenu extends GolemMenu {
     @Override
     public void removed(Player player) {
         super.removed(player);
-        // содержимое остаётся в кодировщике (чистые карты, готовая карта, рецепт)
+        // the contents stay in the encoder (blank cards, the finished card, the recipe)
         if (container instanceof SimpleContainer sc) {
             sc.removeListener(listener);
         }

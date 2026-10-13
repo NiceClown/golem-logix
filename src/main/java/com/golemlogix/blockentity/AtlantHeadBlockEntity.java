@@ -10,11 +10,11 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Голова Атланта (верхняя половина статуи): на клиенте плавно поворачивается к игроку, если тот рядом и перед статуей;
- * без игрока — медленно возвращается и смотрит прямо. Данных не хранит.
+ * Atlant head (upper half of the statue): on the client it turns smoothly towards a player who is nearby and in front of the statue;
+ * with no player it slowly turns back and looks straight ahead. Stores no data.
  */
 public class AtlantHeadBlockEntity extends BlockEntity {
-    /** Поворот головы относительно взгляда статуи (градусы): рысканье и наклон, текущие и прошлого тика. */
+    /** Head rotation relative to the statue's facing (degrees): yaw and pitch, current and previous tick. */
     public float yaw, yawPrev, pitch, pitchPrev;
     private static final double RANGE = 12.0;
     private static final float MAX_YAW = 70f, MAX_PITCH = 35f;
@@ -33,8 +33,8 @@ public class AtlantHeadBlockEntity extends BlockEntity {
     }
 
     /**
-     * Шаг слежения головы в блоке headPos (статуя смотрит в facing): look = {рысканье, наклон}, плавно к игроку рядом и
-     * перед статуей, иначе — прямо. Общее для отдельных атлантов и встроенных в Крио-Мейнфрейм.
+     * Head tracking step for the block headPos (the statue looks along facing): look = {yaw, pitch}, smoothly towards a nearby player
+     * in front of the statue, otherwise straight ahead. Shared by standalone atlants and the ones built into the Cryo-Mainframe.
      */
     public static void track(Level level, BlockPos headPos, net.minecraft.core.Direction facing, float[] look) {
         float tYaw = 0f, tPitch = 0f;
@@ -42,7 +42,7 @@ public class AtlantHeadBlockEntity extends BlockEntity {
         double hx = headPos.getX() + 0.5, hy = headPos.getY() + 0.8, hz = headPos.getZ() + 0.5;
         if (player != null && player.level() == level && player.distanceToSqr(hx, hy, hz) < RANGE * RANGE) {
             double dx = player.getX() - hx, dy = player.getEyeY() - hy, dz = player.getZ() - hz;
-            // мировой угол на игрока в системе Minecraft (0 — на юг), относительно взгляда статуи
+            // world angle to the player in Minecraft terms (0 = south), relative to the statue's facing
             float world = (float) Math.toDegrees(Math.atan2(-dx, dz));
             float rel = Mth.wrapDegrees(world - facing.toYRot());
             if (Math.abs(rel) < 110f) {

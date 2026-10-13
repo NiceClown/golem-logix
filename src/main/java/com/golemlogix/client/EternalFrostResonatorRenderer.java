@@ -15,9 +15,9 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.phys.AABB;
 
 /**
- * Снежный вихрь Вечного Морозного Резонатора: три бирюзовые светящиеся ленты закручиваются спиралью от рунной площадки на
- * дне стеклянной камеры, сужаются в трубе-вытяжке и расходятся над крышей; посередине — мерцающий столб. Пока рядом сеть,
- * вихрь крутится быстрее и ярче. Ленты светятся сами (без освещения) и не закрывают стекло камеры.
+ * The snow vortex of the Eternal Frost Resonator: three glowing teal ribbons spiral up from the rune pad at the
+ * bottom of the glass chamber, narrow in the exhaust pipe and spread above the roof; a flickering pillar in the middle. While a network
+ * is nearby the vortex spins faster and brighter. The ribbons glow by themselves (unlit) and do not hide the chamber glass.
  */
 public class EternalFrostResonatorRenderer implements BlockEntityRenderer<EternalFrostResonatorBlockEntity> {
     private static final ResourceLocation VORTEX = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID,
@@ -33,7 +33,7 @@ public class EternalFrostResonatorRenderer implements BlockEntityRenderer<Eterna
         return new AABB(be.getBlockPos()).expandTowards(0, 0.6, 0);
     }
 
-    /** Радиус спирали (пиксели) на доле высоты h: широко в камере, узко в трубе, расходится над ней. */
+    /** Spiral radius (pixels) at height fraction h: wide in the chamber, narrow in the pipe, spreading above it. */
     private static float radius(float h) {
         float yy = Y0 + h * (Y1 - Y0);
         if (yy < 15f) {
@@ -46,7 +46,7 @@ public class EternalFrostResonatorRenderer implements BlockEntityRenderer<Eterna
         return 1.55f + (yy - 19.7f) / (Y1 - 19.7f) * 2.2f;
     }
 
-    /** Прозрачность на доле высоты: гаснет у самого дна и сверху над трубой. */
+    /** Opacity at a height fraction: fades at the very bottom and at the top above the pipe. */
     private static float fade(float h) {
         float yy = Y0 + h * (Y1 - Y0);
         float bottom = Mth.clamp((yy - Y0) / 0.8f, 0f, 1f);
@@ -76,12 +76,12 @@ public class EternalFrostResonatorRenderer implements BlockEntityRenderer<Eterna
                 float w = 1.7f;
                 int c0 = color(fade(h0) * bright), c1 = color(fade(h1) * bright);
                 float v0 = h0 * 2f + scroll, v1 = h1 * 2f + scroll;
-                // лента: двусторонний четырёхугольник от точки спирали до неё же выше на w
+                // ribbon: a double-sided quad from a spiral point to the same point w higher
                 quad(vc, p, x0, y0, z0, x1, y1, z1, w, v0, v1, c0, c1);
                 quad(vc, p, x1, y1, z1, x0, y0, z0, w, v1, v0, c1, c0);
             }
         }
-        // мерцающий столб посередине: две перекрещённые полосы
+        // flickering pillar in the middle: two crossed strips
         float pulse = (0.55f + 0.25f * Mth.sin(time * 0.2f)) * bright;
         for (int k = 0; k < 2; k++) {
             float dx = k == 0 ? 1.1f : 0f, dz = k == 0 ? 0f : 1.1f;
@@ -90,7 +90,7 @@ public class EternalFrostResonatorRenderer implements BlockEntityRenderer<Eterna
         }
     }
 
-    /** Цвет вершины: бирюзово-белый с яркостью a («глаза» складывают цвета, прозрачность не учитывают — гасим сам цвет). */
+    /** Vertex colour: teal-white with brightness a ("eyes" add colours and ignore transparency, so the colour itself is dimmed). */
     private static int color(float a) {
         float k = Mth.clamp(a, 0f, 1f);
         return 0xFF000000 | ((int) (0xC8 * k) << 16) | ((int) (0xFA * k) << 8) | (int) (0xFF * k);

@@ -16,7 +16,7 @@ import net.minecraft.world.item.ItemStack;
 import javax.annotation.Nullable;
 
 /**
- * Общая база меню мода: слоты игрока, обычный шифт-клик и «призрачные» слоты-фильтры.
+ * Common base of the mod's menus: player slots, the usual shift-click and "ghost" filter slots.
  */
 public abstract class GolemMenu extends AbstractContainerMenu {
     protected int containerSlotCount = 0;
@@ -27,9 +27,9 @@ public abstract class GolemMenu extends AbstractContainerMenu {
         super(type, id);
     }
 
-    /** Кнопка меню «следующий режим редстоуна» (общая для всех машин с Модулем Редстоуна). */
+    /** Menu button "next redstone mode" (shared by all machines with a Redstone Module). */
     public static final int BUTTON_REDSTONE = 10;
-    /** Ширина колонки апгрейдов справа от окна. */
+    /** Width of the upgrade column to the right of the window. */
     public static final int UPGRADE_COLUMN = 26;
 
     protected int upgradeStart = -1;
@@ -37,7 +37,7 @@ public abstract class GolemMenu extends AbstractContainerMenu {
     @Nullable
     protected UpgradeSpec upgradeSpec;
 
-    /** Колонка ячеек апгрейдов (x, y — левый верх первой ячейки относительно окна). */
+    /** Column of upgrade slots (x, y = top left of the first slot relative to the window). */
     protected void addUpgradeSlots(Container upgrades, UpgradeSpec spec, int x, int y) {
         upgradeSpec = spec;
         upgradeStart = this.slots.size();
@@ -64,7 +64,7 @@ public abstract class GolemMenu extends AbstractContainerMenu {
         return upgradeEnd;
     }
 
-    /** Стоит ли в окне апгрейд этого типа (клиент показывает кнопки по нему). */
+    /** Whether an upgrade of this type sits in the window (the client shows buttons by it). */
     public boolean hasUpgrade(UpgradeType type) {
         if (!hasUpgradeSlots()) {
             return false;
@@ -77,7 +77,7 @@ public abstract class GolemMenu extends AbstractContainerMenu {
         return false;
     }
 
-    /** Шифт-клик апгрейдом из инвентаря — в свободную подходящую ячейку апгрейдов. */
+    /** Shift-click with an upgrade from the inventory goes to a free suitable upgrade slot. */
     protected boolean moveUpgradeIn(ItemStack stack) {
         if (!hasUpgradeSlots() || !(stack.getItem() instanceof UpgradeItem)) {
             return false;
@@ -92,7 +92,7 @@ public abstract class GolemMenu extends AbstractContainerMenu {
         return false;
     }
 
-    /** Ячейка апгрейда: один предмет, только подходящий этой машине тип и не больше лимита. */
+    /** Upgrade slot: one item, only a type that suits this machine and no more than the limit. */
     public static class UpgradeSlot extends Slot {
         private final UpgradeSpec spec;
 
@@ -144,7 +144,7 @@ public abstract class GolemMenu extends AbstractContainerMenu {
                 return ItemStack.EMPTY;
             }
         } else if (moveUpgradeIn(stack)) {
-            // апгрейд встал в свою ячейку
+            // the upgrade went into its slot
         } else if (containerSlotCount <= 0 || !this.moveItemStackTo(stack, 0, containerSlotCount, false)) {
             return ItemStack.EMPTY;
         }
@@ -161,7 +161,7 @@ public abstract class GolemMenu extends AbstractContainerMenu {
         return copy;
     }
 
-    /** Слот-«призрак»: хранит копию предмета для фильтра/шаблона, ничего не потребляя. */
+    /** A "ghost" slot: keeps a copy of an item for a filter/pattern without consuming anything. */
     public static class GhostSlot extends Slot {
         public GhostSlot(Container container, int slot, int x, int y) {
             super(container, slot, x, y);
@@ -187,7 +187,7 @@ public abstract class GolemMenu extends AbstractContainerMenu {
         return slotId >= 0 && slotId < this.slots.size() && this.slots.get(slotId) instanceof GhostSlot;
     }
 
-    /** Призрак из JEI (пакет GhostSetPayload): в ячейку кладётся копия, сам предмет у игрока не нужен. */
+    /** A ghost from JEI (GhostSetPayload packet): a copy goes into the slot, the player does not need the item itself. */
     public void setGhost(Player player, int slotId, ItemStack stack) {
         if (!isGhost(slotId)) {
             return;
@@ -197,10 +197,10 @@ public abstract class GolemMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Клик по призрачному слоту:
-     * с предметом в курсоре — ставит копию (ЛКМ: 1 шт., если тот же предмет — +1; ПКМ: убавляет);
-     * без предмета — ЛКМ +1, ПКМ −1, Shift очищает.
-     * Возвращает true, если клик обработан.
+     * A click on a ghost slot:
+     * with an item on the cursor it sets a copy (left-click: 1, +1 if it is the same item; right-click: decreases);
+     * without an item, left-click +1, right-click -1, Shift clears.
+     * Returns true if the click was handled.
      */
     protected boolean handleGhostClick(int slotId, int button, ClickType clickType) {
         if (!isGhost(slotId)) {

@@ -33,17 +33,17 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Кнопка «+» JEI для окон мода: терминал крафта раскладывает рецепт по сетке из сети и инвентаря,
- * кодировщик записывает рецепт в призрачные слоты (верстак — как есть, любая другая категория — как обработку в машине).
+ * JEI "+" button for the mod's windows: the crafting terminal lays the recipe out on the grid from the network and the inventory,
+ * the encoder writes the recipe into the ghost slots (crafting table as is, any other category as processing in a machine).
  */
 final class RecipeTransfers {
-    /** Только для стенда разработчика: считать Ctrl зажатым (прекрафт без ввода с клавиатуры ОС). */
+    /** Only for the developer rig: treat Ctrl as held (precraft without OS keyboard input). */
     static boolean devCtrl;
 
     private RecipeTransfers() {
     }
 
-    /** Варианты ингредиента клетки: показанный сейчас в JEI — первым. */
+    /** Ingredient options of a cell: the one JEI shows right now comes first. */
     static List<ItemStack> options(IRecipeSlotView view) {
         List<ItemStack> out = new ArrayList<>();
         view.getDisplayedItemStack().ifPresent(s -> out.add(s.copy()));
@@ -55,7 +55,7 @@ final class RecipeTransfers {
         return out;
     }
 
-    // ---------------------------------------------------------------------------------- терминал крафта
+    // ---------------------------------------------------------------------------------- crafting terminal
 
     static final class CraftingTerminal implements IRecipeTransferHandler<TerminalMenu, RecipeHolder<CraftingRecipe>> {
         private final IRecipeTransferHandlerHelper helper;
@@ -90,7 +90,7 @@ final class RecipeTransfers {
             if (inputs.size() != 9) {
                 return helper.createInternalError();
             }
-            // что есть: список сети (его прислал сервер) и инвентарь игрока; что сеть умеет создавать
+            // what there is: the network list (sent by the server) and the player's inventory; what the network can craft
             Map<ItemKey, Long> have = new HashMap<>();
             java.util.Set<ItemKey> craftable = new java.util.HashSet<>();
             for (TerminalListPayload.Entry e : menu.clientEntries) {
@@ -108,7 +108,7 @@ final class RecipeTransfers {
             }
             List<List<ItemStack>> options = new ArrayList<>();
             List<IRecipeSlotView> missing = new ArrayList<>();
-            // прекрафт: для каждой пустой клетки — первый вариант, который сеть умеет создавать
+            // precraft: for every empty cell the first option the network can craft
             Map<ItemKey, Integer> toOrder = new java.util.LinkedHashMap<>();
             for (IRecipeSlotView view : inputs) {
                 List<ItemStack> opts = options(view);
@@ -154,8 +154,8 @@ final class RecipeTransfers {
     }
 
     /**
-     * Чего-то нет ни в сети, ни в инвентаре: кнопка подсвечена, недостающие клетки — красные, но перенос всё равно работает.
-     * Если недостающее сеть умеет создавать, Ctrl + «+» закажет его автокрафтом (прекрафт).
+     * Something is neither in the network nor in the inventory: the button is highlighted, the missing cells are red, but the transfer still works.
+     * If the network can craft what is missing, Ctrl + "+" orders it through autocrafting (precraft).
      */
     private record Missing(List<IRecipeSlotView> slots, boolean canOrder) implements IRecipeTransferError {
         @Override
@@ -188,7 +188,7 @@ final class RecipeTransfers {
         }
     }
 
-    // ---------------------------------------------------------------------------------- кодировщик
+    // ---------------------------------------------------------------------------------- encoder
 
     static final class EncoderCrafting implements IRecipeTransferHandler<PatternEncoderMenu, RecipeHolder<CraftingRecipe>> {
         private final IRecipeTransferHandlerHelper helper;
@@ -231,7 +231,7 @@ final class RecipeTransfers {
         }
     }
 
-    /** Любой другой рецепт (печь, машины модов) кодируется как обработка: предметы-входы и до трёх предметов-выходов. */
+    /** Any other recipe (furnace, other mods' machines) is encoded as processing: item inputs and up to three item outputs. */
     static final class EncoderProcessing implements IUniversalRecipeTransferHandler<PatternEncoderMenu> {
         private final IRecipeTransferHandlerHelper helper;
 
@@ -254,7 +254,7 @@ final class RecipeTransfers {
         public IRecipeTransferError transferRecipe(PatternEncoderMenu menu, Object recipe, IRecipeSlotsView slots,
                                                    Player player, boolean maxTransfer, boolean doTransfer) {
             if (recipe instanceof AnvilCrushRecipe) {
-                // голема в машину не положишь
+                // a golem cannot be put into a machine
                 return helper.createInternalError();
             }
             List<List<ItemStack>> inputs = new ArrayList<>();

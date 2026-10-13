@@ -7,12 +7,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Результат планирования автокрафта.
+ * Result of autocraft planning.
  *
- * @param targets     что заказано и сколько (обычно один предмет; прекрафт из JEI заказывает сразу несколько)
- * @param fromStorage сколько каких предметов нужно взять из хранилища сети
- * @param steps       шаги в порядке зависимостей (сначала то, что нужно для следующих)
- * @param missing     чего не хватает (нет в хранилище и нет шаблона)
+ * @param targets     what was ordered and how much (usually one item; a precraft from JEI orders several at once)
+ * @param fromStorage how many of which items to take from network storage
+ * @param steps       steps in dependency order (first what the following ones need)
+ * @param missing     what is missing (not in storage and no pattern)
  */
 public record CraftingPlan(Map<ItemKey, Long> targets, Map<ItemKey, Long> fromStorage, List<Step> steps,
                            Map<ItemKey, Long> missing) {
@@ -20,12 +20,12 @@ public record CraftingPlan(Map<ItemKey, Long> targets, Map<ItemKey, Long> fromSt
     public record Step(PatternData pattern, long times) {
     }
 
-    /** Первый (главный) заказанный предмет. */
+    /** The first (main) ordered item. */
     public ItemKey target() {
         return targets.keySet().iterator().next();
     }
 
-    /** Сколько заказано главного предмета. */
+    /** How much of the main item was ordered. */
     public long amount() {
         return targets.values().iterator().next();
     }

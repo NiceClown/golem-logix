@@ -19,9 +19,9 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Серверное хранилище содержимого магнитных дисков. На самом диске лежит только UUID и счётчик,
- * а предметы и жидкости — здесь (сохраняется вместе с миром). Так содержимое не гоняется по сети,
- * не теряется при клиентских манипуляциях (творческий инвентарь) и не раздувает стаки.
+ * Server-side store of magnetic disk contents. The disk itself only carries a UUID and a counter,
+ * while the items and fluids live here (saved with the world). This way the contents do not travel over the network,
+ * are not lost by client manipulations (the creative inventory) and do not bloat stacks.
  */
 public class DiskStore extends SavedData {
     public static final String NAME = GolemLogixMod.MOD_ID + "_disks";

@@ -8,21 +8,21 @@ import net.minecraft.world.item.ItemStack;
 import java.util.List;
 
 /**
- * Клиентские вызовы, вынесенные из общих классов, чтобы выделенный сервер не пытался загрузить клиентский код.
+ * Client calls moved out of common classes so that a dedicated server never tries to load client code.
  */
 public final class ClientHooks {
     private ClientHooks() {
     }
 
     /**
-     * Строка поиска JEI (если JEI установлен — плагин подставляет сюда свои функции): терминалы мода зеркалят свой поиск в
-     * JEI и подхватывают то, что игрок набрал в JEI.
+     * JEI search line (when JEI is installed the plugin plugs its functions in here): the mod's terminals mirror their search into
+     * JEI and pick up what the player typed in JEI.
      */
     public static java.util.function.Consumer<String> jeiSetSearch = s -> {
     };
     public static java.util.function.Supplier<String> jeiGetSearch = () -> null;
 
-    /** Локальный игрок (или null) — для голов атлантов, следящих за ним. */
+    /** The local player (or null), for atlant heads that follow them. */
     public static net.minecraft.world.entity.player.Player localPlayer() {
         return Minecraft.getInstance().player;
     }
@@ -31,7 +31,7 @@ public final class ClientHooks {
         Minecraft.getInstance().setScreen(new com.golemlogix.client.book.BookScreen());
     }
 
-    /** Уведомление «Заказ готов» и короткий звон. */
+    /** "Order ready" notification and a short chime. */
     public static void craftDone(List<ItemStack> items) {
         Minecraft mc = Minecraft.getInstance();
         mc.getToasts().addToast(new CraftDoneToast(items));

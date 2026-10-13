@@ -40,13 +40,13 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Сеть Голем Логикс.
+ * A Golem Logix network.
  *
- * Строится обходом соседних блоков-узлов (GolemNode). Для работы нужно Ядро Атланта с питанием Source.
- * Каждое устройство занимает каналы; канал идёт от ядра по дереву труб, у каждой трубы свой лимит
- * (базовая снежная труба 16, плотная морозная 64). Из сети во внешний мир каналы выходят через Кабельные Муфты:
- * у достроенной Решётки Атланта их 5 и у каждой «линия» из 64 каналов (всего 320); Расширители Каналов в стенах
- * решётки поднимают ёмкость каждой линии. Без решётки ядро даёт лишь 8 каналов «на старте».
+ * Built by walking neighbouring node blocks (GolemNode). It needs an Atlas Core powered with Source to work.
+ * Every device takes channels; a channel goes from the core along the pipe tree, every pipe has its own limit
+ * (basic snow pipe 16, dense frost pipe 64). Channels leave the network for the outside world through Cable Bushings:
+ * a complete Atlas Array has 5 of them, each with a "line" of 64 channels (320 in total); Channel Expanders in the array walls
+ * raise the capacity of every line. Without the array the core gives only 8 "starter" channels.
  */
 public final class GolemNetwork {
     public static final int MAX_NODES = 4096;
@@ -65,7 +65,7 @@ public final class GolemNetwork {
 
     private final Set<BlockPos> nodes = new HashSet<>();
     private final Set<BlockPos> activeDevices = new HashSet<>();
-    /** Сколько каналов проходит через каждый узел-проводник (трубы, муфты) — для подсказок и ограничений. */
+    /** How many channels pass through each conducting node (pipes, bushings), for tooltips and limits. */
     private final Map<BlockPos, Integer> load = new HashMap<>();
     private final List<CopperDriveBayBlockEntity> bays = new ArrayList<>();
     private final List<External> externals = new ArrayList<>();
@@ -83,7 +83,7 @@ public final class GolemNetwork {
         this.start = start;
     }
 
-    /** Внешний контейнер за Перископом: приоритет берётся с самого перископа. */
+    /** An external container behind a Periscope: the priority comes from the periscope itself. */
     public record External(BlockPos target, Direction face, int priority, BlockPos periscope) {
     }
 
@@ -101,7 +101,7 @@ public final class GolemNetwork {
     private static final Map<CacheKey, CacheEntry> CACHE = new HashMap<>();
     private static final int CACHE_TTL = 8;
 
-    /** Сеть с коротким кэшем — для тикающих устройств. */
+    /** A network with a short cache, for ticking devices. */
     public static GolemNetwork get(Level level, BlockPos start) {
         long now = level.getGameTime();
         CacheKey key = new CacheKey(level.dimension(), start.immutable());
@@ -121,7 +121,7 @@ public final class GolemNetwork {
         GolemNetwork net = scan(level, start);
         CacheEntry entry = new CacheEntry(net, now);
         CACHE.put(key, entry);
-        // из любого узла обход даёт ту же сеть: остальные узлы (шины, калькуляторы, терминалы) получают её без повторного обхода
+        // the walk from any node gives the same network: the other nodes (buses, calculators, terminals) get it without walking again
         for (BlockPos p : net.nodes) {
             CACHE.put(new CacheKey(level.dimension(), p), entry);
         }
@@ -172,7 +172,7 @@ public final class GolemNetwork {
             } else if (be instanceof CryoCalculatorBlockEntity cpu) {
                 cpus.add(cpu);
             } else if (be instanceof com.golemlogix.blockentity.CryoMainframeBlockEntity mainframe) {
-                // ядра мейнфрейма — отдельные вычислители, но канал у них один (у блока-хозяина)
+                // mainframe cores are separate processors, but they share one channel (the owner block's)
                 cpus.addAll(mainframe.cores());
             } else if (be instanceof AtlasCoreBlockEntity c && pos.equals(corePos)) {
                 core = c;
@@ -182,7 +182,7 @@ public final class GolemNetwork {
                 BlockPos target = pos.relative(facing);
                 if (level.isLoaded(target) && !(level.getBlockState(target).getBlock() instanceof GolemNode)) {
                     PeriscopeBlockEntity pb = level.getBlockEntity(pos) instanceof PeriscopeBlockEntity p ? p : null;
-                    // Модуль Редстоуна перископа отключает хранилище по сигналу
+                    // the periscope's Redstone Module switches the storage off by signal
                     if (pb == null || pb.storageEnabled()) {
                         externals.add(new External(target, facing.getOpposite(), pb == null ? 0 : pb.getPriority(), pos));
                     }
@@ -191,7 +191,7 @@ public final class GolemNetwork {
 
             for (Direction dir : Direction.values()) {
                 BlockPos next = pos.relative(dir);
-                // в «увиденные» узел попадает, только если связь есть: к разъёму многоблока можно прийти с другой стороны
+                // a node gets "seen" only if there is a link: a multiblock socket may be reached from another side
                 if (!seen.contains(next) && linkable(pos, state, next, dir)) {
                     seen.add(next);
                     queue.add(next);
@@ -199,7 +199,7 @@ public final class GolemNetwork {
             }
         }
 
-        // источники Source рядом с узлами; Резонатор не источник для сети — он питает Хронометры, привязанные к ней
+        // Source sources next to the nodes; the Resonator is not a source for the network, it powers the Chronometers bound to it
         Set<BlockEntity> seenSources = new HashSet<>();
         for (BlockPos pos : nodes) {
             for (Direction dir : Direction.values()) {
@@ -232,12 +232,12 @@ public final class GolemNetwork {
                 channelCapacity = BARE_CORE_CHANNELS;
             }
             allocateChannels();
-            // хранилища и поставщики без канала молчат, как терминалы и шины
+            // storages and providers without a channel stay silent, like terminals and buses
             bays.removeIf(b -> !activeDevices.contains(b.getBlockPos()));
             externals.removeIf(e -> !activeDevices.contains(e.periscope()));
             providers.removeIf(p -> !activeDevices.contains(p.getBlockPos()));
             catalogs.removeIf(p -> !activeDevices.contains(p.getBlockPos()));
-            // два перископа на один сундук не должны удваивать его содержимое
+            // two periscopes on one chest must not double its contents
             Set<BlockPos> targets = new HashSet<>();
             externals.removeIf(e -> !targets.add(e.target()));
         } else {
@@ -245,7 +245,7 @@ public final class GolemNetwork {
         }
     }
 
-    /** Два соседних узла соединяются, только если каждый согласен на связь с другим (dir — от from к соседу). */
+    /** Two neighbouring nodes connect only if each agrees to link with the other (dir = from from to the neighbour). */
     private boolean linkable(BlockPos fromPos, BlockState from, BlockPos nextPos, Direction dir) {
         if (!level.isLoaded(nextPos)) {
             return false;
@@ -253,7 +253,7 @@ public final class GolemNetwork {
         return GolemNode.linked(level, fromPos, from, nextPos, level.getBlockState(nextPos), dir);
     }
 
-    /** Сколько каналов выдаёт наружу грань Расширителя Каналов (только в достроенной решётке). */
+    /** How many channels the outer face of a Channel Expander gives out (only in a complete array). */
     private int expanderExit(com.golemlogix.blocks.ChannelExpanderBlock ex) {
         if (structure == null || !structure.valid()) {
             return 0;
@@ -261,7 +261,7 @@ public final class GolemNetwork {
         return ex.isQuantum() ? GolemConfig.QUANTUM_EXIT.get() : GolemConfig.EXPANDER_EXIT.get();
     }
 
-    /** Ёмкость выхода, через который идут каналы в этот узел (для подсказок): муфта — линия, расширитель — свой выход. */
+    /** Capacity of the exit the channels to this node pass through (for tooltips): for a bushing its line, for an expander its own exit. */
     public int exitCapacity(BlockPos pos) {
         Block b = level.getBlockState(pos).getBlock();
         if (b instanceof CableBushingBlock) {
@@ -273,12 +273,12 @@ public final class GolemNetwork {
         return b instanceof GolemNode n ? n.channelCapacity() : 0;
     }
 
-    /** Узел входит в сеть (обход до него дошёл). */
+    /** The node is part of the network (the walk reached it). */
     public boolean contains(BlockPos pos) {
         return nodes.contains(pos);
     }
 
-    /** Раздаёт каналы устройствам по дереву путей от ядра. */
+    /** Hands out channels to devices along the path tree from the core. */
     private void allocateChannels() {
         Map<BlockPos, BlockPos> parent = new HashMap<>();
         List<BlockPos> order = new ArrayList<>();
@@ -315,11 +315,11 @@ public final class GolemNetwork {
                 Block block = level.getBlockState(p).getBlock();
                 int cap;
                 if (block instanceof CableBushingBlock) {
-                    // только ближайшая к устройству муфта («выход» из решётки) ограничена ёмкостью линии
+                    // only the bushing closest to the device (the "exit" from the array) is limited by the line capacity
                     cap = exitCapped ? Integer.MAX_VALUE : lineCapacity;
                     exitCapped = true;
                 } else if (block instanceof com.golemlogix.blocks.ChannelExpanderBlock ex) {
-                    // расширитель в стене решётки — тоже выход наружу, со своей ёмкостью
+                    // an expander in the array wall is an exit too, with its own capacity
                     cap = exitCapped ? Integer.MAX_VALUE : expanderExit(ex);
                     exitCapped = true;
                 } else {
@@ -362,7 +362,7 @@ public final class GolemNetwork {
         return core;
     }
 
-    /** Ядро есть и запитано Source. */
+    /** There is a core and it is powered with Source. */
     public boolean isOnline() {
         return core != null && core.isPowered();
     }
@@ -379,12 +379,12 @@ public final class GolemNetwork {
         return deviceCount;
     }
 
-    /** Сколько каналов сейчас идёт через узел (например, через кабельную муфту). */
+    /** How many channels pass through a node now (for example a cable bushing). */
     public int loadAt(BlockPos pos) {
         return load.getOrDefault(pos, 0);
     }
 
-    /** Ёмкость одной линии (одной кабельной муфты). */
+    /** Capacity of one line (one cable bushing). */
     public int lineCapacity() {
         return lineCapacity;
     }
@@ -402,7 +402,7 @@ public final class GolemNetwork {
         return sources;
     }
 
-    /** К сети приставлен Вечный Морозный Резонатор: Хронометры этой сети не нужно заряжать. */
+    /** An Eternal Frost Resonator stands next to the network: the Chronometers of this network do not need charging. */
     public boolean hasResonator() {
         return resonators > 0;
     }
@@ -417,8 +417,8 @@ public final class GolemNetwork {
     }
 
     /**
-     * Очерёдность шины среди всех шин сети: 0 — у самой приоритетной. Шина работает в такт «время - очерёдность»,
-     * поэтому шины с большим приоритетом делают свой ход раньше остальных в каждом периоде.
+     * The bus's turn among all buses of the network: 0 for the highest priority one. A bus works on the beat "time - turn",
+     * so buses with a bigger priority make their move before the others in every period.
      */
     public int busRank(BusBlockEntity bus) {
         List<BusBlockEntity> sorted = new ArrayList<>(buses);
@@ -436,12 +436,12 @@ public final class GolemNetwork {
         return providers;
     }
 
-    /** Картотеки перфокарт с каналом: их верстачные шаблоны выполняют сами калькуляторы. */
+    /** Punch Card Catalogs with a channel: the calculators run their crafting-table patterns themselves. */
     public List<com.golemlogix.blockentity.CardCatalogBlockEntity> catalogs() {
         return catalogs;
     }
 
-    /** Для терминала: можно ли им пользоваться. Возвращает null или ключ сообщения об ошибке. */
+    /** For the terminal: whether it can be used. Returns null or an error message key. */
     @Nullable
     public String accessError(@Nullable BlockPos devicePos) {
         if (!hasCore()) {
@@ -457,9 +457,9 @@ public final class GolemNetwork {
     }
 
     /**
-     * Включает/выключает анимации труб, шкафов и терминалов (свойство active): сеть запитана и — для устройств, которым нужен
-     * канал, — канал им достался. Раньше флаг получали все узлы подряд, и устройства сверх лимита каналов (или за трубой с
-     * меньшей ёмкостью) выглядели рабочими. Калькулятор свой флаг ставит сам (он означает «идёт задача»).
+     * Turns the pipe, cabinet and terminal animations on/off (the active property): the network is powered and, for devices that need
+     * a channel, they got one. Before, every node got the flag, and devices beyond the channel limit (or behind a pipe with
+     * a smaller capacity) looked as if they worked. The calculator sets its own flag (it means "a job is running").
      */
     public void syncActiveVisuals(boolean active) {
         for (BlockPos pos : nodes) {
@@ -499,8 +499,8 @@ public final class GolemNetwork {
     }
 
     /**
-     * Обработчик предметов контейнера за перископом. Сначала грань, к которой прижат перископ, потом «общая» (null)
-     * и остальные грани: многие баки и сундуки отдают доступ только с некоторых сторон.
+     * Item handler of the container behind a periscope. First the face the periscope is pressed against, then the "general" one (null)
+     * and the other faces: many tanks and chests give access only from some sides.
      */
     @Nullable
     private IItemHandler itemHandler(External ex) {
@@ -538,7 +538,7 @@ public final class GolemNetwork {
         return h;
     }
 
-    /** Хранилища (шкафы и перископы), от высшего приоритета к низшему; равные идут в порядке обхода сети. */
+    /** Storages (cabinets and periscopes) from the highest priority to the lowest; equal ones go in network walk order. */
     private record Tier(int priority, List<CopperDriveBayBlockEntity> bays, List<External> exts) {
     }
 
@@ -568,7 +568,7 @@ public final class GolemNetwork {
         return disks;
     }
 
-    /** Все предметы сети: тип -> количество. */
+    /** All items of the network: type -> count. */
     public Map<ItemKey, Long> listItems() {
         Map<ItemKey, Long> all = new LinkedHashMap<>();
         for (ItemStack disk : allDisks(false)) {
@@ -644,17 +644,17 @@ public final class GolemNetwork {
     }
 
     /**
-     * Кладёт предметы в сеть. Возвращает остаток, который не влез.
-     * Порядок: от хранилища с наибольшим приоритетом к наименьшему; внутри одного приоритета сначала диски,
-     * где такой предмет уже лежит, потом любые диски, затем внешние контейнеры за перископами.
+     * Puts items into the network. Returns the rest that did not fit.
+     * Order: from the highest priority storage to the lowest; within one priority, first the disks
+     * that already hold this item, then any disks, then the external containers behind periscopes.
      */
     public ItemStack insertItem(ItemStack input, boolean simulate) {
         return insertItem(input, simulate, null);
     }
 
     /**
-     * То же, но в контейнер skipTarget (если он подключён перископом) не кладём: шина импорта не должна возвращать предметы
-     * в тот же сундук, из которого их только что забрала, — иначе она гоняет их по кругу и щёлкает без толку.
+     * The same, but nothing goes into the container skipTarget (if a periscope connects it): an import bus must not return items
+     * into the same chest it has just taken them from, otherwise it moves them in circles and clicks for nothing.
      */
     public ItemStack insertItem(ItemStack input, boolean simulate, @Nullable BlockPos skipTarget) {
         if (input.isEmpty()) {
@@ -698,7 +698,7 @@ public final class GolemNetwork {
             }
             return remaining;
         }
-        // имитация: диски уже учтены суммой свободного места, внешние проверяем по очереди
+        // simulation: disks are already counted by the sum of free space, the external ones are checked one by one
         for (Tier tier : tiers) {
             if (remaining.isEmpty()) {
                 break;
@@ -728,14 +728,14 @@ public final class GolemNetwork {
     }
 
     /**
-     * Достаёт предметы из сети (не больше amount). Возвращает полученный стак (count может быть больше стака).
-     * Берёт сперва из хранилищ с НАИМЕНЬШИМ приоритетом, чтобы высокоприоритетные оставались «основным складом».
+     * Takes items from the network (at most amount). Returns the stack received (count may exceed a stack).
+     * Takes from the storages with the LOWEST priority first, so the high-priority ones stay the "main warehouse".
      */
     public ItemStack extractItem(ItemStack template, int amount, boolean simulate) {
         return extractItem(template, amount, simulate, null);
     }
 
-    /** То же, но из контейнера skipTarget не берём: шина экспорта не перекладывает предметы из сундука в тот же сундук. */
+    /** The same, but nothing is taken from the container skipTarget: an export bus does not move items from a chest into the same chest. */
     public ItemStack extractItem(ItemStack template, int amount, boolean simulate, @Nullable BlockPos skipTarget) {
         if (template.isEmpty() || amount <= 0) {
             return ItemStack.EMPTY;
@@ -783,7 +783,7 @@ public final class GolemNetwork {
         int taken = amount - left;
         return taken > 0 ? template.copyWithCount(taken) : ItemStack.EMPTY;
     }
-    /** Все жидкости сети: тип -> mB. */
+    /** All fluids of the network: type -> mB. */
     public List<FluidStack> listFluids() {
         List<FluidStack> all = new ArrayList<>();
         for (ItemStack disk : allDisks(true)) {
@@ -817,7 +817,7 @@ public final class GolemNetwork {
         all.add(f.copy());
     }
 
-    /** Кладёт жидкость в сеть (порядок — как у предметов: от высшего приоритета). Возвращает, сколько mB принято. */
+    /** Puts fluid into the network (in the same order as items: from the highest priority). Returns how many mB were accepted. */
     public int insertFluid(FluidStack input, boolean simulate) {
         return insertFluid(input, simulate, null);
     }
@@ -878,7 +878,7 @@ public final class GolemNetwork {
         return input.getAmount() - left;
     }
 
-    /** Достаёт жидкость из сети (сперва из хранилищ с наименьшим приоритетом). */
+    /** Takes fluid from the network (from the lowest priority storages first). */
     public FluidStack extractFluid(FluidStack template, int amount, boolean simulate) {
         return extractFluid(template, amount, simulate, null);
     }
@@ -926,7 +926,7 @@ public final class GolemNetwork {
     }
     // --------------------------------------------------------------- crafting
 
-    /** Индекс «предмет -> шаблон, который его производит». */
+    /** Index "item -> the pattern that produces it". */
     public Map<ItemKey, PatternRef> patternIndex() {
         if (patternIndex == null) {
             patternIndex = new LinkedHashMap<>();
@@ -975,14 +975,14 @@ public final class GolemNetwork {
     public record StartResult(StartType type, CraftingPlan plan) {
     }
 
-    /** Планирует и запускает автокрафт на первом свободном Крио-Калькуляторе. */
+    /** Plans and starts autocrafting on the first free Cryo-Calculator. */
     public StartResult startCrafting(ItemKey target, long amount) {
         Map<ItemKey, Long> one = new LinkedHashMap<>();
         one.put(target, amount);
         return startCrafting(one, null, null);
     }
 
-    /** Есть ли свободный калькулятор с каналом. */
+    /** Whether there is a free calculator with a channel. */
     @Nullable
     public com.golemlogix.crafting.CraftingCpu freeCpu() {
         for (com.golemlogix.crafting.CraftingCpu c : cpus) {
@@ -994,8 +994,8 @@ public final class GolemNetwork {
     }
 
     /**
-     * Планирует и запускает автокрафт сразу нескольких предметов на первом свободном Крио-Калькуляторе.
-     * requester — игрок, которому придёт уведомление о готовности; bus — шина экспорта, заказавшая крафт сама.
+     * Plans and starts autocrafting of several items at once on the first free Cryo-Calculator.
+     * requester = the player who gets the "ready" notification; bus = the export bus that ordered the craft itself.
      */
     public StartResult startCrafting(Map<ItemKey, Long> targets, @Nullable java.util.UUID requester, @Nullable BlockPos bus) {
         if (!isOnline()) {
@@ -1021,7 +1021,7 @@ public final class GolemNetwork {
             return new StartResult(StartType.NO_CPU, plan);
         }
 
-        // резервируем исходные материалы: всё или ничего
+        // reserve the source materials: all or nothing
         for (Map.Entry<ItemKey, Long> e : plan.fromStorage().entrySet()) {
             if (itemCountOf(e.getKey()) < e.getValue()) {
                 return new StartResult(StartType.RESERVE_FAILED, plan);
@@ -1040,7 +1040,7 @@ public final class GolemNetwork {
                 left -= got.getCount();
             }
             if (left > 0) {
-                // гонка: вернуть взятое
+                // a race: return what was taken
                 for (Map.Entry<ItemKey, Long> r : reserved.entrySet()) {
                     long n = r.getValue();
                     while (n > 0) {
@@ -1059,7 +1059,7 @@ public final class GolemNetwork {
         return new StartResult(StartType.STARTED, plan);
     }
 
-    /** Поставщик ждёт возврата результата прошлой порции (режим ожидания): какая-то задача ещё не получила его выход. */
+    /** The provider waits for the result of the previous portion (wait mode): some job has not received its output yet. */
     public boolean providerBusy(BlockPos provider) {
         for (com.golemlogix.crafting.CraftingCpu cpu : cpus) {
             if (!cpu.isRemoved() && cpu.getJob() != null && cpu.getJob().hasInFlight(provider)) {
@@ -1069,7 +1069,7 @@ public final class GolemNetwork {
         return false;
     }
 
-    /** Уже идёт задача, которую заказала эта шина, на этот предмет. */
+    /** A job ordered by this bus for this item is already running. */
     public boolean busCraftPending(BlockPos bus, ItemKey key) {
         for (com.golemlogix.crafting.CraftingCpu cpu : cpus) {
             CraftingJob job = cpu.isRemoved() ? null : cpu.getJob();
@@ -1080,7 +1080,7 @@ public final class GolemNetwork {
         return false;
     }
 
-    /** Хватает ли Source на списание amount (ничего не снимает). */
+    /** Whether there is enough Source to take amount (takes nothing). */
     public boolean hasSource(int amount) {
         if (amount <= 0 || !SourceHelper.sourceRequired() || hasInfiniteSource()) {
             return true;
@@ -1092,7 +1092,7 @@ public final class GolemNetwork {
         return total >= amount;
     }
 
-    /** Снимает Source из сети. Без требования Source или при бесконечном источнике всегда успешно. */
+    /** Takes Source from the network. Always succeeds without the Source requirement or with an infinite source. */
     public boolean consumeSource(int amount) {
         if (amount <= 0 || !SourceHelper.sourceRequired() || hasInfiniteSource()) {
             return true;
@@ -1115,8 +1115,8 @@ public final class GolemNetwork {
     }
 
     /**
-     * Вставка от машины (шина импорта и т.п.): сначала предметы, которых ждут активные задачи
-     * автокрафта, остальное уходит в хранилище.
+     * Insertion from a machine (an import bus and the like): first the items active autocraft jobs are waiting
+     * for, the rest goes to storage.
      */
     public int machineWants(ItemStack stack) {
         long n = 0;
@@ -1133,7 +1133,7 @@ public final class GolemNetwork {
         return insertFromMachine(stack, null);
     }
 
-    /** skipTarget — контейнер, из которого предметы только что взяты (в него же их обратно не кладём). */
+    /** skipTarget = the container the items were just taken from (they are not put back into it). */
     public ItemStack insertFromMachine(ItemStack stack, @Nullable BlockPos skipTarget) {
         ItemStack rest = stack;
         for (com.golemlogix.crafting.CraftingCpu cpu : cpus) {

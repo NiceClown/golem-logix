@@ -7,8 +7,8 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Вычислитель автокрафта: одна задача за раз. Это отдельный Крио-Калькулятор или одно из ядер Крио-Мейнфрейма
- * (у всех ядер мейнфрейма один блок, их различает номер core).
+ * Autocraft processor: one job at a time. It is a standalone Cryo-Calculator or one of the Cryo-Mainframe cores
+ * (all mainframe cores share one block, the core number tells them apart).
  */
 public interface CraftingCpu {
     @Nullable
@@ -20,33 +20,33 @@ public interface CraftingCpu {
 
     void startJob(CraftingJob job);
 
-    /** Отмена: всё содержимое задачи возвращается в сеть. */
+    /** Cancel: everything in the job goes back to the network. */
     void cancelJob();
 
-    /** Сколько единиц предмета ждёт задача от машин. */
+    /** How many of an item the job is waiting for from machines. */
     long wants(ItemKey key);
 
-    /** Принять результат машины: возвращает то, что задаче не нужно. */
+    /** Accept a machine's result: returns what the job does not need. */
     ItemStack absorb(ItemStack stack);
 
-    /** Блок вычислителя убран из мира (или ядро исчезло вместе с калькулятором в мейнфрейме). */
+    /** The processor block was removed from the world (or the core disappeared together with its calculator in the mainframe). */
     boolean isRemoved();
 
-    /** Блок, в котором вычислитель стоит (для канала, монитора и подсказок). */
+    /** The block the processor stands in (for the channel, the monitor and tooltips). */
     BlockPos cpuPos();
 
-    /** Номер ядра в мейнфрейме (1..), 0 — отдельный калькулятор. */
+    /** Core number in the mainframe (1..), 0 for a standalone calculator. */
     default int core() {
         return 0;
     }
 
-    /** Сколько шагов шаблонов за цикл. */
+    /** How many pattern steps per cycle. */
     int getWorkers();
 
-    /** Число ускорителей для показа в мониторе (приставленные сопроцессоры, у мейнфрейма — сжатые с множителем). */
+    /** Number of speed-ups shown in the monitor (placed coprocessors; for the mainframe, compressed ones with the multiplier). */
     int getCoprocessors();
 
-    /** Может ли сейчас взять задачу: у блока есть канал в этой сети. */
+    /** Whether it can take a job now: the block has a channel in this network. */
     default boolean canRun(GolemNetwork net) {
         return net.isDeviceActive(cpuPos());
     }

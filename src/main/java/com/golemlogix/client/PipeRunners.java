@@ -17,22 +17,22 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Клиентская «диспетчерская» бегунков: на всю связную сеть труб приходится ровно один снеговичок (или его голова).
- * Он обходит все трубы по обходу дерева в глубину (туда и обратно), поэтому в каждый момент рисует его
- * только одна труба — остальные тратят на проверку один поиск в хэш-таблице.
+ * Client-side "dispatch office" of the runners: there is exactly one snowman (or its head) per connected pipe network.
+ * It walks all pipes by a depth-first tour of the tree (there and back), so at any moment only one pipe draws it;
+ * the others spend a single hash table lookup on the check.
  * <p>
- * Путь непрерывен: на стыке блоков бегунок ровно на границе (0.5 от центра) — его дорисовывает соседняя труба с той же
- * точки; в тупике он останавливается на «станции» (0.35 от центра, по вертикали 0.22 вверх и 0 вниз) и там же
- * разворачивается, отрисовщик крутит его на 180° за время разворота. Номер рейса сквозной (не обнуляется на круге
- * маршрута), поэтому сданный груз — ровно тот, что бегунок нёс. Время считается в long/double: в старых мирах игровое
- * время большое, и float терял доли тика — бег шёл рывками.
+ * The path is continuous: at a block joint the runner is exactly on the boundary (0.5 from the centre) and the neighbouring pipe draws it from
+ * the same point; at a dead end it stops at a "station" (0.35 from the centre, vertically 0.22 up and 0 down) and turns around
+ * there, the renderer rotates it by 180° over the turn. The trip number is cumulative (not reset on each lap of the
+ * route), so the cargo handed over is exactly the one the runner carried. Time is kept in long/double: in old worlds the game
+ * time is large and float lost tick fractions, so the running stuttered.
  */
 public final class PipeRunners {
     private static final int MAX_PIPES = 192;
     private static final int LIFETIME = 60;
-    /** Тиков на один блок пути (целое: длина круга маршрута в тиках тоже целая). */
+    /** Ticks per block of path (an integer: the route lap length in ticks is an integer too). */
     private static final int TICKS_PER_BLOCK = 26;
-    /** Тиков на один рейс одинокой трубы: 48% — бег, 52% — разворот на станции. */
+    /** Ticks per trip of a lonely pipe: 48% running, 52% turning at the station. */
     private static final int LONELY_TRIP = 60;
     private static final float LONELY_WALK = 0.48f;
 
@@ -41,22 +41,22 @@ public final class PipeRunners {
     private PipeRunners() {
     }
 
-    /** Связная группа труб и маршрут бегунка по ней. */
+    /** A connected group of pipes and the runner's route over it. */
     private static final class Component {
         long expires;
         BlockPos[] tour = new BlockPos[0];
-        /** Длина замкнутого маршрута (число шагов); 0 — одинокая труба. */
+        /** Length of the closed route (number of steps); 0 = a lonely pipe. */
         int period;
-        /** Сколько разворотов за круг маршрута. */
+        /** How many turns per route lap. */
         int turns;
-        /** Номер последнего разворота перед шагом (в пределах круга). */
+        /** Number of the last turn before a step (within the lap). */
         int[] tripAtStep = new int[0];
         float[] tripProgressAtStep = new float[0];
     }
 
     /**
-     * Где в этой трубе сейчас бегунок: смещение от центра блока, направление движения (на развороте — куда он смотрел,
-     * когда пришёл), прогресс разворота (0..1 или -1), номера сдаваемого/нового груза и прогресс рейса (0..1).
+     * Where the runner is in this pipe now: offset from the block centre, direction of movement (when turning, where it looked
+     * when it arrived), turn progress (0..1 or -1), numbers of the cargo handed over / the new cargo, and trip progress (0..1).
      */
     public record Spot(float dx, float dy, float dz, Direction heading, float turnProgress, int incomingCargo, int outgoingCargo, float tripProgress) {
         public boolean isTurning() {
@@ -68,7 +68,7 @@ public final class PipeRunners {
         CACHE.clear();
     }
 
-    /** Насколько далеко от центра стоит станция в тупике направления d. */
+    /** How far from the centre the station at the dead end in direction d stands. */
     private static float stationDist(Direction d) {
         return switch (d) {
             case UP -> 0.22f;
@@ -77,7 +77,7 @@ public final class PipeRunners {
         };
     }
 
-    /** Положение бегунка в трубе pos в момент gameTime + partialTick или null, если он сейчас в другой трубе. */
+    /** Runner position in the pipe at pos at gameTime + partialTick, or null if it is in another pipe now. */
     public static Spot locate(Level level, BlockPos pos, BlockState state, long gameTime, float partialTick) {
         long now = level.getGameTime();
         Component comp = CACHE.get(pos);
@@ -111,7 +111,7 @@ public final class PipeRunners {
         int inCargo = trip;
         int outCargo = trip + 1;
 
-        // разворот на станции в тупике: стоит на месте, смотрит туда, откуда пришёл (отрисовщик крутит его на 180°)
+        // turning at a dead-end station: it stands still and looks where it came from (the renderer rotates it by 180°)
         if (a.equals(b)) {
             if (!a.equals(pos)) {
                 return null;
@@ -125,14 +125,14 @@ public final class PipeRunners {
             return new Spot(dIn.getStepX() * sd, dIn.getStepY() * sd, dIn.getStepZ() * sd, dIn, f, inCargo, outCargo, 1f);
         }
 
-        // шаг между соседними трубами a -> b: из станции (или центра) a до границы, от границы до центра (или станции) b
+        // a step between neighbouring pipes a -> b: from the station (or centre) of a to the boundary, from the boundary to the centre (or station) of b
         Direction d = Direction.fromDelta(b.getX() - a.getX(), b.getY() - a.getY(), b.getZ() - a.getZ());
         if (d == null) {
             return null;
         }
         boolean prevWasTurn = comp.tour[(i - 1 + comp.period) % comp.period].equals(a);
         boolean nextIsTurn = comp.tour[(i + 2) % comp.period].equals(b);
-        // станция в a лежит в направлении, обратном движению
+        // the station in a lies opposite to the movement
         float startDist = prevWasTurn ? -stationDist(d.getOpposite()) : 0f;
         float endDist = nextIsTurn ? stationDist(d) : 0f;
         float distA = 0.5f - startDist;
@@ -162,8 +162,8 @@ public final class PipeRunners {
     }
 
     /**
-     * Труба без соседних труб: бегунок ходит от одного её выхода к другому через центр (у трубы с одним выходом — от выхода
-     * к глухому концу), на каждой станции спокойно разворачивается. Путь непрерывен.
+     * A pipe with no neighbouring pipes: the runner walks from one of its exits to another through the centre (for a pipe with one exit, from the exit
+     * to the blind end) and turns around calmly at every station. The path is continuous.
      */
     private static Spot lonely(BlockState state, long gameTime, float partialTick) {
         List<Direction> stations = new ArrayList<>(6);
@@ -189,7 +189,7 @@ public final class PipeRunners {
         Direction to = stations.get((int) Math.floorMod(k + 1, n));
         int trip = (int) k;
         if (phase >= LONELY_WALK) {
-            // разворот на станции «to»: это следующий разворот, его груз сдаётся и берётся новый
+            // turning at station "to": this is the next turn, its cargo is handed over and a new one is taken
             float sd = stationDist(to);
             float turn = (phase - LONELY_WALK) / (1f - LONELY_WALK);
             return new Spot(to.getStepX() * sd, to.getStepY() * sd, to.getStepZ() * sd, to, turn, trip + 1, trip + 2, 1f);
@@ -199,7 +199,7 @@ public final class PipeRunners {
         float total = sdFrom + sdTo;
         float along = t * total;
         if (along < sdFrom || sdTo <= 0f) {
-            // первая половина: от станции «from» к центру
+            // first half: from station "from" to the centre
             float dist = sdFrom - along;
             Direction heading = from.getOpposite();
             return new Spot(from.getStepX() * dist, from.getStepY() * dist, from.getStepZ() * dist, heading, -1f, trip, trip + 1, t);
@@ -244,7 +244,7 @@ public final class PipeRunners {
             comp.tour = new BlockPos[]{origin.immutable()};
             return comp;
         }
-        // старт — тупик с наименьшими координатами (или просто наименьшая труба)
+        // the start is the dead end with the smallest coordinates (or just the smallest pipe)
         BlockPos start = null;
         BlockPos any = null;
         for (BlockPos p : graph.keySet()) {
@@ -260,7 +260,7 @@ public final class PipeRunners {
         }
         List<BlockPos> raw = new ArrayList<>(graph.size() * 2);
         dfs(start, graph, new HashSet<>(), raw);
-        // круг маршрута raw[0..n-1] (raw[n] == raw[0]); где путь поворачивает назад — шаг разворота «на месте»
+        // route lap raw[0..n-1] (raw[n] == raw[0]); where the path turns back there is an "in place" turn step
         int n = raw.size() - 1;
         List<BlockPos> cyc = new ArrayList<>(raw.size() * 2);
         for (int k = 0; k < n; k++) {
@@ -270,7 +270,7 @@ public final class PipeRunners {
                 cyc.add(here);
             }
         }
-        // круг начинается с разворота: тогда рейс никогда не переходит через начало круга
+        // the lap starts with a turn: then a trip never crosses the start of the lap
         int first = 0;
         for (int k = 0; k + 1 < cyc.size(); k++) {
             if (cyc.get(k).equals(cyc.get(k + 1))) {
@@ -315,7 +315,7 @@ public final class PipeRunners {
         return comp;
     }
 
-    /** Обход в глубину: tour — круг по дереву (каждое ребро дважды), начинается и кончается в p. */
+    /** Depth-first walk: tour is a lap over the tree (every edge twice), it starts and ends at p. */
     private static void dfs(BlockPos p, Map<BlockPos, EnumMap<Direction, BlockPos>> graph, Set<BlockPos> seen, List<BlockPos> tour) {
         seen.add(p);
         tour.add(p);

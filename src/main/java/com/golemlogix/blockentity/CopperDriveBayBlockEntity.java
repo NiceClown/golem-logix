@@ -19,8 +19,8 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Медный дисковый шкаф (многоблок 2x2): 10 ячеек (2 столбца x 5 рядов) под магнитные кассеты — диски предметов и жидкостей.
- * Живёт в главной (нижней левой) части шкафа.
+ * Copper Drive Cabinet (2x2 multiblock): 10 slots (2 columns x 5 rows) for magnetic cassettes, item and fluid disks.
+ * Lives in the main (bottom left) part of the cabinet.
  */
 public class CopperDriveBayBlockEntity extends BlockEntity {
     public static final int SLOTS = 10;
@@ -33,7 +33,7 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
             refreshVisuals();
         }
 
-        /** Окно открыли — стеклянная дверца витрины распахивается (как у сундука: по числу смотрящих). */
+        /** The window was opened: the glass display door swings open (like a chest: by the number of viewers). */
         @Override
         public void startOpen(net.minecraft.world.entity.player.Player player) {
             if (!player.isSpectator()) {
@@ -51,11 +51,11 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
         }
     };
 
-    /** Событие блока: сколько игроков смотрят в окно (клиенты открывают и закрывают дверцу витрины). */
+    /** Block event: how many players look into the window (clients open and close the display door). */
     public static final int EVENT_VIEWERS = 1;
     private int viewers = 0;
     private boolean clientOpen = false;
-    /** Раскрытие дверцы 0..1 (клиент). */
+    /** Door opening 0..1 (client). */
     public float door, doorPrev;
 
     public int viewers() {
@@ -87,11 +87,11 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
         be.door = Math.max(0f, Math.min(1f, be.door + (be.clientOpen ? 0.1f : -0.08f)));
     }
 
-    /** Битовая маска занятых ячеек — нужна клиенту для отрисовки. */
+    /** Bit mask of occupied slots, the client needs it for rendering. */
     private int mask = 0;
-    /** Подпись видимого состояния (ячейки + уровень заполнения), чтобы не рассылать лишнего. */
+    /** Signature of the visible state (slots + fill level), so nothing extra is sent. */
     private int visualSig = 0;
-    /** Приоритет шкафа: больше число — диски этого шкафа заполняются раньше и опустошаются позже. */
+    /** Cabinet priority: a bigger number means this cabinet's disks fill earlier and empty later. */
     private int priority = 0;
 
     public CopperDriveBayBlockEntity(BlockPos pos, BlockState state) {
@@ -115,7 +115,7 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
         return container;
     }
 
-    /** Живой список дисков (изменения в стеках сохраняются). */
+    /** Live list of disks (changes to the stacks are saved). */
     public NonNullList<ItemStack> getDisks() {
         return container.getItems();
     }
@@ -124,14 +124,14 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
         return mask;
     }
 
-    /** Пересчитывает, как шкаф выглядит снаружи, и при изменении отправляет клиентам. */
+    /** Recomputes how the cabinet looks from outside and sends it to clients when it changes. */
     public void refreshVisuals() {
         int sig = 0;
         for (int i = 0; i < SLOTS; i++) {
             ItemStack d = container.getItem(i);
             if (!d.isEmpty()) {
                 int cap = Math.max(1, DiskStorage.capacity(d));
-                // счётчик на самом диске (его видит и клиент)
+                // the counter on the disk itself (the client sees it too)
                 long stored = MagneticDiskItem.getStoredCount(d);
                 int level = (int) Math.min(4, stored * 4 / cap + (stored > 0 ? 1 : 0));
                 sig = sig * 31 + (i + 1) * 8 + level + 977 * BuiltInRegistries.ITEM.getId(d.getItem());

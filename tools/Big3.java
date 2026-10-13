@@ -5,16 +5,16 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * Большая модель многоблока в «машинных» координатах: X — слева направо глазами зрителя спереди, Y — вверх, Z — вглубь от
- * фасада (клетка 16x16x16, всего cols x rows x deps клеток). Режется на клетки: каждая получает свой JSON с локальными
- * координатами (модель блока смотрит на север, поворот делает блокстейт; локальный x зеркален — растёт влево от зрителя).
- * Грань остаётся в клетке, только если она — естественная граница бруска (не след разреза). Повёрнутые бруски нельзя резать.
- * Текстуры лицевых граней бывают «по клеткам»: front/back — суффикс {col}{row}, left/right — {dep}{row}.
+ * A big multiblock model in "machine" coordinates: X left to right as seen from the front, Y up, Z inwards from
+ * the front (a 16x16x16 cell, cols x rows x deps cells in all). It is cut into cells: each gets its own JSON with local
+ * coordinates (the block model faces north, the block state rotates it; local x is mirrored and grows to the viewer's left).
+ * A face stays in a cell only if it is a natural boundary of the box (not a cut mark). Rotated boxes cannot be cut.
+ * Front face textures can be "per cell": front/back get the suffix {col}{row}, left/right {dep}{row}.
  */
 final class Big3 {
     static final double EPS = 1e-9;
 
-    /** Проекция: переводит точку на грани (в машинных координатах) в координаты текстуры 0..16. */
+    /** Projection: turns a point on a face (in machine coordinates) into texture coordinates 0..16. */
     interface UvMap {
         double[] at(double x, double y, double z);
     }
@@ -42,12 +42,12 @@ final class Big3 {
             return new Face(tex, map, 0, Mode.SHARED);
         }
 
-        /** Текстура по клеткам: к имени добавляется _{col}{row}. */
+        /** A per-cell texture: _{col}{row} is added to the name. */
         static Face colRow(String tex) {
             return new Face(tex, null, 0, Mode.COL_ROW);
         }
 
-        /** Текстура по клеткам боковых стен: к имени добавляется _{dep}{row}. */
+        /** A per-cell texture of the side walls: _{dep}{row} is added to the name. */
         static Face depRow(String tex) {
             return new Face(tex, null, 0, Mode.DEP_ROW);
         }
@@ -141,7 +141,7 @@ final class Big3 {
         return r == Math.floor(r) ? Long.toString((long) r) : String.format(Locale.ROOT, "%s", r);
     }
 
-    /** Результат нарезки одной клетки: элементы и набор использованных переменных текстур. */
+    /** Result of cutting one cell: the elements and the set of texture variables used. */
     static final class Cell {
         final List<String> elements = new ArrayList<>();
         final Set<String> vars = new LinkedHashSet<>();
@@ -164,7 +164,7 @@ final class Big3 {
             boolean natL = same(ax0, b.x0), natR = same(ax1, b.x1), natB = same(ay0, b.y0), natT = same(ay1, b.y1);
             boolean natF = same(az0, b.z0), natK = same(az1, b.z1);
             if (b.rotAxis != null && !(natL && natR && natB && natT && natF && natK)) {
-                throw new IllegalStateException("повёрнутая деталь пересекает границу клетки: " + b.x0 + "," + b.y0 + "," + b.z0);
+                throw new IllegalStateException("a rotated part crosses a cell boundary: " + b.x0 + "," + b.y0 + "," + b.z0);
             }
             double fx0 = 16.0 * (col + 1) - ax1, fx1 = 16.0 * (col + 1) - ax0;
             double fy0 = ay0 - cy0, fy1 = ay1 - cy0;
@@ -227,7 +227,7 @@ final class Big3 {
         out.add(sb.append("}").toString());
     }
 
-    /** Ищет грани одного направления, лежащие в одной плоскости и перекрывающиеся по площади (z-fighting). */
+    /** Finds faces of one direction that lie in one plane and overlap in area (z-fighting). */
     void lint(String name) {
         for (int i = 0; i < boxes.size(); i++) {
             for (int j = i + 1; j < boxes.size(); j++) {
@@ -251,7 +251,7 @@ final class Big3 {
             return;
         }
         if (Math.min(a1, b1) - Math.max(a0, b0) > EPS && Math.min(c1, d1) - Math.max(c0, d0) > EPS) {
-            System.out.println("Z-FIGHT в " + name + ": детали " + i + " и " + j + ", грань " + face);
+            System.out.println("Z-FIGHT in " + name + ": parts " + i + " and " + j + ", face " + face);
         }
     }
 }

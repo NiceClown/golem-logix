@@ -37,15 +37,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Крио-Калькулятор: центральный процессор автокрафта. Одна задача за раз;
- * Сопроцессоры Охлаждения вплотную к нему ускоряют параллельное выполнение шагов.
- * Пока задача идёт, над калькулятором крутится мини-модель того, что он делает прямо сейчас.
+ * Cryo-Calculator: the central processor of autocrafting. One job at a time;
+ * Cooling Co-Processors right next to it speed up running steps in parallel.
+ * While a job runs, a mini model of what it is making right now spins above the calculator.
  */
 public class CryoCalculatorBlockEntity extends BlockEntity implements com.golemlogix.crafting.CraftingCpu {
     public static final int CYCLE_TICKS = 4;
     public static final int BASE_WORKERS = 1;
     public static final int WORKERS_PER_COPROCESSOR = 2;
-    /** Сжатый Сопроцессор в ячейке апгрейда ускоряет вдвое сильнее приставленного: место ему не нужно, но сжатие стоит Source. */
+    /** A Compressed Co-Processor in an upgrade slot speeds things up twice as much as a placed one: it needs no room, but compression costs Source. */
     public static final int WORKERS_PER_COMPRESSED = 4;
 
     @Nullable
@@ -54,15 +54,15 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
     private boolean active = false;
     private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.CALCULATOR, this);
     private final RedstoneControl redstone = new RedstoneControl();
-    /** Что последний раз отослано клиентам как «делается сейчас» (чтобы слать только при смене). */
+    /** What was last sent to clients as "making now" (so it is only sent on change). */
     private ItemStack sentCurrent = ItemStack.EMPTY;
     private long lastCurrentSync = -100;
-    /** Витрина для клиентов: даже мгновенный заказ виден не меньше VisualHold.TICKS тиков (на крафт не влияет). */
+    /** Display for clients: even an instant order stays visible for at least VisualHold.TICKS ticks (crafting is not slowed down). */
     private final VisualHold hold = new VisualHold();
 
     /**
-     * Ускоряют ли сейчас сопроцессоры работу (за последние BOOST_HOLD тиков был цикл с несколькими шагами сразу): тогда над
-     * калькулятором появляется снеговик-бригадир с головой атланта.
+     * Whether the coprocessors speed up work right now (a cycle with several steps at once happened in the last BOOST_HOLD ticks):
+     * then a snowman foreman with an atlant head appears above the calculator.
      */
     private boolean boosted = false;
     private long boostUntil = 0;
@@ -72,7 +72,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         return boosted;
     }
 
-    // --- клиент
+    // --- client
     private boolean clientHasJob = false;
     private ItemStack clientCurrent = ItemStack.EMPTY;
 
@@ -111,7 +111,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
                 + WORKERS_PER_COMPRESSED * upgrades.count(com.golemlogix.upgrade.UpgradeType.SPEED);
     }
 
-    /** Сколько Сжатых Сопроцессоров стоит в ячейках. */
+    /** How many Compressed Co-Processors sit in the slots. */
     public int getCompressed() {
         return upgrades.count(com.golemlogix.upgrade.UpgradeType.SPEED);
     }
@@ -120,7 +120,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         return upgrades;
     }
 
-    /** Данные окна: 0 — режим редстоуна. */
+    /** Window data: 0 = redstone mode. */
     public ContainerData menuData() {
         return new ContainerData() {
             @Override
@@ -151,7 +151,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         syncToClient();
     }
 
-    /** Сколько единиц предмета ждёт текущая задача от машин (0, если задачи нет). */
+    /** How many of an item the current job is waiting for from machines (0 if there is no job). */
     @Override
     public long wants(ItemKey key) {
         return job == null ? 0L : job.wants(key);
@@ -169,7 +169,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         return rest;
     }
 
-    /** Отмена: всё содержимое задачи возвращается в сеть (лишнее выбрасывается). */
+    /** Cancel: everything in the job goes back to the network (the excess is dropped). */
     @Override
     public void cancelJob() {
         if (job == null || level == null || level.isClientSide()) {
@@ -186,7 +186,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         syncToClient();
     }
 
-    /** Выбросить содержимое при разрушении блока. */
+    /** Drop the contents when the block is broken. */
     public void dropContents() {
         if (level == null) {
             return;
@@ -259,7 +259,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
                 if (done != 0) {
                     level.playSound(null, pos, ModSounds.RELAY_CLICK.get(), SoundSource.BLOCKS, 0.3f, 1.2f);
                 }
-                // сопроцессоры по-настоящему помогли: за цикл сделано больше шагов, чем смог бы один калькулятор
+                // the coprocessors really helped: more steps were done in a cycle than one calculator could do
                 if (done > BASE_WORKERS) {
                     be.boostUntil = time + BOOST_HOLD;
                 }
@@ -296,7 +296,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         }
     }
 
-    /** Мини-модель над калькулятором: клиентам — только при смене предмета и не чаще двух раз в секунду. */
+    /** Mini model above the calculator: sent to clients only when the item changes and at most twice a second. */
     private void syncCurrentIfChanged(long time) {
         if (job == null || time - lastCurrentSync < 10) {
             return;
@@ -308,7 +308,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         }
     }
 
-    /** Заказ готов: тому, кто его сделал, — уведомление (как в AE2). */
+    /** The order is done: whoever placed it gets a notification (as in AE2). */
     public static void notifyFinished(Level level, CraftingJob done) {
         if (done.requester() == null || !(level instanceof ServerLevel sl)) {
             return;
@@ -328,8 +328,8 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
     }
 
     /**
-     * Сопроцессоры, поставленные до появления у них анимации, не имеют блок-сущности: создаём её и сообщаем клиентам,
-     * чтобы маховик начал крутиться и у старых блоков.
+     * Coprocessors placed before they had an animation have no block entity: create it and tell clients,
+     * so the flywheel starts turning on old blocks too.
      */
     private static void ensureCoprocessorEntity(Level level, BlockPos p, BlockState state) {
         LevelChunk chunk = level.getChunkAt(p);
@@ -398,7 +398,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
                 : ItemStack.EMPTY;
     }
 
-    /** Пакет sendBlockUpdated несёт тот же тег, что и при загрузке чанка: читаем только поля для клиента (не задачу). */
+    /** The sendBlockUpdated packet carries the same tag as chunk loading: read only the client fields (not the job). */
     @Override
     public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider lookupProvider) {
         handleUpdateTag(pkt.getTag(), lookupProvider);
@@ -408,7 +408,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         return clientHasJob;
     }
 
-    /** Клиент: что калькулятор делает сейчас (пусто — простаивает). */
+    /** Client: what the calculator is making now (empty = idle). */
     public ItemStack clientCurrent() {
         return clientCurrent;
     }
@@ -418,24 +418,24 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         return ClientboundBlockEntityDataPacket.create(this);
     }
 
-    /** Ключ цели для отображения (может быть null). */
+    /** Target key for display (may be null). */
     @Nullable
     public ItemKey targetKey() {
         return job == null ? null : job.target();
     }
 
-    // --------------------------------------------------------------- клиентская анимация
+    // --------------------------------------------------------------- client animation
 
-    /** Плавная «раскрутка» калькулятора 0..1 (горки и матричный дождь) и её фаза. */
+    /** Smooth spin-up of the calculator 0..1 (slides and matrix rain) and its phase. */
     public float spin = 0f;
     public float spinPrev = 0f;
-    /** Бригадир: 0 — нет, 1 — стоит на крыше (выскакивает и прячется плавно). */
+    /** Foreman: 0 = none, 1 = stands on the roof (pops up and hides smoothly). */
     public float foreman = 0f;
     public float foremanPrev = 0f;
 
-    // Визуальный таймер минимальной длительности работы (не менее 28 тиков = 1.4 секунды)
-    // Гарантирует, что при мгновенном крафте анимация полностью отыгрывает сборку изделия
-    // и плавно возвращается в покой, без резких исчезновений и телепортаций.
+    // Visual timer for the minimum work duration (at least 28 ticks = 1.4 seconds)
+    // Makes sure an instant craft still plays the whole assembly animation
+    // and returns smoothly to rest, without sudden disappearances or teleports.
     public int visualWorkTimer = 0;
     private ItemStack visualItem = ItemStack.EMPTY;
 
@@ -463,13 +463,13 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         boolean activeVisually = on || be.visualWorkTimer > 0;
 
         if (activeVisually) {
-            // Энергичный разгон до максимума
+            // Energetic spin-up to the maximum
             be.spin += (1f - be.spin) * 0.14f;
             if (be.spin > 0.98f) {
                 be.spin = 1f;
             }
         } else {
-            // Плавное возвращение в состояние простоя (smooth return-to-idle)
+            // Smooth return to idle
             be.spin += (0f - be.spin) * 0.05f;
             if (be.spin < 0.005f) {
                 be.spin = 0f;

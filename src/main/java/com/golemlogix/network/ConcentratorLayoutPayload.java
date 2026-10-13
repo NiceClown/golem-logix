@@ -15,8 +15,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Сервер -> клиент: раскладка строк окна Крио-концентратора схем (после поиска): заголовки категорий и строки ячеек
- * (значок, подпись, сколько ячеек в строке). Сами перфокарты приходят обычной синхронизацией ячеек меню.
+ * Server -> client: layout of the Cryo Schematic Concentrator window rows (after a search): category headers and slot rows
+ * (icon, label, how many slots in the row). The punch cards themselves come with the usual menu slot sync.
  */
 public record ConcentratorLayoutPayload(int containerId, List<ConcentratorMenu.RowInfo> rows) implements CustomPacketPayload {
     public static final Type<ConcentratorLayoutPayload> TYPE =

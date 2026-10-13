@@ -15,9 +15,9 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Что стояло на месте части до сборки машины (чтобы вернуть при разборе) и где хозяин. Раз в две секунды часть проверяет,
- * что хозяин на месте и собран, иначе возвращает прежний блок сама (так не остаются «осиротевшие» части после разрушения
- * хозяина командой или в незагруженном чанке).
+ * What stood in the part's place before the machine was assembled (to return it on disassembly) and where the owner is. Every two
+ * seconds the part checks that the owner is in place and assembled, otherwise it returns the former block itself (so no "orphaned"
+ * parts are left after the owner is destroyed by a command or in an unloaded chunk).
  */
 public class SaturatorPartBlockEntity extends BlockEntity {
     private BlockState original = Blocks.AIR.defaultBlockState();

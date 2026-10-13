@@ -5,7 +5,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 
-/** Мелкие помощники для рисования плоских текстурированных прямоугольников в отрисовщиках блок-сущностей. */
+/** Small helpers for drawing flat textured rectangles in block entity renderers. */
 public final class Quads {
     private Quads() {
     }
@@ -15,7 +15,7 @@ public final class Quads {
         vc.addVertex(pose, x, y, z).setColor(argb).setUv(u, v).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, nx, ny, nz);
     }
 
-    /** Горизонтальный прямоугольник (лицом вверх) на высоте y. Координаты — доли блока. */
+    /** A horizontal rectangle (facing up) at height y. Coordinates are block fractions. */
     public static void top(VertexConsumer vc, PoseStack.Pose pose, float x0, float z0, float x1, float z1, float y,
                            float u0, float v0, float u1, float v1, int argb, int light) {
         vertex(vc, pose, x0, y, z1, u0, v1, argb, light, 0, 1, 0);
@@ -25,8 +25,8 @@ public final class Quads {
     }
 
     /**
-     * Прямоугольник на передней (северной, лицом к -Z) плоскости z: центр (cx, cy), размер w x h, поворот rot градусов
-     * вокруг центра (против часовой стрелки глазами наблюдателя). flipX зеркалит текстуру по горизонтали.
+     * A rectangle on the front (north, facing -Z) plane z: centre (cx, cy), size w x h, rotated by rot degrees
+     * around the centre (counterclockwise as seen by the viewer). flipX mirrors the texture horizontally.
      */
     public static void front(VertexConsumer vc, PoseStack.Pose pose, float cx, float cy, float z, float w, float h, float rot,
                              float u0, float v0, float u1, float v1, boolean flipX, int argb, int light) {
@@ -42,7 +42,7 @@ public final class Quads {
             uv[2] = uv[3];
             uv[3] = t;
         }
-        // порядок обхода: смотрим из -Z, значит X растёт справа налево — зеркалим x
+        // winding order: we look from -Z, so X grows from right to left, hence x is mirrored
         for (int i = 3; i >= 0; i--) {
             float x = corner[i][0], y = corner[i][1];
             float rx = x * c - y * s, ry = x * s + y * c;
@@ -51,8 +51,8 @@ public final class Quads {
     }
 
     /**
-     * Параллелепипед (доли блока), все шесть граней с одной областью текстуры u0..u1 x v0..v1 (для брусков и жидкости).
-     * Для типов отрисовки без отсечения обратных граней порядок обхода не важен.
+     * A box (block fractions), all six faces with the same texture area u0..u1 x v0..v1 (for bars and fluid).
+     * For render types without back-face culling the winding order does not matter.
      */
     public static void box(VertexConsumer vc, PoseStack.Pose pose, float x0, float y0, float z0, float x1, float y1, float z1,
                            float u0, float v0, float u1, float v1, int argb, int light) {
@@ -79,7 +79,7 @@ public final class Quads {
         vertex(vc, pose, x1, y1, z1, u0, v0, argb, light, 1, 0, 0);
     }
 
-    /** Повернуть позу так, чтобы «перед» модели (север) смотрел по FACING блока. */
+    /** Rotate the pose so the model's "front" (north) faces the block's FACING. */
     public static void faceModel(PoseStack pose, net.minecraft.core.Direction facing) {
         pose.translate(0.5, 0.5, 0.5);
         pose.mulPose(Axis.YP.rotationDegrees(180f - facing.toYRot()));

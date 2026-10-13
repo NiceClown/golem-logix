@@ -13,11 +13,11 @@ import net.neoforged.neoforge.client.model.BakedModelWrapper;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Модель записанной перфокарты: пока зажат Shift, вместо карты рисуется то, что она делает (как шаблоны AE2) — в инвентаре,
- * в поставщике, в руке. Чистая карта и карта без Shift рисуются как обычно.
+ * Model of a written punch card: while Shift is held, what the card makes is drawn instead of the card (like AE2 patterns), in the inventory,
+ * in a provider, in the hand. A blank card and a card without Shift are drawn as usual.
  */
 public final class PunchCardModel extends BakedModelWrapper<BakedModel> {
-    /** Только для снимков DevShots: вести себя так, будто Shift зажат. */
+    /** Only for DevShots screenshots: behave as if Shift were held. */
     public static boolean devShift = false;
     private final ItemOverrides overrides;
 

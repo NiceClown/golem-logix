@@ -18,7 +18,7 @@ import net.minecraft.util.Mth;
 import net.neoforged.neoforge.client.model.data.ModelData;
 
 /**
- * Подвижные детали Интерфейса: турбины в раструбах всех шести сторон и маятники плоских метрономов на четырёх боковых гранях.
+ * Moving parts of the Interface: turbines in the funnels on all six sides and pendulums of flat metronomes on the four side faces.
  */
 public class InterfaceRenderer implements BlockEntityRenderer<InterfaceBlockEntity> {
     public static final ModelResourceLocation TURBINE = ModelResourceLocation.standalone(
@@ -26,12 +26,12 @@ public class InterfaceRenderer implements BlockEntityRenderer<InterfaceBlockEnti
     public static final ModelResourceLocation PENDULUM = ModelResourceLocation.standalone(
             ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/golem_interface_pendulum"));
     /**
-     * Метрономы плашмя на боковых гранях (как в tools/Interface.java: слева от раструба глазами зрителя, ось на высоте 5.2,
-     * перед корпусом на глубине 0.42 от плоскости блока): x, z оси в пикселях и поворот модели маятника лицом наружу.
+     * Metronomes lying flat on the side faces (as in tools/Interface.java: left of the funnel as seen by the viewer, axis at height 5.2,
+     * in front of the body at depth 0.42 from the block plane): x, z of the axis in pixels and the rotation of the pendulum model facing outwards.
      */
     private static final float[][] METRONOMES = {{13.15f, 0.42f, 0f}, {2.85f, 15.58f, 180f}, {0.42f, 2.85f, 90f}, {15.58f, 13.15f, -90f}};
     private static final float PIVOT_Y = 5.2f;
-    /** Размах маятника: в плоскости грани он не задевает ни раструб, ни ребро каркаса. */
+    /** Pendulum swing: in the face plane it touches neither the funnel nor the frame edge. */
     private static final float SWING = 11f;
 
     public InterfaceRenderer(BlockEntityRendererProvider.Context context) {
@@ -60,7 +60,7 @@ public class InterfaceRenderer implements BlockEntityRenderer<InterfaceBlockEnti
                 default -> {
                 }
             }
-            // соседние стороны крутятся в разные стороны — как шестерни
+            // neighbouring sides spin in opposite directions, like gears
             pose.mulPose(Axis.ZP.rotationDegrees(d.ordinal() % 2 == 0 ? spin : -spin));
             pose.translate(-0.5, -0.5, -0.5);
             renderer.renderModel(pose.last(), buffer, null, turbine, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY, ModelData.EMPTY,
@@ -68,7 +68,7 @@ public class InterfaceRenderer implements BlockEntityRenderer<InterfaceBlockEnti
             pose.popPose();
         }
 
-        // маятник: перевёрнутый (ось внизу), качается в плоскости грани; размах растёт с разгоном, соседние грани — в противофазе
+        // pendulum: upside down (axis at the bottom), swings in the face plane; the swing grows with the spin-up, neighbouring faces are in antiphase
         for (int i = 0; i < METRONOMES.length; i++) {
             float[] m = METRONOMES[i];
             float swing = SWING * activity * Mth.sin(phase + i * Mth.HALF_PI);

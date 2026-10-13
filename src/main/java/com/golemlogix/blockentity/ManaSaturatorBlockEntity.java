@@ -24,22 +24,22 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Насыщатель Маны — конвейер из трёх мест: левая задняя палуба (очередь заготовок), наковальня (железный голем куёт) и
- * правая задняя палуба (готовые пластины). Два медных голема носят независимо: подносчик заранее берёт следующую заготовку
- * и ждёт у наковальни, уносчик выходит к наковальне, пока идёт ритуал, и забирает результат сразу после последнего удара —
- * кузнец почти не простаивает.
+ * Mana Saturator, a conveyor of three places: the left back deck (queue of blanks), the anvil (the iron golem forges) and
+ * the right back deck (finished plates). Two copper golems carry independently: the bringer takes the next blank in advance
+ * and waits at the anvil, the taker walks to the anvil while the ritual runs and picks up the result right after the last
+ * strike, so the smith is almost never idle.
  */
 public class ManaSaturatorBlockEntity extends BlockEntity {
-    /** Наковальня: заготовка под молотом или только что выкованный результат (его заберёт уносчик). */
+    /** Anvil: the blank under the hammer or the freshly forged result (the taker will pick it up). */
     private ItemStack heldItem = ItemStack.EMPTY;
-    /** Левая палуба: очередь заготовок (одного вида, до DECK_MAX). */
+    /** Left deck: queue of blanks (one kind, up to DECK_MAX). */
     private ItemStack inDeck = ItemStack.EMPTY;
-    /** Правая палуба: готовые пластины (одного вида, до стопки). */
+    /** Right deck: finished plates (one kind, up to a stack). */
     private ItemStack outDeck = ItemStack.EMPTY;
     public static final int DECK_MAX = 4;
     /**
-     * Ход ритуала в «единицах работы»: за тик +10 и ещё +4 за каждый Сопроцессор Охлаждения на крыше (5 с без них, ~1.7 с
-     * с пятью).
+     * Ritual progress in "work units": +10 per tick plus +4 for every Cooling Co-Processor on the roof (5 s without them, ~1.7 s
+     * with five).
      */
     private int ritualProgress = 0;
     public static final int MAX_PROGRESS = 1000;
@@ -47,23 +47,23 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
     public static final int SPEED_PER_COOLER = 4;
     private boolean isCrafting = false;
     private int coolers = 0;
-    /** Модуль Редстоуна (ставится ПКМ по машине) и его режим. */
+    /** Redstone Module (installed by right-clicking the machine) and its mode. */
     private boolean redstoneModule = false;
     private final com.golemlogix.upgrade.RedstoneControl redstone = new com.golemlogix.upgrade.RedstoneControl();
-    /** Внутренний запас Source: пополняется из сети (или соседних банок) и расходуется на насыщение. */
+    /** Internal Source buffer: refilled from the network (or neighbouring jars) and spent on saturation. */
     public static final int BUFFER_MAX = 5000;
     private static final int PULL_STEP = 100;
     private int source = 0;
-    /** Последний разосланный клиентам уровень заполнения (в восьмых), чтобы не слать лишнего. */
+    /** Fill level last sent to clients (in eighths), so nothing extra is sent. */
     private int syncedLevel = 0;
 
-    // ---------------------------------------------------------------------------------- носильщики
-    /** Сколько тиков идёт медный голем от своей палубы до наковальни (и обратно). */
+    // ---------------------------------------------------------------------------------- carriers
+    /** How many ticks a copper golem walks from its deck to the anvil (and back). */
     public static final int WALK = 18;
-    /** Фазы носильщика: дома, идёт к наковальне, ждёт у наковальни, идёт к палубе. */
+    /** Carrier phases: home, walking to the anvil, waiting at the anvil, walking to the deck. */
     public static final int HOME = 0, TO_ANVIL = 1, AT_ANVIL = 2, TO_DECK = 3;
 
-    /** Медный голем-носильщик: что в руках, фаза и сколько тиков осталось идти. */
+    /** Copper carrier golem: what it holds, its phase and how many ticks of walking are left. */
     public static final class Carrier {
         public ItemStack hands = ItemStack.EMPTY;
         public int phase = HOME, timer = 0;
@@ -90,31 +90,31 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         }
     }
 
-    /** Подносчик (левая палуба -> наковальня) и уносчик (наковальня -> правая палуба). */
+    /** Bringer (left deck -> anvil) and taker (anvil -> right deck). */
     public final Carrier bringer = new Carrier(), taker = new Carrier();
 
     public ManaSaturatorBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.MANA_SATURATOR.get(), pos, state);
     }
 
-    /** Что на наковальне. */
+    /** What is on the anvil. */
     public ItemStack getHeldItem() {
         return heldItem;
     }
 
-    /** Очередь заготовок на левой палубе. */
+    /** Queue of blanks on the left deck. */
     public ItemStack inputDeck() {
         return inDeck;
     }
 
-    /** Готовые пластины на правой палубе. */
+    /** Finished plates on the right deck. */
     public ItemStack outputDeck() {
         return outDeck;
     }
 
     /**
-     * Для шин, воронок и поставщиков шаблонов: ячейка 0 — левая палуба (только положить заготовку, до DECK_MAX одного
-     * вида), ячейка 1 — правая палуба (только забрать готовое).
+     * For buses, hoppers and pattern providers: slot 0 is the left deck (insert blanks only, up to DECK_MAX of one
+     * kind), slot 1 is the right deck (take finished items only).
      */
     private final net.neoforged.neoforge.items.IItemHandler automation = new net.neoforged.neoforge.items.IItemHandler() {
         @Override
@@ -180,7 +180,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         return state.hasProperty(ManaSaturatorBlock.FORMED) && state.getValue(ManaSaturatorBlock.FORMED);
     }
 
-    /** Сколько ещё таких заготовок поместится на левую палубу. */
+    /** How many more of these blanks fit on the left deck. */
     public int roomInDeck(ItemStack stack) {
         if (inDeck.isEmpty()) {
             return DECK_MAX;
@@ -188,7 +188,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         return ItemStack.isSameItemSameComponents(inDeck, stack) ? DECK_MAX - inDeck.getCount() : 0;
     }
 
-    /** Положить заготовки на левую палубу (проверка места — roomInDeck). */
+    /** Put blanks on the left deck (check room with roomInDeck). */
     public void addToDeck(ItemStack stack) {
         if (inDeck.isEmpty()) {
             inDeck = stack.copy();
@@ -198,7 +198,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         changed();
     }
 
-    /** Забрать с палуб: сначала готовое, иначе очередь заготовок (рукой игрока). */
+    /** Take from the decks: finished items first, otherwise the queue of blanks (by a player's hand). */
     public ItemStack takeFromDecks() {
         ItemStack out;
         if (!outDeck.isEmpty()) {
@@ -214,7 +214,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         return out;
     }
 
-    /** Положить прямо на наковальню (сцены DevShots и старые миры); ход ритуала сбрасывается. */
+    /** Put straight onto the anvil (DevShots scenes and old worlds); ritual progress is reset. */
     public void setHeldItem(ItemStack stack) {
         this.heldItem = stack;
         this.ritualProgress = 0;
@@ -222,7 +222,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         changed();
     }
 
-    /** Всё, что лежит в машине и в руках носильщиков (выпадает при разрушении). */
+    /** Everything inside the machine and in the carriers' hands (dropped when it is broken). */
     public java.util.List<ItemStack> allItems() {
         java.util.List<ItemStack> out = new java.util.ArrayList<>();
         for (ItemStack s : new ItemStack[]{inDeck, heldItem, outDeck, bringer.hands, taker.hands}) {
@@ -233,11 +233,11 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         return out;
     }
 
-    // ------------------------------------------------------------------ ручная ковка (наковальня до сборки машины)
+    // ------------------------------------------------------------------ forging by hand (the anvil before the machine is built)
     /**
-     * Ручная ковка на наковальне несобранного насыщателя (промежуточная ступень, машина — её апгрейд): заготовку кладут на
-     * площадку ПКМ, бьют Кузнечным молотом (ЛКМ), каждый удар тратит Source из заряда молота и немного сытости; после
-     * MANUAL_HITS ударов заготовка становится пластиной — одной (машина даёт две). Вручную куются ТОЛЬКО три базовые пластины.
+     * Forging by hand on the anvil of an unassembled saturator (an intermediate stage, the machine is its upgrade): a blank is put
+     * on the face with right-click and struck with the Forge Hammer (left-click); every strike spends Source from the hammer's charge
+     * and a little food; after MANUAL_HITS strikes the blank becomes a plate, just one (the machine gives two). ONLY the three base plates can be forged by hand.
      */
     public static final int MANUAL_HITS = 4, MANUAL_COOLDOWN = 6;
     private int manualHits = 0;
@@ -245,7 +245,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
 
     public enum Strike { HIT, DONE, COOLDOWN, NO_SOURCE, NOTHING }
 
-    /** Что даёт ручная ковка: только три базовые пластины, по одной. */
+    /** What forging by hand gives: only the three base plates, one each. */
     public static ItemStack manualOutputFor(ItemStack input) {
         if (input.is(Blocks.IRON_BLOCK.asItem())) {
             return new ItemStack(ModItems.FLATTENED_IRON_CORE.get());
@@ -285,7 +285,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         return s;
     }
 
-    /** Удар молотом по заготовке на наковальне (сервер). */
+    /** A hammer strike on the blank on the anvil (server). */
     public Strike strike(ServerLevel level, BlockPos pos, Player player, ItemStack hammer) {
         if (!isManualInput(heldItem)) {
             return Strike.NOTHING;
@@ -328,7 +328,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         return Math.min(1f, (float) ritualProgress / (float) MAX_PROGRESS);
     }
 
-    /** Сколько единиц работы за тик (с учётом сопроцессоров на крыше). */
+    /** Work units per tick (counting the coprocessors on the roof). */
     public int speed() {
         return BASE_SPEED + SPEED_PER_COOLER * coolers;
     }
@@ -345,7 +345,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         return redstone.mode();
     }
 
-    /** ПКМ Модулем Редстоуна: поставить его (true) или, если уже стоит, переключить режим (false). */
+    /** Right-click with a Redstone Module: install it (true) or, if it is already there, cycle its mode (false). */
     public boolean installOrCycleRedstone() {
         boolean installed = !redstoneModule;
         if (installed) {
@@ -358,7 +358,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         return installed;
     }
 
-    /** Снять Модуль Редстоуна (Shift+ПКМ пустой рукой); true — он стоял. */
+    /** Remove the Redstone Module (Shift + right-click with an empty hand); true if it was installed. */
     public boolean removeRedstoneModule() {
         if (!redstoneModule) {
             return false;
@@ -368,7 +368,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         return true;
     }
 
-    /** Есть ли сигнал редстоуна у любой клетки машины. */
+    /** Whether any cell of the machine gets a redstone signal. */
     private boolean powered(Level level, BlockPos pos, Direction facing) {
         for (BlockPos p : SaturatorStructure.cells(pos, facing)) {
             if (level.isLoaded(p) && level.hasNeighborSignal(p)) {
@@ -386,7 +386,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         return source;
     }
 
-    /** Заполнение чаши от 0 до 1. */
+    /** Bowl fill level from 0 to 1. */
     public float getSourceFraction() {
         return Math.min(1f, (float) source / BUFFER_MAX);
     }
@@ -395,7 +395,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         return source <= 0 ? 0 : 1 + Math.min(7, source * 8 / (BUFFER_MAX + 1));
     }
 
-    /** Сеть, подключённая к любому разъёму машины (у которой есть ядро), иначе сеть фасадного разъёма. */
+    /** The network connected to any socket of the machine (one that has a core), otherwise the network of the front socket. */
     public static GolemNetwork network(Level level, BlockPos controller, Direction facing) {
         GolemNetwork first = null;
         for (int port : SaturatorStructure.PORTS) {
@@ -410,21 +410,21 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         return first;
     }
 
-    /** Пополняет запас: из сети через любой разъём (если в ней есть ядро), иначе из банок вокруг машины. */
+    /** Refills the buffer: from the network through any socket (if it has a core), otherwise from the jars around the machine. */
     private void refill(ServerLevel serverLevel, BlockPos pos, BlockState state) {
         if (source >= BUFFER_MAX) {
             return;
         }
-        // подкачка растёт вместе с ускорением: каждый охладитель ускоряет ритуал, значит и Source уходит быстрее
+        // the pull grows with the speed-up: every cooler speeds up the ritual, so Source is spent faster too
         int want = Math.min(PULL_STEP * (1 + coolers), BUFFER_MAX - source);
         int got = 0;
         Direction facing = state.getValue(ManaSaturatorBlock.FACING);
         GolemNetwork net = network(serverLevel, pos, facing);
         if (!SourceHelper.sourceRequired()) {
-            // без Ars Nouveau Source взять негде: машина работает даром (см. SourceHelper.sourceRequired)
+            // without Ars Nouveau there is nowhere to take Source from: the machine works for free (see SourceHelper.sourceRequired)
             got = want;
         } else if (net.hasCore() && net.isOnline()) {
-            // списание из сети — всё или ничего: если столько нет, берём меньшими порциями (сколько есть)
+            // taking from the network is all or nothing: if there is not that much, take smaller portions (whatever there is)
             for (int ask = want; ask >= 10 && got == 0; ask /= 2) {
                 if (net.consumeSource(ask)) {
                     got = ask;
@@ -447,7 +447,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         }
     }
 
-    /** Собирает машину, когда вокруг правильно стоят блоки. */
+    /** Assembles the machine when the blocks around it stand correctly. */
     private void tryForm(ServerLevel serverLevel, BlockPos pos, BlockState state) {
         Direction facing = state.getValue(ManaSaturatorBlock.FACING);
         if (SaturatorStructure.check(serverLevel, pos, facing).valid()) {
@@ -456,13 +456,13 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
     }
 
     /**
-     * Шаг носильщиков (сервер). Подносчик: дома и есть очередь — берёт заготовку и идёт к наковальне, ждёт, пока она
-     * освободится, кладёт и возвращается. Уносчик: идёт к наковальне, как только там ритуал или готовый результат, забирает
-     * результат и несёт на правую палубу (если там чужие пластины или нет места — ждёт с ношей).
+     * Carrier step (server). Bringer: at home with a queue, it takes a blank and walks to the anvil, waits until the anvil
+     * is free, puts the blank down and goes back. Taker: walks to the anvil as soon as a ritual or a finished result is there, takes
+     * the result and carries it to the right deck (if foreign plates are there or there is no room, it waits with its load).
      */
     private boolean stepCarriers() {
         boolean changed = false;
-        // подносчик
+        // bringer
         switch (bringer.phase) {
             case HOME -> {
                 if (!inDeck.isEmpty()) {
@@ -497,7 +497,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
                 }
             }
         }
-        // уносчик
+        // taker
         boolean result = !heldItem.isEmpty() && !isInput(heldItem);
         switch (taker.phase) {
             case HOME -> {
@@ -519,7 +519,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
                     taker.go(TO_DECK);
                     changed = true;
                 } else if (!isCrafting && (heldItem.isEmpty() || !isInput(heldItem))) {
-                    // забирать нечего (результат унесли руками) — домой налегке
+                    // nothing to take (the result was taken by hand): go home empty-handed
                     taker.go(TO_DECK);
                     changed = true;
                 }
@@ -598,7 +598,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         } else {
             ItemStack recipeOutput = outputFor(held);
             int requiredSource = entity.getRequiredSource(held);
-            // начинаем, когда в чаше хватает Source (и разрешает Модуль Редстоуна), и сразу списываем его
+            // start when the bowl has enough Source (and the Redstone Module allows it), and spend it right away
             if (!entity.isCrafting && entity.source >= requiredSource && entity.redstone.allows(entity.redstoneModule, powered, true)) {
                 entity.source -= requiredSource;
                 entity.isCrafting = true;
@@ -608,11 +608,11 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
             if (entity.isCrafting) {
                 int before = entity.ritualProgress;
                 entity.ritualProgress = Math.min(MAX_PROGRESS, entity.ritualProgress + entity.speed());
-                // гул раз в секунду ритуала
+                // a hum every second of the ritual
                 if (before / 200 != entity.ritualProgress / 200) {
                     sl.playSound(null, pos.getX(), pos.getY(), pos.getZ(), ModSounds.VACUUM_HUM.get(), SoundSource.BLOCKS, 0.6f, 1.2f);
                 }
-                // голем бьёт по заготовке пять раз за ритуал: звон удара и искры
+                // the golem strikes the blank five times per ritual: the clang of the strike and sparks
                 int hitsBefore = (before * 5 + MAX_PROGRESS / 4) / MAX_PROGRESS;
                 int hitsNow = (entity.ritualProgress * 5 + MAX_PROGRESS / 4) / MAX_PROGRESS;
                 if (hitsNow != hitsBefore && entity.ritualProgress < MAX_PROGRESS) {
@@ -624,7 +624,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
                 if (entity.ritualProgress >= MAX_PROGRESS) {
                     held.shrink(1);
                     if (!held.isEmpty()) {
-                        // в старых мирах на наковальне могла лежать стопка: лишние результаты — рядом
+                        // in old worlds a stack could lie on the anvil: the extra results go next to it
                         Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.1, pos.getZ() + 0.5, recipeOutput.copy());
                     } else {
                         entity.heldItem = recipeOutput.copy();
@@ -643,7 +643,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         }
     }
 
-    /** Клиент: ход ритуала между пакетами, искры у наковальни, шаги носильщиков (переходы фаз приходят с сервера). */
+    /** Client: ritual progress between packets, sparks at the anvil, carrier steps (phase changes come from the server). */
     private void clientTick(Level level, BlockPos pos) {
         for (Carrier c : new Carrier[]{bringer, taker}) {
             if ((c.phase == TO_ANVIL || c.phase == TO_DECK) && c.timer > 0) {
@@ -664,8 +664,8 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
     }
 
     /**
-     * Клиент: медный голем с лампой на крыше (над балкой, клетка хозяина X 16..32, Z 0..16). В простое ходит по кругу вокруг
-     * основания кристалла (19.5..28.5 x 3.5..12.5) по восьми точкам, при ритуале и нехватке Source стоит впереди.
+     * Client: copper golem with a lamp on the roof (above the beam, owner cell X 16..32, Z 0..16). When idle it walks in a circle
+     * around the crystal base (19.5..28.5 x 3.5..12.5) over eight points; during a ritual or when Source is short it stands in front.
      */
     public final LampWalker walker = new LampWalker(24f, 1.8f);
     private static final float[][] RING = {{17.6f, 1.8f}, {24f, 1.8f}, {30.4f, 1.8f}, {30.4f, 8f}, {30.4f, 14.2f}, {24f, 14.2f},
@@ -674,13 +674,13 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
     private void walkLamp(Level level) {
         var r = level.random;
         walker.tick(lampState() == 0, 24f, 1.8f, r, () -> {
-            // к соседней точке круга (по или против часовой): напрямик через кристалл голем не ходит
+            // to the next point of the circle (clockwise or counterclockwise): the golem never walks straight through the crystal
             walker.ring = Math.floorMod(walker.ring + (r.nextInt(4) == 0 ? -1 : 1), RING.length);
             return RING[walker.ring];
         });
     }
 
-    /** Сигнал лампы на крыше: 0 — простой, 1 — идёт ритуал, 2 — заготовка лежит, а Source не хватает. */
+    /** Roof lamp signal: 0 = idle, 1 = ritual running, 2 = a blank is waiting but Source is short. */
     public int lampState() {
         if (isCrafting) {
             return 1;
@@ -691,7 +691,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         return 0;
     }
 
-    /** Можно ли прессовать предмет (иначе клик с ним по машине — обычная установка блока). */
+    /** Whether the item can be pressed (otherwise clicking the machine with it is a normal block placement). */
     public static boolean isInput(ItemStack stack) {
         return !outputFor(stack).isEmpty();
     }
@@ -706,7 +706,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         } else if (input.is(ModItems.IMPLODED_WITHER_PLASMA.get())) {
             return new ItemStack(ModItems.INTERDIMENSIONAL_OCCULT_MATRIX.get());
         } else if (input.is(com.golemlogix.init.ModBlocks.COOLING_COPROCESSOR.get().asItem())) {
-            // сопроцессор, сжатый в плоский ускоритель для шин
+            // a coprocessor compressed into a flat speed upgrade for buses
             return new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get());
         }
         return ItemStack.EMPTY;

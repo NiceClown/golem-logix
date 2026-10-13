@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Окно состояния Крио-Калькулятора: ход текущей задачи, содержимое, кнопка отмены, ячейки Сжатых Сопроцессоров и Модуля Редстоуна.
+ * Cryo-Calculator status window: progress of the current job, contents, cancel button, Compressed Co-Processor and Redstone Module slots.
  */
 public class CalculatorMenu extends GolemMenu {
     public static final int IMAGE_HEIGHT = 228;
@@ -39,7 +39,7 @@ public class CalculatorMenu extends GolemMenu {
     private final ContainerData data;
     private CalculatorStatusPayload lastSent = null;
 
-    /** Клиентское состояние. */
+    /** Client state. */
     public CalculatorStatusPayload clientStatus = null;
 
     public static CalculatorMenu fromNetwork(int id, Inventory inv, RegistryFriendlyByteBuf buf) {

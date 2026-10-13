@@ -2,10 +2,10 @@ import java.io.File;
 import java.util.Random;
 
 /**
- * Иконки предметов 32x32 (холст 16x16 юнитов, 2 пикселя на юнит), пятое поколение:
- * Воксельный изометрический стиль Magic-Steampunk Golem Logix.
- * Окисленная медь с бирюзовой патиной (verdigris), тёплая латунь, кованое железо,
- * светящиеся руны и логические дорожки, аналоговые манометры, морозный крио-иней.
+ * 32x32 item icons (a 16x16 unit canvas, 2 pixels per unit), the fifth generation:
+ * the voxel isometric Magic-Steampunk style of Golem Logix.
+ * Oxidized copper with teal patina (verdigris), warm brass, wrought iron,
+ * glowing runes and logic traces, analog gauges, frosty cryo rime.
  */
 final class Items {
     static final int[] BRASS = Paint.BRASS, BRONZE = Paint.BRONZE, IRON = Paint.IRON, CYAN = Paint.CYAN, VIOLET = Paint.VIOLET,
@@ -35,7 +35,7 @@ final class Items {
         return new Paint(16, 16, 2);
     }
 
-    /** Мягкая тень под предметом (эллипс). */
+    /** A soft shadow under the item (an ellipse). */
     static void shadow(Paint p, double cx, double cy, double rx, double ry) {
         for (int j = 0; j < p.h; j++) {
             for (int i = 0; i < p.w; i++) {
@@ -48,12 +48,12 @@ final class Items {
         }
     }
 
-    /** Четырёхугольник (по часовой) с заливкой функцией цвета. */
+    /** A quadrilateral (clockwise) filled by a colour function. */
     static void quad(Paint p, double[] xs, double[] ys, Paint.PixelFn f) {
         p.polyFn(xs, ys, f);
     }
 
-    /** Медь с патиной: бленд медного оттенка с бирюзовой окисью по карте шума. */
+    /** Copper with patina: a blend of the copper tint with teal oxide by a noise map. */
     static int copperPatina(double baseT, double noise) {
         if (noise > 0.58) {
             double pt = (noise - 0.58) / 0.42;
@@ -62,23 +62,23 @@ final class Items {
         return Paint.ramp(COPPER, baseT);
     }
 
-    // ============================================================================================ кассеты данных
-    /** Цвета тиров: 1k медь, 4k железо, 16k золото, 64k бирюза/алмаз, 256k аметист. */
+    // ============================================================================================ data cassettes
+    /** Tier colours: 1k copper, 4k iron, 16k gold, 64k teal/diamond, 256k amethyst. */
     static final int[] TIER = {0xD9803A, 0x9AA4B4, 0xF0C850, 0x55E6E0, 0xA070FF};
 
-    /** Магнитная кассета данных: окисленный медный корпус с патиной, латунная накладка с руной тира, бобины с лентой, золотые контакты снизу. */
+    /** A magnetic data cassette: an oxidized copper body with patina, a brass plate with the tier rune, reels with tape, gold contacts at the bottom. */
     static Paint copperDisk(int tier) {
         Paint p = canvas();
         shadow(p, 8.2, 13.4, 7.2, 1.3);
         double x0 = 1.2, x1 = 14.8, y0 = 4.4, y1 = 12.2, th = 1.4;
 
-        // Золотые контакты разъема снизу
+        // Gold connector contacts at the bottom
         for (double gx = x0 + 3.8; gx < x1 - 3.4; gx += 1.4) {
             p.rect(gx, y1 - 0.2, gx + 0.8, y1 + 1.2, at(GOLD, 4.8));
             p.rect(gx, y1 + 0.8, gx + 0.8, y1 + 1.2, at(GOLD, 2.6));
         }
 
-        // Верхний скошенный торец (толщина корпуса)
+        // The top bevelled end (body thickness)
         quad(p, new double[]{x0, x0 + 0.9, x1 + 0.9, x1}, new double[]{y0, y0 - th, y0 - th, y0},
                 (u, v) -> {
                     double n = 0.5 + 0.5 * Math.sin(u * 7.1 + v * 3.3);
@@ -86,11 +86,11 @@ final class Items {
                 });
         p.line(x0 + 0.9, y0 - th + 0.15, x1 + 0.9, y0 - th + 0.15, 0.3, at(BRASS, 5.5));
 
-        // Правый торец
+        // The right end
         quad(p, new double[]{x1, x1 + 0.9, x1 + 0.9, x1}, new double[]{y0, y0 - th, y1 - th, y1},
                 (u, v) -> at(COPPER, 1.8));
 
-        // Лицевая панель из окисленной меди с патиной
+        // The front panel of oxidized copper with patina
         Random rnd = new Random(2101 + tier * 17L);
         quad(p, new double[]{x0, x1, x1, x0}, new double[]{y0, y0, y1, y1},
                 (u, v) -> {
@@ -100,7 +100,7 @@ final class Items {
                 });
         p.streaks(x0 + 0.3, y0 + 0.3, x1 - 0.3, y1 - 0.3, 0.05, 2101 + tier, true);
 
-        // Патина пятна
+        // Patina spots
         for (int i = 0; i < 4; i++) {
             double px = x0 + 1.2 + rnd.nextDouble() * (x1 - x0 - 2.4);
             double py = y0 + 1.0 + rnd.nextDouble() * (y1 - y0 - 2.0);
@@ -108,21 +108,21 @@ final class Items {
             p.disc(px, py, 0.3, at(VERDIGRIS, 5.2));
         }
 
-        // Латунная шильда с руной емкости по центру сверху
+        // A brass nameplate with the capacity rune at the top middle
         int labelColor = rgb(TIER[tier]);
         p.slab(x0 + 1.2, y0 + 0.5, x1 - 1.2, y0 + 2.3, BRASS, 3.8, 1);
         p.rect(x0 + 1.6, y0 + 0.7, x1 - 1.6, y0 + 2.1, at(BRASS, 2.2));
         p.rect(x0 + 1.8, y0 + 0.8, x1 - 1.8, y0 + 2.0, Paint.shade(labelColor, 0.45));
 
-        // Декоративные полоски текста и руна емкости на шильде
+        // Decorative text strips and the capacity rune on the nameplate
         for (int i = 0; i < 2; i++) {
             p.rect(x0 + 2.4, y0 + 1.0 + i * 0.5, x0 + 6.2 - i * 1.0, y0 + 1.2 + i * 0.5, at(CREAM, 4.5));
         }
-        // Руна тира
+        // Tier rune
         p.rune(x1 - 3.6, y0 + 0.7, 1.4, 3 + tier * 5, labelColor, at(GOLD, 1.2));
         p.glowRect(x1 - 3.6, y0 + 0.7, x1 - 2.2, y0 + 2.1, 0.4, labelColor, 80);
 
-        // Окно с катушками (углубление)
+        // The window with reels (a recess)
         double wx0 = x0 + 1.0, wx1 = x1 - 1.0, wy0 = y0 + 2.8, wy1 = y1 - 0.9;
         p.rect(wx0, wy0, wx1, wy1, at(IRON, 0.4));
         p.rect(wx0, wy0, wx1, wy0 + 0.4, at(IRON, 0.1));
@@ -134,7 +134,7 @@ final class Items {
         for (int s = 0; s < 2; s++) {
             double r = s == 0 ? Math.min(2.0, tape) : Math.max(1.0, 2.2 - tape * 0.5);
             final double sx = cx[s];
-            // Намотанная медная лента с витками
+            // Wound copper tape with turns
             p.discFn(sx, cy, r, (u, v) -> Paint.ramp(COPPER, 0.22 + 0.14 * (0.5 + 0.5 * Math.cos(Math.hypot(u - sx, v - cy) * 11))));
             p.disc(cx[s], cy, 0.95, at(BRASS, 2.0));
             p.sphere(cx[s], cy, 0.85, BRASS, 0.35, 0.95);
@@ -143,25 +143,25 @@ final class Items {
                 p.disc(cx[s] + Math.cos(a) * 0.45, cy + Math.sin(a) * 0.45, 0.18, at(IRON, 0.2));
             }
         }
-        // Натянутая лента между катушками
+        // Stretched tape between the reels
         p.line(cx[0], cy + Math.min(2.0, tape) - 0.15, cx[1], cy + Math.max(1.0, 2.2 - tape * 0.5) - 0.15, 0.35, at(COPPER, 1.2));
 
-        // Блик на стекле окна
+        // Highlight on the window glass
         p.line(wx0 + 0.6, wy1 - 0.6, wx0 + 2.6, wy0 + 0.6, 0.3, argb(100, 0xFFFFFF));
 
-        // Светодиоды активности / данных (светятся бирюзовым)
+        // Activity / data LEDs (glowing teal)
         p.disc(x0 + 0.8, y0 + 1.2, 0.35, at(CYAN, 5.5));
         p.glowRect(x0 + 0.6, y0 + 1.0, x0 + 1.0, y0 + 1.4, 0.5, at(CYAN, 4.5), 110);
         p.disc(x1 - 0.8, y0 + 1.2, 0.35, at(CYAN, 5.5));
         p.glowRect(x1 - 1.0, y0 + 1.0, x1 - 0.6, y0 + 1.4, 0.5, at(CYAN, 4.5), 110);
 
-        // Латунные уголки и заклепки
+        // Brass corners and rivets
         for (double[] c : new double[][]{{x0, y0}, {x1 - 1.4, y0}, {x0, y1 - 1.4}, {x1 - 1.4, y1 - 1.4}}) {
             p.slab(c[0], c[1], c[0] + 1.4, c[1] + 1.4, BRASS, 3.6, 1);
             p.rivet(c[0] + 0.7, c[1] + 0.7, 0.32, BRASS);
         }
 
-        // Индикатор заполненности/тира внизу
+        // Fill/tier indicator at the bottom
         for (int i = 0; i <= tier; i++) {
             p.rect(x0 + 4.6 + i * 1.2, y1 - 0.55, x0 + 5.4 + i * 1.2, y1 - 0.2, at(CYAN, 5.2));
         }
@@ -169,7 +169,7 @@ final class Items {
         return p;
     }
 
-    // ============================================================================================ криогенные кассеты жидкостей
+    // ============================================================================================ cryogenic fluid cassettes
     static final int[][] FLUID = {
             {0x0d4547, 0x136f70, 0x20a8a6, 0x45d6d2, 0x96f2ee, 0xe2fffe, 0xffffff},
             {0x0d3a5a, 0x165a86, 0x2a86b8, 0x4cb0e0, 0x8ad4f6, 0xd0f0ff, 0xffffff},
@@ -177,7 +177,7 @@ final class Items {
             {0x141a5c, 0x232e8a, 0x3446b8, 0x5266e0, 0x8a98f6, 0xccd4ff, 0xffffff},
             VIOLET};
 
-    /** Крио-капсула жидкости: окисленная медная рама, стеклянная колба с бурлящей маной, конденсаторные ребра, золотые контакты. */
+    /** A cryo fluid capsule: an oxidized copper frame, a glass flask with bubbling mana, condenser fins, gold contacts. */
     static Paint fluidDisk(int tier) {
         Paint p = canvas();
         shadow(p, 8.0, 14.6, 5.4, 1.2);
@@ -185,13 +185,13 @@ final class Items {
         int[] liq = FLUID[tier];
         double x0 = 4.4, x1 = 11.6, y0 = 1.4, y1 = 14.2;
 
-        // Золотые контакты снизу
+        // Gold contacts at the bottom
         for (double gx = x0 + 1.2; gx < x1 - 1.0; gx += 1.4) {
             p.rect(gx, y1 + 0.1, gx + 0.8, y1 + 1.3, at(GOLD, 4.8));
             p.rect(gx, y1 + 0.9, gx + 0.8, y1 + 1.3, at(GOLD, 2.5));
         }
 
-        // Боковые охладительные ребра радиатора с инеем
+        // Side cooling radiator fins with frost
         for (int i = 0; i < 5; i++) {
             double ry = y0 + 3.2 + i * 1.8;
             p.rect(x0 - 1.6, ry, x0 - 0.4, ry + 0.6, at(COPPER, 2.8));
@@ -200,7 +200,7 @@ final class Items {
             p.rect(x1 + 1.2, ry, x1 + 1.6, ry + 0.6, at(FROST, 5.0));
         }
 
-        // Массивные верхний и нижний колпаки с латунными фланцами и патиной
+        // Massive top and bottom caps with brass flanges and patina
         for (double[] c : new double[][]{{y0, y0 + 2.2}, {y1 - 2.2, y1}}) {
             p.slab(x0 - 0.4, c[0], x1 + 0.4, c[1], frame, 3.2, 1);
             p.rect(x0 + 0.4, c[0] + 0.7, x1 - 0.4, c[0] + 1.1, at(frame, 1.6));
@@ -209,11 +209,11 @@ final class Items {
         }
         p.frostLine(x0 - 0.4, x1 + 0.4, y0, 0.6, 2201 + tier);
 
-        // Вертикальные стойки рамы
+        // Vertical frame posts
         p.slab(x0 - 0.5, y0 + 1.8, x0 + 0.5, y1 - 1.8, frame, 2.8, 1);
         p.slab(x1 - 0.5, y0 + 1.8, x1 + 0.5, y1 - 1.8, frame, 2.4, 1);
 
-        // Колба: темное стекло сверху, вихревая светящаяся крио-жидкость снизу
+        // Flask: dark glass on top, a swirling glowing cryo liquid below
         double gx0 = x0 + 0.6, gx1 = x1 - 0.6, gy0 = y0 + 2.2, gy1 = y1 - 2.2;
         double level = gy1 - (gy1 - gy0) * (0.58 + 0.08 * tier);
         p.fill(gx0, gy0, gx1, gy1, (u, v) -> {
@@ -225,12 +225,12 @@ final class Items {
             return Paint.ramp(liq, 0.28 + 0.48 * cyl + 0.1 * swirl - 0.12 * (v - level) / (gy1 - level));
         });
 
-        // Мениск и стеклянные блики
+        // Meniscus and glass highlights
         p.rect(gx0, level, gx1, level + 0.35, at(liq, 5.8));
         p.line(gx0 + 0.4, gy0 + 0.4, gx0 + 0.7, gy1 - 0.4, 0.3, argb(170, 0xFFFFFF));
         p.line(gx1 - 0.7, gy0 + 0.8, gx1 - 0.5, gy1 - 0.8, 0.25, argb(80, 0xFFFFFF));
 
-        // Пузырьки и свечение жидкости
+        // Bubbles and the liquid's glow
         Random r = new Random(2211 + tier);
         for (int i = 0; i < 5; i++) {
             double bx = gx0 + 1.0 + r.nextDouble() * (gx1 - gx0 - 2.0);
@@ -238,25 +238,25 @@ final class Items {
             p.ring(bx, by, 0.18, 0.38, argb(220, Paint.ramp(liq, 0.95) & 0xFFFFFF));
         }
 
-        // Светящаяся руна внутри жидкости
+        // A glowing rune inside the liquid
         p.rune(7.2, level + 0.8, Math.min(3.4, gy1 - level - 1.2), 2 + tier * 5, at(liq, 6.0), at(liq, 3.4));
         p.glowRect(gx0 + 0.4, level, gx1 - 0.4, gy1, 0.8, at(liq, 4.4), 85);
 
-        // Засечки шкалы уровня на боковой стойке
+        // Level scale marks on the side post
         for (int i = 0; i <= tier + 1; i++) {
             p.rect(x1 - 0.3, gy1 - 0.6 - i * 1.1, x1 + 0.4, gy1 - 0.35 - i * 1.1, at(CYAN, 5.4));
         }
         return p;
     }
 
-    // ============================================================================================ перфокарта
-    /** Медная перфокарта: тяжелый картридж с латунной рамкой, сеткой пробивок со светящимся бирюзовым светом, патиной и заклепками. */
+    // ============================================================================================ punch card
+    /** A copper punch card: a heavy cartridge with a brass frame, a grid of punches glowing teal, patina and rivets. */
     static Paint punchCard() {
         Paint p = canvas();
         shadow(p, 8.4, 13.6, 7.2, 1.2);
         double x0 = 1.0, x1 = 15.0, y0 = 3.0, y1 = 13.0;
 
-        // Скошенный верхний левый угол
+        // Bevelled top left corner
         double[] xs = {x0 + 1.8, x1, x1, x0, x0}, ys = {y0, y0, y1, y1, y0 + 1.8};
         p.polyFn(xs, ys, (u, v) -> {
             double n = 0.5 + 0.5 * Math.sin(u * 5.2 + v * 4.4);
@@ -265,51 +265,51 @@ final class Items {
         });
         p.streaks(x0, y0, x1, y1, 0.06, 2301, true);
 
-        // Латунная окантовка картриджа
+        // Brass edging of the cartridge
         p.line(x0 + 1.8, y0 + 0.15, x1, y0 + 0.15, 0.35, at(BRASS, 5.6));
         p.line(x0 + 0.15, y0 + 1.8, x0 + 0.15, y1, 0.35, at(BRASS, 5.2));
         p.line(x0 + 0.1, y0 + 1.8, x0 + 1.8, y0 + 0.1, 0.35, at(BRASS, 5.8));
         p.rect(x0, y1 - 0.35, x1, y1, at(BRASS, 2.0));
         p.rect(x1 - 0.35, y0, x1, y1, at(BRASS, 2.2));
 
-        // Пятна окислившейся патины
+        // Oxidized patina spots
         p.disc(x0 + 3.2, y1 - 1.2, 0.7, at(VERDIGRIS, 4.4));
         p.disc(x1 - 2.0, y0 + 2.8, 0.8, at(VERDIGRIS, 4.6));
 
-        // Латунная плашка заголовка с рунами
+        // A brass header plate with runes
         p.slab(x0 + 2.4, y0 + 0.6, x0 + 9.6, y0 + 2.2, BRASS, 3.6, 1);
         for (int i = 0; i < 4; i++) {
             p.rune(x0 + 2.8 + i * 1.6, y0 + 0.8, 1.1, i * 4 + 7, at(VIOLET, 5.2), 0);
         }
         p.glowRect(x0 + 2.8, y0 + 0.8, x0 + 9.2, y0 + 2.0, 0.3, at(VIOLET, 4.0), 60);
 
-        // Шестерня-индекс в верхнем правом углу
+        // An index gear in the top right corner
         p.gearStatic(x1 - 1.8, y0 + 1.4, 1.1, 6, 0.2, BRASS, 3.8);
 
-        // Пробивки: сетка отверстий со светящимся бирюзовым кодом рецепта внутри
+        // Punches: a grid of holes with the recipe code glowing teal inside
         Random r = new Random(2302);
         for (int c = 0; c < 12; c++) {
             for (int row = 0; row < 5; row++) {
                 double hx = x0 + 1.2 + c * 1.08, hy = y0 + 3.2 + row * 1.25;
                 if (r.nextInt(5) < 3) {
-                    // Пробитое отверстие с ярким бирюзовым свечением!
+                    // A punched hole with a bright teal glow!
                     p.rect(hx, hy, hx + 0.65, hy + 0.85, at(CYAN, 5.2));
                     p.glowRect(hx - 0.1, hy - 0.1, hx + 0.75, hy + 0.95, 0.3, at(CYAN, 4.0), 80);
                     p.rect(hx, hy, hx + 0.65, hy + 0.2, at(CYAN, 6.0));
                 } else {
-                    // Непробитый след
+                    // An unpunched mark
                     p.rect(hx + 0.15, hy + 0.3, hx + 0.5, hy + 0.55, at(COPPER, 1.8));
                 }
             }
         }
 
-        // Заклепки по углам
+        // Rivets in the corners
         p.rivet(x1 - 1.2, y1 - 1.2, 0.42, BRASS);
         p.rivet(x0 + 1.2, y1 - 1.2, 0.42, BRASS);
         return p;
     }
 
-    // ============================================================================================ сплющенные пластины
+    // ============================================================================================ flattened plates
     interface PlateFace {
         int at(double s, double t);
     }
@@ -317,18 +317,18 @@ final class Items {
     static void plate(Paint p, double th, int[] edgeRamp, PlateFace face) {
         double cx = 8, cy = 7.4, hw = 7.2, hh = 3.9;
         double[] tx = {cx - hw, cx, cx + hw, cx}, ty = {cy, cy - hh, cy, cy + hh};
-        // Торцы (толщина плиты)
+        // Ends (the plate thickness)
         quad(p, new double[]{cx - hw, cx, cx, cx - hw}, new double[]{cy, cy + hh, cy + hh + th, cy + th},
                 (u, v) -> Paint.ramp(edgeRamp, 0.44 - 0.1 * (v - cy) / (hh + th)));
         quad(p, new double[]{cx, cx + hw, cx + hw, cx}, new double[]{cy + hh, cy, cy + th, cy + hh + th},
                 (u, v) -> Paint.ramp(edgeRamp, 0.26 - 0.08 * (v - cy) / (hh + th)));
-        // Верхняя грань: координаты s и t
+        // Top face: coordinates s and t
         quad(p, tx, ty, (u, v) -> {
             double a = (u - cx) / hw, b = (v - cy) / hh;
             double s = (1 + a - b) / 2, t = (1 - a - b) / 2;
             return face.at(Math.max(0, Math.min(1, s)), Math.max(0, Math.min(1, t)));
         });
-        // Светлая окантовка по верхним рёбрам, тёмная по нижним
+        // A light edging along the top edges, a dark one along the bottom
         p.line(cx - hw, cy, cx, cy - hh, 0.32, argb(180, Paint.ramp(edgeRamp, 0.95) & 0xFFFFFF));
         p.line(cx, cy - hh, cx + hw, cy, 0.32, argb(130, Paint.ramp(edgeRamp, 0.85) & 0xFFFFFF));
         p.line(cx - hw, cy + th, cx, cy + hh + th, 0.28, argb(170, 0x000000));
@@ -341,7 +341,7 @@ final class Items {
         return new double[]{cx + a * hw, cy + b * hh};
     }
 
-    /** Сплющенный железный сердечник: тяжелый кованый блок с трещинами, заклепками, ступенчатым ядром и светящейся бирюзовой руной. */
+    /** Flattened iron core: a heavy forged block with cracks, rivets, a stepped core and a glowing teal rune. */
     static Paint ironCore() {
         Paint p = canvas();
         shadow(p, 8.4, 13.4, 7.4, 1.3);
@@ -355,7 +355,7 @@ final class Items {
             double d = Math.hypot(s - 0.5, t - 0.5) * 2;
             double rings = 0.5 + 0.5 * Math.cos(d * 22);
             double base = 0.52 + 0.12 * (1 - s) - 0.08 * t + 0.05 * noise[(int) (s * 7.99) * 8 + (int) (t * 7.99)];
-            // Кованые трещины
+            // Forged cracks
             boolean crack = Math.abs(s - t) < 0.04 && d > 0.4 && d < 0.95;
             if (crack) {
                 return rgb(0x121418);
@@ -369,13 +369,13 @@ final class Items {
             return Paint.ramp(IRON, base);
         });
 
-        // 8 латунных массивных заклепок по углам и граням
+        // 8 massive brass rivets at the corners and edges
         for (double[] st : new double[][]{{0.1, 0.1}, {0.9, 0.1}, {0.1, 0.9}, {0.9, 0.9}, {0.5, 0.08}, {0.08, 0.5}, {0.92, 0.5}, {0.5, 0.92}}) {
             double[] c = onPlate(st[0], st[1]);
             p.rivet(c[0], c[1], 0.38, BRASS);
         }
 
-        // Центральный концентрический сердечник со светящейся оккультной руной
+        // A central concentric core with a glowing occult rune
         double[] c = onPlate(0.5, 0.5);
         p.disc(c[0], c[1], 1.2, at(IRON, 0.5));
         p.sphere(c[0], c[1], 0.9, IRON, 0.35, 1.0);
@@ -385,7 +385,7 @@ final class Items {
         return p;
     }
 
-    /** Сплющенная медная матрица: окисленная медь с бирюзовой патиной, латунной рамкой, золотыми контактами по бокам и светящейся схемой. */
+    /** Flattened copper matrix: oxidized copper with teal patina, a brass frame, gold contacts on the sides and a glowing circuit. */
     static Paint copperMatrix() {
         Paint p = canvas();
         shadow(p, 8.4, 13.4, 7.4, 1.3);
@@ -406,13 +406,13 @@ final class Items {
                 return Paint.ramp(BRASS, 0.88);
             }
             if (trace) {
-                // Светящаяся бирюзовая логическая дорожка
+                // A glowing teal logic trace
                 return at(CYAN, 5.2);
             }
             return copperPatina(baseT, n);
         });
 
-        // Золотые контактные ножки по краям
+        // Gold contact pins along the edges
         for (double st = 0.2; st <= 0.8; st += 0.2) {
             double[] pTop = onPlate(st, 0.04);
             p.rect(pTop[0] - 0.25, pTop[1] - 0.4, pTop[0] + 0.25, pTop[1], at(GOLD, 5.0));
@@ -420,19 +420,19 @@ final class Items {
             p.rect(pRight[0], pRight[1] - 0.2, pRight[0] + 0.4, pRight[1] + 0.2, at(GOLD, 4.6));
         }
 
-        // Центральный чип / кристалл процессора
+        // A central chip / processor crystal
         double[] c = onPlate(0.5, 0.5);
         p.slab(c[0] - 1.4, c[1] - 0.9, c[0] + 1.4, c[1] + 0.9, IRON, 0.7, 1);
         p.rect(c[0] - 1.0, c[1] - 0.5, c[0] + 1.0, c[1] + 0.5, at(CYAN, 5.0));
         p.glowRect(c[0] - 1.0, c[1] - 0.5, c[0] + 1.0, c[1] + 0.5, 0.8, at(CYAN, 4.0), 110);
 
-        // Шестерни-инкрустации по углам
+        // Inlaid gears in the corners
         double[] c1 = onPlate(0.18, 0.82);
         p.gearStatic(c1[0], c1[1], 0.8, 6, 0.15, BRASS, 3.4);
         return p;
     }
 
-    /** Сплющенная крио-подложка: блок голубого льда в латунных скобах, сосульки снизу, закрученная метель и руны льда. */
+    /** Flattened cryo substrate: a block of blue ice in brass brackets, icicles below, a swirling blizzard and ice runes. */
     static Paint cryoSubstrate() {
         Paint p = canvas();
         shadow(p, 8.4, 13.4, 7.4, 1.3);
@@ -448,14 +448,14 @@ final class Items {
             return Paint.ramp(FROST, base);
         });
 
-        // Латунные скобы-зажимы по углам с заклепками
+        // Brass clamp brackets in the corners with rivets
         for (double[] st : new double[][]{{0.1, 0.1}, {0.9, 0.1}, {0.1, 0.9}, {0.9, 0.9}}) {
             double[] c = onPlate(st[0], st[1]);
             p.slab(c[0] - 0.6, c[1] - 0.6, c[0] + 0.6, c[1] + 0.6, BRASS, 3.4, 1);
             p.rivet(c[0], c[1], 0.28, BRASS);
         }
 
-        // Сосульки по нижнему периметру
+        // Icicles along the bottom edge
         double[] b0 = onPlate(0.2, 0.95);
         double[] b1 = onPlate(0.5, 0.95);
         double[] b2 = onPlate(0.8, 0.95);
@@ -464,7 +464,7 @@ final class Items {
             p.sparkle(pt[0], pt[1] + pt[2], rgb(0xFFFFFF));
         }
 
-        // Светящаяся крио-снежинка и руны по центру
+        // A glowing cryo snowflake and runes in the middle
         double[] c = onPlate(0.5, 0.5);
         for (int i = 0; i < 3; i++) {
             double a = i * Math.PI / 3;
@@ -478,14 +478,14 @@ final class Items {
         return p;
     }
 
-    // ============================================================================================ секретные материалы
-    /** Схлопнувшаяся плазма Визера: изометрическая незеритовая клетка, крио-зажимы, фиолетовый войд-вихрь и электрические молнии. */
+    // ============================================================================================ secret materials
+    /** Imploded Wither plasma: an isometric netherite cage, cryo clamps, a purple void vortex and electric bolts. */
     static Paint witherPlasma() {
         Paint p = canvas();
         double cx = 8, cy = 8, r = 6.4;
         p.glowRect(cx - 4.5, cy - 4.5, cx + 4.5, cy + 4.5, 3.6, at(VIOLET, 4.4), 90);
 
-        // Внешнее силовое поле и фиолетовый вихрь
+        // The outer force field and the purple vortex
         p.discFn(cx, cy, r, (u, v) -> {
             double dx = u - cx, dy = v - cy, d = Math.hypot(dx, dy) / r, a = Math.atan2(dy, dx);
             double sw = 0.5 + 0.5 * Math.sin(a * 4 + d * 13);
@@ -497,34 +497,34 @@ final class Items {
             return c;
         });
 
-        // Незеритово-криогенные силовые зажимы клетки
+        // Netherite-cryogenic force clamps of the cage
         for (int i = 0; i < 4; i++) {
             double a = i * Math.PI / 2 + Math.PI / 4;
             double kx = cx + Math.cos(a) * (r - 0.8), ky = cy + Math.sin(a) * (r - 0.8);
             p.slab(kx - 0.9, ky - 0.9, kx + 0.9, ky + 0.9, NETHERITE, 2.8, 1);
             p.rivet(kx, ky, 0.32, BRASS);
-            // Крио-наросты на зажимах
+            // Cryo growths on the clamps
             p.line(kx, ky, cx + Math.cos(a) * (r + 0.8), cy + Math.sin(a) * (r + 0.8), 0.45, at(CYAN, 4.8));
         }
 
-        // Электрические дуги крио-плазмы (бирюзовые молнии)
+        // Electric arcs of the cryo plasma (teal bolts)
         p.line(cx - 2.8, cy - 1.0, cx - 0.8, cy - 2.2, 0.3, at(CYAN, 5.5));
         p.line(cx - 0.8, cy - 2.2, cx + 1.2, cy - 1.4, 0.3, at(CYAN, 5.5));
         p.line(cx - 1.4, cy + 1.8, cx + 0.8, cy + 2.4, 0.3, at(CYAN, 5.5));
         p.glowRect(cx - 2.5, cy - 2.5, cx + 2.5, cy + 2.5, 1.2, at(CYAN, 4.5), 80);
 
-        // Силуэт черепа Визера в глубине плазмы
+        // The Wither skull silhouette deep in the plasma
         p.rect(cx - 1.6, cy - 1.5, cx + 1.6, cy + 0.8, rgb(0x040106));
         p.rect(cx - 1.1, cy + 0.8, cx + 1.1, cy + 1.6, rgb(0x040106));
-        // Светящиеся фиолетовые глазницы
+        // Glowing purple eye sockets
         p.rect(cx - 1.1, cy - 0.8, cx - 0.3, cy - 0.1, at(VIOLET, 6.0));
         p.rect(cx + 0.3, cy - 0.8, cx + 1.1, cy - 0.1, at(VIOLET, 6.0));
         p.glowRect(cx - 1.1, cy - 0.8, cx + 1.1, cy - 0.1, 0.8, at(VIOLET, 5.2), 140);
-        // Зубы
+        // Teeth
         p.rect(cx - 0.8, cy + 1.0, cx - 0.5, cy + 1.6, at(VIOLET, 3.0));
         p.rect(cx + 0.5, cy + 1.0, cx + 0.8, cy + 1.6, at(VIOLET, 3.0));
 
-        // Искры
+        // Sparks
         Random rr = new Random(2501);
         for (int i = 0; i < 8; i++) {
             double a = rr.nextDouble() * Math.PI * 2, d = r + 0.3 + rr.nextDouble() * 1.2;
@@ -533,13 +533,13 @@ final class Items {
         return p;
     }
 
-    /** Межпространственная оккультная матрица: изометрический гиперкуб с латунными кольцами кардана, звездами внутри, фиолетовыми и бирюзовыми рунами. */
+    /** Interdimensional occult matrix: an isometric hypercube with brass gimbal rings, stars inside, purple and teal runes. */
     static Paint occultMatrix() {
         Paint p = canvas();
         double cx = 8, cy = 8;
         p.glowRect(cx - 3.5, cy - 3.5, cx + 3.5, cy + 3.5, 3.4, at(VIOLET, 4.0), 80);
 
-        // 4 внешних луча пространственного разлома
+        // 4 outer rays of the spatial rift
         for (int i = 0; i < 4; i++) {
             double a = i * Math.PI / 2 + Math.PI / 4;
             double ex = cx + Math.cos(a) * 7.6, ey = cy + Math.sin(a) * 7.6;
@@ -548,13 +548,13 @@ final class Items {
             p.line(cx, cy, ex, ey, 0.3, at(GOLD, 5.8));
         }
 
-        // Латунное кольцо кардана с шестернями
+        // A brass gimbal ring with gears
         p.disc(cx, cy, 6.2, at(GOLD, 1.4));
         p.sphere(cx, cy, 6.0, GOLD, 0.38, 0.95);
         p.disc(cx, cy, 4.6, at(GOLD, 1.1));
         p.disc(cx, cy, 4.4, rgb(0x090514));
 
-        // Оккультные руны на кольце: чередуются фиолетовый и бирюзовый
+        // Occult runes on the ring: purple and teal alternate
         for (int i = 0; i < 4; i++) {
             double a = i * Math.PI / 2;
             double rx = cx + Math.cos(a) * 5.25, ry = cy + Math.sin(a) * 5.25;
@@ -564,7 +564,7 @@ final class Items {
             p.glowRect(rx - 0.6, ry - 0.8, rx + 0.6, ry + 0.8, 0.5, runeColor, 90);
         }
 
-        // Всевидящее космическое око в центре разлома
+        // The all-seeing cosmic eye in the middle of the rift
         p.polyFn(new double[]{cx - 3.8, cx - 1.8, cx + 1.8, cx + 3.8, cx + 1.8, cx - 1.8},
                 new double[]{cy, cy - 2.1, cy - 2.1, cy, cy + 2.1, cy + 2.1}, (u, v) -> Paint.ramp(CREAM, 0.95 - 0.25 * Math.abs(v - cy) / 2.1));
         p.discFn(cx, cy, 1.8, (u, v) -> {
@@ -575,52 +575,52 @@ final class Items {
         p.glowRect(cx - 1.2, cy - 1.2, cx + 1.2, cy + 1.2, 0.6, at(VIOLET, 5.0), 90);
         p.disc(cx - 0.6, cy - 0.7, 0.35, rgb(0xFFFFFF));
 
-        // Латунные орбитальные рамки
+        // Brass orbital frames
         p.line(cx - 3.8, cy, cx - 1.8, cy - 2.1, 0.28, at(GOLD, 2.2));
         p.line(cx - 1.8, cy - 2.1, cx + 1.8, cy - 2.1, 0.28, at(GOLD, 2.2));
         p.line(cx + 1.8, cy - 2.1, cx + 3.8, cy, 0.28, at(GOLD, 2.2));
         return p;
     }
 
-    // ============================================================================================ оккультный гримуар
-    /** Гримуар: тисненая темная кожа, медные уголки с патиной, золоченый обрез, круглый глаз-шестерня голема и светящиеся руны. */
+    // ============================================================================================ occult grimoire
+    /** Grimoire: embossed dark leather, copper corners with patina, gilded page edges, a round golem gear eye and glowing runes. */
     static Paint guideBook() {
         Paint p = canvas();
         shadow(p, 8.6, 14.6, 6.6, 1.1);
         double x0 = 2.6, x1 = 13.6, y0 = 1.4, y1 = 14.2;
 
-        // Золоченый обрез страниц справа и снизу (толщина книги)
+        // Gilded page edges on the right and at the bottom (the book thickness)
         p.fill(x1, y0 + 0.6, x1 + 1.0, y1 + 0.4, (u, v) -> ((int) (v * 4) % 2 == 0) ? Paint.ramp(GOLD, 0.85) : Paint.ramp(CREAM, 0.65));
         p.fill(x0 + 0.6, y1, x1 + 1.0, y1 + 0.6, (u, v) -> ((int) (u * 4) % 2 == 0) ? Paint.ramp(GOLD, 0.75) : Paint.ramp(CREAM, 0.55));
 
-        // Кожаный переплет и корешок
+        // Leather binding and spine
         p.slab(x0, y0, x1, y1, LEATHER, 3.2, 1);
         p.grain(x0, y0, x1, y1, 0.08, 2601);
         p.slab(x0, y0, x0 + 1.6, y1, LEATHER, 2.0, 1);
 
-        // Шестерни и латунные ребра корешка
+        // Gears and brass ribs of the spine
         for (double y : new double[]{y0 + 2.0, y1 - 2.6}) {
             p.rect(x0, y, x0 + 1.6, y + 0.5, at(BRASS, 3.8));
         }
         p.gearStatic(x0 + 0.8, (y0 + y1) / 2, 0.9, 6, 0.15, BRASS, 4.0);
 
-        // Тисненая рамка переплета
+        // The embossed frame of the binding
         p.frame(x0 + 2.2, y0 + 1.0, x1 - 0.9, y1 - 1.0, 0.25, at(LEATHER, 1.2));
         p.frame(x0 + 2.5, y0 + 1.3, x1 - 1.2, y1 - 1.3, 0.14, at(BRASS, 3.2));
 
-        // Центральная круглая эмблема: шестерня-око голема
+        // The central round emblem: the golem gear eye
         double gx = (x0 + 1.6 + x1) / 2 + 0.2, gy = (y0 + y1) / 2 - 0.5;
         p.gearStatic(gx, gy, 3.0, 8, 0.35, COPPER, 3.6);
         p.disc(gx, gy, 2.2, at(BRASS, 3.8));
         p.disc(gx, gy, 1.6, at(IRON, 0.4));
 
-        // Светящееся всевидящее око голема в центре
+        // The glowing all-seeing golem eye in the middle
         p.polyFn(new double[]{gx - 1.4, gx, gx + 1.4, gx}, new double[]{gy, gy - 0.8, gy, gy + 0.8},
                 (u, v) -> at(CYAN, 5.2));
         p.disc(gx, gy, 0.45, at(CYAN, 6.0));
         p.glowRect(gx - 1.4, gy - 0.8, gx + 1.4, gy + 0.8, 0.8, at(CYAN, 4.2), 110);
 
-        // Светящиеся руны по периметру обложки
+        // Glowing runes around the cover
         for (int i = 0; i < 3; i++) {
             p.rune(x0 + 2.8 + i * 2.2, y0 + 1.8, 1.1, i * 3 + 4, at(CYAN, 5.0), 0);
             p.rune(x0 + 2.8 + i * 2.2, y1 - 2.6, 1.1, i * 4 + 7, at(CYAN, 5.0), 0);
@@ -628,35 +628,35 @@ final class Items {
         p.glowRect(x0 + 2.5, y0 + 1.6, x1 - 1.5, y0 + 2.8, 0.3, at(CYAN, 3.6), 60);
         p.glowRect(x0 + 2.5, y1 - 2.8, x1 - 1.5, y1 - 1.6, 0.3, at(CYAN, 3.6), 60);
 
-        // Окисленные медные уголки с патиной и латунными заклепками
+        // Oxidized copper corners with patina and brass rivets
         for (double[] c : new double[][]{{x1 - 1.6, y0}, {x1 - 1.6, y1 - 1.6}}) {
             p.slab(c[0], c[1], c[0] + 1.6, c[1] + 1.6, COPPER, 3.4, 1);
             p.disc(c[0] + 0.8, c[1] + 0.8, 0.5, at(VERDIGRIS, 4.4));
             p.rivet(c[0] + 0.8, c[1] + 0.8, 0.3, BRASS);
         }
 
-        // Морозный крио-замок-защелка на правом обрезе
+        // A frosty cryo clasp on the right edge
         p.slab(x1 - 0.4, 6.8, x1 + 1.4, 8.8, FROST, 4.0, 1);
         p.rect(x1 + 0.2, 7.4, x1 + 0.8, 8.2, at(CYAN, 5.4));
         p.glowRect(x1 + 0.2, 7.4, x1 + 0.8, 8.2, 0.4, at(CYAN, 4.0), 90);
 
-        // Шелковая закладка-лента снизу
+        // A silk ribbon bookmark at the bottom
         p.rect(x0 + 5.6, y1, x0 + 6.4, y1 + 1.8, at(Gen3.RED, 3.6));
         p.poly(new double[]{x0 + 5.6, x0 + 6.0, x0 + 6.4}, new double[]{y1 + 1.9, y1 + 1.3, y1 + 1.9}, 0);
 
-        // Иней на верхнем крае
+        // Frost on the top edge
         p.frostLine(x0 + 1.6, x1, y0, 0.5, 2602);
         return p;
     }
 
-    // ============================================================================================ заглушка трубы
-    /** Заглушка трубы: восьмигранный латунный корпус с патиной, аналоговый манометр, рычаг клапана и светящееся неоновое кольцо уплотнителя. */
+    // ============================================================================================ pipe plug
+    /** Pipe plug: an octagonal brass body with patina, an analog gauge, a valve lever and a glowing neon seal ring. */
     static Paint pipePlug() {
         Paint p = canvas();
         shadow(p, 8.0, 14.4, 6.2, 1.2);
         double cx = 8.0, cy = 8.2, r = 6.2;
 
-        // Восьмигранный латунный фланец с патиной
+        // An octagonal brass flange with patina
         double[] xs = new double[8], ys = new double[8], xb = new double[8], yb = new double[8];
         for (int i = 0; i < 8; i++) {
             double a = Math.PI / 8 + i * Math.PI / 4;
@@ -675,7 +675,7 @@ final class Items {
             return Paint.ramp(BRASS, base);
         });
 
-        // Руны на фасках фланца
+        // Runes on the flange bevels
         for (int i = 0; i < 8; i++) {
             double a = Math.PI / 8 + i * Math.PI / 4;
             double rx = cx + Math.cos(a) * 4.9 - 0.4;
@@ -683,11 +683,11 @@ final class Items {
             p.rune(rx, ry, 0.8, i * 3 + 1, at(BRASS, 1.2), at(BRASS, 4.6));
         }
 
-        // Темная выемка седла
+        // The dark recess of the seat
         p.disc(cx, cy, 3.8, rgb(0x141a20));
         p.ring(cx, cy, 3.4, 3.8, rgb(0x0a0e12));
 
-        // Ступенчатая резьбовая пробка из меди с патиной
+        // A stepped threaded copper stopper with patina
         p.discFn(cx, cy, 3.2, (u, v) -> {
             double angle = Math.atan2(v - cy, u - cx);
             double shine = 0.5 + 0.5 * Math.cos(angle - Math.PI * 0.75);
@@ -702,29 +702,29 @@ final class Items {
         });
         p.ring(cx, cy, 1.6, 1.9, at(COPPER, 1.4));
 
-        // Светящееся неоновое кольцо герметичного крио-уплотнения у основания
+        // A glowing neon ring of the hermetic cryo seal at the base
         p.ring(cx, cy, 3.7, 4.3, at(CYAN, 5.2));
         p.glowRect(cx - 4.5, cy - 3.8, cx + 4.5, cy + 3.8, 0.8, at(CYAN, 4.2), 100);
 
-        // Верхний рычаг сброса давления / вентиль
+        // The top pressure relief lever / valve
         p.slab(cx - 1.8, cy - 7.0, cx + 1.8, cy - 5.8, COPPER, 3.6, 1);
         p.rect(cx - 0.6, cy - 5.8, cx + 0.6, cy - 4.8, at(BRASS, 3.2));
         p.rivet(cx, cy - 6.4, 0.28, BRASS);
 
-        // Аналоговый манометр справа сверху (с живой дрожащей стрелкой в красной зоне!)
+        // An analog gauge at the top right (with a live needle trembling in the red zone!)
         p.gauge(cx + 2.8, cy - 3.6, 2.1, 145, at(Gen3.RED, 4.5));
 
-        // Шестерня механизма слева сверху
+        // A mechanism gear at the top left
         p.gear(cx - 3.0, cy - 3.8, 1.8, 8, 0.22, BRASS, 3.4);
         p.disc(cx - 3.0, cy - 3.8, 0.5, at(IRON, 0.2));
 
-        // Кристаллические сосульки снизу
+        // Crystal icicles at the bottom
         for (double[] ic : new double[][]{{cx - 2.6, cy + 5.2, 1.6}, {cx, cy + 5.5, 2.2}, {cx + 2.6, cy + 5.2, 1.4}}) {
             p.line(ic[0], ic[1], ic[0], ic[1] + ic[2], 0.5, argb(230, 0x90DCF8));
             p.sparkle(ic[0], ic[1] + ic[2], argb(255, 0xFFFFFF));
         }
 
-        // Заклёпки по углам
+        // Rivets in the corners
         for (int i = 0; i < 4; i++) {
             double a = Math.PI / 4 + i * Math.PI / 2;
             p.rivet(cx + Math.cos(a) * 5.4, cy + Math.sin(a) * 4.7, 0.45, BRASS);
@@ -733,13 +733,13 @@ final class Items {
     }
 
     /**
-     * Кузнечный молот по концепту: тяжёлая головка из морозного железа (бойки обросли льдом, сосульки), медные бандажи с патиной
-     * и заклёпками, латунные пояса, на щеке — медная маска голема с бирюзовыми глазами и светящиеся руны; рукоять из дерева,
-     * обмотанная кожей, с латунным навершием. Рисуется по диагонали, как инструменты Minecraft (головка — справа вверху).
+     * The Forge Hammer from the concept: a heavy head of frost iron (the faces are overgrown with ice, icicles), copper bands with patina
+     * and rivets, brass belts, on the cheek a copper golem mask with teal eyes and glowing runes; a wooden handle
+     * wrapped in leather, with a brass pommel. Drawn diagonally, like Minecraft tools (the head at the top right).
      */
     static Paint forgeHammer() {
         Paint p = canvas();
-        // рукоять: от навершия (внизу слева) к головке
+        // handle: from the pommel (bottom left) to the head
         double nx = 0.7071, ny = 0.7071, dx = 0.7071, dy = -0.7071;
         double hx0 = 1.7, hy0 = 14.3, hx1 = 8.8, hy1 = 7.2, hw = 0.85;
         p.polyFn(new double[]{hx0 + nx * hw, hx1 + nx * hw, hx1 - nx * hw, hx0 - nx * hw},
@@ -747,14 +747,14 @@ final class Items {
                     double along = ((u - hx0) * dx + (v - hy0) * dy) / Math.hypot(hx1 - hx0, hy1 - hy0);
                     double across = ((u - hx0) * nx + (v - hy0) * ny) / hw;
                     double shade = 3.2 - across * 1.2;
-                    // кожаная обмотка — косые полосы, выше неё — голое дерево
+                    // leather wrap as slanted stripes, bare wood above it
                     if (along > 0.18 && along < 0.72) {
                         double wrap = (along * 26 + across * 0.8) % 2.0;
                         return at(LEATHER, shade + (wrap < 0.35 ? -1.4 : 0));
                     }
                     return at(BRONZE, shade - 0.6 + 0.3 * Math.sin(along * 40));
                 });
-        // навершие и манжета под головкой
+        // the pommel and the collar under the head
         p.disc(hx0 + 0.2, hy0 - 0.2, 1.25, at(BRASS, 2.0));
         p.disc(hx0 + 0.2, hy0 - 0.2, 0.9, at(BRASS, 4.0));
         p.rivet(hx0 + 0.2, hy0 - 0.2, 0.4, COPPER);
@@ -762,7 +762,7 @@ final class Items {
                 new double[]{9.0 + ny * 1.2, 7.4 + ny * 1.2, 7.4 - ny * 1.2, 9.0 - ny * 1.2},
                 (u, v) -> at(COPPER, 3.0 - ((u - 7.8) * nx + (v - 8.2) * ny)));
 
-        // головка: длинная ось n (вниз вправо), ширина вдоль рукояти d
+        // head: the long axis n (down and right), the width along the handle d
         double cx = 10.0, cy = 6.0, half = 5.0, wid = 2.6;
         double[] xs = new double[4], ys = new double[4];
         int[][] sg = {{1, 1}, {1, -1}, {-1, -1}, {-1, 1}};
@@ -785,7 +785,7 @@ final class Items {
                 return Paint.ramp(IRON, 0.12);
             }
             if (as > 0.8) {
-                // обледеневший боёк
+                // an iced striking face
                 return Paint.ramp(FROST, 0.55 + 0.35 * light + 0.15 * n);
             }
             if (as > 0.63) {
@@ -796,14 +796,14 @@ final class Items {
             }
             return Paint.ramp(IRON, 0.25 + 0.45 * light + 0.06 * n);
         });
-        // заклёпки на медных бандажах
+        // rivets on the copper bands
         for (int side : new int[]{-1, 1}) {
             for (int k : new int[]{-1, 1}) {
                 double s = side * 0.71 * half, t = k * 0.55 * wid;
                 p.rivet(cx + s * nx + t * dx, cy + s * ny + t * dy, 0.32, BRASS);
             }
         }
-        // медная маска голема на щеке и светящиеся руны по бокам от неё
+        // the copper golem mask on the cheek and glowing runes on both sides of it
         double mx = cx - 0.2 * nx + 0.1 * dx, my = cy - 0.2 * ny + 0.1 * dy;
         p.rect(mx - 1.3, my - 1.4, mx + 1.3, my + 1.4, at(COPPER, 1.0));
         p.polyFn(new double[]{mx - 1.1, mx + 1.1, mx + 1.1, mx - 1.1}, new double[]{my - 1.2, my - 1.2, my + 1.2, my + 1.2},
@@ -812,7 +812,7 @@ final class Items {
         p.glowRect(mx - 0.8, my - 0.45, mx - 0.25, my + 0.05, 0.05, at(CYAN, 6.2), 255);
         p.glowRect(mx + 0.25, my - 0.45, mx + 0.8, my + 0.05, 0.05, at(CYAN, 6.2), 255);
         p.rect(mx - 0.3, my + 0.35, mx + 0.3, my + 1.0, at(COPPER, 1.6));
-        // светящиеся руны — короткие бирюзовые насечки вдоль щеки между маской и бандажами
+        // glowing runes: short teal notches along the cheek between the mask and the bands
         for (int k : new int[]{-1, 1}) {
             for (int j = 0; j < 2; j++) {
                 double s = k * (2.0 + j * 0.55), t = j == 0 ? 0.5 : -0.5;
@@ -820,12 +820,12 @@ final class Items {
                 p.glowRect(ux - 0.2, uy - 0.2, ux + 0.2, uy + 0.2, 0.05, at(CYAN, 5.8), 255);
             }
         }
-        // латунная пластина с манометром на верхней грани
+        // a brass plate with a gauge on the top face
         double gx = cx + 1.4 * nx + 1.7 * dx, gy = cy + 1.4 * ny + 1.7 * dy;
         p.disc(gx, gy, 0.75, at(BRASS, 2.0));
         p.disc(gx, gy, 0.55, rgb(0xF2EEE2));
         p.line(gx, gy, gx + 0.35, gy - 0.3, 0.14, rgb(0xB81410));
-        // сосульки под бойками
+        // icicles under the striking faces
         for (int side : new int[]{-1, 1}) {
             double bx = cx + side * 0.86 * half * nx - 1.2 * dx, by = cy + side * 0.86 * half * ny - 1.2 * dy;
             p.line(bx, by, bx - 0.2, by + 1.3, 0.35, argb(230, 0xA8E6F8));
