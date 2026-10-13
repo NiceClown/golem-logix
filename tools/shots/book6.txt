@@ -1,0 +1,27 @@
+# Book: layout audit (en + ru), new catalog/concentrator articles
+reload
+lang en_us
+wait 20
+bookaudit
+book ac_catalog 0
+wait 10
+shot book6_catalog_en_0
+book ac_catalog 1
+wait 5
+shot book6_catalog_en_1
+lang ru_ru
+wait 20
+bookaudit
+book ac_catalog 1
+wait 5
+shot book6_catalog_ru_1
+book ac_concentrator 0
+wait 5
+shot book6_conc_ru_0
+book ac_concentrator 1
+wait 5
+shot book6_conc_ru_1
+book - 0 5
+wait 5
+shot book6_map_ac
+closescreen

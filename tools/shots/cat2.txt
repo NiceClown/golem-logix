@@ -1,0 +1,38 @@
+# Punch Card Catalog golems + windows of the catalog and the concentrator (scrolled to machines)
+reload
+cmd time set day
+cmd kill @e[type=item]
+cmd fill -40 -61 -20 40 -61 20 minecraft:deepslate_tiles
+cmd fill -40 -60 -20 40 -45 20 minecraft:air
+hook rig 0 -60 0
+cmd setblock 6 -60 1 golem_logix:basic_snow_pipe
+cmd setblock 6 -60 0 golem_logix:basic_snow_pipe
+hook catalog 6 -60 3 south 12 1
+cmd setblock 2 -60 -2 golem_logix:pattern_provider
+cmd setblock 2 -60 -3 minecraft:furnace[facing=north]
+hook provfill 2 -60 -2 smelt
+cmd setblock 9 -60 0 golem_logix:pattern_provider
+hook provfill 9 -60 0 smelt
+cmd setblock 10 -60 -2 golem_logix:schematic_concentrator[facing=north]
+wait 60
+look 6.5 -59 4 6.2 180 12
+wait 5
+shot cat2_front
+look 4 -58.8 4 3.4 205 12
+wait 3
+shot cat2_golem_left
+look 9 -58.8 4 3.4 155 12
+wait 3
+shot cat2_golem_right
+use 10 -60 -2
+wait 15
+shot conc2_gui
+uiscroll 100 60 4
+wait 10
+shot conc2_gui_scrolled
+closescreen
+wait 5
+use 6 -60 3
+wait 15
+shot cat2_gui
+closescreen

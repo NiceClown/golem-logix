@@ -1,0 +1,6 @@
+{
+    "textures":  {
+                     "layer0":  "golem_logix:item/fluid_disk_1k"
+                 },
+    "parent":  "minecraft:item/generated"
+}

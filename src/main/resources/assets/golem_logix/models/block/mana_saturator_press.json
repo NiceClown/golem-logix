@@ -1,0 +1,148 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "display": {
+    "gui": {"rotation": [30, 135, 0], "translation": [0, 0, 0], "scale": [1.0, 1.0, 1.0]},
+    "ground": {"rotation": [0, 0, 0], "translation": [0, 3, 0], "scale": [0.5, 0.5, 0.5]},
+    "fixed": {"rotation": [0, 180, 0], "translation": [0, 0, 0], "scale": [0.75, 0.75, 0.75]},
+    "thirdperson_righthand": {"rotation": [75, 45, 0], "translation": [0, 2.5, 0], "scale": [0.375, 0.375, 0.375]},
+    "firstperson_righthand": {"rotation": [0, 45, 0], "translation": [0, 0, 0], "scale": [0.4, 0.4, 0.4]},
+    "firstperson_lefthand": {"rotation": [0, 225, 0], "translation": [0, 0, 0], "scale": [0.4, 0.4, 0.4]}
+  },
+  "textures": {
+    "particle": "golem_logix:block/sat_anvil_steel",
+    "anvil_base": "golem_logix:block/sat_anvil_base",
+    "anvil_casing": "golem_logix:block/sat_anvil_casing",
+    "anvil_face": "golem_logix:block/sat_anvil_face",
+    "anvil_steel": "golem_logix:block/sat_anvil_steel"
+  },
+  "elements": [
+    {
+      "from": [1, 0, 2.5],
+      "to": [15, 1.6, 13.5],
+      "faces": {
+        "north": {"texture": "#anvil_base", "neoforge_data": {"block_light": 9, "sky_light": 9}},
+        "south": {"texture": "#anvil_base", "neoforge_data": {"block_light": 9, "sky_light": 9}},
+        "east": {"texture": "#anvil_base", "neoforge_data": {"block_light": 9, "sky_light": 9}},
+        "west": {"texture": "#anvil_base", "neoforge_data": {"block_light": 9, "sky_light": 9}},
+        "up": {"texture": "#anvil_base", "neoforge_data": {"block_light": 9, "sky_light": 9}},
+        "down": {"texture": "#anvil_base", "neoforge_data": {"block_light": 9, "sky_light": 9}}
+      }
+    },
+    {
+      "from": [2, 1.6, 3.5],
+      "to": [14, 3.4, 12.5],
+      "faces": {
+        "north": {"texture": "#anvil_steel"},
+        "south": {"texture": "#anvil_steel"},
+        "east": {"texture": "#anvil_steel"},
+        "west": {"texture": "#anvil_steel"},
+        "up": {"texture": "#anvil_steel"},
+        "down": {"texture": "#anvil_steel"}
+      }
+    },
+    {
+      "from": [3.4, 3.4, 4.5],
+      "to": [12.6, 4.8, 11.5],
+      "faces": {
+        "north": {"texture": "#anvil_steel"},
+        "south": {"texture": "#anvil_steel"},
+        "east": {"texture": "#anvil_steel"},
+        "west": {"texture": "#anvil_steel"},
+        "up": {"texture": "#anvil_steel"},
+        "down": {"texture": "#anvil_steel"}
+      }
+    },
+    {
+      "from": [5, 4.8, 5.5],
+      "to": [11, 9.6, 10.5],
+      "faces": {
+        "north": {"uv": [0, 0, 16, 16], "texture": "#anvil_casing", "neoforge_data": {"block_light": 8, "sky_light": 8}},
+        "south": {"uv": [0, 0, 16, 16], "texture": "#anvil_casing", "neoforge_data": {"block_light": 8, "sky_light": 8}},
+        "east": {"uv": [0, 0, 16, 16], "texture": "#anvil_casing", "neoforge_data": {"block_light": 8, "sky_light": 8}},
+        "west": {"uv": [0, 0, 16, 16], "texture": "#anvil_casing", "neoforge_data": {"block_light": 8, "sky_light": 8}},
+        "up": {"texture": "#anvil_steel", "neoforge_data": {"block_light": 8, "sky_light": 8}},
+        "down": {"texture": "#anvil_steel", "neoforge_data": {"block_light": 8, "sky_light": 8}}
+      }
+    },
+    {
+      "from": [3.6, 9.6, 4.5],
+      "to": [12.4, 10.8, 11.5],
+      "faces": {
+        "north": {"texture": "#anvil_steel"},
+        "south": {"texture": "#anvil_steel"},
+        "east": {"texture": "#anvil_steel"},
+        "west": {"texture": "#anvil_steel"},
+        "up": {"texture": "#anvil_steel"},
+        "down": {"texture": "#anvil_steel"}
+      }
+    },
+    {
+      "from": [2.4, 10.8, 3.6],
+      "to": [13, 14.3, 12.4],
+      "faces": {
+        "north": {"texture": "#anvil_steel"},
+        "south": {"texture": "#anvil_steel"},
+        "east": {"texture": "#anvil_steel"},
+        "west": {"texture": "#anvil_steel"},
+        "up": {"texture": "#anvil_steel"},
+        "down": {"texture": "#anvil_steel"}
+      }
+    },
+    {
+      "from": [2.6, 14.3, 3.9],
+      "to": [12.8, 14.9, 12.1],
+      "faces": {
+        "north": {"texture": "#anvil_steel", "neoforge_data": {"block_light": 5, "sky_light": 5}},
+        "south": {"texture": "#anvil_steel", "neoforge_data": {"block_light": 5, "sky_light": 5}},
+        "east": {"texture": "#anvil_steel", "neoforge_data": {"block_light": 5, "sky_light": 5}},
+        "west": {"texture": "#anvil_steel", "neoforge_data": {"block_light": 5, "sky_light": 5}},
+        "up": {"uv": [0, 0, 16, 16], "texture": "#anvil_face", "neoforge_data": {"block_light": 5, "sky_light": 5}},
+        "down": {"texture": "#anvil_steel", "neoforge_data": {"block_light": 5, "sky_light": 5}}
+      }
+    },
+    {
+      "from": [1, 11.6, 5],
+      "to": [2.4, 14.3, 11],
+      "faces": {
+        "north": {"texture": "#anvil_steel"},
+        "south": {"texture": "#anvil_steel"},
+        "east": {"texture": "#anvil_steel"},
+        "west": {"texture": "#anvil_steel"},
+        "up": {"texture": "#anvil_steel"},
+        "down": {"texture": "#anvil_steel"}
+      }
+    },
+    {
+      "from": [0.2, 12.6, 6.4],
+      "to": [1, 14.1, 9.6],
+      "faces": {
+        "north": {"texture": "#anvil_steel"},
+        "south": {"texture": "#anvil_steel"},
+        "east": {"texture": "#anvil_steel"},
+        "west": {"texture": "#anvil_steel"},
+        "up": {"texture": "#anvil_steel"},
+        "down": {"texture": "#anvil_steel"}
+      }
+    },
+    {
+      "from": [13, 12.2, 4.6],
+      "to": [15.4, 14.3, 11.4],
+      "faces": {
+        "north": {"texture": "#anvil_steel"},
+        "south": {"texture": "#anvil_steel"},
+        "east": {"texture": "#anvil_steel"},
+        "west": {"texture": "#anvil_steel"},
+        "up": {"texture": "#anvil_steel"},
+        "down": {"texture": "#anvil_steel"}
+      }
+    },
+    {
+      "from": [13.6, 14.3, 7],
+      "to": [14.6, 14.32, 9],
+      "faces": {
+        "up": {"texture": "#anvil_base"}
+      }
+    }
+  ]
+}

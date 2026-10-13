@@ -1,0 +1,63 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="MIT"
+
+[[mods]]
+modId="golem_logix"
+version="${mod_version}"
+displayName="Golem Logix"
+logoFile="logo.png"
+authors="NiceClown"
+credits="Copper golem model and textures: Copper Age Backport (CC0). Occult-analog style, runes and everything else drawn by code."
+description='''
+Cold, occult, analog logistics for Minecraft 1.21.1: a storage network with channels and an Atlas Array multiblock,
+2x2 copper drive cabinets with cassette disks, glass frost pipes with running snowmen, buses, terminals and
+autocrafting on punch cards. The whole network runs on Ars Nouveau Source (without Ars Nouveau it needs no Source at all).
+Copper golems for the anvil ritual come from Copper Age Backport. Includes an in-game guide book in English and Russian.
+'''
+
+[[accessTransformers]]
+file="META-INF/accesstransformer.cfg"
+
+[[dependencies.golem_logix]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1.0,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.golem_logix]]
+    modId="minecraft"
+    type="required"
+    versionRange="[1.21.1,1.22)"
+    ordering="NONE"
+    side="BOTH"
+
+# медный голем для ритуала наковальни (первые Медные Матрицы) — в 1.21.1 его даёт только этот мод
+[[dependencies.golem_logix]]
+    modId="copperagebackport"
+    type="required"
+    versionRange="[0.1.5,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.golem_logix]]
+    modId="ars_nouveau"
+    type="optional"
+    versionRange="*"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.golem_logix]]
+    modId="jei"
+    type="optional"
+    versionRange="*"
+    ordering="NONE"
+    side="CLIENT"
+
+[[dependencies.golem_logix]]
+    modId="jade"
+    type="optional"
+    versionRange="*"
+    ordering="NONE"
+    side="BOTH"

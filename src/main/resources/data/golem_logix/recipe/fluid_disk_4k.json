@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "D": { "item": "golem_logix:fluid_disk_1k" },
+    "P": { "item": "minecraft:packed_ice" }
+  },
+  "pattern": [
+    "PPP",
+    "DDD",
+    "PPP"
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:fluid_disk_4k"
+  }
+}

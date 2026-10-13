@@ -1,0 +1,16 @@
+# cabinet window with 10 slots (use on the upper right part to test forwarding to the master)
+reload
+cmd kill @e[type=item]
+cmd fill -40 -61 -14 40 -61 10 minecraft:deepslate_tiles
+cmd fill -40 -60 -14 40 -50 10 minecraft:air
+cmd kill @e[type=item]
+cmd fill -40 -60 3 40 -48 3 minecraft:deepslate_bricks
+hook array 6 -60 0
+cmd setblock 8 -60 -1 golem_logix:basic_snow_pipe
+hook bay 10 -60 -1 north stock
+wait 60
+use 9 -59 -1
+wait 15
+shot gui_bay
+closeScreen
+wait 5

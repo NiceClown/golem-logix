@@ -1,0 +1,18 @@
+# the terminal greets the player when the network starts (wave over the whole screen)
+reload
+cmd kill @e[type=item]
+cmd fill -40 -61 -14 40 -61 10 minecraft:deepslate_tiles
+cmd fill -40 -60 -14 40 -50 10 minecraft:air
+cmd kill @e[type=item]
+look 4.5 -59.4 -1.5 3 180 12
+hook rig 0 -60 0
+wait 26
+shot wave_a
+wait 8
+shot wave_b
+wait 8
+shot wave_c
+wait 8
+shot wave_d
+wait 120
+shot wave_after

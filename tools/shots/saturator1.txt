@@ -1,0 +1,32 @@
+# the Mana Saturator multiblock: unformed press, formed machine from all sides
+reload
+cmd time set day
+cmd fill -40 -61 -30 40 -61 14 minecraft:deepslate_tiles
+cmd fill -30 -60 -24 30 -50 8 minecraft:air
+hook saturator 0 -58 -8 south jar
+look 0 -58.5 -8 4 150 20
+wait 5
+shot sat1_unformed_ctl
+wait 70
+hook saturatorcheck 0 -58 -8 formed
+look 0 -58.2 -8.5 11 180 14
+wait 25
+shot sat1_front
+look 0 -58.2 -8.5 11 215 16
+wait 25
+shot sat1_front_left
+look 0 -58.2 -8.5 11 145 16
+wait 25
+shot sat1_front_right
+look 0 -58.2 -8.5 11 0 14
+wait 25
+shot sat1_back
+look 0 -58.2 -8.5 11 90 14
+wait 25
+shot sat1_right
+look 0 -58.2 -8.5 11 270 14
+wait 25
+shot sat1_left
+look 0 -58.0 -8.5 5 180 10
+wait 25
+shot sat1_front_close

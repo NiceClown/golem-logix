@@ -1,0 +1,19 @@
+# the cabinet from behind: one solid panel
+reload
+cmd time set day
+cmd fill -40 -61 -14 40 -61 10 minecraft:deepslate_tiles
+cmd fill -40 -60 -14 40 -50 10 minecraft:air
+hook bay 0 -60 0 north stock
+wait 30
+look 0 -58.8 0 4.6 180 8
+wait 25
+shot cab2_back
+look 0 -58.8 0 3.0 190 6
+wait 25
+shot cab2_back_close
+look 0 -58.8 0 5.6 140 12
+wait 25
+shot cab2_back_angle
+look 0 -58.8 0 5.2 215 14
+wait 25
+shot cab2_back_angle2

@@ -1,0 +1,88 @@
+# 1.0.1 cosmetics: book tabs under the cover, saturator (solid liquid, small front port, frosty anvil), half-block buses,
+# rune glow at night and moving gauge needles
+reload
+cmd time set day
+cmd kill @e[type=!player]
+cmd fill -40 -61 -30 40 -61 14 minecraft:deepslate_tiles
+cmd fill -30 -60 -24 30 -50 8 minecraft:air
+hook saturator 0 -58 -8 south jar
+wait 80
+hook saturatorcheck 0 -58 -8 formed
+look 0 -59 -8.5 6 160 14
+wait 5
+shot g1_sat_front
+look 0 -58.4 -8.3 2.0 180 2
+wait 5
+shot g1_sat_port
+look 0 -57.2 -8.3 1.6 200 25
+wait 5
+shot g1_sat_anvil
+look -1 -57.3 -8.2 1.8 150 10
+wait 5
+shot g1_sat_tank
+# gauges: two moments of the same view
+look 1 -57.8 -8.4 1.6 180 0
+wait 3
+shot g1_gauge_a
+wait 9
+shot g1_gauge_b
+# buses: half-block, on a pipe line, every facing
+cmd fill 8 -60 -1 25 -60 -1 golem_logix:basic_snow_pipe
+cmd setblock 10 -59 -1 golem_logix:periscope_storage_bus[facing=up]
+cmd setblock 9 -59 -1 golem_logix:basic_snow_pipe
+cmd setblock 11 -59 -1 golem_logix:basic_snow_pipe
+cmd setblock 14 -59 -1 golem_logix:vacuum_import_bus[facing=north]
+cmd setblock 13 -59 -1 golem_logix:dense_frost_pipe
+cmd setblock 15 -59 -1 golem_logix:dense_frost_pipe
+cmd setblock 14 -58 -1 golem_logix:dense_frost_pipe
+cmd setblock 18 -59 -1 golem_logix:injector_export_bus[facing=west]
+cmd setblock 19 -59 -1 golem_logix:dense_frost_pipe
+cmd setblock 22 -60 2 minecraft:chest
+cmd setblock 22 -60 1 golem_logix:vacuum_import_bus[facing=south]
+cmd setblock 22 -60 0 golem_logix:basic_snow_pipe
+cmd setblock 21 -60 1 golem_logix:basic_snow_pipe
+cmd setblock 24 -60 2 minecraft:chest
+cmd setblock 24 -59 2 golem_logix:injector_export_bus[facing=down]
+cmd setblock 24 -59 1 golem_logix:basic_snow_pipe
+wait 60
+look 16 -59 -1 8 200 30
+wait 5
+shot g1_bus_overview
+look 14.5 -58.5 -0.5 2.6 220 25
+wait 5
+shot g1_bus_import
+look 18.5 -58.5 -0.5 2.4 160 25
+wait 5
+shot g1_bus_export
+look 23 -59.5 1 3 230 30
+wait 5
+shot g1_bus_chests
+look 10.5 -58.5 -0.5 2.4 200 30
+wait 5
+shot g1_bus_periscope
+# night: runes glow
+cmd time set midnight
+wait 40
+look 0 -59 -8.5 6 160 14
+wait 5
+shot g1_night_sat
+look 16 -59 -1 6 200 30
+wait 5
+shot g1_night_bus
+cmd time set day
+# book: tabs tucked under the cover, corners on top
+cmd advancement grant @s only golem_logix:secret_revealed killed_wither
+cmd advancement grant @s only golem_logix:secret_revealed dimension_signal
+wait 10
+book - 0 0
+wait 15
+shot g1_book_map
+closeScreen
+book - 0 8
+wait 15
+shot g1_book_secret
+closeScreen
+book saturator 1
+wait 15
+shot g1_book_article
+closeScreen

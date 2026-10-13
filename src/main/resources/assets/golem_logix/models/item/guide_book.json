@@ -1,0 +1,6 @@
+{
+    "textures":  {
+                     "layer0":  "golem_logix:item/guide_book"
+                 },
+    "parent":  "minecraft:item/generated"
+}

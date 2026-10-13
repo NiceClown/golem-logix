@@ -1,0 +1,8 @@
+# book layout re-check
+reload
+lang en_us
+wait 20
+bookaudit
+lang ru_ru
+wait 20
+bookaudit

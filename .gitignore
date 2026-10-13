@@ -1,0 +1,42 @@
+# build and run
+/build/
+/.gradle/
+/run/
+/out/
+/bin/
+/gradle-dist/
+/scratch/
+*.class
+*.log
+
+# test modpack, promo media, generated documents and archives (not part of the mod source)
+/testpack/
+/media/
+/promo/
+/Golem_Logix_Documentation.*
+*.zip
+*.7z
+/STATUS_REPORT_*.md
+/CHANGES_PLAN*.md
+/ФАЗЫ_*.md
+/github_export/
+
+# local-only tools (machine-specific paths, third-party binaries, promo pipelines)
+/tools/classes/
+/tools/libwebp/
+/tools/GeneratePdfDocument.java
+/tools/TextureProcessor.java
+/tools/GifBatch.java
+/tools/WebpBatch.java
+/tools/WebpMaker.java
+/tools/GifMaker.java
+/tools/run_promo.ps1
+/tools/shots/promo_gifs.txt
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/

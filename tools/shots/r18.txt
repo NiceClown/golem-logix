@@ -1,0 +1,50 @@
+# Round 18: Forge Hammer on the anvil (real left clicks), charging at a jar, book page
+reload
+cmd time set day
+cmd gamemode survival @p
+cmd kill @e[type=item]
+cmd fill -10 -61 -10 10 -61 10 minecraft:deepslate_tiles
+cmd fill -10 -60 -10 10 -50 10 minecraft:air
+cmd setblock 2 -60 2 golem_logix:mana_saturator[facing=south]
+cmd setblock 4 -60 2 golem_logix:creative_source_jar
+cmd tp @p 2.5 -60 4.6 180 40
+hook give golem_logix:forge_hammer 1 0
+cmd item replace entity @p hotbar.1 with minecraft:iron_block 4
+gui on
+wait 20
+shot r18_hammer_in_hand
+useheld 4 -60 2
+wait 5
+shot r18_charged
+gui off
+wait 5
+cmd item replace entity @p hotbar.0 with minecraft:iron_block 1
+wait 2
+useheld 2 -60 2
+wait 3
+hook give golem_logix:forge_hammer 1 0
+useheld 4 -60 2
+wait 5
+attack 2 -60 2
+wait 8
+shot r18_strike_1
+attack 2 -60 2
+wait 8
+attack 2 -60 2
+wait 8
+shot r18_strike_3
+attack 2 -60 2
+wait 10
+shot r18_done
+inv
+wait 5
+shot r18_inventory
+closescreen
+cmd gamemode creative @p
+book hammer 0
+wait 8
+shot r18_book_hammer
+book saturator 1
+wait 5
+shot r18_book_forging
+closescreen

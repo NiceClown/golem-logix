@@ -1,0 +1,42 @@
+# close-ups of the rear decks from both sides (after sat7: the machine stands at 0 -58 -8 facing south)
+cmd kill @e[type=item]
+hook saturatorput 0 -58 -8 minecraft:air
+look -1 -58.0 -8.3 1.9 -110 22
+wait 10
+shot sat8_west_idle
+look 2 -58.0 -8.3 1.9 110 22
+wait 3
+shot sat8_east_idle
+hook saturatorput 0 -58 -8 minecraft:copper_block
+look -1 -58.0 -8.3 1.9 -110 22
+wait 1
+shot sat8_w01
+wait 8
+shot sat8_w09
+wait 10
+shot sat8_w19
+wait 10
+shot sat8_w29
+wait 10
+shot sat8_w39
+wait 10
+shot sat8_w49
+look 2 -58.0 -8.3 1.9 110 22
+wait 10
+shot sat8_e59
+wait 30
+shot sat8_e89_out
+wait 40
+shot sat8_e129_wait
+wait 50
+shot sat8_e179
+wait 12
+shot sat8_e191
+wait 12
+shot sat8_e203
+wait 12
+shot sat8_e215
+wait 12
+shot sat8_e227
+wait 20
+shot sat8_e247_ready

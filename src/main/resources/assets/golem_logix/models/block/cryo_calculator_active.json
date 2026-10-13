@@ -1,0 +1,24 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "golem_logix:block/cryo_panel",
+    "panel": "golem_logix:block/cryo_panel",
+    "ice": "golem_logix:block/ice_crystal",
+    "matrix": "golem_logix:block/cryo_panel_matrix"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0],
+      "to": [16, 16, 16],
+      "faces": {
+        "north": {"texture": "#matrix"},
+        "south": {"texture": "#matrix"},
+        "east": {"texture": "#matrix"},
+        "west": {"texture": "#matrix"},
+        "up": {"texture": "#panel"},
+        "down": {"texture": "#panel"}
+      }
+    }
+  ]
+}

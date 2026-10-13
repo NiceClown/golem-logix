@@ -1,0 +1,94 @@
+# MULTIPLAYER: the client is connected to a dedicated server (start: devshots.ps1 server -Mods, then start -Mods -Server localhost:25565).
+# Every mod packet is really encoded and decoded here: terminal list/info/actions, craft request, "order ready", monitor,
+# precraft, Chronometer charge, secret state, block entity updates (calculator model, saturator smith), bus window data.
+cam 0 -50 12 180 30
+cmd time set day
+cmd kill @e[type=item]
+cmd fill -40 -61 -14 40 -61 10 minecraft:deepslate_tiles
+cmd fill -40 -60 -14 40 -50 10 minecraft:air
+cmd advancement revoke @s only golem_logix:secret_revealed
+cmd advancement revoke @s only golem_logix:secret_knowledge
+hook rig 0 -60 0
+cmd setblock 5 -60 -2 golem_logix:cooling_coprocessor
+cmd setblock 3 -60 -2 golem_logix:crafting_terminal[facing=south]
+cmd setblock 10 -59 -1 golem_logix:recipe_monitor[facing=south]
+cmd setblock 14 -60 -2 golem_logix:injector_export_bus[facing=north]
+wait 120
+hook fillnet 0 -60 0
+hook netput 0 -60 0 minecraft:oak_log 40
+# terminal over the network: list, take a stack, put it back
+look 4.5 -59.5 -1.5 3 0 8
+wait 10
+use 4 -60 -2
+wait 40
+shot mp_terminal
+uiclick list name:Diamond 0
+wait 15
+check carried minecraft:diamond x64
+uiclick list name:Diamond 0
+wait 15
+check carried empty
+# autocraft order from the terminal (CraftRequestPayload), the calculator shows its model, then "order ready"
+craftreq minecraft:stick 128
+wait 10
+closeScreen
+look 6.5 -59.3 -2.5 2.6 0 28
+wait 15
+shot mp_calculator_model
+look 10.5 -58.5 -0.5 2.6 180 8
+wait 10
+shot mp_monitor_cards
+use 10 -59 -1
+wait 30
+shot mp_monitor_window
+closeScreen
+gui on
+wait 120
+shot mp_toast
+gui off
+hook netcheck 0 -60 0 minecraft:stick 128
+# precraft from JEI in the crafting terminal: Ctrl + "+" for a wooden pickaxe (PrecraftPayload)
+look 3.5 -59.5 -1.5 3 0 8
+use 3 -60 -2
+wait 40
+jeitransfer minecraft:wooden_pickaxe COSMETIC ctrl
+wait 80
+jeitransfer minecraft:wooden_pickaxe ok
+wait 20
+shot mp_precraft_filled
+closeScreen
+# the Chronometer: wireless window with the Source gauge (charge synced in the info packet)
+hook chrono 0 -57 0 5000
+useitem
+wait 40
+shot mp_chronometer
+closeScreen
+# bus window with upgrades and the redstone button
+hook upgrades 14 -60 -2 golem_logix:compressed_coprocessor golem_logix:autocraft_module golem_logix:redstone_module
+look 14.5 -59.5 -1.5 3 0 8
+use 14 -60 -2
+wait 30
+shot mp_bus_window
+closeScreen
+# secret state packet: the "Secret Knowledge" tab appears
+cmd advancement grant @s only golem_logix:secret_knowledge killed_wither
+cmd advancement grant @s only golem_logix:secret_revealed killed_wither
+wait 30
+book - 0 8
+wait 15
+shot mp_book_secret
+closeScreen
+cmd advancement revoke @s only golem_logix:secret_revealed
+cmd advancement revoke @s only golem_logix:secret_knowledge
+# saturator smith over the network (progress is predicted on the client between server updates)
+cmd fill -6 -60 -14 6 -55 -9 minecraft:air
+hook saturator 0 -58 -12 south jar
+wait 80
+hook saturatorcheck 0 -58 -12 formed
+hook coolers 0 -58 -12 3
+hook saturatorput 0 -58 -12 minecraft:iron_block
+look 0 -58.3 -12.3 2.8 180 6
+wait 6
+shot mp_saturator_hit
+wait 120
+hook saturatorheld 0 -58 -12 golem_logix:flattened_iron_core 2

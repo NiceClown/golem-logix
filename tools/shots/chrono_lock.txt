@@ -1,0 +1,27 @@
+# Portable Chronometer: its slot is locked while its window is open (the window must not close)
+reload
+cmd time set day
+cmd fill -40 -61 -20 40 -61 20 minecraft:deepslate_tiles
+cmd fill -40 -60 -20 40 -45 20 minecraft:air
+hook rig 0 -60 0
+cmd item replace entity @p hotbar.0 with minecraft:air
+cmd item replace entity @p hotbar.1 with minecraft:dirt 5
+cmd item replace entity @p hotbar.2 with minecraft:air
+hook chrono 0 -57 0 5000
+wait 10
+useitem
+wait 15
+shot chrono_lock_open
+slotclick 37 0
+wait 5
+check carried empty
+slotclick 38 0
+wait 5
+check carried minecraft:dirt x5
+slotclick 37 0
+wait 5
+check carried minecraft:dirt x5
+shot chrono_lock_after
+slotclick 38 0
+wait 5
+closescreen

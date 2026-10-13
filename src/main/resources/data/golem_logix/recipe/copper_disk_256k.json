@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "C": { "item": "minecraft:diamond" },
+    "D": { "item": "golem_logix:copper_disk_64k" },
+    "M": { "item": "golem_logix:flattened_iron_core" }
+  },
+  "pattern": [
+    "CMC",
+    "DDD",
+    "CMC"
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:copper_disk_256k"
+  }
+}

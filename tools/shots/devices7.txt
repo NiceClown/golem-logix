@@ -1,0 +1,20 @@
+# powered terminals: the screen animation must line up with the new fronts
+cmd time set day
+cmd fill -30 -60 -20 30 -50 14 minecraft:air
+hook rig 0 -60 0
+wait 120
+cmd setblock 3 -60 -2 golem_logix:crafting_terminal[facing=south]
+cmd setblock 5 -60 -2 golem_logix:pattern_encoder[facing=south]
+hook refresh 0 -57 0
+wait 40
+look 4 -59.5 -2 3.2 180 6
+wait 20
+shot d7_front_a
+wait 60
+shot d7_front_b
+look 4 -59.5 -2 4 155 22
+wait 20
+shot d7_angle
+look 4 -59.5 -2 4 205 22
+wait 20
+shot d7_angle2

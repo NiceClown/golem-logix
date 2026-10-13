@@ -1,0 +1,10 @@
+cmd kill @e[type=!player]
+cmd setblock 0 -60 -6 minecraft:air
+wait 5
+cmd setblock 0 -60 -6 golem_logix:analog_terminal[facing=south]
+look 0 -59.5 -6 3.2 20 10
+wait 15
+shot d4_an_back_low
+look 0 -59.5 -6 3.2 100 5
+wait 15
+shot d4_an_side_low

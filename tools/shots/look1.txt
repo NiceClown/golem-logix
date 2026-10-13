@@ -1,0 +1,48 @@
+# inspection: cabinet (front, sides, back, inside), bus with dense pipe, terminals, monitor, atlas array
+reload
+cmd time set day
+cmd kill @e[type=!player]
+cmd fill -40 -61 -20 40 -61 14 minecraft:grass_block
+cmd fill -40 -60 -20 40 -45 14 minecraft:air
+hook rig 0 -60 0
+cmd setblock 3 -60 -3 golem_logix:recipe_monitor[facing=south]
+cmd setblock 14 -60 -4 golem_logix:vacuum_import_bus[facing=north]
+cmd setblock 14 -60 -3 golem_logix:dense_frost_pipe
+cmd setblock 14 -60 -2 golem_logix:dense_frost_pipe
+wait 100
+look 13 -59 -0.5 3 0 10
+wait 5
+shot lk_bay_front
+look 11.6 -59 -0.5 3.2 -90 8
+wait 5
+shot lk_bay_left
+look 15.4 -59 -0.5 3.2 90 8
+wait 5
+shot lk_bay_right
+look 13 -59 -0.5 3.4 180 8
+wait 5
+shot lk_bay_back
+look 13.6 -59.2 -0.6 1.3 10 5
+wait 5
+shot lk_bay_inside
+look 14.5 -59.5 -3.5 1.6 200 40
+wait 5
+shot lk_bus_dense
+look 14.5 -59.5 -3.5 1.6 120 10
+wait 5
+shot lk_bus_dense_side
+look 4.5 -59.5 -1.5 2 180 25
+wait 5
+shot lk_terminal
+look 4.5 -59.5 -1.5 1.6 180 70
+wait 5
+shot lk_terminal_top
+look 3.5 -59.5 -2.5 2 0 10
+wait 5
+shot lk_monitor
+look 3.5 -59.5 -2.5 2 90 10
+wait 5
+shot lk_monitor_side
+look 0.5 -58 0.5 6 200 15
+wait 5
+shot lk_atlas

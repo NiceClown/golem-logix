@@ -1,0 +1,113 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "render_type": "minecraft:cutout",
+  "display": {
+    "gui": {"rotation": [30, 225, 0], "translation": [0, 0, 0], "scale": [0.625, 0.625, 0.625]},
+    "ground": {"rotation": [0, 0, 0], "translation": [0, 3, 0], "scale": [0.5, 0.5, 0.5]},
+    "fixed": {"rotation": [0, 180, 0], "translation": [0, 0, 0], "scale": [0.75, 0.75, 0.75]},
+    "thirdperson_righthand": {"rotation": [75, 45, 0], "translation": [0, 2.5, 0], "scale": [0.375, 0.375, 0.375]},
+    "firstperson_righthand": {"rotation": [0, 45, 0], "translation": [0, 0, 0], "scale": [0.4, 0.4, 0.4]},
+    "firstperson_lefthand": {"rotation": [0, 225, 0], "translation": [0, 0, 0], "scale": [0.4, 0.4, 0.4]}
+  },
+  "textures": {
+    "particle": "golem_logix:block/monitor_side_l",
+    "front": "golem_logix:block/monitor_front",
+    "back": "golem_logix:block/monitor_back",
+    "side_l": "golem_logix:block/monitor_side_l",
+    "side_r": "golem_logix:block/monitor_side_r",
+    "top": "golem_logix:block/monitor_top",
+    "bottom": "golem_logix:block/sat_dark",
+    "portal": "golem_logix:block/monitor_portal",
+    "ring": "golem_logix:block/sat_brass",
+    "brass": "golem_logix:block/sat_brass",
+    "crystal": "golem_logix:block/sat_crystal",
+    "gauge": "golem_logix:block/monitor_gauge",
+    "deck": "golem_logix:block/monitor_deck"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0],
+      "to": [16, 16, 16],
+      "faces": {
+        "north": {"uv": [0, 0, 16, 16], "texture": "#front"},
+        "south": {"uv": [0, 0, 16, 16], "texture": "#back"},
+        "west": {"uv": [0, 0, 16, 16], "texture": "#side_l"},
+        "east": {"uv": [0, 0, 16, 16], "texture": "#side_r"},
+        "up": {"uv": [0, 0, 16, 16], "texture": "#top"},
+        "down": {"uv": [0, 0, 16, 16], "texture": "#bottom"}
+      }
+    },
+    {
+      "from": [3.4, 2.9000000000000004, 1.2],
+      "to": [12.6, 12.1, 1.2],
+      "faces": {
+        "north": {"uv": [0, 0, 16, 16], "texture": "#portal", "neoforge_data": {"block_light": 15, "sky_light": 15}}
+      }
+    },
+    {
+      "from": [3.4, 2.9000000000000004, 0.02],
+      "to": [3.6, 12.1, 1.2],
+      "faces": {
+        "east": {"texture": "#ring"}
+      }
+    },
+    {
+      "from": [12.4, 2.9000000000000004, 0.02],
+      "to": [12.6, 12.1, 1.2],
+      "faces": {
+        "west": {"texture": "#ring"}
+      }
+    },
+    {
+      "from": [3.4, 11.9, 0.02],
+      "to": [12.6, 12.1, 1.2],
+      "faces": {
+        "down": {"texture": "#ring"}
+      }
+    },
+    {
+      "from": [3.4, 2.9000000000000004, 0.02],
+      "to": [12.6, 3.1000000000000005, 1.2],
+      "faces": {
+        "up": {"texture": "#ring"}
+      }
+    },
+    {
+      "from": [3.5, 16, 3.5],
+      "to": [12.5, 16.4, 12.5],
+      "faces": {
+        "north": {"uv": [3.5, 15.600000000000001, 12.5, 16], "texture": "#brass"},
+        "south": {"uv": [3.5, 15.600000000000001, 12.5, 16], "texture": "#brass"},
+        "east": {"uv": [3.5, 15.600000000000001, 12.5, 16], "texture": "#brass"},
+        "west": {"uv": [3.5, 15.600000000000001, 12.5, 16], "texture": "#brass"},
+        "up": {"uv": [0, 0, 16, 16], "texture": "#deck"},
+        "down": {"texture": "#brass"}
+      }
+    },
+    {
+      "from": [1.5, 16, 2],
+      "to": [4.5, 18.4, 3],
+      "faces": {
+        "north": {"uv": [0, 0, 16, 16], "texture": "#gauge"},
+        "south": {"uv": [1.5, 13.600000000000001, 4.5, 16], "texture": "#brass"},
+        "east": {"uv": [13, 13.600000000000001, 14, 16], "texture": "#brass"},
+        "west": {"uv": [2, 13.600000000000001, 3, 16], "texture": "#brass"},
+        "up": {"texture": "#brass"},
+        "down": {"texture": "#brass"}
+      }
+    },
+    {
+      "from": [11.5, 16, 2],
+      "to": [14.5, 18.4, 3],
+      "faces": {
+        "north": {"uv": [0, 0, 16, 16], "texture": "#gauge"},
+        "south": {"uv": [11.5, 13.600000000000001, 14.5, 16], "texture": "#brass"},
+        "east": {"uv": [13, 13.600000000000001, 14, 16], "texture": "#brass"},
+        "west": {"uv": [2, 13.600000000000001, 3, 16], "texture": "#brass"},
+        "up": {"texture": "#brass"},
+        "down": {"texture": "#brass"}
+      }
+    }
+  ]
+}

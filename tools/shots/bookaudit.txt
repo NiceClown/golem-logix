@@ -1,0 +1,6 @@
+# book layout audit in both languages: widow lines and pictures leaving no room for text
+lang en_us
+bookaudit
+lang ru_ru
+bookaudit
+lang en_us

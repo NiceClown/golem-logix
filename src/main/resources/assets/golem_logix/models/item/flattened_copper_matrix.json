@@ -1,0 +1,6 @@
+{
+    "textures":  {
+                     "layer0":  "golem_logix:item/flattened_copper_matrix"
+                 },
+    "parent":  "minecraft:item/generated"
+}

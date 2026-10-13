@@ -1,0 +1,32 @@
+# saturator at work: item on the anvil, press strokes, result
+cmd time set day
+cmd fill -40 -61 -30 40 -61 14 minecraft:deepslate_tiles
+cmd fill -30 -60 -24 30 -50 8 minecraft:air
+hook saturator 0 -58 -8 south jar
+wait 60
+hook saturatorcheck 0 -58 -8 formed
+wait 120
+hook saturatorput 0 -58 -8 minecraft:iron_block
+look 0 -58.0 -8.5 6 170 8
+wait 10
+shot sat2_idle
+wait 22
+shot sat2_crafting_a
+wait 12
+shot sat2_crafting_b
+wait 30
+shot sat2_crafting_c
+wait 80
+hook saturatorheld 0 -58 -8 golem_logix:flattened_iron_core 2
+shot sat2_done
+cmd setblock 0 -59 -9 minecraft:stone
+wait 20
+hook saturatorcheck 0 -58 -8 formed
+cmd setblock 0 -59 -9 golem_logix:atlas_casing
+wait 5
+cmd setblock 1 -60 -8 minecraft:air
+wait 5
+hook saturatorcheck 0 -58 -8 unformed
+look 0 -58.0 -8.5 8 160 14
+wait 15
+shot sat2_broken

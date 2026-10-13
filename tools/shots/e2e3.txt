@@ -1,0 +1,42 @@
+# combined terminal list (items + fluids in one list, default) - needs a fresh rig
+reload
+cmd time set day
+cmd kill @e[type=item]
+cmd fill -30 -61 -14 30 -61 10 minecraft:deepslate_tiles
+cmd fill -30 -60 -14 30 -45 10 minecraft:air
+hook rig 0 -60 0
+wait 120
+hook netput 0 -60 0 minecraft:diamond 100
+hook netput 0 -60 0 minecraft:iron_ingot 20
+hook netput 0 -60 0 minecraft:oak_log 3
+hook netfluidput 0 -60 0 minecraft:water 7300
+hook netfluidput 0 -60 0 minecraft:lava 2100
+hook netfluidput 0 -60 0 minecraft:milk 500
+look 4.5 -59.5 -1.5 3 0 8
+wait 10
+use 4 -60 -2
+wait 40
+shot comb_all
+# an empty bucket on the water row fills up from the network: 7300 - 1000
+hook carry minecraft:bucket 1
+wait 5
+uiclick list name:water 0
+wait 20
+check carried minecraft:water_bucket x1
+hook netfluid 0 -60 0 minecraft:water 6300
+# a full bucket on the lava row pours the water back in
+uiclick list name:lava 0
+wait 20
+check carried minecraft:bucket x1
+hook netfluid 0 -60 0 minecraft:water 7300
+shot comb_after
+# items only, then fluids only
+uibutton Both
+wait 15
+shot comb_items
+uibutton Items
+wait 15
+shot comb_fluids
+uibutton Fluids
+wait 10
+closeScreen

@@ -1,0 +1,63 @@
+# Mana Saturator: iron golem smith (poppy when idle), roof coolers with fans, network ports on every side but the roof
+reload
+cmd time set day
+cmd kill @e[type=!player]
+cmd fill -40 -61 -30 40 -61 14 minecraft:deepslate_tiles
+cmd fill -30 -60 -24 30 -50 8 minecraft:air
+hook saturator 0 -58 -8 south jar
+# pipes on the ports: front (dense, then basic -> reducer), back, left (west) and right (east)
+cmd setblock 0 -60 -7 golem_logix:dense_frost_pipe
+cmd setblock 0 -60 -6 golem_logix:basic_snow_pipe
+cmd setblock 0 -60 -10 golem_logix:basic_snow_pipe
+cmd setblock -2 -60 -9 golem_logix:basic_snow_pipe
+cmd setblock 2 -60 -9 golem_logix:basic_snow_pipe
+cmd setblock 1 -57 -8 golem_logix:basic_snow_pipe
+wait 80
+hook saturatorcheck 0 -58 -8 formed
+# idle: the smith offers a poppy
+look 0 -58.3 -8.3 2.8 180 6
+wait 10
+shot sat5_idle
+look 0 -59 -8.5 7 150 18
+wait 5
+shot sat5_front
+# at work: five blows per ritual
+hook saturatorput 0 -58 -8 minecraft:iron_block
+look 0 -58.3 -8.3 2.8 180 6
+wait 4
+shot sat5_hit_a
+wait 3
+shot sat5_hit_b
+wait 3
+shot sat5_hit_c
+wait 60
+hook saturatorheld 0 -58 -8 golem_logix:flattened_iron_core 2
+shot sat5_done
+# roof: five co-processors with fans
+hook coolers 0 -58 -8 5
+wait 30
+look 0 -57.2 -8.6 5 160 48
+wait 5
+shot sat5_roof
+look 0 -57.2 -8.6 2.6 200 35
+wait 5
+shot sat5_roof_close
+# ports at the back and on both sides
+look 0 -59.4 -9 4.5 0 12
+wait 5
+shot sat5_back
+look -1.5 -59.4 -8.5 4.5 -90 12
+wait 5
+shot sat5_left
+look 1.5 -59.4 -8.5 4.5 90 12
+wait 5
+shot sat5_right
+# close-ups: the poppy, the smith at work
+cmd kill @e[type=item]
+hook saturatorput 0 -58 -8 minecraft:air
+look 0 -58.2 -8.4 1.6 180 25
+wait 10
+shot sat5_poppy
+look 0 -58.2 -8.4 1.6 150 30
+wait 3
+shot sat5_poppy_angle

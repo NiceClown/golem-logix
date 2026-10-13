@@ -1,0 +1,65 @@
+# pipes around buses (the glitch from the playtest screenshots): periscope with pipes on every side, buses with dense pipes,
+# bus next to bus, and the basic-to-dense reducer
+reload
+cmd time set day
+cmd kill @e[type=item]
+cmd fill -20 -61 -14 30 -61 10 minecraft:grass_block
+cmd fill -20 -60 -14 30 -40 10 minecraft:air
+hook array 6 -60 0
+cmd fill 8 -60 -1 25 -60 -1 golem_logix:basic_snow_pipe
+# periscope standing on the line, facing up, pipes on four sides
+cmd setblock 10 -59 -1 golem_logix:periscope_storage_bus[facing=up]
+cmd setblock 9 -59 -1 golem_logix:basic_snow_pipe
+cmd setblock 11 -59 -1 golem_logix:basic_snow_pipe
+cmd setblock 10 -59 -2 golem_logix:basic_snow_pipe
+cmd setblock 10 -59 0 golem_logix:basic_snow_pipe
+# import bus facing north with dense pipes on its sides and on top
+cmd setblock 14 -59 -1 golem_logix:vacuum_import_bus[facing=north]
+cmd setblock 13 -59 -1 golem_logix:dense_frost_pipe
+cmd setblock 15 -59 -1 golem_logix:dense_frost_pipe
+cmd setblock 14 -58 -1 golem_logix:dense_frost_pipe
+# export bus facing west on the line, dense pipe behind it
+cmd setblock 18 -59 -1 golem_logix:injector_export_bus[facing=west]
+cmd setblock 19 -59 -1 golem_logix:dense_frost_pipe
+cmd setblock 20 -59 -1 golem_logix:basic_snow_pipe
+# two buses side by side
+cmd setblock 22 -59 -1 golem_logix:vacuum_import_bus[facing=up]
+cmd setblock 23 -59 -1 golem_logix:injector_export_bus[facing=up]
+wait 100
+look 10.5 -58.5 -0.5 3.2 200 35
+wait 10
+shot bp_periscope_a
+look 10.5 -58.5 -0.5 3.2 30 35
+wait 5
+shot bp_periscope_b
+look 14.5 -58.5 -0.5 3.2 200 30
+wait 5
+shot bp_import_a
+look 14.5 -58.5 -0.5 3.2 330 30
+wait 5
+shot bp_import_b
+look 19 -58.5 -0.5 3.2 200 25
+wait 5
+shot bp_export
+look 19.5 -58.5 -0.5 1.8 160 20
+wait 5
+shot bp_reducer
+look 22.5 -58.5 -0.5 3.2 200 30
+wait 5
+shot bp_pair
+look 16 -59 -1 9 200 30
+wait 5
+shot bp_overview
+# close-ups like the playtest screenshots: dense pipe sleeves at the import bus and the bands of a dense pipe
+look 13.5 -58.5 -1 1.3 240 35
+wait 5
+shot bp_close_cap_a
+look 14.5 -57.6 -0.5 1.2 160 50
+wait 5
+shot bp_close_cap_b
+look 19.5 -58.6 -0.6 1.1 200 30
+wait 5
+shot bp_close_reducer
+look 10.5 -58.5 -1.5 1.2 300 40
+wait 5
+shot bp_close_periscope

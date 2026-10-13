@@ -1,0 +1,26 @@
+# close-ups of the smith on the anvil (after sat5: the machine stands at 0 -58 -8)
+cmd kill @e[type=item]
+hook saturatorput 0 -58 -8 minecraft:air
+look 0 -58.2 -8.4 1.6 180 25
+wait 10
+shot sat6_idle_close
+look 0 -58.2 -8.4 1.6 150 30
+wait 3
+shot sat6_idle_angle
+hook saturatorput 0 -58 -8 minecraft:copper_block
+look 0 -58.2 -8.4 1.6 180 25
+wait 2
+shot sat6_hit_a
+wait 2
+shot sat6_hit_b
+look 0 -58.2 -8.4 1.6 150 30
+wait 2
+shot sat6_hit_c
+wait 40
+hook saturatorput 0 -58 -8 golem_logix:cooling_coprocessor
+look 0 -58.2 -8.4 1.6 180 25
+wait 3
+shot sat6_cop_a
+wait 60
+shot sat6_cop_done
+hook saturatorheld 0 -58 -8 golem_logix:compressed_coprocessor 1

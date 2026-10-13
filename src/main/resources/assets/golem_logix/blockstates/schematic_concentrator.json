@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": {"model": "golem_logix:block/schematic_concentrator"},
+    "facing=east": {"model": "golem_logix:block/schematic_concentrator", "y": 90},
+    "facing=south": {"model": "golem_logix:block/schematic_concentrator", "y": 180},
+    "facing=west": {"model": "golem_logix:block/schematic_concentrator", "y": 270}
+  }
+}

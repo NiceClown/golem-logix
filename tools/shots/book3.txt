@@ -1,0 +1,30 @@
+# book pages changed in the audit: rituals, Source, saturator, crafting terminal, encoder, provider
+reload
+book anvil 0
+wait 15
+shot book3_anvil0
+closeScreen
+book anvil 1
+wait 15
+shot book3_anvil1
+closeScreen
+book source 0
+wait 15
+shot book3_source0
+closeScreen
+book saturator 1
+wait 15
+shot book3_saturator1
+closeScreen
+book st_crafting 0
+wait 15
+shot book3_crafting0
+closeScreen
+book ac_cards 1
+wait 15
+shot book3_cards1
+closeScreen
+book ac_provider 0
+wait 15
+shot book3_provider0
+closeScreen

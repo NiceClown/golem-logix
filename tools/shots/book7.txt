@@ -1,0 +1,8 @@
+# Book layout re-check after shortening
+reload
+lang en_us
+wait 20
+bookaudit
+lang ru_ru
+wait 20
+bookaudit

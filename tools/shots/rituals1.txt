@@ -1,0 +1,44 @@
+# anvil ritual on real golems (needs: start -Mods for the copper golem from Copper Age Backport)
+cmd time set day
+cmd gamerule doMobLoot false
+cmd kill @e[type=!player]
+cmd fill -12 -61 -6 12 -61 12 minecraft:deepslate_tiles
+cmd fill -12 -60 -6 12 -48 12 minecraft:air
+cmd summon minecraft:iron_golem 0 -60 0 {Health:3f,NoAI:1b}
+cmd summon minecraft:snow_golem 4 -60 0 {Health:3f,NoAI:1b}
+cmd summon minecraft:copper_golem 8 -60 0 {Health:3f,NoAI:1b}
+cmd summon minecraft:iron_golem -4 -60 0 {NoAI:1b}
+cmd summon minecraft:snow_golem -8 -60 0 {NoAI:1b}
+wait 10
+hook mobcheck 8 -60 0 2 minecraft:copper_golem 1
+hook mobcheck 0 -60 0 2 minecraft:iron_golem 1
+look 0 -59 0 14 180 12
+wait 10
+shot rit1_before
+cmd setblock 0 -55 0 minecraft:anvil
+cmd setblock 4 -56 0 minecraft:anvil
+cmd setblock 8 -56 0 minecraft:anvil
+cmd setblock -4 -55 0 minecraft:anvil
+cmd setblock -8 -56 0 minecraft:anvil
+wait 6
+shot rit1_falling
+wait 40
+shot rit1_after
+hook itemnear 0 -60 0 2 golem_logix:flattened_iron_core 1
+hook itemnear 4 -60 0 2 golem_logix:flattened_cryo_substrate 1
+hook itemnear 8 -60 0 2 golem_logix:flattened_copper_matrix 1
+hook mobcheck 0 -60 0 2 minecraft:iron_golem 0
+hook mobcheck 8 -60 0 2 minecraft:copper_golem 0
+hook mobcheck -4 -60 0 2 minecraft:iron_golem 1
+hook itemnear -4 -60 0 2 golem_logix:flattened_iron_core 0
+hook itemnear -8 -60 0 2 golem_logix:flattened_cryo_substrate 0
+# the Wither during its spawn invulnerability
+cmd kill @e[type=minecraft:item]
+cmd summon minecraft:wither 0 -60 8 {Invul:220}
+wait 4
+cmd setblock 0 -54 8 minecraft:anvil
+wait 40
+hook itemnear 0 -59 8 3 golem_logix:imploded_wither_plasma 1
+hook mobcheck 0 -59 8 4 minecraft:wither 0
+cmd kill @e[type=minecraft:wither]
+cmd gamerule doMobLoot true

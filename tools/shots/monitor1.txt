@@ -1,0 +1,31 @@
+# Recipe Monitor: the portal cabinet with punch cards orbiting for every running job, and its window
+reload
+cmd time set day
+cmd kill @e[type=item]
+cmd fill -40 -61 -14 40 -61 10 minecraft:deepslate_tiles
+cmd fill -40 -60 -14 40 -50 10 minecraft:air
+cmd kill @e[type=item]
+hook rig 0 -60 0
+cmd setblock 2 -60 -2 golem_logix:cryo_calculator
+cmd setblock 10 -59 -1 golem_logix:recipe_monitor[facing=south]
+wait 120
+hook netput 0 -60 0 minecraft:oak_log 100
+look 10.5 -58.5 -0.5 2.6 180 8
+wait 10
+shot mon1_idle
+look 10.5 -58.5 -0.5 4 140 20
+wait 5
+shot mon1_angle
+hook craft 0 -60 0 minecraft:stick 512
+hook craft 0 -60 0 minecraft:oak_planks 128
+look 10.5 -58.5 -0.5 2.6 180 8
+wait 30
+shot mon1_cards_a
+wait 3
+shot mon1_cards_b
+use 10 -59 -1
+wait 30
+shot mon1_gui
+wait 30
+shot mon1_gui_later
+closeScreen

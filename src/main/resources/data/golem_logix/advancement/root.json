@@ -1,0 +1,39 @@
+{
+  "display": {
+    "icon": {
+      "id": "golem_logix:guide_book"
+    },
+    "title": {
+      "translate": "advancements.golem_logix.root.title"
+    },
+    "description": {
+      "translate": "advancements.golem_logix.root.description"
+    },
+    "background": "minecraft:textures/block/packed_ice.png",
+    "frame": "task",
+    "show_toast": false,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "golem_plate": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "golem_logix:guide_book",
+              "golem_logix:flattened_iron_core",
+              "golem_logix:flattened_copper_matrix",
+              "golem_logix:flattened_cryo_substrate"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "golem_plate"
+    ]
+  ]
+}

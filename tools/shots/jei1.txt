@@ -1,0 +1,31 @@
+# JEI windows and the Jade tooltip (needs: start -Mods)
+closescreen
+jei golem_logix:flattened_copper_matrix
+wait 30
+shot jei1_matrix
+closescreen
+jei golem_logix:flattened_cryo_substrate
+wait 30
+shot jei1_substrate
+closescreen
+jei golem_logix:interdimensional_occult_matrix
+wait 30
+shot jei1_occult
+closescreen
+jei golem_logix:copper_drive_bay
+wait 30
+shot jei1_bay
+closescreen
+jei golem_logix:mana_saturator uses
+wait 30
+shot jei1_saturator_uses
+closescreen
+# Jade over the bushing of the tower from ars1 (tower at 0 -60 0); Jade draws only with the HUD on
+gui on
+look 0.5 -59.5 0.5 3 120 30
+wait 30
+shot jade1_bushing
+look 0.5 -56.5 0.5 3 120 20
+wait 30
+shot jade1_core
+gui off

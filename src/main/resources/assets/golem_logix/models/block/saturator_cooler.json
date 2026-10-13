@@ -1,0 +1,157 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "golem_logix:block/cryo_fin",
+    "brass": "golem_logix:block/sat_brass",
+    "fin": "golem_logix:block/cryo_fin",
+    "panel": "golem_logix:block/cryo_panel",
+    "core": "golem_logix:block/ice_crystal"
+  },
+  "elements": [
+    {
+      "from": [3, 12, 3],
+      "to": [13, 12.6, 13],
+      "faces": {
+        "north": {"texture": "#brass"},
+        "south": {"texture": "#brass"},
+        "east": {"texture": "#brass"},
+        "west": {"texture": "#brass"},
+        "up": {"texture": "#brass"},
+        "down": {"texture": "#brass"}
+      }
+    },
+    {
+      "from": [4.4, 12.6, 3.8],
+      "to": [5.300000000000001, 14.6, 12.2],
+      "faces": {
+        "north": {"texture": "#fin"},
+        "south": {"texture": "#fin"},
+        "east": {"texture": "#fin"},
+        "west": {"texture": "#fin"},
+        "up": {"texture": "#fin"},
+        "down": {"texture": "#fin"}
+      }
+    },
+    {
+      "from": [6, 12.6, 3.8],
+      "to": [6.9, 14.6, 12.2],
+      "faces": {
+        "north": {"texture": "#fin"},
+        "south": {"texture": "#fin"},
+        "east": {"texture": "#fin"},
+        "west": {"texture": "#fin"},
+        "up": {"texture": "#fin"},
+        "down": {"texture": "#fin"}
+      }
+    },
+    {
+      "from": [7.6, 12.6, 3.8],
+      "to": [8.5, 14.6, 12.2],
+      "faces": {
+        "north": {"texture": "#fin"},
+        "south": {"texture": "#fin"},
+        "east": {"texture": "#fin"},
+        "west": {"texture": "#fin"},
+        "up": {"texture": "#fin"},
+        "down": {"texture": "#fin"}
+      }
+    },
+    {
+      "from": [9.2, 12.6, 3.8],
+      "to": [10.1, 14.6, 12.2],
+      "faces": {
+        "north": {"texture": "#fin"},
+        "south": {"texture": "#fin"},
+        "east": {"texture": "#fin"},
+        "west": {"texture": "#fin"},
+        "up": {"texture": "#fin"},
+        "down": {"texture": "#fin"}
+      }
+    },
+    {
+      "from": [10.8, 12.6, 3.8],
+      "to": [11.700000000000001, 14.6, 12.2],
+      "faces": {
+        "north": {"texture": "#fin"},
+        "south": {"texture": "#fin"},
+        "east": {"texture": "#fin"},
+        "west": {"texture": "#fin"},
+        "up": {"texture": "#fin"},
+        "down": {"texture": "#fin"}
+      }
+    },
+    {
+      "from": [3, 14.6, 3],
+      "to": [13, 15.1, 13],
+      "faces": {
+        "north": {"texture": "#panel"},
+        "south": {"texture": "#panel"},
+        "east": {"texture": "#panel"},
+        "west": {"texture": "#panel"},
+        "up": {"texture": "#panel"},
+        "down": {"texture": "#panel"}
+      }
+    },
+    {
+      "from": [6.6, 15.1, 6.6],
+      "to": [9.4, 15.4, 9.4],
+      "faces": {
+        "north": {"texture": "#core", "neoforge_data": {"block_light": 14, "sky_light": 14}},
+        "south": {"texture": "#core", "neoforge_data": {"block_light": 14, "sky_light": 14}},
+        "east": {"texture": "#core", "neoforge_data": {"block_light": 14, "sky_light": 14}},
+        "west": {"texture": "#core", "neoforge_data": {"block_light": 14, "sky_light": 14}},
+        "up": {"texture": "#core", "neoforge_data": {"block_light": 14, "sky_light": 14}},
+        "down": {"texture": "#core", "neoforge_data": {"block_light": 14, "sky_light": 14}}
+      }
+    },
+    {
+      "from": [3, 12.6, 3],
+      "to": [4, 14.6, 4],
+      "faces": {
+        "north": {"texture": "#brass"},
+        "south": {"texture": "#brass"},
+        "east": {"texture": "#brass"},
+        "west": {"texture": "#brass"},
+        "up": {"texture": "#brass"},
+        "down": {"texture": "#brass"}
+      }
+    },
+    {
+      "from": [12, 12.6, 3],
+      "to": [13, 14.6, 4],
+      "faces": {
+        "north": {"texture": "#brass"},
+        "south": {"texture": "#brass"},
+        "east": {"texture": "#brass"},
+        "west": {"texture": "#brass"},
+        "up": {"texture": "#brass"},
+        "down": {"texture": "#brass"}
+      }
+    },
+    {
+      "from": [3, 12.6, 12],
+      "to": [4, 14.6, 13],
+      "faces": {
+        "north": {"texture": "#brass"},
+        "south": {"texture": "#brass"},
+        "east": {"texture": "#brass"},
+        "west": {"texture": "#brass"},
+        "up": {"texture": "#brass"},
+        "down": {"texture": "#brass"}
+      }
+    },
+    {
+      "from": [12, 12.6, 12],
+      "to": [13, 14.6, 13],
+      "faces": {
+        "north": {"texture": "#brass"},
+        "south": {"texture": "#brass"},
+        "east": {"texture": "#brass"},
+        "west": {"texture": "#brass"},
+        "up": {"texture": "#brass"},
+        "down": {"texture": "#brass"}
+      }
+    }
+  ]
+}

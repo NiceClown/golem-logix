@@ -1,0 +1,20 @@
+{
+  "variants": {
+    "facing=north,part=bl": {"model": "golem_logix:block/copper_drive_bay_bl"},
+    "facing=east,part=bl": {"model": "golem_logix:block/copper_drive_bay_bl", "y": 90},
+    "facing=south,part=bl": {"model": "golem_logix:block/copper_drive_bay_bl", "y": 180},
+    "facing=west,part=bl": {"model": "golem_logix:block/copper_drive_bay_bl", "y": 270},
+    "facing=north,part=br": {"model": "golem_logix:block/copper_drive_bay_br"},
+    "facing=east,part=br": {"model": "golem_logix:block/copper_drive_bay_br", "y": 90},
+    "facing=south,part=br": {"model": "golem_logix:block/copper_drive_bay_br", "y": 180},
+    "facing=west,part=br": {"model": "golem_logix:block/copper_drive_bay_br", "y": 270},
+    "facing=north,part=tl": {"model": "golem_logix:block/copper_drive_bay_tl"},
+    "facing=east,part=tl": {"model": "golem_logix:block/copper_drive_bay_tl", "y": 90},
+    "facing=south,part=tl": {"model": "golem_logix:block/copper_drive_bay_tl", "y": 180},
+    "facing=west,part=tl": {"model": "golem_logix:block/copper_drive_bay_tl", "y": 270},
+    "facing=north,part=tr": {"model": "golem_logix:block/copper_drive_bay_tr"},
+    "facing=east,part=tr": {"model": "golem_logix:block/copper_drive_bay_tr", "y": 90},
+    "facing=south,part=tr": {"model": "golem_logix:block/copper_drive_bay_tr", "y": 180},
+    "facing=west,part=tr": {"model": "golem_logix:block/copper_drive_bay_tr", "y": 270}
+  }
+}

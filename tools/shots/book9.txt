@@ -1,0 +1,12 @@
+# Book layout audit (en + ru) after the manual forging page
+reload
+lang en_us
+wait 20
+bookaudit
+lang ru_ru
+wait 20
+bookaudit
+book saturator 1
+wait 8
+shot book9_saturator_forging
+closescreen

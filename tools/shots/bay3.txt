@@ -1,0 +1,21 @@
+# drive bay glass doors from the front: closed, opening, open, at an angle
+reload
+cmd time set day
+cmd fill -40 -61 -20 40 -61 20 minecraft:deepslate_tiles
+cmd fill -40 -60 -20 40 -50 20 minecraft:air
+hook rig 0 -60 0
+wait 100
+look 12.5 -59.2 -1.5 3.2 0 8
+wait 3
+shot bay3_closed
+hook bayopen 12 -60 -1 1
+wait 4
+shot bay3_opening
+wait 12
+shot bay3_open
+look 12.5 -59.2 -1.5 3.4 35 18
+wait 3
+shot bay3_open_angle
+hook bayopen 12 -60 -1 0
+wait 15
+shot bay3_closed_again

@@ -1,0 +1,13 @@
+# hole hunt in the cabinet (after look3): the right edge of the display, from the front-right and from the front-left
+look 12.3 -59 -1.2 1.7 -35 5
+wait 5
+shot r5_hole_a
+look 12.3 -59 -1.2 1.5 -10 5
+wait 5
+shot r5_hole_b
+look 13.9 -59 -1.2 1.7 35 5
+wait 5
+shot r5_hole_c
+look 13 -58.2 -0.5 1.4 0 -40
+wait 5
+shot r5_hole_d

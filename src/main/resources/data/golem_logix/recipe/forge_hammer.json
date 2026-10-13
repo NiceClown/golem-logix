@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "C": { "item": "minecraft:copper_ingot" },
+    "I": { "item": "minecraft:iron_block" },
+    "P": { "item": "minecraft:packed_ice" },
+    "S": { "item": "minecraft:stick" }
+  },
+  "pattern": [
+    "CIC",
+    "PSP",
+    " S "
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:forge_hammer"
+  }
+}

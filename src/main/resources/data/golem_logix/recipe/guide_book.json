@@ -1,0 +1,15 @@
+{
+    "ingredients":  [
+                        {
+                            "item":  "minecraft:book"
+                        },
+                        {
+                            "item":  "minecraft:copper_ingot"
+                        }
+                    ],
+    "result":  {
+                   "count":  1,
+                   "id":  "golem_logix:guide_book"
+               },
+    "type":  "minecraft:crafting_shapeless"
+}

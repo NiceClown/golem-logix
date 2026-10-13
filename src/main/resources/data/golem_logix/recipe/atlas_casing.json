@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "I": { "item": "minecraft:iron_ingot" },
+    "P": { "item": "golem_logix:flattened_iron_core" }
+  },
+  "pattern": [
+    "III",
+    "IPI",
+    "III"
+  ],
+  "result": {
+    "count": 8,
+    "id": "golem_logix:atlas_casing"
+  }
+}

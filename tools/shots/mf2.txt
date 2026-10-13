@@ -1,0 +1,51 @@
+# Cryo-Mainframe with built-in atlants holding the cornice; ghost blueprint; drive bay glass door; channels on a basic pipe
+reload
+cmd time set day
+cmd kill @e[type=item]
+cmd fill -40 -61 -20 40 -61 20 minecraft:deepslate_tiles
+cmd fill -40 -60 -20 40 -50 20 minecraft:air
+cmd kill @e[type=item]
+hook rig 0 -60 0
+cmd setblock 6 -60 -2 minecraft:air
+hook mainframe 6 -60 1 south 7 2
+wait 120
+look 6.5 -59 1.5 5 180 10
+wait 5
+shot mf2_front
+look 6.5 -59 1.5 5.2 140 22
+wait 3
+shot mf2_angle_left
+look 6.5 -59 1.5 5.2 220 22
+wait 3
+shot mf2_angle_right
+look 4.5 -58.6 1.5 2.6 170 10
+wait 3
+shot mf2_atlant_close
+hook mainframeopen 6 -60 1 1
+hook netput 0 -60 0 minecraft:oak_log 640
+wait 10
+hook craft 0 -60 0 minecraft:stick 4096
+wait 30
+look 6.5 -59 1.5 5 180 10
+wait 3
+shot mf2_open_work
+hook mainframeopen 6 -60 1 0
+# ghost blueprint of a second mainframe next to the first
+look 6.5 -60 9 6 180 30
+ghost start mainframe
+wait 10
+shot mf2_ghost
+ghost clear
+# the drive bay of the rig: closed, then the glass door swings open
+look 12.5 -59.2 -1.2 3.2 180 8
+wait 3
+shot bay_closed
+hook bayopen 12 -60 -1 1
+wait 15
+shot bay_open
+look 12.5 -59.2 -1.2 3.4 140 18
+wait 3
+shot bay_open_angle
+hook bayopen 12 -60 -1 0
+wait 15
+shot bay_closed_again

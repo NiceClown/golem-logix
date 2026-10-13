@@ -1,0 +1,29 @@
+# buses in the game
+reload
+cmd fill -40 -61 -14 40 -61 10 minecraft:deepslate_tiles
+cmd fill -40 -60 -14 40 -50 10 minecraft:air
+cmd fill -40 -60 3 40 -48 3 minecraft:deepslate_bricks
+cmd setblock 20 -60 0 minecraft:chest[facing=north]
+cmd setblock 23 -60 0 minecraft:chest[facing=north]
+cmd setblock 26 -60 0 minecraft:chest[facing=north]
+cmd setblock 20 -60 -1 golem_logix:vacuum_import_bus[facing=south]
+cmd setblock 23 -60 -1 golem_logix:injector_export_bus[facing=south]
+cmd setblock 26 -60 -1 golem_logix:periscope_storage_bus[facing=south]
+look 23 -59.4 -1 7 0 8
+wait 30
+shot bus_row
+look 20 -59.5 -1 2.6 -25 12
+wait 20
+shot bus_vac_a
+look 20 -59.5 -1 2.6 55 14
+wait 20
+shot bus_vac_b
+look 23 -59.5 -1 2.6 -25 12
+wait 20
+shot bus_inj_a
+look 26 -59.5 -1 2.6 -25 12
+wait 20
+shot bus_per_a
+look 26 -59.5 -1 2.6 55 14
+wait 20
+shot bus_per_b

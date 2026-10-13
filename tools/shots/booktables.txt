@@ -1,0 +1,31 @@
+# wrapped table cells and bold text across line breaks (Russian and English)
+lang ru_ru
+book bus_upgrades 0 4
+wait 15
+shot booktab_ru_upgrades0
+closeScreen
+book bus_upgrades 1 4
+wait 15
+shot booktab_ru_upgrades1
+closeScreen
+book ac_cpu 2 5
+wait 15
+shot booktab_ru_cpu
+closeScreen
+book st_terminal 0 3
+wait 15
+shot booktab_ru_terminal
+closeScreen
+book eg_resonator 0 6
+wait 15
+shot booktab_ru_resonator
+closeScreen
+lang en_us
+book glossary 0 0
+wait 15
+shot booktab_en_glossary
+closeScreen
+book plates 0 1
+wait 15
+shot booktab_en_plates
+closeScreen

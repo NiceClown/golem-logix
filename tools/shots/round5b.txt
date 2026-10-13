@@ -1,0 +1,42 @@
+# round 5b (world of round5): front shots of the resonator and encoder, close-ups of the saturator conveyor
+look 2.5 -59.3 4.5 2.0 180 15
+wait 3
+shot r5b_resonator_front
+look 2.5 -59.1 4.5 2.4 140 30
+wait 3
+shot r5b_resonator_angle
+look 18.5 -59.5 4.5 1.6 180 8
+wait 2
+shot r5b_encoder_a
+wait 9
+shot r5b_encoder_b
+cmd time set night
+wait 5
+look 2.5 -59.2 4.5 2.2 160 20
+wait 3
+shot r5b_resonator_night
+cmd time set day
+cmd kill @e[type=item]
+hook saturator 0 -58 -8 south jar
+wait 80
+hook saturatorput 0 -58 -8 minecraft:iron_block 4
+look -1 -58.0 -8.3 1.9 -110 22
+wait 2
+shot r5b_sat_w02
+wait 8
+shot r5b_sat_w10
+wait 10
+shot r5b_sat_w20
+look 2 -58.0 -8.3 1.9 110 22
+wait 15
+shot r5b_sat_e35
+wait 50
+shot r5b_sat_e85
+wait 25
+shot r5b_sat_e110
+look -1 -58.0 -8.3 1.9 -110 22
+wait 10
+shot r5b_sat_w120
+look 0 -58.2 -8.4 1.6 180 25
+wait 30
+shot r5b_sat_front_150

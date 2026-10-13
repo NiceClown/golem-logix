@@ -1,0 +1,14 @@
+# item icons in the inventory (all mod items, 36 per page); survival mode, otherwise the creative screen opens
+cmd kill @e[type=item]
+hook mode survival
+hook giveall 0
+inv
+wait 15
+shot items2_a
+closeScreen
+hook giveall 36
+inv
+wait 15
+shot items2_b
+closeScreen
+hook mode creative

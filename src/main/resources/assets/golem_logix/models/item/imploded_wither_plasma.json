@@ -1,0 +1,6 @@
+{
+    "textures":  {
+                     "layer0":  "golem_logix:item/imploded_wither_plasma"
+                 },
+    "parent":  "minecraft:item/generated"
+}

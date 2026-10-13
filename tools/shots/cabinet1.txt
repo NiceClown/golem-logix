@@ -1,0 +1,25 @@
+reload
+cmd kill @e[type=item]
+# cabinet 2x2 in a powered network
+cmd fill -40 -61 -14 40 -61 10 minecraft:deepslate_tiles
+cmd fill -40 -60 -14 40 -50 10 minecraft:air
+cmd fill -40 -60 3 40 -48 3 minecraft:deepslate_bricks
+hook array 6 -60 0
+cmd setblock 8 -60 -1 golem_logix:basic_snow_pipe
+hook bay 10 -60 -1 north stock
+wait 100
+look 10 -59 -1 5.5 0 8
+wait 20
+shot cab_front
+look 10 -59 -1 3.0 0 6
+wait 20
+shot cab_close
+look 10 -59 -1 5.0 -35 14
+wait 20
+shot cab_angle_l
+look 10 -59 -1 5.0 40 14
+wait 20
+shot cab_angle_r
+look 10 -58.5 -1 4.0 140 25
+wait 20
+shot cab_back_top

@@ -1,0 +1,6 @@
+{
+    "textures":  {
+                     "layer0":  "golem_logix:item/copper_disk_64k"
+                 },
+    "parent":  "minecraft:item/generated"
+}

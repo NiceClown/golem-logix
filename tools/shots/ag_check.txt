@@ -1,0 +1,127 @@
+# Check of the art/animation rework: book layout (en + ru), changed articles, atlants, catalog, pipes/plug/runners,
+# calculator panels, concentrator, encoder, mainframe, saturator, resonator; night shots for the glow layers
+reload
+lang en_us
+wait 20
+bookaudit
+lang ru_ru
+wait 20
+bookaudit
+book - 0 0
+wait 10
+shot ag_book_map
+book anvil 0
+wait 5
+shot ag_book_anvil_0
+book anvil 1
+wait 5
+shot ag_book_anvil_1
+book saturator 1
+wait 5
+shot ag_book_saturator_1
+book saturator 2
+wait 5
+shot ag_book_saturator_2
+book ac_mainframe 1
+wait 5
+shot ag_book_mainframe_1
+book ac_catalog 1
+wait 5
+shot ag_book_catalog_1
+closescreen
+wait 5
+cmd time set day
+cmd kill @e[type=!player]
+cmd fill -35 -61 -25 35 -61 25 minecraft:deepslate_tiles
+cmd fill -35 -60 -25 35 -45 25 minecraft:air
+# network: array with atlants, pipes, terminal, calculator, provider; longer dense line with a plug
+hook rig 0 -60 0
+cmd fill 12 -60 -1 22 -60 -1 golem_logix:dense_frost_pipe
+hook plug 16 -60 -1 north
+cmd setblock 5 -60 -2 golem_logix:cooling_coprocessor
+cmd setblock 7 -60 -2 golem_logix:cooling_coprocessor
+cmd setblock 2 -60 -2 golem_logix:cryo_calculator
+cmd setblock 10 -60 -2 golem_logix:schematic_concentrator[facing=north]
+cmd setblock 12 -60 -2 golem_logix:pattern_encoder[facing=north]
+cmd setblock -2 -60 0 golem_logix:eternal_frost_resonator[facing=west]
+hook catalog 6 -60 6 south 40 3
+hook mainframe 0 -60 12 south 6 3
+hook saturator 0 -58 -8 south jar
+wait 60
+hook coolers 0 -58 -8 5
+hook netput 0 -60 0 minecraft:oak_log 200
+hook craft 0 -60 0 minecraft:stick 1024
+wait 40
+look 0.5 -58 0.5 7 30 18
+wait 3
+shot ag_array
+look 1.5 -58.3 -0.5 3 45 10
+wait 3
+shot ag_atlant_close
+look 10 -59.5 -1 8 160 30
+wait 3
+shot ag_pipes_overview
+look 16 -59.6 -0.5 3.8 200 20
+wait 3
+shot ag_pipe_plug
+look 19 -59.6 -0.5 3 160 15
+wait 10
+shot ag_pipe_runner_a
+wait 25
+shot ag_pipe_runner_b
+look 6.5 -59.4 -2.5 3.0 20 24
+wait 3
+shot ag_calculator
+look 10.5 -59.5 -2.5 2.2 20 16
+wait 3
+shot ag_concentrator
+look 12.5 -59.5 -2.5 2.0 0 10
+wait 3
+shot ag_encoder_a
+wait 13
+shot ag_encoder_b
+look -1.5 -59.5 0.5 2.6 270 15
+wait 3
+shot ag_resonator
+look 6.5 -59 7 6 180 12
+wait 3
+shot ag_catalog_front
+look 4 -58.8 7 3.4 200 12
+wait 3
+shot ag_catalog_golem
+look 6.5 -58.9 7 1.8 180 5
+wait 3
+shot ag_catalog_screen
+hook catalogopen 6 -60 6 1
+wait 30
+look 6.5 -59 7 5.2 165 16
+wait 3
+shot ag_catalog_open
+hook catalogopen 6 -60 6 0
+look 0.5 -59 13 6.5 180 14
+wait 3
+shot ag_mainframe
+look -1.5 -58.5 13 3 200 10
+wait 3
+shot ag_mainframe_atlant
+hook saturatorput 0 -58 -8 minecraft:iron_block
+wait 20
+look 0 -58.3 -8.3 3.4 190 16
+wait 3
+shot ag_saturator
+# night: glow layers
+cmd time set midnight
+wait 10
+look 6.5 -59.4 -2.5 3.0 20 24
+wait 3
+shot ag_night_calculator
+look 12.5 -59.5 -2.5 2.0 0 10
+wait 3
+shot ag_night_encoder
+look 0.5 -58 0.5 7 30 18
+wait 3
+shot ag_night_array
+look 6.5 -59 7 6 180 12
+wait 3
+shot ag_night_catalog
+cmd time set day

@@ -1,0 +1,41 @@
+# Mana Saturator: copper carriers bring the blank from the left rear deck to the anvil and take the result to the right deck
+reload
+cmd time set day
+cmd kill @e[type=!player]
+cmd fill -40 -61 -30 40 -61 14 minecraft:deepslate_tiles
+cmd fill -30 -60 -24 30 -50 8 minecraft:air
+hook saturator 0 -58 -8 south jar
+wait 100
+hook saturatorcheck 0 -58 -8 formed
+look 0 -58.3 -8.5 3.2 180 14
+wait 5
+shot sat7_idle
+look 0 -58.3 -8.6 3.4 135 22
+wait 3
+shot sat7_idle_left
+hook saturatorput 0 -58 -8 minecraft:iron_block
+wait 3
+shot sat7_t03_pick
+wait 22
+shot sat7_t25_carry
+wait 12
+shot sat7_t37_carry
+look 0 -58.3 -8.5 3.2 180 14
+wait 16
+shot sat7_t53_place
+wait 30
+shot sat7_t83_ritual_b_out
+look 0 -58.3 -8.6 3.4 225 22
+wait 40
+shot sat7_t123_b_waits
+wait 64
+shot sat7_t187_b_picks
+wait 20
+shot sat7_t207_b_carries
+wait 26
+shot sat7_t233_b_places
+wait 30
+shot sat7_t263_ready
+look 0 -58.3 -8.5 3.2 180 14
+wait 3
+shot sat7_ready_front

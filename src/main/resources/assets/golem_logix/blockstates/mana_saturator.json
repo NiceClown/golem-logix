@@ -1,0 +1,12 @@
+{
+  "variants": {
+    "facing=north,formed=false": {"model": "golem_logix:block/mana_saturator_press"},
+    "facing=north,formed=true": {"model": "golem_logix:block/saturator_c120"},
+    "facing=east,formed=false": {"model": "golem_logix:block/mana_saturator_press", "y": 90},
+    "facing=east,formed=true": {"model": "golem_logix:block/saturator_c120", "y": 90},
+    "facing=south,formed=false": {"model": "golem_logix:block/mana_saturator_press", "y": 180},
+    "facing=south,formed=true": {"model": "golem_logix:block/saturator_c120", "y": 180},
+    "facing=west,formed=false": {"model": "golem_logix:block/mana_saturator_press", "y": 270},
+    "facing=west,formed=true": {"model": "golem_logix:block/saturator_c120", "y": 270}
+  }
+}

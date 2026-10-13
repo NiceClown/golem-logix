@@ -1,0 +1,71 @@
+# playtest round 3: chronometer as a device (animated icon in the hotbar and inventory), its window with the Source gauge,
+# calculator with compressed co-processors, the "Secret Knowledge" tab (needs: start -Mods)
+reload
+cmd time set day
+cmd kill @e[type=item]
+cmd fill -40 -61 -14 40 -61 10 minecraft:deepslate_tiles
+cmd fill -40 -60 -14 40 -50 10 minecraft:air
+cmd kill @e[type=item]
+cmd advancement revoke @s only golem_logix:secret_revealed
+cmd advancement revoke @s only golem_logix:secret_knowledge
+hook rig 0 -60 0
+wait 120
+hook fillnet 0 -60 0
+# the chronometer in the hotbar: icon frames over time
+hook chrono 0 -57 0 6400
+hook give golem_logix:portable_chronometer 1 1
+gui on
+look 4.5 -59.5 -1.5 3 0 8
+wait 10
+shot r3_hotbar_a
+wait 20
+shot r3_hotbar_b
+wait 30
+shot r3_hotbar_c
+gui off
+inv
+wait 10
+shot r3_inventory
+closeScreen
+# its window: crafting terminal layout with a Source gauge
+useitem
+wait 30
+shot r3_chrono_window
+closeScreen
+# calculator with four compressed co-processors and the redstone module; idle — no Abort button
+hook upgrades 6 -60 -2 golem_logix:compressed_coprocessor golem_logix:compressed_coprocessor golem_logix:compressed_coprocessor golem_logix:compressed_coprocessor golem_logix:redstone_module
+look 6.5 -59.5 -1.5 3 0 8
+use 6 -60 -2
+wait 30
+shot r3_calc_idle
+closeScreen
+hook netput 0 -60 0 minecraft:oak_log 32
+hook craft 0 -60 0 minecraft:stick 256
+use 6 -60 -2
+wait 10
+shot r3_calc_running
+closeScreen
+# secret tab: hidden, then appears after the first trial
+book - 0 0
+wait 15
+shot r3_book_no_secret
+closeScreen
+cmd advancement grant @s only golem_logix:secret_knowledge killed_wither
+cmd advancement grant @s only golem_logix:secret_revealed killed_wither
+wait 30
+book - 0 0
+wait 15
+shot r3_book_secret_tab
+closeScreen
+book - 0 8
+wait 15
+shot r3_book_secret_map
+closeScreen
+cmd advancement grant @s only golem_logix:secret_revealed dimension_signal
+wait 20
+book - 0 8
+wait 15
+shot r3_book_secret_full
+closeScreen
+cmd advancement revoke @s only golem_logix:secret_revealed
+cmd advancement revoke @s only golem_logix:secret_knowledge

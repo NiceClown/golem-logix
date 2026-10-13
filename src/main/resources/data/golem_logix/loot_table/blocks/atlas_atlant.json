@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "bonus_rolls": 0.0,
+      "conditions": [
+        { "condition": "minecraft:survives_explosion" },
+        { "condition": "minecraft:block_state_property", "block": "golem_logix:atlas_atlant", "properties": { "half": "lower" } }
+      ],
+      "entries": [ { "type": "minecraft:item", "name": "golem_logix:atlas_atlant" } ],
+      "rolls": 1.0
+    }
+  ]
+}

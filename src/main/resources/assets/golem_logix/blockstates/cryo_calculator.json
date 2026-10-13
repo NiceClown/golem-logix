@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "active=false": {"model": "golem_logix:block/cryo_calculator"},
+    "active=true": {"model": "golem_logix:block/cryo_calculator_active"}
+  }
+}

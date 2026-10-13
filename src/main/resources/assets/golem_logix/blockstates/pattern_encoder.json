@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": {"model": "golem_logix:block/pattern_encoder"},
+    "facing=east": {"model": "golem_logix:block/pattern_encoder", "y": 90},
+    "facing=south": {"model": "golem_logix:block/pattern_encoder", "y": 180},
+    "facing=west": {"model": "golem_logix:block/pattern_encoder", "y": 270}
+  }
+}

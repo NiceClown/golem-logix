@@ -1,0 +1,35 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "render_type": "minecraft:translucent",
+  "textures": {
+    "particle": "golem_logix:block/sat_bronze",
+    "sat_wall": "golem_logix:block/sat_wall",
+    "sat_b_02": "golem_logix:block/sat_b_02",
+    "sat_l_12": "golem_logix:block/sat_l_12",
+    "sat_bronze": "golem_logix:block/sat_bronze",
+    "sat_top": "golem_logix:block/sat_top"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 12],
+      "to": [16, 7, 16],
+      "faces": {
+        "north": {"texture": "#sat_wall"},
+        "south": {"texture": "#sat_b_02"},
+        "east": {"texture": "#sat_l_12"},
+        "west": {"texture": "#sat_bronze"}
+      }
+    },
+    {
+      "from": [0, 7, 0],
+      "to": [16, 12, 16],
+      "faces": {
+        "south": {"texture": "#sat_b_02"},
+        "east": {"texture": "#sat_l_12"},
+        "up": {"texture": "#sat_top"},
+        "down": {"texture": "#sat_bronze"}
+      }
+    }
+  ]
+}

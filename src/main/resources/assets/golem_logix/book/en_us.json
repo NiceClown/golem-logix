@@ -1,0 +1,1228 @@
+{
+  "title": "Occult Logistics Grimoire",
+  "categories": [
+    {
+      "id": "basics",
+      "title": "Basics",
+      "blurb": "where it all begins",
+      "icon": "golem_logix:guide_book",
+      "color": "38d9d6",
+      "entries": [
+        {
+          "id": "intro", "title": "Introduction to Golem Logix", "icon": "golem_logix:guide_book", "x": 0, "y": 0, "gold": true,
+          "pages": [
+            {"type": "text", "title": "Cold, copper and golems",
+             "text": [
+               "Golem Logix is the science of making the world store, remember and craft things on its own. Nothing electric here: the turn of the twentieth century, polished copper, brass, vacuum tubes, punch cards - and the icy breath of snow golems.",
+               "The mod gives you &lnetwork storage&r (disks and cabinets), &lterminals&r to reach it, &lbuses&r that haul items between chests and the network by themselves, and &lautocrafting&r on punch cards.",
+               "# The triad of golems",
+               "• &lIron&r - the heart: the network core, the colossal Atlants and the Saturator's smith.",
+               "• &lCopper&r - the hand: buses, disks, punch cards.",
+               "• &lSnow&r - the cold: pipes, channels, cryo calculators."
+             ]},
+            {"type": "text", "title": "How this book works",
+             "text": [
+               "Tabs on the left are sections. On the map every article is a node; the lines show what connects to what and in which order to read. New articles pulse white.",
+               "Drag the map with the mouse and zoom it with the wheel. The search box at the top looks through every article (press &lTab&r or &l/&r).",
+               "Inside an article flip the spread with the arrows, the mouse wheel or &l← →&r. &lBackspace&r or &lEsc&r returns to the map.",
+               "If you want the road from zero to your first terminal, open &lQuick start&r."
+             ]}
+          ]
+        },
+        {
+          "id": "source", "title": "Source - the only energy", "icon": "golem_logix:creative_source_jar", "x": 1, "y": 0, "parents": ["intro"],
+          "pages": [
+            {"type": "text", "title": "Powering the network",
+             "text": [
+               "There is no RF or FE here. The whole network runs on magical &lSource&r from Ars Nouveau. A source can be:",
+               "• a Source Jar (or any Ars Nouveau machine holding Source),",
+               "• the &lCreative Source Jar&r - infinite, for testing.",
+               "The source must touch &lany block of the network&r (a bushing, bus, pipe, cabinet...).",
+               "&oThe Eternal Frost Resonator does not feed the network: it sends Source through the aether to Portable Chronometers (see “Chronometer and late game”).&r"
+             ]},
+            {"type": "text", "title": "What it costs",
+             "text": [
+               "Once a second the &lAtlas Core&r drains Source from the sources:",
+               "&l1 unit&r for the core itself + &l¼ unit&r for every used channel (rounded up).",
+               "Example: 40 used channels cost 1 + 10 = 11 Source per second.",
+               "Infinite sources cost nothing. When Source runs out the core goes dark and the whole network falls asleep: terminals refuse to open, buses stop, calculators halt. As soon as the flow returns, everything resumes by itself.",
+               "Every autocrafting step costs Source too - &l2 units&r.",
+               "&oWithout Ars Nouveau there is nowhere to get Source, so the network, the Saturator and the Chronometer work for free.&r"
+             ]}
+          ]
+        },
+        {
+          "id": "quickstart", "title": "Quick start", "icon": "golem_logix:analog_terminal", "x": 2, "y": 0, "parents": ["source"], "gold": true,
+          "pages": [
+            {"type": "text", "title": "From zero to a terminal",
+             "text": [
+               "1. Get plates: drop an anvil on a wounded golem (see Anvil ritual) or make them in the &lMana Saturator&r.",
+               "2. Craft an &lAtlas Core&r and place it. A small tower is enough to start: the core, two &lAtlas Conduits&r beneath it and a &lCable Bushing&r (see Starter tower).",
+               "3. Put a Source supply next to any block of the tower - for example a Creative Source Jar.",
+               "4. Attach a &lCopper Drive Bay&r to the bushing and put a &lMagnetic Disk&r inside.",
+               "5. Attach an &lAnalog Terminal&r to the bushing as well and right-click it.",
+               "Done: everything you put into the terminal lies on the disk."
+             ]},
+            {"type": "text", "title": "What next",
+             "text": [
+               "• Finish the &lAtlas Array&r - 320 channels instead of 8.",
+               "• Place &lbuses&r and connect chests, furnaces and machines.",
+               "• Learn &lautocrafting&r: Encoder, Pattern Provider, Cryo-Calculator.",
+               "• Grab a &lPortable Chronometer&r - a crafting terminal in your pocket.",
+               "&oThe lines on the map lead from the simple to the complex.&r"
+             ]}
+          ]
+        },
+        {
+          "id": "lore", "title": "Frozen Runes & Golem Will", "icon": "golem_logix:flattened_cryo_substrate", "x": 0, "y": 1, "parents": ["intro"],
+          "pages": [
+            {"type": "text", "title": "Cryogenic Aether Fixation",
+             "text": [
+               "In classical Ars Nouveau sorcery, primal &lSource&r mana is volatile, warm and fluid. Spell runes and information glyphs drift like heat waves: weaving thousands of data threads at once is impossible without etheric turbulence and entropy tearing them apart.",
+               "Our breakthrough stems from the cryo-energetics of &lsnow golems&r. Their icy core emits a field of absolute stillness, bringing etheric entropy down to zero.",
+               "Under sub-zero cryo-temperatures, mana runes carrying structural imprints of items &lfreeze into super-dense crystalline glyphs&r. A frozen rune loses all volatility, locking vast physical records into a stable crystal. Inside frost pipes, these frozen runes glide in superfluid conduits at lightning speed, granting instant access to entire warehouses without risk of etheric decay."
+             ]},
+            {"type": "text", "title": "Mechanical Will",
+             "text": [
+               "The mortal mind cannot manually juggle thousands of frozen runes without shattering their matrices. For this, we enlist &lgolems&r, bound by occult flattened plates and subordinated to our command.",
+               "Golems possess neither doubt nor mortal fatigue: they embody the master's pure algorithmic will.",
+               "With calibrated copper fingers and precision keys, they manipulate, rotate and stack frozen runes into multidimensional arrays. Shifting a frozen matrix instantly yields &lcompound rune combinations&r: guided by punch-card geometry, golems and snowmen assemble finished items in the blink of an eye.",
+               "&oThis harmonizes with Ars Nouveau rather than opposing it: Source fuels the work, cryo-cold preserves the information, and golem will enforces absolute order.&r"
+             ]}
+          ]
+        },
+        {
+          "id": "glossary", "title": "Glossary", "icon": "minecraft:writable_book", "x": 1, "y": 1, "parents": ["intro"],
+          "pages": [
+            {"type": "table", "title": "Terms", "header": ["Word", "Meaning"], "widths": [50, 98],
+             "rows": [
+               ["Network", "touching blocks"],
+               ["Node", "a network block"],
+               ["Channel", "a device's seat"],
+               ["Line", "bushing channels"],
+               ["Array", "3x3x4 multiblock"],
+               ["Core", "network brain"],
+               ["Disk", "item storage"],
+               ["Pattern", "punched recipe"]
+             ]},
+            {"type": "text", "title": "About the text",
+             "text": [
+               "&lBold&r marks block names and important numbers.",
+               "&oItalics&r are tips and remarks."
+             ]}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rituals",
+      "title": "Golem Rituals",
+      "blurb": "plates from iron, copper and ice",
+      "icon": "golem_logix:flattened_iron_core",
+      "color": "e0b04a",
+      "entries": [
+        {
+          "id": "anvil", "title": "Anvil ritual", "icon": "minecraft:anvil", "x": 0, "y": 0, "gold": true,
+          "pages": [
+            {"type": "text", "title": "A blow to logic",
+             "text": [
+               "Golems are born animated: their flesh is imbued with pure concentrated magical Source from the moment of creation. In a healthy golem, this inner matrix remains firm and cohesive. But when a golem is gravely wounded (down to 4 HP or less), its anchoring bond fractures.",
+               "In that brief moment, the crushing impact of a falling anvil collapses the fragile matrix, compressing the golem's concentrated essence directly into a dense runic plate.",
+               "The anvil must fall from at least one block high above the wounded golem.",
+               "&oA healthy golem is too sturdy and holds its matrix intact — the ritual will not trigger until health drops to critical.&r"
+             ]},
+            {"type": "ritual", "title": "Iron Golem", "station": "minecraft:anvil", "inputs": ["minecraft:iron_block"], "outputs": ["golem_logix:flattened_iron_core"],
+             "condition": "A golem with 1-4 HP (out of 100).",
+             "text": ["Cores go into processors, the Atlas Core, casings and high-capacity pipes.", "To bring 100 HP down to four, a harming potion, lava or a long fall helps."]},
+            {"type": "ritual", "title": "Copper Golem", "station": "minecraft:anvil", "inputs": ["minecraft:copper_block"], "outputs": ["golem_logix:flattened_copper_matrix"],
+             "condition": "A golem with 1-4 HP (out of 12).",
+             "text": ["Matrices are the basis of disks, buses, punch cards and cabinets.", "&oCopper golems come from Copper Age Backport: a copper block with a carved pumpkin on top, as in 1.21.9.&r"]},
+            {"type": "ritual", "title": "Snow Golem", "station": "minecraft:anvil", "inputs": ["minecraft:snow_block"], "outputs": ["golem_logix:flattened_cryo_substrate"],
+             "condition": "A golem with 1-3 HP - not at full health!",
+             "text": ["A snow golem has only 4 HP. Hit it once with your hand - 3 are left and the anvil will now work (snowballs do not hurt snow golems).", "Substrates go into pipes, cryo blocks and fluid disks."]}
+          ]
+        },
+        {
+          "id": "saturator", "title": "Mana Saturator", "icon": "golem_logix:mana_saturator", "x": 1, "y": 0, "parents": ["anvil"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:mana_saturator",
+             "text": ["The head of a 3x3x2 multiblock: a supreme alchemical forge. Unlike the crude crushing of living golems with an anvil, here inanimate blocks are artificially infused with the needed amount of Source. No golem gets hurt, and plate yield is doubled.", "Build casings, an End Rod and a dense pipe around it."]},
+{"type": "text", "title": "Forging by hand",
+ "text": [
+   "Until the machine is assembled, the Saturator is a &lmagic anvil&r. Right-click puts an iron block, a copper block or packed ice on its face — &lonly these three&r plates can be forged by hand.",
+   "Strike with the &lForge Hammer&r: left-click the anvil. A strike takes &l100 Source&r from the hammer's charge; after &l4 strikes&r the blank becomes a plate.",
+   "By hand you get &lone&r plate. The multiblock around the anvil is its upgrade: the forging golem makes two plates and works on its own.",
+   "Right-click with an empty hand takes the result (or the blank back)."
+ ]},
+            {"type": "checklist", "variant": "saturator", "title": "Materials list",
+             "text": ["Checked against your inventory. The button shows the ghost blocks: the centre from bottom to top is the dense pipe, the End Rod and the Saturator; the other 15 cells are Atlas Casings.", "The ghosts follow the block you look at; &lY&r locks them, &lN&r cancels them. The front of the machine faces you."]},
+            {"type": "text", "title": "Assembly",
+             "text": [
+               "The machine assembles itself as soon as every block is in place (checked once a second; right-clicking the Saturator tells you what is missing).",
+               "The &lEnd Rod&r is the base of the anvil and the &ldense pipe&r is the central crate of the front.",
+               "On assembly the blocks turn into one machine: Source columns, the forge chamber with its anvil, the crystal. Break any part and everything goes back to ordinary blocks.",
+               "# Network connectors",
+               "A network pipe can come from &lany side except the roof&r: one connector on the front (the central crate's port), one on the back, one on each side (near the back edge) and one underneath. They are easy to spot - brass rings with a turquoise rim."
+             ]},
+            {"type": "text", "title": "How it works",
+             "text": [
+               "1. Right-click any part of the machine with a block in hand - it joins the queue on the &lleft rear deck&r (up to four blanks of one kind).",
+               "2. Instead of forcibly crushing living constructs, the forge directly saturates raw material with pure Source (&l1000 units&r per ritual). A focusing crystal artificially weaves magic into the metal lattice, while the smith hammers out plates of perfect geometry. Right-click with an empty hand to see the stock.",
+               "3. Over &lfive seconds&r the smith strikes five blows, condensing magic into plates. The two copper carrier golems work &lindependently&r: one takes the finished plates to the &lright deck&r while the other is already bringing the next blank from the queue — the smith hardly ever waits. The result is taken from the right deck (by hand, a bus or a Pattern Provider).",
+               "# The result is TWO plates",
+               "• Iron Block → 2 Flattened Iron Cores,",
+               "• Copper Block → 2 Flattened Copper Matrices,",
+               "• Packed Ice → 2 Flattened Cryo-Substrates.",
+               "And a Cooling Co-Processor gets squeezed into a &lCompressed Co-Processor&r - a speed upgrade for buses and calculators.",
+               "Source comes from the network through any connector (if the network has a core) or from jars next to the machine. Right-clicking with an empty hand takes the finished plates from the right deck (or, if it is empty, the queue from the left one). Buses and the Pattern Provider work with the machine through any of its parts: they put blanks into the left deck's queue and take the finished plates from the right one.",
+               "&oWith nothing to forge, the golem just stands there offering you a poppy.&r"
+             ]},
+            {"type": "text", "title": "Roof cooling",
+             "text": [
+               "The roof of the machine has five &lventilation grilles&r. Each can take a &lCooling Co-Processor&r: hold one and right-click a grille &lfrom above&r. A radiator with a fan covers the grille.",
+               "Every co-processor speeds the smith up by &l40%&r. With all five the ritual runs three times faster — under two seconds, and the carriers still keep up.",
+               "Sneak and right-click the radiator with an empty hand to take it off. When the machine is dismantled the co-processors drop as items.",
+               "&oThe fans spin faster while the golem is at work.&r"
+             ]},
+            {"type": "text", "title": "Redstone Module",
+             "text": [
+               "The Saturator has no window, so the &lRedstone Module&r goes straight into the machine: right-click any part with the module.",
+               "Right-clicking again with a module switches the mode (with signal, without signal, per pulse, ignore). Any wall of the machine takes the signal.",
+               "Sneak and right-click the machine with an empty hand (not on a radiator) to take the module out. Jade shows the current mode."
+             ]}
+          ]
+        },
+        {
+          "id": "hammer", "title": "Forge Hammer", "icon": "golem_logix:forge_hammer", "x": 1, "y": 1, "parents": ["anvil"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:forge_hammer",
+             "text": ["A heavy frost-iron hammer in copper bands: it forges plates on the anvil — an unassembled Mana Saturator."]},
+            {"type": "text", "title": "Charge and strikes",
+             "text": [
+               "The hammer runs on &lSource&r from its own charge (up to &l4000&r), like the Portable Chronometer: it takes nothing from jars nearby.",
+               "To charge it, &lright-click a Source jar&r with it. The charge shows as a bar on the item and in its tooltip.",
+               "&lLeft-click the anvil&r to strike (100 Source). The hammer does not break the anvil.",
+               "&oWithout Ars Nouveau the hammer strikes for free.&r"
+             ]}
+          ]
+        },
+        {
+"id": "plates", "title": "Plates and their uses", "icon": "golem_logix:flattened_copper_matrix", "x": 2, "y": 0, "parents": ["saturator"],
+          "pages": [
+            {"type": "table", "title": "Where plates go", "header": ["Plate", "Used for"], "widths": [58, 90],
+             "rows": [
+               ["Iron core", "Atlas Core, casing, Atlant, calculator"],
+               ["Copper matrix", "disks, cabinets, buses, terminals, encoder"],
+               ["Cryo substrate", "pipes, fluid disks, cryo blocks"],
+               ["Occult Matrix", "chronometer, quantum expander, resonator"]
+             ]},
+            {"type": "text", "title": "Advice",
+             "text": [
+               "There are no crafting-table recipes for plates: only the anvil and the Saturator. Build a Saturator as early as possible - one iron block turns into two cores.",
+               "&oPacked ice for cryo-substrates can be mined with a Silk Touch pickaxe.&r"
+             ]}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "array",
+      "title": "Atlas Array",
+      "blurb": "the 3x3x4 multiblock",
+      "icon": "golem_logix:atlas_core",
+      "color": "7fd0e8",
+      "entries": [
+        {
+          "id": "array_overview", "title": "The Atlas Array: overview", "icon": "golem_logix:atlas_core", "x": 0, "y": 0, "gold": true,
+          "pages": [
+            {"type": "text", "title": "A monument for the network",
+             "text": [
+               "The heart of a developed base is an iron tower 3x3x4: four Atlants at the corners carry a crown with the Core on their shoulders, and five Cable Bushings at the base let channels out.",
+               "The array is not just decoration, it &ldefines the size of the network&r:",
+               "• a completed array gives &l5 lines × 64 = 320 channels&r;",
+               "• &lChannel Expanders&r in its walls raise the capacity of every line;",
+               "• without the array the core gives only &l8 channels&r to start."
+             ]},
+            {"type": "image", "texture": "array_full", "title": "What it looks like",
+             "text": ["The core with its crystal is at the very top. Copper electron-golems orbit around it, and mini-golems carry crates around the ring of casings."]}
+          ]
+        },
+        {
+          "id": "array_assembly", "title": "Building layer by layer", "icon": "golem_logix:atlas_casing", "x": 1, "y": 0, "parents": ["array_overview"], "gold": true,
+          "pages": [
+            {"type": "checklist", "variant": "full", "title": "Materials list",
+             "text": ["The list is checked against your inventory: a green tick - you have enough.", "The button turns on &lghost blocks&r: turquoise ones show what to place and where, red ones are foreign blocks in the way. The ghosts follow the block you look at; press &lG&r to lock them and &lH&r to remove them. Near a Core the projection snaps onto it.", "&oThe lower and upper halves of an Atlant are a single item; casing can be partly replaced by expanders.&r"]},
+            {"type": "image", "texture": "array_layers", "title": "Exploded view",
+             "text": ["Four layers, bottom to top. It is convenient to build layer by layer; the Core is placed last."]},
+            {"type": "blueprint", "layer": 0, "title": "Layer 1 - the base",
+             "text": ["&lBushings&r at the corners and in the center, &lconduits&r on the sides.", "Bushings are the only places where the network leaves the array: attach pipes and devices to them."]},
+            {"type": "blueprint", "layer": 1, "title": "Layer 2 - the Atlants' legs",
+             "text": ["Corners: &lAtlants&r (lower half).", "Center: a &lconduit&r. Sides: &lcasing&r or a &lChannel Expander&r (cycling in the diagram)."]},
+            {"type": "blueprint", "layer": 2, "title": "Layer 3 - the shoulders",
+             "text": ["Corners: Atlants (the upper half - the item places it itself).", "Center: a conduit. Sides: casing or expanders."]},
+            {"type": "blueprint", "layer": 3, "title": "Layer 4 - the crown",
+             "text": ["Corners and sides: &lcasing&r, center: the &lAtlas Core&r.", "The core crystal rises above the ring of casings."]},
+            {"type": "text", "title": "Building hints",
+             "text": [
+               "Right-click the core to see what is missing: you get the block name and coordinates, and sparks flash at the right spot.",
+               "An Atlant is placed like a door - one item, two blocks. When the array is complete the Atlants turn to face outward by themselves.",
+               "&oThe order of layers does not matter - only that everything stands in its place at the end.&r"
+             ]}
+          ]
+        },
+        {
+          "id": "array_core", "title": "Atlas Core", "icon": "golem_logix:atlas_core", "x": 1, "y": -1, "parents": ["array_overview"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:atlas_core",
+             "text": ["The core is the network's mind and its only Source consumer.", "The crystal glows and electrons orbit it: three for a complete array, one for a tower."]},
+            {"type": "text", "title": "Core rules",
+             "text": [
+               "• A network must have &lexactly one&r core. A second core in the same network stays idle (right-clicking it tells you so).",
+               "• The core links only to array parts (conduits, bushings), not to pipes directly - channels leave through bushings.",
+               "• Once a second the core recounts the network, drains Source, lights up the pipes and wakes the cabinets.",
+               "# Right-click on the core",
+               "Shows channels (used/capacity), line capacity, device count and Source drain. If the array is incomplete it names the missing block."
+             ]}
+          ]
+        },
+        {
+          "id": "array_atlants", "title": "Atlants", "icon": "golem_logix:atlas_atlant", "x": 2, "y": -1, "parents": ["array_assembly", "array_core"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:atlas_atlant",
+             "text": ["An iron golem colossus two blocks tall. Four Atlants hold the array up by its corners."]},
+            {"type": "text", "title": "About the statue",
+             "text": [
+               "• Placed with &lone item into two blocks&r (like a door), so free space above is required.",
+               "• Both halves break together; the item drops once.",
+               "• The lower half stands on layer 2 of the array, the upper half on layer 3. Mix the halves up and the array will not count.",
+               "• When the array forms the Atlants turn themselves: northern ones face north, southern ones face south.",
+               "&oAtlants give no channels and connect nothing - they are the monument's load-bearing supports.&r"
+             ]}
+          ]
+        },
+        {
+          "id": "array_casing", "title": "Casing and conduits", "icon": "golem_logix:atlas_conduit", "x": 2, "y": 0, "parents": ["array_assembly"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:atlas_casing",
+             "text": ["The iron walls of the monument: the side cells of the two middle layers and the whole crown. The top of every casing is inlaid with brass."]},
+            {"type": "crafting", "recipe": "golem_logix:atlas_conduit",
+             "text": ["A copper-and-rune bus: the base (sides) and the central column up to the core."]},
+            {"type": "text", "title": "A quirk of the conduit",
+             "text": [
+               "The conduit links &lonly to other array parts&r: the core, bushings and other conduits. A pipe, terminal or cabinet placed against it &lwill not connect&r.",
+               "This is so channels can leave only through bushings - otherwise line capacity could be bypassed.",
+               "Casing connects nothing - it only completes the monument."
+             ]}
+          ]
+        },
+        {
+          "id": "array_bushings", "title": "Cable Bushings and lines", "icon": "golem_logix:cable_bushing", "x": 2, "y": 1, "parents": ["array_assembly", "array_tower"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:cable_bushing",
+             "text": ["A brass “exit” socket of the array. Five bushings at the base are five independent lines."]},
+            {"type": "text", "title": "Lines",
+             "text": [
+               "Every bushing gives &lone line&r: &l64 channels&r for a basic array. All devices connected through this bushing (and through pipes behind it) share its line.",
+               "A corner bushing has two or three free faces: each can take its own pipe. The center bushing sits in a shaft, but a power source can be put under it.",
+               "Right-clicking a bushing prints in chat &lhow many channels are used&r on its line and in the whole network; the same is shown in the tooltip above the block (Jade).",
+               "# Tip",
+               "Spread heavy sections over &ldifferent bushings&r: four corners give four lines, and the total capacity of the network is the sum of all lines."
+             ]},
+            {"type": "table", "title": "Capacity", "header": ["Line", "Network (5 lines)"], "widths": [74, 74],
+             "rows": [["64 (base)", "320"], ["+16 (1 exp.)", "400"], ["+128 (8 exp.)", "960"], ["+256 (8 quantum)", "1600"]],
+             "text": ["More on expansion in the article “Expanding channels”."]}
+          ]
+        },
+        {
+          "id": "array_tower", "title": "Starter tower", "icon": "golem_logix:atlas_conduit", "x": 1, "y": 1, "parents": ["array_overview"],
+          "pages": [
+            {"type": "checklist", "variant": "tower", "title": "Materials list",
+             "text": ["Checked against your inventory. The button shows the ghost blocks of the tower: place the bushing, and above it two conduits and the core.", "The ghosts follow the block you look at; &lY&r locks them, &lN&r cancels them."]},
+            {"type": "text", "title": "8 channels to start",
+             "text": [
+               "Until you have iron for the whole array, the network can be started with a &lsmall tower&r - just a chain of the core, conduits and a bushing:",
+               "• the core on top,",
+               "• two Atlas Conduits under it,",
+               "• a Cable Bushing at the bottom (attach devices to it),",
+               "• a Source supply touching any block.",
+               "Such a network gives &l8 channels&r - for a terminal, a cabinet and a couple of buses. The bushing limits its single line to the same eight.",
+               "&oWhen you have saved for casing and Atlants, build the monument around the tower - it becomes a full array without being taken apart.&r"
+             ]}
+          ]
+        },
+        {
+          "id": "array_expanders", "title": "Expanding channels", "icon": "golem_logix:quantum_channel_expander", "x": 3, "y": 0, "parents": ["array_casing", "array_bushings"], "gold": true,
+          "pages": [
+            {"type": "text", "title": "More channels",
+             "text": [
+               "A basic array gives 5 lines of 64 - 320 channels. When that is not enough, put &lChannel Expanders&r instead of casing into the side cells of the two middle layers (&l8 places&r in total).",
+               "Each expander raises the capacity of &levery one&r of the five lines:",
+               "• &lChannel Expander&r: +16 per line,",
+               "• &lQuantum Channel Expander&r: +32 per line."
+             ]},
+            {"type": "image", "texture": "array_middle", "title": "Expander slots",
+             "text": ["The middle layers of the array. Windows in the side cells are expanders (turquoise basic, violet-and-gold quantum)."]},
+            {"type": "crafting", "recipe": "golem_logix:channel_expander",
+             "text": ["Fits any of the eight side cells of layers 2 and 3."]},
+            {"type": "crafting", "recipe": "golem_logix:quantum_channel_expander",
+             "text": ["Built from a basic expander, gold and an &lInterdimensional Occult Matrix&r."]},
+            {"type": "table", "title": "What you get", "header": ["Expanders", "Line / network"], "widths": [84, 64],
+             "rows": [
+               ["none", "64 / 320"],
+               ["4 basic", "128 / 640"],
+               ["8 basic", "192 / 960"],
+               ["4 quantum", "192 / 960"],
+               ["8 quantum", "320 / 1600"],
+               ["mix 4+4", "256 / 1280"]
+             ],
+             "text": ["The network capacity is the sum of its five lines."]},
+            {"type": "text", "title": "Important",
+             "text": [
+               "The expander must be &lbuilt into the wall&r: the array is checked as a whole. If you pull a block out, the core reports what is missing and the network falls back to 8 channels.",
+               "Pipes still limit their own stretches: to pass more than 64 channels through one bushing, run several pipes from it or use dense pipes."
+             ]}
+          ]
+        },
+        {
+          "id": "array_diagnosis", "title": "When something is wrong", "icon": "minecraft:spyglass", "x": 3, "y": -1, "parents": ["array_core"],
+          "pages": [
+            {"type": "table", "title": "Core messages", "header": ["Message", "Cause"], "widths": [74, 74],
+             "rows": [
+               ["Incomplete", "a block is missing"],
+               ["Array OFFLINE", "no Source"],
+               ["Another core", "a core is already there"],
+               ["No channels", "line or pipe full"]
+             ],
+             "text": ["Right-click the core: it names the missing block and lights the spot with sparks."]}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network",
+      "title": "Network",
+      "blurb": "pipes and channels",
+      "icon": "golem_logix:basic_snow_pipe",
+      "color": "9fe3f0",
+      "entries": [
+        {
+          "id": "net_channels", "title": "Channels", "icon": "golem_logix:dense_frost_pipe", "x": 0, "y": 0, "gold": true,
+          "pages": [
+            {"type": "text", "title": "What a channel is",
+             "text": [
+               "Every network device (terminal, cabinet, bus, provider...) takes &l1 channel&r. A channel is a path from the core to the device through a bushing and pipes.",
+               "A channel has three limits:",
+               "• &lTotal network capacity&r - set by the array (8 / 320 / more).",
+               "• &lBushing line&r - no more channels pass through one bushing than the line capacity.",
+               "• &lPipes&r - a basic pipe passes 16 channels, a dense one 64.",
+               "A device that gets no channel stays &lsilent&r: the terminal reports “no free channels”."
+             ]},
+            {"type": "text", "title": "Who takes channels",
+             "text": [
+               "# Take 1 channel",
+               "• Analog and Crafting terminals, Copper Drive Bay,",
+               "• Vacuum, Injector and Periscope buses,",
+               "• Encoder, Pattern Provider, Cryo-Calculator, Recipe Monitor.",
+               "# Take no channels",
+               "• Pipes, Cable Bushings, Atlas Conduits,",
+               "• Cooling Co-Processors, the Core, the Mana Saturator.",
+               "&oThe Portable Chronometer is not a device: it talks to the core directly and spends no channels.&r"
+             ]}
+          ]
+        },
+        {
+          "id": "net_pipes", "title": "Cryogenic pipes", "icon": "golem_logix:basic_snow_pipe", "x": 1, "y": 0, "parents": ["net_channels"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:basic_snow_pipe",
+             "text": ["A glass tube with brass bands. Passes &l16 channels&r."]},
+            {"type": "crafting", "recipe": "golem_logix:dense_frost_pipe",
+             "text": ["A thick pipe of deep blue ice with heavy bronze bands. Passes &l64 channels&r. Where a basic pipe meets it, a brass reducer washer closes its end: the thin tube enters it without a gap."]},
+            {"type": "text", "title": "How pipes behave",
+             "text": [
+               "• Pipes attach to all neighboring network blocks - devices and other pipes. Brass cuffs appear at the ends.",
+               "• While the network has power, the glass of every pipe &lglows softly&r. The glow is only for the eye: pipes do not light up the area and do not stop mobs from spawning.",
+               "• Inside a powered pipe a tiny snowman in a pumpkin head runs carrying a box - &lone for the whole connected pipe network&r. In thin pipes only its head is visible, in dense ones the whole snowman. Without Source it freezes and the glow goes out.",
+               "• Pipes do not connect to the array's internals (conduits, core).",
+               "# Limit",
+               "A pipe passes a limited number of channels. Devices behind an overloaded pipe go silent - replace it with a dense one or lay a second line from another bushing."
+             ]}
+          ]
+        },
+        {
+          "id": "net_devices", "title": "Placing devices", "icon": "golem_logix:copper_drive_bay", "x": 2, "y": 0, "parents": ["net_pipes"],
+          "pages": [
+            {"type": "text", "title": "Devices attach directly",
+             "text": [
+               "A device needs no pipe if it stands against a bushing, another pipe or another network device: nodes conduct channels through each other.",
+               "So terminals and cabinets can be chained. But remember: all channels behind such a chain pass through it.",
+               "# Source supply",
+               "A jar must touch any node (not necessarily the core). It takes no channel and does not carry the network. The Eternal Frost Resonator is attached the same way - but it powers chronometers, not the network."
+             ]},
+            {"type": "image", "texture": "array_setup", "title": "A sample base",
+             "text": ["An array with two cabinets, a terminal, a calculator, a provider and a bus; a Resonator below the array."]}
+          ]
+        },
+        {
+          "id": "net_plan", "title": "Planning a network", "icon": "minecraft:map", "x": 1, "y": 1, "parents": ["net_channels"],
+          "pages": [
+            {"type": "text", "title": "Avoiding the limit",
+             "text": [
+               "• Count your devices: terminals, cabinets and buses take one channel each.",
+               "• More than 8 devices - complete the array (320).",
+               "• Many devices behind one exit - use different bushings or dense pipes.",
+               "• Hit the line limit - add expanders.",
+               "• Hit the network limit - quantum expanders.",
+               "&oA basic array is often enough: a typical base of 30-60 devices lives comfortably on 320 channels.&r"
+             ]}
+          ]
+        },
+        {
+          "id": "net_diagnose", "title": "Diagnostics", "icon": "minecraft:redstone_lamp", "x": 2, "y": 1, "parents": ["net_plan"],
+          "pages": [
+            {"type": "table", "title": "What a message means", "header": ["Message", "What to do"], "widths": [66, 82],
+             "rows": [
+               ["No Atlas Core", "connect to the array"],
+               ["No Source", "bring a source"],
+               ["No channels", "pipes / expanders"],
+               ["Waiting for machine", "return output by bus"],
+               ["No provider", "put the pattern in one"],
+               ["Paused", "see the Redstone Module"]
+             ],
+             "text": ["At the bottom of the terminal screen you see “Ch 12/64” - used and available channels; the tooltip shows everything else."]}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "title": "Storage",
+      "blurb": "disks, cabinets, terminals",
+      "icon": "golem_logix:copper_drive_bay",
+      "color": "e08c4a",
+      "entries": [
+        {
+          "id": "st_disks", "title": "Magnetic disks", "icon": "golem_logix:copper_disk_16k", "x": 0, "y": 0, "gold": true,
+          "pages": [
+            {"type": "text", "title": "Pure capacity",
+             "text": [
+               "A disk stores items in the Refined Storage way: capacity is counted in &lpieces&r and you can store any number of types - there is no artificial limit.",
+               "# Capacities",
+               "• 1k - 1,000 items, 4k - 4,000, 16k - 16,000, 64k - 64,000, &l256k - 256,000&r.",
+               "A disk can be pulled out, carried and put into another cabinet: all of its contents stay on it."
+             ]},
+            {"type": "crafting", "recipe": "golem_logix:copper_disk_1k", "text": ["The base of the line."]},
+            {"type": "crafting", "recipe": "golem_logix:copper_disk_4k", "text": ["Three 1k disks and copper."]},
+            {"type": "crafting", "recipe": "golem_logix:copper_disk_16k", "text": ["Three 4k disks, copper and matrices."]},
+            {"type": "crafting", "recipe": "golem_logix:copper_disk_64k", "text": ["Three 16k disks, gold and matrices."]},
+            {"type": "crafting", "recipe": "golem_logix:copper_disk_256k", "text": ["Three 64k disks, diamonds and cores."]}
+          ]
+        },
+        {
+          "id": "st_fluid", "title": "Cryo Fluid Disks", "icon": "golem_logix:fluid_disk_16k", "x": 1, "y": -1, "parents": ["st_disks"],
+          "pages": [
+            {"type": "text", "title": "Cold disks",
+             "text": [
+               "The same five capacities - 1k, 4k, 16k, 64k, &l256k&r - but in &lmillibuckets&r (mB). 1000 mB is one bucket.",
+               "Fluid disks glow blue; item disks do not accept fluids and vice versa.",
+               "Any number of fluid types can be stored: water, lava, oil, milk..."
+             ]},
+            {"type": "crafting", "recipe": "golem_logix:fluid_disk_1k", "text": ["Glass and substrate."]},
+            {"type": "crafting", "recipe": "golem_logix:fluid_disk_4k", "text": ["Three 1k disks and packed ice."]},
+            {"type": "crafting", "recipe": "golem_logix:fluid_disk_16k"},
+            {"type": "crafting", "recipe": "golem_logix:fluid_disk_64k"},
+            {"type": "crafting", "recipe": "golem_logix:fluid_disk_256k"}
+          ]
+        },
+        {
+          "id": "st_bay", "title": "Copper Drive Bay", "icon": "golem_logix:copper_drive_bay", "x": 1, "y": 0, "parents": ["st_disks"], "gold": true,
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:copper_drive_bay",
+             "text": ["A big copper cabinet with a glass front: &l10 cassette slots&r for item and fluid disks. Takes 4 blocks and 1 channel."]},
+            {"type": "text", "title": "What it looks like",
+             "text": [
+               "The cabinet is &l2x2 blocks&r: two cells wide and two tall, one block deep. It is placed with a single item, like a door: the lower left block goes where you click and the other three go to the right and above, so leave free room. The front faces you; &lany of the four parts&r connects it to the network.",
+               "Behind the glass &levery inserted disk is a cassette with a colored label&r in its slot, with &lfour fill LEDs&r on it.",
+               "# Label color = capacity",
+               "• Item: copper (1k), iron (4k), gold (16k), diamond (64k), amethyst (256k).",
+               "• Fluid: light blue (1k), ice (4k), blue ice (16k), lapis (64k), purpur (256k).",
+               "# LED",
+               "&2Green&r - nearly empty, &6yellow&r - from ¼, &6orange&r - from ½, &4red&r - over ¾."
+             ]},
+            {"type": "text", "title": "Archivists",
+             "text": [
+               "While the network is powered, &lcopper archivist golems&r run in front of the cassettes carrying crates along the shelves; every cassette has &ltwo reels&r and the tape winds from one to the other as the disk fills: this is how the cabinet “reads” data. Violet runes pulse above the front and on the plinth. While the cabinet's window is open, the &lglass doors&r of the showcase and the gauge panel stand open.",
+               "No Source - the cabinet freezes and the golems stand still.",
+               "# Controls",
+               "• Right-clicking any part opens the window: 2×5 disk slots and the cabinet &lpriority&r. Only disks are accepted.",
+               "• Items go to cabinets with a higher priority first and are taken from cabinets with a lower priority first.",
+               "• Shift-click moves a disk between the cabinet and your inventory.",
+               "• A broken cabinet drops all disks - with their contents."
+             ]}
+          ]
+        },
+        {
+          "id": "st_terminal", "title": "Analog Terminal", "icon": "golem_logix:analog_terminal", "x": 2, "y": 0, "parents": ["st_bay"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:analog_terminal",
+             "text": ["A green-phosphor CRT screen. Shows everything in the network. Takes 1 channel. When the network starts, a golem on the screen waves at you across the whole screen, and then hauls crates."]},
+            {"type": "table", "title": "Controls", "header": ["Action", "Result"], "widths": [66, 82],
+             "rows": [
+               ["LMB on item", "take a stack"],
+               ["RMB on item", "take half"],
+               ["MMB on item", "take one"],
+               ["Shift+LMB", "stack to inventory"],
+               ["Click with item", "insert all"],
+               ["RMB with item", "insert one"],
+               ["Shift+click inv.", "send to network"],
+               ["Ctrl+LMB", "order crafting"]
+             ]},
+            {"type": "text", "title": "Search and sorting",
+             "text": [
+               "The search box understands:",
+               "• plain text - by item name,",
+               "• &l@mod&r - by mod (for example @minecraft),",
+               "• &l#text&r - by tooltip text.",
+               "Buttons on the right of the window: &lsort mode&r (name/quantity/mod), &ldirection&r, &llist view&r (both / items / fluids), &lcraftable only&r.",
+               "At the bottom - the disk fill bar and “Ch used/capacity”; hover for details: items, fluids, channels, busy calculators.",
+               "The mouse wheel and the bar on the right scroll the list. &lTab&r or &l/&r jumps straight into search."
+             ]},
+            {"type": "text", "title": "Window size and JEI",
+             "text": [
+               "The &l“Size”&r button on the right stretches the window vertically: normal, tall or &lthe whole screen&r - the list gets as many rows as fit, and you see most of the network at once. The choice is remembered for all terminals and the Chronometer.",
+               "With JEI, hover an item or fluid in the list and press &lR&r to see its recipes or &lU&r to see its uses. JEI bookmarks work the same way."
+             ]}
+          ]
+        },
+        {
+          "id": "st_crafting", "title": "Crafting Terminal", "icon": "golem_logix:crafting_terminal", "x": 3, "y": 0, "parents": ["st_terminal"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:crafting_terminal",
+             "text": ["The same terminal, but with a 3×3 crafting grid and a result. Takes 1 channel. A golem with crates lives on the amber screen too."]},
+            {"type": "text", "title": "Conveniences",
+             "text": [
+               "• Used ingredients &lrefill themselves&r from the network: take the result and the missing items in the grid are topped up.",
+               "• The “v” button on the left returns everything from the grid to the network.",
+               "• Shift-clicking the result crafts as many as possible.",
+               "• Closing the window also returns the grid to the network (and what does not fit goes to your inventory).",
+               "&oWith JEI the “+” button of a recipe lays it out in the grid from the network and your inventory (Shift - full stacks); JEI marks in red what is nowhere to be found.&r"
+             ]},
+            {"type": "text", "title": "Precraft",
+             "text": [
+               "If something is missing for a recipe but the network &lhas patterns&r for it, JEI's “+” button lights up turquoise.",
+               "&lCtrl + “+”&r orders the missing items right away - one job for all of them (with Shift - for a full stack). Whatever cannot be crafted is listed in chat.",
+               "When the order is ready, an &l“Order ready”&r plate pops up in the corner of the screen with a chime - press “+” again and craft the recipe."
+             ]}
+          ]
+        },
+        {
+          "id": "st_fluids_ui", "title": "Fluids in the terminal", "icon": "minecraft:bucket", "x": 3, "y": -1, "parents": ["st_terminal", "st_fluid"],
+          "pages": [
+            {"type": "text", "title": "Fluids in the list",
+             "text": [
+               "By default the list shows items and fluids &ltogether&r. A fluid is counted in &lbuckets&r: 1000 mB is “one piece” (a droplet marks the cell), the exact amount is in the tooltip. The “Both/Items/Fluids” button on the right chooses the view; in the Fluids view amounts are shown in mB.",
+               "# Filling and pouring",
+               "• An &lempty bucket&r on the cursor + a click on a fluid row - the bucket is filled from the network.",
+               "• A &lfull bucket&r on the cursor + a click on a fluid row - the fluid is poured into the network and you keep the empty bucket. In item mode &lright-clicking with the bucket&r on the list does the same.",
+               "Any container that understands fluids works (tank, cistern...).",
+               "Buses move fluids automatically (see the Buses section)."
+             ]}
+          ]
+        },
+        {
+          "id": "st_periscope", "title": "Periscope", "icon": "golem_logix:periscope_storage_bus", "x": 2, "y": 1, "parents": ["st_bay"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:periscope_storage_bus",
+             "text": ["A compact brass box with a runed monocle lens in front and an icy star on top. Takes 1 channel."]},
+            {"type": "text", "title": "Containers as memory",
+             "text": [
+               "Place the periscope &lwith its lens on a chest&r, barrel or any container with items or fluids: its contents appear in the terminal as if they lay on a disk.",
+               "• Items are taken from and put into the chest through the terminal.",
+               "• The periscope sees &ltanks with fluids&r too: a tank is attached like a chest.",
+               "• Right-clicking the periscope opens the &lpriority&r window: the higher the number, the earlier this storage receives items (cabinets and periscopes are ordered by the same number) and the later it gives them up.",
+               "• With a &lRedstone Module&r the storage is switched on and off by a signal.",
+               "• The periscope hauls nothing itself - it only “peers” inside.",
+               "&oGreat for hooking up old warehouses you do not want to dismantle.&r"
+             ]}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "buses",
+      "title": "Buses",
+      "blurb": "vacuum and pneumatics",
+      "icon": "golem_logix:vacuum_import_bus",
+      "color": "d4a017",
+      "entries": [
+        {
+          "id": "bus_intro", "title": "Interaction buses", "icon": "golem_logix:vacuum_import_bus", "x": 0, "y": 0, "gold": true,
+          "pages": [
+            {"type": "text", "title": "How buses work",
+             "text": [
+               "Buses connect the network to the outside world - chests, furnaces, machine inventories. Each takes 1 channel.",
+               "A bus faces &lthe container with its front&r (place it aiming at the block). Without upgrades it moves up to 16 items or 1000 mB of fluid at a time, two and a half times a second.",
+               "A bus is compact: it takes the half of the block next to the container. Its other sides have &lpipe sockets&r that grow into mini tubes to the block edge next to a network node.",
+               "Buses and pipes are &lsteps&r: you walk onto them without jumping.",
+               "Three buses:",
+               "• &lVacuum Import Bus&r - sucks from a container into the network;",
+               "• &lInjector Export Bus&r - pushes from the network into a container;",
+               "• &lPeriscope&r - connects a container as storage (see the Storage section).",
+               "&oItems are never shuffled in a circle: a bus does not put things back into the very chest it takes them from, even if a periscope links that chest.&r"
+             ]}
+          ]
+        },
+        {
+          "id": "bus_import", "title": "Vacuum import bus", "icon": "golem_logix:vacuum_import_bus", "x": 1, "y": -1, "parents": ["bus_intro"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:vacuum_import_bus",
+             "text": ["A compact brass box; a turbine funnel in front sucks items in, a turquoise star on a rune plate on top."]},
+            {"type": "text", "title": "Takes what is needed",
+             "text": [
+               "• The bus scans the container's slots and pulls items into the network (if the disks have room).",
+               "• The same for fluids: it pumps them out of tanks.",
+               "• An &lempty filter&r means take everything. A filled one - only what is listed.",
+               "• With only an item filter it does not take fluids, and vice versa.",
+               "• The bus gives priority to autocrafting jobs: expected results go straight to the cryo calculator - even if the storage is completely full.",
+               "• The bus window has a &lpriority&r: with several buses in a network the one with the higher number works first.",
+               "&oThis is the “result return” for machines: attach it to the furnace output and ingots go straight into the network.&r"
+             ]}
+          ]
+        },
+        {
+          "id": "bus_export", "title": "Injector export bus", "icon": "golem_logix:injector_export_bus", "x": 1, "y": 0, "parents": ["bus_intro"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:injector_export_bus",
+             "text": ["A compact brass box; a steel nozzle in front pushes items out, a violet star on a rune plate on top."]},
+            {"type": "text", "title": "Outputs only by list",
+             "text": [
+               "• Without a filter the bus &loutputs nothing&r - otherwise it would drain the whole network.",
+               "• List the items to deliver in the filter. The bus supplies them while the container accepts.",
+               "• A bucket in a filter slot - output that fluid.",
+               "• Before delivering it checks whether the item fits: the excess stays in the network.",
+               "• The bus priority sets the order: a higher number works earlier than the others in the network.",
+               "• With an &lAutocraft Module&r the bus orders what the network lacks from the calculators - and delivers it as soon as it is ready.",
+               "&oExample: a bus with coal in its filter on a furnace - the furnace always has fuel.&r"
+             ]}
+          ]
+        },
+        {
+          "id": "bus_filters", "title": "Filters", "icon": "minecraft:hopper", "x": 2, "y": 0, "parents": ["bus_import", "bus_export"],
+          "pages": [
+            {"type": "text", "title": "Setting up a filter",
+             "text": [
+               "Right-clicking a bus opens a window with &l9 ghost slots&r - items placed in them are not consumed.",
+               "# How to set",
+               "• Click with an item from the cursor - puts that item in the slot.",
+               "• LMB on a slot with an empty hand - +1 (the number does not matter for a filter).",
+               "• RMB - -1 or clear.",
+               "• Shift-click - clears the slot.",
+               "• Shift-click on an inventory item - puts a copy into the first free slot.",
+               "A &lbucket (or any container holding fluid)&r in a slot is a fluid filter. Because of this a “water bucket” item cannot be passed through a filter as an item: there it means water."
+             ]}
+          ]
+        },
+        {
+          "id": "bus_upgrades", "title": "Bus upgrades", "icon": "golem_logix:compressed_coprocessor", "x": 2, "y": 1, "parents": ["bus_import", "bus_export"], "gold": true,
+          "pages": [
+            {"type": "text", "title": "Six slots",
+             "text": [
+               "To the right of the bus window there is a column of &lsix upgrade slots&r. Shift-clicking an upgrade in your inventory puts it into a free slot.",
+               "• &lCompressed Co-Processor&r - a speed upgrade: up to &l4&r in an import or export bus.",
+               "• &lAutocraft Module&r - export bus only: it orders what is missing from the Cryo-Calculators.",
+               "• &lRedstone Module&r - signal control (see “Redstone”).",
+               "The Periscope has one slot - for the Redstone Module."
+             ]},
+            {"type": "ritual", "title": "Compressed Co-Processor", "station": "golem_logix:mana_saturator", "inputs": ["golem_logix:cooling_coprocessor"], "outputs": ["golem_logix:compressed_coprocessor"],
+             "condition": "1000 Source per ritual.",
+             "text": ["The Mana Saturator's golem flattens a Cooling Co-Processor into a thin pack of fins - a speed upgrade for buses and Cryo-Calculators."]},
+            {"type": "table", "title": "Bus speed", "header": ["Upgrades", "Per move", "How often"], "widths": [60, 34, 54],
+             "rows": [
+               ["none", "16", "0.4 s"],
+               ["1", "32", "0.3 s"],
+               ["2", "64", "0.2 s"],
+               ["3", "96", "0.1 s"],
+               ["4", "128", "1 tick"]
+             ],
+             "text": ["Fluids speed up the same way: 1000 mB per move without upgrades and up to 8000 mB with four."]},
+            {"type": "crafting", "recipe": "golem_logix:autocraft_module",
+             "text": ["An export bus with this module: if an item from the filter is not in the network but has a pattern, the bus orders crafting (a batch at most every 2 s) and delivers the result when it is ready. No new order while one is in progress."]},
+            {"type": "crafting", "recipe": "golem_logix:redstone_module",
+             "text": ["The Redstone Module: once installed, a mode button appears to the left of the window."]}
+          ]
+        },
+        {
+          "id": "bus_redstone", "title": "Redstone", "icon": "golem_logix:redstone_module", "x": 3, "y": 1, "parents": ["bus_upgrades"],
+          "pages": [
+            {"type": "table", "title": "Module modes", "header": ["Mode", "The machine works"], "widths": [66, 82],
+             "rows": [
+               ["Ignore", "always"],
+               ["With signal", "while powered"],
+               ["Without signal", "while unpowered"],
+               ["Per pulse", "one action per pulse"]
+             ],
+             "text": ["Like the AE2 redstone card and the RS redstone mode. The mode button appears left of the machine window while the module is installed."]},
+            {"type": "text", "title": "For every machine",
+             "text": [
+               "• &lImport and export buses&r - move items by signal; per pulse - one batch.",
+               "• &lPeriscope&r - the storage is connected by signal (no pulse mode).",
+               "• &lPattern Provider&r - feeds ingredients by signal; per pulse - one batch.",
+               "• &lCryo-Calculator&r - works on its job by signal (otherwise “Paused by redstone”); per pulse - one cycle.",
+               "• &lMana Saturator&r - starts a ritual by signal; the module goes in with a right-click on the machine, the mode changes with another right-click with a module."
+             ]}
+          ]
+        },
+        {
+          "id": "bus_examples", "title": "Layouts", "icon": "minecraft:furnace", "x": 3, "y": 0, "parents": ["bus_filters"],
+          "pages": [
+            {"type": "text", "title": "A furnace on autopilot",
+             "text": [
+               "# A self-running furnace",
+               "1. An export bus with coal in its filter faces the furnace from above - it supplies fuel.",
+               "2. A second export bus (with ore) faces the furnace from the side - it supplies ore.",
+               "3. An import bus faces the furnace from below and takes the ingots.",
+               "# A factory",
+               "Feed ingredients to a machine with a Pattern Provider and take the product with an import bus - this is the basis of &lmachine autocrafting&r.",
+               "&oEvery bus takes a channel; with a dozen furnaces keep a reserve of channels.&r"
+             ]}
+          ]
+        },
+        {
+          "id": "bus_interface", "title": "Golem Interface", "icon": "golem_logix:golem_interface", "x": 1, "y": 1, "parents": ["bus_intro"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:golem_interface",
+             "text": ["A copper cube with an intake and a network socket on &levery&r side. An import and an export bus in one block, on &lone channel&r."]},
+            {"type": "text", "title": "Stock and intake",
+             "text": [
+               "• The top row is &lkeep in stock&r: drop a stack there and the interface keeps that many (left/right click: ±1).",
+               "• It takes what is missing from the network and returns the excess. The stock is taken from any side.",
+               "• Whatever is &linserted&r goes into the network, crafting jobs first."
+             ]},
+            {"type": "text", "title": "Fluids",
+             "text": [
+               "Put a bucket in a stock slot and the interface keeps &lthe fluid itself&r: a bucket = 1000 mB, up to 64 buckets. Pipes drain it from any side.",
+               "The switch under the slot: &ldrop&r - fluid, &lsquare&r - the buckets themselves.",
+               "Fluid poured into the interface (by a pipe or a bucket) goes into the network."
+             ]},
+            {"type": "text", "title": "Upgrades",
+             "text": [
+               "Like the export bus: up to four &lCompressed Co-Processors&r, an &lAutocraft Module&r (orders stock the network lacks) and a &lRedstone Module&r.",
+               "While the interface works, the turbines in its intakes spin and the metronomes on its sides keep time - faster with speed upgrades."
+             ]}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "autocraft",
+      "title": "Autocrafting",
+      "blurb": "punch cards and cryo calculators",
+      "icon": "golem_logix:cryo_calculator",
+      "color": "5ec8ff",
+      "entries": [
+        {
+          "id": "ac_overview", "title": "From recipe to result", "icon": "golem_logix:cryo_calculator", "x": 0, "y": 0, "gold": true,
+          "pages": [
+            {"type": "text", "title": "The path of an order",
+             "text": [
+               "Autocrafting is a chain of four links:",
+               "1. The &lEncoder&r punches a recipe onto a copper punch card.",
+               "2. The &lPattern Provider&r stores the cards and feeds ingredients into machines.",
+               "3. The &lCryo-Calculator&r breaks an order into steps and carries them out.",
+               "4. You order the result in a &lterminal&r - it lands in the network."
+             ]},
+            {"type": "text", "title": "What it can do",
+             "text": [
+               "• Crafting-table 3×3 recipes are carried out right in the calculator.",
+               "• “Machine” recipes (furnaces, crushers, altars) go through the Provider and an import bus.",
+               "• The recipe tree unfolds by itself: intermediates are taken from storage, the rest is made by other patterns.",
+               "• When an order is ready, whoever placed it gets a notification.",
+               "• An order always makes &lthe ordered amount&r - even if such an item is already in storage."
+             ]}
+          ]
+        },
+        {
+          "id": "ac_cards", "title": "Punch cards and the Encoder", "icon": "golem_logix:pattern_encoder", "x": 1, "y": -1, "parents": ["ac_overview"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:copper_punch_card",
+             "text": ["Blank cards: four from paper and copper."]},
+            {"type": "crafting", "recipe": "golem_logix:pattern_encoder",
+             "text": ["The Encoder takes 1 channel, but encoding does not need the network."]},
+            {"type": "text", "title": "How to encode",
+             "text": [
+               "In the window: a 3×3 grid on the left, up to three outputs on the right, a blank-card slot and a finished-card slot.",
+               "# “Crafting” mode",
+               "Lay out the recipe - the result appears by itself. No recipe - “Punch” refuses.",
+               "# “Machine” mode",
+               "Specify the inputs (with amounts) and up to three outputs. Click +1, RMB -1, Shift clears.",
+               "# Buttons",
+               "“Punch” writes the card, “Read” loads a card's recipe for editing, “Clear” wipes the grid.",
+               "An encoded card glints and lists its inputs and outputs in the tooltip. With JEI: “+” on a crafting recipe fills the grid, on a furnace or machine recipe it switches to “Machine” mode with the inputs and outputs."
+             ]}
+          ]
+        },
+        {
+          "id": "ac_provider", "title": "Stamping Gateway", "icon": "golem_logix:pattern_provider", "x": 1, "y": 0, "parents": ["ac_overview"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:pattern_provider",
+             "text": ["Holds up to &l9 cards&r and feeds ingredients into adjacent machines. Takes 1 channel."]},
+            {"type": "text", "title": "How it feeds",
+             "text": [
+               "• Right-click and put in encoded cards - the patterns are at once available to the whole network.",
+               "• For machine recipes the Provider looks for an adjacent &lnon-network&r block with an inventory (furnace, crate, machine, or an assembled Mana Saturator) and puts all ingredients of one batch into it.",
+               "• With several neighbors it tries them in turn. If a machine cannot take everything at once, the batch is postponed and retried.",
+               "• The button to the left of the window picks the &loutput side&r: all sides (as before) or a single one — then the provider feeds only the machine on that side. Handy when machines stand side by side. The arrow on the block's faces points at the chosen side; a sun with rays means it feeds all sides.",
+               "• The machine must return its output to the network - put a &lVacuum Import Bus&r next to it.",
+               "&oCrafting-table recipes do not concern the provider: the calculator carries them out.&r"
+             ]},
+            {"type": "text", "title": "Waiting for the result",
+             "text": [
+               "The &lclock&r button to the left of the window turns waiting on: until the result of the previous batch has come back to the job (through an import bus), the next batch of ingredients &lis not loaded&r.",
+               "This is for machines that get confused by the ingredients of two recipes at once, or that make one item at a time.",
+               "Without waiting (a hopper on the button) the Provider loads batches as soon as the machine accepts them.",
+               "The slot to the right of the window takes a &lRedstone Module&r."
+             ]}
+          ]
+        },
+        {
+          "id": "ac_cpu", "title": "Cryo-Calculator", "icon": "golem_logix:cryo_calculator", "x": 1, "y": 1, "parents": ["ac_overview"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:cryo_calculator",
+             "text": ["An icy calculator with frost crystals. Carries out &lone job&r at a time. Takes 1 channel."]},
+            {"type": "crafting", "recipe": "golem_logix:cooling_coprocessor",
+             "text": ["The cooling co-processor is a finned radiator. Takes no channels; speeds up the &ladjacent&r calculator. While it works the fins pump like a flywheel: they squeeze and spread, smoothly gaining and losing momentum."]},
+            {"type": "text", "title": "Speed",
+             "text": [
+               "The calculator works in cycles - five times a second - and does up to &l1 + 2×N&r steps per cycle, where N is the number of co-processors touching it (up to 6). Each &lCompressed Co-Processor&r in the window's slots adds &l4&r more (up to four of them): up to 29 steps per cycle.",
+               "Each step costs &l2 Source&r.",
+               "# The calculator window",
+               "Right-click shows the target, progress “steps/total”, status, number of co-processors, items inside and an “Abort” button. On the right - slots for Compressed Co-Processors and the Redstone Module.",
+               "&oSeveral calculators work in parallel - each takes its own order.&r"
+             ]},
+            {"type": "text", "title": "You can see it think",
+             "text": [
+               "While a job is running:",
+               "• a &lminiature model&r of what it is making right now (the output of the current step) spins above the calculator;",
+               "• a &lcrew of snowmen&r of different sizes builds it on the roof: they bend down for an ice part, lift it over their heads and toss it into the model;",
+               "• turquoise “matrix rain” runs down its side panels.",
+               "When the job ends the model melts away, the rain stops and the snowmen goof off: they look around, hop in circles, wave and doze.",
+               "# The foreman",
+               "When co-processors &lactually&r speed the work up (more than one step done in a cycle), a snowman with a &lblack atlant head&r appears and urges the others on: it waves its stick arm and points at the model. Nothing to speed up — the foreman leaves."
+             ]},
+            {"type": "table", "title": "Job states", "header": ["State", "Meaning"], "widths": [70, 78],
+             "rows": [
+               ["Computing", "working"],
+               ["Waiting for machine", "needs an import bus"],
+               ["No provider", "pattern is in no provider"],
+               ["Not enough Source", "no energy"],
+               ["Invalid pattern", "recipe is gone"],
+               ["Delivering", "storage full"],
+               ["Paused", "Redstone Module"]
+             ]}
+          ]
+        },
+        {
+          "id": "ac_order", "title": "Ordering in the terminal", "icon": "golem_logix:crafting_terminal", "x": 2, "y": 0, "parents": ["ac_cards", "ac_provider", "ac_cpu"], "gold": true,
+          "pages": [
+            {"type": "text", "title": "How to order",
+             "text": [
+               "1. In the terminal switch on the “Craft” filter: only items that have a pattern remain.",
+               "2. &lCtrl+LMB&r on an item (or a click on an item with zero stock - it is marked “C”) opens the order window.",
+               "3. Enter the amount or press ±1, ±10, ±100.",
+               "4. “Preview” shows in chat what is needed and what is missing. “Start” launches the job.",
+               "Finished items land in storage, and an &l“Order ready”&r plate pops up in the corner of your screen - just like in AE2.",
+               "&oFrom JEI the missing ingredients of a recipe are ordered with one button: Ctrl + “+” (see “Crafting Terminal”).&r"
+             ]},
+            {"type": "text", "title": "How the plan is built",
+             "text": [
+               "The planner descends the recipe tree:",
+               "• takes what is needed from the network (surplus from earlier steps first);",
+               "• makes what is missing from patterns, and unfolds their ingredients in turn;",
+               "• marks cycles and trees that are too deep as “missing”.",
+               "Before starting, all raw materials are &lreserved&r - they leave the network into the calculator, so nobody can take them on the way. If you abort the job, everything returns to the network.",
+               "&oVery large orders (tens of thousands of steps) are refused - split them into parts.&r"
+             ]}
+          ]
+        },
+        {
+          "id": "ac_mainframe", "title": "Cryo-Mainframe", "icon": "golem_logix:cryo_mainframe", "x": 2, "y": 2, "parents": ["ac_cpu"], "gold": true,
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:cryo_mainframe",
+             "text": ["A cabinet for &l12 Cryo Calculators&r: for when autocrafting outgrows rows of calculators wrapped in co-processors. The whole cabinet takes &lone channel&r."]},
+            {"type": "checklist", "variant": "mainframe", "title": "Materials",
+             "text": [
+               "Checked against your inventory. The button shows ghost blocks: the Mainframe at the bottom middle, glass around it, casings behind, atlants at the sides.",
+               "The ghosts follow the block you look at; &lY&r locks them, &lN&r cancels. The cabinet's front faces you."
+             ]},
+            {"type": "text", "title": "Assembly",
+             "text": [
+               "A 3 x 2 x 2 cabinet with two atlants at the sides — they are what holds it:",
+               "• front: the Cryo-Mainframe at the bottom middle with &l5 glass blocks&r around it;",
+               "• back row: &l6 Atlas Casings&r;",
+               "• at both sides of the front row — an &lAtlant&r (the two-block statue, facing any way).",
+               "The cabinet assembles itself (checked every second); right-click an unassembled one to learn what is missing and where. When it assembles the atlants are &lbuilt into&r the cabinet: their torsos come straight out of its sides, the outer arm wraps around the front corner and grips the post, the inner one rests on the roof crest, and their heads still follow you.",
+               "Break any part and the cabinet comes apart, the other blocks come back (a broken atlant drops whole). A network pipe can go to any part."
+             ]},
+            {"type": "text", "title": "Cores and the multiplier",
+             "text": [
+               "The window has two shelves of six slots for Cryo Calculators and an upgrade column on the right.",
+               "• Every calculator inside gives &l2 cores&r. A core is an independent CPU: it takes its own order, just like a separate calculator. 12 calculators — 24 parallel orders on one channel.",
+               "• Every &lCompressed Co-processor&r (up to six) counts &ltwice&r and speeds up &lall cores at once&r: a core does 1 + 8×N steps per cycle — up to 49 with six.",
+               "The Recipe Monitor lists the cabinet's cores as separate rows (#1, #2...).",
+               "&oSuperconducting cryo-frost and crystal resonance enable the mainframe to unleash peak computational throughput.&r"
+             ]},
+            {"type": "text", "title": "Behind the glass",
+             "text": [
+               "While anyone has the cabinet's window open, its &lglass doors swing open&r; close the window and they close.",
+               "Inside a turquoise matrix glows, the calculators you put in stand on the shelves, and in front of them &lsnowman crews&r work — one per shelf, each building its own item. When co-processors really speed the work up, a foreman with an atlant head shows up below.",
+               "A &lcopper golem&r turns the red valve wheel on top while the cabinet is busy, and a row of turquoise lights runs along the crest. Copper archivist golems walk the shelves bringing boxes of parts to the snowmen."
+             ]}
+          ]
+        },
+        {
+          "id": "ac_catalog", "title": "Punch Card Catalog", "icon": "golem_logix:punch_card_catalog", "x": 2, "y": -1, "parents": ["ac_provider", "ac_cards"], "gold": true,
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:punch_card_catalog",
+             "text": ["A filing cabinet for hundreds of punch cards with &lcrafting-table recipes&r — no more rows of Pattern Providers just to hold them. The whole cabinet takes &lone channel&r."]},
+            {"type": "checklist", "variant": "catalog", "title": "Materials",
+             "text": [
+               "Checked against your inventory. The button shows ghost blocks: the Catalog at the bottom middle, bookshelves around it, copper blocks behind, copper blocks with copper golem statues at the sides.",
+               "The ghosts follow the block you look at; &lY&r locks them, &lN&r cancels. The cabinet's front faces you."
+             ]},
+            {"type": "text", "title": "Assembly",
+             "text": [
+               "A 3 x 2 x 2 cabinet with two copper golems at the sides:",
+               "• front: the Punch Card Catalog at the bottom middle with &l5 bookshelves&r around it;",
+               "• back row: &l6 copper blocks&r (any oxidation, waxed too);",
+               "• at both sides of the front row — a copper block with a &lcopper golem statue&r on it (any oxidation).",
+               "The cabinet assembles itself (checked every second); right-click an unassembled one to learn what is missing and where. When it assembles the statues come alive: the golems grow into the sides with a shoulder, hold the roof corner with the near arm and a punch card in the far one. They keep the statues' oxidation.",
+               "Break any part and the cabinet comes apart; every block comes back as it was (same oxidation and wax). The cards stay inside."
+             ]},
+            {"type": "text", "title": "Places and providers",
+             "text": [
+               "The middle of the window is a scrolling grid of card places; on the right are a Redstone Module slot and, below it, the &lPattern Provider slot&r.",
+               "• Put ordinary Pattern Providers there (up to a stack): &leach one opens 27 places&r. 64 providers — 1728 cards in one cabinet.",
+               "• Places without providers are locked (bars). Providers whose places hold cards cannot be taken out — take the cards out first.",
+               "• Only cards with &lcrafting-table&r recipes fit: the calculators carry them out themselves, no machine needed. Machine cards stay in providers next to their machines.",
+               "• The search under the grid looks at the recipe result; the mouse wheel, the scrollbar and PageUp/PageDown scroll.",
+               "&oEach provider adds another rack of archive drawers.&r"
+             ]},
+            {"type": "text", "title": "Redstone and drawers",
+             "text": [
+               "With a &lRedstone Module&r the catalog's patterns are switched on and off by a signal (with signal, without signal, ignore).",
+               "While the window is open the drawers slide out one after another showing the cards, the letter drums on the roof flip, steam pours from the chimney and the golems wave their cards.",
+               "The turquoise screen in the middle searches the list for a card; the gauge under it shows how full the catalog is."
+             ]}
+          ]
+        },
+        {
+          "id": "ac_concentrator", "title": "Cryo Schematic Concentrator", "icon": "golem_logix:schematic_concentrator", "x": 3, "y": -1, "parents": ["ac_catalog"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:schematic_concentrator",
+             "text": ["A rusty cube with a big round holographic screen: &levery punch card of the network in one window&r — like the RS autocrafting manager or the AE2 pattern access terminal. Takes 1 channel."]},
+            {"type": "text", "title": "Categories",
+             "text": [
+               "Right-click to open a list of every Pattern Provider of the network (with a channel) and the places of every Catalog, by category:",
+               "• &lCrafting table&r — providers with only crafting cards, empty providers with no machine, and all Catalogs;",
+               "• then by the &lmachine&r a provider feeds: its block's icon and name (all providers at furnaces share one category);",
+               "• last — &lNo machine&r: providers with machine cards but no machine next to them (worth a look!).",
+               "Hover the icon to the left of a row to see where the provider stands and which machine it feeds."
+             ]},
+            {"type": "text", "title": "Working with cards",
+             "text": [
+               "The window's slots are the providers' real slots: cards can be &ltaken out and put in&r right here.",
+               "Shift-click a card in your inventory to put it into the first free slot of its kind (crafting or machine).",
+               "The search at the bottom keeps only rows with matching results.",
+               "&oWhile the window is open, holographic punch cards fan out in front of the screen.&r"
+             ]}
+          ]
+        },
+        {
+"id": "ac_monitor", "title": "Recipe Monitor", "icon": "golem_logix:recipe_monitor", "x": 2, "y": 1, "parents": ["ac_cpu"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:recipe_monitor",
+             "text": ["A brass cabinet with a big porthole behind which a violet vortex swirls. Takes 1 channel."]},
+            {"type": "text", "title": "A desk for every order",
+             "text": [
+               "Right-click opens the desk: on the left - &levery Cryo-Calculator of the network&r (what it makes, how far along, its state), on the right - the details of the selected one:",
+               "• what was ordered and how much,",
+               "• what is being made right now,",
+               "• how much is left of every step,",
+               "• what is expected from machines,",
+               "• the &l“Abort”&r button - everything inside the job returns to the network.",
+               "With JEI you can press R or U on any item of the desk.",
+               "&oPunch cards float in a circle inside the porthole - one for every running job.&r"
+             ]}
+          ]
+        },
+        {
+          "id": "ac_machines", "title": "Machine steps", "icon": "minecraft:blast_furnace", "x": 3, "y": 0, "parents": ["ac_order"],
+          "pages": [
+            {"type": "text", "title": "To the machine and back",
+             "text": [
+               "When a pattern is a machine recipe, the calculator hands a batch to the Provider, which puts the ingredients into the adjacent machine. The calculator remembers: &lwaiting for the output of this batch&r.",
+               "The output is returned by a &lVacuum Import Bus&r at the machine. Seeing an awaited item, the bus hands it straight to the job - bypassing storage.",
+               "# Example: ingots from ore",
+               "1. Pattern: 1 raw iron → 1 ingot (“Machine” mode).",
+               "2. The Provider stands against the furnace; an import bus is attached to the furnace output.",
+               "3. Order “ingots ×64” - the Provider loads ore, the bus returns ingots, the job counts them done."
+             ]}
+          ]
+        },
+        {
+          "id": "ac_faq", "title": "Common problems", "icon": "minecraft:barrier", "x": 4, "y": 0, "parents": ["ac_machines"],
+          "pages": [
+            {"type": "text", "title": "What to do if...",
+             "text": [
+               "• &lA job is stuck on “Waiting for machine”&r - there is no import bus at the output or the output does not match the pattern.",
+               "• &lNo pattern&r - the Provider did not find a card: put it into a Provider that is connected and has a channel.",
+               "• &lNo calculator&r - all are busy or have no channel.",
+               "• &lNot enough resources&r - “Preview” lists exactly what.",
+               "• &lStorage is full&r - the job hangs on “Delivering” and finishes as soon as disk space frees up.",
+               "• &l“Paused by redstone”&r - check the signal and the Redstone Module mode.",
+               "&oAny job can be aborted in the calculator window or in the Recipe Monitor: everything inside returns to the network.&r"
+             ]}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "endgame",
+      "title": "Chronometer and late game",
+      "blurb": "wireless access and the eternal aether",
+      "icon": "golem_logix:portable_chronometer",
+      "color": "c08cff",
+      "entries": [
+        {
+          "id": "eg_chrono", "title": "Portable Chronometer", "icon": "golem_logix:portable_chronometer", "x": 0, "y": 0, "gold": true,
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:portable_chronometer",
+             "text": ["Pocket watch with a mini oscilloscope: a wireless crafting terminal for your network. The wither skeleton skull powers its dark cathode tube - explaining the frantic Wither silhouette projected onto the screen."]},
+            {"type": "text", "title": "Binding and use",
+             "text": [
+               "1. &lShift+right-click on the Atlas Core&r - the watch binds to it (the tooltip shows coordinates and world).",
+               "2. &lRight-click in the air&r - a network terminal opens &lwith a crafting grid&r: everything the Crafting Terminal can do, including JEI “+”, precraft and R/U.",
+               "• The chronometer takes no channels.",
+               "• While the window is open the range is checked constantly: leave the zone and the window closes.",
+               "• The network must be powered and the core loaded.",
+               "&oThe chronometer itself is a little brass device with a green screen: a flat Wither on it keeps trying to shoot a skull right through the glass - at you.&r"
+             ]},
+            {"type": "text", "title": "Source charge",
+             "text": [
+               "With Ars Nouveau the chronometer runs on its own store of &lSource&r (up to 10,000): opening the window costs 20, and while it is open it uses 2 per second. The charge shows as a bar on the item and as a violet gauge next to the crafting grid.",
+               "&lRight-click a Source Jar&r with the chronometer to charge it to the top (as much as the jar holds).",
+               "If an &lEternal Frost Resonator&r is attached to the network, the watch never needs charging again: the resonator sends it Source through the aether wherever you are.",
+               "&oWithout Ars Nouveau no charge is needed at all.&r"
+             ]}
+          ]
+        },
+        {
+          "id": "eg_tiers", "title": "Range and upgrades", "icon": "minecraft:ender_eye", "x": 1, "y": 0, "parents": ["eg_chrono"],
+          "pages": [
+            {"type": "table", "title": "Tiers", "header": ["Tier", "Range"], "widths": [86, 62],
+             "rows": [
+               ["Local", "200 blocks, same world"],
+               ["Dimension", "anywhere in the same world"],
+               ["Cross-dimension", "across any dimensions"]
+             ]},
+            {"type": "crafting", "grid": ["golem_logix:portable_chronometer", "minecraft:ender_eye", "golem_logix:flattened_copper_matrix", "", "", "", "", "", ""],
+             "result": "golem_logix:portable_chronometer", "title": "Chronometer: dimension",
+             "text": ["An upgrade in the crafting table; cell order does not matter. The binding and the charge are kept."]},
+            {"type": "crafting", "grid": ["golem_logix:portable_chronometer", "golem_logix:interdimensional_occult_matrix", "", "", "", "", "", "", ""],
+             "result": "golem_logix:portable_chronometer", "title": "Chronometer: cross-dimension",
+             "text": ["Needs a chronometer of the “Dimension” tier: you cannot skip a step. Where the matrix comes from is a secret you have yet to uncover."]}
+          ]
+        },
+        {
+          "id": "eg_resonator", "title": "Eternal Frost Source Resonator", "icon": "golem_logix:eternal_frost_resonator", "x": 2, "y": 0, "parents": ["eg_tiers"], "gold": true,
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:eternal_frost_resonator",
+             "text": ["A rusty copper body in a brass frame with a big turquoise dial; above it a glass chamber where a snow vortex swirls and rises into the chimney; frosted pipes and icicles at the sides. It is placed facing you. Its recipe holds a clock (the link with the chronometers) and an &lInterdimensional Occult Matrix&r."]},
+            {"type": "text", "title": "Source through the aether",
+             "text": [
+               "The resonator draws Source from the ethereal vacuum and &lsends it through the aether to the Portable Chronometers&r bound to its network - they never need charging, even in another dimension.",
+               "Put it against any node of the network: snowflakes start falling around it — the link is up.",
+               "• It does &lnot feed the network&r: the Core still takes Source from jars.",
+               "• It does &lnot fill Ars Nouveau jars&r.",
+               "&oOne resonator is enough for every chronometer of the network.&r"
+             ]}
+          ]
+        },
+        {
+          "id": "eg_creative", "title": "Creative Source Jar", "icon": "golem_logix:creative_source_jar", "x": 3, "y": 0, "parents": ["eg_resonator"],
+          "pages": [
+            {"type": "text", "title": "For testing",
+             "text": [
+               "A bottle of turquoise Source with a cork. Creative mode only.",
+               "An infinite source for the network and for Ars Nouveau jars next to it (it tops them up with 10,000 every second). A chronometer charges to the top from it.",
+               "Handy for trying out a network layout without spending resources on Source."
+             ]}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "secrets",
+      "title": "Secret Knowledge",
+      "blurb": "not for everyone",
+      "icon": "minecraft:nether_star",
+      "color": "b070ff",
+      "entries": [
+        {
+          "id": "secret_hint", "title": "Secret knowledge", "icon": "minecraft:nether_star", "x": 0, "y": 0, "secret": "partial",
+          "pages": [
+            {"type": "text", "title": "What the star whispered", "when": "wither",
+             "text": [
+               "The Wither is defeated, and its star still echoes the summoning. Its power can be caught not in battle but at the very start - while the Wither is only “assembling”.",
+               "But the knowledge is incomplete: what is that power for? It is sought by those for whom one world is too small.",
+               "&oTry to open a Portable Chronometer in another dimension - where the network core can no longer be heard.&r"
+             ]},
+            {"type": "text", "title": "A voice beyond the border", "when": "dimension",
+             "text": [
+               "The Chronometer could not reach the core: the border between worlds muffles any signal. To break through, you need a power that tears the fabric of dimensions itself.",
+               "Only one creature holds such power - the Wither.",
+               "&oDefeat the Wither, and the secret will be revealed in full.&r"
+             ]},
+            {"type": "tasks", "title": "Two trials",
+             "tasks": [
+               {"id": "wither", "text": "Defeat the Wither"},
+               {"id": "dimension", "text": "Try to open a Chronometer in another dimension"}
+             ],
+             "text": ["The order does not matter. Each trial reveals half of the knowledge, both - the whole recipe: here in the Grimoire and in JEI."]},
+            {"type": "text", "title": "The secret is revealed", "when": "both",
+             "text": [
+               "Both halves of the knowledge have come together. Read &l“The Wither's secret”&r and &l“Interdimensional Occult Matrix”&r - they have appeared next to this article on the map."
+             ]}
+          ]
+        },
+        {
+          "id": "wither", "title": "The Wither's secret", "icon": "minecraft:nether_star", "x": 1, "y": 0, "parents": ["secret_hint"], "secret": "full",
+          "pages": [
+            {"type": "text", "title": "Imploded plasma",
+             "text": [
+               "The strangest plate comes from the most dangerous mob. While the Wither is just being summoned it is still invulnerable and “assembling”. In those first moments it can be &limploded&r.",
+               "Drop an anvil on the forming Wither before its summoning timer runs on (the first 4 seconds). Instead of a fight you get &lImploded Wither Plasma&r, and the Wither vanishes.",
+               "&oIf you are late, the anvil merely hits a regular Wither - and nothing happens.&r",
+               "Plasma is the key to the &lInterdimensional Occult Matrix&r."
+             ]},
+            {"type": "ritual", "title": "Breaking the summoning", "station": "minecraft:anvil", "inputs": ["minecraft:nether_star"], "outputs": ["golem_logix:imploded_wither_plasma"],
+             "condition": "The first seconds of the Wither summoning.",
+             "text": ["Bring a stack of anvils and a careful build: keep a frame of blocks overhead so the anvil lands exactly."]}
+          ]
+        },
+        {
+          "id": "matrix", "title": "Interdimensional Occult Matrix", "icon": "golem_logix:interdimensional_occult_matrix", "x": 2, "y": 0, "parents": ["wither", "saturator"], "secret": "full",
+          "pages": [
+            {"type": "ritual", "title": "A gate between worlds", "station": "golem_logix:mana_saturator", "inputs": ["golem_logix:imploded_wither_plasma"], "outputs": ["golem_logix:interdimensional_occult_matrix"],
+             "condition": "2500 Source per ritual.",
+             "text": [
+               "One ritual turns the plasma into &lone&r matrix. It goes into:",
+               "• the Chronometer's cross-dimension upgrade,",
+               "• the &lQuantum Channel Expander&r,",
+               "• the &lEternal Frost Source Resonator&r."
+             ]}
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+# calculator snowmen: idle antics, then the build crew at work and the atlant-headed foreman when coprocessors really help
+reload
+cmd time set day
+cmd kill @e[type=item]
+cmd fill -40 -61 -14 40 -61 10 minecraft:deepslate_tiles
+cmd fill -40 -60 -14 40 -50 10 minecraft:air
+cmd kill @e[type=item]
+hook rig 0 -60 0
+cmd setblock 5 -60 -2 golem_logix:cooling_coprocessor
+cmd setblock 7 -60 -2 golem_logix:cooling_coprocessor
+wait 120
+look 6.5 -58.9 -1.5 1.5 160 30
+wait 5
+shot calc6_idle_a
+wait 60
+shot calc6_idle_b
+wait 70
+shot calc6_idle_c
+look 6.5 -58.9 -1.5 1.5 20 25
+wait 50
+shot calc6_idle_d
+hook netput 0 -60 0 minecraft:oak_log 64
+wait 10
+hook craft 0 -60 0 minecraft:stick 512
+look 6.5 -58.8 -1.5 1.6 160 22
+wait 30
+shot calc6_work_a
+wait 7
+shot calc6_work_b
+wait 7
+shot calc6_work_c
+wait 9
+shot calc6_work_d
+look 6.5 -58.8 -1.5 1.6 20 22
+wait 6
+shot calc6_work_front
+wait 11
+shot calc6_work_front2

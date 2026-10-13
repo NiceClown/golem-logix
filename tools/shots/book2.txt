@@ -1,0 +1,13 @@
+cmd kill @e[type=item]
+book st_terminal 0
+wait 15
+shot book2_terminal
+closeScreen
+book bus_import 0
+wait 15
+shot book2_busimport
+closeScreen
+book st_encoder 0
+wait 15
+shot book2_encoder
+closeScreen

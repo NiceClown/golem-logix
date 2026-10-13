@@ -1,0 +1,6 @@
+{
+    "textures":  {
+                     "layer0":  "golem_logix:item/interdimensional_occult_matrix"
+                 },
+    "parent":  "minecraft:item/generated"
+}

@@ -1,0 +1,56 @@
+# round 4 checks: cabinet (big reels, doors), terminal top golem, monitor window + lamp golem, atlas heads/glyphs/conduit,
+# bus + dense pipe, saturator back + pedestal, calculator window
+reload
+cmd time set day
+cmd kill @e[type=!player]
+cmd fill -40 -61 -20 40 -61 14 minecraft:grass_block
+cmd fill -40 -60 -20 40 -45 14 minecraft:air
+hook rig 0 -60 0
+cmd setblock 3 -60 -3 golem_logix:recipe_monitor[facing=south]
+cmd setblock 14 -60 -4 golem_logix:vacuum_import_bus[facing=north]
+cmd setblock 14 -60 -3 golem_logix:dense_frost_pipe
+cmd setblock 14 -60 -2 golem_logix:dense_frost_pipe
+cmd setblock 16 -60 -4 golem_logix:crafting_terminal[facing=south]
+wait 100
+hook netput 0 -60 0 minecraft:oak_log 64
+look 13 -59 -0.5 2.3 0 8
+wait 5
+shot r4_bay_a
+wait 30
+shot r4_bay_b
+look 14.4 -58.6 -0.5 1.2 10 5
+wait 5
+shot r4_bay_doors
+look 13 -59 -0.5 3.4 180 8
+wait 5
+shot r4_bay_back
+look 14.5 -59.5 -3.5 1.6 200 40
+wait 5
+shot r4_bus_dense
+look 16.5 -59.4 -4.5 1.3 180 70
+wait 5
+shot r4_term_top_a
+wait 20
+shot r4_term_top_b
+look 16.5 -59.5 -4.5 1.6 90 10
+wait 5
+shot r4_term_side
+look 3.5 -59.5 -2.5 2 180 15
+wait 5
+shot r4_monitor_idle
+hook craft 0 -60 0 minecraft:stick 256
+wait 40
+shot r4_monitor_work
+look 0.5 -58 0.5 6 200 12
+wait 5
+shot r4_atlas_a
+look 0.5 -58 0.5 6 140 12
+wait 30
+shot r4_atlas_b
+look 0.5 -59.5 0.5 4 200 2
+wait 5
+shot r4_atlas_low
+use 6 -60 -2
+wait 10
+shot r4_calc_gui
+closeScreen

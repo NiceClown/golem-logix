@@ -1,0 +1,47 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "golem_logix:block/cryo_panel",
+    "panel": "golem_logix:block/cryo_panel",
+    "fin": "golem_logix:block/cryo_fin"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0],
+      "to": [16, 3, 16],
+      "faces": {
+        "north": {"texture": "#panel"},
+        "south": {"texture": "#panel"},
+        "east": {"texture": "#panel"},
+        "west": {"texture": "#panel"},
+        "up": {"texture": "#panel"},
+        "down": {"texture": "#panel"}
+      }
+    },
+    {
+      "from": [7, 3, 7],
+      "to": [9, 13, 9],
+      "faces": {
+        "north": {"texture": "#panel"},
+        "south": {"texture": "#panel"},
+        "east": {"texture": "#panel"},
+        "west": {"texture": "#panel"},
+        "up": {"texture": "#panel"},
+        "down": {"texture": "#panel"}
+      }
+    },
+    {
+      "from": [0, 13, 0],
+      "to": [16, 16, 16],
+      "faces": {
+        "north": {"texture": "#panel"},
+        "south": {"texture": "#panel"},
+        "east": {"texture": "#panel"},
+        "west": {"texture": "#panel"},
+        "up": {"texture": "#panel"},
+        "down": {"texture": "#panel"}
+      }
+    }
+  ]
+}

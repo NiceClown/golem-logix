@@ -1,0 +1,15 @@
+# press chamber close-up while crafting: what is the noisy object over the anvil?
+cmd time set day
+cmd kill @e[type=!player]
+hook saturator 0 -58 -8 south jar
+wait 80
+hook saturatorput 0 -58 -8 minecraft:iron_block
+look 0 -58.3 -8.5 2.6 180 4
+wait 6
+shot sat4_a
+wait 14
+shot sat4_b
+wait 14
+shot sat4_c
+wait 30
+shot sat4_d

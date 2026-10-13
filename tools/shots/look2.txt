@@ -1,0 +1,10 @@
+# inspection 2 (after look1): cabinet right compartment close, from the front and at an angle
+look 14.4 -58.6 -1 1.4 20 5
+wait 5
+shot lk2_bay_machine
+look 14.4 -58.6 -1 1.6 60 5
+wait 5
+shot lk2_bay_machine_angle
+look 12.7 -58.6 -0.5 1.6 -20 5
+wait 5
+shot lk2_bay_shelves

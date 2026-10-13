@@ -1,0 +1,19 @@
+# saturator chamber close-up, pipe on the port
+cmd time set day
+cmd fill -40 -61 -30 40 -61 14 minecraft:deepslate_tiles
+cmd fill -30 -60 -24 30 -50 8 minecraft:air
+hook saturator 0 -58 -8 south
+cmd setblock 0 -60 -7 golem_logix:basic_snow_pipe
+cmd setblock 0 -60 -6 golem_logix:basic_snow_pipe
+cmd setblock 0 -60 -5 golem_logix:basic_snow_pipe
+wait 60
+hook saturatorput 0 -58 -8 minecraft:packed_ice
+look 0 -58.0 -8.2 3.2 172 6
+wait 20
+shot sat3_chamber_idle
+look 0 -59.4 -8.2 4.5 160 10
+wait 15
+shot sat3_port_pipe
+look 0 -58.2 -8.2 7 235 22
+wait 15
+shot sat3_corner

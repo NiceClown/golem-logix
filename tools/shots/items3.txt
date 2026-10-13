@@ -1,0 +1,11 @@
+# every mod item icon in the JEI list (needs: start -Mods); empty inventory so the cursor hovers nothing
+cmd kill @e[type=item]
+hook mode survival
+cmd clear @a
+inv
+jeifilter @golem_logix
+wait 20
+shot items3_jei
+closeScreen
+jeifilter
+hook mode creative

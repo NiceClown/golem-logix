@@ -1,0 +1,58 @@
+# terminal sizes (normal / tall / full screen), JEI R and U on list cells, the Chronometer's green screen with the Wither (needs: start -Mods)
+reload
+cmd time set day
+cmd kill @e[type=item]
+cmd fill -40 -61 -14 40 -61 10 minecraft:deepslate_tiles
+cmd fill -40 -60 -14 40 -50 10 minecraft:air
+cmd kill @e[type=item]
+hook rig 0 -60 0
+wait 120
+hook fillnet 0 -60 0
+look 4.5 -59.5 -1.5 3 0 8
+wait 10
+use 4 -60 -2
+wait 40
+guiscale 2
+termsize normal
+wait 10
+shot term2_normal
+termsize tall
+wait 10
+shot term2_tall
+termsize full
+wait 10
+shot term2_full
+guiscale 0
+termsize normal
+wait 10
+jeiat name:Diamond
+wait 30
+shot term2_jei_r
+closeScreen
+use 4 -60 -2
+wait 30
+jeiat name:Oak Log uses
+wait 30
+shot term2_jei_u
+closeScreen
+termsize normal
+# the Chronometer: crafting grid and the green screen
+hook chrono 0 -57 0 7500
+useitem
+wait 30
+shot term2_chrono_a
+wait 2
+shot term2_chrono_b
+wait 2
+shot term2_chrono_c
+wait 2
+shot term2_chrono_d
+wait 2
+shot term2_chrono_e
+wait 2
+shot term2_chrono_f
+termsize full
+wait 10
+shot term2_chrono_full
+termsize normal
+closeScreen

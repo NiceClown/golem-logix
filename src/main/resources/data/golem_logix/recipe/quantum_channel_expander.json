@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "E": { "item": "golem_logix:channel_expander" },
+    "G": { "item": "minecraft:gold_ingot" },
+    "X": { "item": "golem_logix:interdimensional_occult_matrix" }
+  },
+  "pattern": [
+    " X ",
+    "GEG",
+    " G "
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:quantum_channel_expander"
+  }
+}

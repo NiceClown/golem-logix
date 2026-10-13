@@ -1,0 +1,195 @@
+# Comprehensive playtest audit script for server-client rendering
+cmd time set day
+cmd kill @e[type=!player]
+cmd fill -20 -60 -20 20 -45 20 minecraft:air
+cmd fill -20 -61 -20 20 -61 20 minecraft:deepslate_tiles
+wait 10
+
+# ================================================================
+# 1. ATLAS ARRAY (Muscular Atlants, Core, Conduits, Runes)
+# ================================================================
+hook array 0 -60 0
+wait 60
+look 0.5 -57.5 0.5 8.0 145 20
+shot audit_atlas_array_overview
+look 1.5 -58.5 -1.5 3.0 135 15
+shot audit_atlas_golem_closeup
+look -1.5 -58.5 1.5 3.0 315 15
+shot audit_atlas_golem_rear_runes
+look 0.5 -57.0 0.5 4.0 180 50
+shot audit_atlas_core_crystal
+
+# ================================================================
+# 2. CARD CATALOG (CRT Archivist Screen, Golems, Drawers)
+# ================================================================
+cmd fill -15 -60 -15 15 -45 15 minecraft:air
+cmd kill @e[type=item]
+cmd fill -15 -61 -15 15 -61 15 minecraft:deepslate_tiles
+wait 10
+hook catalog 0 -60 0 south 30 3
+wait 40
+look 0.5 -59.0 0.5 4.2 180 12
+shot audit_catalog_closed
+hook catalogopen 0 -60 0 1
+wait 35
+look 0.5 -59.0 0.5 4.2 180 12
+shot audit_catalog_opened_drawers
+look 0.5 -58.8 -0.2 2.2 180 8
+shot audit_catalog_crt_screen
+look 1.8 -59.0 0.2 2.2 210 10
+shot audit_catalog_side_golem
+hook catalogopen 0 -60 0 0
+
+# ================================================================
+# 3. FROST PIPES & COURIER LOGISTICS (Pipes, Couriers, Crate, Plug)
+# ================================================================
+cmd fill -15 -60 -15 15 -45 15 minecraft:air
+cmd kill @e[type=item]
+cmd fill -15 -61 -15 15 -61 15 minecraft:deepslate_tiles
+wait 10
+hook rig -10 -60 0
+cmd fill 0 -60 0 16 -60 0 golem_logix:dense_frost_pipe
+cmd fill -4 -60 0 -1 -60 0 golem_logix:basic_snow_pipe
+hook plug 16 -60 0 east
+hook plug -4 -60 0 west
+# Две заглушки на расстоянии 2 блоков (< 5 блоков) для проверки правила "1 склад":
+hook plug 8 -60 0 north
+hook plug 10 -60 0 north
+hook netput -10 -60 0 minecraft:iron_ingot 64
+hook netput -10 -60 0 minecraft:gold_ingot 64
+hook netput -10 -60 0 minecraft:oak_log 64
+hook netfluidput -10 -60 0 minecraft:water 5000
+
+# Короткая ветка плотной трубы для фиксации разворота с медным големом:
+cmd setblock 2 -60 3 golem_logix:dense_frost_pipe
+hook plug 2 -60 3 east
+cmd setblock 1 -60 3 golem_logix:dense_frost_pipe
+cmd setblock 0 -60 3 golem_logix:dense_frost_pipe
+hook plug 0 -60 3 west
+
+wait 50
+look 9.0 -59.3 0.5 4.5 180 20
+shot audit_warehouse_cluster_rule
+look 8.0 -59.5 0.5 1.8 180 10
+shot audit_pipes_manometer_overload
+look 16.0 -59.5 0.0 2.2 240 15
+shot audit_warehouse_dense_dock
+look -4.0 -59.5 0.0 2.2 60 15
+shot audit_warehouse_basic_dock
+look 4.0 -59.5 0.5 3.0 170 12
+shot audit_courier_running_1
+wait 35
+shot audit_courier_running_2
+wait 35
+shot audit_courier_running_3
+look 2.0 -59.4 3.0 2.4 200 16
+shot audit_turnaround_copper_golem
+wait 25
+shot audit_turnaround_copper_golem_drop
+look 0.0 -59.5 0.0 3.0 140 15
+shot audit_pipe_dock_turnaround
+
+# ================================================================
+# 4. CRYO CALCULATOR & COOLING COPROCESSORS
+# ================================================================
+cmd setblock 6 -60 4 golem_logix:cooling_coprocessor
+cmd setblock 8 -60 4 golem_logix:cooling_coprocessor
+cmd setblock 4 -60 4 golem_logix:cryo_calculator
+wait 20
+hook calcwork 4 -60 4 1 minecraft:compass
+wait 30
+look 5.5 -59.4 4.5 3.2 195 20
+shot audit_cryo_calculator_matrix
+hook calcwork 4 -60 4 0
+
+# ================================================================
+# 5. SCHEMATIC CONCENTRATOR
+# ================================================================
+cmd setblock 10 -60 4 golem_logix:schematic_concentrator[facing=south]
+wait 25
+look 10.5 -59.4 4.5 2.2 180 15
+shot audit_concentrator_closed
+hook concentratoropen 10 -60 4 1
+wait 35
+look 10.5 -59.4 4.5 2.2 180 15
+shot audit_concentrator_hologram
+hook concentratoropen 10 -60 4 0
+
+# ================================================================
+# 6. PUNCH CARD ENCODER (Scoreboard Digits & Runes)
+# ================================================================
+cmd setblock 14 -60 4 golem_logix:pattern_encoder[facing=south]
+wait 30
+look 14.0 -59.5 4.5 2.0 180 12
+shot audit_encoder_scoreboard_1
+wait 20
+shot audit_encoder_scoreboard_2
+
+# ================================================================
+# 7. RECIPE MONITOR
+# ================================================================
+cmd setblock 18 -60 4 golem_logix:recipe_monitor[facing=south]
+wait 25
+look 18.0 -59.4 4.5 2.2 180 12
+shot audit_recipe_monitor_portal
+
+# ================================================================
+# 8. CRYO MAINFRAME
+# ================================================================
+cmd fill -15 -60 -15 15 -45 15 minecraft:air
+cmd kill @e[type=item]
+cmd fill -15 -61 -15 15 -61 15 minecraft:deepslate_tiles
+wait 10
+hook mainframe 0 -60 0 south 6 4
+wait 40
+look 0.5 -58.5 0.5 5.5 160 18
+shot audit_mainframe_closed
+hook mainframeopen 0 -60 0 1
+hook mainframework 0 -60 0 1 minecraft:golden_apple minecraft:diamond_pickaxe
+wait 40
+look 0.5 -58.5 0.5 5.5 160 18
+shot audit_mainframe_open
+look 0.5 -58.7 0.8 3.2 180 12
+shot audit_mainframe_shelf_golems
+hook mainframeopen 0 -60 0 0
+hook mainframework 0 -60 0 0
+
+# ================================================================
+# 9. MANA SATURATOR
+# ================================================================
+cmd fill -15 -60 -15 15 -45 15 minecraft:air
+cmd kill @e[type=item]
+cmd fill -15 -61 -15 15 -61 15 minecraft:deepslate_tiles
+wait 10
+hook saturator 0 -58 0 south jar
+wait 40
+hook coolers 0 -58 0 5
+wait 30
+hook saturatorput 0 -58 0 minecraft:iron_block
+wait 20
+look 0.0 -58.3 0.5 3.8 190 18
+shot audit_mana_saturator_hammering
+
+# ================================================================
+# 10. COPPER DRIVE BAY & ANALOG TERMINAL
+# ================================================================
+cmd fill -15 -60 -15 15 -45 15 minecraft:air
+cmd kill @e[type=item]
+cmd fill -15 -61 -15 15 -61 15 minecraft:deepslate_tiles
+wait 15
+hook bay 0 -60 0 south stock
+wait 30
+look 0.5 -59.2 0.5 3.5 180 15
+shot audit_drive_bay_closed
+hook bayopen 0 -60 0 1
+wait 25
+look 0.5 -59.2 0.5 3.5 180 15
+shot audit_drive_bay_opened
+hook bayopen 0 -60 0 0
+cmd setblock 4 -60 0 golem_logix:analog_terminal[facing=south]
+wait 20
+look 4.0 -59.3 0.5 2.2 180 12
+shot audit_analog_terminal
+
+wait 10
+cmd say AUDIT_COMPLETE

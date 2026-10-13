@@ -1,0 +1,43 @@
+# fixes: interface fluid mode window, dense pipe end at a bus (both orientations), saturator with 5 coolers keeps its Source up
+reload
+cmd time set day
+cmd kill @e[type=!player]
+cmd fill -40 -61 -30 40 -61 14 minecraft:grass_block
+cmd fill -40 -60 -30 40 -45 14 minecraft:air
+hook rig 0 -60 0
+cmd setblock 10 -60 -3 golem_logix:golem_interface
+cmd setblock 14 -59 -2 golem_logix:vacuum_import_bus[facing=up]
+cmd setblock 14 -60 -2 golem_logix:dense_frost_pipe
+cmd setblock 16 -60 -3 golem_logix:injector_export_bus[facing=north]
+cmd setblock 16 -60 -2 golem_logix:dense_frost_pipe
+wait 100
+hook netfluidput 0 -60 0 minecraft:water 8000
+hook iface 10 -60 -3 0 minecraft:water_bucket 3
+hook iface 10 -60 -3 1 minecraft:oak_log 4
+wait 60
+use 10 -60 -3
+wait 10
+shot f8_iface_gui
+closeScreen
+look 14.5 -59 -1.5 1.3 200 50
+wait 5
+shot f8_join_up
+look 16.5 -59.5 -2.5 1.3 160 25
+wait 5
+shot f8_join_side
+reload
+cmd kill @e[type=!player]
+cmd fill -30 -60 -24 30 -50 8 minecraft:air
+hook saturator 0 -58 -8 south jar
+wait 80
+hook coolers 0 -58 -8 5
+wait 40
+hook saturatorput 0 -58 -8 minecraft:iron_block
+wait 40
+hook saturatorput 0 -58 -8 minecraft:iron_block
+wait 40
+hook saturatorput 0 -58 -8 minecraft:iron_block
+wait 40
+hook saturatorput 0 -58 -8 minecraft:iron_block
+wait 40
+hook saturatorheld 0 -58 -8 golem_logix:flattened_iron_core 2

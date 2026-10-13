@@ -1,0 +1,11 @@
+{
+  "variants": {
+    "output=all": {"model": "golem_logix:block/pattern_provider"},
+    "output=down": {"model": "golem_logix:block/pattern_provider_down"},
+    "output=up": {"model": "golem_logix:block/pattern_provider_up"},
+    "output=north": {"model": "golem_logix:block/pattern_provider_north"},
+    "output=south": {"model": "golem_logix:block/pattern_provider_south"},
+    "output=west": {"model": "golem_logix:block/pattern_provider_west"},
+    "output=east": {"model": "golem_logix:block/pattern_provider_east"}
+  }
+}

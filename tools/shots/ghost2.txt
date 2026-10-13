@@ -1,0 +1,32 @@
+# saturator: the book page with materials, then the ghost blueprint following the player and locking on the head
+cmd time set day
+cmd fill -30 -61 -30 30 -61 14 minecraft:deepslate_tiles
+cmd fill -30 -60 -30 30 -50 14 minecraft:air
+cmd kill @e[type=item]
+hook giveall 0
+book saturator 0 1
+wait 20
+shot book_saturator_materials
+closeScreen
+book saturator 1 0
+wait 20
+shot book_saturator_how
+closeScreen
+look 0 -60 -8 3 180 25
+wait 20
+ghost start saturator
+wait 25
+shot ghost_sat_follow
+key Y
+wait 10
+check ghostLocked true
+shot ghost_sat_locked
+ghost clear
+hook saturator 10 -58 -8 north
+cmd setblock 10 -58 -8 golem_logix:mana_saturator[facing=north]
+look 10 -59 -8 7 0 12
+wait 5
+ghost start saturator
+wait 30
+shot ghost_sat_snap
+ghost clear

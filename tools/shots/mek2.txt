@@ -1,0 +1,3 @@
+# inspect Mekanism pipe and tank NBT (after mek1)
+hook nbt 10 -60 -3
+hook nbt 10 -62 -2

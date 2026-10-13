@@ -1,0 +1,23 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "golem_logix:block/cryo_fin",
+    "panel": "golem_logix:block/cryo_panel",
+    "fin": "golem_logix:block/cryo_fin"
+  },
+  "elements": [
+    {
+      "from": [1, 0, 1],
+      "to": [15, 1, 15],
+      "faces": {
+        "north": {"texture": "#fin"},
+        "south": {"texture": "#fin"},
+        "east": {"texture": "#fin"},
+        "west": {"texture": "#fin"},
+        "up": {"texture": "#fin"},
+        "down": {"texture": "#fin"}
+      }
+    }
+  ]
+}

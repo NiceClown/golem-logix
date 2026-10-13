@@ -1,0 +1,25 @@
+# terminals and pattern encoder: front, side and back
+reload
+cmd time set day
+cmd fill -40 -61 -14 40 -61 10 minecraft:deepslate_tiles
+cmd fill -40 -60 -14 40 -50 10 minecraft:air
+cmd setblock 0 -60 -6 golem_logix:analog_terminal[facing=south]
+cmd setblock 2 -60 -6 golem_logix:crafting_terminal[facing=south]
+cmd setblock 4 -60 -6 golem_logix:pattern_encoder[facing=south]
+cmd setblock 6 -60 -6 golem_logix:pattern_provider
+wait 20
+look 3 -59.5 -6 6 165 18
+wait 20
+shot d2_front
+look 3 -59.5 -6 6 120 18
+wait 20
+shot d2_side_e
+look 3 -59.5 -6 6 -120 18
+wait 20
+shot d2_side_w
+look 3 -59.5 -6 6 20 18
+wait 20
+shot d2_back
+look 3 -59.5 -6 6 100 70
+wait 20
+shot d2_top

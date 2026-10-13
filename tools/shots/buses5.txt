@@ -1,0 +1,24 @@
+# close-ups of bus bodies
+reload
+cmd time set day
+cmd fill -40 -61 -14 40 -61 10 minecraft:deepslate_tiles
+cmd fill -40 -60 -14 40 -50 10 minecraft:air
+cmd setblock 0 -60 -6 golem_logix:vacuum_import_bus[facing=south]
+cmd setblock 3 -60 -6 golem_logix:injector_export_bus[facing=south]
+cmd setblock 6 -60 -6 golem_logix:periscope_storage_bus[facing=south]
+wait 20
+look 0 -59.5 -6 1.8 120 20
+wait 15
+shot b5_vac_side
+look 0 -59.5 -6 1.8 200 55
+wait 15
+shot b5_vac_top
+look 3 -59.5 -6 1.8 135 15
+wait 15
+shot b5_inj
+look 6 -59.5 -6 1.8 135 15
+wait 15
+shot b5_per
+look 3 -59.5 -6 1.9 330 30
+wait 15
+shot b5_back

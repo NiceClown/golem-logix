@@ -1,0 +1,43 @@
+# real Ars Nouveau Source (needs: start -Mods): source jar powers a tower, empty jar shuts it down,
+# the creative jar tops up a neighbouring Ars jar, the saturator drains an Ars jar next to it
+cmd time set day
+cmd kill @e[type=!player]
+cmd fill -12 -61 -6 12 -61 14 minecraft:deepslate_tiles
+cmd fill -12 -60 -6 12 -48 14 minecraft:air
+hook tower 0 -60 0
+cmd setblock 1 -60 0 ars_nouveau:source_jar{source:10000}
+cmd setblock 0 -60 1 golem_logix:analog_terminal[facing=south]
+wait 60
+hook corecheck 0 -57 0 on
+hook sourcecheck 1 -60 0 lt 10000
+look 0.5 -58.5 0.5 6 150 20
+wait 10
+shot ars1_tower_on
+# empty jar: the network goes dark
+cmd setblock 1 -60 0 ars_nouveau:source_jar{source:0}
+wait 50
+hook corecheck 0 -57 0 off
+wait 10
+shot ars1_tower_off
+# (setblock does nothing if the jar state does not change, so clear the spot first)
+cmd setblock 1 -60 0 minecraft:air
+cmd setblock 1 -60 0 ars_nouveau:source_jar{source:10000}
+wait 50
+hook corecheck 0 -57 0 on
+# creative jar pours Source into an Ars jar next to it
+cmd setblock 6 -60 0 golem_logix:creative_source_jar
+cmd setblock 7 -60 0 ars_nouveau:source_jar{source:0}
+wait 60
+hook sourcecheck 7 -60 0 gt 0
+# saturator without a network takes Source from an Ars jar beside it
+hook saturator 0 -58 8 south
+cmd setblock -2 -60 8 ars_nouveau:source_jar{source:10000}
+wait 50
+hook saturatorcheck 0 -58 8 formed
+hook saturatorput 0 -58 8 minecraft:iron_block
+wait 200
+hook saturatorheld 0 -58 8 golem_logix:flattened_iron_core 2
+hook sourcecheck -2 -60 8 lt 9000
+look 0 -58.5 8 9 200 15
+wait 10
+shot ars1_saturator

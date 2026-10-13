@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "golem_logix:block/provider_face_sun",
+    "down": "golem_logix:block/provider_top",
+    "up": "golem_logix:block/provider_top_right",
+    "north": "golem_logix:block/provider_face_left",
+    "south": "golem_logix:block/provider_face_right",
+    "east": "golem_logix:block/provider_face_out",
+    "west": "golem_logix:block/provider_face_in"
+  }
+}

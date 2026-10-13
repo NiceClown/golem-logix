@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "golem_logix:block/atlas_casing_top",
+    "bottom": "golem_logix:block/atlas_casing",
+    "side": "golem_logix:block/atlas_casing"
+  }
+}

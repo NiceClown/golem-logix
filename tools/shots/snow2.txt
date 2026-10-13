@@ -1,0 +1,14 @@
+# does time advance? sample the runner several times
+hook time
+look 9.0 -59.5 -0.5 2.6 -20 12
+shot s_a
+hook time
+wait 10
+shot s_b
+hook time
+wait 10
+shot s_c
+hook time
+wait 10
+shot s_d
+hook time

@@ -1,0 +1,62 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "render_type": "minecraft:translucent",
+  "textures": {
+    "particle": "golem_logix:block/jar_glass",
+    "glass": "golem_logix:block/jar_glass",
+    "liquid": "golem_logix:block/jar_liquid",
+    "brass": "golem_logix:block/brass_plate",
+    "cork": "golem_logix:block/cork"
+  },
+  "elements": [
+    {
+      "from": [4, 1, 4],
+      "to": [12, 11, 12],
+      "faces": {
+        "north": {"texture": "#liquid"},
+        "south": {"texture": "#liquid"},
+        "east": {"texture": "#liquid"},
+        "west": {"texture": "#liquid"},
+        "up": {"texture": "#liquid"},
+        "down": {"texture": "#liquid"}
+      }
+    },
+    {
+      "from": [3, 0, 3],
+      "to": [13, 12, 13],
+      "faces": {
+        "north": {"texture": "#glass"},
+        "south": {"texture": "#glass"},
+        "east": {"texture": "#glass"},
+        "west": {"texture": "#glass"},
+        "up": {"texture": "#glass"},
+        "down": {"texture": "#glass"}
+      }
+    },
+    {
+      "from": [4, 12, 4],
+      "to": [12, 13, 12],
+      "faces": {
+        "north": {"texture": "#brass"},
+        "south": {"texture": "#brass"},
+        "east": {"texture": "#brass"},
+        "west": {"texture": "#brass"},
+        "up": {"texture": "#brass"},
+        "down": {"texture": "#brass"}
+      }
+    },
+    {
+      "from": [5, 13, 5],
+      "to": [11, 15, 11],
+      "faces": {
+        "north": {"texture": "#cork"},
+        "south": {"texture": "#cork"},
+        "east": {"texture": "#cork"},
+        "west": {"texture": "#cork"},
+        "up": {"texture": "#cork"},
+        "down": {"texture": "#cork"}
+      }
+    }
+  ]
+}

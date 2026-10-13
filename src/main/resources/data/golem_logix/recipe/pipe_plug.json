@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "minecraft:copper_ingot" },
+    { "item": "minecraft:snowball" }
+  ],
+  "result": {
+    "count": 4,
+    "id": "golem_logix:pipe_plug"
+  }
+}

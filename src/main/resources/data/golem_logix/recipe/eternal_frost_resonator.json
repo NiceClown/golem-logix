@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "B": { "item": "minecraft:blue_ice" },
+    "E": { "item": "minecraft:amethyst_shard" },
+    "I": { "item": "golem_logix:flattened_iron_core" },
+    "S": { "item": "golem_logix:flattened_cryo_substrate" },
+    "T": { "item": "minecraft:clock" },
+    "X": { "item": "golem_logix:interdimensional_occult_matrix" }
+  },
+  "pattern": [
+    "ETE",
+    "SXS",
+    "IBI"
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:eternal_frost_resonator"
+  }
+}

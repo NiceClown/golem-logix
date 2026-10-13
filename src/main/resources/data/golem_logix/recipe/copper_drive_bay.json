@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "C": {"item": "minecraft:copper_ingot"},
+    "G": {"item": "minecraft:glass"},
+    "M": {"item": "golem_logix:flattened_copper_matrix"},
+    "B": {"item": "minecraft:copper_block"}
+  },
+  "pattern": [
+    "CGC",
+    "MBM",
+    "CCC"
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:copper_drive_bay"
+  }
+}

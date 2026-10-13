@@ -1,0 +1,45 @@
+# round 4b: atlant heads following the camera, monitor lamp golem (idle/work), terminal top, cabinet hole fixed,
+# saturator back panel and pedestal
+reload
+cmd time set day
+cmd kill @e[type=!player]
+cmd fill -40 -61 -30 40 -61 14 minecraft:grass_block
+cmd fill -40 -60 -30 40 -45 14 minecraft:air
+hook rig 0 -60 0
+cmd setblock 3 -60 -3 golem_logix:recipe_monitor[facing=south]
+cmd setblock 16 -60 -4 golem_logix:crafting_terminal[facing=south]
+wait 100
+look 0.5 -57.5 0.5 4.5 225 5
+wait 20
+shot r6_heads_left
+look 0.5 -57.5 0.5 4.5 135 5
+wait 20
+shot r6_heads_right
+look 3.5 -59 -2.5 1.8 180 20
+wait 40
+shot r6_monitor_idle
+hook netput 0 -60 0 minecraft:oak_log 64
+hook craft 0 -60 0 minecraft:stick 256
+wait 40
+shot r6_monitor_work_a
+wait 6
+shot r6_monitor_work_b
+look 16.5 -59 -3.5 1.4 180 75
+wait 5
+shot r6_term_top
+look 12.3 -59 -1.2 1.7 -35 5
+wait 5
+shot r6_bay_hole
+reload
+cmd kill @e[type=!player]
+cmd fill -30 -60 -24 30 -50 8 minecraft:air
+hook saturator 0 -58 -8 south jar
+wait 80
+look 0 -58.5 -9 4.5 0 8
+wait 5
+shot r6_sat_back_a
+wait 12
+shot r6_sat_back_b
+look 0 -58.3 -8.3 1.8 160 10
+wait 5
+shot r6_pedestal

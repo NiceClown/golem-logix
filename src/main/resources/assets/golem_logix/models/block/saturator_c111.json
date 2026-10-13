@@ -1,0 +1,20 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "render_type": "minecraft:translucent",
+  "textures": {
+    "particle": "golem_logix:block/sat_bronze",
+    "sat_chamber": "golem_logix:block/sat_chamber",
+    "sat_b_11": "golem_logix:block/sat_b_11"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0],
+      "to": [16, 16, 16],
+      "faces": {
+        "north": {"texture": "#sat_chamber", "uv": [0, 5.3333, 16, 16]},
+        "south": {"texture": "#sat_b_11"}
+      }
+    }
+  ]
+}

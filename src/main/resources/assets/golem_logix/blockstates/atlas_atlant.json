@@ -1,0 +1,12 @@
+{
+  "variants": {
+    "facing=north,half=lower": {"model": "golem_logix:block/atlas_atlant_lower"},
+    "facing=east,half=lower": {"model": "golem_logix:block/atlas_atlant_lower", "y": 90},
+    "facing=south,half=lower": {"model": "golem_logix:block/atlas_atlant_lower", "y": 180},
+    "facing=west,half=lower": {"model": "golem_logix:block/atlas_atlant_lower", "y": 270},
+    "facing=north,half=upper": {"model": "golem_logix:block/atlas_atlant_upper"},
+    "facing=east,half=upper": {"model": "golem_logix:block/atlas_atlant_upper", "y": 90},
+    "facing=south,half=upper": {"model": "golem_logix:block/atlas_atlant_upper", "y": 180},
+    "facing=west,half=upper": {"model": "golem_logix:block/atlas_atlant_upper", "y": 270}
+  }
+}

@@ -1,0 +1,393 @@
+package com.golemlogix.menu;
+
+import com.golemlogix.data.PatternData;
+import com.golemlogix.crafting.CraftingJob;
+import com.golemlogix.init.ModBlocks;
+import com.golemlogix.init.ModDataComponents;
+import com.golemlogix.init.ModMenus;
+import com.golemlogix.items.CopperPunchCardItem;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.Container;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.DataSlot;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Кодировщик шаблонов: 3x3 призрачных входа, до 3 призрачных выходов, чистая перфокарта на входе,
+ * закодированная на выходе. Режимы: верстак (рецепт определяется сам) и обработка (любая машина).
+ */
+public class PatternEncoderMenu extends GolemMenu {
+    public static final int IMAGE_HEIGHT = 214;
+    public static final int GRID_START = 0;
+    public static final int OUT_START = 9;
+    public static final int CARD_IN = 12;
+    public static final int CARD_OUT = 13;
+
+    public static final int BUTTON_TOGGLE = 0;
+    public static final int BUTTON_ENCODE = 1;
+    public static final int BUTTON_CLEAR = 2;
+    public static final int BUTTON_LOAD = 3;
+
+    public static final int SLOT_COUNT = 14;
+
+    private final Container container;
+    private final net.minecraft.world.inventory.ContainerData data;
+    private final Level level;
+    private boolean updating = false;
+    private final net.minecraft.world.ContainerListener listener = c -> slotsChanged(c);
+
+    private final ContainerLevelAccess access;
+
+    public static PatternEncoderMenu fromNetwork(int id, Inventory inv, RegistryFriendlyByteBuf buf) {
+        return new PatternEncoderMenu(id, inv, new SimpleContainer(SLOT_COUNT), new net.minecraft.world.inventory.SimpleContainerData(1),
+                ContainerLevelAccess.NULL);
+    }
+
+    /** container и data — у блок-сущности кодировщика (на клиенте — пустые копии, их заполняет синхронизация окна). */
+    public PatternEncoderMenu(int id, Inventory inv, Container container, net.minecraft.world.inventory.ContainerData data,
+                              ContainerLevelAccess access) {
+        super(ModMenus.PATTERN_ENCODER.get(), id);
+        this.level = inv.player.level();
+        this.access = access;
+        this.container = container;
+        this.data = data;
+
+        for (int i = 0; i < 9; i++) {
+            this.addSlot(new GhostSlot(container, i, 30 + (i % 3) * 18, 18 + (i / 3) * 18));
+        }
+        for (int i = 0; i < 3; i++) {
+            this.addSlot(new GhostSlot(container, OUT_START + i, 118, 18 + i * 18));
+        }
+        this.addSlot(new Slot(container, CARD_IN, 30, 84) {
+            @Override
+            public boolean mayPlace(ItemStack stack) {
+                return stack.getItem() instanceof CopperPunchCardItem;
+            }
+        });
+        // в ячейку готовой карты можно положить уже записанную перфокарту: её рецепт откроется в сетке для правки, «Выбить»
+        // перезапишет эту же карту (чистая не тратится)
+        this.addSlot(new Slot(container, CARD_OUT, 118, 84) {
+            @Override
+            public boolean mayPlace(ItemStack stack) {
+                return CopperPunchCardItem.hasPattern(stack);
+            }
+
+            @Override
+            public void setByPlayer(ItemStack stack, ItemStack old) {
+                super.setByPlayer(stack, old);
+                if (!level.isClientSide() && CopperPunchCardItem.hasPattern(stack) && !ItemStack.matches(stack, old)) {
+                    loadPattern(stack.get(ModDataComponents.PATTERN.get()));
+                }
+            }
+        });
+        this.containerSlotCount = SLOT_COUNT;
+        addPlayerSlots(inv, 8, IMAGE_HEIGHT - 82);
+        this.addDataSlots(data);
+
+        if (container instanceof SimpleContainer sc) {
+            sc.addListener(listener);
+        }
+    }
+
+    public boolean isCraftingMode() {
+        return data.get(0) == 0;
+    }
+
+    @Override
+    public void setGhost(Player player, int slotId, ItemStack stack) {
+        super.setGhost(player, slotId, stack);
+        refreshCraftingResult();
+    }
+
+    public Container getContainer() {
+        return container;
+    }
+
+    @Override
+    public void clicked(int slotId, int button, ClickType clickType, Player player) {
+        if (handleGhostClick(slotId, button, clickType)) {
+            // выход рецепта верстака вычисляется сам и вручную не меняется
+            if (isCraftingMode() && slotId >= OUT_START && slotId < OUT_START + 3) {
+                refreshCraftingResult();
+            }
+            return;
+        }
+        super.clicked(slotId, button, clickType, player);
+    }
+
+    @Override
+    public void slotsChanged(Container changed) {
+        super.slotsChanged(changed);
+        if (!updating) {
+            refreshCraftingResult();
+        }
+    }
+
+    private void refreshCraftingResult() {
+        if (!isCraftingMode()) {
+            return;
+        }
+        updating = true;
+        try {
+            for (int i = 0; i < 9; i++) {
+                ItemStack s = container.getItem(i);
+                if (!s.isEmpty() && s.getCount() != 1) {
+                    container.setItem(i, s.copyWithCount(1));
+                }
+            }
+            List<ItemStack> grid = new ArrayList<>();
+            for (int i = 0; i < 9; i++) {
+                grid.add(container.getItem(i));
+            }
+            List<ItemStack> result = CraftingJob.craftResult(level, new PatternData(true, grid, List.of()));
+            ItemStack out = result == null ? ItemStack.EMPTY : result.get(0);
+            if (!ItemStack.matches(container.getItem(OUT_START), out)) {
+                container.setItem(OUT_START, out);
+            }
+            for (int i = 1; i < 3; i++) {
+                if (!container.getItem(OUT_START + i).isEmpty()) {
+                    container.setItem(OUT_START + i, ItemStack.EMPTY);
+                }
+            }
+        } finally {
+            updating = false;
+        }
+    }
+
+    @Override
+    public boolean clickMenuButton(Player player, int id) {
+        switch (id) {
+            case BUTTON_TOGGLE -> {
+                data.set(0, isCraftingMode() ? 1 : 0);
+                updating = true;
+                for (int i = 0; i < 3; i++) {
+                    container.setItem(OUT_START + i, ItemStack.EMPTY);
+                }
+                updating = false;
+                refreshCraftingResult();
+                return true;
+            }
+            case BUTTON_CLEAR -> {
+                updating = true;
+                for (int i = 0; i < 12; i++) {
+                    container.setItem(i, ItemStack.EMPTY);
+                }
+                updating = false;
+                refreshCraftingResult();
+                return true;
+            }
+            case BUTTON_LOAD -> {
+                loadFromCard();
+                return true;
+            }
+            case BUTTON_ENCODE -> {
+                encode(player);
+                return true;
+            }
+            default -> {
+                return false;
+            }
+        }
+    }
+
+    /**
+     * Рецепт из JEI («+»): верстак — девять клеток по местам (по одному предмету), обработка в машине — входы подряд
+     * (одинаковые складываются) и до трёх выходов. Слоты призрачные: предметы ниоткуда не берутся.
+     */
+    public void fillFromRecipe(boolean craftingRecipe, List<List<ItemStack>> inputs, List<ItemStack> outputs) {
+        updating = true;
+        try {
+            for (int i = 0; i < 12; i++) {
+                container.setItem(i, ItemStack.EMPTY);
+            }
+            data.set(0, craftingRecipe ? 0 : 1);
+            if (craftingRecipe) {
+                for (int i = 0; i < Math.min(9, inputs.size()); i++) {
+                    ItemStack first = firstOf(inputs.get(i));
+                    container.setItem(i, first.isEmpty() ? ItemStack.EMPTY : first.copyWithCount(1));
+                }
+            } else {
+                int slot = 0;
+                for (List<ItemStack> opts : inputs) {
+                    ItemStack first = firstOf(opts);
+                    if (first.isEmpty()) {
+                        continue;
+                    }
+                    boolean merged = false;
+                    for (int k = 0; k < slot; k++) {
+                        ItemStack ex = container.getItem(k);
+                        if (ItemStack.isSameItemSameComponents(ex, first)) {
+                            container.setItem(k, ex.copyWithCount(Math.min(99, ex.getCount() + first.getCount())));
+                            merged = true;
+                            break;
+                        }
+                    }
+                    if (!merged && slot < 9) {
+                        container.setItem(slot++, first.copyWithCount(Math.max(1, Math.min(99, first.getCount()))));
+                    }
+                }
+                for (int i = 0; i < Math.min(3, outputs.size()); i++) {
+                    ItemStack out = outputs.get(i);
+                    if (!out.isEmpty()) {
+                        container.setItem(OUT_START + i, out.copyWithCount(Math.max(1, Math.min(99, out.getCount()))));
+                    }
+                }
+            }
+        } finally {
+            updating = false;
+        }
+        refreshCraftingResult();
+        broadcastChanges();
+    }
+
+    private static ItemStack firstOf(List<ItemStack> options) {
+        for (ItemStack s : options) {
+            if (!s.isEmpty()) {
+                return s;
+            }
+        }
+        return ItemStack.EMPTY;
+    }
+
+    private void loadFromCard() {
+        PatternData fromIn = container.getItem(CARD_IN).get(ModDataComponents.PATTERN.get());
+        PatternData fromOut = container.getItem(CARD_OUT).get(ModDataComponents.PATTERN.get());
+        loadPattern(fromIn != null ? fromIn : fromOut);
+    }
+
+    /** Открыть рецепт карты в сетке (для правки). */
+    void loadPattern(PatternData pattern) {
+        if (pattern == null) {
+            return;
+        }
+        updating = true;
+        for (int i = 0; i < 12; i++) {
+            container.setItem(i, ItemStack.EMPTY);
+        }
+        data.set(0, pattern.crafting() ? 0 : 1);
+        for (int i = 0; i < Math.min(9, pattern.inputs().size()); i++) {
+            container.setItem(i, pattern.inputs().get(i).copy());
+        }
+        for (int i = 0; i < Math.min(3, pattern.outputs().size()); i++) {
+            container.setItem(OUT_START + i, pattern.outputs().get(i).copy());
+        }
+        updating = false;
+        refreshCraftingResult();
+        broadcastChanges();
+    }
+
+    private void encode(Player player) {
+        ItemStack card = container.getItem(CARD_IN);
+        // в выходной ячейке лежит записанная карта — её перезаписываем (правка рецепта), чистая карта не нужна
+        boolean rewrite = CopperPunchCardItem.hasPattern(container.getItem(CARD_OUT));
+        if (!rewrite && (card.isEmpty() || !(card.getItem() instanceof CopperPunchCardItem))) {
+            player.displayClientMessage(Component.translatable("message.golem_logix.encoder.no_card"), true);
+            return;
+        }
+        if (!rewrite && !container.getItem(CARD_OUT).isEmpty()) {
+            player.displayClientMessage(Component.translatable("message.golem_logix.encoder.output_full"), true);
+            return;
+        }
+
+        List<ItemStack> inputs = new ArrayList<>();
+        List<ItemStack> outputs = new ArrayList<>();
+        boolean crafting = isCraftingMode();
+        if (crafting) {
+            for (int i = 0; i < 9; i++) {
+                ItemStack s = container.getItem(i);
+                inputs.add(s.isEmpty() ? ItemStack.EMPTY : s.copyWithCount(1));
+            }
+            List<ItemStack> result = CraftingJob.craftResult(level, new PatternData(true, inputs, List.of()));
+            if (result == null) {
+                player.displayClientMessage(Component.translatable("message.golem_logix.encoder.no_recipe"), true);
+                return;
+            }
+            outputs.add(result.get(0));
+        } else {
+            for (int i = 0; i < 9; i++) {
+                ItemStack s = container.getItem(i);
+                if (!s.isEmpty()) {
+                    inputs.add(s.copy());
+                }
+            }
+            for (int i = 0; i < 3; i++) {
+                ItemStack s = container.getItem(OUT_START + i);
+                if (!s.isEmpty()) {
+                    outputs.add(s.copy());
+                }
+            }
+        }
+        PatternData data = new PatternData(crafting, inputs, outputs);
+        if (!data.isValid()) {
+            player.displayClientMessage(Component.translatable("message.golem_logix.encoder.incomplete"), true);
+            return;
+        }
+
+        if (rewrite) {
+            ItemStack out = container.getItem(CARD_OUT);
+            container.setItem(CARD_OUT, CopperPunchCardItem.written(out.getItem(), data));
+            player.displayClientMessage(Component.translatable("message.golem_logix.encoder.rewritten"), true);
+            return;
+        }
+        ItemStack encoded = CopperPunchCardItem.written(card.getItem(), data);
+        card.shrink(1);
+        container.setItem(CARD_IN, card.isEmpty() ? ItemStack.EMPTY : card);
+        container.setItem(CARD_OUT, encoded);
+        player.displayClientMessage(Component.translatable("message.golem_logix.encoder.done"), true);
+    }
+
+    @Override
+    public ItemStack quickMoveStack(Player player, int index) {
+        Slot slot = this.slots.get(index);
+        if (slot == null || !slot.hasItem() || isGhost(index)) {
+            return ItemStack.EMPTY;
+        }
+        ItemStack stack = slot.getItem();
+        ItemStack copy = stack.copy();
+        if (index == CARD_IN || index == CARD_OUT) {
+            if (!this.moveItemStackTo(stack, playerStart, playerEnd, true)) {
+                return ItemStack.EMPTY;
+            }
+        } else if (stack.getItem() instanceof CopperPunchCardItem) {
+            // записанная карта — в ячейку правки (если свободна), чистая — в запас чистых
+            if (CopperPunchCardItem.hasPattern(stack) && container.getItem(CARD_OUT).isEmpty()) {
+                ItemStack one = stack.split(1);
+                this.slots.get(CARD_OUT).setByPlayer(one, ItemStack.EMPTY);
+            } else if (CopperPunchCardItem.hasPattern(stack) || !this.moveItemStackTo(stack, CARD_IN, CARD_IN + 1, false)) {
+                return ItemStack.EMPTY;
+            }
+        } else {
+            return ItemStack.EMPTY;
+        }
+        if (stack.isEmpty()) {
+            slot.setByPlayer(ItemStack.EMPTY);
+        } else {
+            slot.setChanged();
+        }
+        return copy;
+    }
+
+    @Override
+    public void removed(Player player) {
+        super.removed(player);
+        // содержимое остаётся в кодировщике (чистые карты, готовая карта, рецепт)
+        if (container instanceof SimpleContainer sc) {
+            sc.removeListener(listener);
+        }
+    }
+
+    @Override
+    public boolean stillValid(Player player) {
+        return stillValid(access, player, ModBlocks.PATTERN_ENCODER.get());
+    }
+}

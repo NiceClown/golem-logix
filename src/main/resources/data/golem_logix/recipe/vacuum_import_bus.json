@@ -1,0 +1,23 @@
+{
+    "key":  {
+                "C":  {
+                          "item":  "minecraft:copper_ingot"
+                      },
+                "M":  {
+                          "item":  "golem_logix:flattened_copper_matrix"
+                      },
+                "H":  {
+                          "item":  "minecraft:hopper"
+                      }
+            },
+    "pattern":  [
+                    " C ",
+                    "CMC",
+                    " H "
+                ],
+    "result":  {
+                   "count":  1,
+                   "id":  "golem_logix:vacuum_import_bus"
+               },
+    "type":  "minecraft:crafting_shaped"
+}

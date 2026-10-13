@@ -1,0 +1,5 @@
+# autocraft chapter map
+book - 0 6
+wait 8
+shot book8_map_ac
+closescreen

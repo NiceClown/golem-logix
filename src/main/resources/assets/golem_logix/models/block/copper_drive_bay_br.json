@@ -1,0 +1,124 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "render_type": "minecraft:cutout",
+  "textures": {
+    "particle": "golem_logix:block/cab_beam",
+    "elev": "golem_logix:block/cab_front_br",
+    "back": "golem_logix:block/cab_back_br",
+    "side_r": "golem_logix:block/cab_side_r",
+    "beam": "golem_logix:block/cab_beam",
+    "wall": "golem_logix:block/cab_wall",
+    "brass": "golem_logix:block/cab_brass",
+    "machine": "golem_logix:block/cab_machine"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0],
+      "to": [16, 4, 16],
+      "faces": {
+        "north": {"texture": "#elev"},
+        "south": {"texture": "#back"},
+        "west": {"texture": "#side_r", "uv": [0, 14, 16, 16]},
+        "up": {"texture": "#beam"},
+        "down": {"texture": "#beam"}
+      }
+    },
+    {
+      "from": [6.5, 4, 0],
+      "to": [8.5, 16, 16],
+      "faces": {
+        "north": {"texture": "#elev"},
+        "south": {"texture": "#back"},
+        "east": {"texture": "#beam"},
+        "west": {"texture": "#beam"}
+      }
+    },
+    {
+      "from": [0, 4, 0],
+      "to": [2.5, 16, 16],
+      "faces": {
+        "north": {"texture": "#elev"},
+        "south": {"texture": "#back"},
+        "east": {"texture": "#beam"},
+        "west": {"texture": "#side_r", "uv": [0, 8, 16, 14]}
+      }
+    },
+    {
+      "from": [8.5, 4, 13.5],
+      "to": [16, 16, 15.4],
+      "faces": {
+        "north": {"texture": "#wall", "uv": [8.5, 8, 16, 16]},
+        "south": {"texture": "#back"}
+      }
+    },
+    {
+      "from": [8.5, 13.6, 1.5],
+      "to": [16, 14.1, 13.5],
+      "faces": {
+        "north": {"texture": "#brass"},
+        "west": {"texture": "#beam"},
+        "up": {"texture": "#beam"},
+        "down": {"texture": "#beam"}
+      }
+    },
+    {
+      "from": [8.5, 8.8, 1.5],
+      "to": [16, 9.3, 13.5],
+      "faces": {
+        "north": {"texture": "#brass"},
+        "west": {"texture": "#beam"},
+        "up": {"texture": "#beam"},
+        "down": {"texture": "#beam"}
+      }
+    },
+    {
+      "from": [8.5, 4, 1.5],
+      "to": [16, 4.5, 13.5],
+      "faces": {
+        "north": {"texture": "#brass"},
+        "west": {"texture": "#beam"},
+        "up": {"texture": "#beam"},
+        "down": {"texture": "#beam"}
+      }
+    },
+    {
+      "from": [2.5, 4, 13.5],
+      "to": [6.5, 16, 15.4],
+      "faces": {
+        "north": {"texture": "#machine", "uv": [0, 8, 16, 16]},
+        "south": {"texture": "#back"}
+      }
+    },
+    {
+      "from": [3.5, 5.5, 15.4],
+      "to": [5.5, 16, 16],
+      "faces": {
+        "south": {"texture": "#back", "neoforge_data": {"block_light": 10, "sky_light": 10}},
+        "east": {"texture": "#brass"},
+        "west": {"texture": "#brass"},
+        "down": {"texture": "#brass"}
+      }
+    },
+    {
+      "from": [9, 10.2, 15.4],
+      "to": [16, 11.2, 16],
+      "faces": {
+        "south": {"texture": "#back"},
+        "west": {"texture": "#brass"},
+        "up": {"texture": "#brass"},
+        "down": {"texture": "#brass"}
+      }
+    },
+    {
+      "from": [9, 5.6, 15.4],
+      "to": [16, 6.6, 16],
+      "faces": {
+        "south": {"texture": "#back"},
+        "west": {"texture": "#brass"},
+        "up": {"texture": "#brass"},
+        "down": {"texture": "#brass"}
+      }
+    }
+  ]
+}

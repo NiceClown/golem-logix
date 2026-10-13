@@ -1,0 +1,256 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "render_type": "minecraft:translucent",
+  "textures": {
+    "particle": "golem_logix:block/sat_bronze",
+    "sat_bronze": "golem_logix:block/sat_bronze",
+    "sat_pedestal_base": "golem_logix:block/sat_pedestal_base",
+    "sat_pedestal": "golem_logix:block/sat_pedestal",
+    "sat_brass": "golem_logix:block/sat_brass",
+    "sat_cryo_tube": "golem_logix:block/sat_cryo_tube",
+    "sat_anvil_side": "golem_logix:block/sat_anvil_side",
+    "sat_anvil": "golem_logix:block/sat_anvil",
+    "sat_ice": "golem_logix:block/sat_ice"
+  },
+  "elements": [
+    {
+      "from": [3, 0, 3],
+      "to": [13, 2, 13],
+      "faces": {
+        "north": {"texture": "#sat_bronze"},
+        "south": {"texture": "#sat_bronze"},
+        "east": {"texture": "#sat_bronze"},
+        "west": {"texture": "#sat_bronze"},
+        "up": {"texture": "#sat_pedestal_base", "uv": [16, 0, 0, 16], "neoforge_data": {"block_light": 9, "sky_light": 9}},
+        "down": {"texture": "#sat_bronze"}
+      }
+    },
+    {
+      "from": [5, 2, 5],
+      "to": [11, 11, 11],
+      "faces": {
+        "north": {"texture": "#sat_pedestal", "uv": [0, 0, 16, 16]},
+        "south": {"texture": "#sat_pedestal", "uv": [16, 0, 0, 16]},
+        "east": {"texture": "#sat_pedestal", "uv": [16, 0, 0, 16]},
+        "west": {"texture": "#sat_pedestal", "uv": [0, 0, 16, 16]}
+      }
+    },
+    {
+      "from": [4.6, 2, 4.6],
+      "to": [11.4, 2.8, 11.4],
+      "faces": {
+        "north": {"texture": "#sat_brass"},
+        "south": {"texture": "#sat_brass"},
+        "east": {"texture": "#sat_brass"},
+        "west": {"texture": "#sat_brass"},
+        "up": {"texture": "#sat_brass"},
+        "down": {"texture": "#sat_brass"}
+      }
+    },
+    {
+      "from": [4.6, 10.2, 4.6],
+      "to": [11.4, 11, 11.4],
+      "faces": {
+        "north": {"texture": "#sat_brass"},
+        "south": {"texture": "#sat_brass"},
+        "east": {"texture": "#sat_brass"},
+        "west": {"texture": "#sat_brass"},
+        "up": {"texture": "#sat_brass"},
+        "down": {"texture": "#sat_brass"}
+      }
+    },
+    {
+      "from": [11, 2.8, 4.2],
+      "to": [11.8, 10.2, 5],
+      "faces": {
+        "north": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
+        "south": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
+        "east": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
+        "west": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}}
+      }
+    },
+    {
+      "from": [4.2, 2.8, 4.2],
+      "to": [5, 10.2, 5],
+      "faces": {
+        "north": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
+        "south": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
+        "east": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
+        "west": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}}
+      }
+    },
+    {
+      "from": [11, 2.8, 11],
+      "to": [11.8, 10.2, 11.8],
+      "faces": {
+        "north": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
+        "south": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
+        "east": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
+        "west": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}}
+      }
+    },
+    {
+      "from": [4.2, 2.8, 11],
+      "to": [5, 10.2, 11.8],
+      "faces": {
+        "north": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
+        "south": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
+        "east": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
+        "west": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}}
+      }
+    },
+    {
+      "from": [2.5, 11, 3],
+      "to": [13.5, 11.7, 13],
+      "faces": {
+        "north": {"texture": "#sat_anvil_side"},
+        "south": {"texture": "#sat_anvil_side"},
+        "east": {"texture": "#sat_anvil_side"},
+        "west": {"texture": "#sat_anvil_side"},
+        "up": {"texture": "#sat_anvil_side"},
+        "down": {"texture": "#sat_anvil_side"}
+      }
+    },
+    {
+      "from": [4.5, 11.7, 4.5],
+      "to": [11.5, 12.4, 11.5],
+      "faces": {
+        "north": {"texture": "#sat_anvil_side"},
+        "south": {"texture": "#sat_anvil_side"},
+        "east": {"texture": "#sat_anvil_side"},
+        "west": {"texture": "#sat_anvil_side"},
+        "up": {"texture": "#sat_anvil_side"},
+        "down": {"texture": "#sat_anvil_side"}
+      }
+    },
+    {
+      "from": [11.5, 12, 6],
+      "to": [14.4, 12.4, 10],
+      "faces": {
+        "north": {"texture": "#sat_anvil_side"},
+        "south": {"texture": "#sat_anvil_side"},
+        "east": {"texture": "#sat_anvil_side"},
+        "west": {"texture": "#sat_anvil_side"},
+        "up": {"texture": "#sat_anvil_side"},
+        "down": {"texture": "#sat_anvil_side"}
+      }
+    },
+    {
+      "from": [1.6, 12, 5],
+      "to": [4.5, 12.4, 11],
+      "faces": {
+        "north": {"texture": "#sat_anvil_side"},
+        "south": {"texture": "#sat_anvil_side"},
+        "east": {"texture": "#sat_anvil_side"},
+        "west": {"texture": "#sat_anvil_side"},
+        "up": {"texture": "#sat_anvil_side"},
+        "down": {"texture": "#sat_anvil_side"}
+      }
+    },
+    {
+      "from": [1, 12.4, 2],
+      "to": [15, 13.5, 14],
+      "faces": {
+        "north": {"texture": "#sat_anvil_side"},
+        "south": {"texture": "#sat_anvil_side"},
+        "east": {"texture": "#sat_anvil_side"},
+        "west": {"texture": "#sat_anvil_side"},
+        "up": {"texture": "#sat_anvil", "uv": [0, 0, 16, 16], "neoforge_data": {"block_light": 11, "sky_light": 11}},
+        "down": {"texture": "#sat_anvil_side"}
+      }
+    },
+    {
+      "from": [13.25, 11.5, 2.15],
+      "to": [13.7, 12.4, 2.6],
+      "faces": {
+        "north": {"texture": "#sat_ice"},
+        "south": {"texture": "#sat_ice"},
+        "east": {"texture": "#sat_ice"},
+        "west": {"texture": "#sat_ice"},
+        "up": {"texture": "#sat_ice"},
+        "down": {"texture": "#sat_ice"}
+      }
+    },
+    {
+      "from": [10.15, 11.85, 2.15],
+      "to": [10.6, 12.4, 2.6],
+      "faces": {
+        "north": {"texture": "#sat_ice"},
+        "south": {"texture": "#sat_ice"},
+        "east": {"texture": "#sat_ice"},
+        "west": {"texture": "#sat_ice"},
+        "up": {"texture": "#sat_ice"},
+        "down": {"texture": "#sat_ice"}
+      }
+    },
+    {
+      "from": [6.95, 11.3, 2.15],
+      "to": [7.4, 12.4, 2.6],
+      "faces": {
+        "north": {"texture": "#sat_ice"},
+        "south": {"texture": "#sat_ice"},
+        "east": {"texture": "#sat_ice"},
+        "west": {"texture": "#sat_ice"},
+        "up": {"texture": "#sat_ice"},
+        "down": {"texture": "#sat_ice"}
+      }
+    },
+    {
+      "from": [3.35, 11.7, 2.15],
+      "to": [3.8, 12.4, 2.6],
+      "faces": {
+        "north": {"texture": "#sat_ice"},
+        "south": {"texture": "#sat_ice"},
+        "east": {"texture": "#sat_ice"},
+        "west": {"texture": "#sat_ice"},
+        "up": {"texture": "#sat_ice"},
+        "down": {"texture": "#sat_ice"}
+      }
+    },
+    {
+      "from": [13, 13.5, 2],
+      "to": [15, 16, 4],
+      "faces": {
+        "north": {"texture": "#sat_brass"},
+        "south": {"texture": "#sat_brass"},
+        "east": {"texture": "#sat_brass"},
+        "west": {"texture": "#sat_brass"},
+        "down": {"texture": "#sat_brass"}
+      }
+    },
+    {
+      "from": [13, 13.5, 12],
+      "to": [15, 16, 14],
+      "faces": {
+        "north": {"texture": "#sat_brass"},
+        "south": {"texture": "#sat_brass"},
+        "east": {"texture": "#sat_brass"},
+        "west": {"texture": "#sat_brass"},
+        "down": {"texture": "#sat_brass"}
+      }
+    },
+    {
+      "from": [1, 13.5, 2],
+      "to": [3, 16, 4],
+      "faces": {
+        "north": {"texture": "#sat_brass"},
+        "south": {"texture": "#sat_brass"},
+        "east": {"texture": "#sat_brass"},
+        "west": {"texture": "#sat_brass"},
+        "down": {"texture": "#sat_brass"}
+      }
+    },
+    {
+      "from": [1, 13.5, 12],
+      "to": [3, 16, 14],
+      "faces": {
+        "north": {"texture": "#sat_brass"},
+        "south": {"texture": "#sat_brass"},
+        "east": {"texture": "#sat_brass"},
+        "west": {"texture": "#sat_brass"},
+        "down": {"texture": "#sat_brass"}
+      }
+    }
+  ]
+}

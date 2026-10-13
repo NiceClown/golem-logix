@@ -1,0 +1,30 @@
+# the cabinet in all four orientations: dynamic parts must line up with the static model
+reload
+cmd time set day
+cmd kill @e[type=item]
+cmd fill -40 -61 -14 40 -61 10 minecraft:deepslate_tiles
+cmd fill -40 -60 -14 40 -50 10 minecraft:air
+cmd kill @e[type=item]
+hook rig 0 -60 0
+wait 100
+hook bay -24 -60 0 north stock
+hook bay -12 -60 0 east stock
+hook bay 0 -60 5 south stock
+hook bay 12 -60 0 west stock
+cmd setblock -22 -60 0 minecraft:stone
+cmd setblock -10 -60 -1 minecraft:stone
+cmd setblock 2 -60 5 minecraft:stone
+cmd setblock 10 -60 1 minecraft:stone
+wait 20
+look -24 -59 0.5 4.5 0 6
+wait 8
+shot face_north
+look -11.5 -59 0 4.5 90 6
+wait 8
+shot face_east
+look 1 -59 5.5 4.5 180 6
+wait 8
+shot face_south
+look 12.5 -59 1 4.5 270 6
+wait 8
+shot face_west

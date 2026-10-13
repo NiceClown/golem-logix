@@ -1,0 +1,105 @@
+# Golem Logix
+
+**Cold, occult, analog logistics.** A storage and autocrafting network in the spirit of Refined Storage and AE2, built not from circuits but from brass, copper, glass and ice, and powered by golems and Ars Nouveau Source.
+
+---
+
+## What is it?
+
+Golem Logix gives you a full logistics network:
+- **Storage:** cassette cabinets hold item and fluid disks.
+- **Network:** frost pipes carry the channels; a tiny snowman runs inside them.
+- **Buses:** move items and fluids between chests and the network.
+- **Terminals:** give access to everything.
+- **Autocrafting:** cryo-calculators craft on their own from punch-card patterns.
+
+Everything is steampunk-and-frost: polished copper, CRT screens, vacuum tubes, violet runes and animated golems everywhere.
+
+The whole network runs on **Source** from Ars Nouveau. Without Ars Nouveau it simply runs for free.
+
+## Features
+
+### The Atlas Array
+- **The heart of your network:** a 3×3×4 multiblock monument. Four iron Atlants carry a crown with the Atlas Core on their shoulders.
+- **Channels:** five Cable Bushings at the base give 5 lines × 64 = **320 channels**.
+- **Expanders:** Channel Expanders and Quantum Channel Expanders in the walls raise that up to **1600**.
+- **Starter tower:** a small tower of core, conduits and bushing gives 8 channels to get going.
+- **Ghost projection:** the guide book can project the build, showing what to place where.
+
+### Storage
+- **Copper Drive Bay:** a 2×2 cabinet with 10 cassette slots.
+  - Every disk is a cassette with a colored label and fill LEDs.
+  - Reels wind tape as it fills, and copper archivist golems run along the shelves.
+- **Disks:** item disks and cryo fluid disks from 1k to 256k, with no type limit. Contents are stored server-side.
+- **Periscope Storage Bus:** turns any chest, barrel or tank into network storage.
+- **Priorities:** set them on cabinets, periscopes and buses.
+
+### Frost pipes
+- **Basic pipe:** 16 channels. **Dense pipe:** 64 channels.
+- **Junctions:** brass cage hubs, device sleeves, and a reducer washer where the two sizes meet.
+- **Glow:** pipes glow softly while powered. This is visual only: they give no light, so mobs still spawn.
+
+### Buses
+- **Vacuum Import Bus** and **Injector Export Bus**, with item and fluid filters and priorities.
+- **Six upgrade slots:**
+  - up to four **Compressed Co-Processors** (speed, up to 8× per move, every tick);
+  - an **Autocraft Module** (the export bus orders what the network lacks);
+  - a **Redstone Module**.
+- **Redstone modes for every machine**, like AE2 and RS: ignore, with signal, without signal, one action per pulse.
+
+### Terminals
+- **Analog CRT Terminal:**
+  - search by name, `@mod` or `#tooltip`;
+  - sorting;
+  - items and fluids in one list, with bucket filling and pouring.
+- **Crafting Terminal:** a 3×3 grid that refills itself from the network.
+- **Window size:** normal, tall or full screen.
+- **JEI:** R/U on list entries and "+" recipe transfer. **Ctrl + "+"** orders all missing ingredients (precraft).
+
+### Autocrafting
+- **Pattern Encoder:** punches crafting and machine recipes onto copper punch cards.
+- **Pattern Provider:** feeds machines, with an optional "wait for result" mode.
+- **Cryo-Calculator:**
+  - plans the whole recipe tree, reserves materials and runs the steps;
+  - speeds up with Cooling Co-Processors next to it, which pump like flywheels, and with Compressed Co-Processors in its slots;
+  - while working, a miniature of the current item spins above it, ice hills rise and sink, and "matrix rain" runs down its sides.
+- **Recipe Monitor:** a brass cabinet with a swirling portal where punch cards orbit for every running job. Its window shows and aborts every job in the network.
+- **"Order ready" notification** when your craft is done.
+
+### Golem rituals
+- **Anvil plates:** drop an anvil on a wounded iron, copper or snow golem to get flattened plates, the crafting base of the mod.
+- **Mana Saturator:** a 3×3×2 multiblock forge where a small iron golem hammers blocks into plates.
+  - Up to five roof coolers speed it up.
+  - Network connectors on every side.
+  - It offers you a poppy when idle.
+- **Secret recipe:** it reveals itself only after two trials… find them yourself.
+
+### Late game
+- **Portable Chronometer:** a brass handheld device and wireless crafting terminal with three range tiers, up to cross-dimension.
+  - It runs on its own Source charge.
+  - On its green screen, a flat Wither keeps trying to shoot a skull right at you.
+- **Eternal Frost Resonator:** sends Source through the aether to your Chronometers, so they never need charging.
+
+### Guide book
+The **Occult Logistics Grimoire** is an illustrated, searchable research map:
+- material checklists and ghost-block projections for every multiblock;
+- recipes, tables and tips.
+
+It's available in **English and Russian**.
+
+## Requirements
+
+- Minecraft **1.21.1**, NeoForge **21.1.x**
+- **Copper Age Backport** (required: copper golems for the rituals)
+- Optional: **Ars Nouveau** (Source), **JEI**, **Jade**
+
+Works in singleplayer and on dedicated servers. Install on both client and server.
+
+## Getting started
+
+1. Craft the **Guide Book**: a book and a copper ingot, shapeless.
+2. Open **Quick start**. It walks you from the first plates to your first terminal.
+
+---
+
+*The copper golem model and textures come from Copper Age Backport (CC0). Licensed under MIT.*

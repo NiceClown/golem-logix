@@ -1,0 +1,70 @@
+# GIF frames, second take: closer cameras
+reload
+cmd time set day
+cmd kill @e[type=!player]
+cmd fill -40 -61 -14 40 -61 10 minecraft:deepslate_tiles
+cmd fill -40 -60 -14 40 -50 10 minecraft:air
+hook array 6 -60 0
+cmd setblock 9 -60 -1 golem_logix:analog_terminal[facing=north]
+cmd setblock 11 -60 -1 golem_logix:crafting_terminal[facing=north]
+cmd fill 8 -60 0 8 -60 1 golem_logix:basic_snow_pipe
+cmd fill 4 -60 -1 0 -60 -1 golem_logix:dense_frost_pipe
+hook bay -2 -60 -1 north stock
+cmd fill 8 -60 2 8 -60 4 golem_logix:basic_snow_pipe
+cmd fill 9 -60 4 13 -60 4 golem_logix:basic_snow_pipe
+cmd fill 14 -60 4 22 -60 4 golem_logix:dense_frost_pipe
+wait 120
+burst g_array 72 2 orbit 6.5 -57.3 0.5 6.2 28 150 5
+look -1.5 -58.6 -1 2.5 0 4
+wait 20
+burst g_cabinet 50 2
+look 16 -59.6 4.5 2.6 200 20
+wait 10
+burst g_pipes 60 2
+# terminal screen: rig, camera above the pipe line
+reload
+cmd kill @e[type=item]
+cmd fill -40 -61 -14 40 -61 10 minecraft:deepslate_tiles
+cmd fill -40 -60 -14 40 -50 10 minecraft:air
+hook rig 0 -60 0
+cmd setblock 5 -60 -2 golem_logix:cooling_coprocessor
+cmd setblock 7 -60 -2 golem_logix:cooling_coprocessor
+wait 120
+hook netput 0 -60 0 minecraft:oak_log 64
+look 4.5 -59.5 -1.5 2.4 180 32
+wait 10
+burst g_terminal 40 2
+look 6.5 -59.4 -2.5 2.5 20 24
+wait 5
+hook craft 0 -60 0 minecraft:stick 512
+wait 30
+burst g_calculator 60 2
+# saturator smith, close
+reload
+cmd time set day
+cmd kill @e[type=!player]
+cmd fill -40 -61 -30 40 -61 14 minecraft:deepslate_tiles
+cmd fill -30 -60 -24 30 -50 8 minecraft:air
+hook saturator 0 -58 -8 south jar
+wait 80
+hook coolers 0 -58 -8 5
+wait 40
+look 0 -58.3 -8.3 2.6 180 8
+wait 5
+hook saturatorput 0 -58 -8 minecraft:iron_block
+burst g_saturator 40 2
+# anvil ritual, close
+cmd kill @e[type=!player]
+cmd fill 8 -60 -12 14 -50 -6 minecraft:air
+cmd summon minecraft:iron_golem 11 -60 -9 {NoAI:1b,Health:3f,Rotation:[0f,0f]}
+look 11 -58.6 -9 4.5 180 10
+wait 10
+cmd setblock 11 -53 -9 minecraft:anvil
+burst g_anvil 30 2
+# chronometer in an item frame on a wall, close
+cmd kill @e[type=!player]
+cmd fill -6 -60 -20 6 -55 -20 minecraft:deepslate_bricks
+cmd summon minecraft:item_frame 0 -58 -19 {Facing:3b,Invisible:1b,Fixed:1b,Item:{id:"golem_logix:portable_chronometer",count:1}}
+look 0.5 -57.5 -18.9 0.95 180 0
+wait 20
+burst g_chrono 50 2

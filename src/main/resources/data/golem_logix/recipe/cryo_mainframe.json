@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "A": { "item": "golem_logix:atlas_casing" },
+    "C": { "item": "golem_logix:cryo_calculator" },
+    "G": { "item": "minecraft:glass" },
+    "I": { "item": "golem_logix:flattened_iron_core" },
+    "M": { "item": "golem_logix:flattened_copper_matrix" },
+    "X": { "item": "golem_logix:compressed_coprocessor" }
+  },
+  "pattern": [
+    "ICI",
+    "GXG",
+    "AMA"
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:cryo_mainframe"
+  }
+}

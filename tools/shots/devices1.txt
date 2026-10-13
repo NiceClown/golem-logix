@@ -1,0 +1,32 @@
+# every device from the front, powered network
+reload
+cmd time set day
+cmd kill @e[type=item]
+cmd fill -40 -61 -14 40 -61 10 minecraft:deepslate_tiles
+cmd fill -40 -60 -14 40 -50 10 minecraft:air
+cmd fill -40 -60 3 40 -48 3 minecraft:deepslate_bricks
+hook array 6 -60 0
+cmd fill 8 -60 -1 26 -60 -1 golem_logix:basic_snow_pipe
+cmd setblock 9 -60 -2 golem_logix:analog_terminal[facing=north]
+cmd setblock 11 -60 -2 golem_logix:crafting_terminal[facing=north]
+cmd setblock 13 -60 -2 golem_logix:pattern_encoder[facing=north]
+cmd setblock 15 -60 -2 golem_logix:pattern_provider
+cmd setblock 17 -60 -2 golem_logix:cryo_calculator
+cmd setblock 17 -59 -2 golem_logix:cooling_coprocessor
+cmd setblock 19 -60 -2 golem_logix:mana_saturator
+cmd setblock 21 -60 -2 golem_logix:eternal_frost_resonator
+cmd setblock 23 -60 -2 golem_logix:creative_source_jar
+cmd setblock 25 -60 -2 golem_logix:atlas_core
+wait 120
+look 10.0 -59.3 -2 3.8 0 10
+wait 15
+shot dev_term
+look 14.0 -59.3 -2 3.8 0 10
+wait 15
+shot dev_enc
+look 18.0 -59.0 -2 3.8 0 10
+wait 15
+shot dev_cryo
+look 22.0 -59.3 -2 3.8 0 10
+wait 15
+shot dev_res

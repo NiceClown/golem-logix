@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "B": { "item": "minecraft:iron_block" },
+    "I": { "item": "minecraft:iron_ingot" },
+    "P": { "item": "golem_logix:flattened_iron_core" }
+  },
+  "pattern": [
+    " P ",
+    "IBI",
+    "I I"
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:atlas_atlant"
+  }
+}

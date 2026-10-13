@@ -1,0 +1,26 @@
+{
+    "key":  {
+                "C":  {
+                          "item":  "golem_logix:flattened_copper_matrix"
+                      },
+                "S":  {
+                          "item":  "golem_logix:flattened_cryo_substrate"
+                      },
+                "I":  {
+                          "item":  "minecraft:purpur_block"
+                      },
+                "A":  {
+                          "item":  "minecraft:end_rod"
+                      }
+            },
+    "pattern":  [
+                    " A ",
+                    "SCS",
+                    "III"
+                ],
+    "result":  {
+                   "count":  1,
+                   "id":  "golem_logix:mana_saturator"
+               },
+    "type":  "minecraft:crafting_shaped"
+}

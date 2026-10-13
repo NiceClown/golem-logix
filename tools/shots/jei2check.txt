@@ -1,0 +1,4 @@
+# after jei2: the 64 logs from the crafting grid went back into the network when the window closed
+wait 10
+hook netcheck 8 -60 -1 minecraft:oak_log 230
+check inventory minecraft:oak_log=0

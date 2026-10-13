@@ -1,0 +1,123 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "render_type": "minecraft:translucent",
+  "textures": {
+    "particle": "golem_logix:block/pipe_dense_u",
+    "su": "golem_logix:block/pipe_dense_u",
+    "sv": "golem_logix:block/pipe_dense_v",
+    "sd": "golem_logix:block/pipe_dense_d",
+    "band": "golem_logix:block/pipe_dense_band",
+    "flange": "golem_logix:block/pipe_flange",
+    "hub": "golem_logix:block/pipe_dense_hub",
+    "plug": "golem_logix:block/pipe_plug",
+    "dock": "golem_logix:block/pipe_dock",
+    "dial": "golem_logix:block/resonator_dial",
+    "ice": "golem_logix:block/sat_ice",
+    "brass": "golem_logix:block/sat_brass",
+    "copper": "golem_logix:block/resonator_pipe",
+    "dark": "golem_logix:block/sat_dark"
+  },
+  "elements": [
+    {
+      "from": [4.050000000000001, 12, 0],
+      "to": [11.95, 14.1, 0.9],
+      "faces": {
+        "north": {"texture": "#flange"},
+        "south": {"texture": "#flange"},
+        "east": {"texture": "#flange"},
+        "west": {"texture": "#flange"},
+        "up": {"texture": "#flange"},
+        "down": {"texture": "#flange"}
+      }
+    },
+    {
+      "from": [4.050000000000001, 1.9, 0],
+      "to": [11.95, 4, 0.9],
+      "faces": {
+        "north": {"texture": "#flange"},
+        "south": {"texture": "#flange"},
+        "east": {"texture": "#flange"},
+        "west": {"texture": "#flange"},
+        "up": {"texture": "#flange"},
+        "down": {"texture": "#flange"}
+      }
+    },
+    {
+      "from": [1.9, 4.050000000000001, 0],
+      "to": [4, 11.95, 0.9],
+      "faces": {
+        "north": {"texture": "#flange"},
+        "south": {"texture": "#flange"},
+        "east": {"texture": "#flange"},
+        "west": {"texture": "#flange"},
+        "up": {"texture": "#flange"},
+        "down": {"texture": "#flange"}
+      }
+    },
+    {
+      "from": [12, 4.050000000000001, 0],
+      "to": [14.1, 11.95, 0.9],
+      "faces": {
+        "north": {"texture": "#flange"},
+        "south": {"texture": "#flange"},
+        "east": {"texture": "#flange"},
+        "west": {"texture": "#flange"},
+        "up": {"texture": "#flange"},
+        "down": {"texture": "#flange"}
+      }
+    },
+    {
+      "from": [2.322626012039944, 2.528096141512533, 0.04],
+      "to": [5.302373987960056, 5.096903858487467, 0.86],
+      "rotation": {"origin": [3.8125, 3.8125, 0.45], "axis": "z", "angle": -45},
+      "faces": {
+        "north": {"texture": "#flange"},
+        "south": {"texture": "#flange"},
+        "east": {"texture": "#flange"},
+        "west": {"texture": "#flange"},
+        "up": {"texture": "#flange"},
+        "down": {"texture": "#flange"}
+      }
+    },
+    {
+      "from": [2.322626012039944, 10.903096141512533, 0.04],
+      "to": [5.302373987960056, 13.471903858487467, 0.86],
+      "rotation": {"origin": [3.8125, 12.1875, 0.45], "axis": "z", "angle": 45},
+      "faces": {
+        "north": {"texture": "#flange"},
+        "south": {"texture": "#flange"},
+        "east": {"texture": "#flange"},
+        "west": {"texture": "#flange"},
+        "up": {"texture": "#flange"},
+        "down": {"texture": "#flange"}
+      }
+    },
+    {
+      "from": [10.697626012039944, 2.528096141512533, 0.04],
+      "to": [13.677373987960056, 5.096903858487467, 0.86],
+      "rotation": {"origin": [12.1875, 3.8125, 0.45], "axis": "z", "angle": 45},
+      "faces": {
+        "north": {"texture": "#flange"},
+        "south": {"texture": "#flange"},
+        "east": {"texture": "#flange"},
+        "west": {"texture": "#flange"},
+        "up": {"texture": "#flange"},
+        "down": {"texture": "#flange"}
+      }
+    },
+    {
+      "from": [10.697626012039944, 10.903096141512533, 0.04],
+      "to": [13.677373987960056, 13.471903858487467, 0.86],
+      "rotation": {"origin": [12.1875, 12.1875, 0.45], "axis": "z", "angle": -45},
+      "faces": {
+        "north": {"texture": "#flange"},
+        "south": {"texture": "#flange"},
+        "east": {"texture": "#flange"},
+        "west": {"texture": "#flange"},
+        "up": {"texture": "#flange"},
+        "down": {"texture": "#flange"}
+      }
+    }
+  ]
+}

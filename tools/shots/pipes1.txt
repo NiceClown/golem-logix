@@ -1,0 +1,38 @@
+# pipes: straight runs, tees, corners, device sleeves, runners
+reload
+cmd fill -20 -61 -14 30 -61 10 minecraft:deepslate_tiles
+cmd fill -20 -60 -14 30 -40 10 minecraft:air
+cmd fill -20 -60 3 30 -48 3 minecraft:deepslate_bricks
+hook array 6 -60 0
+# basic line east of the array with a tee north, a riser and devices at the ends
+cmd fill 8 -60 -1 12 -60 -1 golem_logix:basic_snow_pipe
+cmd setblock 13 -60 -1 golem_logix:analog_terminal[facing=north]
+cmd fill 10 -60 -2 10 -60 -4 golem_logix:basic_snow_pipe
+cmd fill 11 -60 -4 12 -60 -4 golem_logix:basic_snow_pipe
+cmd setblock 13 -60 -4 golem_logix:vacuum_import_bus[facing=east]
+cmd fill 12 -59 -1 12 -57 -1 golem_logix:basic_snow_pipe
+cmd setblock 12 -56 -1 golem_logix:periscope_storage_bus[facing=up]
+# dense line west of the array, a corner and a cabinet at the end
+cmd fill 4 -60 -1 0 -60 -1 golem_logix:dense_frost_pipe
+cmd fill 2 -60 -2 2 -60 -3 golem_logix:dense_frost_pipe
+cmd fill 1 -60 -3 0 -60 -3 golem_logix:dense_frost_pipe
+hook bay -1 -60 -1 north stock
+wait 120
+look 6 -59 -3 12 0 22
+wait 20
+shot pipe_overview
+look 10.5 -59.5 -0.5 4.5 -20 14
+wait 20
+shot pipe_basic_a
+look 12.5 -58.5 -0.5 3.2 -55 20
+wait 20
+shot pipe_basic_b
+look 2.5 -59.5 -1.5 4.2 -25 16
+wait 20
+shot pipe_dense_a
+look 0.5 -59.5 -1.5 3.4 25 14
+wait 20
+shot pipe_dense_b
+look 13.5 -59.5 -0.5 2.4 -90 10
+wait 20
+shot pipe_device_cap

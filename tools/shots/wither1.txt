@@ -1,0 +1,17 @@
+# anvil on the Wither during its spawn invulnerability (peaceful would remove the Wither at once)
+cmd difficulty easy
+cmd kill @e[type=!player]
+cmd fill -12 -60 -6 12 -48 14 minecraft:air
+cmd summon minecraft:wither 0 -60 8 {Invul:220}
+wait 4
+hook mobcheck 0 -59 8 4 minecraft:wither 1
+look 0 -58 8 10 180 10
+cmd setblock 0 -54 8 minecraft:anvil
+wait 8
+shot wither1_falling
+wait 40
+shot wither1_after
+hook itemnear 0 -59 8 3 golem_logix:imploded_wither_plasma 1
+hook mobcheck 0 -59 8 4 minecraft:wither 0
+cmd kill @e[type=minecraft:wither]
+cmd difficulty peaceful

@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": {"model": "golem_logix:block/punch_card_catalog"},
+    "facing=east": {"model": "golem_logix:block/punch_card_catalog", "y": 90},
+    "facing=south": {"model": "golem_logix:block/punch_card_catalog", "y": 180},
+    "facing=west": {"model": "golem_logix:block/punch_card_catalog", "y": 270}
+  }
+}

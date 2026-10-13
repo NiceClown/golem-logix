@@ -1,0 +1,22 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "golem_logix:block/cryo_panel",
+    "panel": "golem_logix:block/cryo_panel"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0],
+      "to": [16, 16, 16],
+      "faces": {
+        "north": {"texture": "#panel"},
+        "south": {"texture": "#panel"},
+        "east": {"texture": "#panel"},
+        "west": {"texture": "#panel"},
+        "up": {"texture": "#panel"},
+        "down": {"texture": "#panel"}
+      }
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+# Cryo-Calculator at work: model of the current output above it, ice hills, matrix rain; co-processor flywheel; "order ready" toast
+reload
+cmd time set day
+cmd kill @e[type=item]
+cmd fill -40 -61 -14 40 -61 10 minecraft:deepslate_tiles
+cmd fill -40 -60 -14 40 -50 10 minecraft:air
+cmd kill @e[type=item]
+hook rig 0 -60 0
+cmd setblock 5 -60 -2 golem_logix:cooling_coprocessor
+cmd setblock 7 -60 -2 golem_logix:cooling_coprocessor
+wait 120
+hook netput 0 -60 0 minecraft:oak_log 64
+look 6.5 -59.2 -2.5 3.4 200 24
+wait 10
+shot calc1_idle
+hook craft 0 -60 0 minecraft:stick 512
+wait 6
+shot calc1_a
+wait 2
+shot calc1_b
+look 6.5 -59.6 -2.5 2.4 160 8
+wait 2
+shot calc1_side_a
+wait 2
+shot calc1_side_b
+look 6.5 -59.4 -2.5 3.2 225 30
+wait 2
+shot calc1_c
+gui on
+wait 150
+shot calc1_toast_a
+wait 10
+shot calc1_toast_b
+gui off
+hook netcheck 0 -60 0 minecraft:stick 512
+wait 40
+look 6.5 -59.2 -2.5 3.4 200 24
+shot calc1_after

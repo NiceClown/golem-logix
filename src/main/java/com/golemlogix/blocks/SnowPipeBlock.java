@@ -1,0 +1,248 @@
+package com.golemlogix.blocks;
+
+import com.golemlogix.blockentity.PipeBlockEntity;
+import com.golemlogix.system.GolemNode;
+import com.mojang.serialization.MapCodec;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.util.StringRepresentable;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.EnumMap;
+import java.util.Map;
+
+public class SnowPipeBlock extends Block implements GolemNode, EntityBlock {
+    public static final MapCodec<SnowPipeBlock> CODEC = simpleCodec(props -> new SnowPipeBlock(16, false, props));
+
+    /**
+     * Что находится в этом направлении: ничего, другая труба (сплошное стекло), устройство (латунная заглушка) или — у плотной
+     * трубы — базовая труба: тогда торец закрыт латунной шайбой-переходником с отверстием под тонкую трубку.
+     */
+    public enum Link implements StringRepresentable {
+        NONE("none"), PIPE("pipe"), DEVICE("device"), REDUCER("reducer");
+
+        private final String name;
+
+        Link(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String getSerializedName() {
+            return name;
+        }
+    }
+
+    public static final EnumProperty<Link> NORTH = EnumProperty.create("north", Link.class);
+    public static final EnumProperty<Link> EAST = EnumProperty.create("east", Link.class);
+    public static final EnumProperty<Link> SOUTH = EnumProperty.create("south", Link.class);
+    public static final EnumProperty<Link> WEST = EnumProperty.create("west", Link.class);
+    public static final EnumProperty<Link> UP = EnumProperty.create("up", Link.class);
+    public static final EnumProperty<Link> DOWN = EnumProperty.create("down", Link.class);
+
+    public static final Map<Direction, EnumProperty<Link>> LINKS = new EnumMap<>(Direction.class);
+
+    static {
+        LINKS.put(Direction.NORTH, NORTH);
+        LINKS.put(Direction.EAST, EAST);
+        LINKS.put(Direction.SOUTH, SOUTH);
+        LINKS.put(Direction.WEST, WEST);
+        LINKS.put(Direction.UP, UP);
+        LINKS.put(Direction.DOWN, DOWN);
+    }
+
+    private final int maxChannels;
+    private final boolean isDense;
+
+    private static final VoxelShape CORE_SHAPE = Block.box(4, 4, 4, 12, 12, 12);
+    private static final Map<Direction, VoxelShape> ARM_SHAPES = Map.of(
+            Direction.NORTH, Block.box(4, 4, 0, 12, 12, 4),
+            Direction.SOUTH, Block.box(4, 4, 12, 12, 12, 16),
+            Direction.WEST, Block.box(0, 4, 4, 4, 12, 12),
+            Direction.EAST, Block.box(12, 4, 4, 16, 12, 12),
+            Direction.DOWN, Block.box(4, 0, 4, 12, 4, 12),
+            Direction.UP, Block.box(4, 12, 4, 12, 16, 12)
+    );
+    /** Плотная труба толще: 12x12 вместо 8x8. */
+    private static final VoxelShape DENSE_CORE_SHAPE = Block.box(2, 2, 2, 14, 14, 14);
+    private static final Map<Direction, VoxelShape> DENSE_ARM_SHAPES = Map.of(
+            Direction.NORTH, Block.box(2, 2, 0, 14, 14, 2),
+            Direction.SOUTH, Block.box(2, 2, 14, 14, 14, 16),
+            Direction.WEST, Block.box(0, 2, 2, 2, 14, 14),
+            Direction.EAST, Block.box(14, 2, 2, 16, 14, 14),
+            Direction.DOWN, Block.box(2, 0, 2, 14, 2, 14),
+            Direction.UP, Block.box(2, 14, 2, 14, 16, 14)
+    );
+
+    public SnowPipeBlock(int maxChannels, boolean isDense, Properties properties) {
+        super(properties.sound(SoundType.GLASS).noOcclusion().strength(1.0f));
+        this.maxChannels = maxChannels;
+        this.isDense = isDense;
+
+        BlockState def = this.stateDefinition.any().setValue(GolemProperties.ACTIVE, false);
+        for (EnumProperty<Link> prop : LINKS.values()) {
+            def = def.setValue(prop, Link.NONE);
+        }
+        this.registerDefaultState(def);
+    }
+
+    /** Что в направлении dir у этой трубы. */
+    public static Link link(BlockState state, Direction dir) {
+        return state.getValue(LINKS.get(dir));
+    }
+
+    /** Есть ли в направлении dir соединение (с трубой или устройством). */
+    public static boolean linked(BlockState state, Direction dir) {
+        return link(state, dir) != Link.NONE;
+    }
+
+    @Nullable
+    @Override
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return new PipeBlockEntity(pos, state);
+    }
+
+    @Override
+    protected MapCodec<? extends Block> codec() {
+        return CODEC;
+    }
+
+    public int getMaxChannels() {
+        return maxChannels;
+    }
+
+    @Override
+    public int channelCapacity() {
+        return maxChannels;
+    }
+
+    public boolean isDense() {
+        return isDense;
+    }
+
+    /**
+     * Форма зависит только от того, в какие стороны есть соединение: 64 сочетания, посчитанные заранее. Собирать её из
+     * брусков при каждом вызове нельзя: при входе на сервер клиент перестраивает кэш всех 8192 состояний трубы, и сборка
+     * форм занимала дольше, чем сервер ждёт клиента (вход обрывался по таймауту).
+     */
+    private static final VoxelShape[] SHAPES = buildShapes(CORE_SHAPE, ARM_SHAPES);
+    private static final VoxelShape[] DENSE_SHAPES = buildShapes(DENSE_CORE_SHAPE, DENSE_ARM_SHAPES);
+    /** Столкновения — только нижняя половина: труба работает как ступенька (на неё заходят, не прыгая). */
+    private static final VoxelShape[] STEP_SHAPES = stepShapes(SHAPES);
+    private static final VoxelShape[] DENSE_STEP_SHAPES = stepShapes(DENSE_SHAPES);
+
+    private static VoxelShape[] stepShapes(VoxelShape[] shapes) {
+        VoxelShape[] out = new VoxelShape[shapes.length];
+        for (int i = 0; i < shapes.length; i++) {
+            out[i] = BusLinks.step(shapes[i]);
+        }
+        return out;
+    }
+
+    private static VoxelShape[] buildShapes(VoxelShape core, Map<Direction, VoxelShape> arms) {
+        VoxelShape[] out = new VoxelShape[64];
+        for (int mask = 0; mask < 64; mask++) {
+            VoxelShape shape = core;
+            for (Direction dir : Direction.values()) {
+                if ((mask & (1 << dir.ordinal())) != 0) {
+                    shape = Shapes.or(shape, arms.get(dir));
+                }
+            }
+            out[mask] = shape.optimize();
+        }
+        return out;
+    }
+
+    private static int mask(BlockState state) {
+        int mask = 0;
+        for (Direction dir : Direction.values()) {
+            if (linked(state, dir)) {
+                mask |= 1 << dir.ordinal();
+            }
+        }
+        return mask;
+    }
+
+    @Override
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return (isDense ? DENSE_SHAPES : SHAPES)[mask(state)];
+    }
+
+    @Override
+    protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return (isDense ? DENSE_STEP_SHAPES : STEP_SHAPES)[mask(state)];
+    }
+
+    @Override
+    public BlockState getStateForPlacement(BlockPlaceContext context) {
+        BlockGetter level = context.getLevel();
+        BlockPos pos = context.getClickedPos();
+        BlockState state = this.defaultBlockState();
+        for (Direction dir : Direction.values()) {
+            state = state.setValue(LINKS.get(dir), linkTo(level, pos, pos.relative(dir), dir));
+        }
+        return state;
+    }
+
+    @Override
+    public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+        return state.setValue(LINKS.get(direction), linkTo(level, pos, neighborPos, direction));
+    }
+
+    /** Пересчитать все стороны (после установки или снятия заглушки). */
+    public BlockState relink(BlockState state, BlockGetter level, BlockPos pos) {
+        for (Direction dir : Direction.values()) {
+            state = state.setValue(LINKS.get(dir), linkTo(level, pos, pos.relative(dir), dir));
+        }
+        return state;
+    }
+
+    /** Заглушки выпадают вместе с трубой. */
+    @Override
+    protected void onRemove(BlockState state, net.minecraft.world.level.Level level, BlockPos pos, BlockState newState, boolean isMoving) {
+        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof PipeBlockEntity be && be.plugCount() > 0) {
+            net.minecraft.world.Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+                    new net.minecraft.world.item.ItemStack(com.golemlogix.init.ModItems.PIPE_PLUG.get(), be.plugCount()));
+        }
+        super.onRemove(state, level, pos, newState, isMoving);
+    }
+
+    private Link linkTo(BlockGetter level, BlockPos pos, BlockPos neighborPos, Direction dir) {
+        // сторона, закрытая заглушкой (у этой трубы или у соседней), ни с чем не соединяется
+        if (PipeBlockEntity.plugged(level, pos, dir) || PipeBlockEntity.plugged(level, neighborPos, dir.getOpposite())) {
+            return Link.NONE;
+        }
+        BlockState neighborState = level.getBlockState(neighborPos);
+        // Вечный Резонатор узлом сети не является (он питает Хронометры), но труба к нему подходит и видна подключённой
+        if (neighborState.getBlock() instanceof EternalFrostResonatorBlock) {
+            return Link.DEVICE;
+        }
+        if (neighborState.getBlock() instanceof SnowPipeBlock other) {
+            // трубы разной толщины: тонкая входит манжетой в шайбу-переходник на торце плотной — без щели между ними
+            if (other.isDense == this.isDense) {
+                return Link.PIPE;
+            }
+            return this.isDense ? Link.REDUCER : Link.DEVICE;
+        }
+        return neighborState.getBlock() instanceof GolemNode n && n.canLink(neighborState, this.defaultBlockState(), dir.getOpposite())
+                ? Link.DEVICE : Link.NONE;
+    }
+
+    @Override
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(NORTH, EAST, SOUTH, WEST, UP, DOWN, GolemProperties.ACTIVE);
+    }
+}

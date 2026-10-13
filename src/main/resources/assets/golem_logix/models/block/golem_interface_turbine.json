@@ -1,0 +1,27 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "golem_logix:block/interface_turbine",
+    "side0": "golem_logix:block/interface_side_0",
+    "side1": "golem_logix:block/interface_side_1",
+    "side2": "golem_logix:block/interface_side_2",
+    "side3": "golem_logix:block/interface_side_3",
+    "top": "golem_logix:block/interface_top",
+    "bottom": "golem_logix:block/interface_bottom",
+    "brass": "golem_logix:block/interface_brass",
+    "ice": "golem_logix:block/sat_ice",
+    "metronome": "golem_logix:block/interface_metronome",
+    "turbine": "golem_logix:block/interface_turbine",
+    "rod": "golem_logix:block/cab_dark"
+  },
+  "elements": [
+    {
+      "from": [5.3, 5.3, 0.55],
+      "to": [10.7, 10.7, 0.55],
+      "faces": {
+        "north": {"uv": [0, 0, 16, 16], "texture": "#turbine"}
+      }
+    }
+  ]
+}

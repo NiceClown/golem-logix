@@ -1,0 +1,24 @@
+# 1.0.1 final checks: book layout in both languages, the bus article, dimmer casing runes at night
+lang ru_ru
+bookaudit
+book bus_intro 0 4
+wait 15
+shot g3_book_bus_ru
+closeScreen
+lang en_us
+bookaudit
+book bus_intro 0 4
+wait 15
+shot g3_book_bus_en
+closeScreen
+reload
+cmd time set midnight
+cmd kill @e[type=!player]
+cmd fill -40 -61 -14 40 -61 10 minecraft:deepslate_tiles
+cmd fill -40 -60 -14 40 -50 10 minecraft:air
+hook array 6 -60 0
+wait 80
+look 6.5 -58 0.5 7 200 20
+wait 5
+shot g3_night_array
+cmd time set day

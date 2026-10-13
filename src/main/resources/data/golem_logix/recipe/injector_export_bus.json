@@ -1,0 +1,23 @@
+{
+    "key":  {
+                "C":  {
+                          "item":  "minecraft:copper_ingot"
+                      },
+                "P":  {
+                          "item":  "minecraft:piston"
+                      },
+                "M":  {
+                          "item":  "golem_logix:flattened_copper_matrix"
+                      }
+            },
+    "pattern":  [
+                    " C ",
+                    "CMC",
+                    " P "
+                ],
+    "result":  {
+                   "count":  1,
+                   "id":  "golem_logix:injector_export_bus"
+               },
+    "type":  "minecraft:crafting_shaped"
+}

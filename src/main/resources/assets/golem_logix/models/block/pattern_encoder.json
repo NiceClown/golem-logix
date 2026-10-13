@@ -1,0 +1,91 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "display": {
+    "gui": {"rotation": [30, 135, 0], "translation": [0, 0, 0], "scale": [0.7, 0.7, 0.7]},
+    "ground": {"rotation": [0, 0, 0], "translation": [0, 3, 0], "scale": [0.5, 0.5, 0.5]},
+    "fixed": {"rotation": [0, 180, 0], "translation": [0, 0, 0], "scale": [0.75, 0.75, 0.75]},
+    "thirdperson_righthand": {"rotation": [75, 45, 0], "translation": [0, 2.5, 0], "scale": [0.375, 0.375, 0.375]},
+    "firstperson_righthand": {"rotation": [0, 45, 0], "translation": [0, 0, 0], "scale": [0.4, 0.4, 0.4]},
+    "firstperson_lefthand": {"rotation": [0, 225, 0], "translation": [0, 0, 0], "scale": [0.4, 0.4, 0.4]}
+  },
+  "textures": {
+    "particle": "golem_logix:block/pattern_encoder_front",
+    "pattern_encoder_front": "golem_logix:block/pattern_encoder_front",
+    "pattern_encoder_side": "golem_logix:block/pattern_encoder_side",
+    "pattern_encoder_back": "golem_logix:block/pattern_encoder_back",
+    "pattern_encoder_top": "golem_logix:block/pattern_encoder_top",
+    "bottom": "golem_logix:block/terminal_bottom",
+    "hopper": "golem_logix:block/encoder_hopper",
+    "cards": "golem_logix:block/encoder_cards"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0],
+      "to": [16, 13, 16],
+      "faces": {
+        "north": {"uv": [0, 3, 16, 16], "texture": "#pattern_encoder_front"},
+        "east": {"uv": [0, 3, 16, 16], "texture": "#pattern_encoder_side"},
+        "west": {"uv": [16, 3, 0, 16], "texture": "#pattern_encoder_side"},
+        "up": {"uv": [0, 0, 16, 16], "texture": "#pattern_encoder_top"},
+        "down": {"uv": [0, 0, 16, 16], "texture": "#bottom"},
+        "south": {"uv": [0, 3, 16, 16], "texture": "#pattern_encoder_back"}
+      }
+    },
+    {
+      "from": [2, 13, 3],
+      "to": [14, 16, 3.7],
+      "faces": {
+        "north": {"uv": [0, 0, 16, 16], "texture": "#hopper"},
+        "south": {"uv": [0, 0, 16, 16], "texture": "#hopper"},
+        "east": {"uv": [0, 0, 16, 16], "texture": "#hopper"},
+        "west": {"uv": [0, 0, 16, 16], "texture": "#hopper"},
+        "up": {"uv": [0, 0, 16, 16], "texture": "#hopper"}
+      }
+    },
+    {
+      "from": [2, 13, 12.3],
+      "to": [14, 16, 13],
+      "faces": {
+        "north": {"uv": [0, 0, 16, 16], "texture": "#hopper"},
+        "south": {"uv": [0, 0, 16, 16], "texture": "#hopper"},
+        "east": {"uv": [0, 0, 16, 16], "texture": "#hopper"},
+        "west": {"uv": [0, 0, 16, 16], "texture": "#hopper"},
+        "up": {"uv": [0, 0, 16, 16], "texture": "#hopper"}
+      }
+    },
+    {
+      "from": [2, 13, 3.7],
+      "to": [2.7, 15.2, 12.3],
+      "faces": {
+        "north": {"uv": [0, 0, 16, 16], "texture": "#hopper"},
+        "south": {"uv": [0, 0, 16, 16], "texture": "#hopper"},
+        "east": {"uv": [0, 0, 16, 16], "texture": "#hopper"},
+        "west": {"uv": [0, 0, 16, 16], "texture": "#hopper"},
+        "up": {"uv": [0, 0, 16, 16], "texture": "#hopper"}
+      }
+    },
+    {
+      "from": [13.3, 13, 3.7],
+      "to": [14, 15.2, 12.3],
+      "faces": {
+        "north": {"uv": [0, 0, 16, 16], "texture": "#hopper"},
+        "south": {"uv": [0, 0, 16, 16], "texture": "#hopper"},
+        "east": {"uv": [0, 0, 16, 16], "texture": "#hopper"},
+        "west": {"uv": [0, 0, 16, 16], "texture": "#hopper"},
+        "up": {"uv": [0, 0, 16, 16], "texture": "#hopper"}
+      }
+    },
+    {
+      "from": [2.7, 13, 3.7],
+      "to": [13.3, 15.6, 12.3],
+      "faces": {
+        "north": {"uv": [0, 0, 16, 16], "texture": "#cards"},
+        "south": {"uv": [0, 0, 16, 16], "texture": "#cards"},
+        "east": {"uv": [0, 0, 16, 16], "texture": "#cards"},
+        "west": {"uv": [0, 0, 16, 16], "texture": "#cards"},
+        "up": {"uv": [0, 0, 16, 16], "texture": "#cards"}
+      }
+    }
+  ]
+}

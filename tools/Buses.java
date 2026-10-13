@@ -1,0 +1,526 @@
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+/**
+ * Три шины мода: узкое устройство, в центре блока. Спереди — рабочий узел подачи или выгрузки (по назначению), за ним технический
+ * блок (латунный короб 8x8x6 с рунной плитой сверху), со всех остальных сторон — разъёмы под трубы. Когда рядом есть узел сети
+ * (труба, другая шина, терминал), разъём вытягивается в мини-трубку до самого края блока.
+ * <ul>
+ * <li>Вакуумная (импорт): раструб с турбиной, бирюзовая звезда на крыше;</li>
+ * <li>Инжекторная (экспорт): длинный ствол-сопло, фиолетовая звезда;</li>
+ * <li>Перископическая: линза-монокль, ледяная звезда.</li>
+ * </ul>
+ * Модели смотрят на NORTH (-Z); поворот делает блокстейт (мультипарт по facing и по флагам соединений north..down).
+ */
+final class Buses {
+    static final int K = Forge2.K;
+    static final int[] BRASS = Paint.BRASS, BRONZE = Paint.BRONZE, IRON = Paint.IRON, CYAN = Paint.CYAN, VIOLET = Paint.VIOLET,
+            FROST = Paint.FROST, COPPER = Paint.COPPER, CREAM = Paint.CREAM;
+
+    static int at(int[] r, double i) {
+        return Paint.at(r, i);
+    }
+
+    static int rgb(int c) {
+        return Paint.rgb(c);
+    }
+
+    static int argb(int a, int c) {
+        return Paint.argb(a, c);
+    }
+
+    // ------------------------------------------------------------------------------------------- текстуры
+    /** Латунная плита-плитка 16x16 юнитов (общая обшивка). */
+    static Paint brassPlate() {
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, BRASS, 3.0, 1);
+        p.streaks(0.3, 0.3, 15.7, 15.7, 0.07, 301, true);
+        p.grain(0, 0, 16, 16, 0.04, 302);
+        p.frame(1.3, 1.3, 14.7, 14.7, 0.2, at(BRASS, 1.2));
+        p.frame(1.5, 1.5, 14.5, 14.5, 0.1, at(BRASS, 4.7));
+        for (double t = 2.6; t < 14; t += 2.9) {
+            for (double[] c : new double[][]{{t, 0.65}, {t, 15.35}, {0.65, t}, {15.35, t}}) {
+                p.rivet(c[0], c[1], 0.3, BRASS);
+            }
+        }
+        for (double[] c : new double[][]{{0, 0}, {16, 0}, {0, 16}, {16, 16}}) {
+            double x = Math.min(c[0], 16 - 3.5), y = Math.min(c[1], 16 - 3.5);
+            p.tint(x, y, x + 3.5, y + 3.5, argb(26, 0x120a04));
+        }
+        return p;
+    }
+
+    /** Восьмиконечная звезда (два квадрата под 45 градусов) с объёмом: светлее сверху-слева. */
+    static void star(Paint p, double cx, double cy, double r, int[] ramp) {
+        double[] xs = new double[16], ys = new double[16];
+        for (int i = 0; i < 16; i++) {
+            double a = i * Math.PI / 8 - Math.PI / 2, rr = i % 2 == 0 ? r : r * 0.6;
+            xs[i] = cx + Math.cos(a) * rr;
+            ys[i] = cy + Math.sin(a) * rr;
+        }
+        double[] xo = new double[16], yo = new double[16];
+        for (int i = 0; i < 16; i++) {
+            double a = i * Math.PI / 8 - Math.PI / 2, rr = (i % 2 == 0 ? r : r * 0.6) + 0.2;
+            xo[i] = cx + Math.cos(a) * rr;
+            yo[i] = cy + Math.sin(a) * rr;
+        }
+        p.poly(xo, yo, at(ramp, 0.6));
+        p.polyFn(xs, ys, (u, v) -> {
+            double lit = 0.5 + 0.5 * (-(u - cx) * 0.6 - (v - cy) * 0.8) / r;
+            return Paint.ramp(ramp, 0.5 + 0.45 * lit - 0.12 * Math.hypot(u - cx, v - cy) / r);
+        });
+        p.sphere(cx, cy, r * 0.22, ramp, 0.8, 1.0);
+    }
+
+    /** Крыша технического блока 6x6: тёмная рунная панель в латунной раме и латунная площадка со звездой по центру. */
+    static Paint top(int variant) {
+        int[] ac = VIOLET, star = variant == 0 ? CYAN : variant == 1 ? VIOLET : FROST;
+        Paint p = new Paint(6, 6, 8);
+        p.slab(0, 0, 6, 6, BRASS, 3.0, 1);
+        p.slab(0.55, 0.55, 5.45, 5.45, IRON, 0.7, 1);
+        p.grain(0.55, 0.55, 5.45, 5.45, 0.06, 321 + variant);
+        p.glowRect(1.0, 0.8, 5.0, 1.8, 0.4, at(ac, 3.2), 55);
+        p.glowRect(1.0, 4.2, 5.0, 5.2, 0.4, at(ac, 3.2), 55);
+        int[][] glyphs = {{1, 12, 13, 8}, {16, 8, 11, 12}, {13, 1, 8, 16}};
+        for (int i = 0; i < 4; i++) {
+            p.rune(1.15 + i * 1.0, 0.8, 1.0, glyphs[variant][i], at(ac, 5.4), 0);
+            p.rune(1.15 + i * 1.0, 4.2, 1.0, glyphs[variant][3 - i], at(ac, 5.4), 0);
+        }
+        p.slab(1.6, 1.8, 4.4, 4.2, BRASS, 3.3, 1);
+        p.rect(1.85, 2.05, 4.15, 3.95, rgb(0x0a0c10));
+        star(p, 3, 3, 0.95, star);
+        for (double[] c : new double[][]{{0.28, 0.28}, {5.72, 0.28}, {0.28, 5.72}, {5.72, 5.72}}) {
+            p.rivet(c[0], c[1], 0.17, BRASS);
+        }
+        return p;
+    }
+
+    /** Боковая панель технического блока 6x6: латунная рама, тёмное железо, гнездо под разъём по центру. */
+    static Paint side(int variant) {
+        Paint p = new Paint(6, 6, 8);
+        p.slab(0, 0, 6, 6, BRASS, 3.0, 1);
+        p.slab(0.5, 0.5, 5.5, 5.5, IRON, 1.5, 1);
+        p.grain(0.5, 0.5, 5.5, 5.5, 0.07, 311 + variant);
+        p.frame(0.85, 0.85, 5.15, 5.15, 0.1, at(IRON, 2.9));
+        // гнездо: разъём (4x4) закрывает середину, вокруг виден латунный ободок
+        p.disc(3, 3, 2.55, at(BRASS, 1.2));
+        p.ring(3, 3, 2.25, 2.55, at(BRASS, 4.6));
+        p.disc(3, 3, 2.0, at(IRON, 0.3));
+        // индикаторы по углам
+        int[] led = variant == 0 ? CYAN : variant == 1 ? VIOLET : FROST;
+        p.disc(1.05, 1.05, 0.22, at(led, 4.8));
+        p.disc(4.95, 4.95, 0.22, at(led, 3.4));
+        for (double[] c : new double[][]{{0.3, 0.3}, {5.7, 0.3}, {0.3, 5.7}, {5.7, 5.7}}) {
+            p.rivet(c[0], c[1], 0.17, BRASS);
+        }
+        return p;
+    }
+
+    /** Торцевая заглушка-разъём (4x4): латунное кольцо вокруг тёмного отверстия. */
+    static Paint socket() {
+        Paint p = new Paint(4, 4, 12);
+        p.slab(0, 0, 4, 4, BRASS, 2.8, 1);
+        p.sphere(2, 2, 1.75, BRASS, 0.2, 0.95);
+        p.disc(2, 2, 1.25, at(IRON, 0.2));
+        p.disc(2, 2, 0.85, rgb(0x040506));
+        p.ring(2, 2, 0.85, 0.98, at(IRON, 3.4));
+        for (int i = 0; i < 4; i++) {
+            double a = i * Math.PI / 2 + Math.PI / 4;
+            p.rivet(2 + Math.cos(a) * 1.5, 2 + Math.sin(a) * 1.5, 0.16, BRASS);
+        }
+        return p;
+    }
+
+    /** Раструб вакуумной шины (12x12): тёмная воронка с лопастями турбины и бирюзовой ступицей. */
+    static Paint funnel() {
+        Paint p = new Paint(12, 12, 8);
+        p.slab(0, 0, 12, 12, BRASS, 2.8, 1);
+        p.disc(6, 6, 5.85, at(BRASS, 1.2));
+        p.discFn(6, 6, 5.5, (u, v) -> {
+            double d = Math.hypot(u - 6, v - 6) / 5.5;
+            return Paint.ramp(IRON, 0.05 + 0.25 * d);
+        });
+        for (int b = 0; b < 9; b++) {
+            double a0 = b * 2 * Math.PI / 9;
+            for (double r = 0.9; r < 5.2; r += 0.1) {
+                double a = a0 + r * 0.16;
+                double x = 6 + r * Math.cos(a), y = 6 + r * Math.sin(a);
+                p.disc(x, y, 0.4 + r * 0.04, Paint.ramp(COPPER, 0.25 + 0.55 * (r / 5.2) + 0.1 * Math.sin(a * 3)));
+            }
+        }
+        p.ring(6, 6, 5.5, 5.85, at(BRASS, 4.0));
+        p.sphere(6, 6, 1.0, BRASS, 0.3, 1.0);
+        p.disc(6, 6, 0.5, at(CYAN, 4.8));
+        p.glowRect(5.75, 5.75, 6.25, 6.25, 0.8, at(CYAN, 4.2), 90);
+        for (double[] c : new double[][]{{0.7, 0.7}, {11.3, 0.7}, {0.7, 11.3}, {11.3, 11.3}}) {
+            p.rivet(c[0], c[1], 0.34, BRASS);
+        }
+        return p;
+    }
+
+    /** Торец сопла инжектора (6x6): тёмное отверстие с фиолетовым отблеском. */
+    static Paint nozzle() {
+        Paint p = new Paint(6, 6, 8);
+        p.slab(0, 0, 6, 6, BRASS, 2.6, 1);
+        p.disc(3, 3, 2.7, at(BRASS, 1.0));
+        p.sphere(3, 3, 2.6, BRASS, 0.3, 0.9);
+        p.disc(3, 3, 1.85, rgb(0x050607));
+        p.ring(3, 3, 1.85, 2.02, at(IRON, 3.0));
+        p.disc(3, 3, 0.8, at(VIOLET, 2.2));
+        p.disc(2.85, 2.85, 0.36, at(VIOLET, 5.4));
+        p.sparkle(2.8, 2.8, argb(255, 0xFFFFFF));
+        return p;
+    }
+
+    /** Монокль перископа (10x10): оправа с кольцом рун и прозрачная линза. */
+    static Paint lens() {
+        Paint p = new Paint(10, 10, 6.4);
+        p.slab(0, 0, 10, 10, BRASS, 2.4, 1);
+        p.disc(5, 5, 4.9, at(BRASS, 1.2));
+        p.sphere(5, 5, 4.8, BRASS, 0.3, 0.95);
+        p.disc(5, 5, 3.95, at(IRON, 0.4));
+        for (int i = 0; i < 12; i++) {
+            double a = i * Math.PI / 6;
+            p.rune(5 + Math.cos(a) * 3.45 - 0.3, 5 + Math.sin(a) * 3.45 - 0.5, 1.0, i * 3 + 1, at(CYAN, 5.2), 0);
+        }
+        p.disc(5, 5, 2.75, at(BRASS, 1.4));
+        p.discFn(5, 5, 2.58, (u, v) -> {
+            double dx = (u - 5) / 2.58, dy = (v - 5) / 2.58, d = Math.hypot(dx, dy);
+            double lit = 0.5 + 0.5 * (-dx * 0.5 - dy * 0.7);
+            return Paint.mix(rgb(0x1b3a52), rgb(0xcfe9ff), Math.max(0, Math.min(1, 0.25 + 0.55 * lit - d * 0.2)));
+        });
+        p.disc(4, 3.9, 0.55, argb(210, 0xFFFFFF));
+        p.line(3.7, 6.5, 6.7, 3.6, 0.22, argb(120, 0xFFFFFF));
+        p.ring(5, 5, 1.25, 1.4, argb(150, 0xFFFFFF));
+        p.disc(5, 5, 0.75, rgb(0x0a1018));
+        return p;
+    }
+
+    /** Полосатая сталь ствола. */
+    static Paint steel() {
+        Paint p = new Paint(4, 16, K);
+        p.slab(0, 0, 4, 16, IRON, 4.0, 1);
+        p.grain(0, 0, 4, 16, 0.05, 331);
+        for (double y = 0.8; y < 16; y += 1.6) {
+            p.rect(0, y, 4, y + 0.22, at(IRON, 1.6));
+            p.rect(0, y + 0.22, 4, y + 0.36, at(IRON, 5.6));
+        }
+        return p;
+    }
+
+    static void textures() throws Exception {
+        brassPlate().save(Forge2.tex("bus_plate"));
+        for (int i = 0; i < 3; i++) {
+            side(i).save(Forge2.tex("bus_side_" + i));
+            top(i).save(Forge2.tex("bus_top_" + i));
+        }
+        socket().save(Forge2.tex("bus_socket"));
+        funnel().save(Forge2.tex("bus_funnel"));
+        nozzle().save(Forge2.tex("bus_nozzle"));
+        lens().save(Forge2.tex("bus_lens"));
+        steel().save(Forge2.tex("bus_steel"));
+        for (String old : new String[]{"bus_crystal_cyan", "bus_crystal_violet", "bus_crystal_ice", "bus_vial", "bus_gauge", "bus_lens_2", "bus_flange"}) {
+            Files.deleteIfExists(Forge2.tex(old).toPath());
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------------- модели
+    static final double[] FULL_UV = {0, 0, 16, 16};
+
+    static double[] sub(double[] uv, double fx, double fy) {
+        double du = uv[2] - uv[0], dv = uv[3] - uv[1];
+        return new double[]{uv[0] + du * fx, uv[1] + dv * fy, uv[2] - du * fx, uv[3] - dv * fy};
+    }
+
+    /**
+     * Восьмиугольная призма вдоль Z: «плюс» из двух брусков и четыре диагональные пластины на углах. east/west — боковые панели,
+     * up/down — верх и низ, торцы — по необходимости (текстура целиком на описанный квадрат).
+     */
+    static void oct(List<Models.El> l, double x0, double y0, double z0, double x1, double y1, double z1, double c,
+                    String side, String topBottom, String diag, String endNorth, String endSouth) {
+        double w = x1 - x0, h = y1 - y0;
+        Models.El a = Models.e(x0, y0 + c, z0, x1, y1 - c, z1);
+        a.faces.put("east", Models.El.face("#" + side, FULL_UV));
+        a.faces.put("west", Models.El.face("#" + side, FULL_UV));
+        l.add(a);
+        Models.El b = Models.e(x0 + c, y0, z0, x1 - c, y1, z1);
+        b.faces.put("up", Models.El.face("#" + topBottom, FULL_UV));
+        b.faces.put("down", Models.El.face("#" + topBottom, FULL_UV));
+        l.add(b);
+        if (endNorth != null) {
+            Models.El n = Models.e(x0, y0 + c, z0 - 0.02, x1, y1 - c, z0);
+            n.faces.put("north", Models.El.face("#" + endNorth, sub(FULL_UV, 0, c / h)));
+            l.add(n);
+            Models.El n2 = Models.e(x0 + c, y0, z0 - 0.01, x1 - c, y1, z0);
+            n2.faces.put("north", Models.El.face("#" + endNorth, sub(FULL_UV, c / w, 0)));
+            l.add(n2);
+        }
+        if (endSouth != null) {
+            Models.El s = Models.e(x0, y0 + c, z1, x1, y1 - c, z1 + 0.02);
+            s.faces.put("south", Models.El.face("#" + endSouth, sub(FULL_UV, 0, c / h)));
+            l.add(s);
+            Models.El s2 = Models.e(x0 + c, y0, z1, x1 - c, y1, z1 + 0.01);
+            s2.faces.put("south", Models.El.face("#" + endSouth, sub(FULL_UV, c / w, 0)));
+            l.add(s2);
+        }
+        if (diag != null) {
+            // угловые пластины толщиной во весь срезанный угол (c/√2): закрывают и угловые треугольники торцов, где «плюс» из
+            // двух брусков оставлял сквозные дырочки
+            Models.octCorners(l, x0, y0, x1, y1, z0, z1, c, c / Math.sqrt(2), "#" + diag, null,
+                    endNorth != null ? "#" + diag : null, endSouth != null ? "#" + diag : null, 0);
+        }
+    }
+
+    // Шина занимает переднюю половину блока: рабочий узел Z 0..3.2, технический блок 6.4x6.4 на Z 3.2..8 (как BusLinks в Java).
+    static final double LO = 4.8, HI = 11.2, Z0 = 3.2, Z1 = 8, MID = 5.6;
+    /** На сколько середина корпуса (и боковые трубки) сдвинута к лицу шины от середины блока. */
+    static final double SHIFT = 8 - MID;
+
+    /** Общее тело: технический блок 6.4x6.4x4.8, рунная плита-крыша со звездой, кованые пояса. */
+    static List<Models.El> common() {
+        List<Models.El> l = new ArrayList<>();
+        oct(l, LO, LO, Z0, HI, HI, Z1, 0.8, "side", "plate", "plate", "plate", "plate");
+        // латунные пояса по краям тела (рельеф, как кованые обручи)
+        Pipes.ring(l, LO - 0.3, HI + 0.3, Z0 + 0.2, Z0 + 0.8, 0.9, "plate", 0.6);
+        Pipes.ring(l, LO - 0.3, HI + 0.3, Z1 - 0.8, Z1 - 0.2, 0.9, "plate", 0.6);
+        Models.El pad = Models.e(5.6, HI, Z0 + 1.0, 10.4, HI + 0.4, Z1 - 1.0).only("#plate", "east", "west", "north", "south");
+        pad.faces.put("up", Models.El.face("#top", FULL_UV));
+        l.add(pad.glow(6));
+        return l;
+    }
+
+    /** Короткий разъём (3.2x3.2 юнита) у грани тела: toward-north, стоит у z = zFace и торчит на 1.2 юнита в сторону севера. */
+    static Models.El stubBox(double zFace) {
+        Models.El s = Models.e(6.4, 6.4, zFace - 1.2, 9.6, 9.6, zFace).only("#plate", "east", "west", "up", "down", "south");
+        s.faces.put("north", Models.El.face("#socket", FULL_UV));
+        return s;
+    }
+
+    /** Разъёмы на четырёх сторонах (кроме лицевой и звезды) для модели предмета: боковые — посередине корпуса. */
+    static List<Models.El> itemStubs() {
+        List<Models.El> l = new ArrayList<>();
+        Models.El east = Models.e(HI, 6.4, MID - 1.6, HI + 1.2, 9.6, MID + 1.6).only("#plate", "north", "south", "up", "down", "west");
+        east.faces.put("east", Models.El.face("#socket", FULL_UV));
+        Models.El west = Models.e(LO - 1.2, 6.4, MID - 1.6, LO, 9.6, MID + 1.6).only("#plate", "north", "south", "up", "down", "east");
+        west.faces.put("west", Models.El.face("#socket", FULL_UV));
+        Models.El down = Models.e(6.4, LO - 1.2, MID - 1.6, 9.6, LO, MID + 1.6).only("#plate", "north", "south", "east", "west", "up");
+        down.faces.put("down", Models.El.face("#socket", FULL_UV));
+        Models.El back = Models.e(6.4, 6.4, Z1, 9.6, 9.6, Z1 + 1.2).only("#plate", "east", "west", "up", "down", "north");
+        back.faces.put("south", Models.El.face("#socket", FULL_UV));
+        l.add(east);
+        l.add(west);
+        l.add(down);
+        l.add(back);
+        return l;
+    }
+
+    static String[][] pipeTex() {
+        return new String[][]{{"plate", "bus_plate"}, {"socket", "bus_socket"}, {"su", "pipe_glass_u"}, {"sv", "pipe_glass_v"},
+                {"sd", "pipe_glass_d"}, {"band", "pipe_band"}};
+    }
+
+    /** Сдвиг элементов (вместе с центром поворота). */
+    static List<Models.El> shifted(List<Models.El> l, double dx, double dy, double dz) {
+        for (Models.El e : l) {
+            e.f[0] += dx;
+            e.t[0] += dx;
+            e.f[1] += dy;
+            e.t[1] += dy;
+            e.f[2] += dz;
+            e.t[2] += dz;
+            if (e.rotOrigin != null) {
+                e.rot(e.rotAxis, e.rotAngle, e.rotOrigin[0] + dx, e.rotOrigin[1] + dy, e.rotOrigin[2] + dz);
+            }
+        }
+        return l;
+    }
+
+    /** Мини-трубка «в сторону севера» от грани тела (z = zb) до края блока: ободок у тела, стекло, ободок у края. */
+    static List<Models.El> arm(double zb) {
+        List<Models.El> arm = new ArrayList<>();
+        Pipes.tube(arm, 6, 10, 0, zb, 0.7, "sv", "su", "sd");
+        Pipes.ring(arm, 5.4, 10.6, zb - 1.0, zb, 0.9, "band");
+        Pipes.ring(arm, 5.4, 10.6, 0, 1.0, 0.9, "band");
+        return arm;
+    }
+
+    /** Сдвиги боковых разъёмов в модели «в сторону севера»: к середине корпуса, куда бы шина ни смотрела. */
+    static final String[] SHIFTS = {"px", "nx", "py", "ny"};
+
+    static double[] shiftOf(String s) {
+        return switch (s) {
+            case "px" -> new double[]{SHIFT, 0};
+            case "nx" -> new double[]{-SHIFT, 0};
+            case "py" -> new double[]{0, SHIFT};
+            default -> new double[]{0, -SHIFT};
+        };
+    }
+
+    /** Общие мини-трубки и разъёмы (для каждого направления отдельная модель «в сторону севера»). */
+    static void sharedModels() throws Exception {
+        // боковые: у грани тела (z = LO от края блока), со сдвигом к середине корпуса; задние — по оси, от задней грани (z = 8)
+        for (String s : SHIFTS) {
+            double[] d = shiftOf(s);
+            Models.model("bus_stub_cross_" + s, false, "bus_plate", pipeTex(),
+                    shifted(new ArrayList<>(List.of(stubBox(LO))), d[0], d[1], 0).toArray(new Models.El[0]));
+            Models.model("bus_arm_cross_" + s, true, "bus_plate", pipeTex(), shifted(arm(LO), d[0], d[1], 0).toArray(new Models.El[0]));
+        }
+        Models.model("bus_stub_back", false, "bus_plate", pipeTex(), stubBox(16 - Z1));
+        Models.model("bus_arm_back", true, "bus_plate", pipeTex(), arm(16 - Z1).toArray(new Models.El[0]));
+        for (String old : new String[]{"bus_stub_cross", "bus_arm_cross"}) {
+            Files.deleteIfExists(Forge2.RES.resolve("models/block/" + old + ".json"));
+        }
+    }
+
+    static void bus(String name, int variant, List<Models.El> front, String[][] extraTex) throws Exception {
+        List<Models.El> els = new ArrayList<>(common());
+        els.addAll(front);
+        List<String[]> tex = new ArrayList<>(List.of(
+                new String[]{"plate", "bus_plate"}, new String[]{"side", "bus_side_" + variant},
+                new String[]{"top", "bus_top_" + variant}, new String[]{"socket", "bus_socket"}));
+        tex.addAll(List.of(extraTex));
+        // тело и рабочий узел без разъёмов: разъёмы и мини-трубки добавляет блокстейт
+        Models.model(name + "_body", false, "bus_plate", tex.toArray(new String[0][]), els.toArray(new Models.El[0]));
+        List<Models.El> item = new ArrayList<>(els);
+        item.addAll(itemStubs());
+        // в инвентаре — по центру (сама шина в передней половине блока); модель блока уже записана
+        shifted(item, 0, 0, 8 - (Z1 + 1.2) / 2);
+        Models.model(name + "_item", false, "bus_plate", tex.toArray(new String[0][]), item.toArray(new Models.El[0]));
+        Models.item(name, name + "_item");
+        Forge2.addDisplay(name + "_item", 135, 1.0);
+        blockstate(name);
+    }
+
+    static final String[][] ROT = {{"north", ""}, {"east", ", \"y\": 90"}, {"south", ", \"y\": 180"}, {"west", ", \"y\": 270"},
+            {"up", ", \"x\": 270"}, {"down", ", \"x\": 90"}};
+
+    static String opposite(String d) {
+        return switch (d) {
+            case "north" -> "south";
+            case "south" -> "north";
+            case "east" -> "west";
+            case "west" -> "east";
+            case "up" -> "down";
+            default -> "up";
+        };
+    }
+
+    /** Куда смотрит «верх» модели (сторона со звездой) при данном facing. */
+    static String localUp(String facing) {
+        return switch (facing) {
+            case "up" -> "south";
+            case "down" -> "north";
+            default -> "up";
+        };
+    }
+
+    /**
+     * Мультипарт: тело по facing, а по каждому направлению — разъём или мини-трубка (у задней грани и у боковых разные длины).
+     * Сторона со звездой (верх модели) без трубы разъёма не имеет: там рунная плита, а подключённая труба выходит из неё.
+     */
+    static void blockstate(String name) throws Exception {
+        List<String> parts = new ArrayList<>();
+        for (String[] f : ROT) {
+            parts.add("    {\"when\": {\"facing\": \"" + f[0] + "\"}, \"apply\": {\"model\": \"" + Forge2.NS + name + "_body\"" + f[1] + "}}");
+        }
+        for (String[] d : ROT) {
+            String back = opposite(d[0]);
+            boolean backStub = !localUp(back).equals(d[0]);
+            for (String link : new String[]{"false", "true"}) {
+                boolean arm = link.equals("true");
+                String kind = arm ? "arm" : "stub";
+                if (arm || backStub) {
+                    parts.add("    {\"when\": {\"AND\": [{\"facing\": \"" + back + "\"}, {\"" + d[0] + "\": \"" + link + "\"}]}, \"apply\": {\"model\": \""
+                            + Forge2.NS + "bus_" + kind + "_back\"" + d[1] + "}}");
+                }
+                // боковые: своя модель со сдвигом к лицу шины для каждой пары (сторона, куда смотрит шина)
+                for (String[] f : ROT) {
+                    if (f[0].equals(d[0]) || f[0].equals(back) || (!arm && localUp(f[0]).equals(d[0]))) {
+                        continue;
+                    }
+                    String[] r = crossRotation(d[0], f[0]);
+                    parts.add("    {\"when\": {\"AND\": [{\"facing\": \"" + f[0] + "\"}, {\"" + d[0] + "\": \"" + link + "\"}]}, \"apply\": {\"model\": \""
+                            + Forge2.NS + "bus_" + kind + "_cross_" + r[0] + "\"" + r[1] + "}}");
+                }
+            }
+        }
+        Forge2.write(Forge2.RES.resolve("blockstates/" + name + ".json"), "{\n  \"multipart\": [\n" + String.join(",\n", parts) + "\n  ]\n}\n");
+    }
+
+    static int[] vec(String d) {
+        return switch (d) {
+            case "north" -> new int[]{0, 0, -1};
+            case "south" -> new int[]{0, 0, 1};
+            case "east" -> new int[]{1, 0, 0};
+            case "west" -> new int[]{-1, 0, 0};
+            case "up" -> new int[]{0, 1, 0};
+            default -> new int[]{0, -1, 0};
+        };
+    }
+
+    /** Поворот блокстейта: сначала x (90: y,z -> z,-y), потом y (90: x,z -> -z,x) — как у моделей с "x"/"y". */
+    static int[] rotate(int[] v, int x, int y) {
+        int[] r = v.clone();
+        for (int i = 0; i < x / 90; i++) {
+            r = new int[]{r[0], r[2], -r[1]};
+        }
+        for (int i = 0; i < y / 90; i++) {
+            r = new int[]{-r[2], r[1], r[0]};
+        }
+        return r;
+    }
+
+    /**
+     * Модель бокового разъёма и поворот для стороны d у шины, смотрящей в f: «север» модели должен уйти в d, а сдвиг модели
+     * (к середине корпуса) — в сторону f. Возвращает {суффикс модели, строку поворота}.
+     */
+    static String[] crossRotation(String d, String f) {
+        for (String s : SHIFTS) {
+            double[] sh = shiftOf(s);
+            int[] sv = {(int) Math.signum(sh[0]), (int) Math.signum(sh[1]), 0};
+            for (int x = 0; x < 360; x += 90) {
+                for (int y = 0; y < 360; y += 90) {
+                    if (Arrays.equals(rotate(vec("north"), x, y), vec(d)) && Arrays.equals(rotate(sv, x, y), vec(f))) {
+                        return new String[]{s, (x != 0 ? ", \"x\": " + x : "") + (y != 0 ? ", \"y\": " + y : "")};
+                    }
+                }
+            }
+        }
+        throw new IllegalStateException("no rotation for side " + d + " of facing " + f);
+    }
+    static void models() throws Exception {
+        sharedModels();
+        for (String old : new String[]{"vacuum_import_bus", "injector_export_bus", "periscope_storage_bus"}) {
+            Files.deleteIfExists(Forge2.RES.resolve("models/block/" + old + ".json"));
+        }
+
+        // Рабочие узлы — на Z 0..3.2, вся шина в передней половине блока.
+        // --- Вакуумная шина (импорт): плоский раструб с турбиной, сужающийся к телу
+        List<Models.El> vac = new ArrayList<>();
+        oct(vac, 2.5, 2.5, 0, 13.5, 13.5, 1.2, 2.4, "plate", "plate", "plate", "funnel", "plate");
+        oct(vac, 3.6, 3.6, 1.2, 12.4, 12.4, 2.2, 1.9, "plate", "plate", "plate", null, "plate");
+        oct(vac, 4.6, 4.6, 2.2, 11.4, 11.4, Z0, 1.4, "plate", "plate", "plate", null, null);
+        bus("vacuum_import_bus", 0, vac, new String[][]{{"funnel", "bus_funnel"}});
+
+        // --- Инжекторная шина (экспорт): короткий ствол-сопло с кольцами
+        List<Models.El> inj = new ArrayList<>();
+        oct(inj, 5.2, 5.2, 0.4, 10.8, 10.8, Z0, 0.9, "steel", "steel", "steel", null, null);
+        oct(inj, 4.6, 4.6, 1.0, 11.4, 11.4, 1.5, 1.2, "plate", "plate", "plate", "plate", "plate");
+        oct(inj, 4.6, 4.6, 2.2, 11.4, 11.4, 2.7, 1.2, "plate", "plate", "plate", "plate", "plate");
+        oct(inj, 5.2, 5.2, 0, 10.8, 10.8, 0.4, 0.9, "plate", "plate", "plate", "nozzle", "plate");
+        bus("injector_export_bus", 1, inj, new String[][]{{"nozzle", "bus_nozzle"}, {"steel", "bus_steel"}});
+
+        // --- Перископическая шина: линза-монокль на коротком горле
+        List<Models.El> per = new ArrayList<>();
+        oct(per, 3, 3, 0, 13, 13, 1.4, 2.2, "plate", "plate", "plate", "lens", "plate");
+        oct(per, 5, 5, 1.4, 11, 11, Z0, 1.2, "plate", "plate", "plate", null, null);
+        bus("periscope_storage_bus", 2, per, new String[][]{{"lens", "bus_lens"}});
+    }
+
+    static void all() throws Exception {
+        textures();
+        models();
+    }
+}

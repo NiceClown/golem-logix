@@ -1,0 +1,60 @@
+# Golem Interface: keeps stock from the network (with autocraft), takes items in from a hopper, gives stock to a hopper below;
+# turbines in the intakes spin and the roof metronomes swing while it works
+reload
+cmd time set day
+cmd kill @e[type=!player]
+cmd fill -40 -61 -14 40 -61 10 minecraft:deepslate_tiles
+cmd fill -40 -60 -14 40 -50 10 minecraft:air
+hook rig 0 -60 0
+cmd setblock 10 -60 -2 golem_logix:golem_interface
+cmd setblock 11 -60 -2 minecraft:hopper[facing=west]
+cmd setblock 11 -59 -2 minecraft:chest
+cmd setblock 10 -61 -2 minecraft:hopper[facing=down]
+cmd setblock 10 -62 -2 minecraft:chest
+wait 100
+hook netput 0 -60 0 minecraft:oak_log 32
+hook upgrades 10 -60 -2 golem_logix:compressed_coprocessor golem_logix:compressed_coprocessor golem_logix:autocraft_module
+hook iface 10 -60 -2 0 minecraft:oak_planks 16
+hook iface 10 -60 -2 1 minecraft:oak_log 4
+cmd item replace block 11 -59 -2 container.0 with minecraft:cobblestone 64
+wait 20
+look 10.5 -59.4 -2.5 2.2 200 28
+wait 2
+shot if1_work_a
+wait 3
+shot if1_work_b
+look 10.5 -59.5 -2.5 2.6 0 20
+wait 3
+shot if1_view0
+look 10.5 -59.5 -2.5 2.6 90 20
+wait 3
+shot if1_view90
+look 10.5 -59.5 -2.5 2.6 135 25
+wait 3
+shot if1_view135
+look 10.5 -59.5 -2.5 2.6 315 25
+wait 3
+shot if1_view315
+look 10.5 -58.6 -2.5 1.6 135 20
+wait 3
+shot if1_metro_a
+wait 4
+shot if1_metro_b
+wait 200
+hook netcheck 0 -60 0 minecraft:cobblestone 64
+hook ifacecheck 10 -60 -2 1 4
+use 10 -60 -2
+wait 10
+shot if1_gui
+closeScreen
+# idle: stock full, no input — metronomes stop
+hook iface 10 -60 -2 0 minecraft:air 1
+cmd setblock 10 -61 -2 minecraft:deepslate_tiles
+wait 80
+look 10.5 -59.4 -2.5 2.2 200 28
+wait 3
+shot if1_idle
+cmd time set midnight
+wait 30
+shot if1_night
+cmd time set day

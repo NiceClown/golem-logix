@@ -1,0 +1,8 @@
+cmd fill 8 -60 -2 11 -60 4 minecraft:air
+cmd fill -26 -60 -2 -20 -57 4 minecraft:air
+look 12.5 -59 1 6 270 6
+wait 10
+shot face_west2
+look -11.5 -59 0 6 90 6
+wait 10
+shot face_east2

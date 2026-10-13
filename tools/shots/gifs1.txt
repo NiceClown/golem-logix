@@ -1,0 +1,89 @@
+# GIF frames for the mod page: every main mechanism in motion (frames name_000.png ... for tools/GifMaker.java)
+# ---------------------------------------------------------------- 1. Atlas Array: orbiting camera
+reload
+cmd time set day
+cmd kill @e[type=item]
+cmd fill -40 -61 -14 40 -61 10 minecraft:deepslate_tiles
+cmd fill -40 -60 -14 40 -50 10 minecraft:air
+hook array 6 -60 0
+cmd setblock 9 -60 -1 golem_logix:analog_terminal[facing=north]
+cmd setblock 11 -60 -1 golem_logix:crafting_terminal[facing=north]
+cmd fill 8 -60 0 8 -60 1 golem_logix:basic_snow_pipe
+cmd fill 4 -60 -1 0 -60 -1 golem_logix:dense_frost_pipe
+hook bay -2 -60 -1 north stock
+wait 120
+burst g_array 72 2 orbit 6.5 -57.8 0.5 8.5 22 150 5
+# ---------------------------------------------------------------- 2. Drive Bay: reels, tape, archivist golems
+look -2 -59 -1 3.6 0 6
+wait 20
+burst g_cabinet 50 2
+# ---------------------------------------------------------------- 3. frost pipes at night: glow and the snowman runner
+cmd fill 12 -60 4 30 -60 4 golem_logix:dense_frost_pipe
+cmd fill 8 -60 2 8 -60 4 golem_logix:basic_snow_pipe
+cmd fill 9 -60 4 11 -60 4 golem_logix:basic_snow_pipe
+cmd time set midnight
+wait 40
+look 16 -59.6 4.5 4.5 210 25
+wait 10
+burst g_pipes 60 2
+cmd time set day
+# ---------------------------------------------------------------- 4. Cryo-Calculator at work with co-processors
+reload
+cmd kill @e[type=item]
+cmd fill -40 -61 -14 40 -61 10 minecraft:deepslate_tiles
+cmd fill -40 -60 -14 40 -50 10 minecraft:air
+hook rig 0 -60 0
+cmd setblock 5 -60 -2 golem_logix:cooling_coprocessor
+cmd setblock 7 -60 -2 golem_logix:cooling_coprocessor
+cmd setblock 10 -59 -1 golem_logix:recipe_monitor[facing=south]
+cmd setblock 2 -60 -2 golem_logix:cryo_calculator
+wait 120
+hook netput 0 -60 0 minecraft:oak_log 100
+look 6.5 -59.4 -2.5 3.4 20 26
+wait 10
+hook craft 0 -60 0 minecraft:stick 512
+hook craft 0 -60 0 minecraft:oak_planks 256
+wait 30
+burst g_calculator 60 2
+# ---------------------------------------------------------------- 5. Recipe Monitor: portal with orbiting punch cards
+look 10.5 -58.5 -0.5 2.4 180 10
+wait 5
+burst g_monitor 50 2
+# ---------------------------------------------------------------- 6. terminal screen in the world
+look 4.5 -59.5 -1.5 2.2 180 6
+wait 5
+burst g_terminal 40 2
+# ---------------------------------------------------------------- 7. Mana Saturator: the iron golem smith
+reload
+cmd time set day
+cmd kill @e[type=!player]
+cmd fill -40 -61 -30 40 -61 14 minecraft:deepslate_tiles
+cmd fill -30 -60 -24 30 -50 8 minecraft:air
+hook saturator 0 -58 -8 south jar
+cmd setblock 0 -60 -7 golem_logix:dense_frost_pipe
+cmd setblock 0 -60 -6 golem_logix:basic_snow_pipe
+wait 80
+hook coolers 0 -58 -8 5
+wait 40
+look 0 -58.6 -8.4 4.2 200 18
+wait 5
+hook saturatorput 0 -58 -8 minecraft:iron_block
+burst g_saturator 44 2
+hook saturatorput 0 -58 -8 minecraft:copper_block
+burst g_saturator2 44 2
+# ---------------------------------------------------------------- 8. anvil ritual on a wounded iron golem
+cmd kill @e[type=!player]
+cmd fill 8 -60 -12 14 -50 -6 minecraft:air
+cmd summon minecraft:iron_golem 11 -60 -9 {NoAI:1b,Health:3f,Rotation:[180f,0f]}
+look 11 -58.5 -9 6 180 8
+wait 10
+cmd setblock 11 -53 -9 minecraft:anvil
+burst g_anvil 30 2
+# ---------------------------------------------------------------- 9. the Portable Chronometer in hand
+cmd kill @e[type=item]
+hook give golem_logix:portable_chronometer 1 0
+gui on
+look 0 -57 -14 3 200 -10
+wait 10
+burst g_chrono 50 2
+gui off

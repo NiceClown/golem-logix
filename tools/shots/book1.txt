@@ -1,0 +1,38 @@
+# guide book: the map and some articles
+cmd kill @e[type=item]
+book - 0
+wait 20
+shot book_map
+closeScreen
+book st_bay 0
+wait 15
+shot book_bay0
+closeScreen
+book st_bay 1
+wait 15
+shot book_bay1
+closeScreen
+book st_periscope 0
+wait 15
+shot book_periscope0
+closeScreen
+book array_assembly 0
+wait 15
+shot book_assembly0
+closeScreen
+book array_assembly 1
+wait 15
+shot book_assembly1
+closeScreen
+book net_pipes 0
+wait 15
+shot book_pipes0
+closeScreen
+book bus_import 0
+wait 15
+shot book_busimport0
+closeScreen
+book quickstart 0
+wait 15
+shot book_quick0
+closeScreen

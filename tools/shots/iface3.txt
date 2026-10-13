@@ -1,0 +1,22 @@
+# Golem Interface: book article in both languages, item icon in the inventory
+lang ru_ru
+bookaudit
+book bus_interface 0 4
+wait 15
+shot if3_book_ru0
+closeScreen
+book bus_interface 1 4
+wait 15
+shot if3_book_ru1
+closeScreen
+lang en_us
+bookaudit
+book bus_interface 1 4
+wait 15
+shot if3_book_en1
+closeScreen
+hook give golem_logix:golem_interface 1 0
+gui on
+wait 10
+shot if3_hotbar
+gui off

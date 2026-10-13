@@ -1,0 +1,6 @@
+{
+    "textures":  {
+                     "layer0":  "golem_logix:item/copper_punch_card"
+                 },
+    "parent":  "minecraft:item/generated"
+}

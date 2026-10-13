@@ -1,0 +1,17 @@
+# inventory icons of every mod item (two pages), survival layout
+reload
+hook mode survival
+wait 10
+hook giveall 0
+wait 5
+inv
+wait 15
+shot inv_page1
+closeScreen
+hook giveall 36
+wait 5
+inv
+wait 15
+shot inv_page2
+closeScreen
+hook mode creative

@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "golem_logix:block/quantum_channel_expander"
+  }
+}

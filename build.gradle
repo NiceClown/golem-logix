@@ -1,0 +1,150 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.neoforged.moddev' version '2.0.5-beta'
+}
+
+tasks.named('wrapper', Wrapper) {
+    distributionType = Wrapper.DistributionType.BIN
+}
+
+version = mod_version
+group = 'com.golemlogix'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven {
+        name = 'BlameJared'
+        url = 'https://maven.blamejared.com/'
+        content { includeGroup 'mezz.jei' }
+    }
+    maven {
+        name = 'Modrinth'
+        url = 'https://api.modrinth.com/maven'
+        content { includeGroup 'maven.modrinth' }
+    }
+    maven {
+        name = 'CurseMaven'
+        url = 'https://www.cursemaven.com'
+    }
+}
+
+base {
+    archivesName = 'golem_logix'
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+neoForge {
+    // собираем и проверяем на свежей 21.1.x: с ней работают актуальные Ars Nouveau и JEI (мод совместим и со старыми 21.1)
+    version = '21.1.256'
+
+    parchment {
+        mappingsVersion = '2024.11.17'
+        minecraftVersion = '1.21.1'
+    }
+
+    runs {
+        client {
+            client()
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'golem_logix'
+        }
+
+        // стенд кадров для разработчика: клиент сам создаёт мир и снимает кадры по сценариям из run/devshots/queue
+        devShots {
+            client()
+            gameDirectory = file('run/devshots')
+            systemProperty 'golemlogix.devshots', file('run/devshots/queue').getAbsolutePath()
+            // сетевой режим стенда: gradle -PdevshotsServer=localhost:25565 runDevShots (клиент заходит на выделенный сервер)
+            if (project.hasProperty('devshotsServer')) {
+                systemProperty 'golemlogix.devshots.server', project.property('devshotsServer').toString()
+            }
+            programArguments.addAll '--width', '1280', '--height', '720'
+        }
+
+        server {
+            server()
+            gameDirectory = file('run/server')
+            programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'golem_logix'
+        }
+
+        gameTestServer {
+            type = 'gameTestServer'
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'golem_logix'
+        }
+
+        data {
+            data()
+            programArguments.addAll '--mod', 'golem_logix', '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+        }
+    }
+
+    mods {
+        golem_logix {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+dependencies {
+    // необязательные интеграции: компилируем против API, в игре они подхватываются, только если установлены
+    compileOnly 'mezz.jei:jei-1.21.1-neoforge-api:19.44.0.403'
+    compileOnly 'maven.modrinth:jade:15.10.6+neoforge'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.2'
+
+    // id версий Modrinth, а не номера: у одинаковых номеров бывают сборки под Fabric.
+    // Copper Age Backport — обязательная зависимость (медный голем для ритуала наковальни), нужен в каждом dev-запуске.
+    runtimeOnly 'maven.modrinth:backport-copper-age:ZyjDScTQ'      // 1.21.1-0.1.5.1-pre neoforge
+
+    // проверка с настоящими модами в dev-запусках: gradle -PtestMods runClient / runDevShots / runGameTestServer
+    // (Source из банок Ars Nouveau, JEI, Jade). В релизный jar не попадают.
+    if (project.hasProperty('testMods')) {
+        runtimeOnly 'maven.modrinth:ars-nouveau:yWDnir1o'          // 5.13.3
+        runtimeOnly 'maven.modrinth:geckolib:Grwn5rUB'             // 4.9.3 neoforge
+        runtimeOnly 'maven.modrinth:curios:yohfFbgD'               // 9.5.1+1.21.1
+        runtimeOnly 'mezz.jei:jei-1.21.1-neoforge:19.44.0.403'
+        runtimeOnly 'maven.modrinth:jade:15.10.6+neoforge'
+    }
+    // совместимость с жидкостями крупных модов: gradle -Pmekanism ... (вёдра и баки Mekanism в Интерфейсе)
+    if (project.hasProperty('mekanism')) {
+        runtimeOnly 'maven.modrinth:mekanism:5KzzycBT'             // 10.7.19.85 (1.21.1 neoforge)
+    }
+}
+
+test {
+    useJUnitPlatform()
+}
+
+// игровые тесты нужны только для runGameTestServer (он берёт классы из build/classes, а не из jar)
+tasks.named('jar') {
+    exclude 'com/golemlogix/gametest/**'
+    exclude 'com/golemlogix/devtest/**'
+    exclude 'data/golem_logix/structure/**'
+    manifest {
+        attributes(
+                'Implementation-Title': 'Golem Logix',
+                'Implementation-Version': project.version,
+                'Implementation-Vendor': 'NiceClown',
+                'Specification-Title': 'golem_logix',
+                'Specification-Version': project.version
+        )
+    }
+}
+
+// версия в neoforge.mods.toml берётся из gradle (${mod_version})
+tasks.named('processResources', ProcessResources) {
+    var replaceProperties = [mod_version: project.version]
+    inputs.properties replaceProperties
+    filesMatching('META-INF/neoforge.mods.toml') {
+        expand replaceProperties
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}

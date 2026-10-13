@@ -1,0 +1,86 @@
+# Round 17: pipe plug + warehouse dock, anvil manual forging, mainframe idle golems, craft planner, JEI toggle button
+reload
+cmd time set day
+cmd kill @e[type=!player]
+cmd fill -35 -61 -25 35 -61 25 minecraft:deepslate_tiles
+cmd fill -35 -60 -25 35 -45 25 minecraft:air
+hook rig 0 -60 0
+# two dead ends next to each other: one gets the warehouse dock, the other a plug
+cmd fill 1 -60 2 1 -60 6 golem_logix:dense_frost_pipe
+cmd fill -1 -60 2 -1 -60 6 golem_logix:basic_snow_pipe
+# anvil (unformed saturator) with a creative jar
+cmd setblock 6 -60 7 golem_logix:mana_saturator[facing=south]
+cmd setblock 7 -60 7 golem_logix:creative_source_jar
+hook mainframe 0 -60 16 south 6 3
+wait 60
+look 0 -59.5 7.2 2.6 180 18
+wait 3
+shot r17_dead_ends
+look -1 -59.5 7.2 1.4 180 10
+wait 3
+shot r17_plug_close
+look 1 -59.5 7.2 1.6 180 10
+wait 3
+shot r17_dock_close
+look 1 -59.4 5 1.8 150 35
+wait 3
+shot r17_dock_inside
+look 6.5 -59.4 7.5 2.2 200 22
+wait 3
+shot r17_anvil_empty
+look 6.5 -59.4 7.5 2.2 140 22
+wait 3
+shot r17_anvil_back
+hook anvilput 6 -60 7 minecraft:iron_block
+wait 5
+look 6.5 -59.3 7.5 1.8 190 30
+wait 3
+shot r17_anvil_iron
+hook anvilstrike 6 -60 7
+wait 8
+hook anvilstrike 6 -60 7
+wait 8
+hook anvilstrike 6 -60 7
+wait 8
+hook anvilstrike 6 -60 7
+wait 8
+shot r17_anvil_half
+hook anvilstrike 6 -60 7
+wait 8
+hook anvilstrike 6 -60 7
+wait 8
+hook anvilstrike 6 -60 7
+wait 8
+hook anvilstrike 6 -60 7
+wait 10
+shot r17_anvil_done
+# mainframe idle: doors open so the shelves are visible
+hook mainframeopen 0 -60 16 1
+wait 30
+look 0.5 -58.6 17 4.6 180 12
+wait 3
+shot r17_mf_idle_a
+wait 150
+shot r17_mf_idle_b
+wait 150
+shot r17_mf_idle_c
+wait 150
+shot r17_mf_idle_d
+look 0.5 -57.3 16.5 3.6 180 35
+wait 3
+shot r17_mf_roof
+hook mainframeopen 0 -60 16 0
+# planner: terminal at 4 -60 -2 (facing south)
+hook netput 0 -60 0 minecraft:oak_log 4
+look 4.5 -59.5 -0.8 2 180 10
+wait 5
+use 4 -60 -2
+wait 15
+shot r17_terminal
+planner minecraft:stick 8
+wait 20
+shot r17_planner_ok
+planner minecraft:stick 64
+wait 20
+shot r17_planner_missing
+closescreen

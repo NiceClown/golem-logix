@@ -1,0 +1,70 @@
+# 1.0.1 cosmetics, part 2: rune glow at night on every machine, the frosty anvil close, new item icons
+reload
+cmd time set midnight
+cmd kill @e[type=!player]
+cmd fill -40 -61 -14 40 -61 10 minecraft:deepslate_tiles
+cmd fill -40 -60 -14 40 -50 10 minecraft:air
+hook rig 0 -60 0
+cmd setblock 3 -60 -3 golem_logix:recipe_monitor[facing=south]
+cmd setblock 5 -60 -3 golem_logix:pattern_encoder[facing=south]
+cmd setblock 7 -60 -3 golem_logix:pattern_provider
+cmd setblock 9 -60 -3 golem_logix:eternal_frost_resonator
+cmd setblock 11 -60 -3 golem_logix:vacuum_import_bus[facing=up]
+cmd setblock 13 -60 -3 golem_logix:cryo_calculator
+hook bay -4 -60 -3 south stock
+wait 100
+look 4 -59.4 -1 6 180 18
+wait 5
+shot g2_night_rig
+look 6 -59.4 -3.5 4.5 0 15
+wait 5
+shot g2_night_row
+look -3 -59 -2.5 4 0 10
+wait 5
+shot g2_night_bay
+look 11 -59.4 -3 1.5 0 50
+wait 5
+shot g2_night_bus_top
+cmd time set day
+wait 10
+look 6 -59.4 -3.5 4.5 0 15
+wait 5
+shot g2_day_row
+# saturator anvil close
+reload
+cmd kill @e[type=!player]
+cmd fill -40 -61 -30 40 -61 14 minecraft:deepslate_tiles
+cmd fill -30 -60 -24 30 -50 8 minecraft:air
+hook saturator 0 -58 -8 south jar
+wait 80
+look 0 -58.15 -8.4 1.5 150 30
+wait 5
+shot g2_anvil_a
+look 0 -58.15 -8.4 1.3 210 12
+wait 5
+shot g2_anvil_b
+# items: inventory and hand
+hook give golem_logix:copper_disk_1k 1 0
+hook give golem_logix:copper_disk_64k 1 1
+hook give golem_logix:copper_disk_256k 1 2
+hook give golem_logix:fluid_disk_4k 1 3
+hook give golem_logix:fluid_disk_256k 1 4
+hook give golem_logix:copper_punch_card 1 5
+hook give golem_logix:flattened_iron_core 1 6
+hook give golem_logix:flattened_copper_matrix 1 7
+hook give golem_logix:flattened_cryo_substrate 1 8
+hook give golem_logix:interdimensional_occult_matrix 1 9
+hook give golem_logix:imploded_wither_plasma 1 10
+hook give golem_logix:guide_book 1 11
+hook give golem_logix:vacuum_import_bus 1 12
+hook give golem_logix:injector_export_bus 1 13
+hook give golem_logix:periscope_storage_bus 1 14
+inv
+wait 10
+shot g2_inventory
+closeScreen
+gui on
+look 0 -57 -14 3 200 -10
+wait 10
+shot g2_hand
+gui off

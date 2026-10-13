@@ -1,0 +1,38 @@
+{
+  "anvil_crush": {
+    "subtitle": "subtitles.golem_logix.anvil_crush",
+    "sounds": [
+      { "name": "minecraft:block.anvil.land", "type": "event" }
+    ]
+  },
+  "tube_scurry": {
+    "subtitle": "subtitles.golem_logix.tube_scurry",
+    "sounds": [
+      { "name": "minecraft:block.snow.step", "type": "event", "volume": 0.6, "pitch": 1.4 }
+    ]
+  },
+  "relay_click": {
+    "subtitle": "subtitles.golem_logix.relay_click",
+    "sounds": [
+      { "name": "minecraft:block.comparator.click", "type": "event" }
+    ]
+  },
+  "vacuum_hum": {
+    "subtitle": "subtitles.golem_logix.vacuum_hum",
+    "sounds": [
+      { "name": "minecraft:block.beacon.ambient", "type": "event", "volume": 0.5, "pitch": 1.6 }
+    ]
+  },
+  "vacuum_suction": {
+    "subtitle": "subtitles.golem_logix.vacuum_suction",
+    "sounds": [
+      { "name": "minecraft:block.bubble_column.upwards_ambient", "type": "event" }
+    ]
+  },
+  "pneumatic_inject": {
+    "subtitle": "subtitles.golem_logix.pneumatic_inject",
+    "sounds": [
+      { "name": "minecraft:block.piston.extend", "type": "event", "volume": 0.5, "pitch": 1.8 }
+    ]
+  }
+}

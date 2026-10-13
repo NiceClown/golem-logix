@@ -1,0 +1,43 @@
+# new and rewritten book articles in Russian: saturator cooling and redstone, bus upgrades, monitor, precraft, chronometer, resonator
+lang ru_ru
+cmd advancement grant @s only golem_logix:secret_revealed killed_wither
+cmd advancement grant @s only golem_logix:secret_revealed dimension_signal
+wait 20
+book saturator 2 1
+wait 15
+shot bookru_saturator2
+closeScreen
+book bus_upgrades 0 4
+wait 15
+shot bookru_upgrades0
+closeScreen
+book bus_upgrades 1 4
+wait 15
+shot bookru_upgrades1
+closeScreen
+book bus_redstone 0 4
+wait 15
+shot bookru_redstone0
+closeScreen
+book ac_monitor 0 5
+wait 15
+shot bookru_monitor0
+closeScreen
+book ac_provider 1 5
+wait 15
+shot bookru_provider1
+closeScreen
+book eg_chrono 1 6
+wait 15
+shot bookru_chrono1
+closeScreen
+book eg_resonator 0 6
+wait 15
+shot bookru_resonator0
+closeScreen
+book secret_hint 1 1
+wait 15
+shot bookru_secret1
+closeScreen
+cmd advancement revoke @s only golem_logix:secret_revealed
+lang en_us
