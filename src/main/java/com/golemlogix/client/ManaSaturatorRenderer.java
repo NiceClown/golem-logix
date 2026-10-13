@@ -105,7 +105,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
         light = LightTexture.pack(Math.max(LightTexture.block(light), 10), Math.max(LightTexture.sky(light), 6));
         // ritual progress between ticks, smoothly (the server only sends the start and the end)
         float progress = entity.isCrafting()
-                ? Math.min(1f, entity.getProgressFraction() + partialTick * entity.speed() / (float) ManaSaturatorBlockEntity.MAX_PROGRESS)
+                ? Math.min(1f, entity.getProgressFraction() + partialTick * entity.speed() / (float) entity.currentWork())
                 : 0f;
 
         pose.pushPose();

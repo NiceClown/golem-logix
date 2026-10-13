@@ -6,8 +6,11 @@ import com.golemlogix.blockentity.CopperDriveBayBlockEntity;
 import com.golemlogix.blockentity.CryoCalculatorBlockEntity;
 import com.golemlogix.blockentity.PatternProviderBlockEntity;
 import com.golemlogix.blockentity.PeriscopeBlockEntity;
+import com.golemlogix.blocks.AtlasConduitBlock;
 import com.golemlogix.blocks.AtlasCoreBlock;
 import com.golemlogix.blocks.CableBushingBlock;
+import com.golemlogix.blocks.ChannelExpanderBlock;
+import com.golemlogix.blocks.SnowPipeBlock;
 import net.minecraft.world.level.block.Block;
 import com.golemlogix.blocks.GolemProperties;
 import com.golemlogix.blocks.PeriscopeStorageBusBlock;
@@ -18,7 +21,6 @@ import com.golemlogix.crafting.CraftingPlanner;
 import com.golemlogix.data.PatternData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -31,25 +33,28 @@ import net.neoforged.neoforge.items.IItemHandler;
 import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.WeakHashMap;
 
 /**
  * A Golem Logix network.
  *
  * Built by walking neighbouring node blocks (GolemNode). It needs an Atlas Core powered with Source to work.
- * Every device takes channels; a channel goes from the core along the pipe tree, every pipe has its own limit
- * (basic snow pipe 16, dense frost pipe 64). Channels leave the network for the outside world through Cable Bushings:
- * a complete Atlas Array has 5 of them, each with a "line" of 64 channels (320 in total); Channel Expanders in the array walls
- * raise the capacity of every line. Without the array the core gives only 8 "starter" channels.
+ * Every device takes one channel. {@link ChannelCalculation} hands the channels out as Applied Energistics 2 does: from the
+ * controller (the core with the conduits of its array) along the shortest routes, dense carriers first, and a device gets a
+ * channel only if every node on its route has room. Limits: a basic snow pipe carries 16, a dense frost pipe 64, a Cable Bushing
+ * its line (64 in a complete Atlas Array, raised by Channel Expanders in the walls; 8 in a starter tower), the outer face of an
+ * expander its exit, a device as much as a basic pipe (config "deviceChannels"). The whole network has the sum of its five lines
+ * (8 without the array).
  */
 public final class GolemNetwork {
-    public static final int MAX_NODES = 4096;
+    public static final int MAX_NODES = 16384;
     public static final int BARE_CORE_CHANNELS = 8;
 
     private final Level level;
@@ -59,14 +64,22 @@ public final class GolemNetwork {
     private AtlasCoreBlockEntity core;
     private AtlasStructure.Result structure;
     private int lineCapacity = BARE_CORE_CHANNELS;
-    private int channelCapacity;
+    private int channelCapacity = BARE_CORE_CHANNELS;
     private int channelsUsed;
     private int deviceCount;
 
-    private final Set<BlockPos> nodes = new HashSet<>();
+    /** The nodes in walk order; a node's index is its place in these lists and in the arrays below. */
+    private final List<BlockPos> nodeList = new ArrayList<>();
+    private final Map<BlockPos, Integer> nodeIndex = new HashMap<>();
+    private final List<BlockState> nodeStates = new ArrayList<>();
+    /** Channel limit of every node (only with a core). */
+    private int[] capacities = new int[0];
+    /** The node belongs to the controller: the core and the conduits that carry its channels to the exits. */
+    private boolean[] controller = new boolean[0];
+    /** The channel assignment; null without a core. */
+    @Nullable
+    private ChannelCalculation channels;
     private final Set<BlockPos> activeDevices = new HashSet<>();
-    /** How many channels pass through each conducting node (pipes, bushings), for tooltips and limits. */
-    private final Map<BlockPos, Integer> load = new HashMap<>();
     private final List<CopperDriveBayBlockEntity> bays = new ArrayList<>();
     private final List<External> externals = new ArrayList<>();
     private final List<PatternProviderBlockEntity> providers = new ArrayList<>();
@@ -92,44 +105,131 @@ public final class GolemNetwork {
 
     // ------------------------------------------------------------------ cache
 
-    private record CacheKey(ResourceKey<Level> dim, BlockPos pos) {
+    /**
+     * The networks of one level, remembered under every node they contain. The server and the client keep separate maps: in
+     * single player both run in one process, and a network walked over the client's copy of the world must never serve the
+     * server (the pipe renderer's network used to land in a shared map, and for a few ticks buses and terminals worked on the
+     * client's block entities, while two threads wrote into one HashMap).
+     */
+    private static final class LevelCache {
+        final Map<BlockPos, CacheEntry> byPos = new HashMap<>();
+        /** Raised when a node appears, disappears or becomes another block: entries of an older version are stale. */
+        int version;
     }
 
-    private record CacheEntry(GolemNetwork network, long time) {
+    private record CacheEntry(GolemNetwork network, long time, int version) {
     }
 
-    private static final Map<CacheKey, CacheEntry> CACHE = new HashMap<>();
+    private static final Map<Level, LevelCache> SERVER_CACHE = new WeakHashMap<>();
+    private static final Map<Level, LevelCache> CLIENT_CACHE = new WeakHashMap<>();
+    /** Even with the same nodes a network is walked again after this many ticks (Source jars, chests behind periscopes). */
     private static final int CACHE_TTL = 8;
+    /** Where nodes changed during this tick: the networks there are recomputed at the end of the tick. */
+    private static final Map<Level, Set<BlockPos>> CHANGED = new WeakHashMap<>();
+
+    private static LevelCache cacheOf(Level level) {
+        return (level.isClientSide() ? CLIENT_CACHE : SERVER_CACHE).computeIfAbsent(level, l -> new LevelCache());
+    }
 
     /** A network with a short cache, for ticking devices. */
     public static GolemNetwork get(Level level, BlockPos start) {
+        LevelCache cache = cacheOf(level);
         long now = level.getGameTime();
-        CacheKey key = new CacheKey(level.dimension(), start.immutable());
-        CacheEntry e = CACHE.get(key);
-        if (e != null && now - e.time < CACHE_TTL && now >= e.time) {
+        CacheEntry e = cache.byPos.get(start);
+        if (e != null && e.version == cache.version && now - e.time < CACHE_TTL && now >= e.time) {
             return e.network;
         }
-        if (CACHE.size() > 8192) {
-            Iterator<Map.Entry<CacheKey, CacheEntry>> it = CACHE.entrySet().iterator();
-            while (it.hasNext()) {
-                CacheEntry c = it.next().getValue();
-                if (now - c.time >= CACHE_TTL || now < c.time) {
-                    it.remove();
-                }
-            }
+        return remember(cache, scan(level, start), now);
+    }
+
+    /** Walks the network now and remembers it for all its nodes (the core does it once a second). */
+    public static GolemNetwork refresh(Level level, BlockPos start) {
+        return remember(cacheOf(level), scan(level, start), level.getGameTime());
+    }
+
+    private static GolemNetwork remember(LevelCache cache, GolemNetwork net, long now) {
+        if (cache.byPos.size() > 65536) {
+            cache.byPos.values().removeIf(c -> now - c.time > 1200 || now < c.time);
         }
-        GolemNetwork net = scan(level, start);
-        CacheEntry entry = new CacheEntry(net, now);
-        CACHE.put(key, entry);
+        CacheEntry entry = new CacheEntry(net, now, cache.version);
+        cache.byPos.put(net.start, entry);
         // the walk from any node gives the same network: the other nodes (buses, calculators, terminals) get it without walking again
-        for (BlockPos p : net.nodes) {
-            CACHE.put(new CacheKey(level.dimension(), p), entry);
+        for (BlockPos p : net.nodeList) {
+            cache.byPos.put(p, entry);
         }
         return net;
     }
 
+    /** Every remembered network on the server becomes stale (a multiblock formed, a plug was added, a periscope switched). */
     public static void clearCache() {
-        CACHE.clear();
+        for (LevelCache c : SERVER_CACHE.values()) {
+            c.version++;
+        }
+    }
+
+    /**
+     * Links changed at pos without a block changing (a pipe plug, a multiblock that formed): the networks of the level are stale and
+     * the one around pos gets new channels and lights at the end of the tick.
+     */
+    public static void nodesChanged(Level level, BlockPos pos) {
+        if (level.isClientSide()) {
+            return;
+        }
+        LevelCache cache = SERVER_CACHE.get(level);
+        if (cache != null) {
+            cache.version++;
+        }
+        CHANGED.computeIfAbsent(level, l -> new HashSet<>()).add(pos.immutable());
+    }
+
+    /** The server stopped: nothing of its levels is kept. */
+    public static void forgetAll() {
+        SERVER_CACHE.clear();
+        CHANGED.clear();
+    }
+
+    /**
+     * A block changed on the server (the neighbour notification of NeoForge). If a node appeared, disappeared or became another
+     * block, the remembered networks of the level are stale, and the networks around the place get new channels and lights
+     * at the end of the tick, as an AE2 grid repaths when a connection changes. A change of a node's own looks (its "active" flag)
+     * or of an ordinary block (a furnace lighting up next to a bus) is not a change of the network.
+     */
+    public static void onBlockChanged(Level level, BlockPos pos, BlockState state) {
+        if (level.isClientSide()) {
+            return;
+        }
+        LevelCache cache = SERVER_CACHE.get(level);
+        CacheEntry e = cache == null ? null : cache.byPos.get(pos);
+        Block was = e == null ? null : e.network.nodeBlock(pos);
+        Block now = state.getBlock() instanceof GolemNode ? state.getBlock() : null;
+        if (was == now) {
+            return;
+        }
+        if (cache != null) {
+            cache.version++;
+        }
+        CHANGED.computeIfAbsent(level, l -> new HashSet<>()).add(pos.immutable());
+    }
+
+    /** End of a server level tick: the networks where nodes changed get their channels and lights recomputed. */
+    public static void processChanges(Level level) {
+        Set<BlockPos> changed = CHANGED.remove(level);
+        if (changed == null) {
+            return;
+        }
+        Set<BlockPos> done = new HashSet<>();
+        for (BlockPos pos : changed) {
+            for (int d = -1; d < 6; d++) {
+                BlockPos p = d < 0 ? pos : pos.relative(Direction.from3DDataValue(d));
+                if (done.contains(p) || !level.isLoaded(p) || !(level.getBlockState(p).getBlock() instanceof GolemNode)) {
+                    continue;
+                }
+                GolemNetwork net = refresh(level, p);
+                done.add(p);
+                done.addAll(net.nodeList);
+                net.syncActiveVisuals(net.isOnline());
+            }
+        }
     }
 
     // ------------------------------------------------------------------- scan
@@ -145,8 +245,10 @@ public final class GolemNetwork {
         queue.add(start);
         Set<BlockPos> seen = new HashSet<>();
         seen.add(start);
+        List<BlockPos[]> linkedTo = new ArrayList<>();
+        List<BlockPos> cores = new ArrayList<>();
 
-        while (!queue.isEmpty() && nodes.size() < MAX_NODES) {
+        while (!queue.isEmpty() && nodeList.size() < MAX_NODES) {
             BlockPos pos = queue.poll();
             if (!level.isLoaded(pos)) {
                 continue;
@@ -155,10 +257,12 @@ public final class GolemNetwork {
             if (!(state.getBlock() instanceof GolemNode)) {
                 continue;
             }
-            nodes.add(pos);
+            nodeIndex.put(pos, nodeList.size());
+            nodeList.add(pos);
+            nodeStates.add(state);
 
-            if (state.getBlock() instanceof AtlasCoreBlock && corePos == null) {
-                corePos = pos;
+            if (state.getBlock() instanceof AtlasCoreBlock) {
+                cores.add(pos);
             }
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof CopperDriveBayBlockEntity bay) {
@@ -174,8 +278,6 @@ public final class GolemNetwork {
             } else if (be instanceof com.golemlogix.blockentity.CryoMainframeBlockEntity mainframe) {
                 // mainframe cores are separate processors, but they share one channel (the owner block's)
                 cpus.addAll(mainframe.cores());
-            } else if (be instanceof AtlasCoreBlockEntity c && pos.equals(corePos)) {
-                core = c;
             }
             if (state.getBlock() instanceof PeriscopeStorageBusBlock) {
                 Direction facing = state.getValue(PeriscopeStorageBusBlock.FACING);
@@ -189,22 +291,41 @@ public final class GolemNetwork {
                 }
             }
 
+            BlockPos[] links = new BlockPos[6];
+            int linkCount = 0;
             for (Direction dir : Direction.values()) {
                 BlockPos next = pos.relative(dir);
                 // a node gets "seen" only if there is a link: a multiblock socket may be reached from another side
-                if (!seen.contains(next) && linkable(pos, state, next, dir)) {
-                    seen.add(next);
-                    queue.add(next);
+                if (linkable(pos, state, next, dir)) {
+                    links[linkCount++] = next;
+                    if (seen.add(next)) {
+                        queue.add(next);
+                    }
                 }
             }
+            linkedTo.add(Arrays.copyOf(links, linkCount));
+        }
+        // the links as node indices, in Direction order on every node (the order decides who gets a channel first)
+        int[][] links = new int[nodeList.size()][];
+        for (int i = 0; i < links.length; i++) {
+            BlockPos[] targets = linkedTo.get(i);
+            int[] idx = new int[targets.length];
+            int n = 0;
+            for (BlockPos t : targets) {
+                Integer j = nodeIndex.get(t);
+                if (j != null) {
+                    idx[n++] = j;
+                }
+            }
+            links[i] = Arrays.copyOf(idx, n);
         }
 
         // Source sources next to the nodes; the Resonator is not a source for the network, it powers the Chronometers bound to it
         Set<BlockEntity> seenSources = new HashSet<>();
-        for (BlockPos pos : nodes) {
+        for (BlockPos pos : nodeList) {
             for (Direction dir : Direction.values()) {
                 BlockPos p = pos.relative(dir);
-                if (nodes.contains(p) || !level.isLoaded(p)) {
+                if (nodeIndex.containsKey(p) || !level.isLoaded(p)) {
                     continue;
                 }
                 BlockEntity be = level.getBlockEntity(p);
@@ -221,8 +342,9 @@ public final class GolemNetwork {
             }
         }
 
+        corePos = primaryCore(cores);
         if (corePos != null) {
-            structure = AtlasStructure.check(level, corePos);
+            core = level.getBlockEntity(corePos) instanceof AtlasCoreBlockEntity c ? c : null;
             if (structure.valid()) {
                 lineCapacity = GolemConfig.LINE_CHANNELS.get() + GolemConfig.EXPANDER_BONUS.get() * structure.expanders()
                         + GolemConfig.QUANTUM_BONUS.get() * structure.quantumExpanders();
@@ -231,7 +353,7 @@ public final class GolemNetwork {
                 lineCapacity = BARE_CORE_CHANNELS;
                 channelCapacity = BARE_CORE_CHANNELS;
             }
-            allocateChannels();
+            allocateChannels(links);
             // storages and providers without a channel stay silent, like terminals and buses
             bays.removeIf(b -> !activeDevices.contains(b.getBlockPos()));
             externals.removeIf(e -> !activeDevices.contains(e.periscope()));
@@ -240,9 +362,26 @@ public final class GolemNetwork {
             // two periscopes on one chest must not double its contents
             Set<BlockPos> targets = new HashSet<>();
             externals.removeIf(e -> !targets.add(e.target()));
-        } else {
-            channelCapacity = BARE_CORE_CHANNELS;
         }
+    }
+
+    /**
+     * The core that runs the network when there are several: a complete array before a tower, then the lowest position. The choice
+     * does not depend on where the walk started, so every device of the network agrees on it; the other cores stay idle.
+     */
+    @Nullable
+    private BlockPos primaryCore(List<BlockPos> cores) {
+        BlockPos best = null;
+        for (BlockPos c : cores) {
+            AtlasStructure.Result r = AtlasStructure.check(level, c);
+            boolean better = best == null || (r.valid() && !structure.valid())
+                    || (r.valid() == structure.valid() && c.compareTo(best) < 0);
+            if (better) {
+                best = c;
+                structure = r;
+            }
+        }
+        return best;
     }
 
     /** Two neighbouring nodes connect only if each agrees to link with the other (dir = from from to the neighbour). */
@@ -254,91 +393,117 @@ public final class GolemNetwork {
     }
 
     /** How many channels the outer face of a Channel Expander gives out (only in a complete array). */
-    private int expanderExit(com.golemlogix.blocks.ChannelExpanderBlock ex) {
+    private int expanderExit(ChannelExpanderBlock ex) {
         if (structure == null || !structure.valid()) {
             return 0;
         }
         return ex.isQuantum() ? GolemConfig.QUANTUM_EXIT.get() : GolemConfig.EXPANDER_EXIT.get();
     }
 
-    /** Capacity of the exit the channels to this node pass through (for tooltips): for a bushing its line, for an expander its own exit. */
+    /** Capacity of a bushing or an expander exit (for tooltips and tests); the same as {@link #capacityAt} for other nodes. */
     public int exitCapacity(BlockPos pos) {
         Block b = level.getBlockState(pos).getBlock();
         if (b instanceof CableBushingBlock) {
             return lineCapacity;
         }
-        if (b instanceof com.golemlogix.blocks.ChannelExpanderBlock ex) {
+        if (b instanceof ChannelExpanderBlock ex) {
             return expanderExit(ex);
         }
-        return b instanceof GolemNode n ? n.channelCapacity() : 0;
+        return Math.max(0, capacityAt(pos));
     }
 
     /** The node is part of the network (the walk reached it). */
     public boolean contains(BlockPos pos) {
-        return nodes.contains(pos);
+        return nodeIndex.containsKey(pos);
     }
 
-    /** Hands out channels to devices along the path tree from the core. */
-    private void allocateChannels() {
-        Map<BlockPos, BlockPos> parent = new HashMap<>();
-        List<BlockPos> order = new ArrayList<>();
-        ArrayDeque<BlockPos> queue = new ArrayDeque<>();
-        queue.add(corePos);
-        parent.put(corePos, null);
+    /** The block of a node as the walk saw it (null if the position is not a node of this network). */
+    @Nullable
+    private Block nodeBlock(BlockPos pos) {
+        Integer i = nodeIndex.get(pos);
+        return i == null ? null : nodeStates.get(i).getBlock();
+    }
+
+    /** The node is one of the array cells (relative to the core on top). */
+    private boolean inArray(BlockPos pos) {
+        int dy = corePos.getY() - pos.getY();
+        return Math.abs(pos.getX() - corePos.getX()) <= 1 && Math.abs(pos.getZ() - corePos.getZ()) <= 1 && dy >= 0 && dy <= 3;
+    }
+
+    /**
+     * Hands out the channels (see {@link ChannelCalculation}). The controller is the core with the conduits of a complete array,
+     * or, in a starter tower, with the conduits joined to it; its neighbours (the bushings, the expanders) are the exits. Channels
+     * never pass from one exit to another through the array, so every line counts only its own devices.
+     */
+    private void allocateChannels(int[][] links) {
+        int n = nodeList.size();
+        boolean formed = structure.valid();
+        controller = new boolean[n];
+        capacities = new int[n];
+        int[] tiers = new int[n];
+        boolean[] needs = new boolean[n];
+
+        // the controller nodes in walk order from the core: the walk passes all array cells, or only the conduits of a tower
+        int coreIdx = nodeIndex.get(corePos);
+        List<Integer> controllers = new ArrayList<>();
+        boolean[] seen = new boolean[n];
+        ArrayDeque<Integer> queue = new ArrayDeque<>();
+        queue.add(coreIdx);
+        seen[coreIdx] = true;
+        controller[coreIdx] = true;
         while (!queue.isEmpty()) {
-            BlockPos pos = queue.poll();
-            order.add(pos);
-            BlockState from = level.getBlockState(pos);
-            for (Direction dir : Direction.values()) {
-                BlockPos next = pos.relative(dir);
-                if (nodes.contains(next) && !parent.containsKey(next) && linkable(pos, from, next, dir)) {
-                    parent.put(next, pos);
-                    queue.add(next);
+            int i = queue.poll();
+            if (controller[i]) {
+                controllers.add(i);
+            }
+            for (int j : links[i]) {
+                Block b = nodeStates.get(j).getBlock();
+                boolean conduit = b instanceof AtlasConduitBlock;
+                boolean inside = formed ? inArray(nodeList.get(j)) && b instanceof AtlasPart && !(b instanceof AtlasCoreBlock) : conduit;
+                if (!seen[j] && inside) {
+                    seen[j] = true;
+                    controller[j] = conduit;
+                    queue.add(j);
                 }
             }
         }
 
-        for (BlockPos pos : order) {
-            BlockState state = level.getBlockState(pos);
-            int cost = ((GolemNode) state.getBlock()).channelCost(state);
-            if (cost <= 0) {
-                continue;
+        int deviceChannels = GolemConfig.DEVICE_CHANNELS.get();
+        for (int i = 0; i < n; i++) {
+            BlockState state = nodeStates.get(i);
+            Block b = state.getBlock();
+            needs[i] = ((GolemNode) b).channelCost(state) > 0;
+            if (needs[i]) {
+                deviceCount++;
             }
-            deviceCount++;
-            if (channelsUsed + cost > channelCapacity) {
-                continue;
+            if (controller[i]) {
+                capacities[i] = ChannelCalculation.UNLIMITED;
+                tiers[i] = ChannelCalculation.TIER_DENSE;
+            } else if (b instanceof AtlasCoreBlock) {
+                // another core is idle and carries nothing
+                capacities[i] = 0;
+                tiers[i] = ChannelCalculation.TIER_DEVICE;
+            } else if (b instanceof CableBushingBlock || b instanceof AtlasConduitBlock) {
+                capacities[i] = lineCapacity;
+                tiers[i] = ChannelCalculation.TIER_DENSE;
+            } else if (b instanceof ChannelExpanderBlock ex) {
+                capacities[i] = expanderExit(ex);
+                tiers[i] = ChannelCalculation.TIER_DENSE;
+            } else if (b instanceof SnowPipeBlock pipe) {
+                capacities[i] = pipe.channelCapacity();
+                tiers[i] = pipe.isDense() ? ChannelCalculation.TIER_DENSE : ChannelCalculation.TIER_PIPE;
+            } else {
+                capacities[i] = deviceChannels;
+                tiers[i] = ChannelCalculation.TIER_DEVICE;
             }
-            boolean ok = true;
-            boolean exitCapped = false;
-            List<BlockPos> path = new ArrayList<>();
-            for (BlockPos p = parent.get(pos); p != null && !p.equals(corePos); p = parent.get(p)) {
-                Block block = level.getBlockState(p).getBlock();
-                int cap;
-                if (block instanceof CableBushingBlock) {
-                    // only the bushing closest to the device (the "exit" from the array) is limited by the line capacity
-                    cap = exitCapped ? Integer.MAX_VALUE : lineCapacity;
-                    exitCapped = true;
-                } else if (block instanceof com.golemlogix.blocks.ChannelExpanderBlock ex) {
-                    // an expander in the array wall is an exit too, with its own capacity
-                    cap = exitCapped ? Integer.MAX_VALUE : expanderExit(ex);
-                    exitCapped = true;
-                } else {
-                    cap = ((GolemNode) block).channelCapacity();
-                }
-                if (load.getOrDefault(p, 0) + cost > cap) {
-                    ok = false;
-                    break;
-                }
-                path.add(p);
+        }
+        channels = new ChannelCalculation(links, capacities, tiers, needs,
+                controllers.stream().mapToInt(Integer::intValue).toArray(), channelCapacity);
+        channelsUsed = channels.used();
+        for (int i = 0; i < n; i++) {
+            if (channels.granted(i)) {
+                activeDevices.add(nodeList.get(i));
             }
-            if (!ok) {
-                continue;
-            }
-            for (BlockPos p : path) {
-                load.merge(p, cost, Integer::sum);
-            }
-            channelsUsed += cost;
-            activeDevices.add(pos);
         }
     }
 
@@ -379,9 +544,44 @@ public final class GolemNetwork {
         return deviceCount;
     }
 
-    /** How many channels pass through a node now (for example a cable bushing). */
+    /** How many channels pass through a node now (for example a cable bushing), its own channel included. */
     public int loadAt(BlockPos pos) {
-        return load.getOrDefault(pos, 0);
+        Integer i = nodeIndex.get(pos);
+        return i == null || channels == null ? 0 : channels.load(i);
+    }
+
+    /** How many channels the node can carry: -1 for the controller (no limit) and outside a network with a core. */
+    public int capacityAt(BlockPos pos) {
+        Integer i = nodeIndex.get(pos);
+        return i == null || channels == null || controller[i] ? -1 : capacities[i];
+    }
+
+    /** The core of this network is the given block (false for an idle second core). */
+    public boolean isPrimaryCore(BlockPos pos) {
+        return pos.equals(corePos);
+    }
+
+    /**
+     * Channels of one node, for the tooltip: whether it needs a channel and got one, how many channels pass through it and how many
+     * it can carry, and, for a device without a channel, what stopped it (the full node on its route, if that was the reason).
+     */
+    public record NodeChannels(boolean member, boolean needsChannel, boolean hasChannel, int load, int capacity,
+                               ChannelCalculation.Missing missing, @Nullable BlockPos bottleneck) {
+    }
+
+    public NodeChannels channelsAt(BlockPos pos) {
+        Integer i = nodeIndex.get(pos);
+        if (i == null) {
+            return new NodeChannels(false, false, false, 0, -1, ChannelCalculation.Missing.NONE, null);
+        }
+        BlockState state = nodeStates.get(i);
+        boolean needs = ((GolemNode) state.getBlock()).channelCost(state) > 0;
+        if (channels == null) {
+            return new NodeChannels(true, needs, false, 0, -1, ChannelCalculation.Missing.NONE, null);
+        }
+        int b = channels.bottleneck(i);
+        return new NodeChannels(true, needs, channels.granted(i), channels.load(i), controller[i] ? -1 : capacities[i],
+                channels.missing(i), b >= 0 ? nodeList.get(b) : null);
     }
 
     /** Capacity of one line (one cable bushing). */
@@ -458,16 +658,18 @@ public final class GolemNetwork {
 
     /**
      * Turns the pipe, cabinet and terminal animations on/off (the active property): the network is powered and, for devices that need
-     * a channel, they got one. Before, every node got the flag, and devices beyond the channel limit (or behind a pipe with
-     * a smaller capacity) looked as if they worked. The calculator sets its own flag (it means "a job is running").
+     * a channel, they got one; pipes and other carriers light up when the walk from the core reaches them. The calculator sets its
+     * own flag (it means "a job is running").
      */
     public void syncActiveVisuals(boolean active) {
-        for (BlockPos pos : nodes) {
+        for (int i = 0; i < nodeList.size(); i++) {
+            BlockPos pos = nodeList.get(i);
             BlockState state = level.getBlockState(pos);
-            if (!state.hasProperty(GolemProperties.ACTIVE) || state.getBlock() instanceof com.golemlogix.blocks.CryoCalculatorBlock) {
+            if (!state.hasProperty(GolemProperties.ACTIVE) || !(state.getBlock() instanceof GolemNode node)
+                    || state.getBlock() instanceof com.golemlogix.blocks.CryoCalculatorBlock) {
                 continue;
             }
-            boolean on = active && (((GolemNode) state.getBlock()).channelCost(state) <= 0 || activeDevices.contains(pos));
+            boolean on = active && channels != null && (node.channelCost(state) > 0 ? channels.granted(i) : channels.reached(i));
             if (state.getValue(GolemProperties.ACTIVE) != on) {
                 level.setBlock(pos, state.setValue(GolemProperties.ACTIVE, on), 18);
             }

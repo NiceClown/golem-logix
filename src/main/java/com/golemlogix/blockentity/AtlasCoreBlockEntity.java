@@ -80,15 +80,15 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         be.refresh(level, pos);
     }
 
-    /** Forced rescan (first tick, right-click on the core). */
+    /** Forced rescan (first tick, right-click on the core); the fresh network is shared with every device of it. */
     public void refresh(Level level, BlockPos pos) {
-        GolemNetwork net = GolemNetwork.scan(level, pos);
+        GolemNetwork net = GolemNetwork.refresh(level, pos);
 
         boolean newPowered;
         int cost = 0;
-        duplicate = net.corePos() != null && !net.corePos().equals(pos);
+        duplicate = !net.isPrimaryCore(pos);
         if (duplicate) {
-            // a second core in the same network does not work
+            // a second core in the same network does not work (the network chose the other one, the same from every device)
             newPowered = false;
         } else {
             cost = GolemConfig.CORE_SOURCE_PER_SECOND.get()

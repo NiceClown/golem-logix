@@ -96,7 +96,7 @@ public class ManaSaturatorBlock extends Block implements EntityBlock {
                 }
                 return ItemInteractionResult.sidedSuccess(level.isClientSide());
             }
-            if (be instanceof ManaSaturatorBlockEntity anvil && ManaSaturatorBlockEntity.isInput(stack)) {
+            if (be instanceof ManaSaturatorBlockEntity anvil && ManaSaturatorBlockEntity.isInput(level, stack)) {
                 if (!level.isClientSide()) {
                     if (!ManaSaturatorBlockEntity.isManualInput(stack)) {
                         player.displayClientMessage(Component.translatable("message.golem_logix.anvil.needs_machine"), true);
@@ -131,7 +131,7 @@ public class ManaSaturatorBlock extends Block implements EntityBlock {
                 }
                 return ItemInteractionResult.sidedSuccess(level.isClientSide());
             }
-            if (!ManaSaturatorBlockEntity.isInput(stack)) {
+            if (!ManaSaturatorBlockEntity.isInput(level, stack)) {
                 // a pipe, a torch and the like are simply placed next to it (for example a pipe to the inlet), not put on the anvil
                 return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
             }

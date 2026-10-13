@@ -1,0 +1,87 @@
+# Round 20 (-Mods): the Cryo-Mainframe's golems stay in front of a full row of calculators (idle shots over a whole golem cycle,
+# then at work); the Saturator makes Source Gems from amethyst; JEI; the new book entry
+reload
+cmd time set day
+cmd gamemode creative @p
+cmd kill @e[type=item]
+cmd fill -20 -61 -20 20 -61 20 minecraft:deepslate_tiles
+cmd fill -20 -60 -20 20 -48 20 minecraft:air
+hook rig 0 -60 0
+cmd setblock 6 -60 -2 minecraft:air
+hook mainframe 6 -60 1 south 12 2
+hook mainframeopen 6 -60 1 1
+hook saturator 0 -58 -8 south jar
+wait 100
+gui off
+look 6.5 -59.05 1.3 3.3 180 4
+wait 5
+shot r20_mf_idle_0
+wait 100
+shot r20_mf_idle_1
+wait 100
+shot r20_mf_idle_2
+wait 100
+shot r20_mf_idle_3
+wait 100
+shot r20_mf_idle_4
+wait 100
+shot r20_mf_idle_5
+wait 100
+shot r20_mf_idle_6
+wait 100
+shot r20_mf_idle_7
+hook netput 0 -60 0 minecraft:oak_log 640
+wait 5
+hook craft 0 -60 0 minecraft:stick 4096
+wait 40
+shot r20_mf_work_0
+wait 50
+shot r20_mf_work_1
+wait 50
+shot r20_mf_work_2
+wait 50
+shot r20_mf_work_3
+# the Saturator: three amethyst shards become Source Gems
+hook saturatorput 0 -58 -8 minecraft:amethyst_shard 3
+wait 40
+look 0 -58.3 -8.3 3.4 190 16
+wait 3
+shot r20_sat_ritual
+wait 200
+look 0 -58.3 -8.3 3.6 160 30
+wait 3
+shot r20_sat_done
+gui on
+jeicount saturator 7
+jei ars_nouveau:source_gem
+wait 10
+shot r20_jei_gem
+closescreen
+jei ars_nouveau:source_gem_block
+wait 10
+shot r20_jei_gem_block
+closescreen
+book saturator_gems 0
+wait 8
+shot r20_book_gems_0
+book saturator_gems 1
+wait 5
+shot r20_book_gems_1
+bookaudit
+closescreen
+gui off
+lang ru_ru
+wait 20
+gui on
+book saturator_gems 0
+wait 8
+shot r20_book_gems_ru_0
+book saturator_gems 1
+wait 5
+shot r20_book_gems_ru_1
+bookaudit
+closescreen
+gui off
+lang en_us
+wait 20
+gui on

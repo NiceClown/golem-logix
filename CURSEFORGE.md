@@ -38,6 +38,8 @@ The whole network runs on **Source** from Ars Nouveau. Without Ars Nouveau it si
 - **Basic pipe:** 16 channels. **Dense pipe:** 64 channels.
 - **Junctions:** brass cage hubs, device sleeves, and a reducer washer where the two sizes meet.
 - **Glow:** pipes glow softly while powered. This is visual only: they give no light, so mobs still spawn.
+- **Channels like in AE2:** they go from the core along the shortest routes, dense pipes first. A device passes on as many as a basic pipe (16).
+- **Jade:** "Device Online", "Device Missing Channel" (with the full block that stopped it), "X of Y Channels" on pipes and bushings.
 
 ### Buses
 - **Vacuum Import Bus** and **Injector Export Bus**, with item and fluid filters and priorities.
@@ -76,6 +78,7 @@ The whole network runs on **Source** from Ars Nouveau. Without Ars Nouveau it si
   - It offers you a poppy when idle.
 - **Forge Hammer:** forge plates by hand on the unassembled Saturator, the anvil.
 - **With Ars Nouveau:** after your first anvil plate, a Dispel unbinds a battered golem's mind; an Enchanting Apparatus presses it into two plates.
+- **Source Gems:** with Ars Nouveau the assembled Saturator makes Source Gems and their blocks, twice as fast as the Imbuement Chamber for a third more Source.
 - **With Create:** a Mixer tears a block's mind in Liquid Cryo-Source, a Press turns it into a plate.
 - **Secret recipe:** it reveals itself only after two trials… find them yourself.
 
@@ -96,7 +99,7 @@ It's available in **English and Russian**.
 
 - Minecraft **1.21.1**, NeoForge **21.1.x**
 - **Copper Age Backport** (required: copper golems for the rituals)
-- Optional: **Ars Nouveau** (Source, the Dispel method), **Create** (mixer and press recipes), **JEI**, **Jade**
+- Optional: **Ars Nouveau** (Source, the Dispel method, Source Gems), **Create** (mixer and press recipes), **JEI**, **Jade**
 
 Works in singleplayer and on dedicated servers. Install on both client and server.
 
@@ -107,4 +110,4 @@ Works in singleplayer and on dedicated servers. Install on both client and serve
 
 ---
 
-*The copper golem model and textures come from Copper Age Backport (CC0). Licensed under MIT.*
+*The copper golem model and textures come from Copper Age Backport (CC0). The channel system follows the design of Applied Energistics 2 (no AE2 code is included). Licensed under MIT.*

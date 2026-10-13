@@ -38,8 +38,9 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
     private ItemStack outDeck = ItemStack.EMPTY;
     public static final int DECK_MAX = 4;
     /**
-     * Ritual progress in "work units": +10 per tick plus +4 for every Cooling Co-Processor on the roof (5 s without them, ~1.7 s
-     * with five).
+     * Ritual progress in "work units": +10 per tick plus +4 for every Cooling Co-Processor on the roof. A plate takes MAX_PROGRESS
+     * (5 s without coolers, ~1.7 s with five); a Source Gem takes half the time of the Ars Nouveau Imbuement Chamber (see
+     * {@link #ritualWork}).
      */
     private int ritualProgress = 0;
     public static final int MAX_PROGRESS = 1000;
@@ -52,7 +53,8 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
     private final com.golemlogix.upgrade.RedstoneControl redstone = new com.golemlogix.upgrade.RedstoneControl();
     /** Internal Source buffer: refilled from the network (or neighbouring jars) and spent on saturation. */
     public static final int BUFFER_MAX = 5000;
-    private static final int PULL_STEP = 100;
+    /** Source pulled every 5 ticks (times 1 + coolers): 600 a second covers even a Source Gem block (2660 Source in 5 s). */
+    private static final int PULL_STEP = 150;
     private int source = 0;
     /** Fill level last sent to clients (in eighths), so nothing extra is sent. */
     private int syncedLevel = 0;
@@ -129,7 +131,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
 
         @Override
         public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-            if (slot != 0 || stack.isEmpty() || !isInput(stack) || !formed()) {
+            if (slot != 0 || stack.isEmpty() || !isInput(level, stack) || !formed()) {
                 return stack;
             }
             int room = roomInDeck(stack);
@@ -167,7 +169,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
 
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
-            return slot == 0 && isInput(stack);
+            return slot == 0 && isInput(level, stack);
         }
     };
 
@@ -329,7 +331,12 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
     }
 
     public float getProgressFraction() {
-        return Math.min(1f, (float) ritualProgress / (float) MAX_PROGRESS);
+        return Math.min(1f, (float) ritualProgress / (float) currentWork());
+    }
+
+    /** Work units of the ritual on the anvil now. */
+    public int currentWork() {
+        return ritualWork(level, heldItem);
     }
 
     /** Work units per tick (counting the coprocessors on the roof). */
@@ -502,7 +509,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
             }
         }
         // taker
-        boolean result = !heldItem.isEmpty() && !isInput(heldItem);
+        boolean result = !heldItem.isEmpty() && !isInput(level, heldItem);
         switch (taker.phase) {
             case HOME -> {
                 if (isCrafting || result) {
@@ -522,7 +529,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
                     heldItem = ItemStack.EMPTY;
                     taker.go(TO_DECK);
                     changed = true;
-                } else if (!isCrafting && (heldItem.isEmpty() || !isInput(heldItem))) {
+                } else if (!isCrafting && (heldItem.isEmpty() || !isInput(level, heldItem))) {
                     // nothing to take (the result was taken by hand): go home empty-handed
                     taker.go(TO_DECK);
                     changed = true;
@@ -596,12 +603,13 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         boolean changed = entity.stepCarriers();
 
         ItemStack held = entity.heldItem;
-        if (held.isEmpty() || !isInput(held)) {
+        if (held.isEmpty() || !isInput(level, held)) {
             entity.ritualProgress = 0;
             entity.isCrafting = false;
         } else {
-            ItemStack recipeOutput = outputFor(held);
-            int requiredSource = entity.getRequiredSource(held);
+            ItemStack recipeOutput = outputFor(level, held);
+            int requiredSource = requiredSource(level, held);
+            int work = ritualWork(level, held);
             // start when the bowl has enough Source (and the Redstone Module allows it), and spend it right away
             if (!entity.isCrafting && entity.source >= requiredSource && entity.redstone.allows(entity.redstoneModule, powered, true)) {
                 entity.source -= requiredSource;
@@ -611,21 +619,21 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
             }
             if (entity.isCrafting) {
                 int before = entity.ritualProgress;
-                entity.ritualProgress = Math.min(MAX_PROGRESS, entity.ritualProgress + entity.speed());
+                entity.ritualProgress = Math.min(work, entity.ritualProgress + entity.speed());
                 // a hum every second of the ritual
                 if (before / 200 != entity.ritualProgress / 200) {
                     sl.playSound(null, pos.getX(), pos.getY(), pos.getZ(), ModSounds.VACUUM_HUM.get(), SoundSource.BLOCKS, 0.6f, 1.2f);
                 }
                 // the golem strikes the blank five times per ritual: the clang of the strike and sparks
-                int hitsBefore = (before * 5 + MAX_PROGRESS / 4) / MAX_PROGRESS;
-                int hitsNow = (entity.ritualProgress * 5 + MAX_PROGRESS / 4) / MAX_PROGRESS;
-                if (hitsNow != hitsBefore && entity.ritualProgress < MAX_PROGRESS) {
+                int hitsBefore = (before * 5 + work / 4) / work;
+                int hitsNow = (entity.ritualProgress * 5 + work / 4) / work;
+                if (hitsNow != hitsBefore && entity.ritualProgress < work) {
                     sl.playSound(null, pos.getX(), pos.getY(), pos.getZ(), net.minecraft.sounds.SoundEvents.IRON_GOLEM_ATTACK,
                             SoundSource.BLOCKS, 0.5f, 1.3f);
                     sl.sendParticles(ParticleTypes.ENCHANTED_HIT, pos.getX() + 0.5, pos.getY() - 0.05, pos.getZ() + 0.5,
                             6, 0.15, 0.05, 0.15, 0.08);
                 }
-                if (entity.ritualProgress >= MAX_PROGRESS) {
+                if (entity.ritualProgress >= work) {
                     held.shrink(1);
                     if (!held.isEmpty()) {
                         // in old worlds a stack could lie on the anvil: the extra results go next to it
@@ -654,8 +662,9 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
                 c.timer--;
             }
         }
-        if (isCrafting && ritualProgress < MAX_PROGRESS) {
-            ritualProgress = Math.min(MAX_PROGRESS, ritualProgress + speed());
+        int work = currentWork();
+        if (isCrafting && ritualProgress < work) {
+            ritualProgress = Math.min(work, ritualProgress + speed());
         }
         if (isCrafting) {
             double cx = pos.getX() + 0.5, cy = pos.getY() + 0.1, cz = pos.getZ() + 0.5;
@@ -689,18 +698,56 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         if (isCrafting) {
             return 1;
         }
-        if (!heldItem.isEmpty() && isInput(heldItem) && source < getRequiredSource(heldItem)) {
+        if (!heldItem.isEmpty() && isInput(level, heldItem) && source < requiredSource(level, heldItem)) {
             return 2;
         }
         return 0;
     }
 
     /** Whether the item can be pressed (otherwise clicking the machine with it is a normal block placement). */
-    public static boolean isInput(ItemStack stack) {
-        return !outputFor(stack).isEmpty();
+    public static boolean isInput(@javax.annotation.Nullable Level level, ItemStack stack) {
+        return !outputFor(level, stack).isEmpty();
     }
 
-    public static ItemStack outputFor(ItemStack input) {
+    /**
+     * What one ritual makes: the mod's own plates and parts, and, with Ars Nouveau, the Imbuement Chamber's Source Gem recipes
+     * (amethyst, an amethyst block, lapis), read from the level's recipes.
+     */
+    public static ItemStack outputFor(@javax.annotation.Nullable Level level, ItemStack input) {
+        ItemStack own = ownOutput(input);
+        if (!own.isEmpty()) {
+            return own;
+        }
+        com.golemlogix.integration.ars.ArsImbuement.Entry gem = com.golemlogix.integration.ars.ArsImbuement.find(level, input);
+        return gem == null ? ItemStack.EMPTY : gem.output().copy();
+    }
+
+    /** Source of one ritual: 1000 for a plate, 2500 for the Occult Matrix, a Source Gem a third more than in the chamber. */
+    public static int requiredSource(@javax.annotation.Nullable Level level, ItemStack input) {
+        if (input.is(ModItems.IMPLODED_WITHER_PLASMA.get())) {
+            return 2500;
+        }
+        if (ownOutput(input).isEmpty()) {
+            com.golemlogix.integration.ars.ArsImbuement.Entry gem = com.golemlogix.integration.ars.ArsImbuement.find(level, input);
+            if (gem != null) {
+                return gem.source();
+            }
+        }
+        return 1000;
+    }
+
+    /** Work units of one ritual: MAX_PROGRESS for the mod's own; a Source Gem takes half the chamber's ticks at the base speed. */
+    public static int ritualWork(@javax.annotation.Nullable Level level, ItemStack input) {
+        if (!input.isEmpty() && ownOutput(input).isEmpty()) {
+            com.golemlogix.integration.ars.ArsImbuement.Entry gem = com.golemlogix.integration.ars.ArsImbuement.find(level, input);
+            if (gem != null) {
+                return gem.ticks() * BASE_SPEED;
+            }
+        }
+        return MAX_PROGRESS;
+    }
+
+    private static ItemStack ownOutput(ItemStack input) {
         if (input.is(Blocks.IRON_BLOCK.asItem())) {
             return new ItemStack(ModItems.FLATTENED_IRON_CORE.get(), 2);
         } else if (input.is(Blocks.COPPER_BLOCK.asItem()) || input.is(Blocks.CUT_COPPER.asItem()) || input.is(Blocks.WAXED_COPPER_BLOCK.asItem())) {
@@ -714,13 +761,6 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
             return new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get());
         }
         return ItemStack.EMPTY;
-    }
-
-    private int getRequiredSource(ItemStack input) {
-        if (input.is(ModItems.IMPLODED_WITHER_PLASMA.get())) {
-            return 2500;
-        }
-        return 1000;
     }
 
     @Override

@@ -17,6 +17,7 @@ public final class GolemConfig {
     public static final ModConfigSpec.IntValue QUANTUM_BONUS;
     public static final ModConfigSpec.IntValue EXPANDER_EXIT;
     public static final ModConfigSpec.IntValue QUANTUM_EXIT;
+    public static final ModConfigSpec.IntValue DEVICE_CHANNELS;
     public static final ModConfigSpec.IntValue CRAFT_STEP_SOURCE;
     public static final ModConfigSpec.IntValue MAINFRAME_CORES_PER_CALCULATOR;
     public static final ModConfigSpec.IntValue MAINFRAME_COPROCESSOR_MULTIPLIER;
@@ -52,6 +53,9 @@ public final class GolemConfig {
                 .defineInRange("expanderExitChannels", 64, 0, 4096);
         QUANTUM_EXIT = b.comment("Channels a Quantum Channel Expander passes out of its outer face.")
                 .defineInRange("quantumExpanderExitChannels", 128, 0, 4096);
+        DEVICE_CHANNELS = b.comment("Channels a device (terminal, cabinet, bus, calculator...) passes on to the devices behind it, its own",
+                        "channel included. 16 = like a basic pipe, as AE2 devices carry as much as a normal cable.")
+                .defineInRange("deviceChannels", 16, 1, 4096);
         b.pop();
 
         b.push("crafting");

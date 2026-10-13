@@ -207,6 +207,20 @@
           ]
         },
         {
+          "id": "saturator_gems", "title": "Source Gems in the Saturator", "icon": "ars_nouveau:source_gem", "x": 2, "y": 1, "parents": ["saturator"],
+          "requires": "ars_nouveau",
+          "pages": [
+            {"type": "text", "title": "Faster than the chamber",
+             "text": ["With Ars Nouveau the assembled Saturator also runs the &lImbuement Chamber&r recipes that make Source Gems: from amethyst, an amethyst block or lapis.", "It works &ltwice as fast&r as the chamber but takes &la third more Source&r. Roof coolers speed it up as usual, and buses and Pattern Providers feed it like the plates."]},
+            {"type": "ritual", "title": "Source Gem", "station": "golem_logix:mana_saturator", "inputs": ["minecraft:amethyst_shard"], "outputs": ["ars_nouveau:source_gem"],
+             "condition": "665 Source, 2.5 s (the chamber: 500, 5 s).",
+             "text": ["Lapis Lazuli works the same way."]},
+            {"type": "ritual", "title": "Source Gem Block", "station": "golem_logix:mana_saturator", "inputs": ["minecraft:amethyst_block"], "outputs": ["ars_nouveau:source_gem_block"],
+             "condition": "2660 Source, 5 s (the chamber: 2000, 10 s).",
+             "text": ["The Saturator's bowl holds 5000 Source and refills on its own."]}
+          ]
+        },
+        {
 "id": "dispel", "title": "Dispel: the Mind of Metal", "icon": "golem_logix:raw_copper_mind", "x": 1, "y": -1, "parents": ["anvil"],
           "secret": "mind", "requires": "ars_nouveau",
           "pages": [
@@ -458,11 +472,19 @@
             {"type": "text", "title": "What a channel is",
              "text": [
                "Every network device (terminal, cabinet, bus, provider...) takes &l1 channel&r. A channel is a path from the core to the device through a bushing and pipes.",
-               "A channel has three limits:",
+               "A channel has four limits:",
                "• &lTotal network capacity&r - set by the array (8 / 320 / more).",
                "• &lBushing line&r - no more channels pass through one bushing than the line capacity.",
                "• &lPipes&r - a basic pipe passes 16 channels, a dense one 64.",
+               "• &lDevices&r - a device passes on 16, like a basic pipe.",
                "A device that gets no channel stays &lsilent&r: the terminal reports “no free channels”."
+             ]},
+            {"type": "text", "title": "Who gets a channel first",
+             "text": [
+               "Channels are handed out as in &lAE2&r: from the core along the &lshortest path&r to each device.",
+               "&lDense runs go first&r: devices on dense pipes, then on basic pipes, then devices that hang on other devices.",
+               "A device gets a channel only if &levery block&r on its path still has room; otherwise it waits.",
+               "&oChannels never cross the array: each bushing counts only its own devices.&r"
              ]},
             {"type": "text", "title": "Who takes channels",
              "text": [
@@ -501,7 +523,7 @@
             {"type": "text", "title": "Devices attach directly",
              "text": [
                "A device needs no pipe if it stands against a bushing, another pipe or another network device: nodes conduct channels through each other.",
-               "So terminals and cabinets can be chained. But remember: all channels behind such a chain pass through it.",
+               "So terminals and cabinets can be chained, but, as in AE2, a device passes on &lat most 16 channels&r (like a basic pipe), its own included. Run a dense pipe along big rows of devices.",
                "# Source supply",
                "A jar must touch any node (not necessarily the core). It takes no channel and does not carry the network. The Eternal Frost Resonator is attached the same way - but it powers chronometers, not the network."
              ]},
@@ -535,7 +557,14 @@
                ["No provider", "put the pattern in one"],
                ["Paused", "see the Redstone Module"]
              ],
-             "text": ["At the bottom of the terminal screen you see “Ch 12/64” - used and available channels; the tooltip shows everything else."]}
+             "text": ["At the bottom of the terminal screen you see “Ch 12/64” - used and available channels; the tooltip shows everything else."]},
+            {"type": "text", "title": "Jade tooltips",
+             "text": [
+               "Look at a block with Jade (as in AE2):",
+               "• a device: &lDevice Online&r, &lDevice Missing Channel&r with the full block that stopped it, or &lDevice Offline&r (no core or no Source);",
+               "• a pipe: “12 of 16 Channels”;",
+               "• a bushing: its line and the whole network; an expander: its exit."
+             ]}
           ]
         }
       ]

@@ -32,7 +32,15 @@ public enum CoreProvider implements IBlockComponentProvider {
         } else {
             tooltip.add(Component.translatable("jade.golem_logix.core.on", core.getSourcePerSecond()).withStyle(ChatFormatting.AQUA));
         }
-        tooltip.add(Component.translatable("jade.golem_logix.core.channels", core.getChannelsUsed(), core.getChannelCapacity(),
+        // the live numbers of the server's network (ChannelProvider sends them); the core's own copy is a second old at most
+        int used = core.getChannelsUsed();
+        int max = core.getChannelCapacity();
+        if (accessor.getServerData().contains(ChannelProvider.TAG)) {
+            var t = accessor.getServerData().getCompound(ChannelProvider.TAG);
+            used = t.getInt("netUsed");
+            max = t.getInt("netMax");
+        }
+        tooltip.add(Component.translatable("jade.golem_logix.core.channels", used, max,
                 Component.translatable(core.isFormed() ? "jade.golem_logix.core.array" : "jade.golem_logix.core.tower")));
     }
 

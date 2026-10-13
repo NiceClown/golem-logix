@@ -431,26 +431,52 @@ public class GolemGameTests {
         });
     }
 
+    /**
+     * A comb of terminals along a dense pipe: the spine runs from (x0, 1, z) by dx/dz for len blocks; every pipe but the first gets
+     * a column of terminals above it and a full-height column on each side, so no terminal is more than a few devices from the pipe.
+     * Returns the number of terminals.
+     */
+    private static int comb(GameTestHelper helper, int x0, int z0, int dx, int dz, int len) {
+        int count = 0;
+        for (int i = 0; i < len; i++) {
+            BlockPos p = new BlockPos(x0 + dx * i, 1, z0 + dz * i);
+            put(helper, p, ModBlocks.DENSE_FROST_PIPE.get());
+            for (int y = 2; y <= 5; y++) {
+                put(helper, p.atY(y), ModBlocks.ANALOG_TERMINAL.get());
+                count++;
+            }
+            if (i == 0) {
+                continue;
+            }
+            for (int side = -1; side <= 1; side += 2) {
+                for (int y = 1; y <= 5; y++) {
+                    put(helper, p.offset(dz * side, y - 1, dx * side), ModBlocks.ANALOG_TERMINAL.get());
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
     @GameTest(template = T, timeoutTicks = 200)
     public static void lineLimit(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
-        // two dense pipelines from one corner bushing (6,1,6): east and south, each followed by a plate of 48 terminals
-        put(helper, new BlockPos(7, 1, 6), ModBlocks.DENSE_FROST_PIPE.get());
-        for (int x = 8; x <= 11; x++) for (int y = 1; y <= 4; y++) for (int z = 6; z <= 8; z++) put(helper, new BlockPos(x, y, z), ModBlocks.ANALOG_TERMINAL.get());
-        put(helper, new BlockPos(6, 1, 7), ModBlocks.DENSE_FROST_PIPE.get());
-        put(helper, new BlockPos(6, 1, 8), ModBlocks.DENSE_FROST_PIPE.get());
-        for (int x = 4; x <= 7; x++) for (int y = 1; y <= 4; y++) for (int z = 9; z <= 11; z++) put(helper, new BlockPos(x, y, z), ModBlocks.ANALOG_TERMINAL.get());
+        // two dense combs from one corner bushing (6,1,6): east and south, 60 terminals each
+        int east = comb(helper, 7, 6, 1, 0, 5);
+        int south = comb(helper, 6, 7, 0, 1, 5);
         helper.runAfterDelay(5, () -> {
+            helper.assertTrue(east == 60 && south == 60, "combs of 60, got " + east + " and " + south);
             GolemNetwork n = net(helper, ORIGIN);
             helper.assertTrue(n.lineCapacity() == 64, "line 64");
             helper.assertTrue(n.channelsUsed() == 64, "one bushing line passes only 64 channels, got " + n.channelsUsed());
+            helper.assertTrue(n.loadAt(helper.absolutePos(new BlockPos(6, 1, 6))) == 64, "the bushing carries the whole line");
 
-            // two expanders raise the line to 96: all 96 devices pass through the same bushing
+            // two expanders raise the line to 96: 96 of the 120 devices pass through the same bushing
             buildArray(helper, 2, 0);
             GolemNetwork n2 = net(helper, ORIGIN);
             helper.assertTrue(n2.lineCapacity() == 96, "line 96, got " + n2.lineCapacity());
-            helper.assertTrue(n2.channelsUsed() == 96, "all 96 terminals work now, got " + n2.channelsUsed());
+            helper.assertTrue(n2.channelsUsed() == 96, "96 terminals work now, got " + n2.channelsUsed());
             helper.succeed();
         });
     }
@@ -459,15 +485,166 @@ public class GolemGameTests {
     public static void pipeLimit(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
+        // corner bushing (6,1,6) -> a basic pipe (7,1,6) -> a dense comb of 46 terminals
         put(helper, new BlockPos(7, 1, 6), ModBlocks.BASIC_SNOW_PIPE.get());
-        for (int x = 8; x <= 11; x++) for (int y = 1; y <= 4; y++) for (int z = 6; z <= 8; z++) put(helper, new BlockPos(x, y, z), ModBlocks.ANALOG_TERMINAL.get());
+        int count = comb(helper, 8, 6, 1, 0, 4);
         helper.runAfterDelay(5, () -> {
             GolemNetwork n = net(helper, ORIGIN);
+            helper.assertTrue(n.deviceCount() == count, "all " + count + " terminals are in the network, got " + n.deviceCount());
             helper.assertTrue(n.channelsUsed() == 16, "basic pipe passes only 16 channels, got " + n.channelsUsed());
+            helper.assertTrue(n.loadAt(helper.absolutePos(new BlockPos(7, 1, 6))) == 16, "the basic pipe is full");
             helper.setBlock(new BlockPos(7, 1, 6), ModBlocks.DENSE_FROST_PIPE.get().defaultBlockState());
             GolemNetwork n2 = net(helper, ORIGIN);
-            helper.assertTrue(n2.channelsUsed() == 48, "dense pipe passes all 48, got " + n2.channelsUsed());
+            helper.assertTrue(n2.channelsUsed() == count, "dense pipe passes all " + count + ", got " + n2.channelsUsed());
             helper.succeed();
+        });
+    }
+
+    /** As in AE2, a device carries as many channels as a basic pipe (its own included): a slab of 20 terminals with one entry gets 16. */
+    @GameTest(template = T, timeoutTicks = 200)
+    public static void devicesCarryLikeBasicPipes(GameTestHelper helper) {
+        buildArray(helper, 0, 0);
+        powered(helper);
+        // 4 x 5 terminals east of the corner bushing (6,1,6); only (7,1,6) touches the bushing
+        for (int x = 7; x <= 10; x++) {
+            for (int y = 1; y <= 5; y++) {
+                put(helper, new BlockPos(x, y, 6), ModBlocks.ANALOG_TERMINAL.get());
+            }
+        }
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, ORIGIN);
+            BlockPos entry = helper.absolutePos(new BlockPos(7, 1, 6));
+            helper.assertTrue(n.channelsUsed() == 16, "16 of 20 terminals get a channel, got " + n.channelsUsed());
+            helper.assertTrue(n.loadAt(entry) == 16, "the entry terminal carries 16, got " + n.loadAt(entry));
+            GolemNetwork.NodeChannels far = n.channelsAt(helper.absolutePos(new BlockPos(10, 5, 6)));
+            helper.assertTrue(!far.hasChannel() && far.missing() == com.golemlogix.system.ChannelCalculation.Missing.BOTTLENECK
+                    && entry.equals(far.bottleneck()), "the farthest terminal is stopped by the entry terminal: " + far);
+            helper.succeed();
+        });
+    }
+
+    /** Channels never cross the array from one exit to another: the center bushing and the expanders carry only their own devices. */
+    @GameTest(template = T, timeoutTicks = 200)
+    public static void noTransitThroughTheArray(GameTestHelper helper) {
+        buildArray(helper, 2, 0);
+        powered(helper);
+        put(helper, TERM, ModBlocks.ANALOG_TERMINAL.get());                  // behind the corner bushing (4,1,6)
+        put(helper, new BlockPos(3, 2, 6), ModBlocks.CRAFTING_TERMINAL.get());
+        put(helper, new BlockPos(7, 1, 4), ModBlocks.ANALOG_TERMINAL.get());  // behind the corner bushing (6,1,4)
+        put(helper, new BlockPos(7, 1, 6), ModBlocks.ANALOG_TERMINAL.get());  // behind the corner bushing (6,1,6)
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, ORIGIN);
+            helper.assertTrue(n.channelsUsed() == 4, "four devices, got " + n.channelsUsed());
+            helper.assertTrue(n.loadAt(helper.absolutePos(ORIGIN)) == 0, "the center bushing has no devices, got " + n.loadAt(helper.absolutePos(ORIGIN)));
+            helper.assertTrue(n.loadAt(helper.absolutePos(new BlockPos(4, 2, 5))) == 0 && n.loadAt(helper.absolutePos(new BlockPos(5, 2, 4))) == 0,
+                    "expanders without pipes carry nothing");
+            helper.assertTrue(n.loadAt(helper.absolutePos(new BlockPos(4, 1, 6))) == 2, "corner line with two terminals");
+            helper.assertTrue(n.loadAt(helper.absolutePos(new BlockPos(6, 1, 4))) == 1 && n.loadAt(helper.absolutePos(new BlockPos(6, 1, 6))) == 1,
+                    "the other corner lines carry one each");
+            helper.succeed();
+        });
+    }
+
+    /** As in AE2, dense runs are served first: in an 8-channel tower the far devices on a dense pipe win over near ones on a basic pipe. */
+    @GameTest(template = T, timeoutTicks = 200)
+    public static void denseRunsComeFirst(GameTestHelper helper) {
+        put(helper, CORE, ModBlocks.ATLAS_CORE.get());
+        put(helper, ORIGIN.offset(0, 2, 0), ModBlocks.ATLAS_CONDUIT.get());
+        put(helper, ORIGIN.offset(0, 1, 0), ModBlocks.ATLAS_CONDUIT.get());
+        put(helper, ORIGIN, ModBlocks.CABLE_BUSHING.get());
+        powered(helper);
+        // west: a basic pipe with 4 terminals right next to the bushing
+        put(helper, new BlockPos(4, 1, 5), ModBlocks.BASIC_SNOW_PIPE.get());
+        BlockPos[] near = {new BlockPos(4, 2, 5), new BlockPos(4, 1, 4), new BlockPos(4, 1, 6), new BlockPos(3, 1, 5)};
+        // east: four dense pipes with 8 terminals at their far end
+        for (int x = 6; x <= 9; x++) {
+            put(helper, new BlockPos(x, 1, 5), ModBlocks.DENSE_FROST_PIPE.get());
+        }
+        BlockPos[] far = {new BlockPos(7, 2, 5), new BlockPos(8, 2, 5), new BlockPos(8, 1, 4), new BlockPos(8, 1, 6),
+                new BlockPos(9, 2, 5), new BlockPos(9, 1, 4), new BlockPos(9, 1, 6), new BlockPos(10, 1, 5)};
+        for (BlockPos p : near) {
+            put(helper, p, ModBlocks.ANALOG_TERMINAL.get());
+        }
+        for (BlockPos p : far) {
+            put(helper, p, ModBlocks.ANALOG_TERMINAL.get());
+        }
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, near[0]);
+            helper.assertTrue(n.channelsUsed() == 8, "a tower has 8 channels, got " + n.channelsUsed());
+            for (BlockPos p : far) {
+                helper.assertTrue(n.isDeviceActive(helper.absolutePos(p)), "far terminal on the dense run has a channel: " + p);
+            }
+            for (BlockPos p : near) {
+                GolemNetwork.NodeChannels c = n.channelsAt(helper.absolutePos(p));
+                helper.assertTrue(!c.hasChannel() && c.missing() == com.golemlogix.system.ChannelCalculation.Missing.NETWORK_FULL,
+                        "near terminal on the basic pipe waits: " + p + " " + c);
+            }
+            helper.succeed();
+        });
+    }
+
+    /** Two cores in one network: the same one runs it from every device, the other one is idle and says so. */
+    @GameTest(template = T, timeoutTicks = 200)
+    public static void oneCoreRunsTheNetwork(GameTestHelper helper) {
+        // tower A at (5,1,5)..(5,4,5), tower B at (9,1,9)..(9,4,9), their bushings joined by a basic pipe
+        for (BlockPos base : new BlockPos[]{ORIGIN, new BlockPos(9, 1, 9)}) {
+            put(helper, base, ModBlocks.CABLE_BUSHING.get());
+            put(helper, base.above(), ModBlocks.ATLAS_CONDUIT.get());
+            put(helper, base.above(2), ModBlocks.ATLAS_CONDUIT.get());
+            put(helper, base.above(3), ModBlocks.ATLAS_CORE.get());
+        }
+        powered(helper);
+        for (int x = 6; x <= 9; x++) {
+            put(helper, new BlockPos(x, 1, 5), ModBlocks.BASIC_SNOW_PIPE.get());
+        }
+        for (int z = 6; z <= 8; z++) {
+            put(helper, new BlockPos(9, 1, z), ModBlocks.BASIC_SNOW_PIPE.get());
+        }
+        BlockPos[] terminals = {new BlockPos(4, 1, 5), new BlockPos(7, 2, 5), new BlockPos(10, 1, 9), new BlockPos(9, 1, 10), new BlockPos(8, 1, 9)};
+        for (BlockPos p : terminals) {
+            put(helper, p, ModBlocks.ANALOG_TERMINAL.get());
+        }
+        helper.runAfterDelay(25, () -> {
+            GolemNetwork fromA = net(helper, terminals[0]);
+            GolemNetwork fromB = net(helper, terminals[2]);
+            helper.assertTrue(fromA.corePos().equals(fromB.corePos()), "every device sees the same core: " + fromA.corePos() + " / " + fromB.corePos());
+            helper.assertTrue(fromA.corePos().equals(helper.absolutePos(CORE)), "the lower position wins between two towers");
+            for (BlockPos p : terminals) {
+                BlockPos abs = helper.absolutePos(p);
+                helper.assertTrue(fromA.isDeviceActive(abs) == fromB.isDeviceActive(abs), "the same channels from both ends: " + p);
+            }
+            helper.assertTrue(fromA.channelsUsed() == 5, "five terminals on 8 channels, got " + fromA.channelsUsed());
+            var coreB = (com.golemlogix.blockentity.AtlasCoreBlockEntity) helper.getBlockEntity(new BlockPos(9, 4, 9));
+            var coreA = (com.golemlogix.blockentity.AtlasCoreBlockEntity) helper.getBlockEntity(CORE);
+            coreB.refresh(helper.getLevel(), helper.absolutePos(new BlockPos(9, 4, 9)));
+            coreA.refresh(helper.getLevel(), helper.absolutePos(CORE));
+            helper.assertTrue(coreB.isDuplicate() && !coreA.isDuplicate(), "B is idle, A runs the network");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * The remembered network follows the world at once (as an AE2 grid repaths when a connection changes): a new device is counted in the
+     * same tick, and devices cut off from the core go dark at the end of the tick instead of glowing forever.
+     */
+    @GameTest(template = T, timeoutTicks = 200)
+    public static void networkFollowsChanges(GameTestHelper helper) {
+        buildArray(helper, 0, 0);
+        powered(helper);
+        put(helper, TERM, ModBlocks.ANALOG_TERMINAL.get());
+        helper.runAfterDelay(25, () -> {
+            var level = helper.getLevel();
+            helper.assertTrue(GolemNetwork.get(level, helper.absolutePos(TERM)).channelsUsed() == 1, "one terminal");
+            helper.assertTrue(helper.getBlockState(TERM).getValue(com.golemlogix.blocks.GolemProperties.ACTIVE), "the terminal is lit");
+            put(helper, TERM.west(), ModBlocks.ANALOG_TERMINAL.get());
+            helper.assertTrue(GolemNetwork.get(level, helper.absolutePos(TERM)).channelsUsed() == 2, "the new terminal counts in the same tick");
+            // the corner bushing goes: both terminals are cut off from the core
+            helper.setBlock(new BlockPos(4, 1, 6), Blocks.AIR);
+            helper.assertTrue(!GolemNetwork.get(level, helper.absolutePos(TERM)).hasCore(), "no core behind a missing bushing");
+            helper.runAfterDelay(2, () -> {
+                helper.assertTrue(!helper.getBlockState(TERM).getValue(com.golemlogix.blocks.GolemProperties.ACTIVE), "a cut-off terminal goes dark");
+                helper.succeed();
+            });
         });
     }
 
@@ -1677,7 +1854,9 @@ public class GolemGameTests {
                         // an entry about another mod's integration names that mod's items: they exist only when it is installed
                         String requires = e.has("requires") ? e.get("requires").getAsString() : "";
                         boolean items = requires.isEmpty() || net.neoforged.fml.ModList.get().isLoaded(requires);
-                        checkItem(helper, e.get("icon").getAsString(), id);
+                        if (items) {
+                            checkItem(helper, e.get("icon").getAsString(), id);
+                        }
                         if (e.has("parents")) {
                             for (var p : e.getAsJsonArray("parents")) {
                                 helper.assertTrue(ids.contains(p.getAsString()), "entry " + id + " has unknown parent " + p.getAsString());
@@ -2121,6 +2300,51 @@ public class GolemGameTests {
                     helper.succeed();
                 });
             });
+        });
+    }
+
+    /**
+     * With Ars Nouveau the assembled Saturator runs the Imbuement Chamber's Source Gem recipes: twice as fast as the chamber
+     * (100 -> 50 ticks for a gem, 200 -> 100 for a block) for a third more Source (500 -> 665, 2000 -> 2660). Without Ars there are none.
+     */
+    @GameTest(template = T, timeoutTicks = 400)
+    public static void saturatorMakesSourceGems(GameTestHelper helper) {
+        var level = helper.getLevel();
+        ItemStack shard = new ItemStack(Items.AMETHYST_SHARD);
+        var gems = com.golemlogix.integration.ars.ArsImbuement.all(level);
+        if (!net.neoforged.fml.ModList.get().isLoaded("ars_nouveau")) {
+            helper.assertTrue(gems.isEmpty() && !com.golemlogix.blockentity.ManaSaturatorBlockEntity.isInput(level, shard),
+                    "no Source Gem rituals without Ars Nouveau");
+            helper.succeed();
+            return;
+        }
+        var gemEntry = com.golemlogix.integration.ars.ArsImbuement.find(level, shard);
+        var blockEntry = com.golemlogix.integration.ars.ArsImbuement.find(level, new ItemStack(Items.AMETHYST_BLOCK));
+        helper.assertTrue(gemEntry != null && gemEntry.chamberSource() == 500 && gemEntry.source() == 665 && gemEntry.chamberTicks() == 100
+                && gemEntry.ticks() == 50, "amethyst: 665 Source in 50 ticks (chamber 500 in 100), got " + gemEntry);
+        helper.assertTrue(blockEntry != null && blockEntry.source() == 2660 && blockEntry.chamberTicks() == 200 && blockEntry.ticks() == 100,
+                "amethyst block: 2660 Source in 100 ticks (chamber 2000 in 200), got " + blockEntry);
+        helper.assertTrue(com.golemlogix.integration.ars.ArsImbuement.find(level, new ItemStack(Items.LAPIS_LAZULI)) != null, "lapis too");
+        helper.assertTrue(com.golemlogix.blockentity.ManaSaturatorBlockEntity.ritualWork(level, shard) == 500
+                && com.golemlogix.blockentity.ManaSaturatorBlockEntity.ritualWork(level, new ItemStack(Items.IRON_BLOCK)) == 1000,
+                "a gem ritual is half as long as a plate");
+        helper.assertTrue(com.golemlogix.blockentity.ManaSaturatorBlockEntity.requiredSource(level, shard) == 665, "a gem costs 665 Source");
+        BlockPos ctl = new BlockPos(5, 3, 5);
+        buildSaturator(helper, ctl, Direction.NORTH);
+        put(helper, new BlockPos(7, 1, 5), ModBlocks.CREATIVE_SOURCE_JAR.get());
+        BlockPos side = com.golemlogix.system.SaturatorStructure.cellPos(helper.absolutePos(ctl), Direction.NORTH,
+                com.golemlogix.system.SaturatorStructure.index(2, 1, 1));
+        helper.runAfterDelay(30, () -> {
+            var h = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, side, null);
+            helper.assertTrue(h.insertItem(0, new ItemStack(Items.AMETHYST_SHARD, 3), false).isEmpty(), "three shards queue on the left deck");
+        });
+        helper.runAfterDelay(330, () -> {
+            var h = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, side, null);
+            ItemStack out = h.extractItem(1, 64, false);
+            helper.assertTrue(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(out.getItem()).toString().equals("ars_nouveau:source_gem")
+                            && out.getCount() == 3,
+                    "three Source Gems come out, got " + out);
+            helper.succeed();
         });
     }
 

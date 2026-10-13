@@ -143,7 +143,7 @@ public final class MainframeStructure {
         if (cs.getBlock() instanceof CryoMainframeBlock) {
             level.setBlock(controller, cs.setValue(CryoMainframeBlock.FORMED, true), 3);
         }
-        GolemNetwork.clearCache();
+        GolemNetwork.nodesChanged(level, controller);
     }
 
     /**
@@ -180,7 +180,7 @@ public final class MainframeStructure {
         if (cs.getBlock() instanceof CryoMainframeBlock && cs.getValue(CryoMainframeBlock.FORMED)) {
             level.setBlock(controller, cs.setValue(CryoMainframeBlock.FORMED, false), 3);
         }
-        GolemNetwork.clearCache();
+        GolemNetwork.nodesChanged(level, controller);
     }
 
     /** Notify the neighbours of all cells (pipes recompute their joints) once the whole cabinet has been replaced. */

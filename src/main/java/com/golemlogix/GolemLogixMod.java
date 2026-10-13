@@ -11,7 +11,10 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import org.slf4j.Logger;
 
 @Mod(GolemLogixMod.MOD_ID)
@@ -50,7 +53,22 @@ public class GolemLogixMod {
     public static class GameEvents {
         @SubscribeEvent
         public static void onServerStopped(ServerStoppedEvent event) {
-            GolemNetwork.clearCache();
+            GolemNetwork.forgetAll();
+        }
+
+        /** A block was placed, broken or replaced: if it was a network node, the networks around it are recomputed (see GolemNetwork). */
+        @SubscribeEvent
+        public static void onNeighborNotify(BlockEvent.NeighborNotifyEvent event) {
+            if (event.getLevel() instanceof Level level && !level.isClientSide()) {
+                GolemNetwork.onBlockChanged(level, event.getPos(), event.getState());
+            }
+        }
+
+        @SubscribeEvent
+        public static void onLevelTick(LevelTickEvent.Post event) {
+            if (!event.getLevel().isClientSide()) {
+                GolemNetwork.processChanges(event.getLevel());
+            }
         }
     }
 }

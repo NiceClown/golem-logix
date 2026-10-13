@@ -71,7 +71,7 @@ public class ManaSaturatorCategory implements IRecipeCategory<ManaSaturatorRecip
 
     @Override
     public void setRecipe(IRecipeLayoutBuilder builder, ManaSaturatorRecipe recipe, IFocusGroup focuses) {
-        builder.addSlot(RecipeIngredientRole.INPUT, IN_X + 1, SLOT_Y + 1).addItemStack(recipe.inputBlock());
+        builder.addSlot(RecipeIngredientRole.INPUT, IN_X + 1, SLOT_Y + 1).addItemStacks(recipe.inputs());
         builder.addSlot(RecipeIngredientRole.OUTPUT, OUT_X + 1, SLOT_Y + 1).addItemStack(recipe.output());
     }
 
@@ -81,7 +81,10 @@ public class ManaSaturatorCategory implements IRecipeCategory<ManaSaturatorRecip
         slot.draw(g, IN_X, SLOT_Y);
         slot.draw(g, OUT_X, SLOT_Y);
         arrow.draw(g, (IN_X + OUT_X + 18) / 2 - 12, SLOT_Y + 1);
-        Component cost = Component.translatable("jei.golem_logix.source_cost", recipe.sourceCost());
+        // seconds without coolers: 5 for the mod's own rituals, half of the Imbuement Chamber's time for Source Gems
+        String seconds = recipe.ticks() % 20 == 0 ? String.valueOf(recipe.ticks() / 20)
+                : String.format(java.util.Locale.ROOT, "%.1f", recipe.ticks() / 20f);
+        Component cost = Component.translatable("jei.golem_logix.source_cost", recipe.sourceCost(), seconds);
         g.drawString(font, cost, (W - font.width(cost)) / 2, SLOT_Y + 24, 0xFF5A3C9A, false);
     }
 }

@@ -296,6 +296,12 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
                              Consumer<PoseStack> chest) {
     }
 
+    /**
+     * The calculators stand at the back of each shelf from z = 22.5 (pixels). A golem facing them stands at FRONT at most: with its arms
+     * forward and a bow it reaches about 2.5 px, so it never enters a calculator. The back wall behind them is only for empty shelves.
+     */
+    private static final float FRONT = 19.6f;
+
     /** A point on the shelf floor (x, z in pixels) in blocks. */
     private static Vector3f spot(float x, float floor, float z) {
         return new Vector3f(x / 16f, floor, z / 16f);
@@ -450,11 +456,11 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         float cycle = ((time / 160f) + 0.12f) % 1.0f;
         if (cycle < 0.40f) {
             float ratchet = Mth.sin(time * 0.75f);
-            return new GolemPose(spot(-5.3f, floor, 20.5f), new Vector3f(0f, 0f, 1f), new CopperGolemPuppet.Anim(time * 0.3f, false, false, 0.26f),
+            return new GolemPose(spot(-5.3f, floor, FRONT), new Vector3f(0f, 0f, 1f), new CopperGolemPuppet.Anim(time * 0.3f, false, false, 0.26f),
                     new CopperGolemPuppet.Arms(-1.15f + 0.28f * ratchet, 0.12f, -0.65f, -0.1f, 0.15f * Mth.sin(time * 0.3f), wrench, null), null);
         }
         if (cycle < 0.48f) {
-            return walk((cycle - 0.40f) / 0.08f, -5.3f, 20.5f, -12.2f, 19.5f, floor, time, wrench);
+            return walk((cycle - 0.40f) / 0.08f, -5.3f, FRONT, -12.2f, 19.5f, floor, time, wrench);
         }
         if (cycle < 0.72f) {
             float valvePump = Mth.sin(time * 0.45f);
@@ -473,27 +479,30 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         float floor = 16.2f / 16f;
         Consumer<PoseStack> coprocessor = held(new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get()), 0.38f, 0f, light, buffers);
         Consumer<PoseStack> card = held(new ItemStack(ModItems.COPPER_PUNCH_CARD.get()), 0.35f, 90f, light, buffers);
+        // calculators on this shelf (slots 7..12): then the golem keeps in front of them instead of going to the back wall
+        boolean shelfFilled = be.clientCalcs() > CryoMainframeBlockEntity.CALC_SLOTS / 2;
+        float polishZ = shelfFilled ? FRONT : 25.5f, sortZ = shelfFilled ? FRONT : 23.5f;
         if (spin <= 0.05f) {
             float cyc = ((time + be.getBlockPos().asLong() % 113) / 760f + 0.5f) % 1f;
             if (cyc < 0.22f) {
-                // polishes the glowing matrix on the back wall: the hand is high and moves a rag from side to side
+                // polishes the glowing matrix on the back wall (or the calculators in front of it): a rag moves from side to side
                 float a = time * 0.3f;
-                return new GolemPose(spot(-2f, floor, 25.5f), new Vector3f(0f, 0f, 1f), new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0f),
-                        new CopperGolemPuppet.Arms(-2.35f + 0.1f * Mth.cos(a), 0.45f * Mth.sin(a), -0.3f, -0.1f, 0.2f * Mth.sin(a),
-                                held(new ItemStack(net.minecraft.world.item.Items.PAPER), 0.3f, 0f, light, buffers), null), null);
+                return new GolemPose(spot(-2f, floor, polishZ), new Vector3f(0f, 0f, 1f), new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0f),
+                        new CopperGolemPuppet.Arms((shelfFilled ? -1.45f : -2.35f) + 0.1f * Mth.cos(a), 0.45f * Mth.sin(a), -0.3f, -0.1f,
+                                0.2f * Mth.sin(a), held(new ItemStack(net.minecraft.world.item.Items.PAPER), 0.3f, 0f, light, buffers), null), null);
             }
             if (cyc < 0.28f) {
-                return walk((cyc - 0.22f) / 0.06f, -2f, 25.5f, 20f, 23.5f, floor, time, null);
+                return walk((cyc - 0.22f) / 0.06f, -2f, polishZ, 20f, sortZ, floor, time, null);
             }
             if (cyc < 0.50f) {
                 // sorts punch cards into stacks: reaches out with the right hand, then the left
                 float sw = Mth.sin(time * 0.3f);
-                return new GolemPose(spot(20f, floor, 23.5f), new Vector3f(0.6f, 0f, 0.8f), new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.2f),
+                return new GolemPose(spot(20f, floor, sortZ), new Vector3f(0.6f, 0f, 0.8f), new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.2f),
                         new CopperGolemPuppet.Arms(-0.8f - 0.35f * Math.max(0f, sw), 0.15f, -0.8f - 0.35f * Math.max(0f, -sw), -0.15f, 0.3f * sw,
                                 sw > 0f ? card : null, sw <= 0f ? card : null), null);
             }
             if (cyc < 0.56f) {
-                return walk((cyc - 0.50f) / 0.06f, 20f, 23.5f, 8f, 18f, floor, time, null);
+                return walk((cyc - 0.50f) / 0.06f, 20f, sortZ, 8f, 18f, floor, time, null);
             }
             if (cyc < 0.78f) {
                 // winds the chronometer: the watch in the left hand at the chest, the right one turns the crown
@@ -526,10 +535,10 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
                     new CopperGolemPuppet.Arms(rX, 0.2f, rX, -0.2f, 0f, null, null), coprocessor);
         }
         if (cycle < 0.73f) {
-            return walk((cycle - 0.65f) / 0.08f, 6.5f, 17.0f, 16.3f, 20.8f, floor, time, card);
+            return walk((cycle - 0.65f) / 0.08f, 6.5f, 17.0f, 16.3f, FRONT, floor, time, card);
         }
         float slide = 0.5f + 0.5f * Mth.sin(time * 0.7f);
-        return new GolemPose(spot(16.3f, floor, 20.8f), new Vector3f(0f, 0f, 1f), new CopperGolemPuppet.Anim(time * 0.3f, false, false, 0.15f),
+        return new GolemPose(spot(16.3f, floor, FRONT), new Vector3f(0f, 0f, 1f), new CopperGolemPuppet.Anim(time * 0.3f, false, false, 0.15f),
                 new CopperGolemPuppet.Arms(-1.3f + 0.25f * slide, 0.08f, -0.6f, -0.15f, 0f, card, null), null);
     }
 

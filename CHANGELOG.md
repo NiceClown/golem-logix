@@ -1,5 +1,44 @@
 # Changelog
 
+## 1.1.1 — AE2-style channels, Source Gems in the Saturator
+
+### Channels rewritten after Applied Energistics 2
+
+- **New channel assignment** (`system/ChannelCalculation`), the way AE2 hands out channels: a walk from the controller (the Atlas
+  Core with its conduits) gives every device the shortest route; dense carriers go first (dense pipes, Cable Bushings, Channel
+  Expanders), then basic pipes, then devices; a device gets a channel only if the network and every block on its route still have
+  room. An independent implementation for this mod: no AE2 code is included (see README, "Credits and license").
+- **A device carries as much as a basic pipe** (16, its own channel included), as AE2 devices carry as much as a normal cable.
+  Config `deviceChannels` (array section). Long rows of devices need a dense pipe along them.
+- **Fixed: channels crossed the array.** Devices behind a corner bushing were routed through the central bushing and the expanders,
+  so their lines showed foreign channels and could fill up. Now each bushing and each expander counts only its own devices.
+- **Fixed: a client network in the server's cache.** The pipe renderer's network (walked over the client's copy of the world) could
+  land in the cache shared with the server in single player, and for a few ticks buses and terminals worked on client block entities;
+  both threads also wrote into one map. The server and the client now keep separate caches per level.
+- **Fixed: two cores.** Every core believed it ran the network. Now the same core is chosen from every device (a complete array
+  before a tower, then the lowest position); the other one is idle and says so.
+- **The network follows the world at once.** Placing, breaking or replacing a node makes the remembered networks stale in the same
+  tick (as an AE2 grid repaths), and at the end of the tick the networks around get new channels and lights: devices cut off from the
+  core go dark immediately instead of glowing forever.
+- **Jade tooltips like AE2's**, with the numbers from the server's network: "Device Online", "Device Missing Channel" (with the full
+  block that stopped it), "Device Offline" (no core or no Source), "X of Y Channels" on pipes and on devices that carry others, the
+  line and the whole network on a bushing, the exit on an expander. Before, the tooltip walked the network on the client.
+- 5 new game tests (90 in all): devices carry like basic pipes, no transit through the array, dense runs first, one core runs the
+  network, the network follows changes. `lineLimit` and `pipeLimit` use combs of terminals along dense pipes.
+
+### Mana Saturator makes Source Gems (Ars Nouveau)
+
+- The assembled Saturator runs the **Imbuement Chamber's Source Gem recipes** (amethyst shard, amethyst block, lapis; read from the
+  game's recipes, so modpack changes apply): **twice as fast** as the chamber (2.5 s per gem, 5 s per Source Gem block without
+  coolers) for **a third more Source** (665 instead of 500, 2660 instead of 2000). Coolers on the roof speed it up as usual; buses and
+  Pattern Providers feed it like the plates. JEI shows them in the Saturator category, the book has an entry for them.
+- The Saturator pulls Source faster (150 per 5 ticks instead of 100), enough for a Source Gem block every 5 seconds.
+
+### Cryo-Mainframe
+
+- The copper golems no longer walk into the calculators: the second shelf's golem polished the back wall and sorted cards right
+  inside the row of calculators, and two work spots were too close to them.
+
 ## 1.0.1 — Golem Interface and a cosmetic pass
 
 ### Liquid Cryo-Source, fluid autocrafting, Ars Nouveau and Create (later in 1.0.1)

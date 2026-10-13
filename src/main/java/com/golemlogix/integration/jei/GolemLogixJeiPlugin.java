@@ -290,7 +290,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         registration.addRecipes(AnvilCrushCategory.TYPE, anvilRecipes);
 
         // 2. Mana Saturator
-        List<ManaSaturatorRecipe> saturatorRecipes = List.of(
+        List<ManaSaturatorRecipe> saturatorRecipes = new java.util.ArrayList<>(List.of(
                 new ManaSaturatorRecipe(
                         new ItemStack(Blocks.IRON_BLOCK),
                         1000,
@@ -312,7 +312,11 @@ public class GolemLogixJeiPlugin implements IModPlugin {
                         new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get())
                 ),
                 matrixRitual()
-        );
+        ));
+        // with Ars Nouveau: the Imbuement Chamber's Source Gem recipes, twice as fast for a third more Source
+        for (var gem : com.golemlogix.integration.ars.ArsImbuement.all(net.minecraft.client.Minecraft.getInstance().level)) {
+            saturatorRecipes.add(new ManaSaturatorRecipe(List.of(gem.input().getItems()), gem.source(), gem.output(), gem.ticks()));
+        }
         registration.addRecipes(ManaSaturatorCategory.TYPE, saturatorRecipes);
     }
 }

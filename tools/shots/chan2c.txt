@@ -1,0 +1,41 @@
+# the book pages about channels (en, ru) and the layout audit
+gui off
+reload
+wait 10
+gui on
+book net_channels 0
+wait 8
+shot chan2c_book_channels_0
+book net_channels 1
+wait 5
+shot chan2c_book_channels_1
+book net_devices 0
+wait 5
+shot chan2c_book_devices_0
+book net_diagnose 1
+wait 5
+shot chan2c_book_diagnose_1
+bookaudit
+closescreen
+gui off
+lang ru_ru
+wait 20
+gui on
+book net_channels 0
+wait 8
+shot chan2c_book_channels_ru_0
+book net_channels 1
+wait 5
+shot chan2c_book_channels_ru_1
+book net_devices 0
+wait 5
+shot chan2c_book_devices_ru_0
+book net_diagnose 1
+wait 5
+shot chan2c_book_diagnose_ru_1
+bookaudit
+closescreen
+gui off
+lang en_us
+wait 20
+gui on

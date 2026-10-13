@@ -145,7 +145,7 @@ public final class CatalogStructure {
             level.setBlock(controller, cs.setValue(CardCatalogBlock.FORMED, true), 3);
         }
         be.syncNow();
-        GolemNetwork.clearCache();
+        GolemNetwork.nodesChanged(level, controller);
     }
 
     /** Disassemble: parts become the former blocks again (except the broken one, which drops by itself), the owner is unassembled. */
@@ -172,7 +172,7 @@ public final class CatalogStructure {
         if (cs.getBlock() instanceof CardCatalogBlock && cs.getValue(CardCatalogBlock.FORMED)) {
             level.setBlock(controller, cs.setValue(CardCatalogBlock.FORMED, false), 3);
         }
-        GolemNetwork.clearCache();
+        GolemNetwork.nodesChanged(level, controller);
     }
 
     private static void notifyAll(Level level, BlockPos controller, Direction facing) {

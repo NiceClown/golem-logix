@@ -384,7 +384,7 @@ final class DevScenes {
                     sat.setHeldItem(ItemStack.EMPTY);
                     sat.takeFromDecks();
                     sat.takeFromDecks();
-                } else if (com.golemlogix.blockentity.ManaSaturatorBlockEntity.isInput(stack)) {
+                } else if (com.golemlogix.blockentity.ManaSaturatorBlockEntity.isInput(level, stack)) {
                     sat.addToDeck(stack.copyWithCount(Math.min(stack.getCount(), sat.roomInDeck(stack))));
                 } else {
                     sat.setHeldItem(stack);

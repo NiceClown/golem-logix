@@ -79,6 +79,8 @@ public class PipePlugItem extends ModItemWithTooltip {
         if (updated != ns) {
             level.setBlock(n, updated, Block.UPDATE_ALL);
         }
-        GolemNetwork.clearCache();
+        // both sides of the plug: a split network needs its lights and channels recomputed on each side
+        GolemNetwork.nodesChanged(level, pos);
+        GolemNetwork.nodesChanged(level, n);
     }
 }

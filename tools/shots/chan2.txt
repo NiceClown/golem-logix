@@ -1,0 +1,64 @@
+# AE2-style channels (-Mods): a basic pipe with 20 terminals (16 get a channel), a slab of 20 terminals behind one entry terminal
+# (a device carries 16), and the Jade tooltips: pipe, lit and unlit terminals, bushing, core; then the same in Russian
+reload
+cmd time set day
+cmd gamemode creative @p
+cmd kill @e[type=item]
+cmd fill -20 -61 -20 20 -61 20 minecraft:deepslate_tiles
+cmd fill -20 -60 -20 20 -48 20 minecraft:air
+hook rig 0 -60 0
+# west of the corner bushing (-1,-60,1): a basic pipe with ten terminals on each side
+cmd fill -12 -60 1 -2 -60 1 golem_logix:basic_snow_pipe
+cmd fill -11 -60 0 -2 -60 0 golem_logix:analog_terminal[facing=north]
+cmd fill -11 -60 2 -2 -60 2 golem_logix:analog_terminal[facing=south]
+# south of the corner bushing (1,-60,1): 4 x 5 terminals, only (1,-60,2) touches the bushing
+cmd fill 1 -60 2 1 -56 5 golem_logix:analog_terminal[facing=east]
+wait 60
+gui off
+look -4 -59 3 12 200 35
+wait 5
+shot chan2_scene
+gui on
+# Jade: the first pipe of the line is full
+look -1.5 -59.5 1.5 2.5 0 70
+wait 10
+shot chan2_jade_pipe
+# a lit and an unlit terminal of the line
+look -2.5 -59.5 2.5 2.5 0 20
+wait 10
+shot chan2_jade_online
+look -10.5 -59.5 2.5 2.5 0 20
+wait 10
+shot chan2_jade_missing
+# the bushing of that line, from the south
+look -0.5 -59.7 1.98 2.5 180 10
+wait 10
+shot chan2_jade_bushing
+# the slab: the entry terminal carries 16, the farthest one waits
+look 1.98 -59.5 2.5 2.5 90 10
+wait 10
+shot chan2_jade_entry
+look 1.98 -55.5 5.5 2.5 90 10
+wait 10
+shot chan2_jade_slab_missing
+# the core
+look 0.5 -56.4 0.5 3 0 50
+wait 10
+shot chan2_jade_core
+gui off
+lang ru_ru
+wait 20
+gui on
+look -10.5 -59.5 2.5 2.5 0 20
+wait 10
+shot chan2_jade_missing_ru
+look 1.98 -59.5 2.5 2.5 90 10
+wait 10
+shot chan2_jade_entry_ru
+look -0.5 -59.7 1.98 2.5 180 10
+wait 10
+shot chan2_jade_bushing_ru
+gui off
+lang en_us
+wait 20
+gui on
