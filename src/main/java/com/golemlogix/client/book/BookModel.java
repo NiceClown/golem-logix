@@ -61,14 +61,20 @@ public final class BookModel {
         public final boolean gold;
         public final List<String> parents;
         public final List<JsonObject> pages;
-        /** Secret entry: "partial" = visible after the first trial, "full" = only when the recipe is fully open. */
+        /**
+         * Secret entry: "partial" = visible after the first trial, "full" = only when the recipe is fully open, "mind" = after the
+         * first anvil plate (the Dispel method).
+         */
         public final String secret;
+        /** Mod id the entry is about (its integration): the entry is hidden without that mod; empty = always. */
+        public final String requires;
         public Category category;
         /** All content in lower case, for search. */
         public final String searchText;
 
         Entry(String id, String title, ItemStack icon, int x, int y, boolean gold, List<String> parents, List<JsonObject> pages,
-              String secret) {
+              String secret, String requires) {
+            this.requires = requires;
             this.id = id;
             this.title = title;
             this.icon = icon;
@@ -90,9 +96,14 @@ public final class BookModel {
             if (showAll) {
                 return true;
             }
+            // an entry about another mod's integration is shown only when that mod is installed
+            if (!requires.isEmpty() && !net.neoforged.fml.ModList.get().isLoaded(requires)) {
+                return false;
+            }
             return switch (secret) {
                 case "partial" -> com.golemlogix.client.ClientSecrets.any();
                 case "full" -> com.golemlogix.client.ClientSecrets.all();
+                case "mind" -> com.golemlogix.client.ClientSecrets.mind();
                 default -> true;
             };
         }
@@ -140,6 +151,13 @@ public final class BookModel {
     }
 
     public static ItemStack stack(String id) {
+        // "fluid:<fluid id>" is a fluid (a fluid ghost, 1000 mB; "*250" sets the mB)
+        if (id.startsWith("fluid:")) {
+            ResourceLocation fl = ResourceLocation.tryParse(id.substring(6));
+            var fluid = fl == null ? null : BuiltInRegistries.FLUID.getOptional(fl).orElse(null);
+            return fluid == null || fluid == net.minecraft.world.level.material.Fluids.EMPTY ? new ItemStack(Items.BARRIER)
+                    : com.golemlogix.items.FluidGhostItem.of(new net.neoforged.neoforge.fluids.FluidStack(fluid, 1000));
+        }
         ResourceLocation rl = ResourceLocation.tryParse(id);
         if (rl == null) {
             return new ItemStack(Items.BARRIER);
@@ -186,7 +204,7 @@ public final class BookModel {
                 }
                 Entry entry = new Entry(e.get("id").getAsString(), e.get("title").getAsString(), stack(e.get("icon").getAsString()),
                         e.get("x").getAsInt(), e.get("y").getAsInt(), e.has("gold") && e.get("gold").getAsBoolean(), parents, pages,
-                        e.has("secret") ? e.get("secret").getAsString() : "");
+                        e.has("secret") ? e.get("secret").getAsString() : "", e.has("requires") ? e.get("requires").getAsString() : "");
                 entry.category = cat;
                 cat.entries.add(entry);
                 book.byId.put(entry.id, entry);

@@ -29,8 +29,25 @@ public final class SecretKnowledge {
     public static final ResourceLocation REVEALED = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "secret_revealed");
     public static final String WITHER = "killed_wither";
     public static final String DIMENSION = "dimension_signal";
+    /** The first plate made on an anvil (the falling anvil ritual or the Forge Hammer) opens the Dispel method. */
+    public static final ResourceLocation MIND = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "mind_unbound");
+    public static final String FIRST_PLATE = "first_plate";
 
     private SecretKnowledge() {
+    }
+
+    /** Whether the player knows that a Dispel unbinds a battered golem's mind. */
+    public static boolean knowsMind(ServerPlayer player) {
+        AdvancementHolder holder = player.server.getAdvancements().get(MIND);
+        return holder != null && player.getAdvancements().getOrStartProgress(holder).isDone();
+    }
+
+    /** The player made a plate on an anvil: the Dispel method opens (once). */
+    public static void plateMade(ServerPlayer player) {
+        AdvancementHolder holder = player.server.getAdvancements().get(MIND);
+        if (holder != null && !player.getAdvancements().getOrStartProgress(holder).isDone()) {
+            player.getAdvancements().award(holder, FIRST_PLATE);
+        }
     }
 
     /** Player state: [Wither defeated, attempt from another dimension]. */
@@ -50,7 +67,7 @@ public final class SecretKnowledge {
 
     public static void sync(ServerPlayer player) {
         boolean[] s = state(player);
-        PacketDistributor.sendToPlayer(player, new SecretStatePayload(s[0], s[1]));
+        PacketDistributor.sendToPlayer(player, new SecretStatePayload(s[0], s[1], knowsMind(player)));
     }
 
     @SubscribeEvent
@@ -66,6 +83,17 @@ public final class SecretKnowledge {
             return;
         }
         ResourceLocation id = event.getAdvancement().id();
+        if (id.equals(MIND)) {
+            sync(sp);
+            if (event.getProgressType() == AdvancementEvent.AdvancementProgressEvent.ProgressType.GRANT) {
+                Component link = Component.translatable("message.golem_logix.secret.open_book").withStyle(style -> style
+                        .withColor(ChatFormatting.AQUA).withUnderlined(true)
+                        .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/golemlogix_book dispel"))
+                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.translatable("message.golem_logix.secret.open_book_hint"))));
+                sp.sendSystemMessage(Component.translatable("message.golem_logix.mind.unlocked").withStyle(ChatFormatting.AQUA).append(" ").append(link));
+            }
+            return;
+        }
         if (!id.equals(REVEALED)) {
             return;
         }

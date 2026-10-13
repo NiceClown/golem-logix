@@ -798,7 +798,8 @@ public final class GolemNetwork {
             }
             for (int i = 0; i < h.getTanks(); i++) {
                 FluidStack f = h.getFluidInTank(i);
-                if (!f.isEmpty()) {
+                // Liquid Cryo-Source in a tank behind a periscope is not network stock: the network makes its own from Source
+                if (!f.isEmpty() && !CryoSource.is(f)) {
                     mergeFluid(all, f);
                 }
             }
@@ -823,7 +824,8 @@ public final class GolemNetwork {
     }
 
     public int insertFluid(FluidStack input, boolean simulate, @Nullable BlockPos skipTarget) {
-        if (input.isEmpty()) {
+        // Liquid Cryo-Source is never stored: it only exists while automation pumps it out of the network
+        if (input.isEmpty() || CryoSource.is(input)) {
             return 0;
         }
         int left = input.getAmount();
@@ -887,6 +889,9 @@ public final class GolemNetwork {
         if (template.isEmpty() || amount <= 0) {
             return FluidStack.EMPTY;
         }
+        if (CryoSource.is(template)) {
+            return extractCryoSource(amount, simulate);
+        }
         int left = amount;
         boolean changed = false;
         for (Tier tier : tiers(false)) {
@@ -923,6 +928,53 @@ public final class GolemNetwork {
         }
         int taken = amount - left;
         return taken > 0 ? template.copyWithAmount(taken) : FluidStack.EMPTY;
+    }
+
+    /** How much Liquid Cryo-Source (mB) the network can make right now from its Source. */
+    public long cryoSourceAvailable() {
+        if (!isOnline()) {
+            return 0;
+        }
+        long per = GolemConfig.CRYO_SOURCE_COST.get();
+        if (per <= 0 || !SourceHelper.sourceRequired() || hasInfiniteSource()) {
+            return Integer.MAX_VALUE;
+        }
+        long total = 0;
+        for (SourceHelper.Supplier s : sources) {
+            total += s.available();
+        }
+        return total / per;
+    }
+
+    /** Makes Liquid Cryo-Source from the network's Source (all of the amount that the Source covers). */
+    private FluidStack extractCryoSource(int amount, boolean simulate) {
+        int n = (int) Math.min(amount, cryoSourceAvailable());
+        if (n <= 0) {
+            return FluidStack.EMPTY;
+        }
+        if (!simulate && !consumeSource((int) Math.min(CryoSource.cost(n), Integer.MAX_VALUE))) {
+            return FluidStack.EMPTY;
+        }
+        return CryoSource.stack(n);
+    }
+
+    /** How much of a fluid the network has (mB); Liquid Cryo-Source counts what the Source can make. */
+    public long fluidCountOf(FluidStack fluid) {
+        if (CryoSource.is(fluid)) {
+            return cryoSourceAvailable();
+        }
+        long n = 0;
+        for (FluidStack f : listFluids()) {
+            if (FluidStack.isSameFluidSameComponents(f, fluid)) {
+                n += f.getAmount();
+            }
+        }
+        return n;
+    }
+
+    /** Stock of an ingredient: items by count, fluid keys in mB. */
+    public long countOf(ItemKey key) {
+        return Ingredients.isFluid(key) ? fluidCountOf(Ingredients.fluid(key, 1)) : itemCountOf(key);
     }
     // --------------------------------------------------------------- crafting
 
@@ -1023,40 +1075,61 @@ public final class GolemNetwork {
 
         // reserve the source materials: all or nothing
         for (Map.Entry<ItemKey, Long> e : plan.fromStorage().entrySet()) {
-            if (itemCountOf(e.getKey()) < e.getValue()) {
+            if (countOf(e.getKey()) < e.getValue()) {
                 return new StartResult(StartType.RESERVE_FAILED, plan);
             }
         }
+        // Liquid Cryo-Source goes last: it is made from Source and cannot be put back if something else fails
+        List<Map.Entry<ItemKey, Long>> order = new ArrayList<>(plan.fromStorage().entrySet());
+        order.sort(java.util.Comparator.comparing((Map.Entry<ItemKey, Long> e) -> Ingredients.isFluid(e.getKey())
+                && CryoSource.is(Ingredients.fluid(e.getKey(), 1))));
         Map<ItemKey, Long> reserved = new LinkedHashMap<>();
-        for (Map.Entry<ItemKey, Long> e : plan.fromStorage().entrySet()) {
-            long left = e.getValue();
-            while (left > 0) {
-                int chunk = (int) Math.min(left, 1_000_000_000L);
-                ItemStack got = extractItem(e.getKey().stack(), chunk, false);
-                if (got.isEmpty()) {
-                    break;
-                }
-                reserved.merge(e.getKey(), (long) got.getCount(), Long::sum);
-                left -= got.getCount();
+        for (Map.Entry<ItemKey, Long> e : order) {
+            long got = reserve(e.getKey(), e.getValue());
+            if (got > 0) {
+                reserved.merge(e.getKey(), got, Long::sum);
             }
-            if (left > 0) {
+            if (got < e.getValue()) {
                 // a race: return what was taken
                 for (Map.Entry<ItemKey, Long> r : reserved.entrySet()) {
-                    long n = r.getValue();
-                    while (n > 0) {
-                        int chunk = (int) Math.min(n, 1_000_000_000L);
-                        ItemStack rest = insertItem(r.getKey().toStack(chunk), false);
-                        n -= chunk - rest.getCount();
-                        if (!rest.isEmpty()) {
-                            break;
-                        }
-                    }
+                    giveBack(r.getKey(), r.getValue());
                 }
                 return new StartResult(StartType.RESERVE_FAILED, plan);
             }
         }
         cpu.startJob(new CraftingJob(plan, reserved).requestedBy(requester, bus));
         return new StartResult(StartType.STARTED, plan);
+    }
+
+    /** Takes up to amount of an ingredient out of storage (items by count, fluids in mB); returns how much was taken. */
+    private long reserve(ItemKey key, long amount) {
+        long left = amount;
+        boolean fluid = Ingredients.isFluid(key);
+        while (left > 0) {
+            int chunk = (int) Math.min(left, 1_000_000_000L);
+            int got = fluid ? extractFluid(Ingredients.fluid(key, 1), chunk, false).getAmount()
+                    : extractItem(key.stack(), chunk, false).getCount();
+            if (got <= 0) {
+                break;
+            }
+            left -= got;
+        }
+        return amount - left;
+    }
+
+    /** Puts an ingredient back into storage; returns how much did not fit (Liquid Cryo-Source never fits). */
+    public long giveBack(ItemKey key, long amount) {
+        long n = amount;
+        while (n > 0) {
+            int chunk = (int) Math.min(n, 1_000_000_000L);
+            int stored = Ingredients.isFluid(key) ? insertFluid(Ingredients.fluid(key, chunk), false)
+                    : chunk - insertItem(key.toStack(chunk), false).getCount();
+            n -= stored;
+            if (stored < chunk) {
+                break;
+            }
+        }
+        return n;
     }
 
     /** The provider waits for the result of the previous portion (wait mode): some job has not received its output yet. */

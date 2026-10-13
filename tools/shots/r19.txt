@@ -1,0 +1,117 @@
+# Round 19: Liquid Cryo-Source with Create (-Mods -GradleArgs "-Pcreate"): export bus into a tank, provider into a mixer basin,
+# JEI recipes, a fluid pattern from JEI, the order planner, the Dispel unlock by a hand-forged plate, the new book entries
+reload
+cmd time set day
+cmd gamemode creative @p
+cmd kill @e[type=item]
+cmd fill -14 -61 -14 16 -61 14 minecraft:deepslate_tiles
+cmd fill -14 -60 -14 16 -46 14 minecraft:air
+hook rig 0 -60 0
+cmd setblock 8 -60 -3 create:basin
+cmd setblock 8 -58 -3 create:mechanical_mixer
+cmd setblock 8 -57 -3 create:creative_motor[facing=down]
+cmd setblock 10 -60 -2 golem_logix:injector_export_bus[facing=north]
+cmd setblock 10 -60 -3 create:fluid_tank
+hook busfilter 10 -60 -2 0 fluid:golem_logix:cryo_source 250
+hook provfill 8 -60 -2 mix
+hook netput 4 -60 -1 minecraft:copper_block 4
+wait 20
+hook craft 4 -60 -2 golem_logix:torn_copper_mind 2
+wait 30
+hook fluidcheck 10 -60 -3 golem_logix:cryo_source 1000
+hook fluidcheck 8 -60 -3 golem_logix:cryo_source 1
+gui off
+look 8 -59.5 -2.5 6.5 45 28
+wait 10
+shot r19_scene
+look 7 -59.5 -2 9 30 30
+wait 5
+shot r19_scene_wide
+gui on
+# JEI: the mixer recipe with the fluid, the apparatus recipe
+jei golem_logix:torn_copper_mind
+wait 10
+shot r19_jei_mixing
+closescreen
+jei golem_logix:raw_copper_mind uses
+wait 10
+shot r19_jei_apparatus
+closescreen
+# a fluid pattern from JEI into the encoder
+cmd setblock 3 -60 -4 golem_logix:pattern_encoder
+cam 3.5 -59 -1.5 180 30
+wait 5
+use 3 -60 -4
+wait 5
+jeitransfer golem_logix:create/torn_copper_mind ok
+wait 5
+shot r19_encoder_fluid
+closescreen
+# the order planner shows the cryo-source in mB
+cam 4.5 -59 0.2 180 30
+use 4 -60 -2
+wait 10
+planner golem_logix:torn_copper_mind 4
+wait 15
+shot r19_planner
+closescreen
+# the first hand-forged plate opens the Dispel method (toast, chat link, book entry)
+cmd gamemode survival @p
+cmd setblock 2 -60 6 golem_logix:mana_saturator[facing=south]
+cmd setblock 4 -60 6 golem_logix:creative_source_jar
+cmd tp @p 2.5 -60 8.6 180 40
+cmd item replace entity @p hotbar.0 with minecraft:iron_block 1
+wait 5
+useheld 2 -60 6
+wait 3
+hook give golem_logix:forge_hammer 1 0
+useheld 4 -60 6
+wait 5
+attack 2 -60 6
+wait 8
+attack 2 -60 6
+wait 8
+attack 2 -60 6
+wait 8
+attack 2 -60 6
+wait 6
+shot r19_unlock_toast
+wait 40
+cmd gamemode creative @p
+book dispel 0
+wait 8
+shot r19_book_dispel_0
+book dispel 1
+wait 5
+shot r19_book_dispel_1
+book dispel 3
+wait 5
+shot r19_book_dispel_3
+book create_minds 0
+wait 5
+shot r19_book_create_0
+book create_minds 1
+wait 5
+shot r19_book_create_1
+book ac_cryo 0
+wait 5
+shot r19_book_cryo_0
+book ac_cryo 1
+wait 5
+shot r19_book_cryo_1
+book ac_cryo 2
+wait 5
+shot r19_book_cryo_2
+bookaudit
+lang ru_ru
+wait 20
+book ac_cryo 0
+wait 5
+shot r19_book_cryo_ru_0
+book dispel 3
+wait 5
+shot r19_book_dispel_ru_3
+bookaudit
+lang en_us
+wait 20
+closescreen

@@ -98,7 +98,10 @@ public class CalculatorMenu extends GolemMenu {
                 if (contents.size() >= 8) {
                     break;
                 }
-                contents.add(e.getKey().toStack((int) Math.min(e.getValue(), Integer.MAX_VALUE)));
+                int n = (int) Math.min(e.getValue(), Integer.MAX_VALUE);
+                // a fluid shows as its ghost with the mB of the job
+                contents.add(com.golemlogix.system.Ingredients.isFluid(e.getKey())
+                        ? com.golemlogix.items.FluidGhostItem.withAmount(e.getKey().stack(), n) : e.getKey().toStack(n));
             }
             p = new CalculatorStatusPayload(containerId, job.status().ordinal(), job.doneExecutions(), job.totalExecutions(),
                     be.getCoprocessors(), be.getWorkers(), job.awaitingTotal(), online,

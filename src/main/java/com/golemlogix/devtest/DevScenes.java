@@ -302,8 +302,18 @@ final class DevScenes {
                 }
             }
             case "provfill" -> {
-                // provfill x y z smelt|craft: punch cards into a provider (ore smelting or crafting table ones)
-                if (level.getBlockEntity(pos(a, 0)) instanceof com.golemlogix.blockentity.PatternProviderBlockEntity prov) {
+                // provfill x y z smelt|craft|mix: punch cards into a provider (ore smelting, crafting table ones, or Create mixing:
+                // a block + 250 mB of Liquid Cryo-Source -> a torn mind)
+                if (level.getBlockEntity(pos(a, 0)) instanceof com.golemlogix.blockentity.PatternProviderBlockEntity prov && a[3].equals("mix")) {
+                    Item[][] mix = {{Items.COPPER_BLOCK, com.golemlogix.init.ModItems.TORN_COPPER_MIND.get()},
+                            {Items.IRON_BLOCK, com.golemlogix.init.ModItems.TORN_IRON_MIND.get()},
+                            {Items.PACKED_ICE, com.golemlogix.init.ModItems.TORN_SNOW_MIND.get()}};
+                    for (int i = 0; i < mix.length; i++) {
+                        prov.getContainer().setItem(i, card(new com.golemlogix.data.PatternData(false,
+                                java.util.List.of(new ItemStack(mix[i][0]), com.golemlogix.items.FluidGhostItem.of(com.golemlogix.system.CryoSource.stack(250))),
+                                java.util.List.of(new ItemStack(mix[i][1])))));
+                    }
+                } else if (level.getBlockEntity(pos(a, 0)) instanceof com.golemlogix.blockentity.PatternProviderBlockEntity prov) {
                     Item[][] smelt = {{Items.IRON_ORE, Items.IRON_INGOT}, {Items.GOLD_ORE, Items.GOLD_INGOT}, {Items.COPPER_ORE, Items.COPPER_INGOT},
                             {Items.SAND, Items.GLASS}, {Items.COBBLESTONE, Items.STONE}};
                     Item[] craft = {Items.CHEST, Items.TORCH, Items.LADDER, Items.BOWL};
@@ -511,6 +521,30 @@ final class DevScenes {
                 int n = h == null ? -1 : h.fill(new net.neoforged.neoforge.fluids.FluidStack(fluid, Integer.parseInt(a[4])),
                         net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
                 log.accept("fillfluid " + a[3] + " -> " + n);
+            }
+            case "insertitem" -> {
+                // insertitem x y z <item> <count>: put items into a block (another mod's machine) through its item handler
+                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[3]));
+                var h = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, pos(a, 0),
+                        net.minecraft.core.Direction.UP);
+                ItemStack rest = h == null ? new ItemStack(item, Integer.parseInt(a[4]))
+                        : net.neoforged.neoforge.items.ItemHandlerHelper.insertItem(h, new ItemStack(item, Integer.parseInt(a[4])), false);
+                log.accept("insertitem " + a[3] + " rest " + rest.getCount());
+            }
+            case "busfilter" -> {
+                // busfilter x y z <slot> <item | fluid:<fluid id>> [mB]: a bus filter slot (a fluid becomes a fluid ghost)
+                if (!(level.getBlockEntity(pos(a, 0)) instanceof com.golemlogix.blockentity.BusBlockEntity bus)) {
+                    throw new IllegalStateException("no bus at " + pos(a, 0));
+                }
+                ItemStack ghost;
+                if (a[4].startsWith("fluid:")) {
+                    var fluid = net.minecraft.core.registries.BuiltInRegistries.FLUID.get(net.minecraft.resources.ResourceLocation.parse(a[4].substring(6)));
+                    ghost = com.golemlogix.items.FluidGhostItem.of(new net.neoforged.neoforge.fluids.FluidStack(fluid, a.length > 5 ? Integer.parseInt(a[5]) : 250));
+                } else {
+                    ghost = new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[4])));
+                }
+                bus.getFilters().setItem(Integer.parseInt(a[3]), ghost);
+                log.accept("busfilter slot " + a[3] + " = " + a[4]);
             }
             case "fluidcheck" -> {
                 // fluidcheck x y z <fluid> <minimum mB>: how much of this fluid is in the block (in all its tanks)

@@ -202,6 +202,12 @@ public class AnvilCrushingHandler {
             notifyNearbyPlayers(serverLevel, victim.blockPosition(),
                     Component.translatable("message.golem_logix.crush_success", rewardItem.getName(new ItemStack(rewardItem)).getString())
                             .withStyle(ChatFormatting.AQUA));
+            // the first plate made on an anvil opens the Dispel method to everyone who saw it
+            for (Player p : serverLevel.getEntitiesOfClass(Player.class, new AABB(victim.blockPosition()).inflate(12.0))) {
+                if (p instanceof net.minecraft.server.level.ServerPlayer sp) {
+                    com.golemlogix.secret.SecretKnowledge.plateMade(sp);
+                }
+            }
 
             victim.discard();
             event.setNewDamage(0.0f);

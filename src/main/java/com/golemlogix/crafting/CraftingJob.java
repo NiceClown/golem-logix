@@ -341,16 +341,9 @@ public class CraftingJob {
         boolean left = false;
         List<ItemKey> keys = new ArrayList<>(inventory.keySet());
         for (ItemKey key : keys) {
-            long n = inventory.get(key);
-            while (n > 0) {
-                int chunk = (int) Math.min(n, Math.max(1, key.stack().getMaxStackSize()));
-                ItemStack rest = net.insertItem(key.toStack(chunk), false);
-                n -= chunk - rest.getCount();
-                if (!rest.isEmpty()) {
-                    break;
-                }
-            }
-            if (n <= 0) {
+            long n = net.giveBack(key, inventory.get(key));
+            // leftover Liquid Cryo-Source cannot be stored: it goes back into the aether
+            if (n <= 0 || isCryo(key)) {
                 inventory.remove(key);
             } else {
                 inventory.put(key, n);
@@ -368,14 +361,14 @@ public class CraftingJob {
     public List<ItemStack> refundAll(@Nullable GolemNetwork net) {
         List<ItemStack> overflow = new ArrayList<>();
         for (Map.Entry<ItemKey, Long> e : inventory.entrySet()) {
-            long n = e.getValue();
+            long n = net != null && net.isOnline() ? net.giveBack(e.getKey(), e.getValue()) : e.getValue();
+            // fluids that do not fit cannot be dropped as items: they are lost
+            if (com.golemlogix.system.Ingredients.isFluid(e.getKey())) {
+                continue;
+            }
             while (n > 0) {
                 int chunk = (int) Math.min(n, Math.max(1, e.getKey().stack().getMaxStackSize()));
-                ItemStack stack = e.getKey().toStack(chunk);
-                ItemStack rest = net != null && net.isOnline() ? net.insertItem(stack, false) : stack;
-                if (!rest.isEmpty()) {
-                    overflow.add(rest);
-                }
+                overflow.add(e.getKey().toStack(chunk));
                 n -= chunk;
             }
         }
@@ -409,8 +402,13 @@ public class CraftingJob {
 
     private static void add(Map<ItemKey, Long> map, ItemStack stack) {
         if (!stack.isEmpty()) {
-            map.merge(ItemKey.of(stack), (long) stack.getCount(), Long::sum);
+            map.merge(com.golemlogix.system.Ingredients.key(stack), (long) com.golemlogix.system.Ingredients.amount(stack), Long::sum);
         }
+    }
+
+    private static boolean isCryo(ItemKey key) {
+        return com.golemlogix.system.Ingredients.isFluid(key)
+                && com.golemlogix.system.CryoSource.is(com.golemlogix.system.Ingredients.fluid(key, 1));
     }
 
     /** Crafting table recipe result + the remaining items (buckets and the like), or null if there is no recipe. */

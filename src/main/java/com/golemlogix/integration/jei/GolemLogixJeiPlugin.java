@@ -72,6 +72,9 @@ public class GolemLogixJeiPlugin implements IModPlugin {
     public void onRuntimeAvailable(IJeiRuntime jeiRuntime) {
         runtime = jeiRuntime;
         applySecrets();
+        // the fluid ghost is a marker for ghost slots, not an item a player can have
+        jeiRuntime.getIngredientManager().removeIngredientsAtRuntime(mezz.jei.api.constants.VanillaTypes.ITEM_STACK,
+                List.of(new net.minecraft.world.item.ItemStack(com.golemlogix.init.ModItems.FLUID_GHOST.get())));
         // the mod's terminal search <-> the JEI search line
         com.golemlogix.client.ClientHooks.jeiSetSearch = text -> {
             if (runtime != null && !text.equals(runtime.getIngredientFilter().getFilterText())) {
@@ -143,10 +146,30 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         if (holder == null) {
             return "no recipe " + recipeId;
         }
-        mezz.jei.api.recipe.RecipeType type = holder.value() instanceof net.minecraft.world.item.crafting.CraftingRecipe
-                ? mezz.jei.api.constants.RecipeTypes.CRAFTING : mezz.jei.api.constants.RecipeTypes.SMELTING;
-        var category = runtime.getRecipeManager().getRecipeCategory(type);
-        var layout = runtime.getRecipeManager().createRecipeLayoutDrawable(category, holder,
+        mezz.jei.api.recipe.category.IRecipeCategory category = null;
+        Object recipe = holder;
+        if (holder.value() instanceof net.minecraft.world.item.crafting.CraftingRecipe
+                || holder.value() instanceof net.minecraft.world.item.crafting.SmeltingRecipe) {
+            mezz.jei.api.recipe.RecipeType type = holder.value() instanceof net.minecraft.world.item.crafting.CraftingRecipe
+                    ? mezz.jei.api.constants.RecipeTypes.CRAFTING : mezz.jei.api.constants.RecipeTypes.SMELTING;
+            category = runtime.getRecipeManager().getRecipeCategory(type);
+        } else {
+            // another mod's machine (a Create mixer...): the category that shows this recipe
+            for (var c : runtime.getRecipeManager().createRecipeCategoryLookup().get().toList()) {
+                var found = runtime.getRecipeManager().createRecipeLookup(c.getRecipeType()).get()
+                        .filter(r -> r == holder || (r instanceof net.minecraft.world.item.crafting.RecipeHolder<?> rh && rh.id().equals(recipeId)))
+                        .findFirst();
+                if (found.isPresent()) {
+                    category = c;
+                    recipe = found.get();
+                    break;
+                }
+            }
+            if (category == null) {
+                return "no category";
+            }
+        }
+        var layout = runtime.getRecipeManager().createRecipeLayoutDrawable(category, recipe,
                 runtime.getJeiHelpers().getFocusFactory().getEmptyFocusGroup());
         if (layout.isEmpty()) {
             return "no layout";
@@ -155,7 +178,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         if (handler.isEmpty()) {
             return "no handler";
         }
-        var error = ((mezz.jei.api.recipe.transfer.IRecipeTransferHandler) handler.get()).transferRecipe(mc.player.containerMenu, holder,
+        var error = ((mezz.jei.api.recipe.transfer.IRecipeTransferHandler) handler.get()).transferRecipe(mc.player.containerMenu, recipe,
                 ((mezz.jei.api.gui.IRecipeLayoutDrawable<?>) layout.get()).getRecipeSlotsView(), mc.player, max, true);
         return error == null ? "ok" : error.getType().name();
     }

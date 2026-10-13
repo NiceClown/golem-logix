@@ -14,8 +14,14 @@ import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 public final class ClientSecrets {
     private static boolean wither;
     private static boolean dimension;
+    /** The first anvil plate is made: a Dispel can unbind a battered golem's mind. */
+    private static boolean mind;
 
     private ClientSecrets() {
+    }
+
+    public static boolean mind() {
+        return mind;
     }
 
     public static boolean wither() {
@@ -36,10 +42,11 @@ public final class ClientSecrets {
         return wither && dimension;
     }
 
-    public static void set(boolean w, boolean d) {
-        boolean changed = w != wither || d != dimension;
+    public static void set(boolean w, boolean d, boolean m) {
+        boolean changed = w != wither || d != dimension || m != mind;
         wither = w;
         dimension = d;
+        mind = m;
         if (changed) {
             com.golemlogix.client.book.BookModel.invalidate();
             if (ModList.get().isLoaded("jei")) {
@@ -52,5 +59,6 @@ public final class ClientSecrets {
     public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
         wither = false;
         dimension = false;
+        mind = false;
     }
 }

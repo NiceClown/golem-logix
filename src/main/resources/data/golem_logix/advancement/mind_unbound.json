@@ -1,0 +1,28 @@
+{
+  "parent": "golem_logix:root",
+  "display": {
+    "icon": {
+      "id": "golem_logix:raw_copper_mind"
+    },
+    "title": {
+      "translate": "advancements.golem_logix.mind_unbound.title"
+    },
+    "description": {
+      "translate": "advancements.golem_logix.mind_unbound.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "criteria": {
+    "first_plate": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "first_plate"
+    ]
+  ]
+}

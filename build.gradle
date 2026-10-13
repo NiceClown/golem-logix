@@ -114,6 +114,10 @@ dependencies {
     if (project.hasProperty('mekanism')) {
         runtimeOnly 'maven.modrinth:mekanism:5KzzycBT'             // 10.7.19.85 (1.21.1 neoforge)
     }
+    // Create recipes (mixing with liquid cryo-source, pressing torn minds): gradle -Pcreate ...
+    if (project.hasProperty('create')) {
+        runtimeOnly 'maven.modrinth:create:UjX6dr61'               // 6.0.10 (1.21.1 neoforge, bundles Flywheel and Ponder)
+    }
 }
 
 test {

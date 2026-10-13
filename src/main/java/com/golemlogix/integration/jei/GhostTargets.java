@@ -23,7 +23,7 @@ import java.util.List;
 public final class GhostTargets<T extends GolemScreen<?>> implements IGhostIngredientHandler<T> {
     @Override
     public <I> List<Target<I>> getTargetsTyped(T screen, ITypedIngredient<I> ingredient, boolean doStart) {
-        ItemStack stack = toStack(ingredient.getIngredient());
+        ItemStack stack = toStack(ingredient.getIngredient(), screen.getMenu() instanceof com.golemlogix.menu.PatternEncoderMenu);
         List<Target<I>> out = new ArrayList<>();
         if (stack.isEmpty() || !(screen.getMenu() instanceof GolemMenu menu)) {
             return out;
@@ -50,12 +50,18 @@ public final class GhostTargets<T extends GolemScreen<?>> implements IGhostIngre
         return out;
     }
 
-    private static ItemStack toStack(Object ingredient) {
+    /**
+     * A fluid becomes a fluid ghost in the encoder (a pattern ingredient in mB); for filters and the Interface it becomes a full
+     * bucket if the fluid has one, and a fluid ghost otherwise (Liquid Cryo-Source has no bucket).
+     */
+    private static ItemStack toStack(Object ingredient, boolean encoder) {
         if (ingredient instanceof ItemStack s) {
             return s;
         }
         if (ingredient instanceof FluidStack f && !f.isEmpty()) {
-            return FluidUtil.getFilledBucket(f.copyWithAmount(1000));
+            int mb = com.golemlogix.system.CryoSource.is(f) ? GolemMenu.FLUID_GHOST_STEP : 1000;
+            ItemStack bucket = encoder ? ItemStack.EMPTY : FluidUtil.getFilledBucket(f.copyWithAmount(1000));
+            return bucket.isEmpty() ? com.golemlogix.items.FluidGhostItem.of(f.copyWithAmount(mb)) : bucket;
         }
         return ItemStack.EMPTY;
     }

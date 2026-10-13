@@ -69,7 +69,8 @@ public class InterfaceSlotScreen extends Screen {
             addRenderableWidget(new GolemButton(left + 8 + k * (pw + 2), top + 88, pw, 14, Component.literal(presetLabel(p)), b -> set(p)));
         }
 
-        boolean container = !InterfaceBlockEntity.containedFluid(menu.configItem(slot)).isEmpty();
+        boolean container = !com.golemlogix.items.FluidGhostItem.is(menu.configItem(slot))
+                && !InterfaceBlockEntity.containedFluid(menu.configItem(slot)).isEmpty();
         GolemButton mode = addRenderableWidget(new GolemButton(left + 8, top + 126, 70, 16,
                 () -> Component.translatable(menu.itemMode(slot) ? "gui.golem_logix.interface.mode_item" : "gui.golem_logix.interface.mode_fluid"),
                 () -> Component.translatable("gui.golem_logix.interface.toggle_mode"), () -> false, b -> toggleMode()));
@@ -199,7 +200,9 @@ public class InterfaceSlotScreen extends Screen {
         g.drawString(font, title, left + 8, top + 7, GolemGui.PARCHMENT, false);
 
         ItemStack cfg = menu.configItem(slot);
-        g.renderItem(cfg.copyWithCount(1), left + 9, top + 21);
+        if (!FluidIcons.drawGhost(g, font, cfg, left + 9, top + 21, false)) {
+            g.renderItem(cfg.copyWithCount(1), left + 9, top + 21);
+        }
         g.drawString(font, cfg.getHoverName(), left + 30, top + 20, GolemGui.CYAN, false);
         var contained = InterfaceBlockEntity.containedFluid(cfg);
         Component mode = fluid

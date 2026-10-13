@@ -207,7 +207,54 @@
           ]
         },
         {
-"id": "plates", "title": "Пластины и их применение", "icon": "golem_logix:flattened_copper_matrix", "x": 2, "y": 0, "parents": ["saturator"],
+"id": "dispel", "title": "Отпущение: разум металла", "icon": "golem_logix:raw_copper_mind", "x": 1, "y": -1, "parents": ["anvil"],
+          "secret": "mind", "requires": "ars_nouveau",
+          "pages": [
+            {"type": "text", "title": "Высвободить разум",
+             "text": ["Первая пластина с наковальни показала, что держит голема вместе. Теперь &lОтпущение&r (Dispel) из Ars Nouveau на &lпобитом&r големе высвобождает его разум: голем исчезает, выпадает &lсырой комок разума&r его вида.", "Побитый — как для наковальни: железный или медный голем с 4 HP и меньше, снеговик не с полными 4 HP. Разум голема покрепче держится."]},
+            {"type": "ritual", "title": "Железный голем", "station": "ars_nouveau:glyph_dispel", "inputs": ["minecraft:iron_block"], "outputs": ["golem_logix:raw_iron_mind"],
+             "condition": "Голем с 1-4 HP (из 100).",
+             "text": ["Сначала собьёте здоровье зельем вреда или долгим падением."]},
+            {"type": "ritual", "title": "Медный голем", "station": "ars_nouveau:glyph_dispel", "inputs": ["minecraft:copper_block"], "outputs": ["golem_logix:raw_copper_mind"],
+             "condition": "Голем с 1-4 HP (из 12).",
+             "text": ["Медные големы — из Copper Age Backport."]},
+            {"type": "ritual", "title": "Снежный голем", "station": "ars_nouveau:glyph_dispel", "inputs": ["minecraft:snow_block"], "outputs": ["golem_logix:raw_snow_mind"],
+             "condition": "Голем с 1-3 HP — не с полным здоровьем!",
+             "text": ["Хватит одного удара рукой."]},
+            {"type": "ritual", "title": "Прессовка железного разума", "station": "ars_nouveau:enchanting_apparatus", "inputs": ["golem_logix:raw_iron_mind", "minecraft:iron_ingot*6"], "outputs": ["golem_logix:flattened_iron_core*2"],
+             "condition": "Шесть слитков на пьедесталах, 1000 Source.",
+             "text": ["Сырой комок — в Чародейский аппарат, шесть слитков — на Аркановые пьедесталы вокруг."]},
+            {"type": "ritual", "title": "Прессовка медного разума", "station": "ars_nouveau:enchanting_apparatus", "inputs": ["golem_logix:raw_copper_mind", "minecraft:copper_ingot*6"], "outputs": ["golem_logix:flattened_copper_matrix*2"],
+             "condition": "Шесть слитков на пьедесталах, 1000 Source.",
+             "text": ["Шесть медных слитков на пьедесталах вокруг аппарата."]},
+            {"type": "ritual", "title": "Прессовка снежного разума", "station": "ars_nouveau:enchanting_apparatus", "inputs": ["golem_logix:raw_snow_mind", "minecraft:snow_block*6"], "outputs": ["golem_logix:flattened_cryo_substrate*2"],
+             "condition": "Шесть блоков снега на пьедесталах, 1000 Source.",
+             "text": ["Здесь вместо слитков — блоки снега."]},
+            {"type": "text", "title": "Наковальня, Отпущение, Насыщатель",
+             "text": ["Выгоднее наковальни: один побитый голем даёт уже &lдве&r пластины вместо одной.", "Но каждые две пластины всё равно стоят голема, заклинания вручную и шести слитков, а собранный Насыщатель сам куёт две пластины из одного блока — днём и ночью."]}
+          ]
+        },
+        {
+          "id": "create_minds", "title": "Create: разорванный разум", "icon": "golem_logix:torn_copper_mind", "x": 2, "y": -1, "parents": ["saturator"],
+          "requires": "create",
+          "pages": [
+            {"type": "text", "title": "Смешиватель и пресс",
+             "text": ["С Create &lМеханический смешиватель&r вырывает разум из блока: блок и &l250 mB жидкого крио-источника&r в Чаше дают &lразорванный разум&r.", "Затем &lМеханический пресс&r делает из разорванного разума пластину. Оба шага хорошо идут автокрафтом."]},
+            {"type": "ritual", "title": "Разорванный разум железа", "station": "create:mechanical_mixer", "inputs": ["minecraft:iron_block", "fluid:golem_logix:cryo_source*250"], "outputs": ["golem_logix:torn_iron_mind"],
+             "condition": "Затем пресс: одно Сплющенное Железное Ядро.",
+             "text": ["Смешивание идёт в Чаше под Смешивателем."]},
+            {"type": "ritual", "title": "Разорванный разум меди", "station": "create:mechanical_mixer", "inputs": ["minecraft:copper_block", "fluid:golem_logix:cryo_source*250"], "outputs": ["golem_logix:torn_copper_mind"],
+             "condition": "Затем пресс: одна Сплющенная Медная Матрица.",
+             "text": ["Смешивание идёт в Чаше под Смешивателем."]},
+            {"type": "ritual", "title": "Разорванный разум снеговика", "station": "create:mechanical_mixer", "inputs": ["minecraft:packed_ice", "fluid:golem_logix:cryo_source*250"], "outputs": ["golem_logix:torn_snow_mind"],
+             "condition": "Затем пресс: одна Сплющенная Крио-Подложка.",
+             "text": ["Смешивание идёт в Чаше под Смешивателем."]},
+            {"type": "text", "title": "Цепочкой автокрафта",
+             "text": ["Два шаблона обработки: блок + 250 mB крио-источника -> разорванный разум (Поставщик у Чаши) и разорванный разум -> пластина (Поставщик у Депо под Прессом).", "Шина импорта возвращает результаты. Крио-источник сеть качает сама — см. &lЖидкий крио-источник&r."]}
+          ]
+        },
+        {
+          "id": "plates", "title": "Пластины и их применение", "icon": "golem_logix:flattened_copper_matrix", "x": 2, "y": 0, "parents": ["saturator"],
           "pages": [
             {"type": "table", "title": "Куда идут пластины", "header": ["Пластина", "Что из неё"], "widths": [60, 88],
              "rows": [
@@ -1067,6 +1114,21 @@
                "2. Поставщик стоит вплотную к печи; к выходу печи приставлена шина импорта.",
                "3. Заказ «слитки ×64» — Поставщик загружает руду, шина возвращает слитки, задача считает их готовыми."
              ]}
+          ]
+        },
+        {
+          "id": "ac_cryo", "title": "Жидкий крио-источник", "icon": "golem_logix:fluid_ghost", "x": 3, "y": 1, "parents": ["ac_machines"],
+          "pages": [
+            {"type": "text", "title": "Своя жидкость сети",
+             "text": ["Жидкий крио-источник &lнигде не хранится&r: сеть делает его из своего Source в тот момент, когда автоматика его выкачивает, &l1 mB за 1 Source&r.", "Диски его не принимают, терминалы не показывают. &lНи ведром&r, ни другой ёмкостью его не набрать вручную: выкачивает только автоматика."]},
+            {"type": "image", "texture": "cryo_source", "title": "Как его выкачать", "size": 128,
+             "text": ["Шина экспорта -> бак, Поставщик -> Чаша."]},
+            {"type": "text", "title": "Кто его качает",
+             "text": ["&lШина экспорта&r: с крио-источником в фильтре заливает его в бак или машину перед собой.", "&lПоставщик Шаблонов&r: шаблон с крио-источником в ингредиентах заливает его в машину вместе с предметами.", "&lИнтерфейс Голема&r: ячейка запаса с крио-источником держит столько в своём баке для труб и машин."]},
+            {"type": "text", "title": "Как задать жидкость",
+             "text": ["Перетащите &lЖидкий крио-источник&r из JEI в ячейку фильтра, запаса или шаблона. Без JEI — кликните по ячейке &lКувшином с Истоком&r.", "Жидкость в ячейке считается в mB: клик добавляет &l250 mB&r, ПКМ убавляет 250, Shift-клик очищает ячейку."]},
+            {"type": "text", "title": "Жидкости в шаблонах",
+             "text": ["В режиме обработки \"+\" из JEI переносит жидкие ингредиенты с их количеством. Жидкость не бывает выходом и ингредиентом верстака.", "Поставщик заливает жидкости в &lту же сторону&r машины, что и предметы, и только если она примет всё. Планировщик заказа показывает жидкости в mB.", "Неизрасходованный крио-источник (отменённая задача, излишек Интерфейса) не возвращается: он уходит обратно в эфир."]}
           ]
         },
         {

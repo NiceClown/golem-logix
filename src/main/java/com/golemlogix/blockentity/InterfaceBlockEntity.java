@@ -105,16 +105,23 @@ public class InterfaceBlockEntity extends BlockEntity {
         setChanged();
     }
 
-    /** Fluid of the container in a config slot (empty if it is not a container with fluid). */
+    /** Fluid of the container (or fluid ghost) in a config slot (empty if it is neither). */
     public static net.neoforged.neoforge.fluids.FluidStack containedFluid(ItemStack cfg) {
-        return cfg.isEmpty() ? net.neoforged.neoforge.fluids.FluidStack.EMPTY
-                : net.neoforged.neoforge.fluids.FluidUtil.getFluidContained(cfg).filter(f -> !f.isEmpty())
+        if (cfg.isEmpty()) {
+            return net.neoforged.neoforge.fluids.FluidStack.EMPTY;
+        }
+        var ghost = com.golemlogix.items.FluidGhostItem.fluid(cfg);
+        if (!ghost.isEmpty()) {
+            return ghost;
+        }
+        return net.neoforged.neoforge.fluids.FluidUtil.getFluidContained(cfg).filter(f -> !f.isEmpty())
                 .orElse(net.neoforged.neoforge.fluids.FluidStack.EMPTY);
     }
 
-    /** The slot keeps fluid: the config holds a container with fluid and the mode is not "item". */
+    /** The slot keeps fluid: the config holds a fluid ghost, or a container with fluid and the mode is not "item". */
     public boolean isFluidSlot(int i) {
-        return !itemMode(i) && !containedFluid(config.getItem(i)).isEmpty();
+        ItemStack cfg = config.getItem(i);
+        return com.golemlogix.items.FluidGhostItem.is(cfg) || (!itemMode(i) && !containedFluid(cfg).isEmpty());
     }
 
     public net.neoforged.neoforge.fluids.FluidStack fluidStock(int i) {
@@ -198,6 +205,10 @@ public class InterfaceBlockEntity extends BlockEntity {
                         ? have.getAmount() : have.getAmount() - wantedFluid(i);
                 if (excess > 0) {
                     int back = network.insertFluid(have.copyWithAmount(excess), false);
+                    if (back < excess && com.golemlogix.system.CryoSource.is(have)) {
+                        // Liquid Cryo-Source cannot be stored: the excess goes back into the aether
+                        back = excess;
+                    }
                     have.shrink(back);
                     if (have.isEmpty()) {
                         fluidStock[i] = net.neoforged.neoforge.fluids.FluidStack.EMPTY;

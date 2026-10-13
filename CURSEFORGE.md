@@ -65,6 +65,8 @@ The whole network runs on **Source** from Ars Nouveau. Without Ars Nouveau it si
   - while working, a miniature of the current item spins above it, ice hills rise and sink, and "matrix rain" runs down its sides.
 - **Recipe Monitor:** a brass cabinet with a swirling portal where punch cards orbit for every running job. Its window shows and aborts every job in the network.
 - **"Order ready" notification** when your craft is done.
+- **Fluids in patterns:** JEI "+" carries fluid ingredients over, and the Pattern Provider pours them into the machine together with the items.
+- **Liquid Cryo-Source:** the network's own fluid, made from Source on the spot. Only automation pumps it out (Export Bus, Pattern Provider, Interface); no bucket can hold it.
 
 ### Golem rituals
 - **Anvil plates:** drop an anvil on a wounded iron, copper or snow golem to get flattened plates, the crafting base of the mod.
@@ -72,6 +74,9 @@ The whole network runs on **Source** from Ars Nouveau. Without Ars Nouveau it si
   - Up to five roof coolers speed it up.
   - Network connectors on every side.
   - It offers you a poppy when idle.
+- **Forge Hammer:** forge plates by hand on the unassembled Saturator, the anvil.
+- **With Ars Nouveau:** after your first anvil plate, a Dispel unbinds a battered golem's mind; an Enchanting Apparatus presses it into two plates.
+- **With Create:** a Mixer tears a block's mind in Liquid Cryo-Source, a Press turns it into a plate.
 - **Secret recipe:** it reveals itself only after two trials… find them yourself.
 
 ### Late game
@@ -91,7 +96,7 @@ It's available in **English and Russian**.
 
 - Minecraft **1.21.1**, NeoForge **21.1.x**
 - **Copper Age Backport** (required: copper golems for the rituals)
-- Optional: **Ars Nouveau** (Source), **JEI**, **Jade**
+- Optional: **Ars Nouveau** (Source, the Dispel method), **Create** (mixer and press recipes), **JEI**, **Jade**
 
 Works in singleplayer and on dedicated servers. Install on both client and server.
 

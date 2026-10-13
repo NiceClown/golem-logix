@@ -217,8 +217,9 @@ public abstract class GolemMenu extends AbstractContainerMenu {
         if (clickType != ClickType.PICKUP) {
             return true;
         }
+        carried = ghostFor(carried);
         if (!carried.isEmpty()) {
-            if (!cur.isEmpty() && ItemStack.isSameItemSameComponents(cur, carried)) {
+            if (!cur.isEmpty() && com.golemlogix.system.Ingredients.key(cur).equals(com.golemlogix.system.Ingredients.key(carried))) {
                 adjust(slot, cur, button == 1 ? -1 : 1);
             } else {
                 slot.set(carried.copyWithCount(1));
@@ -229,7 +230,30 @@ public abstract class GolemMenu extends AbstractContainerMenu {
         return true;
     }
 
+    /** A Liquid Cryo-Source ghost is set with this many mB, and clicks change it by the same step. */
+    public static final int FLUID_GHOST_STEP = 250;
+
+    /**
+     * What a click with this item puts into a ghost slot: a Source Jar (Ars Nouveau or the Creative one) stands for Liquid
+     * Cryo-Source, which has no bucket or other container of its own; anything else is itself.
+     */
+    public static ItemStack ghostFor(ItemStack carried) {
+        if (carried.isEmpty()) {
+            return carried;
+        }
+        net.minecraft.resources.ResourceLocation id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(carried.getItem());
+        boolean jar = id.equals(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("ars_nouveau", "source_jar"))
+                || carried.is(com.golemlogix.init.ModBlocks.CREATIVE_SOURCE_JAR.get().asItem());
+        return jar ? com.golemlogix.items.FluidGhostItem.of(com.golemlogix.system.CryoSource.stack(FLUID_GHOST_STEP)) : carried;
+    }
+
     private void adjust(Slot slot, ItemStack cur, int delta) {
+        if (com.golemlogix.items.FluidGhostItem.is(cur)) {
+            // a fluid ghost counts mB: a click changes it by a step
+            int mb = com.golemlogix.items.FluidGhostItem.amount(cur) + delta * FLUID_GHOST_STEP;
+            slot.set(mb <= 0 ? ItemStack.EMPTY : com.golemlogix.items.FluidGhostItem.withAmount(cur, Math.min(mb, 64_000)));
+            return;
+        }
         int n = cur.getCount() + delta;
         if (n <= 0) {
             slot.set(ItemStack.EMPTY);

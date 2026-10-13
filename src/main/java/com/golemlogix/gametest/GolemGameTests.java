@@ -1644,6 +1644,11 @@ public class GolemGameTests {
 
     private static void checkItem(GameTestHelper helper, String spec, String where) {
         String id = spec.contains("*") ? spec.substring(0, spec.indexOf('*')) : spec;
+        if (id.startsWith("fluid:")) {
+            ResourceLocation fl = ResourceLocation.tryParse(id.substring(6));
+            helper.assertTrue(fl != null && net.minecraft.core.registries.BuiltInRegistries.FLUID.containsKey(fl), "unknown fluid '" + id + "' in " + where);
+            return;
+        }
         ResourceLocation rl = ResourceLocation.tryParse(id);
         helper.assertTrue(rl != null && net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(rl), "unknown item '" + id + "' in " + where);
     }
@@ -1669,6 +1674,9 @@ public class GolemGameTests {
                     for (var ee : ce.getAsJsonObject().getAsJsonArray("entries")) {
                         var e = ee.getAsJsonObject();
                         String id = e.get("id").getAsString();
+                        // an entry about another mod's integration names that mod's items: they exist only when it is installed
+                        String requires = e.has("requires") ? e.get("requires").getAsString() : "";
+                        boolean items = requires.isEmpty() || net.neoforged.fml.ModList.get().isLoaded(requires);
                         checkItem(helper, e.get("icon").getAsString(), id);
                         if (e.has("parents")) {
                             for (var p : e.getAsJsonArray("parents")) {
@@ -1677,9 +1685,10 @@ public class GolemGameTests {
                         }
                         helper.assertTrue(e.getAsJsonArray("pages").size() > 0, "entry " + id + " has pages");
                         String secret = e.has("secret") ? e.get("secret").getAsString() : "";
-                        helper.assertTrue(secret.isEmpty() || secret.equals("partial") || secret.equals("full"), "entry " + id + ": bad secret " + secret);
+                        helper.assertTrue(java.util.List.of("", "partial", "full", "mind").contains(secret), "entry " + id + ": bad secret " + secret);
                         sig.append(ce.getAsJsonObject().get("id").getAsString()).append("/").append(id).append("@").append(e.get("x")).append(",").append(e.get("y"))
-                                .append(e.has("parents") ? e.get("parents").toString() : "[]").append(e.has("gold") ? "G" : "").append(secret).append(":");
+                                .append(e.has("parents") ? e.get("parents").toString() : "[]").append(e.has("gold") ? "G" : "").append(secret)
+                                .append(requires.isEmpty() ? "" : "^" + requires).append(":");
                         for (var pe : e.getAsJsonArray("pages")) {
                             var page = pe.getAsJsonObject();
                             String type = page.get("type").getAsString();
@@ -1714,14 +1723,14 @@ public class GolemGameTests {
                                 checkItem(helper, page.get("result").getAsString(), id + " result");
                             }
                             for (String key : new String[]{"inputs", "outputs"}) {
-                                if (page.has(key)) {
+                                if (page.has(key) && items) {
                                     for (var s : page.getAsJsonArray(key)) {
                                         checkItem(helper, s.getAsString(), id + " " + key);
                                     }
                                 }
                             }
                             for (String key : new String[]{"station", "item"}) {
-                                if (page.has(key)) {
+                                if (page.has(key) && items) {
                                     checkItem(helper, page.get(key).getAsString(), id + " " + key);
                                 }
                             }
@@ -2209,7 +2218,184 @@ public class GolemGameTests {
         public static void register(net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent event) {
             event.registerBlock(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.BLOCK,
                     (level, pos, state, be, side) -> tank(pos), Blocks.LODESTONE);
+            // a "machine" with items and fluids for fluid patterns: a barrel gets a tank too
+            event.registerBlock(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.BLOCK,
+                    (level, pos, state, be, side) -> tank(pos), Blocks.BARREL);
         }
+    }
+
+    // ------------------------------------------------- Liquid Cryo-Source, fluid patterns, golem minds
+
+    private static FluidStack cryo(int mb) {
+        return com.golemlogix.system.CryoSource.stack(mb);
+    }
+
+    /** The network makes Liquid Cryo-Source from Source when it is pumped out; it is never stored, listed or put into a bucket. */
+    @GameTest(template = T, timeoutTicks = 100)
+    public static void cryoSourceFromNetwork(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        ((CopperDriveBayBlockEntity) helper.getBlockEntity(bay)).getContainer().setItem(1, new ItemStack(ModItems.FLUID_DISK_4K.get()));
+        helper.runAfterDelay(20, () -> {
+            GolemNetwork n = net(helper, bay);
+            helper.assertTrue(n.isOnline() && n.cryoSourceAvailable() >= 1000, "a powered network can make cryo-source");
+            FluidStack got = n.extractFluid(cryo(1), 750, false);
+            helper.assertTrue(com.golemlogix.system.CryoSource.is(got) && got.getAmount() == 750, "750 mB pumped out, got " + got.getAmount());
+            helper.assertTrue(n.insertFluid(cryo(500), false) == 0, "cryo-source is never stored");
+            helper.assertTrue(n.listFluids().stream().noneMatch(com.golemlogix.system.CryoSource::is), "and never listed");
+            helper.assertTrue(net.neoforged.neoforge.fluids.FluidUtil.getFilledBucket(cryo(1000)).isEmpty(), "it has no bucket");
+            helper.succeed();
+        });
+    }
+
+    /** Fluid ghosts in a pattern count in mB under one fluid key. */
+    @GameTest(template = T, timeoutTicks = 20)
+    public static void fluidPatternTotals(GameTestHelper helper) {
+        PatternData p = new PatternData(false, List.of(new ItemStack(Items.COPPER_BLOCK),
+                com.golemlogix.items.FluidGhostItem.of(cryo(250)), com.golemlogix.items.FluidGhostItem.of(cryo(100))),
+                List.of(new ItemStack(ModItems.TORN_COPPER_MIND.get())));
+        var totals = p.ingredientTotals();
+        ItemKey fluid = com.golemlogix.system.Ingredients.fluidKey(cryo(1));
+        helper.assertTrue(totals.get(fluid) == 350, "350 mB of cryo-source, got " + totals.get(fluid));
+        helper.assertTrue(totals.get(ItemKey.of(new ItemStack(Items.COPPER_BLOCK))) == 1, "one copper block");
+        helper.assertTrue(p.hasFluidInputs(), "the pattern has a fluid input");
+        helper.succeed();
+    }
+
+    /** An export bus with a cryo-source filter pours it into the tank in front of it. */
+    @GameTest(template = T, timeoutTicks = 200)
+    public static void exportBusPumpsCryoSource(GameTestHelper helper) {
+        baseNetwork(helper);
+        helper.setBlock(BUS_OUT, ModBlocks.INJECTOR_EXPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        BlockPos tankRel = BUS_OUT.north();
+        helper.setBlock(tankRel, Blocks.LODESTONE);
+        var tank = TestCaps.tank(helper.absolutePos(tankRel));
+        tank.setFluid(FluidStack.EMPTY);
+        var bus = (com.golemlogix.blockentity.BusBlockEntity) helper.getBlockEntity(BUS_OUT);
+        bus.getFilters().setItem(0, com.golemlogix.items.FluidGhostItem.of(cryo(250)));
+        helper.runAfterDelay(80, () -> {
+            helper.assertTrue(com.golemlogix.system.CryoSource.is(tank.getFluid()) && tank.getFluidAmount() >= 1000,
+                    "the tank fills with cryo-source, has " + tank.getFluidAmount());
+            helper.succeed();
+        });
+    }
+
+    /** An interface keeps a stock of cryo-source in its tank, and pipes drain it. */
+    @GameTest(template = T, timeoutTicks = 200)
+    public static void interfaceStocksCryoSource(GameTestHelper helper) {
+        baseNetwork(helper);
+        helper.setBlock(BUS_OUT, ModBlocks.GOLEM_INTERFACE.get().defaultBlockState());
+        var be = (com.golemlogix.blockentity.InterfaceBlockEntity) helper.getBlockEntity(BUS_OUT);
+        be.setSlot(0, com.golemlogix.items.FluidGhostItem.of(cryo(250)), 750);
+        helper.runAfterDelay(120, () -> {
+            helper.assertTrue(be.isFluidSlot(0) && be.amount(0) == 750, "slot 0 keeps 750 mB");
+            helper.assertTrue(com.golemlogix.system.CryoSource.is(be.fluidStock(0)) && be.fluidStock(0).getAmount() == 750,
+                    "750 mB of cryo-source in stock, has " + be.fluidStock(0).getAmount());
+            var fluids = helper.getLevel().getCapability(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.BLOCK,
+                    helper.absolutePos(BUS_OUT), Direction.UP);
+            FluidStack out = fluids.drain(500, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
+            helper.assertTrue(com.golemlogix.system.CryoSource.is(out) && out.getAmount() == 500, "pipes drain it, got " + out.getAmount());
+            helper.succeed();
+        });
+    }
+
+    /**
+     * Autocrafting with a fluid ingredient: a copper block + 250 mB of cryo-source -> a torn copper mind. The planner takes the
+     * cryo-source from the network's Source, the provider pours it into the machine's tank along with the block.
+     */
+    @GameTest(template = T, timeoutTicks = 400)
+    public static void autocraftWithFluid(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        BlockPos machine = PROV.east();
+        helper.setBlock(machine, Blocks.BARREL);
+        var tank = TestCaps.tank(helper.absolutePos(machine));
+        tank.setFluid(FluidStack.EMPTY);
+        Container machineInv = (Container) helper.getBlockEntity(machine);
+        PatternProviderBlockEntity provider = (PatternProviderBlockEntity) helper.getBlockEntity(PROV);
+        provider.getContainer().setItem(0, card(new PatternData(false,
+                List.of(new ItemStack(Items.COPPER_BLOCK), com.golemlogix.items.FluidGhostItem.of(cryo(250))),
+                List.of(new ItemStack(ModItems.TORN_COPPER_MIND.get())))));
+        ItemKey torn = ItemKey.of(new ItemStack(ModItems.TORN_COPPER_MIND.get()));
+
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.COPPER_BLOCK, 2), false);
+            var plan = com.golemlogix.crafting.CraftingPlanner.plan(n, torn, 2);
+            helper.assertTrue(plan.missing().isEmpty(), "nothing missing: " + plan.missing());
+            helper.assertTrue(plan.fromStorage().get(com.golemlogix.system.Ingredients.fluidKey(cryo(1))) == 500, "500 mB of cryo-source planned");
+            GolemNetwork.StartResult r = n.startCrafting(torn, 2);
+            helper.assertTrue(r.type() == GolemNetwork.StartType.STARTED, "start result " + r.type());
+        });
+        helper.runAfterDelay(60, () -> {
+            int blocks = 0;
+            for (int i = 0; i < machineInv.getContainerSize(); i++) {
+                blocks += machineInv.getItem(i).is(Items.COPPER_BLOCK) ? machineInv.getItem(i).getCount() : 0;
+            }
+            helper.assertTrue(blocks == 2, "the machine gets 2 copper blocks, got " + blocks);
+            helper.assertTrue(com.golemlogix.system.CryoSource.is(tank.getFluid()) && tank.getFluidAmount() == 500,
+                    "and 500 mB of cryo-source, got " + tank.getFluidAmount());
+            machineInv.clearContent();
+            tank.setFluid(FluidStack.EMPTY);
+            ItemStack rest = net(helper, bay).insertFromMachine(new ItemStack(ModItems.TORN_COPPER_MIND.get(), 2));
+            helper.assertTrue(rest.isEmpty(), "the job absorbs the torn minds");
+        });
+        helper.runAfterDelay(120, () -> {
+            helper.assertTrue(net(helper, bay).itemCountOf(torn) == 2, "2 torn minds delivered");
+            helper.assertTrue(((CryoCalculatorBlockEntity) helper.getBlockEntity(CPU)).isIdle(), "calculator idle");
+            helper.succeed();
+        });
+    }
+
+    /** A Dispel turns a battered golem into its raw mind, but only for a player who has made a plate on an anvil. */
+    @GameTest(template = T, timeoutTicks = 60)
+    public static void dispelUnbindsGolemMind(GameTestHelper helper) {
+        ServerPlayer player = testPlayer(helper);
+        var golem = helper.spawn(net.minecraft.world.entity.EntityType.IRON_GOLEM, new BlockPos(4, 1, 4));
+        golem.setNoAi(true);
+        golem.setHealth(3f);
+        var healthy = helper.spawn(net.minecraft.world.entity.EntityType.SNOW_GOLEM, new BlockPos(8, 1, 4));
+        healthy.setNoAi(true);
+        // (a fake player has no advancements: the "first plate" unlock itself is checked in the dev client)
+        helper.assertTrue(com.golemlogix.secret.GolemMinds.attempt(player, golem, false) && golem.isAlive(), "unknown method: the golem stays");
+        helper.assertTrue(com.golemlogix.secret.GolemMinds.attempt(player, healthy, true) && healthy.isAlive(), "a snow golem at full HP holds on");
+        helper.assertTrue(com.golemlogix.secret.GolemMinds.attempt(player, golem, true) && !golem.isAlive(), "the battered iron golem is unbound");
+        helper.assertTrue(!com.golemlogix.secret.GolemMinds.attempt(player, player, true), "a player is no golem");
+        helper.runAfterDelay(2, () -> {
+            var drops = helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                    new net.minecraft.world.phys.AABB(helper.absolutePos(new BlockPos(4, 1, 4))).inflate(2));
+            helper.assertTrue(drops.stream().anyMatch(e -> e.getItem().is(ModItems.RAW_IRON_MIND.get())), "a raw iron mind drops");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * With Ars Nouveau (-PtestMods): its real EffectResolveEvent for a Dispel on a golem reaches the mod and is cancelled (the fake
+     * player does not know the method, so the golem stays and gets a hint).
+     */
+    @GameTest(template = T, timeoutTicks = 40)
+    public static void arsDispelEvent(GameTestHelper helper) throws Exception {
+        if (!net.neoforged.fml.ModList.get().isLoaded("ars_nouveau")) {
+            helper.succeed();
+            return;
+        }
+        ServerPlayer player = testPlayer(helper);
+        var golem = helper.spawn(net.minecraft.world.entity.EntityType.SNOW_GOLEM, new BlockPos(4, 1, 4));
+        golem.setNoAi(true);
+        golem.setHealth(2f);
+        Class<?> type = Class.forName("com.hollingsworth.arsnouveau.api.event.EffectResolveEvent$Pre");
+        Object dispel = Class.forName("com.hollingsworth.arsnouveau.common.spell.effect.EffectDispel").getField("INSTANCE").get(null);
+        var ctor = type.getConstructors()[0];
+        Object[] args = new Object[ctor.getParameterCount()];
+        args[0] = helper.getLevel();
+        args[1] = player;
+        args[2] = new net.minecraft.world.phys.EntityHitResult(golem);
+        args[5] = dispel;
+        var event = (net.neoforged.bus.api.Event) ctor.newInstance(args);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(event);
+        helper.assertTrue(((net.neoforged.bus.api.ICancellableEvent) event).isCanceled(), "the Dispel on a golem goes to the mod");
+        helper.assertTrue(golem.isAlive(), "the method is unknown to this player: the golem stays");
+        helper.succeed();
     }
 
     private static void periscope(GameTestHelper helper, BlockPos at, Direction facing) {

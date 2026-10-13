@@ -79,6 +79,24 @@ public class GolemLogixClientEvents {
         event.register(ModMenus.CONCENTRATOR.get(), ConcentratorScreen::new);
     }
 
+    /** Liquid Cryo-Source textures (tanks, basins, JEI, the planner). */
+    @SubscribeEvent
+    public static void registerClientExtensions(net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent event) {
+        var still = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/cryo_source_still");
+        var flow = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/cryo_source_flow");
+        event.registerFluidType(new net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions() {
+            @Override
+            public net.minecraft.resources.ResourceLocation getStillTexture() {
+                return still;
+            }
+
+            @Override
+            public net.minecraft.resources.ResourceLocation getFlowingTexture() {
+                return flow;
+            }
+        }, com.golemlogix.init.ModFluids.CRYO_SOURCE_TYPE.get());
+    }
+
     @SubscribeEvent
     public static void registerKeys(RegisterKeyMappingsEvent event) {
         event.register(com.golemlogix.client.ghost.GolemKeys.GHOST_CONFIRM);

@@ -41,6 +41,11 @@ public class ModDataComponents {
     public static final Supplier<DataComponentType<Integer>> SOURCE_CHARGE = COMPONENTS.registerComponentType(
             "source_charge", b -> b.persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT));
 
+    /** The fluid and amount a fluid ghost stands for (bus filters, interface stock, pattern inputs). */
+    public static final Supplier<DataComponentType<net.neoforged.neoforge.fluids.SimpleFluidContent>> GHOST_FLUID = COMPONENTS.registerComponentType(
+            "ghost_fluid", b -> b.persistent(net.neoforged.neoforge.fluids.SimpleFluidContent.CODEC)
+                    .networkSynchronized(net.neoforged.neoforge.fluids.SimpleFluidContent.STREAM_CODEC));
+
     /** The Chronometer was last powered by the Eternal Frost Resonator of its network (for the tooltip). */
     public static final Supplier<DataComponentType<Boolean>> RESONATOR_LINK = COMPONENTS.registerComponentType(
             "resonator_link", b -> b.persistent(Codec.BOOL).networkSynchronized(ByteBufCodecs.BOOL));

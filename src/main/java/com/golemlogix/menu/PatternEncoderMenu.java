@@ -105,6 +105,9 @@ public class PatternEncoderMenu extends GolemMenu {
 
     @Override
     public void setGhost(Player player, int slotId, ItemStack stack) {
+        if (com.golemlogix.items.FluidGhostItem.is(stack) && slotId >= OUT_START && slotId < OUT_START + 3) {
+            return;
+        }
         super.setGhost(player, slotId, stack);
         refreshCraftingResult();
     }
@@ -115,6 +118,12 @@ public class PatternEncoderMenu extends GolemMenu {
 
     @Override
     public void clicked(int slotId, int button, ClickType clickType, Player player) {
+        // fluids are only ingredients of processing patterns: never outputs and never in the crafting table grid
+        boolean fluid = com.golemlogix.items.FluidGhostItem.is(ghostFor(getCarried()));
+        if (fluid && clickType == ClickType.PICKUP && isGhost(slotId)
+                && ((slotId >= OUT_START && slotId < OUT_START + 3) || isCraftingMode())) {
+            return;
+        }
         if (handleGhostClick(slotId, button, clickType)) {
             // the crafting table recipe output is computed by itself and cannot be changed by hand
             if (isCraftingMode() && slotId >= OUT_START && slotId < OUT_START + 3) {
@@ -141,7 +150,9 @@ public class PatternEncoderMenu extends GolemMenu {
         try {
             for (int i = 0; i < 9; i++) {
                 ItemStack s = container.getItem(i);
-                if (!s.isEmpty() && s.getCount() != 1) {
+                if (com.golemlogix.items.FluidGhostItem.is(s)) {
+                    container.setItem(i, ItemStack.EMPTY);
+                } else if (!s.isEmpty() && s.getCount() != 1) {
                     container.setItem(i, s.copyWithCount(1));
                 }
             }
@@ -214,7 +225,8 @@ public class PatternEncoderMenu extends GolemMenu {
             if (craftingRecipe) {
                 for (int i = 0; i < Math.min(9, inputs.size()); i++) {
                     ItemStack first = firstOf(inputs.get(i));
-                    container.setItem(i, first.isEmpty() ? ItemStack.EMPTY : first.copyWithCount(1));
+                    boolean usable = !first.isEmpty() && !com.golemlogix.items.FluidGhostItem.is(first);
+                    container.setItem(i, usable ? first.copyWithCount(1) : ItemStack.EMPTY);
                 }
             } else {
                 int slot = 0;
@@ -223,22 +235,30 @@ public class PatternEncoderMenu extends GolemMenu {
                     if (first.isEmpty()) {
                         continue;
                     }
+                    boolean fluid = com.golemlogix.items.FluidGhostItem.is(first);
                     boolean merged = false;
                     for (int k = 0; k < slot; k++) {
                         ItemStack ex = container.getItem(k);
-                        if (ItemStack.isSameItemSameComponents(ex, first)) {
+                        if (fluid && com.golemlogix.system.Ingredients.key(ex).equals(com.golemlogix.system.Ingredients.key(first))) {
+                            // the same fluid twice: one ghost with the summed mB
+                            container.setItem(k, com.golemlogix.items.FluidGhostItem.withAmount(ex,
+                                    com.golemlogix.items.FluidGhostItem.amount(ex) + com.golemlogix.items.FluidGhostItem.amount(first)));
+                            merged = true;
+                            break;
+                        }
+                        if (!fluid && ItemStack.isSameItemSameComponents(ex, first)) {
                             container.setItem(k, ex.copyWithCount(Math.min(99, ex.getCount() + first.getCount())));
                             merged = true;
                             break;
                         }
                     }
                     if (!merged && slot < 9) {
-                        container.setItem(slot++, first.copyWithCount(Math.max(1, Math.min(99, first.getCount()))));
+                        container.setItem(slot++, fluid ? first.copyWithCount(1) : first.copyWithCount(Math.max(1, Math.min(99, first.getCount()))));
                     }
                 }
                 for (int i = 0; i < Math.min(3, outputs.size()); i++) {
                     ItemStack out = outputs.get(i);
-                    if (!out.isEmpty()) {
+                    if (!out.isEmpty() && !com.golemlogix.items.FluidGhostItem.is(out)) {
                         container.setItem(OUT_START + i, out.copyWithCount(Math.max(1, Math.min(99, out.getCount()))));
                     }
                 }

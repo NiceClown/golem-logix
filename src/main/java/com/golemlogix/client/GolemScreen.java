@@ -200,6 +200,19 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
     protected void renderOverlay(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
     }
 
+    /** Fluid ghosts in ghost slots are drawn as their fluid; their mB label unless the screen labels slots itself. */
+    @Override
+    protected void renderSlot(GuiGraphics g, net.minecraft.world.inventory.Slot slot) {
+        if (FluidIcons.drawGhost(g, font, slot.getItem(), slot.x, slot.y, labelFluidGhosts())) {
+            return;
+        }
+        super.renderSlot(g, slot);
+    }
+
+    protected boolean labelFluidGhosts() {
+        return true;
+    }
+
     @Override
     protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
         g.drawString(font, title, titleLabelX, titleLabelY, GolemGui.PARCHMENT, false);

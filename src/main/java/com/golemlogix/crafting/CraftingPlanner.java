@@ -35,6 +35,14 @@ public final class CraftingPlanner {
         for (Map.Entry<ItemKey, Long> e : net.listItems().entrySet()) {
             stock.put(e.getKey(), e.getValue());
         }
+        // fluids count in mB under fluid keys; Liquid Cryo-Source is what the network's Source can make
+        for (net.neoforged.neoforge.fluids.FluidStack f : net.listFluids()) {
+            stock.merge(com.golemlogix.system.Ingredients.fluidKey(f), (long) f.getAmount(), Long::sum);
+        }
+        long cryo = net.cryoSourceAvailable();
+        if (cryo > 0) {
+            stock.put(com.golemlogix.system.Ingredients.fluidKey(com.golemlogix.system.CryoSource.stack(1)), cryo);
+        }
     }
 
     public static CraftingPlan plan(GolemNetwork net, ItemKey target, long amount) {

@@ -375,7 +375,8 @@ public class TerminalMenu extends GolemMenu {
 
     private void fluidFillCarried(GolemNetwork net, ServerPlayer sp, FluidStack fluid) {
         ItemStack carried = getCarried();
-        if (carried.isEmpty() || fluid.isEmpty()) {
+        // Liquid Cryo-Source is pumped out by automation only, never into buckets or other containers by hand
+        if (carried.isEmpty() || fluid.isEmpty() || com.golemlogix.system.CryoSource.is(fluid)) {
             return;
         }
         ItemStack single = carried.copyWithCount(1);

@@ -126,6 +126,11 @@ public class Audit {
                     usedTex.add("textures/" + m.group(1));
                 }
             }
+            // image pages name their picture by its short name in textures/gui/book
+            Matcher img = Pattern.compile("\"texture\"\\s*:\\s*\"([a-z0-9_]+)\"").matcher(read(p));
+            while (img.find()) {
+                usedTex.add("textures/gui/book/" + img.group(1));
+            }
         }
         // items: textures/item/<item name>.png is picked up by the model item/<name>.json through generated
         System.out.println("=== unreferenced textures ===");

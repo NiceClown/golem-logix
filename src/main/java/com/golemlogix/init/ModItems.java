@@ -19,6 +19,29 @@ public class ModItems {
     public static final DeferredItem<ModItemWithTooltip> FLATTENED_CRYO_SUBSTRATE = ITEMS.register("flattened_cryo_substrate",
             () -> new ModItemWithTooltip("tooltip.golem_logix.flattened_cryo_substrate", new Item.Properties().stacksTo(64)));
 
+    // Golem minds: Dispel on a battered golem (Ars Nouveau) gives a raw mind, the Create mixer tears a block's mind
+    public static final DeferredItem<ModItemWithTooltip> RAW_IRON_MIND = ITEMS.register("raw_iron_mind",
+            () -> new ModItemWithTooltip("tooltip.golem_logix.raw_mind", new Item.Properties().stacksTo(16)));
+
+    public static final DeferredItem<ModItemWithTooltip> RAW_COPPER_MIND = ITEMS.register("raw_copper_mind",
+            () -> new ModItemWithTooltip("tooltip.golem_logix.raw_mind", new Item.Properties().stacksTo(16)));
+
+    public static final DeferredItem<ModItemWithTooltip> RAW_SNOW_MIND = ITEMS.register("raw_snow_mind",
+            () -> new ModItemWithTooltip("tooltip.golem_logix.raw_mind", new Item.Properties().stacksTo(16)));
+
+    public static final DeferredItem<ModItemWithTooltip> TORN_IRON_MIND = ITEMS.register("torn_iron_mind",
+            () -> new ModItemWithTooltip("tooltip.golem_logix.torn_mind", new Item.Properties().stacksTo(64)));
+
+    public static final DeferredItem<ModItemWithTooltip> TORN_COPPER_MIND = ITEMS.register("torn_copper_mind",
+            () -> new ModItemWithTooltip("tooltip.golem_logix.torn_mind", new Item.Properties().stacksTo(64)));
+
+    public static final DeferredItem<ModItemWithTooltip> TORN_SNOW_MIND = ITEMS.register("torn_snow_mind",
+            () -> new ModItemWithTooltip("tooltip.golem_logix.torn_mind", new Item.Properties().stacksTo(64)));
+
+    /** A fluid marker for ghost slots; never a real item (see FluidGhostItem). */
+    public static final DeferredItem<FluidGhostItem> FLUID_GHOST = ITEMS.register("fluid_ghost",
+            () -> new FluidGhostItem(new Item.Properties()));
+
     // Occult Catalysts & Secret Wither Drop
     public static final DeferredItem<ModItemWithTooltip> IMPLODED_WITHER_PLASMA = ITEMS.register("imploded_wither_plasma",
             () -> new ModItemWithTooltip("tooltip.golem_logix.imploded_wither_plasma", new Item.Properties().stacksTo(16)));

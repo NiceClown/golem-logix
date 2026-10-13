@@ -262,6 +262,12 @@ final class RecipeTransfers {
                 List<ItemStack> opts = options(view);
                 if (!opts.isEmpty()) {
                     inputs.add(opts);
+                    continue;
+                }
+                // a fluid ingredient (a Create basin, a mixer...): a fluid ghost with the recipe's amount
+                var fluid = view.getDisplayedIngredient(mezz.jei.api.neoforge.NeoForgeTypes.FLUID_STACK);
+                if (fluid.isPresent() && !fluid.get().isEmpty()) {
+                    inputs.add(List.of(com.golemlogix.items.FluidGhostItem.of(fluid.get().copy())));
                 }
             }
             List<ItemStack> outputs = new ArrayList<>();

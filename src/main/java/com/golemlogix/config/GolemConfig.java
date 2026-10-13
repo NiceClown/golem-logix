@@ -11,6 +11,7 @@ public final class GolemConfig {
     public static final ModConfigSpec.BooleanValue REQUIRE_SOURCE;
     public static final ModConfigSpec.IntValue CORE_SOURCE_PER_SECOND;
     public static final ModConfigSpec.DoubleValue CHANNEL_SOURCE_PER_SECOND;
+    public static final ModConfigSpec.IntValue CRYO_SOURCE_COST;
     public static final ModConfigSpec.IntValue LINE_CHANNELS;
     public static final ModConfigSpec.IntValue EXPANDER_BONUS;
     public static final ModConfigSpec.IntValue QUANTUM_BONUS;
@@ -36,6 +37,8 @@ public final class GolemConfig {
                 .defineInRange("coreSourcePerSecond", 1, 0, 100000);
         CHANNEL_SOURCE_PER_SECOND = b.comment("Extra Source drained every second per used channel.")
                 .defineInRange("channelSourcePerSecond", 0.25D, 0.0D, 1000.0D);
+        CRYO_SOURCE_COST = b.comment("Source the network spends to make 1 mB of Liquid Cryo-Source pumped out by automation.")
+                .defineInRange("cryoSourceCost", 1, 0, 1000);
         b.pop();
 
         b.push("array");

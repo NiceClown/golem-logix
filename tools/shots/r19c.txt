@@ -1,0 +1,22 @@
+# Round 19c: book after fixes (illustration, captions, Russian widow), the planner status line
+gui off
+reload
+cmd gamemode creative @p
+gui on
+book ac_cryo 0
+wait 8
+shot r19c_cryo_0
+book ac_cryo 1
+wait 5
+shot r19c_cryo_1
+bookaudit
+lang ru_ru
+wait 20
+book ac_cryo 0
+wait 5
+shot r19c_cryo_ru_0
+book dispel 0
+wait 5
+shot r19c_dispel_ru_0
+bookaudit
+closescreen

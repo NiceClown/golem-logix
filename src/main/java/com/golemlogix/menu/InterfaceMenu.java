@@ -93,7 +93,8 @@ public class InterfaceMenu extends GolemMenu {
 
     /** The config slot keeps fluid (it holds a container with fluid and the mode is "fluid"). */
     public boolean isFluidSlot(int i) {
-        return !itemMode(i) && !InterfaceBlockEntity.containedFluid(config.getItem(i)).isEmpty();
+        ItemStack cfg = config.getItem(i);
+        return com.golemlogix.items.FluidGhostItem.is(cfg) || (!itemMode(i) && !InterfaceBlockEntity.containedFluid(cfg).isEmpty());
     }
 
     /** Fluid stock of slot i, mB (accurate to ten). */
@@ -128,6 +129,9 @@ public class InterfaceMenu extends GolemMenu {
 
     /** Default amount for a new ghost: a bucket for fluid, for an item as many as in the cursor stack. */
     private int defaultAmount(int i, ItemStack stack) {
+        if (com.golemlogix.items.FluidGhostItem.is(stack)) {
+            return Math.max(1, com.golemlogix.items.FluidGhostItem.amount(stack));
+        }
         boolean fluid = !itemMode(i) && !InterfaceBlockEntity.containedFluid(stack).isEmpty();
         return fluid ? stack.getCount() * InterfaceBlockEntity.MB_PER_BUCKET : stack.getCount();
     }
@@ -157,7 +161,7 @@ public class InterfaceMenu extends GolemMenu {
     public void clicked(int slotId, int button, ClickType clickType, Player player) {
         if (isGhost(slotId)) {
             int i = this.slots.get(slotId).getContainerSlot();
-            ItemStack carried = getCarried();
+            ItemStack carried = ghostFor(getCarried());
             if (clickType == ClickType.QUICK_MOVE) {
                 clearSlot(i);
             } else if (clickType == ClickType.PICKUP && !carried.isEmpty() && be != null) {

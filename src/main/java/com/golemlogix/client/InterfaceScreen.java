@@ -36,7 +36,8 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
 
     /** Whether the slot has a switch: the config holds a container with fluid. */
     private boolean hasToggle(int i) {
-        return !InterfaceBlockEntity.containedFluid(menu.configItem(i)).isEmpty();
+        // a fluid ghost is always fluid: only real containers can be kept as items
+        return !com.golemlogix.items.FluidGhostItem.is(menu.configItem(i)) && !InterfaceBlockEntity.containedFluid(menu.configItem(i)).isEmpty();
     }
 
     private int gearX(int i) {
@@ -171,12 +172,18 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
             ItemStack icon = menu.configItem(i);
             int x = leftPos + 8 + i * 18, y = topPos + InterfaceMenu.STOCK_Y;
             int amount = menu.fluidAmount(i);
-            if (amount > 0) {
+            if (amount > 0 && !FluidIcons.drawGhost(g, font, icon, x, y, false)) {
                 g.renderItem(icon.copyWithCount(1), x, y);
             }
             String text = amount >= 1000 ? InterfaceSlotScreen.bucketText(amount) : amount + "";
             small(g, text, x, y, amount > 0 ? 0xFF96F2EE : 0xFF6A7480);
         }
+    }
+
+    /** The config row labels its slots itself (how much to keep). */
+    @Override
+    protected boolean labelFluidGhosts() {
+        return false;
     }
 
     /** Small label in the bottom right corner of a slot (over the item). */

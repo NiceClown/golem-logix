@@ -1,0 +1,26 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "ars_nouveau"
+    }
+  ],
+  "type": "ars_nouveau:enchanting_apparatus",
+  "keepNbtOfReagent": false,
+  "pedestalItems": [
+    {"item": "minecraft:snow_block"},
+    {"item": "minecraft:snow_block"},
+    {"item": "minecraft:snow_block"},
+    {"item": "minecraft:snow_block"},
+    {"item": "minecraft:snow_block"},
+    {"item": "minecraft:snow_block"}
+  ],
+  "reagent": {
+    "item": "golem_logix:raw_snow_mind"
+  },
+  "result": {
+    "count": 2,
+    "id": "golem_logix:flattened_cryo_substrate"
+  },
+  "sourceCost": 1000
+}

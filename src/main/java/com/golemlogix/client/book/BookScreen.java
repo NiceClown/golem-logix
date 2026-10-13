@@ -892,15 +892,19 @@ public class BookScreen extends Screen {
         int star = spec.indexOf('*');
         ItemStack s = BookModel.stack(star < 0 ? spec : spec.substring(0, star));
         if (star >= 0) {
-            s.setCount(Integer.parseInt(spec.substring(star + 1)));
+            int n = Integer.parseInt(spec.substring(star + 1));
+            // for a fluid the number is mB
+            s = com.golemlogix.items.FluidGhostItem.is(s) ? com.golemlogix.items.FluidGhostItem.withAmount(s, n) : s.copyWithCount(n);
         }
         return s;
     }
 
     private void slotWithItem(GuiGraphics g, ItemStack s, int sx, int sy, int mx, int my) {
         GolemGui.slot(g, sx - 1, sy - 1);
-        g.renderItem(s, sx, sy);
-        g.renderItemDecorations(font, s, sx, sy);
+        if (!com.golemlogix.client.FluidIcons.drawGhost(g, font, s, sx, sy, true)) {
+            g.renderItem(s, sx, sy);
+            g.renderItemDecorations(font, s, sx, sy);
+        }
         if (mx >= sx && mx < sx + 16 && my >= sy && my < sy + 16) {
             hoverStack = s;
         }

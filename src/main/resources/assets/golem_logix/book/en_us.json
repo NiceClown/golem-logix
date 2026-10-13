@@ -207,7 +207,54 @@
           ]
         },
         {
-"id": "plates", "title": "Plates and their uses", "icon": "golem_logix:flattened_copper_matrix", "x": 2, "y": 0, "parents": ["saturator"],
+"id": "dispel", "title": "Dispel: the Mind of Metal", "icon": "golem_logix:raw_copper_mind", "x": 1, "y": -1, "parents": ["anvil"],
+          "secret": "mind", "requires": "ars_nouveau",
+          "pages": [
+            {"type": "text", "title": "Unbinding a mind",
+             "text": ["Your first plate made on an anvil showed what holds a golem together. Now an Ars Nouveau &lDispel&r cast at a &lbattered&r golem unbinds its mind: the golem is gone, and a &lraw mind&r of its kind drops.", "Battered means the same as for the anvil: an iron or copper golem with 4 HP or less, a snow golem below its full 4 HP. A healthier golem's mind holds on."]},
+            {"type": "ritual", "title": "Iron Golem", "station": "ars_nouveau:glyph_dispel", "inputs": ["minecraft:iron_block"], "outputs": ["golem_logix:raw_iron_mind"],
+             "condition": "A golem with 1-4 HP (out of 100).",
+             "text": ["Bring it down with a harming potion or a long fall first."]},
+            {"type": "ritual", "title": "Copper Golem", "station": "ars_nouveau:glyph_dispel", "inputs": ["minecraft:copper_block"], "outputs": ["golem_logix:raw_copper_mind"],
+             "condition": "A golem with 1-4 HP (out of 12).",
+             "text": ["Copper golems come from Copper Age Backport."]},
+            {"type": "ritual", "title": "Snow Golem", "station": "ars_nouveau:glyph_dispel", "inputs": ["minecraft:snow_block"], "outputs": ["golem_logix:raw_snow_mind"],
+             "condition": "A golem with 1-3 HP - not at full health!",
+             "text": ["One hit with your hand is enough."]},
+            {"type": "ritual", "title": "Pressing an iron mind", "station": "ars_nouveau:enchanting_apparatus", "inputs": ["golem_logix:raw_iron_mind", "minecraft:iron_ingot*6"], "outputs": ["golem_logix:flattened_iron_core*2"],
+             "condition": "Six ingots on the pedestals, 1000 Source.",
+             "text": ["The raw mind goes into the Enchanting Apparatus, six ingots on the Arcane Pedestals around it."]},
+            {"type": "ritual", "title": "Pressing a copper mind", "station": "ars_nouveau:enchanting_apparatus", "inputs": ["golem_logix:raw_copper_mind", "minecraft:copper_ingot*6"], "outputs": ["golem_logix:flattened_copper_matrix*2"],
+             "condition": "Six ingots on the pedestals, 1000 Source.",
+             "text": ["Six copper ingots on the pedestals around the Apparatus."]},
+            {"type": "ritual", "title": "Pressing a snow mind", "station": "ars_nouveau:enchanting_apparatus", "inputs": ["golem_logix:raw_snow_mind", "minecraft:snow_block*6"], "outputs": ["golem_logix:flattened_cryo_substrate*2"],
+             "condition": "Six snow blocks on the pedestals, 1000 Source.",
+             "text": ["Snow blocks take the place of ingots here."]},
+            {"type": "text", "title": "Anvil, Dispel, Saturator",
+             "text": ["Better than the anvil: one battered golem now gives &ltwo&r plates instead of one.", "But every two plates still cost a golem, a spell cast by hand and six ingots, while the assembled Saturator forges two plates out of one block on its own, day and night."]}
+          ]
+        },
+        {
+          "id": "create_minds", "title": "Create: Torn Minds", "icon": "golem_logix:torn_copper_mind", "x": 2, "y": -1, "parents": ["saturator"],
+          "requires": "create",
+          "pages": [
+            {"type": "text", "title": "Mixer and press",
+             "text": ["With Create, a &lMechanical Mixer&r tears the mind out of a block: the block and &l250 mB of Liquid Cryo-Source&r in a Basin give a &ltorn mind&r.", "A &lMechanical Press&r then turns the torn mind into a plate. Both steps run well as autocrafting."]},
+            {"type": "ritual", "title": "Torn Iron Mind", "station": "create:mechanical_mixer", "inputs": ["minecraft:iron_block", "fluid:golem_logix:cryo_source*250"], "outputs": ["golem_logix:torn_iron_mind"],
+             "condition": "Then the press: one Flattened Iron Core.",
+             "text": ["Mixing happens in a Basin under the Mixer."]},
+            {"type": "ritual", "title": "Torn Copper Mind", "station": "create:mechanical_mixer", "inputs": ["minecraft:copper_block", "fluid:golem_logix:cryo_source*250"], "outputs": ["golem_logix:torn_copper_mind"],
+             "condition": "Then the press: one Flattened Copper Matrix.",
+             "text": ["Mixing happens in a Basin under the Mixer."]},
+            {"type": "ritual", "title": "Torn Snow Mind", "station": "create:mechanical_mixer", "inputs": ["minecraft:packed_ice", "fluid:golem_logix:cryo_source*250"], "outputs": ["golem_logix:torn_snow_mind"],
+             "condition": "Then the press: one Flattened Cryo-Substrate.",
+             "text": ["Mixing happens in a Basin under the Mixer."]},
+            {"type": "text", "title": "As an autocraft chain",
+             "text": ["Two processing patterns: a block + 250 mB of cryo-source -> torn mind (a Provider next to the Basin), and torn mind -> plate (a Provider next to a Depot under the Press).", "An Import Bus brings the results back. The network pumps the cryo-source itself, see &lLiquid Cryo-Source&r."]}
+          ]
+        },
+        {
+          "id": "plates", "title": "Plates and their uses", "icon": "golem_logix:flattened_copper_matrix", "x": 2, "y": 0, "parents": ["saturator"],
           "pages": [
             {"type": "table", "title": "Where plates go", "header": ["Plate", "Used for"], "widths": [58, 90],
              "rows": [
@@ -1066,6 +1113,21 @@
                "2. The Provider stands against the furnace; an import bus is attached to the furnace output.",
                "3. Order “ingots ×64” - the Provider loads ore, the bus returns ingots, the job counts them done."
              ]}
+          ]
+        },
+        {
+          "id": "ac_cryo", "title": "Liquid Cryo-Source", "icon": "golem_logix:fluid_ghost", "x": 3, "y": 1, "parents": ["ac_machines"],
+          "pages": [
+            {"type": "text", "title": "The network's own fluid",
+             "text": ["Liquid Cryo-Source is &lnot stored&r anywhere: the network makes it from its Source the moment automation pumps it out, &l1 mB for 1 Source&r.", "Disks do not take it and terminals do not show it. &lNo bucket&r or other container can be filled with it by hand: only automation pumps it out."]},
+            {"type": "image", "texture": "cryo_source", "title": "Pumping it out", "size": 128,
+             "text": ["Export Bus -> tank, Provider -> Basin."]},
+            {"type": "text", "title": "Who pumps it",
+             "text": ["&lExport Bus&r: with cryo-source in its filter it pours it into the tank or machine in front of it.", "&lPattern Provider&r: a pattern with a cryo-source ingredient pours it into the machine along with the items.", "&lGolem Interface&r: a cryo-source stock slot keeps that much in its tank for pipes and machines."]},
+            {"type": "text", "title": "Setting the fluid",
+             "text": ["Drag &lLiquid Cryo-Source&r from JEI into a filter, stock or pattern slot. Without JEI, click the slot with a &lSource Jar&r.", "A fluid in a slot counts mB: a click adds &l250 mB&r, a right-click takes 250 away, Shift-click clears the slot."]},
+            {"type": "text", "title": "Fluids in patterns",
+             "text": ["In processing mode JEI \"+\" carries fluid ingredients over with their amounts. Fluids are never outputs or crafting table ingredients.", "The Provider pours fluids into the &lsame side&r of the machine as the items, and only if it takes everything. The order planner shows fluids in mB.", "Unused cryo-source (a cancelled job, an Interface's excess) is not returned: it goes back into the aether."]}
           ]
         },
         {

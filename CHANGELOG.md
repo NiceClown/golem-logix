@@ -2,6 +2,23 @@
 
 ## 1.0.1 — Golem Interface and a cosmetic pass
 
+### Liquid Cryo-Source, fluid autocrafting, Ars Nouveau and Create (later in 1.0.1)
+
+- **Liquid Cryo-Source**, the network's own fluid. It is never stored: the network makes it from its Source (1 mB for 1 Source,
+  `cryoSourceCost` in the common config) the moment automation pumps it out. Disks reject it, terminals do not list it, and it has
+  no bucket: only an **Export Bus**, a **Pattern Provider** or a **Golem Interface** can pump it out. Leftovers are not returned.
+- **Fluids in patterns and filters.** A fluid in a ghost slot is a fluid with an amount in mB: JEI "+" carries fluid ingredients of
+  machine recipes into the encoder, JEI drag puts fluids into filters and stock slots (Liquid Cryo-Source also by clicking with a
+  Source Jar), a click changes a fluid slot by 250 mB. The Pattern Provider pours the fluids into the same machine side as the items,
+  only when the machine takes everything; the planner counts fluids in mB and Liquid Cryo-Source by the Source available.
+- **The Dispel method (Ars Nouveau).** Your first plate made on an anvil (the falling anvil or the Forge Hammer) opens it (advancement
+  "A Mind in the Metal" and a new book entry): a Dispel cast at a battered golem turns it into a **raw mind** (iron, copper, snow).
+  On an Enchanting Apparatus a raw mind and six ingots (or snow blocks) give **two plates** for 1000 Source: better than the anvil,
+  dearer than the Saturator.
+- **Create.** A Mechanical Mixer turns a block (copper, iron, packed ice) and 250 mB of Liquid Cryo-Source in a Basin into a **torn
+  mind**; a Mechanical Press turns it into a plate. Both steps run as autocrafting. Book entry shown with Create installed.
+- New book entries with an in-game illustration; 7 new game tests (85 in all).
+
 ### Anvil, craft planner and polish (later in 1.0.1)
 
 - **Mana Saturator before assembly is a magic anvil** (mid-game step; the 3x3x2 machine is its upgrade): a slate plinth with a rune

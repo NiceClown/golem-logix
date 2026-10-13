@@ -117,8 +117,10 @@ public class CalculatorScreen extends GolemScreen<CalculatorMenu> {
             if (i >= 8) {
                 break;
             }
-            g.renderItem(c, cx + i * 19, cy);
-            g.renderItemDecorations(font, c, cx + i * 19, cy);
+            if (!FluidIcons.drawGhost(g, font, c, cx + i * 19, cy, true)) {
+                g.renderItem(c, cx + i * 19, cy);
+                g.renderItemDecorations(font, c, cx + i * 19, cy);
+            }
             i++;
         }
     }

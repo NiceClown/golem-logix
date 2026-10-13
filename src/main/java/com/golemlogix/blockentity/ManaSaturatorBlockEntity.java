@@ -312,6 +312,10 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
             level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, x, y, z, 6, 0.15, 0.05, 0.15, 0.02);
             level.playSound(null, pos, ModSounds.ANVIL_CRUSH.get(), SoundSource.BLOCKS, 0.9f, 1.5f);
             changed();
+            // the first plate made on an anvil opens the Dispel method
+            if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
+                com.golemlogix.secret.SecretKnowledge.plateMade(sp);
+            }
             return Strike.DONE;
         }
         changed();

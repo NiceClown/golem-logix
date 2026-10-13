@@ -932,6 +932,7 @@ public class ArtForge {
         Resonator.all();
         Catalog.all();
         Items.all();
+        Minds.all();
         Interface.all();
         Logo.make();
         System.out.println("ArtForge: done");

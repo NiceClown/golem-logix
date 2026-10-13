@@ -160,9 +160,16 @@ public class PatternProviderBlockEntity extends BlockEntity {
             return null;
         }
         List<ItemStack> inputs = new ArrayList<>();
+        List<net.neoforged.neoforge.fluids.FluidStack> fluids = new ArrayList<>();
         for (ItemStack s : pattern.inputs()) {
-            if (!s.isEmpty()) {
+            if (s.isEmpty()) {
+                continue;
+            }
+            net.neoforged.neoforge.fluids.FluidStack f = com.golemlogix.items.FluidGhostItem.fluid(s);
+            if (f.isEmpty()) {
                 inputs.add(s);
+            } else {
+                mergeFluid(fluids, f);
             }
         }
 
@@ -177,8 +184,14 @@ public class PatternProviderBlockEntity extends BlockEntity {
             if (block == null || (block instanceof GolemNode && !(block instanceof com.golemlogix.blocks.SaturatorPartBlock))) {
                 continue;
             }
-            IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, target, dir.getOpposite());
-            if (handler == null || !canAcceptAll(handler, inputs)) {
+            // items and fluids go into the same machine side, and only if it takes all of them
+            IItemHandler handler = inputs.isEmpty() ? null : level.getCapability(Capabilities.ItemHandler.BLOCK, target, dir.getOpposite());
+            if (!inputs.isEmpty() && (handler == null || !canAcceptAll(handler, inputs))) {
+                continue;
+            }
+            net.neoforged.neoforge.fluids.capability.IFluidHandler tanks = fluids.isEmpty() ? null
+                    : level.getCapability(Capabilities.FluidHandler.BLOCK, target, dir.getOpposite());
+            if (!fluids.isEmpty() && (tanks == null || !canAcceptFluids(tanks, fluids))) {
                 continue;
             }
             List<ItemStack> rejected = new ArrayList<>();
@@ -188,10 +201,37 @@ public class PatternProviderBlockEntity extends BlockEntity {
                     rejected.add(rest);
                 }
             }
+            for (net.neoforged.neoforge.fluids.FluidStack f : fluids) {
+                int filled = tanks.fill(f.copy(), net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
+                if (filled < f.getAmount()) {
+                    rejected.add(com.golemlogix.items.FluidGhostItem.of(f.copyWithAmount(f.getAmount() - filled)));
+                }
+            }
             lastDirection = (lastDirection + 1 + k) % dirs.length;
             return rejected;
         }
         return null;
+    }
+
+    /** Every fluid fits whole (each checked on its own by simulation). */
+    private static boolean canAcceptFluids(net.neoforged.neoforge.fluids.capability.IFluidHandler tanks,
+                                           List<net.neoforged.neoforge.fluids.FluidStack> fluids) {
+        for (net.neoforged.neoforge.fluids.FluidStack f : fluids) {
+            if (tanks.fill(f.copy(), net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.SIMULATE) < f.getAmount()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static void mergeFluid(List<net.neoforged.neoforge.fluids.FluidStack> list, net.neoforged.neoforge.fluids.FluidStack f) {
+        for (int i = 0; i < list.size(); i++) {
+            if (net.neoforged.neoforge.fluids.FluidStack.isSameFluidSameComponents(list.get(i), f)) {
+                list.set(i, list.get(i).copyWithAmount(list.get(i).getAmount() + f.getAmount()));
+                return;
+            }
+        }
+        list.add(f.copy());
     }
 
     /** All ingredients will fit (each checked on its own, then a joint check on the real slots). */

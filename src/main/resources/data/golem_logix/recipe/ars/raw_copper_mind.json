@@ -1,0 +1,26 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "ars_nouveau"
+    }
+  ],
+  "type": "ars_nouveau:enchanting_apparatus",
+  "keepNbtOfReagent": false,
+  "pedestalItems": [
+    {"item": "minecraft:copper_ingot"},
+    {"item": "minecraft:copper_ingot"},
+    {"item": "minecraft:copper_ingot"},
+    {"item": "minecraft:copper_ingot"},
+    {"item": "minecraft:copper_ingot"},
+    {"item": "minecraft:copper_ingot"}
+  ],
+  "reagent": {
+    "item": "golem_logix:raw_copper_mind"
+  },
+  "result": {
+    "count": 2,
+    "id": "golem_logix:flattened_copper_matrix"
+  },
+  "sourceCost": 1000
+}

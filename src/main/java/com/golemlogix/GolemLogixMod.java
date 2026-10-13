@@ -26,6 +26,8 @@ public class GolemLogixMod {
         ModDataComponents.COMPONENTS.register(modEventBus);
         ModBlocks.BLOCKS.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
+        ModFluids.FLUID_TYPES.register(modEventBus);
+        ModFluids.FLUIDS.register(modEventBus);
         ModBlockEntities.BLOCK_ENTITY_TYPES.register(modEventBus);
         ModMenus.MENUS.register(modEventBus);
         ModRecipes.SERIALIZERS.register(modEventBus);
@@ -39,6 +41,8 @@ public class GolemLogixMod {
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
+        // the Dispel method: Ars Nouveau's spell events, if Ars Nouveau is installed
+        event.enqueueWork(com.golemlogix.integration.ars.ArsCompat::init);
         LOGGER.info("Golem Logix common setup initialized successfully.");
     }
 

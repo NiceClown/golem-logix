@@ -25,6 +25,12 @@ public class ModCreativeTabs {
                         output.accept(ModItems.FLATTENED_IRON_CORE.get());
                         output.accept(ModItems.FLATTENED_COPPER_MATRIX.get());
                         output.accept(ModItems.FLATTENED_CRYO_SUBSTRATE.get());
+                        output.accept(ModItems.RAW_IRON_MIND.get());
+                        output.accept(ModItems.RAW_COPPER_MIND.get());
+                        output.accept(ModItems.RAW_SNOW_MIND.get());
+                        output.accept(ModItems.TORN_IRON_MIND.get());
+                        output.accept(ModItems.TORN_COPPER_MIND.get());
+                        output.accept(ModItems.TORN_SNOW_MIND.get());
                         output.accept(ModItems.IMPLODED_WITHER_PLASMA.get());
                         output.accept(ModItems.INTERDIMENSIONAL_OCCULT_MATRIX.get());
 

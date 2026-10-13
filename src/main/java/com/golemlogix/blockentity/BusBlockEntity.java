@@ -190,6 +190,10 @@ public class BusBlockEntity extends BlockEntity {
         if (filter.isEmpty()) {
             return Optional.empty();
         }
+        FluidStack ghost = com.golemlogix.items.FluidGhostItem.fluid(filter);
+        if (!ghost.isEmpty()) {
+            return Optional.of(ghost);
+        }
         return FluidUtil.getFluidContained(filter).filter(f -> !f.isEmpty());
     }
 

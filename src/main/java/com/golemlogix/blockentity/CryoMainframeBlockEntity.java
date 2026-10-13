@@ -326,7 +326,8 @@ public class CryoMainframeBlockEntity extends BlockEntity {
                 continue;
             }
             for (var e : c.job.inventory().entrySet()) {
-                long n = e.getValue();
+                // fluids of the job cannot drop as items: they are spilled
+                long n = com.golemlogix.system.Ingredients.isFluid(e.getKey()) ? 0 : e.getValue();
                 while (n > 0) {
                     int chunk = (int) Math.min(n, e.getKey().stack().getMaxStackSize());
                     Containers.dropItemStack(level, x, y, z, e.getKey().toStack(chunk));

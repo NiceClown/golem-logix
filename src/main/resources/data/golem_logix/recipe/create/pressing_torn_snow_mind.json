@@ -1,0 +1,19 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "create"
+    }
+  ],
+  "type": "create:pressing",
+  "ingredients": [
+    {
+      "item": "golem_logix:torn_snow_mind"
+    }
+  ],
+  "results": [
+    {
+      "id": "golem_logix:flattened_cryo_substrate"
+    }
+  ]
+}

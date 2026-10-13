@@ -55,14 +55,25 @@ public record PatternData(boolean crafting, List<ItemStack> inputs, List<ItemSta
         return totals(outputs);
     }
 
+    /** Items count by the stack, fluids (fluid ghosts) in mB under a fluid key. */
     private static Map<ItemKey, Integer> totals(List<ItemStack> stacks) {
         Map<ItemKey, Integer> map = new LinkedHashMap<>();
         for (ItemStack s : stacks) {
             if (!s.isEmpty()) {
-                map.merge(ItemKey.of(s), s.getCount(), Integer::sum);
+                map.merge(com.golemlogix.system.Ingredients.key(s), com.golemlogix.system.Ingredients.amount(s), Integer::sum);
             }
         }
         return map;
+    }
+
+    /** Whether the pattern feeds any fluid into its machine. */
+    public boolean hasFluidInputs() {
+        for (ItemStack s : inputs) {
+            if (com.golemlogix.items.FluidGhostItem.is(s)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** How many of the given item the recipe gives per execution. */

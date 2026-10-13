@@ -221,7 +221,9 @@ public class CraftRequestScreen extends Screen {
                 if (e.missing() > 0) {
                     g.fill(x, y, x + CELL_W - 1, y + CELL_H - 1, 0x40E05A4F);
                 }
-                g.renderItem(e.stack(), x + 3, y + 4);
+                if (!FluidIcons.drawGhost(g, font, e.stack(), x + 3, y + 4, false)) {
+                    g.renderItem(e.stack(), x + 3, y + 4);
+                }
                 List<Component> lines = cellLines(e);
                 for (int k = 0; k < Math.min(2, lines.size()); k++) {
                     Component line = lines.get(k);
@@ -253,15 +255,20 @@ public class CraftRequestScreen extends Screen {
     private static List<Component> cellLines(CraftPlanPayload.Entry e) {
         List<Component> out = new ArrayList<>(3);
         if (e.missing() > 0) {
-            out.add(Component.translatable("gui.golem_logix.plan.missing", GolemGui.formatCount(e.missing())).withColor(RED));
+            out.add(Component.translatable("gui.golem_logix.plan.missing", amount(e, e.missing())).withColor(RED));
         }
         if (e.craft() > 0) {
-            out.add(Component.translatable("gui.golem_logix.plan.craft", GolemGui.formatCount(e.craft())).withColor(GolemGui.CYAN));
+            out.add(Component.translatable("gui.golem_logix.plan.craft", amount(e, e.craft())).withColor(GolemGui.CYAN));
         }
         if (e.stored() > 0) {
-            out.add(Component.translatable("gui.golem_logix.plan.stored", GolemGui.formatCount(e.stored())).withColor(STORED));
+            out.add(Component.translatable("gui.golem_logix.plan.stored", amount(e, e.stored())).withColor(STORED));
         }
         return out;
+    }
+
+    /** Items by count, fluids (fluid ghosts) in mB. */
+    private static String amount(CraftPlanPayload.Entry e, long n) {
+        return com.golemlogix.items.FluidGhostItem.is(e.stack()) ? GolemGui.formatCount(n) + " mB" : GolemGui.formatCount(n);
     }
 
     @Override
