@@ -1,0 +1,25 @@
+name: Unpack source archive
+on:
+  push:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack golem-logix-source.zip into the repository
+        run: |
+          if [ ! -f golem-logix-source.zip ]; then echo "no archive, nothing to do"; exit 0; fi
+          mkdir -p /tmp/src
+          unzip -q golem-logix-source.zip -d /tmp/src
+          git rm -q --cached golem-logix-source.zip
+          rm golem-logix-source.zip
+          cp -a /tmp/src/. .
+          chmod +x gradlew
+          git config user.name "NiceClown"
+          git config user.email "niceclown@users.noreply.github.com"
+          git add -A
+          git commit -m "Golem Logix 1.0.1 source"
+          git push
