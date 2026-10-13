@@ -68,6 +68,16 @@ public class ModItems {
     public static final DeferredItem<PortableChronometerItem> PORTABLE_CHRONOMETER = ITEMS.register("portable_chronometer",
             () -> new PortableChronometerItem(new Item.Properties().stacksTo(1)));
 
+    // Cryo-Source Telegraph cards: the link card and the two range cards (the same tiers as the Chronometer)
+    public static final DeferredItem<com.golemlogix.items.TelegraphLinkCardItem> AETHERIAL_LINKAGE = ITEMS.register("aetherial_linkage",
+            () -> new com.golemlogix.items.TelegraphLinkCardItem(new Item.Properties().stacksTo(16)));
+
+    public static final DeferredItem<com.golemlogix.items.TelegraphRangeCardItem> AETHER_RESONANCE_CORE = ITEMS.register("aether_resonance_core",
+            () -> new com.golemlogix.items.TelegraphRangeCardItem(1, new Item.Properties().stacksTo(16)));
+
+    public static final DeferredItem<com.golemlogix.items.TelegraphRangeCardItem> VOID_GLASS_PRISM = ITEMS.register("void_glass_prism",
+            () -> new com.golemlogix.items.TelegraphRangeCardItem(2, new Item.Properties().stacksTo(16)));
+
     // Machine upgrades
     public static final DeferredItem<UpgradeItem> COMPRESSED_COPROCESSOR = ITEMS.register("compressed_coprocessor",
             () -> new UpgradeItem(com.golemlogix.upgrade.UpgradeType.SPEED, "tooltip.golem_logix.compressed_coprocessor",

@@ -933,6 +933,7 @@ public class ArtForge {
         Catalog.all();
         Items.all();
         Minds.all();
+        Telegraph.all();
         Interface.all();
         Logo.make();
         System.out.println("ArtForge: done");

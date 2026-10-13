@@ -1,5 +1,44 @@
 # Changelog
 
+## 1.1.2 — Cryo-Source Telegraph, a lighter server
+
+### Cryo-Source Telegraph
+
+- **A remote relay for outposts**: a rusty copper base 2x2 with a mast three blocks high (one item places it all, facing you). Two
+  linked telegraphs join their networks, so an outpost far from the base runs on the base's Atlas Core: terminals, buses and
+  cabinets at the outpost work as if they were next to the core. A telegraph carries 64 channels and takes none itself.
+- **Linking with a card**: put an **Aetherial Linkage** into the **Write** slot of the base telegraph (the card records it), then into
+  the **Memory** slot of a distant one. Write and Memory exclude each other: while one holds a card the other is locked and crossed out.
+  The slots are labelled, an empty slot explains itself on hover, and the window shows the link, the coordinates, how many outposts
+  are linked to this telegraph and whether the message goes through.
+- **A big RESET button** erases the card in Memory and gives the telegraph a new seal: every card written for it stops working.
+- **Range like the Portable Chronometer's**: 200 blocks without a card; the **Aether Resonance Core** reaches the whole dimension;
+  the **Void-Glass Prism** reaches any dimension (a secret recipe: it opens with the other secrets and has its own secret page).
+  The better card of the two ends counts. Both telegraphs must be loaded.
+- **Upkeep**: every working link costs the Atlas Core 2 Source a second (config `telegraphSourcePerSecond`).
+- **Animated, on the client only**: the Source strikes the violet crystal on the mast (it flashes and hums), the golem operator keys
+  "GOLEM" in Morse, the desk lamp lights with every press, a blue pulse runs up the mast and the dish sweeps the sky.
+- Guide book entry (with the range table), JEI recipes, both languages. 2 new game tests: an outpost works through a link, and
+  a Nether outpost works on an overworld core with the prism (and is out of range without it).
+
+### Server performance
+
+- **The network is no longer walked every 8 ticks.** It is rebuilt only when a node or a peripheral next to it changes (a placed or
+  broken pipe, device, Source jar, chest in front of a periscope), with a safety rescan every 5 seconds.
+- **Bus order is cached**: buses sorted themselves by priority every tick (quadratic in the number of buses).
+- **The Atlas Core** uses the cached network instead of walking it every second, and sends its look to clients only when it changes.
+- **The Card Catalog** compared all 1728 slots every tick; now only after its contents change.
+- **The pattern index** is rebuilt only when a pattern is added or removed, and only the drive cabinets whose disks changed are marked
+  for saving.
+- **Cryo Calculators** switch their lights without neighbour updates.
+- All animations (snowmen, golems, reels, screens, the telegraph) run on the client; the server sends at most one "active" flag a
+  second per machine.
+- 1 new game test: the network follows a Source jar and a chest that are placed and broken next to it.
+
+### Guide book
+
+- **New entry "Pipe Plugs"**: how to keep two lines apart, when to plug a pipe, and that a plug takes no channel.
+
 ## 1.1.1 — AE2-style channels, Source Gems in the Saturator
 
 ### Channels rewritten after Applied Energistics 2

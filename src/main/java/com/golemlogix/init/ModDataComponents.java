@@ -46,6 +46,11 @@ public class ModDataComponents {
             "ghost_fluid", b -> b.persistent(net.neoforged.neoforge.fluids.SimpleFluidContent.CODEC)
                     .networkSynchronized(net.neoforged.neoforge.fluids.SimpleFluidContent.STREAM_CODEC));
 
+    /** The telegraph an Aetherial Linkage card records (written in a telegraph's Write slot). */
+    public static final Supplier<DataComponentType<com.golemlogix.items.TelegraphLinkCardItem.Link>> TELEGRAPH_LINK =
+            COMPONENTS.registerComponentType("telegraph_link", b -> b.persistent(com.golemlogix.items.TelegraphLinkCardItem.Link.CODEC)
+                    .networkSynchronized(com.golemlogix.items.TelegraphLinkCardItem.Link.STREAM_CODEC));
+
     /** The Chronometer was last powered by the Eternal Frost Resonator of its network (for the tooltip). */
     public static final Supplier<DataComponentType<Boolean>> RESONATOR_LINK = COMPONENTS.registerComponentType(
             "resonator_link", b -> b.persistent(Codec.BOOL).networkSynchronized(ByteBufCodecs.BOOL));

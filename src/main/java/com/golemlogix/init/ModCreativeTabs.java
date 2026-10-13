@@ -50,6 +50,10 @@ public class ModCreativeTabs {
                         // Pipes
                         output.accept(ModBlocks.BASIC_SNOW_PIPE.get());
                         output.accept(ModBlocks.DENSE_FROST_PIPE.get());
+                        output.accept(ModBlocks.CRYO_SOURCE_TELEGRAPH.get());
+                        output.accept(ModItems.AETHERIAL_LINKAGE.get());
+                        output.accept(ModItems.AETHER_RESONANCE_CORE.get());
+                        output.accept(ModItems.VOID_GLASS_PRISM.get());
 
                         // Storage & Disks
                         output.accept(ModBlocks.COPPER_DRIVE_BAY.get());

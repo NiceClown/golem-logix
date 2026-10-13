@@ -35,6 +35,10 @@ public class PeriscopeBlockEntity extends BlockEntity {
     public void setPriority(int value) {
         this.priority = Mth.clamp(value, -Priority.MAX, Priority.MAX);
         setChanged();
+        // the network remembers the storages behind periscopes with their priority
+        if (level != null && !level.isClientSide()) {
+            com.golemlogix.system.GolemNetwork.clearCache();
+        }
     }
 
     public UpgradeContainer getUpgrades() {

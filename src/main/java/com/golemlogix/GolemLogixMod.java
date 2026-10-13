@@ -54,6 +54,7 @@ public class GolemLogixMod {
         @SubscribeEvent
         public static void onServerStopped(ServerStoppedEvent event) {
             GolemNetwork.forgetAll();
+            com.golemlogix.system.TelegraphLinks.clear();
         }
 
         /** A block was placed, broken or replaced: if it was a network node, the networks around it are recomputed (see GolemNetwork). */

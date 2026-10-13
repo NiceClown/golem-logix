@@ -289,7 +289,9 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         if (wasActive != be.active) {
             be.syncToClient();
             if (state.hasProperty(GolemProperties.ACTIVE) && state.getValue(GolemProperties.ACTIVE) != be.active) {
-                level.setBlock(pos, state.setValue(GolemProperties.ACTIVE, be.active), 3);
+                // only the looks change: no neighbour updates (pipes and the network do not care)
+                level.setBlock(pos, state.setValue(GolemProperties.ACTIVE, be.active),
+                        net.minecraft.world.level.block.Block.UPDATE_CLIENTS | net.minecraft.world.level.block.Block.UPDATE_KNOWN_SHAPE);
             }
         }
         if (be.hold.ended(time)) {

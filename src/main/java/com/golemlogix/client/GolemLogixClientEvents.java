@@ -32,6 +32,7 @@ public class GolemLogixClientEvents {
         event.registerBlockEntityRenderer(ModBlockEntities.ETERNAL_FROST_RESONATOR.get(), EternalFrostResonatorRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.CARD_CATALOG.get(), CardCatalogRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.SCHEMATIC_CONCENTRATOR.get(), ConcentratorRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.TELEGRAPH.get(), TelegraphRenderer::new);
     }
 
     @SubscribeEvent
@@ -77,6 +78,7 @@ public class GolemLogixClientEvents {
         event.register(ModMenus.MAINFRAME.get(), MainframeScreen::new);
         event.register(ModMenus.CARD_CATALOG.get(), CardCatalogScreen::new);
         event.register(ModMenus.CONCENTRATOR.get(), ConcentratorScreen::new);
+        event.register(ModMenus.TELEGRAPH.get(), TelegraphScreen::new);
     }
 
     /** Liquid Cryo-Source textures (tanks, basins, JEI, the planner). */

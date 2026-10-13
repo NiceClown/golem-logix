@@ -140,6 +140,7 @@ public class CryoMainframeBlockEntity extends BlockEntity {
     /** The number of cores follows the number of calculators; jobs of extra cores are cancelled (contents go back to the network). */
     private void syncCores(boolean refund) {
         int target = calculatorCount() * coresPerCalculator();
+        boolean changed = cores.size() != target;
         while (cores.size() < target) {
             cores.add(new Core(cores.size()));
         }
@@ -148,6 +149,10 @@ public class CryoMainframeBlockEntity extends BlockEntity {
             if (gone.job != null && refund) {
                 gone.refund();
             }
+        }
+        // the remembered networks list the cores they found: they are stale now
+        if (changed && level != null && !level.isClientSide()) {
+            GolemNetwork.clearCache();
         }
     }
 

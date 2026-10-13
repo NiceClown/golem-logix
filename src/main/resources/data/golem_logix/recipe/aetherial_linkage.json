@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "golem_logix:flattened_copper_matrix" },
+    { "item": "minecraft:amethyst_shard" },
+    { "item": "minecraft:paper" },
+    { "item": "minecraft:copper_ingot" }
+  ],
+  "result": {
+    "count": 2,
+    "id": "golem_logix:aetherial_linkage"
+  }
+}

@@ -1,0 +1,16 @@
+# Round 21c (-Mods): the shortened pipe-plug page in Russian
+gui off
+lang ru_ru
+wait 20
+reload
+wait 20
+gui on
+book net_plugs 1
+wait 8
+shot r21c_book_plugs_ru_1
+bookaudit
+closescreen
+gui off
+lang en_us
+wait 20
+gui on

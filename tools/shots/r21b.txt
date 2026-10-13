@@ -1,0 +1,37 @@
+# Round 21b (-Mods): close-ups of the telegraph at night: the gem, the desk lamp lighting with the key, the pulse on the mast
+reload
+cmd gamemode creative @p
+cmd fill -24 -61 -20 20 -61 24 minecraft:deepslate_tiles
+cmd fill -24 -60 -20 20 -48 24 minecraft:air
+hook rig 0 -60 0
+hook telegraph -3 -60 2 south
+hook telegraph -12 -60 10 south
+wait 20
+hook telegraphlink -3 -60 2 -12 -60 10
+wait 60
+gui off
+cmd time set midnight
+look -10.8 -58.8 10.6 2.2 150 25
+wait 6
+shot r21b_desk_0
+wait 2
+shot r21b_desk_1
+wait 2
+shot r21b_desk_2
+wait 2
+shot r21b_desk_3
+wait 2
+shot r21b_desk_4
+wait 2
+shot r21b_desk_5
+look -10.5 -57.6 10.5 3.2 165 5
+wait 4
+shot r21b_mast_0
+wait 3
+shot r21b_mast_1
+wait 3
+shot r21b_mast_2
+cmd time set day
+look -10.5 -57.6 10.5 3.2 165 5
+wait 4
+shot r21b_mast_day

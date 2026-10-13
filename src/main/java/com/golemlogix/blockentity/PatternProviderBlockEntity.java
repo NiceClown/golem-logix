@@ -42,6 +42,7 @@ public class PatternProviderBlockEntity extends BlockEntity {
         public void setChanged() {
             super.setChanged();
             patterns = null;
+            com.golemlogix.system.GolemNetwork.patternsChanged();
         }
     };
     private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.REDSTONE_ONLY, this);

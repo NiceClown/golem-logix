@@ -141,6 +141,11 @@ public class ModBlocks {
             () -> new InterfaceBlock(BlockBehaviour.Properties.of()));
 
     // Late Game Resonator
+    /** Cryo-Source Telegraph: links a distant part of the network to the base (Aetherial Linkage cards, range cards). */
+    public static final DeferredBlock<TelegraphBlock> CRYO_SOURCE_TELEGRAPH = registerBlock("cryo_source_telegraph",
+            "tooltip.golem_logix.cryo_source_telegraph",
+            () -> new TelegraphBlock(BlockBehaviour.Properties.of()));
+
     public static final DeferredBlock<EternalFrostResonatorBlock> ETERNAL_FROST_RESONATOR = registerBlock("eternal_frost_resonator",
             "tooltip.golem_logix.eternal_frost_resonator",
             () -> new EternalFrostResonatorBlock(BlockBehaviour.Properties.of()));

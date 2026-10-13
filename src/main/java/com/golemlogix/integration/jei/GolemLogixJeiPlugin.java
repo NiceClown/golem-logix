@@ -95,13 +95,29 @@ public class GolemLogixJeiPlugin implements IModPlugin {
             return;
         }
         var recipes = runtime.getRecipeManager();
+        // the Void-Glass Prism (the telegraph's endless range) is made of the secret matrix: it is a secret too
+        List<net.minecraft.world.item.crafting.RecipeHolder<net.minecraft.world.item.crafting.CraftingRecipe>> prism = new java.util.ArrayList<>();
+        var level = net.minecraft.client.Minecraft.getInstance().level;
+        if (level != null) {
+            level.getRecipeManager().byKey(ResourceLocation.fromNamespaceAndPath(com.golemlogix.GolemLogixMod.MOD_ID, "void_glass_prism"))
+                    .filter(h -> h.value() instanceof net.minecraft.world.item.crafting.CraftingRecipe)
+                    .ifPresent(h -> prism.add(cast(h)));
+        }
         if (ClientSecrets.all()) {
             recipes.unhideRecipes(AnvilCrushCategory.TYPE, List.of(witherRitual()));
             recipes.unhideRecipes(ManaSaturatorCategory.TYPE, List.of(matrixRitual()));
+            recipes.unhideRecipes(mezz.jei.api.constants.RecipeTypes.CRAFTING, prism);
         } else {
             recipes.hideRecipes(AnvilCrushCategory.TYPE, List.of(witherRitual()));
             recipes.hideRecipes(ManaSaturatorCategory.TYPE, List.of(matrixRitual()));
+            recipes.hideRecipes(mezz.jei.api.constants.RecipeTypes.CRAFTING, prism);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static net.minecraft.world.item.crafting.RecipeHolder<net.minecraft.world.item.crafting.CraftingRecipe> cast(
+            net.minecraft.world.item.crafting.RecipeHolder<?> holder) {
+        return (net.minecraft.world.item.crafting.RecipeHolder<net.minecraft.world.item.crafting.CraftingRecipe>) holder;
     }
 
     /** The search line of the JEI ingredient list (for the developer rig: "@golem_logix" shows all of the mod's items). */

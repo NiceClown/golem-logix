@@ -42,6 +42,9 @@ public class ModMenus {
     public static final Supplier<MenuType<ConcentratorMenu>> CONCENTRATOR =
             MENUS.register("schematic_concentrator", () -> IMenuTypeExtension.create(ConcentratorMenu::fromNetwork));
 
+    public static final Supplier<MenuType<TelegraphMenu>> TELEGRAPH =
+            MENUS.register("cryo_source_telegraph", () -> IMenuTypeExtension.create(TelegraphMenu::fromNetwork));
+
     public static final Supplier<MenuType<RecipeMonitorMenu>> RECIPE_MONITOR =
             MENUS.register("recipe_monitor", () -> IMenuTypeExtension.create(RecipeMonitorMenu::fromNetwork));
 }

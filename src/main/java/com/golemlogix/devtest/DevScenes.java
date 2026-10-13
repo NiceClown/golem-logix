@@ -206,6 +206,27 @@ final class DevScenes {
                 }
                 log.accept("saturator built at " + at + " facing " + facing);
             }
+            case "telegraph" -> {
+                // telegraph x y z facing: a whole Cryo-Source Telegraph, the main cell at (x, y, z)
+                BlockPos at = pos(a, 0);
+                com.golemlogix.blocks.TelegraphBlock.place(level, at, net.minecraft.core.Direction.byName(a[3]));
+                log.accept("telegraph built at " + at);
+            }
+            case "telegraphlink" -> {
+                // telegraphlink ax ay az bx by bz [range]: a card written at telegraph A goes into B's Memory; range 1/2 = a range card in A
+                if (!(level.getBlockEntity(pos(a, 0)) instanceof com.golemlogix.blockentity.TelegraphBlockEntity ta)
+                        || !(level.getBlockEntity(pos(a, 3)) instanceof com.golemlogix.blockentity.TelegraphBlockEntity tb)) {
+                    throw new IllegalStateException("no telegraph");
+                }
+                ta.slots().setItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_WRITE, new ItemStack(ModItems.AETHERIAL_LINKAGE.get()));
+                ItemStack card = ta.slots().removeItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_WRITE, 1);
+                tb.slots().setItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_MEMORY, card);
+                if (a.length > 6) {
+                    ta.slots().setItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_RANGE,
+                            new ItemStack(a[6].equals("2") ? ModItems.VOID_GLASS_PRISM.get() : ModItems.AETHER_RESONANCE_CORE.get()));
+                }
+                log.accept("telegraph link " + com.golemlogix.system.TelegraphLinks.status(tb));
+            }
             case "mainframe" -> {
                 // mainframe x y z facing [calculators] [coprocessors]: the cabinet, glass, casings, atlants; contents inside
                 BlockPos at = pos(a, 0);

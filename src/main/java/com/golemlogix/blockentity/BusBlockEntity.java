@@ -79,6 +79,10 @@ public class BusBlockEntity extends BlockEntity {
     public void setPriority(int value) {
         this.priority = Mth.clamp(value, -Priority.MAX, Priority.MAX);
         setChanged();
+        // the network remembers the order of its buses
+        if (level != null && !level.isClientSide()) {
+            GolemNetwork.clearCache();
+        }
     }
 
     public UpgradeContainer getUpgrades() {

@@ -624,6 +624,113 @@ public class GolemGameTests {
     }
 
     /**
+     * The network is remembered long now, so what stands next to it must make it stale by itself: a chest put in front of a periscope
+     * is network storage in the same tick, and a terminal joins at once.
+     */
+    @GameTest(template = T, timeoutTicks = 200)
+    public static void peripheralsFollowChanges(GameTestHelper helper) {
+        buildArray(helper, 0, 0);
+        powered(helper);
+        // a periscope on the corner bushing (4,1,6) looking west at (2,1,6)
+        helper.setBlock(TERM, ModBlocks.PERISCOPE_STORAGE_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.WEST));
+        helper.runAfterDelay(25, () -> {
+            var level = helper.getLevel();
+            BlockPos abs = helper.absolutePos(TERM);
+            ItemKey cobble = ItemKey.of(new ItemStack(Items.COBBLESTONE));
+            helper.assertTrue(GolemNetwork.get(level, abs).itemCountOf(cobble) == 0, "nothing behind the periscope yet");
+            helper.setBlock(TERM.west(), Blocks.CHEST);
+            ((Container) helper.getBlockEntity(TERM.west())).setItem(0, new ItemStack(Items.COBBLESTONE, 12));
+            helper.assertTrue(GolemNetwork.get(level, abs).itemCountOf(cobble) == 12, "the new chest is storage in the same tick");
+            helper.setBlock(TERM.west(), Blocks.AIR);
+            helper.assertTrue(GolemNetwork.get(level, abs).itemCountOf(cobble) == 0, "a removed chest is gone at once");
+            helper.succeed();
+        });
+    }
+
+    /** A Cryo-Source Telegraph links an outpost: Write records the base telegraph, Memory links to it, Reset breaks every card of it. */
+    @GameTest(template = T, timeoutTicks = 200)
+    public static void telegraphLinksAnOutpost(GameTestHelper helper) {
+        buildArray(helper, 0, 0);
+        powered(helper);
+        var level = helper.getLevel();
+        // the base telegraph touches the corner bushing (6,1,6); the outpost one stands apart with a terminal
+        BlockPos aRel = new BlockPos(7, 1, 6), bRel = new BlockPos(2, 1, 10), term = new BlockPos(1, 1, 10);
+        com.golemlogix.blocks.TelegraphBlock.place(level, helper.absolutePos(aRel), Direction.SOUTH);
+        com.golemlogix.blocks.TelegraphBlock.place(level, helper.absolutePos(bRel), Direction.SOUTH);
+        put(helper, term, ModBlocks.ANALOG_TERMINAL.get());
+        helper.runAfterDelay(25, () -> {
+            var a = (com.golemlogix.blockentity.TelegraphBlockEntity) helper.getBlockEntity(aRel);
+            var b = (com.golemlogix.blockentity.TelegraphBlockEntity) helper.getBlockEntity(bRel);
+            int write = com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_WRITE, memory = com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_MEMORY;
+            helper.assertTrue(!net(helper, term).hasCore(), "the outpost is alone before the link");
+            a.slots().setItem(write, new ItemStack(ModItems.AETHERIAL_LINKAGE.get()));
+            ItemStack card = a.slots().removeItem(write, 1);
+            var link = com.golemlogix.items.TelegraphLinkCardItem.link(card);
+            helper.assertTrue(link != null && link.target().pos().equals(helper.absolutePos(aRel)), "the Write slot records the base telegraph");
+            b.slots().setItem(memory, card);
+            helper.assertTrue(com.golemlogix.system.TelegraphLinks.status(b) == com.golemlogix.system.TelegraphLinks.Status.LINKED, "linked");
+            GolemNetwork n = net(helper, term);
+            helper.assertTrue(n.hasCore() && n.isDeviceActive(helper.absolutePos(term)), "the outpost terminal works through the link");
+            helper.assertTrue(n.telegraphLinks() == 1, "one link, got " + n.telegraphLinks());
+            helper.assertTrue(!b.mayPlace(write, new ItemStack(ModItems.AETHERIAL_LINKAGE.get())), "Write is locked while Memory holds a card");
+            helper.assertTrue(com.golemlogix.system.TelegraphLinks.linkedReceivers(a) == 1, "the base telegraph sees its receiver");
+            a.reset();
+            helper.assertTrue(com.golemlogix.system.TelegraphLinks.status(b) == com.golemlogix.system.TelegraphLinks.Status.OUTDATED,
+                    "a reset outdates the card");
+            helper.assertTrue(!net(helper, term).hasCore(), "and breaks the link");
+            helper.succeed();
+        });
+    }
+
+    /** Without a range card a telegraph stays in its dimension; the Void-Glass Prism on either end links the Nether to the base. */
+    @GameTest(template = T, timeoutTicks = 200)
+    public static void telegraphReachesAnotherDimension(GameTestHelper helper) {
+        var level = helper.getLevel();
+        net.minecraft.server.level.ServerLevel nether = level.getServer().getLevel(net.minecraft.world.level.Level.NETHER);
+        if (nether == null) {
+            helper.succeed();
+            return;
+        }
+        buildArray(helper, 0, 0);
+        powered(helper);
+        BlockPos aRel = new BlockPos(7, 1, 6);
+        com.golemlogix.blocks.TelegraphBlock.place(level, helper.absolutePos(aRel), Direction.SOUTH);
+        BlockPos o = helper.absolutePos(ORIGIN);
+        BlockPos b = new BlockPos(o.getX(), 100, o.getZ());
+        nether.setChunkForced(b.getX() >> 4, b.getZ() >> 4, true);
+        for (BlockPos p : BlockPos.betweenClosed(b.offset(-2, -1, -2), b.offset(3, 4, 3))) {
+            nether.setBlock(p, p.getY() == b.getY() - 1 ? Blocks.STONE.defaultBlockState() : Blocks.AIR.defaultBlockState(), 3);
+        }
+        com.golemlogix.blocks.TelegraphBlock.place(nether, b, Direction.SOUTH);
+        BlockPos termPos = b.west();
+        nether.setBlock(termPos, ModBlocks.ANALOG_TERMINAL.get().defaultBlockState(), 3);
+        helper.runAfterDelay(25, () -> {
+            try {
+                var a = (com.golemlogix.blockentity.TelegraphBlockEntity) helper.getBlockEntity(aRel);
+                var bt = (com.golemlogix.blockentity.TelegraphBlockEntity) nether.getBlockEntity(b);
+                helper.assertTrue(bt != null, "the outpost telegraph stands in the Nether");
+                a.slots().setItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_WRITE, new ItemStack(ModItems.AETHERIAL_LINKAGE.get()));
+                ItemStack card = a.slots().removeItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_WRITE, 1);
+                bt.slots().setItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_MEMORY, card);
+                helper.assertTrue(com.golemlogix.system.TelegraphLinks.status(bt) == com.golemlogix.system.TelegraphLinks.Status.OUT_OF_RANGE,
+                        "no range card: another dimension is out of range, got " + com.golemlogix.system.TelegraphLinks.status(bt));
+                a.slots().setItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_RANGE, new ItemStack(ModItems.VOID_GLASS_PRISM.get()));
+                helper.assertTrue(com.golemlogix.system.TelegraphLinks.status(bt) == com.golemlogix.system.TelegraphLinks.Status.LINKED,
+                        "the prism at the base reaches the Nether");
+                GolemNetwork n = GolemNetwork.scan(nether, termPos);
+                helper.assertTrue(n.hasCore() && n.coreLevel() == level, "the Nether outpost runs on the base core");
+                helper.assertTrue(n.isDeviceActive(termPos), "the Nether terminal has a channel");
+                helper.succeed();
+            } finally {
+                for (BlockPos p : BlockPos.betweenClosed(b.offset(-2, -1, -2), b.offset(3, 4, 3))) {
+                    nether.setBlock(p, Blocks.AIR.defaultBlockState(), 3);
+                }
+                nether.setChunkForced(b.getX() >> 4, b.getZ() >> 4, false);
+            }
+        });
+    }
+
+    /**
      * The remembered network follows the world at once (as an AE2 grid repaths when a connection changes): a new device is counted in the
      * same tick, and devices cut off from the core go dark at the end of the tick instead of glowing forever.
      */

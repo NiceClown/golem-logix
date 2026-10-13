@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "A": { "item": "minecraft:amethyst_shard" },
+    "E": { "item": "minecraft:ender_eye" },
+    "G": { "item": "minecraft:gold_ingot" },
+    "I": { "item": "golem_logix:flattened_iron_core" },
+    "M": { "item": "golem_logix:flattened_copper_matrix" }
+  },
+  "pattern": [
+    "GAG",
+    "MEM",
+    "GIG"
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:aether_resonance_core"
+  }
+}

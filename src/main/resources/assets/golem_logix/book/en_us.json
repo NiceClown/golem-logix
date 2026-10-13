@@ -566,6 +566,57 @@
                "• a bushing: its line and the whole network; an expander: its exit."
              ]}
           ]
+        },
+        {
+          "id": "net_plugs", "title": "Pipe Plugs", "icon": "golem_logix:pipe_plug", "x": 2, "y": -1, "parents": ["net_pipes"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:pipe_plug",
+             "text": ["A brass cap that closes one side of a pipe."]},
+            {"type": "text", "title": "Keeping lines apart",
+             "text": [
+               "Pipes join every network block next to them, so two lines side by side &lmerge into one&r: channels take the shortest path and may crowd one line.",
+               "&lRight-click a pipe&r with a plug: the side closest to the click closes. A closed side connects to nothing.",
+               "Right-click a closed side to take the plug back. Jade lists the plugged sides."
+             ]},
+            {"type": "text", "title": "When to plug",
+             "text": [
+               "• Lines from different bushings touch: plug them apart, each keeps its own line.",
+               "• A dense trunk passes devices that should hang on a basic branch: plug the trunk's sides.",
+               "• A device must not take its channel from a neighbouring line: close the side facing it.",
+               "&oA plug takes no channel and does not stop Source jars.&r"
+             ]}
+          ]
+        },
+        {
+          "id": "net_telegraph", "title": "Cryo-Source Telegraph", "icon": "golem_logix:cryo_source_telegraph", "x": 3, "y": 0, "parents": ["net_devices"], "gold": true,
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:cryo_source_telegraph",
+             "text": ["A rusty copper base 2x2 with a mast three blocks high: one item places it all, facing you. It carries 64 channels; pipes join its base."]},
+            {"type": "text", "title": "Linking two telegraphs",
+             "text": [
+               "1. Put an &lAetherial Linkage&r into the &lWrite&r slot of the telegraph at your base: the card records it.",
+               "2. Carry the card to a distant telegraph and put it into its &lMemory&r slot: the two link, and the outpost joins your network.",
+               "• While a card sits in Write, Memory is locked, and the other way round.",
+               "• One base telegraph takes any number of outposts: write a card for each."
+             ]},
+            {"type": "table", "title": "Range", "header": ["Card", "Range"], "widths": [76, 72],
+             "rows": [
+               ["none", "200 blocks"],
+               ["Aether Resonance Core", "the dimension"],
+               ["Void-Glass Prism", "any dimension"]
+             ],
+             "text": ["The better card of the two ends counts. Both telegraphs must be loaded."]},
+            {"type": "text", "title": "Reset and upkeep",
+             "text": [
+               "The big &lRESET&r button erases the card in Memory and gives the telegraph a new seal: every card written for it stops working.",
+               "A working link costs the Atlas Core &l2 Source&r a second.",
+               "&oWhile the link works the operator keys Morse: the lamp lights with every press, a blue pulse runs up the mast.&r"
+             ]},
+            {"type": "crafting", "recipe": "golem_logix:aetherial_linkage",
+             "text": ["Two cards per craft. A blank card records the telegraph whose Write slot it is put into."]},
+            {"type": "crafting", "recipe": "golem_logix:aether_resonance_core",
+             "text": ["Range card: the link reaches anywhere in the same dimension."]}
+          ]
         }
       ]
     },
@@ -1309,7 +1360,20 @@
                "One ritual turns the plasma into &lone&r matrix. It goes into:",
                "• the Chronometer's cross-dimension upgrade,",
                "• the &lQuantum Channel Expander&r,",
-               "• the &lEternal Frost Source Resonator&r."
+               "• the &lEternal Frost Source Resonator&r,",
+               "• the telegraph's &lVoid-Glass Prism&r."
+             ]}
+          ]
+        },
+        {
+          "id": "telegraph_prism", "title": "Void-Glass Prism", "icon": "golem_logix:void_glass_prism", "x": 3, "y": 0, "parents": ["matrix"], "secret": "full",
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:void_glass_prism",
+             "text": ["The range card without limits: a Cryo-Source Telegraph with it links to its partner in &lany dimension&r."]},
+            {"type": "text", "title": "An outpost beyond the border",
+             "text": [
+               "An outpost in the Nether or the End joins your base network through a pair of telegraphs: its buses, terminals and cabinets work as if they stood at home.",
+               "One prism on either end is enough. Both telegraphs must be loaded - keep the outpost's chunks loaded if it has to work while you are away."
              ]}
           ]
         }

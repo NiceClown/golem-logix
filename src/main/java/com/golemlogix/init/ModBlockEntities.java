@@ -28,6 +28,10 @@ public class ModBlockEntities {
             BLOCK_ENTITY_TYPES.register("eternal_frost_resonator", () ->
                     BlockEntityType.Builder.of(EternalFrostResonatorBlockEntity::new, ModBlocks.ETERNAL_FROST_RESONATOR.get()).build(null));
 
+    public static final Supplier<BlockEntityType<com.golemlogix.blockentity.TelegraphBlockEntity>> TELEGRAPH =
+            BLOCK_ENTITY_TYPES.register("cryo_source_telegraph", () ->
+                    BlockEntityType.Builder.of(com.golemlogix.blockentity.TelegraphBlockEntity::new, ModBlocks.CRYO_SOURCE_TELEGRAPH.get()).build(null));
+
     public static final Supplier<BlockEntityType<AtlasCoreBlockEntity>> ATLAS_CORE =
             BLOCK_ENTITY_TYPES.register("atlas_core", () ->
                     BlockEntityType.Builder.of(AtlasCoreBlockEntity::new, ModBlocks.ATLAS_CORE.get()).build(null));

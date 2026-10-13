@@ -54,6 +54,8 @@ public class CardCatalogBlockEntity extends BlockEntity {
         public void setChanged() {
             super.setChanged();
             patterns = null;
+            summaryDirty = true;
+            com.golemlogix.system.GolemNetwork.patternsChanged();
         }
     };
     private final OwnedContainer providers = new OwnedContainer(1, this, s -> s.is(ModBlocks.PATTERN_PROVIDER.get().asItem())) {
@@ -71,6 +73,8 @@ public class CardCatalogBlockEntity extends BlockEntity {
         public void setChanged() {
             super.setChanged();
             patterns = null;
+            summaryDirty = true;
+            com.golemlogix.system.GolemNetwork.patternsChanged();
         }
     };
     private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.REDSTONE_ONLY, this);
@@ -82,6 +86,8 @@ public class CardCatalogBlockEntity extends BlockEntity {
     private int viewers = 0;
     private long lastSync = -100;
     private String sentSummary = "";
+    /** The cards or providers changed since the last sync check (counting 1728 places every tick was wasted work). */
+    private boolean summaryDirty = true;
 
     // --- client
     private int clientCards, clientCapacity;
@@ -285,8 +291,11 @@ public class CardCatalogBlockEntity extends BlockEntity {
             be.patterns = null;
             GolemNetwork.clearCache();
         }
-        if (time - be.lastSync >= 10 && !be.summary().equals(be.sentSummary)) {
-            be.syncNow();
+        if (be.summaryDirty && time - be.lastSync >= 10) {
+            be.summaryDirty = false;
+            if (!be.summary().equals(be.sentSummary)) {
+                be.syncNow();
+            }
         }
     }
 

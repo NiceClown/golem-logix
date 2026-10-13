@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "A": { "item": "minecraft:amethyst_shard" },
+    "C": { "item": "minecraft:copper_block" },
+    "M": { "item": "golem_logix:flattened_copper_matrix" },
+    "P": { "item": "golem_logix:dense_frost_pipe" },
+    "R": { "item": "minecraft:lightning_rod" }
+  },
+  "pattern": [
+    " R ",
+    "MAM",
+    "CPC"
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:cryo_source_telegraph"
+  }
+}

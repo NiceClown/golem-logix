@@ -76,13 +76,31 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         if (be.initialized && (level.getGameTime() + pos.asLong()) % 20 != 0) {
             return;
         }
+        boolean first = !be.initialized;
         be.initialized = true;
-        be.refresh(level, pos);
+        be.update(level, pos, first);
     }
 
-    /** Forced rescan (first tick, right-click on the core); the fresh network is shared with every device of it. */
+    /** Forced rescan (right-click on the core, tests); the fresh network is shared with every device of it. */
     public void refresh(Level level, BlockPos pos) {
-        GolemNetwork net = GolemNetwork.refresh(level, pos);
+        update(level, pos, true);
+    }
+
+    /** The network whose lights were last set, and how many seconds ago (they are set again on a change and now and then). */
+    private GolemNetwork syncedNetwork;
+    private int secondsSinceSync;
+
+    /**
+     * Once a second: drains Source and lights the network. The walk itself is the one the devices share and is remembered until
+     * something changes (it used to be repeated every second); the array is checked here, because casings and Atlants are not
+     * network nodes and their changes do not reach the network on their own.
+     */
+    private void update(Level level, BlockPos pos, boolean force) {
+        GolemNetwork net = force ? GolemNetwork.refresh(level, pos) : GolemNetwork.get(level, pos);
+        if (!force && net.isPrimaryCore(pos) && AtlasStructure.check(level, pos).valid() != net.structureValid()) {
+            GolemNetwork.nodesChanged(level, pos);
+            net = GolemNetwork.refresh(level, pos);
+        }
 
         boolean newPowered;
         int cost = 0;
@@ -92,12 +110,16 @@ public class AtlasCoreBlockEntity extends BlockEntity {
             newPowered = false;
         } else {
             cost = GolemConfig.CORE_SOURCE_PER_SECOND.get()
-                    + (int) Math.ceil(net.channelsUsed() * GolemConfig.CHANNEL_SOURCE_PER_SECOND.get());
+                    + (int) Math.ceil(net.channelsUsed() * GolemConfig.CHANNEL_SOURCE_PER_SECOND.get())
+                    + net.telegraphLinks() * GolemConfig.TELEGRAPH_SOURCE_PER_SECOND.get();
             newPowered = net.consumeSource(cost);
         }
 
-        if (!duplicate) {
+        // the lights only change with the network or the power; walking every node every second for nothing was wasted work
+        if (!duplicate && (force || net != syncedNetwork || newPowered != powered || ++secondsSinceSync >= 10)) {
             net.syncActiveVisuals(newPowered);
+            syncedNetwork = net;
+            secondsSinceSync = 0;
         }
         boolean newFormed = net.structure() != null && net.structure().valid();
         if (newFormed && !formed) {
