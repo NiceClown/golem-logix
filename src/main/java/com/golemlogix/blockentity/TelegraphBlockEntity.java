@@ -43,11 +43,13 @@ import java.util.List;
  */
 public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
     public static final int SLOT_RANGE = 0, SLOT_WRITE = 1, SLOT_MEMORY = 2;
+    /** The Write slot takes a whole stack of linkage cards and writes them all at once; Range and Memory take one card (the menu). */
+    public static final int WRITE_STACK = 16;
 
     private final OwnedContainer slots = new OwnedContainer(3, this, s -> true) {
         @Override
         public int getMaxStackSize() {
-            return 1;
+            return WRITE_STACK;
         }
 
         @Override

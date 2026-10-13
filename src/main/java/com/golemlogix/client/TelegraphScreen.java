@@ -73,7 +73,7 @@ public class TelegraphScreen extends GolemScreen<TelegraphMenu> {
         Component main;
         int color;
         if (writing) {
-            main = Component.translatable("gui.golem_logix.telegraph.written");
+            main = Component.translatable("gui.golem_logix.telegraph.written", menu.slotItem(TelegraphBlockEntity.SLOT_WRITE).getCount());
             color = GolemGui.GREEN;
         } else if (status == TelegraphLinks.Status.LINKED) {
             TelegraphLinkCardItem.Link link = TelegraphLinkCardItem.link(menu.slotItem(TelegraphBlockEntity.SLOT_MEMORY));

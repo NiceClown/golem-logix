@@ -682,6 +682,50 @@ public class GolemGameTests {
         });
     }
 
+    /**
+     * The Write slot takes a whole stack and writes every card; blank cards clicked onto written ones join them; shift-click sends
+     * blank cards to Write and a card written elsewhere to Memory, never rewriting it.
+     */
+    @GameTest(template = T, timeoutTicks = 100)
+    public static void telegraphWritesAStack(GameTestHelper helper) {
+        var level = helper.getLevel();
+        BlockPos rel = new BlockPos(2, 1, 2);
+        com.golemlogix.blocks.TelegraphBlock.place(level, helper.absolutePos(rel), Direction.SOUTH);
+        helper.runAfterDelay(5, () -> {
+            var be = (com.golemlogix.blockentity.TelegraphBlockEntity) helper.getBlockEntity(rel);
+            int write = com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_WRITE, memory = com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_MEMORY;
+            var mine = new com.golemlogix.items.TelegraphLinkCardItem.Link(be.globalPos(), be.seal());
+            var elsewhere = new com.golemlogix.items.TelegraphLinkCardItem.Link(
+                    net.minecraft.core.GlobalPos.of(level.dimension(), helper.absolutePos(new BlockPos(9, 1, 9))), 42);
+            ServerPlayer player = testPlayer(helper);
+            ItemStack foreign = new ItemStack(ModItems.AETHERIAL_LINKAGE.get());
+            foreign.set(com.golemlogix.init.ModDataComponents.TELEGRAPH_LINK.get(), elsewhere);
+            player.getInventory().setItem(0, new ItemStack(ModItems.AETHERIAL_LINKAGE.get(), 5));
+            player.getInventory().setItem(1, foreign);
+            var menu = new com.golemlogix.menu.TelegraphMenu(31, player.getInventory(), be, be.slots(),
+                    new net.minecraft.world.inventory.SimpleContainerData(3), net.minecraft.world.inventory.ContainerLevelAccess.NULL);
+            int hotbar0 = 3 + 27, hotbar1 = hotbar0 + 1;
+            menu.clicked(hotbar0, 0, net.minecraft.world.inventory.ClickType.QUICK_MOVE, player);
+            ItemStack cards = be.slots().getItem(write);
+            helper.assertTrue(cards.getCount() == 5 && mine.equals(com.golemlogix.items.TelegraphLinkCardItem.link(cards)),
+                    "shift-click puts all 5 blank cards into Write and they are written, got " + cards.getCount());
+            menu.setCarried(new ItemStack(ModItems.AETHERIAL_LINKAGE.get(), 3));
+            menu.clicked(write, 0, net.minecraft.world.inventory.ClickType.PICKUP, player);
+            cards = be.slots().getItem(write);
+            helper.assertTrue(cards.getCount() == 8 && menu.getCarried().isEmpty() && mine.equals(com.golemlogix.items.TelegraphLinkCardItem.link(cards)),
+                    "blank cards clicked onto written ones join them, got " + cards.getCount());
+            menu.clicked(hotbar1, 0, net.minecraft.world.inventory.ClickType.QUICK_MOVE, player);
+            helper.assertTrue(elsewhere.equals(com.golemlogix.items.TelegraphLinkCardItem.link(player.getInventory().getItem(1))),
+                    "a card written elsewhere is never rewritten by shift-click");
+            be.slots().setItem(write, ItemStack.EMPTY);
+            menu.clicked(hotbar1, 0, net.minecraft.world.inventory.ClickType.QUICK_MOVE, player);
+            ItemStack mem = be.slots().getItem(memory);
+            helper.assertTrue(mem.getCount() == 1 && elsewhere.equals(com.golemlogix.items.TelegraphLinkCardItem.link(mem)),
+                    "a written card goes to Memory as it is");
+            helper.succeed();
+        });
+    }
+
     /** Without a range card a telegraph stays in its dimension; the Void-Glass Prism on either end links the Nether to the base. */
     @GameTest(template = T, timeoutTicks = 200)
     public static void telegraphReachesAnotherDimension(GameTestHelper helper) {

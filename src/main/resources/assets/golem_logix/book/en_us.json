@@ -594,7 +594,7 @@
              "text": ["A rusty copper base 2x2 with a mast three blocks high: one item places it all, facing you. It carries 64 channels; pipes join its base."]},
             {"type": "text", "title": "Linking two telegraphs",
              "text": [
-               "1. Put an &lAetherial Linkage&r into the &lWrite&r slot of the telegraph at your base: the card records it.",
+               "1. Put &lAetherial Linkages&r into the &lWrite&r slot of the telegraph at your base: a whole stack is written at once.",
                "2. Carry the card to a distant telegraph and put it into its &lMemory&r slot: the two link, and the outpost joins your network.",
                "• While a card sits in Write, Memory is locked, and the other way round.",
                "• One base telegraph takes any number of outposts: write a card for each."
@@ -613,7 +613,7 @@
                "&oWhile the link works the operator keys Morse: the lamp lights with every press, a blue pulse runs up the mast.&r"
              ]},
             {"type": "crafting", "recipe": "golem_logix:aetherial_linkage",
-             "text": ["Two cards per craft. A blank card records the telegraph whose Write slot it is put into."]},
+             "text": ["Two cards per craft. Blank cards record the telegraph whose Write slot they are put into, up to 16 at once."]},
             {"type": "crafting", "recipe": "golem_logix:aether_resonance_core",
              "text": ["Range card: the link reaches anywhere in the same dimension."]}
           ]

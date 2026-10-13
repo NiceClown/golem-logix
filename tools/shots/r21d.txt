@@ -1,0 +1,54 @@
+# Round 21d (-Mods): the operator's hand comes down on the key's knob (front and side close-ups);
+# a stack of linkage cards in the Write slot, then blank cards added onto the written ones
+reload
+cmd gamemode creative @p
+cmd time set day
+cmd fill -24 -61 -20 20 -61 24 minecraft:deepslate_tiles
+cmd fill -24 -60 -20 20 -48 24 minecraft:air
+hook rig 0 -60 0
+hook telegraph -3 -60 2 south
+hook telegraph -12 -60 10 south
+wait 20
+hook telegraphlink -3 -60 2 -12 -60 10
+wait 60
+gui off
+look -11.75 -58.95 10.45 1.5 180 22
+wait 4
+shot r21d_front_0
+wait 1
+shot r21d_front_1
+wait 1
+shot r21d_front_2
+wait 1
+shot r21d_front_3
+look -11.75 -58.95 10.45 1.6 270 8
+wait 4
+shot r21d_side_0
+wait 1
+shot r21d_side_1
+wait 1
+shot r21d_side_2
+wait 1
+shot r21d_side_3
+gui on
+hook give golem_logix:aetherial_linkage 7 0
+cam -2 -59 6 180 20
+wait 3
+use -3 -60 2
+wait 10
+uiat 16 198 0
+wait 2
+uiat 88 40 0
+wait 10
+shot r21d_gui_stack
+closescreen
+hook give golem_logix:aetherial_linkage 4 0
+wait 3
+use -3 -60 2
+wait 10
+uiat 16 198 0
+wait 2
+uiat 88 40 0
+wait 10
+shot r21d_gui_more
+closescreen

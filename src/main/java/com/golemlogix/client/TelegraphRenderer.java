@@ -46,6 +46,8 @@ public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEnti
     /** Ticks a pulse needs to run from the base to the dish. */
     private static final float PULSE_TICKS = 16f;
     private static final float MAST_X = -8f, MAST_Z = 24f, MAST_BOTTOM = 16f, MAST_TOP = 41f;
+    /** The key's knob, right under the operator's right hand when it presses (worked out from CopperGolemPuppet's arm). */
+    private static final float KEY_X = 12.9f, KEY_Z = 9.5f;
 
     private static ResourceLocation tex(String name) {
         return ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/" + name);
@@ -108,9 +110,10 @@ public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEnti
 
         // the operator: stands at the back of the front left cell facing the front, the right hand on the key
         float bob = down ? -0.02f : 0f;
+        // working: the right hand hovers over the knob and comes down on it; idle: it hangs beside the key
         CopperGolemPuppet.Arms arms = wake > 0.05f
-                ? new CopperGolemPuppet.Arms(down ? -0.62f : -0.82f, 0.18f, -0.25f, -0.1f, 0.12f * Mth.sin(time * 0.03f))
-                : new CopperGolemPuppet.Arms(-0.15f, 0.08f, -0.15f, -0.08f, 0.6f * Mth.sin(time * 0.02f));
+                ? new CopperGolemPuppet.Arms(down ? -0.66f : -0.95f, 0.05f, -0.25f, -0.1f, 0.12f * Mth.sin(time * 0.03f))
+                : new CopperGolemPuppet.Arms(0.1f, 0.12f, -0.15f, -0.08f, 0.6f * Mth.sin(time * 0.02f));
         CopperGolemPuppet.render(pose, buffers, light, new Vector3f(9.5f / 16f, 15f / 16f, 11.5f / 16f), new Vector3f(0f, 0f, -1f),
                 new Vector3f(0f, 1f, 0f), 0.58f, new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.12f + bob), 1, null, arms);
         pose.popPose();
@@ -159,8 +162,8 @@ public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEnti
         fitWall(vc, pose.last(), 6f, 3f, 14f, 11f, -16.06f, DIAL, white, light);
         pose.popPose();
         // a copper cable from the key along the deck to the foot of the mast
-        box(vc, p, 4.6f, 15f, 8.5f, 5.6f, 15.7f, 19.5f, COPPER, white, light);
-        box(vc, p, MAST_X, 15f, 18.8f, 5.6f, 15.7f, 19.8f, COPPER, white, light);
+        box(vc, p, KEY_X + 1f, 15f, 8.4f, KEY_X + 1.8f, 15.7f, 19.8f, COPPER, white, light);
+        box(vc, p, MAST_X, 15f, 18.8f, KEY_X + 1f, 15.7f, 19.8f, COPPER, white, light);
     }
 
     // ------------------------------------------------------------------ mast
@@ -275,14 +278,16 @@ public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEnti
     private static void key(VertexConsumer vc, PoseStack pose, int light, boolean down) {
         PoseStack.Pose p = pose.last();
         int white = 0xFFFFFFFF;
-        box(vc, p, 3.5f, 15f, 3.5f, 9.5f, 15.6f, 8f, DARK, white, light);
-        box(vc, p, 8f, 15.6f, 5f, 9f, 16.8f, 6.5f, BRASS, white, light);
-        box(vc, p, 4.5f, 15.6f, 5.2f, 5.3f, 16.2f, 6.3f, BRASS, white, light);
+        // a straight key under the operator's right hand: the lever runs from the pivot at the front towards the golem,
+        // the knob overhangs the base right where the hand comes down (KEY_X/KEY_Z, see the operator's arms)
+        box(vc, p, KEY_X - 1.7f, 15f, 2.8f, KEY_X + 1.7f, 15.6f, 8.4f, DARK, white, light);
+        box(vc, p, KEY_X - 1f, 15.6f, 3.9f, KEY_X + 1f, 16.4f, 5.3f, BRASS, white, light);
+        box(vc, p, KEY_X - 0.4f, 15.6f, 7.4f, KEY_X + 0.4f, 15.7f, 8.2f, BRASS, white, light);
         pose.pushPose();
-        pose.translate(8.5f / 16f, 16.6f / 16f, 5.75f / 16f);
-        pose.mulPose(Axis.ZP.rotationDegrees(down ? 7f : 0f));
-        box(vc, pose.last(), -4.6f, -0.2f, -0.35f, 0.2f, 0.4f, 0.35f, BRASS, 0xFFF0D080, light);
-        box(vc, pose.last(), -4.9f, 0.2f, -0.9f, -3.3f, 1.2f, 0.9f, DARK, white, light);
+        pose.translate(KEY_X / 16f, 16.2f / 16f, 4.6f / 16f);
+        pose.mulPose(Axis.XP.rotationDegrees(down ? 6f : 0f));
+        box(vc, pose.last(), -0.35f, -0.2f, -0.8f, 0.35f, 0.3f, 5.2f, BRASS, 0xFFF0D080, light);
+        box(vc, pose.last(), -0.8f, 0.3f, KEY_Z - 4.6f - 0.7f, 0.8f, 0.9f, KEY_Z - 4.6f + 0.7f, DARK, white, light);
         pose.popPose();
     }
 

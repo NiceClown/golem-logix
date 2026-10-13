@@ -44,7 +44,7 @@ The whole network runs on **Source** from Ars Nouveau. Without Ars Nouveau it si
 
 ### Cryo-Source Telegraph
 - **Outposts on your base network:** a 2×2 relay with a three-block mast. Link two telegraphs and the far one joins your base network, Atlas Core and all.
-- **Linking cards:** write an **Aetherial Linkage** in one telegraph's **Write** slot, put it into the other's **Memory** slot. The two slots lock each other, and a big **RESET** button voids every card written for that telegraph.
+- **Linking cards:** write **Aetherial Linkages** in one telegraph's **Write** slot (a whole stack at once), put one into each outpost's **Memory** slot. The two slots lock each other, and a big **RESET** button voids every card written for that telegraph.
 - **Range like the Chronometer's:** 200 blocks, the whole dimension with the **Aether Resonance Core**, any dimension with the secret **Void-Glass Prism**.
 - **A living machine:** Source strikes the crystal on the mast, a golem operator keys Morse, the desk lamp blinks with every press and blue pulses run up the mast.
 

@@ -1,0 +1,16 @@
+# Round 21e (-Mods, after r21d): the operator's hand and the key's knob in profile, from the side of the key
+gui off
+look -11.75 -58.95 10.45 1.6 90 8
+wait 4
+shot r21e_side_0
+wait 1
+shot r21e_side_1
+wait 1
+shot r21e_side_2
+wait 1
+shot r21e_side_3
+wait 1
+shot r21e_side_4
+wait 1
+shot r21e_side_5
+gui on

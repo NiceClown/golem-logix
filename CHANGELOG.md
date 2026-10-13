@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.3 — Telegraph fixes
+
+- **The Write slot takes a whole stack** of Aetherial Linkages (up to 16) and writes them all at once, so a growing base needs no
+  card shuffling. Blank cards clicked onto written ones join them instead of swapping places with them; the window counts the
+  written cards.
+- **Shift-click sorts linkage cards**: blank cards go to Write, a written card goes to Memory. Before, a card brought from the base
+  could be shift-clicked into the outpost's Write slot and rewritten by accident.
+- **Fixed: the operator struck past the key.** The key stood under the golem's other side with the knob away from the hand. It is
+  now a straight key in front of the right hand: the lever runs from the pivot towards the operator, and the hand comes down right on
+  the knob. When the telegraph is idle the hand hangs beside the key.
+- 1 new game test (95 in all): a stack is written, blank cards join written ones, shift-click never rewrites a written card.
+
 ## 1.1.2 — Cryo-Source Telegraph, a lighter server
 
 ### Cryo-Source Telegraph
