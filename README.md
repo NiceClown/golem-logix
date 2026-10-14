@@ -76,7 +76,7 @@ Put `golem_logix-<version>.jar` into the `mods` folder (client and server). On a
 ## Building from source
 
 ```
-gradlew build              # build/libs/golem_logix-1.1.6.jar (JAVA_HOME must point at JDK 21)
+gradlew build              # build/libs/golem_logix-1.1.7.jar (JAVA_HOME must point at JDK 21)
 gradlew runGameTestServer  # 105 game tests on a real server (add -PtestMods for Ars Nouveau, JEI, Jade, Curios; -Pcreate for
                            # Create; -PnoBackport runs them without Copper Age Backport)
 ```

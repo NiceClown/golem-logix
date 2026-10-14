@@ -51,7 +51,8 @@ public class GolemLogixJeiPlugin implements IModPlugin {
     private static AnvilCrushRecipe witherRitual() {
         if (witherRitual == null) {
             witherRitual = new AnvilCrushRecipe(new ItemStack(Items.NETHER_STAR), Component.translatable("jei.golem_logix.golem.wither"),
-                    Component.translatable("jei.golem_logix.hp.wither"), new ItemStack(ModItems.IMPLODED_WITHER_PLASMA.get()));
+                    Component.translatable("jei.golem_logix.hp.wither"), new ItemStack(ModItems.IMPLODED_WITHER_PLASMA.get()),
+                    net.minecraft.world.entity.EntityType.WITHER, Float.NaN, Float.NaN);
         }
         return witherRitual;
     }
@@ -77,7 +78,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
                     .getBaseValue(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
             hp = Component.translatable("jei.golem_logix.hp.range_of", min, max, (int) Math.round(full));
         }
-        return new AnvilCrushRecipe(icon, type.getDescription(), hp, r.result().copy());
+        return new AnvilCrushRecipe(icon, type.getDescription(), hp, r.result().copy(), type, r.minHealth(), r.maxHealth());
     }
 
     @Override

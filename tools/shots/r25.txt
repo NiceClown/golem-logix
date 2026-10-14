@@ -1,0 +1,13 @@
+# Round 25 (-Mods): the animated anvil ritual in JEI: a series of frames through one loop
+reload
+cmd gamemode creative @p
+cmd time set day
+cmd recipe give @p *
+wait 120
+gui on
+notoasts
+jeitype golem_logix:anvil_crushing
+wait 10
+mouse 20 300
+burst r25_jei_anvil 44 2
+closescreen

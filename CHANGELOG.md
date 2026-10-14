@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.7 — The anvil ritual in JEI, animated
+
+- **The anvil ritual page in JEI is now a little scene** (like Flux Networks' in-world crafting): the anvil hangs above the golem's
+  model, an arrow points down at it, the anvil falls, the golem flinches red and flattens with a burst of sparks, and its plate
+  lights up under an "=" below. An arrow to the left of the golem points at how battered it must be, in hearts with the HP below
+  (½ – 2 hearts, "1-4 HP" for the iron and the copper golem). The Wither's ritual keeps its condition as text.
+
 ## 1.1.6 — Fuzzy mode and the Fuzzy Card
 
 Like RS's fuzzy mode and AE2's substitutions and Fuzzy Card, with one rule for the whole mod: a fuzzy slot takes the same item with

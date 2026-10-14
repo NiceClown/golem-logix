@@ -1,0 +1,13 @@
+# Round 25b (-Mods, after r25): the iron and the copper golem in the animated anvil ritual
+gui on
+notoasts
+jeitype golem_logix:anvil_crushing golem_logix:flattened_iron_core
+wait 10
+mouse 20 300
+shot r25b_iron
+closescreen
+jeitype golem_logix:anvil_crushing golem_logix:flattened_copper_matrix
+wait 10
+mouse 20 300
+shot r25b_copper
+closescreen
