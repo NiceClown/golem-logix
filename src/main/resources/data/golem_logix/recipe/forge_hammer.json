@@ -5,11 +5,12 @@
     "C": { "item": "minecraft:copper_ingot" },
     "I": { "item": "minecraft:iron_block" },
     "P": { "item": "minecraft:packed_ice" },
+    "X": { "tag": "golem_logix:iron_plates" },
     "S": { "item": "minecraft:stick" }
   },
   "pattern": [
     "CIC",
-    "PSP",
+    "PXP",
     " S "
   ],
   "result": {

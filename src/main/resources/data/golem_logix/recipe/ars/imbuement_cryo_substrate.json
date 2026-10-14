@@ -1,0 +1,17 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "ars_nouveau"
+    }
+  ],
+  "type": "ars_nouveau:imbuement",
+  "input": { "item": "minecraft:blue_ice" },
+  "output": { "count": 2, "id": "golem_logix:flattened_cryo_substrate" },
+  "pedestalItems": [
+    [ { "item": "minecraft:amethyst_shard" }, { "tag": "c:gems/quartz" } ],
+    [ { "item": "minecraft:amethyst_shard" }, { "tag": "c:gems/quartz" } ],
+    [ { "item": "minecraft:amethyst_shard" }, { "tag": "c:gems/quartz" } ]
+  ],
+  "source": 1000
+}

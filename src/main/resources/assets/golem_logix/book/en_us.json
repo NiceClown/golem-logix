@@ -136,7 +136,7 @@
              "text": ["Cores go into processors, the Atlas Core, casings and high-capacity pipes.", "To bring 100 HP down to four, a harming potion, lava or a long fall helps."]},
             {"type": "ritual", "title": "Copper Golem", "station": "minecraft:anvil", "inputs": ["minecraft:copper_block"], "outputs": ["golem_logix:flattened_copper_matrix"],
              "condition": "A golem with 1-4 HP (out of 12).",
-             "text": ["Matrices are the basis of disks, buses, punch cards and cabinets.", "&oCopper golems come from Copper Age Backport: a copper block with a carved pumpkin on top, as in 1.21.9.&r"]},
+             "text": ["Matrices are the basis of disks, buses, punch cards and cabinets.", "&oCopper golems come from Copper Age Backport (a copper block with a carved pumpkin on top, as in 1.21.9) or another mod with copper golems.&r"]},
             {"type": "ritual", "title": "Snow Golem", "station": "minecraft:anvil", "inputs": ["minecraft:snow_block"], "outputs": ["golem_logix:flattened_cryo_substrate"],
              "condition": "A golem with 1-3 HP - not at full health!",
              "text": ["A snow golem has only 4 HP. Hit it once with your hand - 3 are left and the anvil will now work (snowballs do not hurt snow golems).", "Substrates go into pipes, cryo blocks and fluid disks."]}
@@ -196,7 +196,7 @@
           "id": "hammer", "title": "Forge Hammer", "icon": "golem_logix:forge_hammer", "x": 1, "y": 1, "parents": ["anvil"],
           "pages": [
             {"type": "crafting", "recipe": "golem_logix:forge_hammer",
-             "text": ["A heavy frost-iron hammer in copper bands: it forges plates on the anvil — an unassembled Mana Saturator."]},
+             "text": ["A heavy frost-iron hammer in copper bands: it forges plates on the anvil — an unassembled Mana Saturator.", "The head sits on an iron core or an iron sheet."]},
             {"type": "text", "title": "Charge and strikes",
              "text": [
                "The hammer runs on &lSource&r from its own charge (up to &l4000&r), like the Portable Chronometer: it takes nothing from jars nearby.",
@@ -231,7 +231,7 @@
              "text": ["Bring it down with a harming potion or a long fall first."]},
             {"type": "ritual", "title": "Copper Golem", "station": "ars_nouveau:glyph_dispel", "inputs": ["minecraft:copper_block"], "outputs": ["golem_logix:raw_copper_mind"],
              "condition": "A golem with 1-4 HP (out of 12).",
-             "text": ["Copper golems come from Copper Age Backport."]},
+             "text": ["Copper golems come from Copper Age Backport or another mod."]},
             {"type": "ritual", "title": "Snow Golem", "station": "ars_nouveau:glyph_dispel", "inputs": ["minecraft:snow_block"], "outputs": ["golem_logix:raw_snow_mind"],
              "condition": "A golem with 1-3 HP - not at full health!",
              "text": ["One hit with your hand is enough."]},
@@ -282,6 +282,30 @@
                "There are no crafting-table recipes for plates: only the anvil and the Saturator. Build a Saturator as early as possible - one iron block turns into two cores.",
                "&oPacked ice for cryo-substrates can be mined with a Silk Touch pickaxe.&r"
              ]}
+          ]
+        },
+        {
+          "id": "create_assembly", "title": "Create: Co-Processor Line", "icon": "golem_logix:incomplete_compressed_coprocessor", "x": 3, "y": -1, "parents": ["create_minds"],
+          "requires": "create",
+          "pages": [
+            {"type": "text", "title": "An assembly line",
+             "text": ["With Create a &lCooling Co-Processor&r can be finished on a belt instead of in the Saturator: a &lSpout&r pours in Liquid Cryo-Source, a &lDeployer&r fits an iron sheet, a &lPress&r flattens it.", "Three times round, nine steps in all. Nine of ten come out as a &lCompressed Co-Processor&r, the rest as scraps."]},
+            {"type": "ritual", "title": "One pass", "station": "create:spout", "inputs": ["golem_logix:incomplete_compressed_coprocessor", "fluid:golem_logix:cryo_source*250"], "outputs": ["golem_logix:incomplete_compressed_coprocessor"],
+             "condition": "Then a Deployer with an iron sheet and a Press.",
+             "text": ["An Export Bus next to the Spout pumps the cryo-source out of the network."]},
+            {"type": "text", "title": "Line or Saturator?",
+             "text": ["The Saturator: &l1000 Source&r a co-processor and nothing else.", "The line: 750 mB of cryo-source (&l750 Source&r) and three iron sheets a try, and one try in ten fails: about the same Source plus iron. It keeps the Saturator free and runs on belts side by side.", "&oPlates stay the Saturator's job: nothing makes them cheaper.&r"]}
+          ]
+        },
+        {
+          "id": "ars_substrate", "title": "Imbuement: Blue Ice", "icon": "minecraft:blue_ice", "x": 3, "y": 0, "parents": ["plates"],
+          "requires": "ars_nouveau",
+          "pages": [
+            {"type": "ritual", "title": "Cryo-Substrate", "station": "ars_nouveau:imbuement_chamber", "inputs": ["minecraft:blue_ice", "minecraft:amethyst_shard*3"], "outputs": ["golem_logix:flattened_cryo_substrate*2"],
+             "condition": "1000 Source; three amethyst shards or quartz on the pedestals.",
+             "text": ["The Imbuement Chamber charges a block of Blue Ice into two substrates."]},
+            {"type": "text", "title": "Before the Saturator",
+             "text": ["No golem and no machine: only the Imbuement Chamber, early in Ars Nouveau.", "But it is dear: Blue Ice is nine packed ice, and the Saturator makes two substrates out of one packed ice for the same Source."]}
           ]
         }
       ]
@@ -861,7 +885,7 @@
              ]},
             {"type": "ritual", "title": "Compressed Co-Processor", "station": "golem_logix:mana_saturator", "inputs": ["golem_logix:cooling_coprocessor"], "outputs": ["golem_logix:compressed_coprocessor"],
              "condition": "1000 Source per ritual.",
-             "text": ["The Mana Saturator's golem flattens a Cooling Co-Processor into a thin pack of fins - a speed upgrade for buses and Cryo-Calculators."]},
+             "text": ["The Mana Saturator's golem flattens a Cooling Co-Processor into a thin pack of fins - a speed upgrade for buses and Cryo-Calculators.", "&oWith Create an assembly line can make them too (Rituals).&r"]},
             {"type": "table", "title": "Bus speed", "header": ["Upgrades", "Per move", "How often"], "widths": [60, 34, 54],
              "rows": [
                ["none", "16", "0.4 s"],
@@ -1254,6 +1278,11 @@
                "&lRight-click a Source Jar&r with the chronometer to charge it to the top (as much as the jar holds).",
                "If an &lEternal Frost Resonator&r is attached to the network, the watch never needs charging again: the resonator sends it Source through the aether wherever you are.",
                "&oWithout Ars Nouveau no charge is needed at all.&r"
+             ]},
+            {"type": "text", "title": "Hotkey and Curios",
+             "text": [
+               "&lCtrl+E&r opens the chronometer without taking it in hand: the one in your hand, in the Curios slot or anywhere in your inventory. The key can be changed in the controls (Golem Logix).",
+               "With &lCurios&r installed you get a &lChronometer&r slot: wear the watch there and keep your hotbar free."
              ]}
           ]
         },

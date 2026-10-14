@@ -42,6 +42,8 @@ public class ModNetwork {
                 com.golemlogix.network.InterfaceAmountPayload::handle);
         registrar.playToServer(com.golemlogix.network.AnvilStrikePayload.TYPE, com.golemlogix.network.AnvilStrikePayload.STREAM_CODEC,
                 com.golemlogix.network.AnvilStrikePayload::handle);
+        registrar.playToServer(com.golemlogix.network.OpenChronometerPayload.TYPE, com.golemlogix.network.OpenChronometerPayload.STREAM_CODEC,
+                com.golemlogix.network.OpenChronometerPayload::handle);
         registrar.playToServer(com.golemlogix.network.MenuScrollPayload.TYPE, com.golemlogix.network.MenuScrollPayload.STREAM_CODEC,
                 com.golemlogix.network.MenuScrollPayload::handle);
     }

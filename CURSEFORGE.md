@@ -86,14 +86,21 @@ The whole network runs on **Source** from Ars Nouveau. Without Ars Nouveau it si
 - **Forge Hammer:** forge plates by hand on the unassembled Saturator, the anvil.
 - **With Ars Nouveau:** after your first anvil plate, a Dispel unbinds a battered golem's mind; an Enchanting Apparatus presses it into two plates.
 - **Source Gems:** with Ars Nouveau the assembled Saturator makes Source Gems and their blocks, twice as fast as the Imbuement Chamber for a third more Source.
-- **With Create:** a Mixer tears a block's mind in Liquid Cryo-Source, a Press turns it into a plate.
+- **With Create:** a Mixer tears a block's mind in Liquid Cryo-Source, a Press turns it into a plate. An assembly line (Spout, Deployer, Press, three passes) finishes Compressed Co-Processors without keeping the Saturator busy.
+- **Blue Ice imbuement:** with Ars Nouveau the Imbuement Chamber charges a Blue Ice block into two Cryo-Substrates: dear, but no golem or machine needed.
+- **The Saturator stays king:** no other path makes plates cheaper.
 - **Secret recipe:** it reveals itself only after two trials… find them yourself.
 
 ### Late game
 - **Portable Chronometer:** a brass handheld device and wireless crafting terminal with three range tiers, up to cross-dimension.
   - It runs on its own Source charge.
+  - **Ctrl+E** opens it from anywhere on you; with **Curios** it gets its own Chronometer slot.
   - On its green screen, a flat Wither keeps trying to shoot a skull right at you.
 - **Eternal Frost Resonator:** sends Source through the aether to your Chronometers, so they never need charging.
+
+### For modpacks
+- The Saturator and anvil rituals are data-driven recipes (`golem_logix:saturator`, `golem_logix:anvil_crushing`): change or add them with a data pack or KubeJS.
+- Any mod's copper golem works (tag `golem_logix:copper_golems`).
 
 ### Guide book
 The **Occult Logistics Grimoire** is an illustrated, searchable research map:
@@ -105,8 +112,8 @@ It's available in **English and Russian**.
 ## Requirements
 
 - Minecraft **1.21.1**, NeoForge **21.1.x**
-- **Copper Age Backport** (required: copper golems for the rituals)
-- Optional: **Ars Nouveau** (Source, the Dispel method, Source Gems), **Create** (mixer and press recipes), **JEI**, **Jade**
+- Recommended: **Copper Age Backport** (copper golems for the first plates). A modpack may use another copper golem or its own recipes instead.
+- Optional: **Ars Nouveau** (Source, the Dispel method, Source Gems, Blue Ice imbuement), **Create** (mixer and press recipes, the Co-Processor assembly line), **Curios** (a Chronometer slot), **JEI**, **Jade**
 
 Works in singleplayer and on dedicated servers. Install on both client and server.
 

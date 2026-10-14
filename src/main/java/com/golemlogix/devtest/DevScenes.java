@@ -635,6 +635,16 @@ final class DevScenes {
                 }
                 player.getInventory().setItem(player.getInventory().selected, c);
             }
+            case "wearchrono" -> {
+                // wearchrono: the Chronometer in the hand goes into the Curios Chronometer slot (Curios only)
+                ItemStack c = player.getInventory().getSelected().copy();
+                if (!com.golemlogix.items.Chronometers.CURIOS || !com.golemlogix.items.Chronometers.is(c)
+                        || !com.golemlogix.integration.curios.CuriosCompat.wear(player, c)) {
+                    throw new IllegalStateException("no Curios Chronometer slot or no Chronometer in the hand");
+                }
+                player.getInventory().setItem(player.getInventory().selected, ItemStack.EMPTY);
+                log.accept("chronometer worn in the Curios slot");
+            }
             case "flat" -> {
                 // platform: dark floor and a backdrop wall
                 BlockPos from = pos(a, 0), to = pos(a, 3);

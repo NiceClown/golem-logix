@@ -1,0 +1,7 @@
+{
+  "type": "golem_logix:anvil_crushing",
+  "entity": "minecraft:snow_golem",
+  "max_health": 3.9,
+  "result": {"id": "golem_logix:flattened_cryo_substrate"},
+  "icon": "minecraft:snow_block"
+}

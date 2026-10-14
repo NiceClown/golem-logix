@@ -20,6 +20,7 @@ import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.runtime.IClickableIngredient;
 import mezz.jei.api.runtime.IJeiRuntime;
 import net.minecraft.client.renderer.Rect2i;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -44,23 +45,39 @@ public class GolemLogixJeiPlugin implements IModPlugin {
      */
     @Nullable
     private static AnvilCrushRecipe witherRitual;
-    @Nullable
-    private static ManaSaturatorRecipe matrixRitual;
+    /** The Saturator recipes marked "secret" in their data (the Occult Matrix by default). */
+    private static List<ManaSaturatorRecipe> secretSaturator = List.of();
 
     private static AnvilCrushRecipe witherRitual() {
         if (witherRitual == null) {
-            witherRitual = new AnvilCrushRecipe(new ItemStack(Items.NETHER_STAR), "jei.golem_logix.golem.wither", "jei.golem_logix.hp.wither",
-                    new ItemStack(ModItems.IMPLODED_WITHER_PLASMA.get()));
+            witherRitual = new AnvilCrushRecipe(new ItemStack(Items.NETHER_STAR), Component.translatable("jei.golem_logix.golem.wither"),
+                    Component.translatable("jei.golem_logix.hp.wither"), new ItemStack(ModItems.IMPLODED_WITHER_PLASMA.get()));
         }
         return witherRitual;
     }
 
-    private static ManaSaturatorRecipe matrixRitual() {
-        if (matrixRitual == null) {
-            matrixRitual = new ManaSaturatorRecipe(new ItemStack(ModItems.IMPLODED_WITHER_PLASMA.get()), 2500,
-                    new ItemStack(ModItems.INTERDIMENSIONAL_OCCULT_MATRIX.get()));
+    /** A golem ritual from the data packs, as JEI shows it; null when no loaded mod has such a golem. */
+    @Nullable
+    private static AnvilCrushRecipe anvilRecipe(com.golemlogix.recipe.AnvilCrushingRecipe r) {
+        List<net.minecraft.world.entity.EntityType<?>> types = r.entityTypes();
+        if (types.isEmpty()) {
+            return null;
         }
-        return matrixRitual;
+        var type = types.get(0);
+        ItemStack icon = r.icon().map(ItemStack::new).orElseGet(() -> {
+            var egg = net.minecraft.world.item.SpawnEggItem.byId(type);
+            return egg != null ? new ItemStack(egg) : new ItemStack(Items.ANVIL);
+        });
+        int min = net.minecraft.util.Mth.ceil(r.minHealth()), max = net.minecraft.util.Mth.floor(r.maxHealth());
+        Component hp = Component.translatable("jei.golem_logix.hp.range", min, max);
+        if (net.minecraft.world.entity.ai.attributes.DefaultAttributes.hasSupplier(type)) {
+            @SuppressWarnings("unchecked")
+            var living = (net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.LivingEntity>) type;
+            double full = net.minecraft.world.entity.ai.attributes.DefaultAttributes.getSupplier(living)
+                    .getBaseValue(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+            hp = Component.translatable("jei.golem_logix.hp.range_of", min, max, (int) Math.round(full));
+        }
+        return new AnvilCrushRecipe(icon, type.getDescription(), hp, r.result().copy());
     }
 
     @Override
@@ -75,6 +92,11 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         // the fluid ghost is a marker for ghost slots, not an item a player can have
         jeiRuntime.getIngredientManager().removeIngredientsAtRuntime(mezz.jei.api.constants.VanillaTypes.ITEM_STACK,
                 List.of(new net.minecraft.world.item.ItemStack(com.golemlogix.init.ModItems.FLUID_GHOST.get())));
+        // the Co-Processor half way through Create's assembly line exists only with Create
+        if (!net.neoforged.fml.ModList.get().isLoaded("create")) {
+            jeiRuntime.getIngredientManager().removeIngredientsAtRuntime(mezz.jei.api.constants.VanillaTypes.ITEM_STACK,
+                    List.of(new net.minecraft.world.item.ItemStack(com.golemlogix.init.ModItems.INCOMPLETE_COMPRESSED_COPROCESSOR.get())));
+        }
         // the mod's terminal search <-> the JEI search line
         com.golemlogix.client.ClientHooks.jeiSetSearch = text -> {
             if (runtime != null && !text.equals(runtime.getIngredientFilter().getFilterText())) {
@@ -105,11 +127,11 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         }
         if (ClientSecrets.all()) {
             recipes.unhideRecipes(AnvilCrushCategory.TYPE, List.of(witherRitual()));
-            recipes.unhideRecipes(ManaSaturatorCategory.TYPE, List.of(matrixRitual()));
+            recipes.unhideRecipes(ManaSaturatorCategory.TYPE, secretSaturator);
             recipes.unhideRecipes(mezz.jei.api.constants.RecipeTypes.CRAFTING, prism);
         } else {
             recipes.hideRecipes(AnvilCrushCategory.TYPE, List.of(witherRitual()));
-            recipes.hideRecipes(ManaSaturatorCategory.TYPE, List.of(matrixRitual()));
+            recipes.hideRecipes(ManaSaturatorCategory.TYPE, secretSaturator);
             recipes.hideRecipes(mezz.jei.api.constants.RecipeTypes.CRAFTING, prism);
         }
     }
@@ -209,6 +231,30 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         return true;
     }
 
+    /** Open one JEI recipe category by its id (the developer rig: "golem_logix:anvil_crushing", "create:sequenced_assembly"). */
+    public static boolean showType(ResourceLocation uid, ItemStack output) {
+        if (runtime == null) {
+            return false;
+        }
+        var type = runtime.getJeiHelpers().getRecipeType(uid);
+        if (type.isEmpty()) {
+            return false;
+        }
+        if (output.isEmpty()) {
+            runtime.getRecipesGui().showTypes(List.of(type.get()));
+        } else {
+            showOnly(type.get(), output);
+        }
+        return true;
+    }
+
+    /** Only the recipes of the category that make this item. */
+    private static <T> void showOnly(mezz.jei.api.recipe.RecipeType<T> type, ItemStack output) {
+        var focus = runtime.getJeiHelpers().getFocusFactory().createFocus(RecipeIngredientRole.OUTPUT, VanillaTypes.ITEM_STACK, output);
+        List<T> recipes = runtime.getRecipeManager().createRecipeLookup(type).limitFocus(List.of(focus)).get().toList();
+        runtime.getRecipesGui().showRecipes(runtime.getRecipeManager().getRecipeCategory(type), recipes, List.of(focus));
+    }
+
     /** An item or fluid in a slot as a "clickable" JEI ingredient. */
     private static Optional<? extends IClickableIngredient<?>> clickable(IClickableIngredientFactory factory, Object ingredient, Rect2i area) {
         if (ingredient instanceof ItemStack stack && !stack.isEmpty()) {
@@ -281,56 +327,39 @@ public class GolemLogixJeiPlugin implements IModPlugin {
 
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
-        // 1. Anvil ritual (the Wither recipe is secret and hidden until the secret is revealed)
-        List<AnvilCrushRecipe> anvilRecipes = List.of(
-                new AnvilCrushRecipe(
-                        new ItemStack(Blocks.IRON_BLOCK),
-                        "jei.golem_logix.golem.iron",
-                        "jei.golem_logix.hp.iron",
-                        new ItemStack(ModItems.FLATTENED_IRON_CORE.get())
-                ),
-                new AnvilCrushRecipe(
-                        new ItemStack(Blocks.COPPER_BLOCK),
-                        "jei.golem_logix.golem.copper",
-                        "jei.golem_logix.hp.copper",
-                        new ItemStack(ModItems.FLATTENED_COPPER_MATRIX.get())
-                ),
-                new AnvilCrushRecipe(
-                        new ItemStack(Blocks.SNOW_BLOCK),
-                        "jei.golem_logix.golem.snow",
-                        "jei.golem_logix.hp.snow",
-                        new ItemStack(ModItems.FLATTENED_CRYO_SUBSTRATE.get())
-                ),
-                witherRitual()
-        );
+        var level = net.minecraft.client.Minecraft.getInstance().level;
+        var manager = level == null ? null : level.getRecipeManager();
+
+        // 1. Anvil rituals: the golem ones from the data packs (golem_logix:anvil_crushing); the Wither one is secret and hidden
+        //    until the secret is revealed
+        List<AnvilCrushRecipe> anvilRecipes = new java.util.ArrayList<>();
+        if (manager != null) {
+            for (var holder : manager.getAllRecipesFor(com.golemlogix.init.ModRecipes.ANVIL_CRUSHING_TYPE.get())) {
+                AnvilCrushRecipe r = anvilRecipe(holder.value());
+                if (r != null) {
+                    anvilRecipes.add(r);
+                }
+            }
+        }
+        anvilRecipes.add(witherRitual());
         registration.addRecipes(AnvilCrushCategory.TYPE, anvilRecipes);
 
-        // 2. Mana Saturator
-        List<ManaSaturatorRecipe> saturatorRecipes = new java.util.ArrayList<>(List.of(
-                new ManaSaturatorRecipe(
-                        new ItemStack(Blocks.IRON_BLOCK),
-                        1000,
-                        new ItemStack(ModItems.FLATTENED_IRON_CORE.get(), 2)
-                ),
-                new ManaSaturatorRecipe(
-                        new ItemStack(Blocks.COPPER_BLOCK),
-                        1000,
-                        new ItemStack(ModItems.FLATTENED_COPPER_MATRIX.get(), 2)
-                ),
-                new ManaSaturatorRecipe(
-                        new ItemStack(Blocks.PACKED_ICE),
-                        1000,
-                        new ItemStack(ModItems.FLATTENED_CRYO_SUBSTRATE.get(), 2)
-                ),
-                new ManaSaturatorRecipe(
-                        new ItemStack(ModBlocks.COOLING_COPROCESSOR.get()),
-                        1000,
-                        new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get())
-                ),
-                matrixRitual()
-        ));
+        // 2. Mana Saturator: its recipes from the data packs (golem_logix:saturator), the secret ones hidden like the Wither
+        List<ManaSaturatorRecipe> saturatorRecipes = new java.util.ArrayList<>();
+        List<ManaSaturatorRecipe> secret = new java.util.ArrayList<>();
+        if (manager != null) {
+            for (var holder : manager.getAllRecipesFor(com.golemlogix.init.ModRecipes.SATURATOR_TYPE.get())) {
+                com.golemlogix.recipe.SaturatorRecipe s = holder.value();
+                ManaSaturatorRecipe r = new ManaSaturatorRecipe(List.of(s.ingredient().getItems()), s.source(), s.result().copy(), s.ticks());
+                saturatorRecipes.add(r);
+                if (s.secret()) {
+                    secret.add(r);
+                }
+            }
+        }
+        secretSaturator = List.copyOf(secret);
         // with Ars Nouveau: the Imbuement Chamber's Source Gem recipes, twice as fast for a third more Source
-        for (var gem : com.golemlogix.integration.ars.ArsImbuement.all(net.minecraft.client.Minecraft.getInstance().level)) {
+        for (var gem : com.golemlogix.integration.ars.ArsImbuement.all(level)) {
             saturatorRecipes.add(new ManaSaturatorRecipe(List.of(gem.input().getItems()), gem.source(), gem.output(), gem.ticks()));
         }
         registration.addRecipes(ManaSaturatorCategory.TYPE, saturatorRecipes);

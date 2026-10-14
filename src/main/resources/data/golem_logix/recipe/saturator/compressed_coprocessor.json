@@ -1,0 +1,7 @@
+{
+  "type": "golem_logix:saturator",
+  "ingredient": {"item": "golem_logix:cooling_coprocessor"},
+  "result": {"id": "golem_logix:compressed_coprocessor"},
+  "source": 1000,
+  "ticks": 100
+}

@@ -1,5 +1,44 @@
 # Changelog
 
+## 1.1.4 — Curios and a hotkey for the Chronometer, data-driven rituals, a Create assembly line
+
+### Portable Chronometer
+
+- **Curios integration**: with Curios installed players get a **Chronometer** slot (its own icon); a Chronometer worn there works
+  like one in the inventory (charge, Resonator, range).
+- **Ctrl+E** (rebindable, "Golem Logix" in the controls) opens the Chronometer without taking it in hand: the one in a hand, in the
+  Curios slot or anywhere in the inventory. Its inventory slot stays locked while the window is open, wherever it is.
+
+### For modpacks
+
+- **Copper Age Backport is optional** (recommended for new players). Any mod's copper golem works: the entity tag
+  `golem_logix:copper_golems`, or any mob with "copper_golem" in its id; the Punch Card Catalog's statues have the block tag
+  `golem_logix:copper_golem_statues`.
+- **The rituals are recipes now**: `golem_logix:saturator` (the Mana Saturator and forging by hand) and
+  `golem_logix:anvil_crushing` (the anvil on a battered golem), changeable with data packs or KubeJS; JEI shows what the recipes
+  say. See README, "For modpacks".
+
+### Recipes
+
+- **Create: a Co-Processor assembly line** — a Cooling Co-Processor on a belt passes a Spout (250 mB of Liquid Cryo-Source), a
+  Deployer (an iron sheet) and a Press, three times round; nine of ten come out as Compressed Co-Processors, the rest as scraps.
+  About as dear as the Saturator (Source plus iron) but it keeps the Saturator free; plates stay the Saturator's job.
+- **Ars Nouveau: Blue Ice imbuement** — the Imbuement Chamber charges a Blue Ice block (three amethyst shards or quartz on the
+  pedestals, 1000 Source) into two Cryo-Substrates: dearer than the Saturator, but it needs no golem and no machine.
+- **Forge Hammer**: the stick in the middle is now an iron plate (a Flattened Iron Core or any iron sheet, tag
+  `golem_logix:iron_plates`).
+
+### Reliability and server load
+
+- **Fixed: a possible crash in single player.** The snowmen in the pipes picked their cargo by reading the server's disk storage
+  from the render thread while the server wrote it. The Atlas Core now sends a few samples of the network's contents with its
+  update, and nothing reads the disks off the server thread.
+- **Idle buses sleep**: a bus whose last operation moved nothing waits longer and longer (up to a second); a change next to it, a
+  new filter or upgrade, or (for export buses) anything entering the network wakes it at once.
+- **Buses and periscopes keep their target's handlers** (NeoForge capability caches) instead of looking them up on every operation.
+- **A copied disk** (same id, e.g. a creative middle-click) is no longer counted twice: the network mounts the first one only.
+- 5 new game tests (100 in all), also run without Copper Age Backport (`-PnoBackport`).
+
 ## 1.1.3 — Telegraph fixes
 
 - **The Write slot takes a whole stack** of Aetherial Linkages (up to 16) and writes them all at once, so a growing base needs no

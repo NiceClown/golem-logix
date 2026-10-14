@@ -1,0 +1,7 @@
+{
+  "type": "golem_logix:anvil_crushing",
+  "entity": "minecraft:iron_golem",
+  "max_health": 4.0,
+  "result": {"id": "golem_logix:flattened_iron_core"},
+  "icon": "minecraft:iron_block"
+}

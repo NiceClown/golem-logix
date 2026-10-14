@@ -45,6 +45,16 @@ public class PeriscopeBlockEntity extends BlockEntity {
         return upgrades;
     }
 
+    /** The handlers of the storage in front (server), looked up once and kept until the block there changes. */
+    public com.golemlogix.system.TargetCaps targetCaps(net.minecraft.server.level.ServerLevel level, BlockPos target, net.minecraft.core.Direction face) {
+        caps = com.golemlogix.system.TargetCaps.of(caps, level, target, face, () -> !isRemoved(), () -> {
+        });
+        return caps;
+    }
+
+    @org.jetbrains.annotations.Nullable
+    private com.golemlogix.system.TargetCaps caps;
+
     /** Whether the storage is connected now (with a Redstone Module, by signal; pulse mode makes no sense here). */
     public boolean storageEnabled() {
         if (level == null || !upgrades.has(UpgradeType.REDSTONE)) {

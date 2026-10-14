@@ -21,11 +21,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import com.golemlogix.system.GolemNetwork;
-import com.golemlogix.system.ItemKey;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidUtil;
 import net.minecraft.world.Container;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -783,26 +779,11 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
                 pool = new CargoPool();
                 pool.expireTime = now + 20L;
                 try {
+                    // samples of the network's contents sent with the core (the client never reads the storage itself)
                     GolemNetwork net = GolemNetwork.get(level, pos);
-                    if (net != null) {
-                        Map<ItemKey, Long> items = net.listItems();
-                        for (ItemKey k : items.keySet()) {
-                            pool.items.add(k.toStack(1));
-                        }
-                        List<FluidStack> fluids = net.listFluids();
-                        for (FluidStack f : fluids) {
-                            if (!f.isEmpty()) {
-                                Item b = f.getFluid().getBucket();
-                                if (b != null && b != Items.AIR) {
-                                    pool.fluids.add(new ItemStack(b));
-                                } else {
-                                    ItemStack fb = FluidUtil.getFilledBucket(f);
-                                    if (!fb.isEmpty()) {
-                                        pool.fluids.add(fb);
-                                    }
-                                }
-                            }
-                        }
+                    if (net != null && net.core() != null) {
+                        pool.items.addAll(net.core().cargoItems());
+                        pool.fluids.addAll(net.core().cargoFluids());
                     }
                     if (pool.items.isEmpty()) {
                         for (Direction dir : Direction.values()) {

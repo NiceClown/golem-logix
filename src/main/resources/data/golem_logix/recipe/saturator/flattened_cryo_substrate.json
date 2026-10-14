@@ -1,0 +1,8 @@
+{
+  "type": "golem_logix:saturator",
+  "ingredient": {"item": "minecraft:packed_ice"},
+  "result": {"id": "golem_logix:flattened_cryo_substrate", "count": 2},
+  "hand_result": {"id": "golem_logix:flattened_cryo_substrate"},
+  "source": 1000,
+  "ticks": 100
+}

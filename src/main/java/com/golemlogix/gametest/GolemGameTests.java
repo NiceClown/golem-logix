@@ -830,6 +830,75 @@ public class GolemGameTests {
         });
     }
 
+    /** A copy of a disk (same id, e.g. a creative middle-click) in the network shares the original's contents: it is counted once. */
+    @GameTest(template = T, timeoutTicks = 60)
+    public static void copiedDiskCountsOnce(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.DIAMOND, 10), false);
+            var container = ((CopperDriveBayBlockEntity) helper.getBlockEntity(bay)).getContainer();
+            container.setItem(1, container.getItem(0).copy());
+            GolemNetwork again = net(helper, bay);
+            ItemKey diamond = ItemKey.of(new ItemStack(Items.DIAMOND));
+            helper.assertTrue(again.itemCountOf(diamond) == 10, "the copy adds nothing, got " + again.itemCountOf(diamond));
+            ItemStack got = again.extractItem(new ItemStack(Items.DIAMOND), 15, false);
+            helper.assertTrue(got.getCount() == 10 && again.itemCountOf(diamond) == 0, "only the real 10 come out, got " + got.getCount());
+            helper.succeed();
+        });
+    }
+
+    /** An import bus facing an empty chest falls asleep (no work every interval); the chest filling up wakes it at once. */
+    @GameTest(template = T, timeoutTicks = 200)
+    public static void busSleepsAndWakes(GameTestHelper helper) {
+        baseNetwork(helper);
+        helper.setBlock(BUS_IN, ModBlocks.VACUUM_IMPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.WEST));
+        BlockPos chest = new BlockPos(2, 1, 4);
+        helper.setBlock(chest, Blocks.CHEST);
+        helper.runAfterDelay(60, () -> {
+            BusBlockEntity bus = (BusBlockEntity) helper.getBlockEntity(BUS_IN);
+            helper.assertTrue(bus.idle(), "an import bus facing an empty chest sleeps");
+            Container c = (Container) helper.getBlockEntity(chest);
+            c.setItem(0, new ItemStack(Items.COBBLESTONE, 5));
+            helper.assertTrue(!bus.idle(), "a change in the chest next to it wakes it");
+            helper.runAfterDelay(20, () -> {
+                helper.assertTrue(c.isEmpty(), "and it imports the items at its next turn");
+                helper.succeed();
+            });
+        });
+    }
+
+    /**
+     * The core sends a few samples of the network's contents to clients (the snowmen's crates); nothing reads the disks from
+     * another thread any more (the single player client used to read the server's storage while the server wrote it).
+     */
+    @GameTest(template = T, timeoutTicks = 100)
+    public static void coreSendsCargoSamples(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.runAfterDelay(5, () -> {
+            var level = helper.getLevel();
+            net(helper, bay).insertItem(new ItemStack(Items.DIAMOND, 3), false);
+            var core = (com.golemlogix.blockentity.AtlasCoreBlockEntity) helper.getBlockEntity(CORE);
+            core.refresh(level, helper.absolutePos(CORE));
+            helper.assertTrue(core.cargoItems().stream().anyMatch(s -> s.is(Items.DIAMOND)), "the samples show the diamonds");
+            var tag = core.getUpdateTag(level.registryAccess());
+            helper.assertTrue(tag.getList("CargoItems", net.minecraft.nbt.Tag.TAG_COMPOUND).size() == core.cargoItems().size(),
+                    "the samples go with the core's update");
+            ItemStack disk = ((CopperDriveBayBlockEntity) helper.getBlockEntity(bay)).getContainer().getItem(0);
+            helper.assertTrue(!com.golemlogix.system.DiskStorage.items(disk).isEmpty(), "the server thread reads the disk");
+            boolean[] emptyElsewhere = {false};
+            Thread other = new Thread(() -> emptyElsewhere[0] = com.golemlogix.system.DiskStorage.items(disk).isEmpty());
+            other.start();
+            try {
+                other.join(5000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            helper.assertTrue(emptyElsewhere[0], "another thread gets nothing from the disks");
+            helper.succeed();
+        });
+    }
+
     @GameTest(template = T, timeoutTicks = 300)
     public static void interfaceKeepsStockAndAccepts(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
@@ -1099,7 +1168,11 @@ public class GolemGameTests {
      */
     @GameTest(template = T, timeoutTicks = 300)
     public static void catalogStoresCraftingCards(GameTestHelper helper) {
-        helper.assertTrue(statue("") != Blocks.AIR && statue("oxidized_") != Blocks.AIR, "copper golem statues are registered");
+        if (statue("") == Blocks.AIR || statue("oxidized_") == Blocks.AIR) {
+            // no mod with copper golem statues (Copper Age Backport is optional): the Catalog cannot be built here
+            helper.succeed();
+            return;
+        }
         BlockPos bay = baseNetwork(helper);
         BlockPos ctl = new BlockPos(5, 1, 1);
         int[] channelsBefore = new int[1];
@@ -1662,7 +1735,7 @@ public class GolemGameTests {
         var sat = (com.golemlogix.blockentity.ManaSaturatorBlockEntity) helper.getBlockEntity(at);
         for (ItemStack only : new ItemStack[]{new ItemStack(ModItems.IMPLODED_WITHER_PLASMA.get()),
                 new ItemStack(ModBlocks.COOLING_COPROCESSOR.get())}) {
-            helper.assertTrue(!com.golemlogix.blockentity.ManaSaturatorBlockEntity.isManualInput(only), only + " needs the machine");
+            helper.assertTrue(!com.golemlogix.blockentity.ManaSaturatorBlockEntity.isManualInput(helper.getLevel(), only), only + " needs the machine");
         }
         boolean source = com.golemlogix.system.SourceHelper.sourceRequired();
         ItemStack hammer = new ItemStack(ModItems.FORGE_HAMMER.get());
@@ -2557,14 +2630,94 @@ public class GolemGameTests {
         assertCrushed(helper, ritual(helper, net.minecraft.world.entity.EntityType.SNOW_GOLEM, at, 3f), at, ModItems.FLATTENED_CRYO_SUBSTRATE.get());
     }
 
-    /** The copper golem comes from Copper Age Backport (minecraft:copper_golem), a required dependency of the mod. */
+    /** The copper golem comes from Copper Age Backport (minecraft:copper_golem), now optional: without it the test has nothing to crush. */
     @GameTest(template = T, timeoutTicks = 100)
     public static void anvilRitualCopperGolem(GameTestHelper helper) {
         var id = ResourceLocation.withDefaultNamespace("copper_golem");
-        helper.assertTrue(net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.containsKey(id), "Copper Age Backport must register minecraft:copper_golem");
+        if (!net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.containsKey(id)) {
+            helper.succeed();
+            return;
+        }
         BlockPos at = new BlockPos(4, 1, 4);
         var type = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(id);
         assertCrushed(helper, ritual(helper, type, at, 3f), at, ModItems.FLATTENED_COPPER_MATRIX.get());
+    }
+
+    /** The rituals are data (recipes golem_logix:saturator and golem_logix:anvil_crushing), so modpacks can change and add them. */
+    @GameTest(template = T, timeoutTicks = 20)
+    public static void ritualsComeFromData(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var iron = com.golemlogix.recipe.SaturatorRecipe.find(level, new ItemStack(Items.IRON_BLOCK));
+        helper.assertTrue(iron != null && iron.result().is(ModItems.FLATTENED_IRON_CORE.get()) && iron.result().getCount() == 2
+                && iron.handResult().getCount() == 1 && iron.source() == 1000 && iron.ticks() == 100, "iron block: 2 cores, 1 by hand");
+        var cut = com.golemlogix.recipe.SaturatorRecipe.find(level, new ItemStack(Items.CUT_COPPER));
+        helper.assertTrue(cut != null && cut.result().is(ModItems.FLATTENED_COPPER_MATRIX.get()), "cut copper makes copper matrices");
+        var plasma = com.golemlogix.recipe.SaturatorRecipe.find(level, new ItemStack(ModItems.IMPLODED_WITHER_PLASMA.get()));
+        helper.assertTrue(plasma != null && plasma.secret() && plasma.source() == 2500 && plasma.handResult().isEmpty(),
+                "the Occult Matrix: secret, 2500 Source, machine only");
+        helper.assertTrue(com.golemlogix.recipe.SaturatorRecipe.find(level, new ItemStack(Items.DIRT)) == null, "dirt is no blank");
+        var manager = level.getRecipeManager();
+        var type = com.golemlogix.init.ModRecipes.ANVIL_CRUSHING_TYPE.get();
+        var ironGolem = manager.getRecipeFor(type, new com.golemlogix.recipe.AnvilCrushingRecipe.Golem(net.minecraft.world.entity.EntityType.IRON_GOLEM), level);
+        helper.assertTrue(ironGolem.isPresent() && ironGolem.get().value().maxHealth() == 4f
+                && ironGolem.get().value().result().is(ModItems.FLATTENED_IRON_CORE.get()), "the iron golem ritual");
+        var snow = manager.getRecipeFor(type, new com.golemlogix.recipe.AnvilCrushingRecipe.Golem(net.minecraft.world.entity.EntityType.SNOW_GOLEM), level);
+        helper.assertTrue(snow.isPresent() && snow.get().value().battered(3f) && !snow.get().value().battered(4f), "a snow golem below full health");
+        helper.assertTrue(manager.getRecipeFor(type, new com.golemlogix.recipe.AnvilCrushingRecipe.Golem(net.minecraft.world.entity.EntityType.COW), level).isEmpty(),
+                "no ritual for a cow");
+        var copper = manager.getAllRecipesFor(type).stream().map(h -> h.value())
+                .filter(r -> r.result().is(ModItems.FLATTENED_COPPER_MATRIX.get())).findFirst();
+        helper.assertTrue(copper.isPresent() && copper.get().entityIdContains().contains("copper_golem"),
+                "the copper ritual takes any mod's copper golem (tag golem_logix:copper_golems or the id)");
+        helper.succeed();
+    }
+
+    /**
+     * The hotkey's Chronometer: the main hand, the offhand, the Curios slot (with Curios), then the inventory; the recipes of this
+     * pass load (the hammer with an iron plate, and with the mods: Create's assembly line, Ars Nouveau's Blue Ice imbuement).
+     */
+    @GameTest(template = T, timeoutTicks = 20)
+    public static void chronometerFoundAnywhere(GameTestHelper helper) {
+        ServerPlayer player = testPlayer(helper);
+        var inv = player.getInventory();
+        inv.clearContent();
+        helper.assertTrue(com.golemlogix.items.Chronometers.find(player) == null, "no Chronometer, nothing found");
+        ItemStack deep = new ItemStack(ModItems.PORTABLE_CHRONOMETER.get());
+        inv.setItem(20, deep);
+        var found = com.golemlogix.items.Chronometers.find(player);
+        helper.assertTrue(found != null && found.slot() == 20 && found.stack() == deep, "found deep in the inventory");
+        ItemStack off = new ItemStack(ModItems.PORTABLE_CHRONOMETER.get());
+        player.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND, off);
+        found = com.golemlogix.items.Chronometers.find(player);
+        helper.assertTrue(found != null && found.slot() == net.minecraft.world.entity.player.Inventory.SLOT_OFFHAND, "the offhand comes first");
+        if (com.golemlogix.items.Chronometers.CURIOS) {
+            player.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND, ItemStack.EMPTY);
+            ItemStack worn = new ItemStack(ModItems.PORTABLE_CHRONOMETER.get());
+            helper.assertTrue(com.golemlogix.integration.curios.CuriosCompat.wear(player, worn), "players have a Chronometer slot");
+            found = com.golemlogix.items.Chronometers.find(player);
+            helper.assertTrue(found != null && found.slot() == com.golemlogix.items.Chronometers.CURIO, "the Curios slot before the inventory");
+            helper.assertTrue(com.golemlogix.items.Chronometers.carried(player).size() == 2, "both Chronometers are carried");
+        }
+        inv.clearContent();
+
+        var level = helper.getLevel();
+        var grid = net.minecraft.world.item.crafting.CraftingInput.of(3, 3, List.of(
+                new ItemStack(Items.COPPER_INGOT), new ItemStack(Items.IRON_BLOCK), new ItemStack(Items.COPPER_INGOT),
+                new ItemStack(Items.PACKED_ICE), new ItemStack(ModItems.FLATTENED_IRON_CORE.get()), new ItemStack(Items.PACKED_ICE),
+                ItemStack.EMPTY, new ItemStack(Items.STICK), ItemStack.EMPTY));
+        var hammer = level.getRecipeManager().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.CRAFTING, grid, level);
+        helper.assertTrue(hammer.isPresent() && hammer.get().value().getResultItem(level.registryAccess()).is(ModItems.FORGE_HAMMER.get()),
+                "the hammer's head sits on an iron plate");
+        var manager = level.getRecipeManager();
+        if (net.neoforged.fml.ModList.get().isLoaded("create")) {
+            helper.assertTrue(manager.byKey(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "create/sequenced_compressed_coprocessor")).isPresent(),
+                    "Create's Co-Processor assembly line loads");
+        }
+        if (net.neoforged.fml.ModList.get().isLoaded("ars_nouveau")) {
+            helper.assertTrue(manager.byKey(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "ars/imbuement_cryo_substrate")).isPresent(),
+                    "the Blue Ice imbuement loads");
+        }
+        helper.succeed();
     }
 
     @GameTest(template = T, timeoutTicks = 100)

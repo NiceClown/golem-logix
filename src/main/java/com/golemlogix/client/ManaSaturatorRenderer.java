@@ -452,7 +452,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
         int light = LevelRenderer.getLightColor(level, entity.getBlockPos().above());
         float time = level.getGameTime() + partialTick;
         pose.pushPose();
-        if (ManaSaturatorBlockEntity.isManualInput(item)) {
+        if (ManaSaturatorBlockEntity.isManualInput(level, item)) {
             float squash = 1f - 0.55f * entity.manualHits() / (float) ManaSaturatorBlockEntity.MANUAL_HITS;
             float size = 0.36f;
             pose.translate(0.5, 15f / 16f + size * squash * 0.5f, 0.5);

@@ -53,9 +53,9 @@ public final class CatalogStructure {
     public static final Set<Block> COPPER = Set.of(Blocks.COPPER_BLOCK, Blocks.EXPOSED_COPPER, Blocks.WEATHERED_COPPER, Blocks.OXIDIZED_COPPER,
             Blocks.WAXED_COPPER_BLOCK, Blocks.WAXED_EXPOSED_COPPER, Blocks.WAXED_WEATHERED_COPPER, Blocks.WAXED_OXIDIZED_COPPER);
 
-    /** A copper golem statue (from Copper Age Backport, any oxidation stage). */
+    /** A copper golem statue of any oxidation stage: the tag golem_logix:copper_golem_statues (modpacks add their own), or any "..copper_golem_statue" block. */
     public static boolean isStatue(BlockState s) {
-        return BuiltInRegistries.BLOCK.getKey(s.getBlock()).getPath().endsWith("copper_golem_statue");
+        return s.is(com.golemlogix.init.ModTags.COPPER_GOLEM_STATUES) || BuiltInRegistries.BLOCK.getKey(s.getBlock()).getPath().endsWith("copper_golem_statue");
     }
 
     /** Oxidation stage of a statue (0 new, 3 oxidized): the golems of the assembled catalog are coloured this way. */

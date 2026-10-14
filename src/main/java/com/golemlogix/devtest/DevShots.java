@@ -724,6 +724,26 @@ public final class DevShots {
                     return true;
                 };
             }
+            case "jeitype": {
+                // jeitype <namespace:category> [item] : one JEI recipe category, or only its recipes making the item (needs -PtestMods)
+                var uid = net.minecraft.resources.ResourceLocation.parse(t[1]);
+                ItemStack only = t.length > 2 ? new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
+                        net.minecraft.resources.ResourceLocation.parse(t[2]))) : ItemStack.EMPTY;
+                return mc -> {
+                    keepScreen = true;
+                    if (!com.golemlogix.integration.jei.GolemLogixJeiPlugin.showType(uid, only)) {
+                        throw new IllegalStateException("no JEI category " + uid);
+                    }
+                    return true;
+                };
+            }
+            case "chronokey":
+                // chronokey: what the "open Portable Chronometer" key (Ctrl+E) sends; the rig cannot hold Ctrl down
+                return mc -> {
+                    keepScreen = true;
+                    net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.golemlogix.network.OpenChronometerPayload());
+                    return true;
+                };
             case "inv":
                 return mc -> {
                     keepScreen = true;

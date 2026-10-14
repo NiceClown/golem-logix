@@ -12,13 +12,11 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.animal.IronGolem;
 import net.minecraft.world.entity.animal.SnowGolem;
 import net.minecraft.world.entity.boss.wither.WitherBoss;
 import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.AnvilBlock;
@@ -138,34 +136,13 @@ public class AnvilCrushingHandler {
             }
         }
 
-        // 2. Golem Crushing with HP check
-        Item rewardItem = null;
-        boolean isCandidateGolem = false;
-        boolean healthTooHigh = false;
-
-        if (victim instanceof IronGolem) {
-            isCandidateGolem = true;
-            if (currentHealth >= 0.5f && currentHealth <= 4.0f) {
-                rewardItem = ModItems.FLATTENED_IRON_CORE.get();
-            } else if (currentHealth > 4.0f) {
-                healthTooHigh = true;
-            }
-        } else if (victim instanceof SnowGolem) {
-            isCandidateGolem = true;
-            // Snow Golem max HP is 4.0. Must NOT be full HP (<= 3.9f)
-            if (currentHealth >= 0.5f && currentHealth <= 3.9f) {
-                rewardItem = ModItems.FLATTENED_CRYO_SUBSTRATE.get();
-            } else if (currentHealth >= 4.0f) {
-                healthTooHigh = true;
-            }
-        } else if (isCopperGolem(victim)) {
-            isCandidateGolem = true;
-            if (currentHealth >= 0.5f && currentHealth <= 4.0f) {
-                rewardItem = ModItems.FLATTENED_COPPER_MATRIX.get();
-            } else if (currentHealth > 4.0f) {
-                healthTooHigh = true;
-            }
+        // 2. The golem rituals (recipes "golem_logix:anvil_crushing" from data packs): which golem, how battered, what it gives
+        com.golemlogix.recipe.AnvilCrushingRecipe ritual = com.golemlogix.recipe.AnvilCrushingRecipe.find(serverLevel, victim);
+        if (ritual == null) {
+            return;
         }
+        boolean healthTooHigh = currentHealth > ritual.maxHealth();
+        ItemStack reward = ritual.battered(currentHealth) ? ritual.result().copy() : ItemStack.EMPTY;
 
         if (healthTooHigh) {
             // Helpful in-game guidance so the player knows what to do!
@@ -183,10 +160,10 @@ public class AnvilCrushingHandler {
             return;
         }
 
-        if (rewardItem != null) {
+        if (!reward.isEmpty()) {
             // Successful crush!
-            ItemEntity drop = new ItemEntity(serverLevel, victim.getX(), victim.getY() + 0.2, victim.getZ(),
-                    new ItemStack(rewardItem));
+            Component rewardName = reward.getHoverName();
+            ItemEntity drop = new ItemEntity(serverLevel, victim.getX(), victim.getY() + 0.2, victim.getZ(), reward);
             serverLevel.addFreshEntity(drop);
 
             serverLevel.sendParticles(ParticleTypes.SNOWFLAKE, victim.getX(), victim.getY() + 0.5, victim.getZ(),
@@ -200,7 +177,7 @@ public class AnvilCrushingHandler {
                     SoundEvents.ANVIL_LAND, SoundSource.BLOCKS, 1.0f, 0.9f);
 
             notifyNearbyPlayers(serverLevel, victim.blockPosition(),
-                    Component.translatable("message.golem_logix.crush_success", rewardItem.getName(new ItemStack(rewardItem)).getString())
+                    Component.translatable("message.golem_logix.crush_success", rewardName.getString())
                             .withStyle(ChatFormatting.AQUA));
             // the first plate made on an anvil opens the Dispel method to everyone who saw it
             for (Player p : serverLevel.getEntitiesOfClass(Player.class, new AABB(victim.blockPosition()).inflate(12.0))) {
@@ -212,15 +189,6 @@ public class AnvilCrushingHandler {
             victim.discard();
             event.setNewDamage(0.0f);
         }
-    }
-
-    /**
-     * The copper golem comes from Copper Age Backport (minecraft:copper_golem, as in 1.21.9) or other mods: any golem
-     * with "copper" in its id will do.
-     */
-    private static boolean isCopperGolem(Entity entity) {
-        String path = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).getPath();
-        return path.contains("copper_golem") || (entity instanceof net.minecraft.world.entity.animal.AbstractGolem && path.contains("copper"));
     }
 
     private static void notifyNearbyPlayers(ServerLevel level, BlockPos pos, Component message) {

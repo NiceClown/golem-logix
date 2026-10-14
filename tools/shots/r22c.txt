@@ -1,0 +1,47 @@
+# Round 22c (-Mods -Pcreate): Create's Co-Processor assembly line in JEI, the hammer with an iron plate (core or sheet),
+# the Blue Ice imbuement, the book's Create pages
+reload
+cmd time set day
+gui on
+jeitype create:sequenced_assembly
+wait 10
+shot r22c_jei_sequenced
+closescreen
+jei golem_logix:compressed_coprocessor
+wait 10
+shot r22c_jei_coprocessor
+closescreen
+jei golem_logix:forge_hammer
+wait 10
+shot r22c_jei_hammer_a
+wait 25
+shot r22c_jei_hammer_b
+closescreen
+jeitype ars_nouveau:imbuement
+wait 10
+shot r22c_jei_imbuement
+closescreen
+book create_assembly 0
+wait 8
+shot r22c_book_assembly_0
+book create_assembly 1
+wait 5
+shot r22c_book_assembly_1
+bookaudit
+closescreen
+gui off
+lang ru_ru
+wait 20
+gui on
+book create_assembly 0
+wait 8
+shot r22c_book_assembly_ru_0
+book create_assembly 1
+wait 5
+shot r22c_book_assembly_ru_1
+bookaudit
+closescreen
+gui off
+lang en_us
+wait 20
+gui on

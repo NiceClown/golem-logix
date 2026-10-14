@@ -82,6 +82,9 @@ public class ModItems {
     public static final DeferredItem<UpgradeItem> COMPRESSED_COPROCESSOR = ITEMS.register("compressed_coprocessor",
             () -> new UpgradeItem(com.golemlogix.upgrade.UpgradeType.SPEED, "tooltip.golem_logix.compressed_coprocessor",
                     new Item.Properties().stacksTo(16)));
+    /** The Co-Processor on Create's assembly line (the transitional item of its sequenced assembly recipe). */
+    public static final DeferredItem<com.golemlogix.items.IncompleteAssemblyItem> INCOMPLETE_COMPRESSED_COPROCESSOR =
+            ITEMS.register("incomplete_compressed_coprocessor", () -> new com.golemlogix.items.IncompleteAssemblyItem(new Item.Properties()));
 
     public static final DeferredItem<UpgradeItem> AUTOCRAFT_MODULE = ITEMS.register("autocraft_module",
             () -> new UpgradeItem(com.golemlogix.upgrade.UpgradeType.CRAFTING, "tooltip.golem_logix.autocraft_module",

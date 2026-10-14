@@ -46,6 +46,12 @@ public final class DiskStorage {
         return server == null || !server.isSameThread() ? null : DiskStore.get(server);
     }
 
+    /** The disk's id in the store (null before its first write). */
+    @Nullable
+    public static UUID diskId(ItemStack disk) {
+        return id(disk);
+    }
+
     @Nullable
     private static UUID id(ItemStack disk) {
         return disk.get(ModDataComponents.DISK_ID.get());
@@ -67,14 +73,9 @@ public final class DiskStorage {
         if (id == null) {
             return null;
         }
+        // server thread only: the client (renderers in single player) must never read the server's maps while it writes them,
+        // it gets samples of the network's contents from the Atlas Core instead (AtlasCoreBlockEntity#cargoItems)
         DiskStore st = store();
-        if (st == null) {
-            // In single player the visual effects (renderers) read the server's local store
-            MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-            if (server != null) {
-                st = DiskStore.get(server);
-            }
-        }
         return st == null ? null : st.getOrNull(id);
     }
 

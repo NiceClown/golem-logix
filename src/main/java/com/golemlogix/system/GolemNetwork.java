@@ -114,7 +114,19 @@ public final class GolemNetwork {
     }
 
     /** An external container behind a Periscope: the priority comes from the periscope itself. */
-    public record External(Level level, BlockPos target, Direction face, int priority, BlockPos periscope) {
+    /**
+     * Grows whenever items or fluids go into or out of any network's storage (server). Sleeping export buses watch it: something
+     * new may have arrived for them.
+     */
+    private static long storageEpoch;
+
+    public static long storageEpoch() {
+        return storageEpoch;
+    }
+
+    /** A storage behind a periscope; on the server the periscope (owner) keeps its handlers cached. */
+    public record External(Level level, BlockPos target, Direction face, int priority, BlockPos periscope,
+                           @Nullable PeriscopeBlockEntity owner) {
     }
 
     public record PatternRef(PatternData data, PatternProviderBlockEntity provider) {
@@ -384,7 +396,7 @@ public final class GolemNetwork {
                         PeriscopeBlockEntity pb = be instanceof PeriscopeBlockEntity p ? p : null;
                         // the periscope's Redstone Module switches the storage off by signal
                         if (pb == null || pb.storageEnabled()) {
-                            externals.add(new External(lvl, target, facing.getOpposite(), pb == null ? 0 : pb.getPriority(), pos));
+                            externals.add(new External(lvl, target, facing.getOpposite(), pb == null ? 0 : pb.getPriority(), pos, pb));
                         }
                     }
                 }
@@ -834,17 +846,39 @@ public final class GolemNetwork {
 
     private List<ItemStack> allDisks(boolean fluid) {
         List<ItemStack> disks = new ArrayList<>();
+        Set<ItemStack> copies = copiedDisks();
         for (CopperDriveBayBlockEntity bay : bays) {
             if (bay.isRemoved()) {
                 continue;
             }
             for (ItemStack disk : bay.getDisks()) {
-                if (fluid ? DiskStorage.isFluidDisk(disk) : DiskStorage.isItemDisk(disk)) {
+                if ((fluid ? DiskStorage.isFluidDisk(disk) : DiskStorage.isItemDisk(disk)) && !copies.contains(disk)) {
                     disks.add(disk);
                 }
             }
         }
         return disks;
+    }
+
+    /**
+     * Disks whose id is already mounted earlier in the network: a copy (a creative middle-click, an inventory backup, another mod)
+     * shares the original's contents, so it is skipped and nothing is counted or offered twice.
+     */
+    private Set<ItemStack> copiedDisks() {
+        Set<java.util.UUID> ids = new HashSet<>();
+        Set<ItemStack> copies = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        for (CopperDriveBayBlockEntity bay : bays) {
+            if (bay.isRemoved()) {
+                continue;
+            }
+            for (ItemStack disk : bay.getDisks()) {
+                java.util.UUID id = DiskStorage.diskId(disk);
+                if (id != null && !ids.add(id)) {
+                    copies.add(disk);
+                }
+            }
+        }
+        return copies;
     }
 
     /** Only the cabinets whose disks really changed are marked (it was every cabinet of the network on every move). */
@@ -874,6 +908,9 @@ public final class GolemNetwork {
         if (!lvl.isLoaded(ex.target)) {
             return null;
         }
+        if (ex.owner != null && !ex.owner.isRemoved() && lvl instanceof net.minecraft.server.level.ServerLevel sl) {
+            return ex.owner.targetCaps(sl, ex.target, ex.face).itemsAnySide();
+        }
         IItemHandler h = lvl.getCapability(Capabilities.ItemHandler.BLOCK, ex.target, ex.face);
         if (h == null) {
             h = lvl.getCapability(Capabilities.ItemHandler.BLOCK, ex.target, null);
@@ -892,6 +929,9 @@ public final class GolemNetwork {
         Level lvl = ex.level;
         if (!lvl.isLoaded(ex.target)) {
             return null;
+        }
+        if (ex.owner != null && !ex.owner.isRemoved() && lvl instanceof net.minecraft.server.level.ServerLevel sl) {
+            return ex.owner.targetCaps(sl, ex.target, ex.face).fluidsAnySide();
         }
         IFluidHandler h = lvl.getCapability(Capabilities.FluidHandler.BLOCK, ex.target, ex.face);
         if (h == null) {
@@ -924,11 +964,12 @@ public final class GolemNetwork {
         return new ArrayList<>(map.values());
     }
 
-    private static List<DiskRef> disksOf(Tier tier, boolean fluid) {
+    private List<DiskRef> disksOf(Tier tier, boolean fluid) {
         List<DiskRef> disks = new ArrayList<>();
+        Set<ItemStack> copies = copiedDisks();
         for (CopperDriveBayBlockEntity bay : tier.bays) {
             for (ItemStack disk : bay.getDisks()) {
-                if (fluid ? DiskStorage.isFluidDisk(disk) : DiskStorage.isItemDisk(disk)) {
+                if ((fluid ? DiskStorage.isFluidDisk(disk) : DiskStorage.isItemDisk(disk)) && !copies.contains(disk)) {
                     disks.add(new DiskRef(bay, disk));
                 }
             }
@@ -1062,6 +1103,9 @@ public final class GolemNetwork {
                 }
             }
             markBaysChanged(touched);
+            if (remaining.getCount() != input.getCount()) {
+                storageEpoch++;
+            }
             return remaining;
         }
         // simulation: disks are already counted by the sum of free space, the external ones are checked one by one
@@ -1145,6 +1189,9 @@ public final class GolemNetwork {
         }
         if (!simulate) {
             markBaysChanged(touched);
+            if (left != amount) {
+                storageEpoch++;
+            }
         }
         int taken = amount - left;
         return taken > 0 ? template.copyWithCount(taken) : ItemStack.EMPTY;
@@ -1241,6 +1288,9 @@ public final class GolemNetwork {
             }
         }
         markBaysChanged(touched);
+        if (!simulate && left != input.getAmount()) {
+            storageEpoch++;
+        }
         return input.getAmount() - left;
     }
 
@@ -1289,6 +1339,9 @@ public final class GolemNetwork {
         }
         if (!simulate) {
             markBaysChanged(touched);
+            if (left != amount) {
+                storageEpoch++;
+            }
         }
         int taken = amount - left;
         return taken > 0 ? template.copyWithAmount(taken) : FluidStack.EMPTY;

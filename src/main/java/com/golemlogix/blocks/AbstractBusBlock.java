@@ -60,6 +60,23 @@ public abstract class AbstractBusBlock extends DirectionalBlock implements Golem
         return BusLinks.update(state, direction, neighborState, level, pos);
     }
 
+    /** A neighbour changed (placed, broken, redstone): an idle bus looks again at once. */
+    @Override
+    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean moving) {
+        super.neighborChanged(state, level, pos, block, fromPos, moving);
+        if (level.getBlockEntity(pos) instanceof BusBlockEntity bus) {
+            bus.wake();
+        }
+    }
+
+    /** The contents of a neighbouring container changed (NeoForge calls this for comparator updates): an idle bus looks again. */
+    @Override
+    public void onNeighborChange(BlockState state, net.minecraft.world.level.LevelReader level, BlockPos pos, BlockPos neighbor) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof BusBlockEntity bus) {
+            bus.wake();
+        }
+    }
+
     @Override
     public int channelCost() {
         return 1;

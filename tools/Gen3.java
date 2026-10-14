@@ -99,6 +99,21 @@ final class Gen3 {
         return p;
     }
 
+    /** The Compressed Co-Processor half way through the Create assembly line: three fins of six, the cryo core not lit yet. */
+    static Paint incompleteCoprocessor() {
+        Paint p = card(COPPER, 2.6, 3101);
+        p.slab(3.0, 4.2, 12.6, 11.4, IRON, 0.9, 1);
+        for (int i = 0; i < 3; i++) {
+            double y = 4.8 + i * 1.05;
+            p.rect(3.4, y, 12.2, y + 0.65, at(COPPER, 4.2));
+            p.rect(3.4, y + 0.65, 12.2, y + 0.8, at(COPPER, 1.4));
+        }
+        // the empty groove of the cryo core and a bare conduit
+        p.rect(6.8, 4.4, 8.8, 11.2, at(IRON, 1.2));
+        p.line(2.4, 6.2, 2.4, 10.4, 0.6, at(FROST, 3.0));
+        return p;
+    }
+
     /** Autocraft Module: a brass cartridge with an anvil, clock gears, vacuum tubes with glowing sparks and gold contacts. */
     static Paint autocraftModule() {
         Paint p = card(BRONZE, 3.2, 3201);
@@ -181,9 +196,10 @@ final class Gen3 {
 
     static void upgrades() throws Exception {
         compressedCoprocessor().save(itemTex("compressed_coprocessor"));
+        incompleteCoprocessor().save(itemTex("incomplete_compressed_coprocessor"));
         autocraftModule().save(itemTex("autocraft_module"));
         redstoneModule().save(itemTex("redstone_module"));
-        for (String n : new String[]{"compressed_coprocessor", "autocraft_module", "redstone_module"}) {
+        for (String n : new String[]{"compressed_coprocessor", "incomplete_compressed_coprocessor", "autocraft_module", "redstone_module"}) {
             Forge2.write(RES.resolve("models/item/" + n + ".json"),
                     "{\n  \"parent\": \"minecraft:item/generated\",\n  \"textures\": {\n    \"layer0\": \"golem_logix:item/" + n + "\"\n  }\n}\n");
         }

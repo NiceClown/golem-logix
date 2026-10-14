@@ -33,10 +33,11 @@ file="META-INF/accesstransformer.cfg"
     ordering="NONE"
     side="BOTH"
 
-# the copper golem for the anvil ritual (the first Copper Matrices): in 1.21.1 only this mod provides it
+# the copper golem for the anvil ritual (the first Copper Matrices). Optional: a modpack may bring another copper golem
+# (tag golem_logix:copper_golems) or change the recipes (golem_logix:anvil_crushing, golem_logix:saturator)
 [[dependencies.golem_logix]]
     modId="copperagebackport"
-    type="required"
+    type="optional"
     versionRange="[0.1.5,)"
     ordering="NONE"
     side="BOTH"

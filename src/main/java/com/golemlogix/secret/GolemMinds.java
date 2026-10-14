@@ -39,11 +39,19 @@ public final class GolemMinds {
         if (entity instanceof SnowGolem) {
             return Kind.SNOW;
         }
-        String path = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).getPath();
-        if (path.contains("copper_golem") || (entity instanceof AbstractGolem && path.contains("copper"))) {
-            return Kind.COPPER;
+        return isCopperGolem(entity) ? Kind.COPPER : null;
+    }
+
+    /**
+     * A copper golem from any mod: the tag golem_logix:copper_golems (Copper Age Backport's minecraft:copper_golem by default,
+     * modpacks add their own), or any golem with "copper" in its id.
+     */
+    public static boolean isCopperGolem(Entity entity) {
+        if (entity.getType().is(com.golemlogix.init.ModTags.COPPER_GOLEMS)) {
+            return true;
         }
-        return null;
+        String path = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).getPath();
+        return path.contains("copper_golem") || (entity instanceof AbstractGolem && path.contains("copper"));
     }
 
     /** Battered enough, as for the anvil ritual: iron and copper golems at 4 HP or less, a snow golem below its full 4 HP. */

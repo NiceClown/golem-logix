@@ -171,8 +171,9 @@ public class TerminalMenu extends GolemMenu {
             this.containerSlotCount = 10;
         }
         addPlayerSlots(inv, LIST_X, invY(crafting, rows));
-        // the hotbar slot with the Chronometer is locked (from the offhand only an F key swap could take it, and that is not allowed either)
-        if (lockedSlot >= 0 && lockedSlot < Inventory.getSelectionSize()) {
+        // the inventory slot with the Chronometer is locked (from the offhand only an F key swap could take it, and that is not allowed
+        // either); one worn in the Curios slot (Chronometers.CURIO) is not in this window at all
+        if (lockedSlot >= 0 && lockedSlot < Inventory.INVENTORY_SIZE) {
             for (int i = playerStart; i < playerEnd; i++) {
                 Slot s = this.slots.get(i);
                 if (s.container == inv && s.getContainerSlot() == lockedSlot) {
@@ -746,18 +747,14 @@ public class TerminalMenu extends GolemMenu {
         if (lockedSlot >= 0 && player.getInventory().getItem(lockedSlot).getItem() instanceof PortableChronometerItem) {
             return player.getInventory().getItem(lockedSlot);
         }
-        for (ItemStack s : player.getInventory().items) {
-            if (s.getItem() instanceof PortableChronometerItem && anchor != null && PortableChronometerItem.getBound(s) != null
-                    && anchor.equals(PortableChronometerItem.getBound(s).pos())) {
+        // the inventory, the offhand and the Curios slot: the one bound to this network, or else any
+        List<ItemStack> carried = com.golemlogix.items.Chronometers.carried(player);
+        for (ItemStack s : carried) {
+            if (anchor != null && PortableChronometerItem.getBound(s) != null && anchor.equals(PortableChronometerItem.getBound(s).pos())) {
                 return s;
             }
         }
-        for (ItemStack s : player.getInventory().offhand) {
-            if (s.getItem() instanceof PortableChronometerItem) {
-                return s;
-            }
-        }
-        return null;
+        return carried.isEmpty() ? null : carried.get(0);
     }
 
     /** Once a second while the window is open: the Chronometer spends Source (unless the network's Resonator powers it). */
@@ -981,7 +978,7 @@ public class TerminalMenu extends GolemMenu {
         }
         if (wireless) {
             boolean held = lockedSlot >= 0 ? player.getInventory().getItem(lockedSlot).getItem() instanceof PortableChronometerItem
-                    : player.getInventory().contains(s -> s.getItem() instanceof PortableChronometerItem);
+                    : !com.golemlogix.items.Chronometers.carried(player).isEmpty();
             if (!held) {
                 return false;
             }

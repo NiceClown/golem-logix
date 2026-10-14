@@ -98,7 +98,7 @@ public class ManaSaturatorBlock extends Block implements EntityBlock {
             }
             if (be instanceof ManaSaturatorBlockEntity anvil && ManaSaturatorBlockEntity.isInput(level, stack)) {
                 if (!level.isClientSide()) {
-                    if (!ManaSaturatorBlockEntity.isManualInput(stack)) {
+                    if (!ManaSaturatorBlockEntity.isManualInput(level, stack)) {
                         player.displayClientMessage(Component.translatable("message.golem_logix.anvil.needs_machine"), true);
                     } else if (!anvil.anvilItem().isEmpty()) {
                         player.displayClientMessage(Component.translatable("message.golem_logix.anvil.busy"), true);

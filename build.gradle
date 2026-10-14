@@ -94,12 +94,17 @@ dependencies {
     // optional integrations: compiled against their APIs, picked up in game only when installed
     compileOnly 'mezz.jei:jei-1.21.1-neoforge-api:19.44.0.403'
     compileOnly 'maven.modrinth:jade:15.10.6+neoforge'
+    // Curios: the Portable Chronometer's own slot (integration/curios, used only when Curios is loaded)
+    compileOnly 'maven.modrinth:curios:yohfFbgD'                    // 9.5.1+1.21.1
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.2'
 
     // Modrinth version ids, not version numbers: the same number sometimes has Fabric builds.
-    // Copper Age Backport is a required dependency (copper golem for the anvil ritual), needed in every dev run.
-    runtimeOnly 'maven.modrinth:backport-copper-age:ZyjDScTQ'      // 1.21.1-0.1.5.1-pre neoforge
+    // Copper Age Backport is optional (it brings the copper golem for the anvil ritual; modpacks may use another golem or their own
+    // recipes). It is in every dev run unless -PnoBackport checks the mod without it.
+    if (!project.hasProperty('noBackport')) {
+        runtimeOnly 'maven.modrinth:backport-copper-age:ZyjDScTQ'  // 1.21.1-0.1.5.1-pre neoforge
+    }
 
     // testing with the real mods in dev runs: gradle -PtestMods runClient / runDevShots / runGameTestServer
     // (Source from Ars Nouveau jars, JEI, Jade). They do not go into the release jar.

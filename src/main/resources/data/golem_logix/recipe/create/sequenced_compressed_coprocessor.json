@@ -1,0 +1,40 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "create"
+    }
+  ],
+  "type": "create:sequenced_assembly",
+  "ingredient": { "item": "golem_logix:cooling_coprocessor" },
+  "loops": 3,
+  "results": [
+    { "chance": 90.0, "id": "golem_logix:compressed_coprocessor" },
+    { "chance": 6.0, "id": "golem_logix:flattened_cryo_substrate" },
+    { "chance": 4.0, "id": "minecraft:copper_ingot" }
+  ],
+  "sequence": [
+    {
+      "type": "create:filling",
+      "ingredients": [
+        { "item": "golem_logix:incomplete_compressed_coprocessor" },
+        { "type": "neoforge:single", "amount": 250, "fluid": "golem_logix:cryo_source" }
+      ],
+      "results": [ { "id": "golem_logix:incomplete_compressed_coprocessor" } ]
+    },
+    {
+      "type": "create:deploying",
+      "ingredients": [
+        { "item": "golem_logix:incomplete_compressed_coprocessor" },
+        { "tag": "c:plates/iron" }
+      ],
+      "results": [ { "id": "golem_logix:incomplete_compressed_coprocessor" } ]
+    },
+    {
+      "type": "create:pressing",
+      "ingredients": [ { "item": "golem_logix:incomplete_compressed_coprocessor" } ],
+      "results": [ { "id": "golem_logix:incomplete_compressed_coprocessor" } ]
+    }
+  ],
+  "transitional_item": { "id": "golem_logix:incomplete_compressed_coprocessor" }
+}

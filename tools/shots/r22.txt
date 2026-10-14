@@ -1,0 +1,70 @@
+# Round 22 (-Mods): the Chronometer in the Curios slot opened by the hotkey (what Ctrl+E sends), the Curios window with the slot,
+# JEI: the rituals from data (anvil, Saturator), the hammer with an iron plate, the Blue Ice imbuement; the new book pages
+reload
+cmd time set day
+cmd gamemode survival @p
+cmd fill -24 -61 -20 20 -61 24 minecraft:deepslate_tiles
+cmd fill -24 -60 -20 20 -48 24 minecraft:air
+hook rig 0 -60 0
+wait 40
+hook chrono 0 -57 0 5000
+hook wearchrono
+cam 0 -59 6 180 15
+wait 5
+gui on
+chronokey
+wait 15
+shot r22_chrono_curio
+closescreen
+wait 5
+inv
+wait 5
+shot r22_inventory
+closescreen
+jei golem_logix:flattened_iron_core
+wait 10
+shot r22_jei_iron_core
+closescreen
+jei golem_logix:flattened_copper_matrix
+wait 10
+shot r22_jei_copper_matrix
+closescreen
+jei golem_logix:compressed_coprocessor
+wait 10
+shot r22_jei_coprocessor
+closescreen
+jei golem_logix:forge_hammer
+wait 10
+shot r22_jei_hammer
+closescreen
+jei golem_logix:flattened_cryo_substrate
+wait 10
+shot r22_jei_substrate
+closescreen
+book ars_substrate 0
+wait 8
+shot r22_book_ars_substrate
+book eg_chrono 2
+wait 5
+shot r22_book_chrono
+book hammer 0
+wait 5
+shot r22_book_hammer
+bookaudit
+closescreen
+gui off
+lang ru_ru
+wait 20
+gui on
+book ars_substrate 0
+wait 8
+shot r22_book_ars_substrate_ru
+book eg_chrono 2
+wait 5
+shot r22_book_chrono_ru
+bookaudit
+closescreen
+gui off
+lang en_us
+wait 20
+gui on

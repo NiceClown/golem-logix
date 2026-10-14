@@ -1,0 +1,8 @@
+{
+  "type": "golem_logix:saturator",
+  "ingredient": {"item": "minecraft:iron_block"},
+  "result": {"id": "golem_logix:flattened_iron_core", "count": 2},
+  "hand_result": {"id": "golem_logix:flattened_iron_core"},
+  "source": 1000,
+  "ticks": 100
+}

@@ -103,6 +103,7 @@ public class GolemLogixClientEvents {
     public static void registerKeys(RegisterKeyMappingsEvent event) {
         event.register(com.golemlogix.client.ghost.GolemKeys.GHOST_CONFIRM);
         event.register(com.golemlogix.client.ghost.GolemKeys.GHOST_CANCEL);
+        event.register(com.golemlogix.client.ghost.GolemKeys.OPEN_CHRONOMETER);
     }
 
     @SubscribeEvent

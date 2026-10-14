@@ -144,11 +144,23 @@ public class PortableChronometerItem extends Item {
         if (level.isClientSide() || !(player instanceof ServerPlayer sp)) {
             return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
         }
+        // the slot the Chronometer lies in is locked while the window is open (40 = offhand)
+        int locked = hand == InteractionHand.MAIN_HAND ? sp.getInventory().selected : Inventory.SLOT_OFFHAND;
+        return open(sp, stack, locked) ? InteractionResultHolder.consume(stack) : InteractionResultHolder.fail(stack);
+    }
+
+    /**
+     * Opens the terminal of the network this Chronometer is bound to: by a click with it, or by the hotkey for a Chronometer
+     * anywhere on the player (Chronometers.find). locked = its inventory slot (40 = offhand), locked while the window is open,
+     * or Chronometers.CURIO for one worn in the Curios slot. Returns false (with a message to the player) if it cannot.
+     */
+    public static boolean open(ServerPlayer sp, ItemStack stack, int locked) {
+        Level level = sp.level();
         GlobalPos bound = getBound(stack);
         if (bound == null) {
             sp.displayClientMessage(Component.translatable("message.golem_logix.chronometer.unbound")
                     .withStyle(ChatFormatting.RED), true);
-            return InteractionResultHolder.fail(stack);
+            return false;
         }
         // trying to reach the core from another dimension is one of the secret recipe trials
         if (level.dimension() != bound.dimension()) {
@@ -159,20 +171,20 @@ public class PortableChronometerItem extends Item {
             sp.displayClientMessage(Component.translatable(level.dimension() != bound.dimension()
                     ? "message.golem_logix.chronometer.other_dimension" : "message.golem_logix.chronometer.lost")
                     .withStyle(ChatFormatting.RED), true);
-            return InteractionResultHolder.fail(stack);
+            return false;
         }
         int tier = getTier(stack).ordinal();
         if (!inRange(tier, level, sp.position(), netLevel, bound.pos())) {
             sp.displayClientMessage(Component.translatable(level.dimension() != bound.dimension()
                     ? "message.golem_logix.chronometer.other_dimension" : "message.golem_logix.chronometer.out_of_range")
                     .withStyle(ChatFormatting.RED), true);
-            return InteractionResultHolder.fail(stack);
+            return false;
         }
         GolemNetwork net = GolemNetwork.scan(netLevel, bound.pos());
         String err = net.accessError(null);
         if (err != null) {
             sp.displayClientMessage(Component.translatable(err), true);
-            return InteractionResultHolder.fail(stack);
+            return false;
         }
         // power: the network's Resonator sends Source itself, otherwise the own charge is needed
         if (SourceHelper.sourceRequired()) {
@@ -183,7 +195,7 @@ public class PortableChronometerItem extends Item {
             } else if (getCharge(stack) < OPEN_COST) {
                 sp.displayClientMessage(Component.translatable("message.golem_logix.chronometer.empty")
                         .withStyle(ChatFormatting.RED), true);
-                return InteractionResultHolder.fail(stack);
+                return false;
             } else {
                 setCharge(stack, getCharge(stack) - OPEN_COST);
             }
@@ -191,8 +203,6 @@ public class PortableChronometerItem extends Item {
         sp.displayClientMessage(Component.translatable("message.golem_logix.chronometer.accessing")
                 .withStyle(ChatFormatting.AQUA), true);
         BlockPos anchor = bound.pos();
-        // the slot the Chronometer lies in is locked while the window is open (40 = offhand)
-        int locked = hand == InteractionHand.MAIN_HAND ? sp.getInventory().selected : Inventory.SLOT_OFFHAND;
         // the Chronometer always has a crafting grid
         sp.openMenu(new SimpleMenuProvider(
                         (id, inv, p) -> new TerminalMenu(id, inv, netLevel, anchor, null, null, true, true, tier, locked),
@@ -202,7 +212,7 @@ public class PortableChronometerItem extends Item {
                     buf.writeBoolean(true);
                     buf.writeVarInt(locked);
                 });
-        return InteractionResultHolder.consume(stack);
+        return true;
     }
 
     /**

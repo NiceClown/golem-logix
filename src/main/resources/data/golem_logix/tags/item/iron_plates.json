@@ -1,0 +1,6 @@
+{
+  "values": [
+    "golem_logix:flattened_iron_core",
+    {"id": "#c:plates/iron", "required": false}
+  ]
+}

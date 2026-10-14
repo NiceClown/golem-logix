@@ -67,6 +67,18 @@ public class BusBlockEntity extends BlockEntity {
     private long lastSound = -1000;
     private long lastCraftRequest = -1000;
 
+    /**
+     * An idle bus (its last operations moved nothing) sleeps longer and longer: its interval, doubled each time, up to a second.
+     * A neighbour change, a new filter or upgrade, or (for an export bus) anything entering or leaving the network wakes it.
+     */
+    private static final int MAX_IDLE_TICKS = 20, MAX_IDLE_STEPS = 5;
+    private int idleSteps;
+    private long sleepUntil;
+    private long sleepEpoch;
+    /** The handlers of the block in front, kept until NeoForge reports a change there (which also wakes the bus). */
+    @org.jetbrains.annotations.Nullable
+    private com.golemlogix.system.TargetCaps caps;
+
     public BusBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.BUS.get(), pos, state);
         this.upgrades = new UpgradeContainer(state.getBlock() instanceof InjectorExportBusBlock ? UpgradeSpec.EXPORT_BUS : UpgradeSpec.IMPORT_BUS, this);
@@ -87,6 +99,24 @@ public class BusBlockEntity extends BlockEntity {
 
     public UpgradeContainer getUpgrades() {
         return upgrades;
+    }
+
+    /** Its last operation moved nothing, so it is sleeping between operations. */
+    public boolean idle() {
+        return idleSteps > 0;
+    }
+
+    /** Ends the idle sleep: the bus works at its next turn. */
+    public void wake() {
+        idleSteps = 0;
+        sleepUntil = 0;
+    }
+
+    /** Filters, upgrades, priority or the redstone mode changed: look again at once. */
+    @Override
+    public void setChanged() {
+        super.setChanged();
+        wake();
     }
 
     public RedstoneControl redstone() {
@@ -153,6 +183,10 @@ public class BusBlockEntity extends BlockEntity {
         if (Math.floorMod(level.getGameTime() - net.busRank(be), interval) != 0) {
             return;
         }
+        long now = level.getGameTime();
+        if (now < be.sleepUntil && !(be.isExport() && be.sleepEpoch != GolemNetwork.storageEpoch())) {
+            return;
+        }
         if (!net.isOnline() || !net.isDeviceActive(pos)) {
             return;
         }
@@ -164,8 +198,10 @@ public class BusBlockEntity extends BlockEntity {
         if (!level.isLoaded(target)) {
             return;
         }
-        IItemHandler items = level.getCapability(Capabilities.ItemHandler.BLOCK, target, facing.getOpposite());
-        IFluidHandler fluids = level.getCapability(Capabilities.FluidHandler.BLOCK, target, facing.getOpposite());
+        be.caps = com.golemlogix.system.TargetCaps.of(be.caps, (net.minecraft.server.level.ServerLevel) level, target, facing.getOpposite(),
+                () -> !be.isRemoved(), be::wake);
+        IItemHandler items = be.caps.items();
+        IFluidHandler fluids = be.caps.fluids();
         if (items == null && fluids == null) {
             return;
         }
@@ -175,10 +211,16 @@ public class BusBlockEntity extends BlockEntity {
         } else {
             be.doImport(level, pos, net, target, items, fluids);
         }
-        if (be.moved > 0) {
+        if (be.moved == 0) {
+            // nothing to do: sleep for the interval doubled with every idle operation, at most a second
+            be.idleSteps = Math.min(MAX_IDLE_STEPS, be.idleSteps + 1);
+            be.sleepUntil = now + Math.max(interval, Math.min(MAX_IDLE_TICKS, interval << be.idleSteps));
+            be.sleepEpoch = GolemNetwork.storageEpoch();
+        } else {
+            be.idleSteps = 0;
+            be.sleepUntil = 0;
             // pulse mode: one action per pulse
             be.redstone.allows(hasRedstone, powered, true);
-            long now = level.getGameTime();
             if (now - be.lastSound >= SOUND_COOLDOWN) {
                 be.lastSound = now;
                 level.playSound(null, pos, be.isExport() ? ModSounds.PNEUMATIC_INJECT.get() : ModSounds.VACUUM_SUCTION.get(),

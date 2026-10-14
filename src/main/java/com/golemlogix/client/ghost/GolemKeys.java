@@ -16,6 +16,10 @@ public final class GolemKeys {
             KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_Y, CATEGORY);
     public static final KeyMapping GHOST_CANCEL = new KeyMapping("key.golem_logix.ghost_cancel",
             KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_N, CATEGORY);
+    /** Opens the Portable Chronometer worn in the Curios slot or carried anywhere in the inventory (Ctrl+E). */
+    public static final KeyMapping OPEN_CHRONOMETER = new KeyMapping("key.golem_logix.open_chronometer",
+            KeyConflictContext.IN_GAME, net.neoforged.neoforge.client.settings.KeyModifier.CONTROL, InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_E, CATEGORY);
 
     private GolemKeys() {
     }

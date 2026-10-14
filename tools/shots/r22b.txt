@@ -1,0 +1,46 @@
+# Round 22b (-Mods): the terminal opened by the hotkey from the Curios slot, the Curios window with the Chronometer slot,
+# the JEI categories of the data-driven rituals, the Russian book layout after the hammer caption fix
+reload
+cmd time set day
+cmd gamemode survival @p
+cmd fill -24 -61 -20 20 -61 24 minecraft:deepslate_tiles
+cmd fill -24 -60 -20 20 -48 24 minecraft:air
+hook rig 0 -60 0
+wait 40
+hook chrono 0 -57 0 5000
+hook wearchrono
+cam 0 -59 6 180 15
+wait 5
+gui on
+chronokey
+wait 15
+shot r22b_chrono_curio
+closescreen
+wait 5
+inv
+wait 5
+uiat 31 14 0
+wait 10
+shot r22b_curios
+closescreen
+jeitype golem_logix:anvil_crushing
+wait 10
+shot r22b_jei_anvil
+closescreen
+jeitype golem_logix:mana_saturator
+wait 10
+shot r22b_jei_saturator
+closescreen
+gui off
+lang ru_ru
+wait 20
+gui on
+book hammer 0
+wait 8
+shot r22b_book_hammer_ru
+bookaudit
+closescreen
+gui off
+lang en_us
+wait 20
+gui on

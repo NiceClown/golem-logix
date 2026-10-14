@@ -1,0 +1,11 @@
+# Round 22d (-Mods -Pcreate): the Co-Processor assembly line and the Blue Ice imbuement, each alone in its JEI category
+reload
+gui on
+jeitype create:sequenced_assembly golem_logix:compressed_coprocessor
+wait 10
+shot r22d_jei_sequenced
+closescreen
+jeitype ars_nouveau:imbuement golem_logix:flattened_cryo_substrate
+wait 10
+shot r22d_jei_imbuement
+closescreen

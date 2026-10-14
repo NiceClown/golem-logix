@@ -90,8 +90,8 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
             g.fill(SCENE_X + 8, y, SCENE_X + 10, y + 2, 0xFF7A7A7A);
         }
         arrow.draw(g, 90, GOLEM_Y + 1);
-        g.drawString(font, Component.translatable(recipe.golemName()), TEXT_X, 4, 0xFF8A5A1E, false);
+        g.drawString(font, recipe.golemName(), TEXT_X, 4, 0xFF8A5A1E, false);
         g.drawString(font, "❤", TEXT_X, 17, 0xFFD02828, false);
-        g.drawString(font, Component.translatable(recipe.healthCondition()), TEXT_X + 10, 17, 0xFFB0581A, false);
+        g.drawString(font, recipe.healthCondition(), TEXT_X + 10, 17, 0xFFB0581A, false);
     }
 }

@@ -247,22 +247,14 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
 
     public enum Strike { HIT, DONE, COOLDOWN, NO_SOURCE, NOTHING }
 
-    /** What forging by hand gives: only the three base plates, one each. */
-    public static ItemStack manualOutputFor(ItemStack input) {
-        if (input.is(Blocks.IRON_BLOCK.asItem())) {
-            return new ItemStack(ModItems.FLATTENED_IRON_CORE.get());
-        }
-        if (input.is(Blocks.COPPER_BLOCK.asItem()) || input.is(Blocks.CUT_COPPER.asItem()) || input.is(Blocks.WAXED_COPPER_BLOCK.asItem())) {
-            return new ItemStack(ModItems.FLATTENED_COPPER_MATRIX.get());
-        }
-        if (input.is(Blocks.PACKED_ICE.asItem())) {
-            return new ItemStack(ModItems.FLATTENED_CRYO_SUBSTRATE.get());
-        }
-        return ItemStack.EMPTY;
+    /** What forging by hand gives: the "hand_result" of the blank's Saturator recipe (data packs; by default the three base plates). */
+    public static ItemStack manualOutputFor(@javax.annotation.Nullable Level level, ItemStack input) {
+        com.golemlogix.recipe.SaturatorRecipe r = com.golemlogix.recipe.SaturatorRecipe.find(level, input);
+        return r == null ? ItemStack.EMPTY : r.handResult().copy();
     }
 
-    public static boolean isManualInput(ItemStack stack) {
-        return !manualOutputFor(stack).isEmpty();
+    public static boolean isManualInput(@javax.annotation.Nullable Level level, ItemStack stack) {
+        return !manualOutputFor(level, stack).isEmpty();
     }
 
     public int manualHits() {
@@ -289,7 +281,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
 
     /** A hammer strike on the blank on the anvil (server). */
     public Strike strike(ServerLevel level, BlockPos pos, Player player, ItemStack hammer) {
-        if (!isManualInput(heldItem)) {
+        if (!isManualInput(level, heldItem)) {
             return Strike.NOTHING;
         }
         long now = level.getGameTime();
@@ -309,7 +301,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         level.sendParticles(ParticleTypes.ENCHANTED_HIT, x, y, z, 8, 0.15, 0.03, 0.15, 0.1);
         level.sendParticles(ParticleTypes.SNOWFLAKE, x, y, z, 4, 0.2, 0.05, 0.2, 0.02);
         if (manualHits >= MANUAL_HITS) {
-            heldItem = manualOutputFor(heldItem);
+            heldItem = manualOutputFor(level, heldItem);
             manualHits = 0;
             level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, x, y, z, 6, 0.15, 0.05, 0.15, 0.02);
             level.playSound(null, pos, ModSounds.ANVIL_CRUSH.get(), SoundSource.BLOCKS, 0.9f, 1.5f);
@@ -714,53 +706,37 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
      * (amethyst, an amethyst block, lapis), read from the level's recipes.
      */
     public static ItemStack outputFor(@javax.annotation.Nullable Level level, ItemStack input) {
-        ItemStack own = ownOutput(input);
-        if (!own.isEmpty()) {
-            return own;
+        com.golemlogix.recipe.SaturatorRecipe own = com.golemlogix.recipe.SaturatorRecipe.find(level, input);
+        if (own != null) {
+            return own.result().copy();
         }
         com.golemlogix.integration.ars.ArsImbuement.Entry gem = com.golemlogix.integration.ars.ArsImbuement.find(level, input);
         return gem == null ? ItemStack.EMPTY : gem.output().copy();
     }
 
-    /** Source of one ritual: 1000 for a plate, 2500 for the Occult Matrix, a Source Gem a third more than in the chamber. */
+    /** Source of one ritual: as its recipe says (1000 for a plate, 2500 for the Occult Matrix), a Source Gem a third more than in the chamber. */
     public static int requiredSource(@javax.annotation.Nullable Level level, ItemStack input) {
-        if (input.is(ModItems.IMPLODED_WITHER_PLASMA.get())) {
-            return 2500;
+        com.golemlogix.recipe.SaturatorRecipe own = com.golemlogix.recipe.SaturatorRecipe.find(level, input);
+        if (own != null) {
+            return own.source();
         }
-        if (ownOutput(input).isEmpty()) {
-            com.golemlogix.integration.ars.ArsImbuement.Entry gem = com.golemlogix.integration.ars.ArsImbuement.find(level, input);
-            if (gem != null) {
-                return gem.source();
-            }
-        }
-        return 1000;
+        com.golemlogix.integration.ars.ArsImbuement.Entry gem = com.golemlogix.integration.ars.ArsImbuement.find(level, input);
+        return gem != null ? gem.source() : com.golemlogix.recipe.SaturatorRecipe.DEFAULT_SOURCE;
     }
 
-    /** Work units of one ritual: MAX_PROGRESS for the mod's own; a Source Gem takes half the chamber's ticks at the base speed. */
+    /** Work units of one ritual: the recipe's ticks at the base speed (MAX_PROGRESS for the plates); a Source Gem takes half the chamber's ticks. */
     public static int ritualWork(@javax.annotation.Nullable Level level, ItemStack input) {
-        if (!input.isEmpty() && ownOutput(input).isEmpty()) {
+        com.golemlogix.recipe.SaturatorRecipe own = com.golemlogix.recipe.SaturatorRecipe.find(level, input);
+        if (own != null) {
+            return own.ticks() * BASE_SPEED;
+        }
+        if (!input.isEmpty()) {
             com.golemlogix.integration.ars.ArsImbuement.Entry gem = com.golemlogix.integration.ars.ArsImbuement.find(level, input);
             if (gem != null) {
                 return gem.ticks() * BASE_SPEED;
             }
         }
         return MAX_PROGRESS;
-    }
-
-    private static ItemStack ownOutput(ItemStack input) {
-        if (input.is(Blocks.IRON_BLOCK.asItem())) {
-            return new ItemStack(ModItems.FLATTENED_IRON_CORE.get(), 2);
-        } else if (input.is(Blocks.COPPER_BLOCK.asItem()) || input.is(Blocks.CUT_COPPER.asItem()) || input.is(Blocks.WAXED_COPPER_BLOCK.asItem())) {
-            return new ItemStack(ModItems.FLATTENED_COPPER_MATRIX.get(), 2);
-        } else if (input.is(Blocks.PACKED_ICE.asItem())) {
-            return new ItemStack(ModItems.FLATTENED_CRYO_SUBSTRATE.get(), 2);
-        } else if (input.is(ModItems.IMPLODED_WITHER_PLASMA.get())) {
-            return new ItemStack(ModItems.INTERDIMENSIONAL_OCCULT_MATRIX.get());
-        } else if (input.is(com.golemlogix.init.ModBlocks.COOLING_COPROCESSOR.get().asItem())) {
-            // a coprocessor compressed into a flat speed upgrade for buses
-            return new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get());
-        }
-        return ItemStack.EMPTY;
     }
 
     @Override

@@ -1,0 +1,8 @@
+{
+  "type": "golem_logix:anvil_crushing",
+  "entity": "#golem_logix:copper_golems",
+  "entity_id_contains": ["copper_golem"],
+  "max_health": 4.0,
+  "result": {"id": "golem_logix:flattened_copper_matrix"},
+  "icon": "minecraft:copper_block"
+}
