@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.1.6 — Fuzzy mode and the Fuzzy Card
+
+Like RS's fuzzy mode and AE2's substitutions and Fuzzy Card, with one rule for the whole mod: a fuzzy slot takes the same item with
+any components (damage, enchantments, a name), or any item of a tag chosen on it; the exact item is still taken first.
+
+- **Pattern Encoder: fuzzy mode** (the new **≈** button). A crafting table pattern then takes in each cell what its recipe accepts
+  there (any planks for a crafting table), so the recipe always still works; a machine pattern's input takes any components, and a
+  **middle-click** (or Ctrl+click) on it goes through the item's tags (`#c:glass_blocks`: any glass for "glass"). Slots show ≈ or #,
+  the tooltip says what they take; the punch card's tooltip shows the mode and the tags. Patterns written before stay exact.
+- **Autocrafting uses it**: the planner counts the substitutes in storage and in leftovers, crafts the encoded item (or a substitute
+  with a pattern) when they run out, and the job sends the very items it took to the machine or the crafting grid.
+- **Fuzzy Card** (a new upgrade; glass, copper, a punch card and a Copper Matrix): in the import and export buses and the Interface
+  the filters match fuzzily; a middle-click on a filter chooses its tag. The export bus and the Interface take the exact item first,
+  then whatever matches; the export bus and the Interface got a 7th upgrade slot for it.
+- 4 new game tests (105 in all): birch planks for a crafting table encoded with oak, red glass into a machine for "glass", the card
+  on both buses (and nothing without it), the Interface keeping blue glass for "glass".
+
 ## 1.1.5 — Progression fixes
 
 A review of the mod's progression (what opens when, and from which paths) found three things:

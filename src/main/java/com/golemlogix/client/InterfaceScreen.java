@@ -84,6 +84,10 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        // a middle-click or Ctrl+click on a config slot with a Fuzzy Card chooses its tag (before the settings window)
+        if (fuzzyClick(button)) {
+            return true;
+        }
         int g = hoveredGear(mx, my);
         if (g >= 0 && button == 0) {
             openSlot(g);

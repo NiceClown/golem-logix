@@ -493,12 +493,15 @@ public class InterfaceBlockEntity extends BlockEntity {
     private int restock(Level level, GolemNetwork net, int budget) {
         int moved = 0;
         Map<ItemKey, Long> toCraft = new LinkedHashMap<>();
+        // a Fuzzy Card: a config slot keeps any item that matches it (any components, or its chosen tag)
+        boolean fuzzy = upgrades.has(UpgradeType.FUZZY);
+        java.util.Set<ItemKey> netKeys = null;
         for (int i = 0; i < SLOTS; i++) {
             ItemStack cfg = config.getItem(i);
             ItemStack have = stock.getItem(i);
             // another item is in the slot (the config changed) or there is too much: return it to the network
             if (!have.isEmpty()) {
-                int excess = cfg.isEmpty() || isFluidSlot(i) || !ItemStack.isSameItemSameComponents(cfg, have) ? have.getCount()
+                int excess = cfg.isEmpty() || isFluidSlot(i) || !com.golemlogix.system.Fuzzy.matches(cfg, have, fuzzy) ? have.getCount()
                         : have.getCount() - wanted(i);
                 if (excess > 0) {
                     ItemStack back = have.copyWithCount(excess);
@@ -512,17 +515,30 @@ public class InterfaceBlockEntity extends BlockEntity {
                 continue;
             }
             have = stock.getItem(i);
-            if (!have.isEmpty() && !ItemStack.isSameItemSameComponents(cfg, have)) {
+            if (!have.isEmpty() && !com.golemlogix.system.Fuzzy.matches(cfg, have, fuzzy)) {
                 continue; // the foreign item has not left yet (the network is full)
             }
             int need = wanted(i) - have.getCount();
             if (need <= 0) {
                 continue;
             }
-            ItemStack template = cfg.copyWithCount(1);
+            ItemStack plain = com.golemlogix.system.Fuzzy.plain(cfg).copyWithCount(1);
+            // more of what is already there; an empty fuzzy slot takes the config's own item, or else any that matches
+            ItemStack template = have.isEmpty() ? plain : have.copyWithCount(1);
             ItemStack got = net.extractItem(template, Math.min(need, budget - moved), false);
+            if (got.isEmpty() && fuzzy && have.isEmpty()) {
+                if (netKeys == null) {
+                    netKeys = net.listItems().keySet();
+                }
+                for (ItemKey k : com.golemlogix.system.Fuzzy.candidates(cfg, netKeys, true)) {
+                    got = net.extractItem(k.toStack(1), Math.min(need, budget - moved), false);
+                    if (!got.isEmpty()) {
+                        break;
+                    }
+                }
+            }
             if (got.isEmpty()) {
-                ItemKey key = ItemKey.of(template);
+                ItemKey key = ItemKey.of(plain);
                 if (upgrades.has(UpgradeType.CRAFTING) && net.canCraft(key) && !net.busCraftPending(worldPosition, key)) {
                     toCraft.merge(key, (long) need, Long::sum);
                 }

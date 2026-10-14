@@ -30,12 +30,14 @@ Everything comes with an illustrated, searchable **guide book** (Russian and Eng
   or, with the secret Void-Glass Prism, any dimension. The golem operator keys Morse, the desk lamp blinks, pulses run up the mast.
 - **Buses** — Vacuum Import Bus, Injector Export Bus and Periscope Storage Bus (turns any chest or tank into network storage, items and
   fluids). Compact bodies with a pipe socket on every side that grows into a mini tube next to a neighbour; filters, per-bus priorities.
-  Six upgrade slots: up to four speed upgrades, an Autocraft Module (the export bus orders what is missing) and a Redstone Module.
+  Upgrade slots: up to four speed upgrades, an Autocraft Module (the export bus orders what is missing), a Redstone Module and a
+  Fuzzy Card (filters take the same item with any components, or any item of a tag chosen on the filter with a middle-click).
 - **Redstone control** for buses, periscopes, pattern providers, calculators and the Mana Saturator: ignore / with signal / without
   signal / one action per pulse, as in AE2 and Refined Storage.
 - **Terminals** — analog CRT terminal (search, sorting, items and fluids in one list with fluids counted in buckets, bucket support),
   crafting terminal, pattern encoder; animated screens; windows stretch to the full screen height; JEI R/U and "+" transfer.
-- **Autocrafting** — punch-card patterns, a Cryo Calculator with Cooling Coprocessors around it and Compressed Co-Processors in its
+- **Autocrafting** — punch-card patterns (with a **fuzzy mode** like RS and AE2: a crafting recipe takes what each cell accepts, a
+  processing input takes any components or a chosen tag), a Cryo Calculator with Cooling Coprocessors around it and Compressed Co-Processors in its
   upgrade slots (it shows what it is making and its coprocessors pump like flywheels), pattern providers that feed machines (with a waiting mode), crafting tree planning with intermediates and a resource planner in the order window, precraft from
   JEI (Ctrl + "+"), "order ready" notifications and the **Recipe Monitor** to watch and abort every job of the network.
 - **Rituals** — flattened plates by dropping an anvil on damaged iron / copper / snow golems, by hand on the **Mana Saturator** anvil,
@@ -74,8 +76,8 @@ Put `golem_logix-<version>.jar` into the `mods` folder (client and server). On a
 ## Building from source
 
 ```
-gradlew build              # build/libs/golem_logix-1.1.5.jar (JAVA_HOME must point at JDK 21)
-gradlew runGameTestServer  # 101 game tests on a real server (add -PtestMods for Ars Nouveau, JEI, Jade, Curios; -Pcreate for
+gradlew build              # build/libs/golem_logix-1.1.6.jar (JAVA_HOME must point at JDK 21)
+gradlew runGameTestServer  # 105 game tests on a real server (add -PtestMods for Ars Nouveau, JEI, Jade, Curios; -Pcreate for
                            # Create; -PnoBackport runs them without Copper Age Backport)
 ```
 

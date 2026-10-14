@@ -273,7 +273,7 @@ public class BusBlockEntity extends BlockEntity {
             int budget = itemsPerOperation();
             for (int i = 0; i < items.getSlots() && budget > 0; i++) {
                 ItemStack inSlot = items.getStackInSlot(i);
-                if (inSlot.isEmpty() || !passes(inSlot, itemFilters, noFilters)) {
+                if (inSlot.isEmpty() || !passes(inSlot, itemFilters, noFilters, fuzzy())) {
                     continue;
                 }
                 ItemStack sim = items.extractItem(i, Math.min(budget, inSlot.getCount()), true);
@@ -337,16 +337,21 @@ public class BusBlockEntity extends BlockEntity {
         }
     }
 
-    private static boolean passes(ItemStack stack, List<ItemStack> itemFilters, boolean noFilters) {
+    private static boolean passes(ItemStack stack, List<ItemStack> itemFilters, boolean noFilters, boolean fuzzy) {
         if (noFilters) {
             return true;
         }
         for (ItemStack f : itemFilters) {
-            if (ItemStack.isSameItemSameComponents(f, stack)) {
+            if (com.golemlogix.system.Fuzzy.matches(f, stack, fuzzy)) {
                 return true;
             }
         }
         return false;
+    }
+
+    /** A Fuzzy Card is installed: filters match any components, or any item of the tag chosen on them. */
+    private boolean fuzzy() {
+        return upgrades.has(UpgradeType.FUZZY);
     }
 
     // ---------------------------------------------------------------- export
@@ -357,38 +362,56 @@ public class BusBlockEntity extends BlockEntity {
         Map<ItemKey, Long> toCraft = new LinkedHashMap<>();
 
         if (items != null) {
+            boolean fuzzy = fuzzy();
+            java.util.Set<ItemKey> netKeys = fuzzy ? net.listItems().keySet() : java.util.Set.of();
             for (ItemStack filter : itemFilters()) {
                 if (itemBudget <= 0) {
                     break;
                 }
-                ItemStack want = filter.copyWithCount(1);
+                ItemStack want = com.golemlogix.system.Fuzzy.plain(filter).copyWithCount(1);
+                // what may go out for this filter: its own item first, with a Fuzzy Card also what the network has that matches it
+                List<ItemStack> wants = new ArrayList<>();
+                wants.add(want);
+                for (ItemKey k : com.golemlogix.system.Fuzzy.candidates(filter, netKeys, fuzzy)) {
+                    if (!k.matches(want)) {
+                        wants.add(k.toStack(1));
+                    }
+                }
                 int perStack = Math.max(1, want.getMaxStackSize());
                 int moved = 0;
-                boolean nothingInNetwork = false;
-                while (itemBudget - moved > 0) {
-                    int ask = Math.min(itemBudget - moved, perStack);
-                    // do not move from a container into the same container (a periscope on the same chest)
-                    ItemStack sim = net.extractItem(want, ask, true, target);
-                    if (sim.isEmpty()) {
-                        nothingInNetwork = moved == 0;
-                        break;
+                boolean nothingInNetwork = true;
+                for (ItemStack one : wants) {
+                    boolean stop = false;
+                    while (itemBudget - moved > 0) {
+                        int ask = Math.min(itemBudget - moved, Math.max(1, one.getMaxStackSize()));
+                        // do not move from a container into the same container (a periscope on the same chest)
+                        ItemStack sim = net.extractItem(one, ask, true, target);
+                        if (sim.isEmpty()) {
+                            break;
+                        }
+                        nothingInNetwork = false;
+                        // top up stacks already started first (like a hopper), then empty slots
+                        ItemStack restSim = ItemHandlerHelper.insertItemStacked(items, sim, true);
+                        int accepted = sim.getCount() - restSim.getCount();
+                        if (accepted <= 0) {
+                            stop = true;
+                            break;
+                        }
+                        ItemStack real = net.extractItem(one, accepted, false, target);
+                        if (real.isEmpty()) {
+                            break;
+                        }
+                        ItemStack rest = ItemHandlerHelper.insertItemStacked(items, real, false);
+                        if (!rest.isEmpty()) {
+                            net.insertItem(rest, false, target);
+                        }
+                        moved += real.getCount() - rest.getCount();
+                        if (accepted < ask) {
+                            stop = true;
+                            break;
+                        }
                     }
-                    // top up stacks already started first (like a hopper), then empty slots
-                    ItemStack restSim = ItemHandlerHelper.insertItemStacked(items, sim, true);
-                    int accepted = sim.getCount() - restSim.getCount();
-                    if (accepted <= 0) {
-                        break;
-                    }
-                    ItemStack real = net.extractItem(want, accepted, false, target);
-                    if (real.isEmpty()) {
-                        break;
-                    }
-                    ItemStack rest = ItemHandlerHelper.insertItemStacked(items, real, false);
-                    if (!rest.isEmpty()) {
-                        net.insertItem(rest, false, target);
-                    }
-                    moved += real.getCount() - rest.getCount();
-                    if (accepted < ask) {
+                    if (stop || itemBudget - moved <= 0) {
                         break;
                     }
                 }

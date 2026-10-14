@@ -1,0 +1,20 @@
+# Round 24c (-Mods): the fuzzy mode pages after the split, the layout audit in both languages
+gui on
+book ac_cards 2
+wait 8
+shot r24c_book_encoder
+bookaudit
+closescreen
+gui off
+lang ru_ru
+wait 20
+gui on
+book ac_cards 2
+wait 8
+shot r24c_book_encoder_ru
+bookaudit
+closescreen
+gui off
+lang en_us
+wait 20
+gui on

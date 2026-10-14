@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "G": { "tag": "c:glass_blocks" },
+    "C": { "item": "minecraft:copper_ingot" },
+    "P": { "item": "golem_logix:copper_punch_card" },
+    "M": { "item": "golem_logix:flattened_copper_matrix" }
+  },
+  "pattern": [
+    " G ",
+    "CPC",
+    " M "
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:fuzzy_card"
+  }
+}

@@ -189,6 +189,9 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
         if (spec.max(UpgradeType.REDSTONE) > 0) {
             out.add(new ItemStack(com.golemlogix.init.ModItems.REDSTONE_MODULE.get()));
         }
+        if (spec.max(UpgradeType.FUZZY) > 0) {
+            out.add(new ItemStack(com.golemlogix.init.ModItems.FUZZY_CARD.get()));
+        }
         return out;
     }
 
@@ -207,6 +210,48 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
             return;
         }
         super.renderSlot(g, slot);
+        // a fuzzy ghost: "#" with a tag chosen, "≈" for the same item with any components
+        if (menu instanceof com.golemlogix.menu.GolemMenu gm && slot.hasItem() && gm.fuzzyActive(slot.index)) {
+            String mark = com.golemlogix.system.Fuzzy.tag(slot.getItem()) != null ? "#" : "≈";
+            g.pose().pushPose();
+            g.pose().translate(slot.x + 10.5f, slot.y - 1f, 300);
+            g.pose().scale(0.75f, 0.75f, 1f);
+            g.drawString(font, mark, 0, 0, GolemGui.CYAN, true);
+            g.pose().popPose();
+        }
+    }
+
+    /** A middle-click (or Ctrl+left-click) on a fuzzy ghost slot asks the server for its next tag. True if it was such a click. */
+    protected boolean fuzzyClick(int button) {
+        if (menu instanceof com.golemlogix.menu.GolemMenu gm && hoveredSlot != null && hoveredSlot.hasItem()
+                && (button == 2 || (button == 0 && hasControlDown())) && gm.canCycleFuzzy(hoveredSlot.index)) {
+            net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+                    new com.golemlogix.network.FuzzyCyclePayload(menu.containerId, hoveredSlot.index));
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        return fuzzyClick(button) || super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    /** The item tooltip of a fuzzy ghost slot says what it takes, and how to change it. */
+    @Override
+    protected List<Component> getTooltipFromContainerItem(ItemStack stack) {
+        List<Component> lines = super.getTooltipFromContainerItem(stack);
+        if (menu instanceof com.golemlogix.menu.GolemMenu gm && hoveredSlot != null && hoveredSlot.getItem() == stack) {
+            Component line = gm.fuzzyLine(hoveredSlot.index);
+            if (line != null) {
+                lines = new java.util.ArrayList<>(lines);
+                lines.add(line);
+                if (gm.canCycleFuzzy(hoveredSlot.index)) {
+                    lines.add(Component.translatable("tooltip.golem_logix.fuzzy.hint").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+                }
+            }
+        }
+        return lines;
     }
 
     protected boolean labelFluidGhosts() {

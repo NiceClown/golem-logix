@@ -37,6 +37,7 @@ public class PatternEncoderMenu extends GolemMenu {
     public static final int BUTTON_ENCODE = 1;
     public static final int BUTTON_CLEAR = 2;
     public static final int BUTTON_LOAD = 3;
+    public static final int BUTTON_FUZZY = 4;
 
     public static final int SLOT_COUNT = 14;
 
@@ -49,7 +50,7 @@ public class PatternEncoderMenu extends GolemMenu {
     private final ContainerLevelAccess access;
 
     public static PatternEncoderMenu fromNetwork(int id, Inventory inv, RegistryFriendlyByteBuf buf) {
-        return new PatternEncoderMenu(id, inv, new SimpleContainer(SLOT_COUNT), new net.minecraft.world.inventory.SimpleContainerData(1),
+        return new PatternEncoderMenu(id, inv, new SimpleContainer(SLOT_COUNT), new net.minecraft.world.inventory.SimpleContainerData(2),
                 ContainerLevelAccess.NULL);
     }
 
@@ -101,6 +102,31 @@ public class PatternEncoderMenu extends GolemMenu {
 
     public boolean isCraftingMode() {
         return data.get(0) == 0;
+    }
+
+    /** Fuzzy mode: a crafting table recipe takes in each cell what the recipe accepts there; a processing input, its chosen tag or any components. */
+    public boolean isFuzzy() {
+        return data.get(1) != 0;
+    }
+
+    @Override
+    public boolean fuzzyActive(int slotId) {
+        return isFuzzy() && slotId >= GRID_START && slotId < GRID_START + 9 && itemGhost(slotId);
+    }
+
+    /** A tag is chosen for processing inputs only: a crafting recipe decides for itself. */
+    @Override
+    public boolean canCycleFuzzy(int slotId) {
+        return fuzzyActive(slotId) && !isCraftingMode();
+    }
+
+    @Override
+    public net.minecraft.network.chat.Component fuzzyLine(int slotId) {
+        if (fuzzyActive(slotId) && isCraftingMode()) {
+            return net.minecraft.network.chat.Component.translatable("tooltip.golem_logix.fuzzy",
+                    net.minecraft.network.chat.Component.translatable("tooltip.golem_logix.fuzzy.recipe")).withStyle(net.minecraft.ChatFormatting.AQUA);
+        }
+        return super.fuzzyLine(slotId);
     }
 
     @Override
@@ -201,6 +227,21 @@ public class PatternEncoderMenu extends GolemMenu {
                 loadFromCard();
                 return true;
             }
+            case BUTTON_FUZZY -> {
+                data.set(1, isFuzzy() ? 0 : 1);
+                if (!isFuzzy()) {
+                    // exact again: the chosen tags go away with it
+                    updating = true;
+                    for (int i = 0; i < 9; i++) {
+                        ItemStack s = container.getItem(i);
+                        if (com.golemlogix.system.Fuzzy.tag(s) != null) {
+                            container.setItem(i, com.golemlogix.system.Fuzzy.plain(s));
+                        }
+                    }
+                    updating = false;
+                }
+                return true;
+            }
             case BUTTON_ENCODE -> {
                 encode(player);
                 return true;
@@ -295,8 +336,12 @@ public class PatternEncoderMenu extends GolemMenu {
             container.setItem(i, ItemStack.EMPTY);
         }
         data.set(0, pattern.crafting() ? 0 : 1);
+        data.set(1, pattern.isFuzzy() ? 1 : 0);
         for (int i = 0; i < Math.min(9, pattern.inputs().size()); i++) {
-            container.setItem(i, pattern.inputs().get(i).copy());
+            ItemStack in = pattern.inputs().get(i).copy();
+            // a processing input's chosen tag goes back onto its ghost
+            container.setItem(i, pattern.crafting() ? in : com.golemlogix.system.Fuzzy.withTag(in,
+                    com.golemlogix.system.Fuzzy.tagOfSpec(pattern.spec(i))));
         }
         for (int i = 0; i < Math.min(3, pattern.outputs().size()); i++) {
             container.setItem(OUT_START + i, pattern.outputs().get(i).copy());
@@ -321,11 +366,14 @@ public class PatternEncoderMenu extends GolemMenu {
 
         List<ItemStack> inputs = new ArrayList<>();
         List<ItemStack> outputs = new ArrayList<>();
+        // fuzziness per input: the recipe's own choice in a crafting grid, the ghost's tag (or any components) in processing
+        List<String> fuzzy = new ArrayList<>();
         boolean crafting = isCraftingMode();
         if (crafting) {
             for (int i = 0; i < 9; i++) {
-                ItemStack s = container.getItem(i);
+                ItemStack s = com.golemlogix.system.Fuzzy.plain(container.getItem(i));
                 inputs.add(s.isEmpty() ? ItemStack.EMPTY : s.copyWithCount(1));
+                fuzzy.add(isFuzzy() && !s.isEmpty() ? com.golemlogix.system.Fuzzy.RECIPE : com.golemlogix.system.Fuzzy.EXACT);
             }
             List<ItemStack> result = CraftingJob.craftResult(level, new PatternData(true, inputs, List.of()));
             if (result == null) {
@@ -337,7 +385,8 @@ public class PatternEncoderMenu extends GolemMenu {
             for (int i = 0; i < 9; i++) {
                 ItemStack s = container.getItem(i);
                 if (!s.isEmpty()) {
-                    inputs.add(s.copy());
+                    inputs.add(com.golemlogix.system.Fuzzy.plain(s).copy());
+                    fuzzy.add(isFuzzy() ? com.golemlogix.system.Fuzzy.specOf(s) : com.golemlogix.system.Fuzzy.EXACT);
                 }
             }
             for (int i = 0; i < 3; i++) {
@@ -347,7 +396,7 @@ public class PatternEncoderMenu extends GolemMenu {
                 }
             }
         }
-        PatternData data = new PatternData(crafting, inputs, outputs);
+        PatternData data = new PatternData(crafting, inputs, outputs, fuzzy);
         if (!data.isValid()) {
             player.displayClientMessage(Component.translatable("message.golem_logix.encoder.incomplete"), true);
             return;

@@ -77,6 +77,44 @@ public abstract class GolemMenu extends AbstractContainerMenu {
         return false;
     }
 
+    // ---------------------------------------------------------------- fuzzy ghosts
+
+    /** Whether this ghost slot matches fuzzily now (a filter with a Fuzzy Card, an encoder input in fuzzy mode): the screen marks it. */
+    public boolean fuzzyActive(int slotId) {
+        return false;
+    }
+
+    /** Whether a middle-click (or Ctrl+click) on this ghost slot chooses its tag. */
+    public boolean canCycleFuzzy(int slotId) {
+        return fuzzyActive(slotId);
+    }
+
+    /** The tooltip line of a fuzzy ghost slot (null: none). */
+    @Nullable
+    public net.minecraft.network.chat.Component fuzzyLine(int slotId) {
+        ItemStack s = slotId >= 0 && slotId < this.slots.size() ? this.slots.get(slotId).getItem() : ItemStack.EMPTY;
+        return fuzzyActive(slotId) && !s.isEmpty() ? com.golemlogix.system.Fuzzy.describe(s) : null;
+    }
+
+    /** Server: the next tag of a fuzzy ghost (FuzzyCyclePayload). */
+    public void cycleFuzzy(int slotId) {
+        if (isGhost(slotId) && canCycleFuzzy(slotId)) {
+            Slot slot = this.slots.get(slotId);
+            if (!slot.getItem().isEmpty() && !com.golemlogix.items.FluidGhostItem.is(slot.getItem())) {
+                slot.set(com.golemlogix.system.Fuzzy.cycle(slot.getItem()));
+            }
+        }
+    }
+
+    /** A non-empty item ghost in slot slotId (fuzziness applies to items only). */
+    protected boolean itemGhost(int slotId) {
+        if (!isGhost(slotId)) {
+            return false;
+        }
+        ItemStack s = this.slots.get(slotId).getItem();
+        return !s.isEmpty() && !com.golemlogix.items.FluidGhostItem.is(s);
+    }
+
     /** Shift-click with an upgrade from the inventory goes to a free suitable upgrade slot. */
     protected boolean moveUpgradeIn(ItemStack stack) {
         if (!hasUpgradeSlots() || !(stack.getItem() instanceof UpgradeItem)) {

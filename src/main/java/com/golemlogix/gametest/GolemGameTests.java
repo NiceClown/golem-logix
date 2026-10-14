@@ -1367,6 +1367,129 @@ public class GolemGameTests {
         });
     }
 
+    /** A fuzzy crafting table pattern takes what the recipe accepts in each cell: birch planks for a crafting table encoded with oak. */
+    @GameTest(template = T, timeoutTicks = 300)
+    public static void fuzzyCraftingTakesSubstitutes(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity provider = (PatternProviderBlockEntity) helper.getBlockEntity(PROV);
+        ItemStack oak = new ItemStack(Items.OAK_PLANKS);
+        PatternData exact = craftingPattern(new ItemStack(Items.CRAFTING_TABLE), oak, oak, ItemStack.EMPTY, oak, oak);
+        List<String> fuzzy = new ArrayList<>(java.util.Collections.nCopies(9, ""));
+        for (int i : new int[]{0, 1, 3, 4}) {
+            fuzzy.set(i, com.golemlogix.system.Fuzzy.RECIPE);
+        }
+        PatternData loose = new PatternData(true, exact.inputs(), exact.outputs(), fuzzy);
+        provider.getContainer().setItem(0, card(exact));
+        ItemKey table = ItemKey.of(new ItemStack(Items.CRAFTING_TABLE));
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.BIRCH_PLANKS, 4), false);
+            helper.assertTrue(!CraftingPlanner.plan(n, table, 1).missing().isEmpty(), "an exact pattern wants oak planks");
+            provider.getContainer().setItem(0, card(loose));
+        });
+        helper.runAfterDelay(10, () -> {
+            GolemNetwork n = net(helper, bay);
+            CraftingPlan plan = CraftingPlanner.plan(n, table, 1);
+            helper.assertTrue(plan.missing().isEmpty(), "a fuzzy one takes birch planks: " + plan.missing());
+            helper.assertTrue(n.startCrafting(table, 1).type() == GolemNetwork.StartType.STARTED, "started");
+        });
+        helper.runAfterDelay(120, () -> {
+            GolemNetwork n = net(helper, bay);
+            helper.assertTrue(n.itemCountOf(table) == 1 && n.itemCountOf(ItemKey.of(new ItemStack(Items.BIRCH_PLANKS))) == 0,
+                    "a crafting table out of birch planks");
+            helper.succeed();
+        });
+    }
+
+    /** A fuzzy processing input with a tag: any glass of #c:glass_blocks goes into the machine for "glass". */
+    @GameTest(template = T, timeoutTicks = 300)
+    public static void fuzzyProcessingByTag(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        BlockPos machine = PROV.east();
+        helper.setBlock(machine, Blocks.CHEST);
+        Container machineInv = (Container) helper.getBlockEntity(machine);
+        PatternProviderBlockEntity provider = (PatternProviderBlockEntity) helper.getBlockEntity(PROV);
+        provider.getContainer().setItem(0, card(new PatternData(false, List.of(new ItemStack(Items.GLASS, 2)),
+                List.of(new ItemStack(Items.GLASS_PANE, 16)), List.of("#c:glass_blocks"))));
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.RED_STAINED_GLASS, 2), false);
+            GolemNetwork.StartResult r = n.startCrafting(ItemKey.of(new ItemStack(Items.GLASS_PANE)), 16);
+            helper.assertTrue(r.type() == GolemNetwork.StartType.STARTED, "start result " + r.type());
+        });
+        helper.runAfterDelay(60, () -> {
+            int red = 0;
+            for (int i = 0; i < machineInv.getContainerSize(); i++) {
+                if (machineInv.getItem(i).is(Items.RED_STAINED_GLASS)) {
+                    red += machineInv.getItem(i).getCount();
+                }
+            }
+            helper.assertTrue(red == 2, "the machine gets the red glass for \"glass\", got " + red);
+            helper.succeed();
+        });
+    }
+
+    /** A Fuzzy Card: filters with a tag let any glass through the import bus and out of the export bus; without it, only glass. */
+    @GameTest(template = T, timeoutTicks = 300)
+    public static void fuzzyCardOnBuses(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        ItemStack glassAny = com.golemlogix.system.Fuzzy.withTag(new ItemStack(Items.GLASS),
+                net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM, ResourceLocation.parse("c:glass_blocks")));
+        helper.setBlock(BUS_IN, ModBlocks.VACUUM_IMPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.WEST));
+        BlockPos chestIn = new BlockPos(2, 1, 4);
+        helper.setBlock(chestIn, Blocks.CHEST);
+        Container in = (Container) helper.getBlockEntity(chestIn);
+        in.setItem(0, new ItemStack(Items.RED_STAINED_GLASS, 5));
+        in.setItem(1, new ItemStack(Items.DIRT, 5));
+        BusBlockEntity importer = (BusBlockEntity) helper.getBlockEntity(BUS_IN);
+        importer.getFilters().setItem(0, glassAny.copy());
+        importer.getUpgrades().setItem(0, new ItemStack(ModItems.FUZZY_CARD.get()));
+
+        helper.setBlock(BUS_OUT, ModBlocks.INJECTOR_EXPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        BlockPos chestOut = new BlockPos(6, 1, 2);
+        helper.setBlock(chestOut, Blocks.CHEST);
+        Container out = (Container) helper.getBlockEntity(chestOut);
+        BusBlockEntity exporter = (BusBlockEntity) helper.getBlockEntity(BUS_OUT);
+        exporter.getFilters().setItem(0, glassAny.copy());
+
+        helper.runAfterDelay(60, () -> {
+            helper.assertTrue(in.getItem(0).isEmpty() && in.getItem(1).getCount() == 5, "the glass came in, the dirt stayed");
+            helper.assertTrue(out.isEmpty(), "without a card the exporter wants plain glass only");
+            exporter.getUpgrades().setItem(0, new ItemStack(ModItems.FUZZY_CARD.get()));
+        });
+        helper.runAfterDelay(140, () -> {
+            int red = 0;
+            for (int i = 0; i < out.getContainerSize(); i++) {
+                if (out.getItem(i).is(Items.RED_STAINED_GLASS)) {
+                    red += out.getItem(i).getCount();
+                }
+            }
+            helper.assertTrue(red == 5, "with the card the red glass goes out, got " + red);
+            helper.succeed();
+        });
+    }
+
+    /** A Fuzzy Card in the Interface: a config slot of "glass" with a tag keeps any glass in stock. */
+    @GameTest(template = T, timeoutTicks = 300)
+    public static void fuzzyCardOnInterface(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(BUS_OUT, ModBlocks.GOLEM_INTERFACE.get().defaultBlockState());
+        var be = (com.golemlogix.blockentity.InterfaceBlockEntity) helper.getBlockEntity(BUS_OUT);
+        be.getConfig().setItem(0, com.golemlogix.system.Fuzzy.withTag(new ItemStack(Items.GLASS, 4),
+                net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM, ResourceLocation.parse("c:glass_blocks"))));
+        be.getUpgrades().setItem(0, new ItemStack(ModItems.FUZZY_CARD.get()));
+        helper.runAfterDelay(2, () -> net(helper, bay).insertItem(new ItemStack(Items.BLUE_STAINED_GLASS, 10), false));
+        helper.runAfterDelay(120, () -> {
+            ItemStack stock = be.getStock().getItem(0);
+            helper.assertTrue(stock.is(Items.BLUE_STAINED_GLASS) && stock.getCount() == 4, "4 blue glass kept for \"glass\", got " + stock);
+            helper.succeed();
+        });
+    }
+
     @GameTest(template = T, timeoutTicks = 400)
     public static void autocraftProcessing(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);

@@ -47,6 +47,17 @@ public class ModDataComponents {
                     .networkSynchronized(net.neoforged.neoforge.fluids.SimpleFluidContent.STREAM_CODEC));
 
     /** The telegraph an Aetherial Linkage card records (written in a telegraph's Write slot). */
+    /**
+     * Fuzzy mode: the item tag chosen on a ghost (a bus or interface filter with a Fuzzy Card, a processing pattern input in the
+     * encoder's fuzzy mode). Without it a fuzzy ghost matches the same item with any components.
+     */
+    public static final Supplier<DataComponentType<net.minecraft.tags.TagKey<net.minecraft.world.item.Item>>> FUZZY_TAG =
+            COMPONENTS.registerComponentType("fuzzy_tag", b -> b
+                    .persistent(net.minecraft.tags.TagKey.codec(net.minecraft.core.registries.Registries.ITEM))
+                    .networkSynchronized(net.minecraft.resources.ResourceLocation.STREAM_CODEC.map(
+                            id -> net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM, id),
+                            net.minecraft.tags.TagKey::location)));
+
     public static final Supplier<DataComponentType<com.golemlogix.items.TelegraphLinkCardItem.Link>> TELEGRAPH_LINK =
             COMPONENTS.registerComponentType("telegraph_link", b -> b.persistent(com.golemlogix.items.TelegraphLinkCardItem.Link.CODEC)
                     .networkSynchronized(com.golemlogix.items.TelegraphLinkCardItem.Link.STREAM_CODEC));

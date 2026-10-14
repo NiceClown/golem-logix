@@ -137,4 +137,10 @@ public class BusMenu extends GolemMenu {
     public boolean stillValid(Player player) {
         return filters.stillValid(player);
     }
+
+    /** With a Fuzzy Card the item filters match fuzzily, and a middle-click chooses a filter's tag. */
+    @Override
+    public boolean fuzzyActive(int slotId) {
+        return slotId < filters.getContainerSize() && itemGhost(slotId) && hasUpgrade(com.golemlogix.upgrade.UpgradeType.FUZZY);
+    }
 }

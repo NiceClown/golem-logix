@@ -157,12 +157,17 @@ public class PatternProviderBlockEntity extends BlockEntity {
      */
     @Nullable
     public List<ItemStack> tryPush(PatternData pattern) {
+        return tryPush(pattern, pattern.inputs());
+    }
+
+    /** The same with the items of this very execution (a fuzzy pattern sends what stands for the encoded items). */
+    public List<ItemStack> tryPush(PatternData pattern, List<ItemStack> stacks) {
         if (level == null || level.isClientSide()) {
             return null;
         }
         List<ItemStack> inputs = new ArrayList<>();
         List<net.neoforged.neoforge.fluids.FluidStack> fluids = new ArrayList<>();
-        for (ItemStack s : pattern.inputs()) {
+        for (ItemStack s : stacks) {
             if (s.isEmpty()) {
                 continue;
             }

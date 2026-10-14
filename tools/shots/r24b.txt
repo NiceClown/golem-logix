@@ -1,0 +1,24 @@
+# Round 24b (-Mods, after r24): the new book pages of fuzzy mode
+gui on
+book ac_cards 2
+wait 8
+shot r24b_book_encoder
+book bus_upgrades 3
+wait 5
+shot r24b_book_card
+closescreen
+gui off
+lang ru_ru
+wait 20
+gui on
+book ac_cards 2
+wait 8
+shot r24b_book_encoder_ru
+book bus_upgrades 3
+wait 5
+shot r24b_book_card_ru
+closescreen
+gui off
+lang en_us
+wait 20
+gui on

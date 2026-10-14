@@ -17,6 +17,8 @@ import net.minecraft.world.level.block.state.BlockState;
 public class PatternEncoderBlockEntity extends BlockEntity {
     private final OwnedContainer items = new OwnedContainer(PatternEncoderMenu.SLOT_COUNT, this, s -> true);
     private int mode;
+    /** Fuzzy mode of the entered recipe (0 off, 1 on). */
+    private int fuzzy;
 
     public PatternEncoderBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.PATTERN_ENCODER.get(), pos, state);
@@ -26,23 +28,27 @@ public class PatternEncoderBlockEntity extends BlockEntity {
         return items;
     }
 
-    /** Window data: 0 = mode (0 crafting table, 1 processing). */
+    /** Window data: 0 = mode (0 crafting table, 1 processing), 1 = fuzzy mode (0 off, 1 on). */
     public ContainerData data() {
         return new ContainerData() {
             @Override
             public int get(int index) {
-                return mode;
+                return index == 1 ? fuzzy : mode;
             }
 
             @Override
             public void set(int index, int value) {
-                mode = value;
+                if (index == 1) {
+                    fuzzy = value;
+                } else {
+                    mode = value;
+                }
                 setChanged();
             }
 
             @Override
             public int getCount() {
-                return 1;
+                return 2;
             }
         };
     }
@@ -52,6 +58,7 @@ public class PatternEncoderBlockEntity extends BlockEntity {
         super.saveAdditional(tag, registries);
         tag.put("Items", items.createTag(registries));
         tag.putInt("Mode", mode);
+        tag.putInt("Fuzzy", fuzzy);
     }
 
     @Override
@@ -59,5 +66,6 @@ public class PatternEncoderBlockEntity extends BlockEntity {
         super.loadAdditional(tag, registries);
         items.fromTag(tag.getList("Items", Tag.TAG_COMPOUND), registries);
         mode = tag.getInt("Mode");
+        fuzzy = tag.getInt("Fuzzy");
     }
 }

@@ -114,6 +114,32 @@ final class Gen3 {
         return p;
     }
 
+    /**
+     * Fuzzy Card: a copper cartridge with a frosted glass lens; behind the frost three blurred shapes (a square, a disc, a diamond)
+     * that the lens takes for one, and a cyan "~" on its brass rim.
+     */
+    static Paint fuzzyCard() {
+        Paint p = card(COPPER, 2.7, 3401);
+        p.disc(3.6, 4.8, 0.8, at(VERDIGRIS, 4.5));
+        p.slab(2.8, 4.0, 12.8, 11.4, IRON, 0.8, 1);
+        // the brass lens ring and the frosted glass in it
+        p.disc(8.0, 7.6, 3.6, at(BRASS, 3.8));
+        p.disc(8.0, 7.6, 3.0, at(FROST, 4.6));
+        // three shapes seen through the frost, all in one soft cyan
+        p.rect(5.6, 6.0, 7.0, 7.4, at(CYAN, 3.4));
+        p.disc(9.6, 6.6, 0.8, at(CYAN, 3.6));
+        p.line(7.4, 9.2, 8.2, 8.4, 0.5, at(CYAN, 3.2));
+        p.line(8.2, 8.4, 9.0, 9.2, 0.5, at(CYAN, 3.2));
+        p.glowRect(5.0, 5.2, 11.0, 10.0, 1.2, at(CYAN, 4.4), 70);
+        // a "~" on the rim: same enough
+        p.line(5.4, 11.9, 6.6, 11.3, 0.35, at(CYAN, 5.4));
+        p.line(6.6, 11.3, 7.9, 11.9, 0.35, at(CYAN, 5.4));
+        p.line(7.9, 11.9, 9.2, 11.3, 0.35, at(CYAN, 5.4));
+        p.line(9.2, 11.3, 10.5, 11.9, 0.35, at(CYAN, 5.4));
+        p.sparkle(11.6, 4.2, rgb(0xFFFFFF));
+        return p;
+    }
+
     /** Autocraft Module: a brass cartridge with an anvil, clock gears, vacuum tubes with glowing sparks and gold contacts. */
     static Paint autocraftModule() {
         Paint p = card(BRONZE, 3.2, 3201);
@@ -199,7 +225,8 @@ final class Gen3 {
         incompleteCoprocessor().save(itemTex("incomplete_compressed_coprocessor"));
         autocraftModule().save(itemTex("autocraft_module"));
         redstoneModule().save(itemTex("redstone_module"));
-        for (String n : new String[]{"compressed_coprocessor", "incomplete_compressed_coprocessor", "autocraft_module", "redstone_module"}) {
+        fuzzyCard().save(itemTex("fuzzy_card"));
+        for (String n : new String[]{"compressed_coprocessor", "incomplete_compressed_coprocessor", "autocraft_module", "redstone_module", "fuzzy_card"}) {
             Forge2.write(RES.resolve("models/item/" + n + ".json"),
                     "{\n  \"parent\": \"minecraft:item/generated\",\n  \"textures\": {\n    \"layer0\": \"golem_logix:item/" + n + "\"\n  }\n}\n");
         }

@@ -246,11 +246,13 @@ public class CraftingJob {
                 continue;
             }
             while (budget > 0 && s.remaining > 0) {
-                if (!hasIngredients(s.pattern)) {
+                // the very items of this execution: the encoded ones, or for a fuzzy pattern what may stand for them
+                Taken taken = take(s.pattern, level);
+                if (taken == null) {
                     break;
                 }
                 if (s.pattern.crafting()) {
-                    List<ItemStack> result = craftResult(level, s.pattern);
+                    List<ItemStack> result = craftResult(level, taken.stacks());
                     if (result == null) {
                         blocked = Status.INVALID_PATTERN;
                         break;
@@ -260,7 +262,7 @@ public class CraftingJob {
                         break;
                     }
                     net.consumeSource(GolemConfig.CRAFT_STEP_SOURCE.get());
-                    consume(s.pattern);
+                    consume(taken);
                     for (ItemStack r : result) {
                         add(inventory, r);
                     }
@@ -283,14 +285,14 @@ public class CraftingJob {
                         blocked = Status.NO_SOURCE;
                         break;
                     }
-                    List<ItemStack> pushed = provider.tryPush(s.pattern);
+                    List<ItemStack> pushed = provider.tryPush(s.pattern, taken.stacks());
                     if (pushed == null) {
                         blocked = Status.WAITING_MACHINE;
                         break;
                     }
                     provider.redstoneAllows(true);
                     net.consumeSource(GolemConfig.CRAFT_STEP_SOURCE.get());
-                    consume(s.pattern);
+                    consume(taken);
                     // what the machine did not accept goes back into the job's inventory
                     for (ItemStack back : pushed) {
                         add(inventory, back);
@@ -380,17 +382,74 @@ public class CraftingJob {
 
     // ----------------------------------------------------------------- helpers
 
-    private boolean hasIngredients(PatternData pattern) {
-        for (Map.Entry<ItemKey, Integer> in : pattern.ingredientTotals().entrySet()) {
-            if (inventory.getOrDefault(in.getKey(), 0L) < in.getValue()) {
-                return false;
-            }
-        }
-        return true;
+    /**
+     * The items one execution takes from the job's inventory: per input the encoded item, and for a fuzzy input also what may stand
+     * for it (the encoded one first). stacks: what goes into the machine or the crafting grid (for a crafting pattern one per cell,
+     * empty cells included); used: how much of each kind. Null if something is missing.
+     */
+    private record Taken(List<ItemStack> stacks, Map<ItemKey, Long> used) {
     }
 
-    private void consume(PatternData pattern) {
-        for (Map.Entry<ItemKey, Integer> in : pattern.ingredientTotals().entrySet()) {
+    @Nullable
+    private Taken take(PatternData pattern, Level level) {
+        Map<ItemKey, Long> used = new LinkedHashMap<>();
+        List<ItemStack> stacks = new ArrayList<>();
+        List<ItemStack> inputs = pattern.inputs();
+        for (int i = 0; i < inputs.size(); i++) {
+            ItemStack s = inputs.get(i);
+            if (s.isEmpty()) {
+                if (pattern.crafting()) {
+                    stacks.add(ItemStack.EMPTY);
+                }
+                continue;
+            }
+            ItemKey key = com.golemlogix.system.Ingredients.key(s);
+            long amount = com.golemlogix.system.Ingredients.amount(s);
+            if (com.golemlogix.system.Ingredients.isFluid(key)) {
+                if (free(key, used) < amount) {
+                    return null;
+                }
+                used.merge(key, amount, Long::sum);
+                stacks.add(s);
+                continue;
+            }
+            java.util.function.Predicate<ItemStack> alt = pattern.matcher(i, level);
+            List<ItemKey> order = new ArrayList<>();
+            order.add(key);
+            if (alt != null) {
+                for (ItemKey k : inventory.keySet()) {
+                    if (!k.equals(key) && !com.golemlogix.system.Ingredients.isFluid(k) && alt.test(k.stack())) {
+                        order.add(k);
+                    }
+                }
+            }
+            long rest = amount;
+            for (ItemKey k : order) {
+                long n = Math.min(rest, free(k, used));
+                // a crafting grid cell holds one item of one kind
+                if (n <= 0 || (pattern.crafting() && n < rest)) {
+                    continue;
+                }
+                used.merge(k, n, Long::sum);
+                stacks.add(k.toStack((int) n));
+                rest -= n;
+                if (rest <= 0) {
+                    break;
+                }
+            }
+            if (rest > 0) {
+                return null;
+            }
+        }
+        return new Taken(stacks, used);
+    }
+
+    private long free(ItemKey key, Map<ItemKey, Long> used) {
+        return inventory.getOrDefault(key, 0L) - used.getOrDefault(key, 0L);
+    }
+
+    private void consume(Taken taken) {
+        for (Map.Entry<ItemKey, Long> in : taken.used().entrySet()) {
             long left = inventory.getOrDefault(in.getKey(), 0L) - in.getValue();
             if (left <= 0) {
                 inventory.remove(in.getKey());
@@ -414,7 +473,13 @@ public class CraftingJob {
     /** Crafting table recipe result + the remaining items (buckets and the like), or null if there is no recipe. */
     @Nullable
     public static List<ItemStack> craftResult(Level level, PatternData pattern) {
-        List<ItemStack> grid = new ArrayList<>(pattern.inputs());
+        return craftResult(level, pattern.inputs());
+    }
+
+    /** The same for the items actually in the grid (a fuzzy pattern's substitutes). */
+    @Nullable
+    public static List<ItemStack> craftResult(Level level, List<ItemStack> cells) {
+        List<ItemStack> grid = new ArrayList<>(cells);
         while (grid.size() < 9) {
             grid.add(ItemStack.EMPTY);
         }

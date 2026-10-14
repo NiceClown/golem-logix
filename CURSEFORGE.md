@@ -53,7 +53,8 @@ The whole network runs on **Source** from Ars Nouveau. Without Ars Nouveau it si
 - **Six upgrade slots:**
   - up to four **Compressed Co-Processors** (speed, up to 8× per move, every tick);
   - an **Autocraft Module** (the export bus orders what the network lacks);
-  - a **Redstone Module**.
+  - a **Redstone Module**;
+  - a **Fuzzy Card** (filters match any components, or a tag chosen on the filter). Works in the Interface too.
 - **Redstone modes for every machine**, like AE2 and RS: ignore, with signal, without signal, one action per pulse.
 
 ### Terminals
@@ -67,6 +68,7 @@ The whole network runs on **Source** from Ars Nouveau. Without Ars Nouveau it si
 
 ### Autocrafting
 - **Pattern Encoder:** punches crafting and machine recipes onto copper punch cards.
+- **Fuzzy mode:** like RS and AE2. A crafting recipe takes whatever each cell accepts (any planks); a machine input takes any components, or a tag you choose with a middle-click (any glass for glass).
 - **Pattern Provider:** feeds machines, with an optional "wait for result" mode.
 - **Cryo-Calculator:**
   - plans the whole recipe tree, reserves materials and runs the steps;

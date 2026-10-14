@@ -195,4 +195,11 @@ public class InterfaceMenu extends GolemMenu {
     public boolean stillValid(Player player) {
         return config.stillValid(player);
     }
+
+    /** With a Fuzzy Card the item config slots keep anything that matches (any components, or a tag chosen with a middle-click). */
+    @Override
+    public boolean fuzzyActive(int slotId) {
+        return slotId < com.golemlogix.blockentity.InterfaceBlockEntity.SLOTS && itemGhost(slotId) && !isFluidSlot(slotId)
+                && hasUpgrade(com.golemlogix.upgrade.UpgradeType.FUZZY);
+    }
 }

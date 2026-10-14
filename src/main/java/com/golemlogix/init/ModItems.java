@@ -93,6 +93,10 @@ public class ModItems {
     public static final DeferredItem<UpgradeItem> REDSTONE_MODULE = ITEMS.register("redstone_module",
             () -> new UpgradeItem(com.golemlogix.upgrade.UpgradeType.REDSTONE, "tooltip.golem_logix.redstone_module",
                     new Item.Properties().stacksTo(16)));
+    /** Fuzzy Card: the filters of a bus or an interface match fuzzily (any components, or a tag chosen on the filter). */
+    public static final DeferredItem<UpgradeItem> FUZZY_CARD = ITEMS.register("fuzzy_card",
+            () -> new UpgradeItem(com.golemlogix.upgrade.UpgradeType.FUZZY, "tooltip.golem_logix.fuzzy_card",
+                    new Item.Properties().stacksTo(16)));
 
     // Magnetic Copper Storage Disks (Raw Item Count - RS style)
     public static final DeferredItem<MagneticDiskItem> COPPER_DISK_1K = ITEMS.register("copper_disk_1k",

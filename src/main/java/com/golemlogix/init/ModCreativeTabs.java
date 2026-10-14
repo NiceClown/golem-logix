@@ -102,6 +102,7 @@ public class ModCreativeTabs {
                         output.accept(ModItems.COMPRESSED_COPROCESSOR.get());
                         output.accept(ModItems.AUTOCRAFT_MODULE.get());
                         output.accept(ModItems.REDSTONE_MODULE.get());
+                        output.accept(ModItems.FUZZY_CARD.get());
                     })
                     .build());
 }

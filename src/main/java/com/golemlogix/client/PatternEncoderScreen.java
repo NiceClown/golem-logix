@@ -17,6 +17,11 @@ public class PatternEncoderScreen extends GolemScreen<PatternEncoderMenu> {
                 () -> Component.translatable(menu.isCraftingMode() ? "gui.golem_logix.encoder.mode_crafting" : "gui.golem_logix.encoder.mode_processing"),
                 () -> Component.translatable("gui.golem_logix.encoder.mode_tooltip"), () -> false,
                 b -> minecraft.gameMode.handleInventoryButtonClick(menu.containerId, PatternEncoderMenu.BUTTON_TOGGLE)));
+        // fuzzy mode: lit while on
+        addRenderableWidget(new GolemButton(leftPos + 88, topPos + 70, 26, 13,
+                () -> Component.literal("≈"),
+                () -> Component.translatable("gui.golem_logix.encoder.fuzzy_tooltip"), menu::isFuzzy,
+                b -> minecraft.gameMode.handleInventoryButtonClick(menu.containerId, PatternEncoderMenu.BUTTON_FUZZY)));
         addRenderableWidget(new GolemButton(leftPos + 88, topPos + 84, 26, 18,
                 Component.translatable("gui.golem_logix.encoder.encode"),
                 b -> minecraft.gameMode.handleInventoryButtonClick(menu.containerId, PatternEncoderMenu.BUTTON_ENCODE)));

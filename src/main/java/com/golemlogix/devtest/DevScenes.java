@@ -635,6 +635,42 @@ final class DevScenes {
                 }
                 player.getInventory().setItem(player.getInventory().selected, c);
             }
+            case "encoderfill" -> {
+                // encoderfill x y z mode(0 crafting, 1 machine) fuzzy(0|1) item[*n][#tag] ... : the encoder's grid (from cell 0), mode and fuzzy mode
+                BlockEntity be = level.getBlockEntity(pos(a, 0));
+                if (!(be instanceof com.golemlogix.blockentity.PatternEncoderBlockEntity enc)) {
+                    throw new IllegalStateException("no encoder at " + pos(a, 0));
+                }
+                enc.data().set(0, Integer.parseInt(a[3]));
+                enc.data().set(1, Integer.parseInt(a[4]));
+                for (int i = 5; i < a.length && i - 5 < 9; i++) {
+                    enc.getItems().setItem(i - 5, ghostSpec(a[i]));
+                }
+            }
+            case "filterset" -> {
+                // filterset x y z slot item[*n][#tag] : a bus filter or an interface config slot
+                BlockEntity be = level.getBlockEntity(pos(a, 0));
+                ItemStack ghost = ghostSpec(a[4]);
+                if (be instanceof com.golemlogix.blockentity.BusBlockEntity bus) {
+                    bus.getFilters().setItem(Integer.parseInt(a[3]), ghost);
+                } else if (be instanceof com.golemlogix.blockentity.InterfaceBlockEntity itf) {
+                    itf.getConfig().setItem(Integer.parseInt(a[3]), ghost);
+                } else {
+                    throw new IllegalStateException("no bus or interface at " + pos(a, 0));
+                }
+            }
+            case "upgradeset" -> {
+                // upgradeset x y z slot item : an upgrade into a bus or an interface
+                BlockEntity be = level.getBlockEntity(pos(a, 0));
+                ItemStack up = new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[4])));
+                if (be instanceof com.golemlogix.blockentity.BusBlockEntity bus) {
+                    bus.getUpgrades().setItem(Integer.parseInt(a[3]), up);
+                } else if (be instanceof com.golemlogix.blockentity.InterfaceBlockEntity itf) {
+                    itf.getUpgrades().setItem(Integer.parseInt(a[3]), up);
+                } else {
+                    throw new IllegalStateException("no bus or interface at " + pos(a, 0));
+                }
+            }
             case "wearchrono" -> {
                 // wearchrono: the Chronometer in the hand goes into the Curios Chronometer slot (Curios only)
                 ItemStack c = player.getInventory().getSelected().copy();
@@ -654,6 +690,25 @@ final class DevScenes {
             }
             default -> throw new IllegalArgumentException("unknown hook " + name);
         }
+    }
+
+    /** "minecraft:glass*2#c:glass_blocks": an item ghost with a count and a fuzzy tag. */
+    private static ItemStack ghostSpec(String spec) {
+        String tag = null;
+        int hash = spec.indexOf('#');
+        if (hash >= 0) {
+            tag = spec.substring(hash + 1);
+            spec = spec.substring(0, hash);
+        }
+        int count = 1;
+        int star = spec.indexOf('*');
+        if (star >= 0) {
+            count = Integer.parseInt(spec.substring(star + 1));
+            spec = spec.substring(0, star);
+        }
+        ItemStack s = new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(spec)), count);
+        return tag == null ? s : com.golemlogix.system.Fuzzy.withTag(s,
+                net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM, net.minecraft.resources.ResourceLocation.parse(tag)));
     }
 
     private static void refresh(ServerLevel level, BlockPos core) {

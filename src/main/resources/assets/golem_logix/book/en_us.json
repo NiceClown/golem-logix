@@ -875,12 +875,13 @@
         {
           "id": "bus_upgrades", "title": "Bus upgrades", "icon": "golem_logix:compressed_coprocessor", "x": 2, "y": 1, "parents": ["bus_import", "bus_export"], "gold": true,
           "pages": [
-            {"type": "text", "title": "Six slots",
+            {"type": "text", "title": "Upgrade slots",
              "text": [
-               "To the right of the bus window there is a column of &lsix upgrade slots&r. Shift-clicking an upgrade in your inventory puts it into a free slot.",
+               "To the right of the bus window there is a column of &lupgrade slots&r. Shift-clicking an upgrade in your inventory puts it into a free slot.",
                "• &lCompressed Co-Processor&r - a speed upgrade: up to &l4&r in an import or export bus.",
                "• &lAutocraft Module&r - export bus only: it orders what is missing from the Cryo-Calculators.",
                "• &lRedstone Module&r - signal control (see “Redstone”).",
+               "• &lFuzzy Card&r - fuzzy filters (see below).",
                "The Periscope has one slot - for the Redstone Module."
              ]},
             {"type": "ritual", "title": "Compressed Co-Processor", "station": "golem_logix:mana_saturator", "inputs": ["golem_logix:cooling_coprocessor"], "outputs": ["golem_logix:compressed_coprocessor"],
@@ -898,7 +899,9 @@
             {"type": "crafting", "recipe": "golem_logix:autocraft_module",
              "text": ["An export bus with this module: if an item from the filter is not in the network but has a pattern, the bus orders crafting (a batch at most every 2 s) and delivers the result when it is ready. No new order while one is in progress."]},
             {"type": "crafting", "recipe": "golem_logix:redstone_module",
-             "text": ["The Redstone Module: once installed, a mode button appears to the left of the window."]}
+             "text": ["The Redstone Module: once installed, a mode button appears to the left of the window."]},
+            {"type": "crafting", "recipe": "golem_logix:fuzzy_card",
+             "text": ["In a bus or the Interface the filters match fuzzily: the same item with any components (≈). A middle-click (Ctrl+click) on a filter chooses a tag (#): any glass for glass."]}
           ]
         },
         {
@@ -1008,6 +1011,18 @@
                "# Buttons",
                "“Punch” writes the card, “Read” loads a card's recipe for editing, “Clear” wipes the grid.",
                "An encoded card glints and lists its inputs and outputs in the tooltip. With JEI: “+” on a crafting recipe fills the grid, on a furnace or machine recipe it switches to “Machine” mode with the inputs and outputs."
+             ]},
+            {"type": "text", "title": "Fuzzy mode",
+             "text": [
+               "The &l≈&r button turns on &lfuzzy mode&r, like RS's fuzzy patterns and AE2's substitutions. The exact item is still taken first.",
+               "# Crafting table",
+               "Each cell takes what the recipe accepts there: any planks for a crafting table. The recipe always works."
+             ]},
+            {"type": "text", "title": "Fuzzy machine inputs",
+             "text": [
+               "An input takes the same item with any components (≈ on the slot).",
+               "A &lmiddle-click&r (Ctrl+click) on it chooses a tag (#): with &l#c:glass_blocks&r any glass will do. Each click goes to the next tag of the item, then back to none.",
+               "The card's tooltip lists the chosen tags."
              ]}
           ]
         },

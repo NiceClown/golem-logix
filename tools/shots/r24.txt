@@ -1,0 +1,95 @@
+# Round 24 (-Mods): fuzzy mode. The encoder in machine mode with a tagged glass input and a sword with any components (badges #, ≈,
+# the tooltip), in crafting mode (the recipe's choice); an export bus with a Fuzzy Card in its 7th slot and tagged filters; an
+# interface keeping blue glass for "glass"; the Fuzzy Card in JEI; the book pages
+reload
+cmd gamemode creative @p
+cmd time set day
+cmd recipe give @p *
+cmd fill -24 -61 -20 20 -61 24 minecraft:deepslate_tiles
+cmd fill -24 -60 -20 20 -48 24 minecraft:air
+hook rig 0 -60 0
+cmd setblock 2 -60 2 golem_logix:pattern_encoder
+cmd setblock 5 -60 0 golem_logix:injector_export_bus[facing=south]
+cmd setblock 7 -60 0 golem_logix:golem_interface
+wait 60
+hook netput 0 -60 0 minecraft:blue_stained_glass 32
+hook encoderfill 2 -60 2 1 1 minecraft:glass*2#c:glass_blocks minecraft:iron_sword minecraft:redstone*4
+hook filterset 5 -60 0 0 minecraft:glass#c:glass_blocks
+hook filterset 5 -60 0 1 minecraft:diamond_sword
+hook upgradeset 5 -60 0 6 golem_logix:fuzzy_card
+hook filterset 7 -60 0 0 minecraft:glass*16#c:glass_blocks
+hook upgradeset 7 -60 0 0 golem_logix:fuzzy_card
+wait 60
+gui on
+
+# the encoder, machine mode, fuzzy: the tooltip of the tagged glass input
+cam 2.5 -59 5 180 30
+wait 3
+use 2 -60 2
+wait 10
+notoasts
+mouse 489 117
+wait 5
+shot r24_encoder_machine
+closescreen
+
+# the encoder, crafting mode, fuzzy: oak planks for a crafting table, each cell "whatever the recipe accepts"
+hook encoderfill 2 -60 2 0 1 minecraft:oak_planks minecraft:oak_planks minecraft:air minecraft:oak_planks minecraft:oak_planks
+wait 3
+use 2 -60 2
+wait 10
+notoasts
+mouse 489 117
+wait 5
+shot r24_encoder_crafting
+closescreen
+
+# the export bus with the card and tagged filters
+cam 5.5 -59 3 180 30
+wait 3
+use 5 -60 0
+wait 10
+notoasts
+mouse 492 126
+wait 5
+shot r24_bus
+closescreen
+
+# the interface keeping blue glass for "glass"
+cam 7.5 -59 3 180 30
+wait 3
+use 7 -60 0
+wait 10
+notoasts
+mouse 423 147
+wait 5
+shot r24_interface
+closescreen
+
+jei golem_logix:fuzzy_card
+wait 10
+notoasts
+mouse 20 300
+shot r24_jei_card
+closescreen
+book ac_cards 1
+wait 8
+shot r24_book_encoder
+book bus_upgrades 2
+wait 5
+shot r24_book_card
+bookaudit
+closescreen
+gui off
+lang ru_ru
+wait 20
+gui on
+book ac_cards 1
+wait 8
+shot r24_book_encoder_ru
+bookaudit
+closescreen
+gui off
+lang en_us
+wait 20
+gui on
