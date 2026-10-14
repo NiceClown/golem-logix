@@ -325,7 +325,17 @@ final class DevScenes {
             case "provfill" -> {
                 // provfill x y z smelt|craft|mix: punch cards into a provider (ore smelting, crafting table ones, or Create mixing:
                 // a block + 250 mB of Liquid Cryo-Source -> a torn mind)
-                if (level.getBlockEntity(pos(a, 0)) instanceof com.golemlogix.blockentity.PatternProviderBlockEntity prov && a[3].equals("mix")) {
+                if (level.getBlockEntity(pos(a, 0)) instanceof com.golemlogix.blockentity.PatternProviderBlockEntity prov && a[3].equals("wood")) {
+                    // wood: a log into planks, planks into sticks (a long real order for the calculator's crews)
+                    java.util.List<ItemStack> logGrid = new java.util.ArrayList<>();
+                    java.util.List<ItemStack> stickGrid = new java.util.ArrayList<>();
+                    for (int i = 0; i < 9; i++) {
+                        logGrid.add(i == 0 ? new ItemStack(Items.OAK_LOG) : ItemStack.EMPTY);
+                        stickGrid.add(i == 0 || i == 3 ? new ItemStack(Items.OAK_PLANKS) : ItemStack.EMPTY);
+                    }
+                    prov.getContainer().setItem(0, card(new com.golemlogix.data.PatternData(true, logGrid, java.util.List.of(new ItemStack(Items.OAK_PLANKS, 4)))));
+                    prov.getContainer().setItem(1, card(new com.golemlogix.data.PatternData(true, stickGrid, java.util.List.of(new ItemStack(Items.STICK, 4)))));
+                } else if (level.getBlockEntity(pos(a, 0)) instanceof com.golemlogix.blockentity.PatternProviderBlockEntity prov && a[3].equals("mix")) {
                     Item[][] mix = {{Items.COPPER_BLOCK, com.golemlogix.init.ModItems.TORN_COPPER_MIND.get()},
                             {Items.IRON_BLOCK, com.golemlogix.init.ModItems.TORN_IRON_MIND.get()},
                             {Items.PACKED_ICE, com.golemlogix.init.ModItems.TORN_SNOW_MIND.get()}};
@@ -686,6 +696,63 @@ final class DevScenes {
                 BlockPos from = pos(a, 0), to = pos(a, 3);
                 for (BlockPos p : BlockPos.betweenClosed(from, to)) {
                     level.setBlock(p, p.getY() == from.getY() ? Blocks.DEEPSLATE_TILES.defaultBlockState() : Blocks.AIR.defaultBlockState(), 2);
+                }
+            }
+            case "biome" -> {
+                // biome <id> [x z]: the nearest such biome (scouting a generated world)
+                var key = net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.BIOME,
+                        net.minecraft.resources.ResourceLocation.parse(a[0]));
+                BlockPos from = a.length > 2 ? new BlockPos(Integer.parseInt(a[1]), 64, Integer.parseInt(a[2])) : player.blockPosition();
+                var found = level.findClosestBiome3d(h -> h.is(key), from, 6400, 32, 64);
+                log.accept(found == null ? "biome " + a[0] + ": none" : "biome " + a[0] + " at " + found.getFirst().toShortString());
+            }
+            case "createbelt" -> {
+                // createbelt x1 y1 z1 x2 y2 z2: a Create belt between two shafts, as the belt connector makes it (by reflection: Create
+                // is only in the -Pcreate dev runs)
+                try {
+                    Class<?> c = Class.forName("com.simibubi.create.content.kinetics.belt.item.BeltConnectorItem");
+                    boolean ok = (boolean) c.getMethod("canConnect", net.minecraft.world.level.Level.class, BlockPos.class, BlockPos.class)
+                            .invoke(null, level, pos(a, 0), pos(a, 3));
+                    if (ok) {
+                        c.getMethod("createBelts", net.minecraft.world.level.Level.class, BlockPos.class, BlockPos.class)
+                                .invoke(null, level, pos(a, 0), pos(a, 3));
+                    }
+                    log.accept("createbelt " + (ok ? "made" : "cannot connect"));
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException("no Create belts", e);
+                }
+            }
+            case "mapcsv" -> {
+                // mapcsv x0 z0 w h step: heights, top blocks and biomes of an area into map_x0_z0.csv (scouting)
+                int x0 = Integer.parseInt(a[0]), z0 = Integer.parseInt(a[1]), w = Integer.parseInt(a[2]), h = Integer.parseInt(a[3]);
+                int step = Integer.parseInt(a[4]);
+                StringBuilder sb = new StringBuilder("x,z,y,block,biome\n");
+                for (int z = z0; z < z0 + h; z += step) {
+                    for (int x = x0; x < x0 + w; x += step) {
+                        var chunk = level.getChunk(x >> 4, z >> 4);
+                        int y = chunk.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x & 15, z & 15);
+                        BlockPos top = new BlockPos(x, y, z);
+                        sb.append(x).append(',').append(z).append(',').append(y).append(',')
+                                .append(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(level.getBlockState(top).getBlock()).getPath())
+                                .append(',').append(level.getBiome(top).unwrapKey().map(k -> k.location().getPath()).orElse("?")).append('\n');
+                    }
+                }
+                java.nio.file.Path out = level.getServer().getServerDirectory().resolve("map_" + x0 + "_" + z0 + ".csv");
+                try {
+                    java.nio.file.Files.writeString(out, sb);
+                } catch (java.io.IOException e) {
+                    throw new RuntimeException(e);
+                }
+                log.accept("map written: " + out.toAbsolutePath());
+            }
+            case "surface" -> {
+                // surface x z [x z ...]: the height and the block on top
+                for (int i = 0; i + 1 < a.length; i += 2) {
+                    int x = Integer.parseInt(a[i]), z = Integer.parseInt(a[i + 1]);
+                    int y = level.getChunk(x >> 4, z >> 4).getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                            x & 15, z & 15);
+                    log.accept("surface " + x + " " + z + ": y=" + y + " " + level.getBlockState(new BlockPos(x, y, z)).getBlock()
+                            + " biome " + level.getBiome(new BlockPos(x, y, z)).unwrapKey().map(k -> k.location().getPath()).orElse("?"));
                 }
             }
             default -> throw new IllegalArgumentException("unknown hook " + name);

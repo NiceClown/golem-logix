@@ -60,7 +60,13 @@ neoForge {
             if (project.hasProperty('devshotsServer')) {
                 systemProperty 'golemlogix.devshots.server', project.property('devshotsServer').toString()
             }
-            programArguments.addAll '--width', '1280', '--height', '720'
+            // a generated world instead of the flat one: gradle -PdevshotsWorld=normal:<seed> runDevShots
+            if (project.hasProperty('devshotsWorld')) {
+                systemProperty 'golemlogix.devshots.world', project.property('devshotsWorld').toString()
+            }
+            // the window size: gradle -PdevshotsSize=1920x1080 runDevShots (default 1280x720)
+            def size = (project.findProperty('devshotsSize') ?: '1280x720').toString().split('x')
+            programArguments.addAll '--width', size[0], '--height', size[1]
         }
 
         server {
@@ -122,6 +128,11 @@ dependencies {
     // Create recipes (mixing with liquid cryo-source, pressing torn minds): gradle -Pcreate ...
     if (project.hasProperty('create')) {
         runtimeOnly 'maven.modrinth:create:UjX6dr61'               // 6.0.10 (1.21.1 neoforge, bundles Flywheel and Ponder)
+    }
+    // side by side with Applied Energistics 2 in dev runs: gradle -Pae2 ...
+    if (project.hasProperty('ae2')) {
+        runtimeOnly 'maven.modrinth:ae2:KDnFUmMm'                  // 19.2.18 (1.21.1 neoforge)
+        runtimeOnly 'maven.modrinth:guideme:hFpGwC6q'              // 21.1.19, required by AE2
     }
 }
 

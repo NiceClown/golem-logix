@@ -110,6 +110,7 @@ public final class DevShots {
         }
         Minecraft mc = Minecraft.getInstance();
         tick++;
+        DevFilm.clientTick();
         if (!optionsApplied) {
             applyOptions(mc);
         }
@@ -186,8 +187,33 @@ public final class DevShots {
     private static boolean keepScreen;
 
     @SubscribeEvent
+    public static void beforeFrame(RenderFrameEvent.Pre event) {
+        if (QUEUE != null) {
+            DevFilm.beforeFrame(Minecraft.getInstance(), event.getPartialTick().getGameTimeDeltaPartialTick(true));
+        }
+    }
+
+    @SubscribeEvent
+    public static void onCameraAngles(net.neoforged.neoforge.client.event.ViewportEvent.ComputeCameraAngles event) {
+        if (QUEUE != null) {
+            DevFilm.cameraAngles(event);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onFov(net.neoforged.neoforge.client.event.ViewportEvent.ComputeFov event) {
+        if (QUEUE != null) {
+            DevFilm.fov(event);
+        }
+    }
+
+    @SubscribeEvent
     public static void onFrame(RenderFrameEvent.Post event) {
-        if (QUEUE == null || pendingShot == null) {
+        if (QUEUE == null) {
+            return;
+        }
+        DevFilm.afterFrame(Minecraft.getInstance());
+        if (pendingShot == null) {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
@@ -221,10 +247,15 @@ public final class DevShots {
         log("creating world");
         LevelSettings settings = new LevelSettings("DevShots", GameType.CREATIVE, false, Difficulty.PEACEFUL, true,
                 new GameRules(), WorldDataConfiguration.DEFAULT);
-        WorldOptions options = new WorldOptions(20261009L, false, false);
+        // a flat world, or (golemlogix.devshots.world=normal:<seed>) a generated one to film in real landscapes
+        String world = System.getProperty("golemlogix.devshots.world", "flat");
+        boolean normal = world.startsWith("normal");
+        long seed = normal && world.contains(":") ? Long.parseLong(world.substring(world.indexOf(':') + 1)) : 20261009L;
+        WorldOptions options = new WorldOptions(seed, false, false);
         String id = "devshots_" + System.currentTimeMillis();
+        var preset = normal ? WorldPresets.NORMAL : WorldPresets.FLAT;
         mc.createWorldOpenFlows().createFreshLevel(id, settings, options,
-                access -> access.registryOrThrow(Registries.WORLD_PRESET).getHolderOrThrow(WorldPresets.FLAT).value().createWorldDimensions(),
+                access -> access.registryOrThrow(Registries.WORLD_PRESET).getHolderOrThrow(preset).value().createWorldDimensions(),
                 mc.screen);
     }
 
@@ -744,6 +775,20 @@ public final class DevShots {
                     net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.golemlogix.network.OpenChronometerPayload());
                     return true;
                 };
+            case "jeioverlay": {
+                // jeioverlay on|off : JEI's item list beside windows (by reflection: JEI is only in the -PtestMods runs)
+                boolean on = t[1].equalsIgnoreCase("on");
+                return mc -> {
+                    Class<?> internal = Class.forName("mezz.jei.common.Internal");
+                    Class<?> toggle = Class.forName("mezz.jei.common.config.IClientToggleState");
+                    Object state = internal.getMethod("getClientToggleState").invoke(null);
+                    boolean now = (boolean) toggle.getMethod("isOverlayEnabled").invoke(state);
+                    if (now != on) {
+                        toggle.getMethod("toggleOverlayEnabled").invoke(state);
+                    }
+                    return true;
+                };
+            }
             case "notoasts":
                 // notoasts : clears the toasts (recipe unlocks, "order ready", advancements) before a shot
                 return mc -> {
@@ -893,6 +938,22 @@ public final class DevShots {
                     return true;
                 };
             }
+            case "useon": {
+                // useon x y z [face]: right-click the block with the held item (a reagent onto an apparatus, a tablet into a brazier)
+                int x = Integer.parseInt(t[1]), y = Integer.parseInt(t[2]), z = Integer.parseInt(t[3]);
+                Direction face = t.length > 4 ? Direction.byName(t[4]) : Direction.UP;
+                Step inner = onServer((server, level, player) -> {
+                    BlockPos pos = new BlockPos(x, y, z);
+                    BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(pos).relative(face, 0.5), face, pos, false);
+                    ItemStack held = player.getMainHandItem();
+                    var result = player.gameMode.useItemOn(player, level, held, InteractionHand.MAIN_HAND, hit);
+                    log("useon " + pos.toShortString() + " with " + held.getItem() + " -> " + result);
+                });
+                return mc -> {
+                    keepScreen = true;
+                    return inner.run(mc);
+                };
+            }
             case "useitem": {
                 // useitem : right-click with the held item (into the air), like a player
                 if (REMOTE != null) {
@@ -971,6 +1032,18 @@ public final class DevShots {
                 }
                 return onServer((server, level, player) -> DevScenes.run(name, args, level, player, DevShots::log));
             }
+            case "campath":
+                return mc -> {
+                    DevFilm.campath(t);
+                    return true;
+                };
+            case "film":
+                return mc -> {
+                    DevFilm.start(mc, t, DevShots::log);
+                    return true;
+                };
+            case "filmwait":
+                return mc -> DevFilm.done();
             case "quit":
                 return mc -> {
                     log("quit");
