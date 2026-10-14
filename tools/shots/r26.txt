@@ -1,0 +1,19 @@
+# Round 26: the foreman on a big speed-up: an order over in one cycle still calls him, and he stays a while
+reload
+cmd time set day
+cmd kill @e[type=item]
+cmd fill -40 -61 -14 40 -61 10 minecraft:deepslate_tiles
+cmd fill -40 -60 -14 40 -50 10 minecraft:air
+cmd kill @e[type=item]
+hook rig 0 -60 0
+cmd setblock 5 -60 -2 golem_logix:cooling_coprocessor
+cmd setblock 7 -60 -2 golem_logix:cooling_coprocessor
+hook upgrades 6 -60 -2 golem_logix:compressed_coprocessor golem_logix:compressed_coprocessor golem_logix:compressed_coprocessor golem_logix:compressed_coprocessor
+wait 120
+hook netput 0 -60 0 minecraft:oak_log 64
+look 6.5 -58.8 -1.5 1.6 160 22
+wait 20
+shot r26_idle
+hook craft 0 -60 0 minecraft:stick 16
+burst r26_foreman 14 8
+hook netcheck 0 -60 0 minecraft:stick 16

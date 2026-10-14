@@ -1101,6 +1101,10 @@ public class GolemGameTests {
             menu.removed(player);
             helper.assertTrue(mf.viewers() == 0, "and close with it");
         });
+        helper.runAfterDelay(50, () -> {
+            var mf = (com.golemlogix.blockentity.CryoMainframeBlockEntity) helper.getBlockEntity(ctl);
+            helper.assertTrue(mf.busyCores() == 0 && mf.isBoosted(), "the sped-up order is over at once and still calls the foreman");
+        });
         helper.runAfterDelay(140, () -> {
             GolemNetwork n = net(helper, bay);
             helper.assertTrue(n.itemCountOf(ItemKey.of(new ItemStack(Items.OAK_PLANKS))) == 16, "the core crafted 16 planks, got "
@@ -1363,6 +1367,37 @@ public class GolemGameTests {
             helper.assertTrue(n.itemCountOf(ItemKey.of(new ItemStack(Items.OAK_PLANKS))) == 0, "no planks left");
             CryoCalculatorBlockEntity cpu = (CryoCalculatorBlockEntity) helper.getBlockEntity(CPU);
             helper.assertTrue(cpu.isIdle(), "calculator must be idle again");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * The foreman: an order the co-processors sped up still calls him when it is over at once (it used to end the speed-up in the
+     * same tick, so on a big speed-up he never came); he leaves a while later.
+     */
+    @GameTest(template = T, timeoutTicks = 200)
+    public static void calculatorForemanAfterQuickJob(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity provider = (PatternProviderBlockEntity) helper.getBlockEntity(PROV);
+        provider.getContainer().setItem(0, card(craftingPattern(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.OAK_LOG))));
+        CryoCalculatorBlockEntity cpu = (CryoCalculatorBlockEntity) helper.getBlockEntity(CPU);
+        cpu.getUpgrades().setItem(0, new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get()));
+        ItemKey planks = ItemKey.of(new ItemStack(Items.OAK_PLANKS));
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.OAK_LOG, 4), false);
+            GolemNetwork.StartResult r = n.startCrafting(planks, 16);
+            helper.assertTrue(r.type() == GolemNetwork.StartType.STARTED, "start result " + r.type());
+        });
+        helper.runAfterDelay(25, () -> {
+            helper.assertTrue(net(helper, bay).itemCountOf(planks) == 16, "16 planks crafted");
+            helper.assertTrue(cpu.isIdle(), "the order is over");
+            helper.assertTrue(cpu.isBoosted(), "the co-processor sped it up: the foreman is called though the order is over");
+        });
+        helper.runAfterDelay(100, () -> {
+            helper.assertTrue(!cpu.isBoosted(), "and he leaves a while later");
             helper.succeed();
         });
     }

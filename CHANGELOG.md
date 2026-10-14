@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.8 — The foreman comes back
+
+- **The atlant-headed foreman shows up again on a big speed-up.** In the Cryo-Calculator and the Cryo-Mainframe he was called only
+  while the order was still running, and the cycle that finished it ended the speed-up in the same tick: with enough co-processors an
+  order is over in one or two cycles, so he never came. An order the co-processors sped up now calls him even when it is over at once.
+- **He stays at least 3 seconds** once called, and the snowman crew keeps working while he is there, so he no longer flickers in and
+  out on short orders.
+- 1 new game test (106 in all); the mainframe test checks him too.
+
 ## 1.1.7 — The anvil ritual in JEI, animated
 
 - **The anvil ritual page in JEI is now a little scene** (like Flux Networks' in-world crafting): the anvil hangs above the golem's

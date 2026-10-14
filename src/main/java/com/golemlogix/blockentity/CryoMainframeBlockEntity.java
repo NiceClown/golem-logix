@@ -76,6 +76,9 @@ public class CryoMainframeBlockEntity extends BlockEntity {
     // --- client
     private int clientCores, clientBusy, clientCalcs, clientWorkers;
     private boolean clientBoosted, clientOpen;
+    /** Ticks the foreman still stays at least, and whether he was called last tick (as on the calculator). */
+    private int foremanLeft;
+    private boolean foremanCalled;
     private final ItemStack[] clientCurrent = {ItemStack.EMPTY, ItemStack.EMPTY};
     /** Door opening 0..1, work spin-up 0..1 and foremen (as on the calculator). */
     public float doors, doorsPrev, spin, spinPrev, foreman, foremanPrev;
@@ -125,6 +128,11 @@ public class CryoMainframeBlockEntity extends BlockEntity {
     public int workersPerCore() {
         return CryoCalculatorBlockEntity.BASE_WORKERS
                 + CryoCalculatorBlockEntity.WORKERS_PER_COMPRESSED * upgrades.count(UpgradeType.SPEED) * coprocessorMultiplier();
+    }
+
+    /** Server: whether the co-processors sped the work up lately (the foreman is shown). */
+    public boolean isBoosted() {
+        return boosted;
     }
 
     public int busyCores() {
@@ -433,7 +441,8 @@ public class CryoMainframeBlockEntity extends BlockEntity {
                 be.syncIfChanged(time);
             }
         }
-        boolean boosted = be.active && time < be.boostUntil;
+        // orders the co-processors finished at once (on a big speed-up: in one cycle) still call the foreman: they were sped up
+        boolean boosted = time < be.boostUntil && (be.active || be.busyCores() == 0);
         if (boosted != be.boosted || wasActive != be.active) {
             be.boosted = boosted;
             be.syncNow();
@@ -541,6 +550,11 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         } else if (be.visualWorkTimer > 0) {
             be.visualWorkTimer--;
         }
+        be.foremanLeft = be.clientBoosted && !be.foremanCalled ? CryoCalculatorBlockEntity.FOREMAN_MIN_TICKS
+                : Math.max(0, be.foremanLeft - 1);
+        be.foremanCalled = be.clientBoosted;
+        // the crews keep working while the foreman urges them on
+        be.visualWorkTimer = Math.max(be.visualWorkTimer, be.foremanLeft);
 
         boolean activeVisually = on || be.visualWorkTimer > 0;
         if (activeVisually) {
@@ -558,7 +572,8 @@ public class CryoMainframeBlockEntity extends BlockEntity {
                 be.visualItems[1] = ItemStack.EMPTY;
             }
         }
-        be.foreman = Math.max(0f, Math.min(1f, be.foreman + (be.clientBoosted && be.spin > 0.4f ? 0.08f : -0.05f)));
+        boolean foremanWanted = (be.clientBoosted || be.foremanLeft > 0) && be.spin > 0.4f;
+        be.foreman = Math.max(0f, Math.min(1f, be.foreman + (foremanWanted ? 0.08f : -0.05f)));
     }
 
     // ------------------------------------------------------------------------------------------------ saving

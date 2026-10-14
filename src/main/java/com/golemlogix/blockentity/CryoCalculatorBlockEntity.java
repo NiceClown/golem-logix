@@ -67,6 +67,8 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
     private boolean boosted = false;
     private long boostUntil = 0;
     private static final int BOOST_HOLD = 60;
+    /** Once called, the foreman stays at least this long (client ticks), even if the speed-up was over in a blink. */
+    public static final int FOREMAN_MIN_TICKS = 60;
 
     public boolean isBoosted() {
         return boosted;
@@ -281,7 +283,8 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
                 }
             }
         }
-        boolean boosted = be.active && time < be.boostUntil;
+        // an order the co-processors finished at once (on a big speed-up: in one cycle) still calls the foreman: it was sped up
+        boolean boosted = time < be.boostUntil && (be.active || be.job == null);
         if (boosted != be.boosted) {
             be.boosted = boosted;
             be.syncToClient();
@@ -435,6 +438,9 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
     /** Foreman: 0 = none, 1 = stands on the roof (pops up and hides smoothly). */
     public float foreman = 0f;
     public float foremanPrev = 0f;
+    /** Ticks the foreman still stays at least, and whether he was called last tick. */
+    private int foremanLeft = 0;
+    private boolean foremanCalled = false;
 
     // Visual timer for the minimum work duration (at least 28 ticks = 1.4 seconds)
     // Makes sure an instant craft still plays the whole assembly animation
@@ -462,6 +468,10 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         } else if (be.visualWorkTimer > 0) {
             be.visualWorkTimer--;
         }
+        be.foremanLeft = be.boosted && !be.foremanCalled ? FOREMAN_MIN_TICKS : Math.max(0, be.foremanLeft - 1);
+        be.foremanCalled = be.boosted;
+        // the crew keeps working while the foreman urges it on
+        be.visualWorkTimer = Math.max(be.visualWorkTimer, be.foremanLeft);
 
         boolean activeVisually = on || be.visualWorkTimer > 0;
 
@@ -480,6 +490,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
             }
         }
 
-        be.foreman = Math.max(0f, Math.min(1f, be.foreman + (be.boosted && be.spin > 0.4f ? 0.08f : -0.05f)));
+        boolean foremanWanted = (be.boosted || be.foremanLeft > 0) && be.spin > 0.4f;
+        be.foreman = Math.max(0f, Math.min(1f, be.foreman + (foremanWanted ? 0.08f : -0.05f)));
     }
 }
