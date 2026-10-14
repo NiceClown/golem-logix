@@ -744,6 +744,30 @@ public final class DevShots {
                     net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.golemlogix.network.OpenChronometerPayload());
                     return true;
                 };
+            case "notoasts":
+                // notoasts : clears the toasts (recipe unlocks, "order ready", advancements) before a shot
+                return mc -> {
+                    mc.getToasts().clear();
+                    return true;
+                };
+            case "mouse": {
+                // mouse x y : where screens think the cursor is (window pixels), e.g. away from buttons with tooltips;
+                // only the game's own variable changes, the OS cursor is not touched
+                double mx = Double.parseDouble(t[1]), my = Double.parseDouble(t[2]);
+                return mc -> {
+                    try {
+                        var fx = net.minecraft.client.MouseHandler.class.getDeclaredField("xpos");
+                        var fy = net.minecraft.client.MouseHandler.class.getDeclaredField("ypos");
+                        fx.setAccessible(true);
+                        fy.setAccessible(true);
+                        fx.setDouble(mc.mouseHandler, mx);
+                        fy.setDouble(mc.mouseHandler, my);
+                    } catch (ReflectiveOperationException e) {
+                        throw new IllegalStateException("cannot set the cursor position", e);
+                    }
+                    return true;
+                };
+            }
             case "chat":
                 // chat : the chat window with its history (messages sent on joining)
                 return mc -> {

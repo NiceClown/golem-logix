@@ -32,6 +32,10 @@
 /tools/GifMaker.java
 /tools/run_promo.ps1
 /tools/shots/promo_gifs.txt
+/tools/PromoReel.java
+/tools/shots/promo_reel.txt
+/tools/shots/promo_reel_gui.txt
+/tools/shots/promo_reel_gui_ru.txt
 
 # IDE
 .idea/
