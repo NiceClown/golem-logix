@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.1.5 — Progression fixes
+
+A review of the mod's progression (what opens when, and from which paths) found three things:
+
+- **The Create assembly line needs the End now.** It made Compressed Co-Processors (bus speed upgrades, calculator upgrades, the
+  Cryo-Mainframe) available in the Nether (the Deployer needs brass), while the Saturator that makes them is an End machine (purpur,
+  End rods). A Deployer step with a **popped chorus fruit** keeps them after the End; the line still keeps the Saturator free.
+- **The book no longer says to build the Saturator "as early as possible"**: it needs purpur and End rods. Until then plates come
+  from the anvil, with Ars Nouveau also the Dispel, with Create the mixer.
+- **No copper golem, no silent dead end.** Copper Age Backport is optional, but every way to the first Copper Matrix needs a copper
+  golem (the Saturator needs a matrix itself, Create's mixer a running network). If the game has no copper golem and no recipe for
+  the matrix, every player who joins is told what to install; the book says it too.
+- 1 new game test (101 in all).
+
 ## 1.1.4 — Curios and a hotkey for the Chronometer, data-driven rituals, a Create assembly line
 
 ### Portable Chronometer

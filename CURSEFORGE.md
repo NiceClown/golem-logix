@@ -86,7 +86,7 @@ The whole network runs on **Source** from Ars Nouveau. Without Ars Nouveau it si
 - **Forge Hammer:** forge plates by hand on the unassembled Saturator, the anvil.
 - **With Ars Nouveau:** after your first anvil plate, a Dispel unbinds a battered golem's mind; an Enchanting Apparatus presses it into two plates.
 - **Source Gems:** with Ars Nouveau the assembled Saturator makes Source Gems and their blocks, twice as fast as the Imbuement Chamber for a third more Source.
-- **With Create:** a Mixer tears a block's mind in Liquid Cryo-Source, a Press turns it into a plate. An assembly line (Spout, Deployer, Press, three passes) finishes Compressed Co-Processors without keeping the Saturator busy.
+- **With Create:** a Mixer tears a block's mind in Liquid Cryo-Source, a Press turns it into a plate. An assembly line (Spout, Deployers with an iron sheet and a popped chorus fruit, Press, three passes) finishes Compressed Co-Processors without keeping the Saturator busy.
 - **Blue Ice imbuement:** with Ars Nouveau the Imbuement Chamber charges a Blue Ice block into two Cryo-Substrates: dear, but no golem or machine needed.
 - **The Saturator stays king:** no other path makes plates cheaper.
 - **Secret recipe:** it reveals itself only after two trials… find them yourself.

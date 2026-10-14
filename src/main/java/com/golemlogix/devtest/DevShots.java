@@ -744,6 +744,13 @@ public final class DevShots {
                     net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.golemlogix.network.OpenChronometerPayload());
                     return true;
                 };
+            case "chat":
+                // chat : the chat window with its history (messages sent on joining)
+                return mc -> {
+                    keepScreen = true;
+                    mc.setScreen(new net.minecraft.client.gui.screens.ChatScreen(""));
+                    return true;
+                };
             case "inv":
                 return mc -> {
                     keepScreen = true;

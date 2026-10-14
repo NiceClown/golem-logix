@@ -31,6 +31,14 @@
       "results": [ { "id": "golem_logix:incomplete_compressed_coprocessor" } ]
     },
     {
+      "type": "create:deploying",
+      "ingredients": [
+        { "item": "golem_logix:incomplete_compressed_coprocessor" },
+        { "item": "minecraft:popped_chorus_fruit" }
+      ],
+      "results": [ { "id": "golem_logix:incomplete_compressed_coprocessor" } ]
+    },
+    {
       "type": "create:pressing",
       "ingredients": [ { "item": "golem_logix:incomplete_compressed_coprocessor" } ],
       "results": [ { "id": "golem_logix:incomplete_compressed_coprocessor" } ]

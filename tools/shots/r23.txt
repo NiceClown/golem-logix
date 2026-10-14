@@ -1,0 +1,35 @@
+# Round 23 (-Mods -Pcreate): the assembly line with the End step (chorus fruit) in JEI, the book pages about it, the corrected
+# Saturator advice and the copper golem note, the layout in both languages
+reload
+gui on
+jeitype create:sequenced_assembly golem_logix:compressed_coprocessor
+wait 10
+shot r23_jei_sequenced
+closescreen
+book create_assembly 0
+wait 8
+shot r23_book_assembly_0
+book create_assembly 1
+wait 5
+shot r23_book_assembly_1
+book plates 0
+wait 5
+shot r23_book_plates
+bookaudit
+closescreen
+gui off
+lang ru_ru
+wait 20
+gui on
+book create_assembly 1
+wait 8
+shot r23_book_assembly_ru_1
+book plates 0
+wait 5
+shot r23_book_plates_ru
+bookaudit
+closescreen
+gui off
+lang en_us
+wait 20
+gui on

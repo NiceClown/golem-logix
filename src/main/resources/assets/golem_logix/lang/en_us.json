@@ -76,6 +76,7 @@
   "tooltip.golem_logix.chronometer.unbound_hint": "Sneak-Right Click Central Core to bind.",
   "message.golem_logix.chronometer.unbound": "Chronometer is not bound to any Golem Logix core!",
   "message.golem_logix.chronometer.none": "No Portable Chronometer: carry one or wear it in the Chronometer slot",
+  "message.golem_logix.no_copper_golem": "Golem Logix: there is no copper golem in this game, so the first Copper Matrix cannot be made. Install Copper Age Backport (or another mod with copper golems), or add a recipe for the matrix.",
   "message.golem_logix.chronometer.accessing": "Synchronizing analog chronometer beam...",
   "message.golem_logix.wither_imploded": "Nascent Wither collapsed under the anvil into Imploded Plasma!",
   "message.golem_logix.snow_golem_full_hp": "Snow Golem is at full health (4 HP)! Damage it first (1-3 HP) before dropping the anvil!",

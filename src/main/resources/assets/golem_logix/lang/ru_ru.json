@@ -76,6 +76,7 @@
   "tooltip.golem_logix.chronometer.unbound_hint": "Shift + ПКМ по Центральному Ядру для привязки.",
   "message.golem_logix.chronometer.unbound": "Хронометр не привязан к Ядру Голем Логикс!",
   "message.golem_logix.chronometer.none": "Нет портативного хронометра: возьмите его с собой или наденьте в слот «Хронометр»",
+  "message.golem_logix.no_copper_golem": "Golem Logix: в этой игре нет медного голема, поэтому первую медную матрицу сделать нельзя. Установите Copper Age Backport (или другой мод с медными големами) или добавьте рецепт матрицы.",
   "message.golem_logix.chronometer.accessing": "Синхронизация аналогового луча хронометра...",
   "message.golem_logix.wither_imploded": "Формирующийся Визер схлопнулся под наковальней в Схлопнувшуюся плазму!",
   "message.golem_logix.snow_golem_full_hp": "Снеговик имеет полное здоровье (4 HP)! Нанесите ему урон (до 1-3 HP) перед сбросом наковальни!",

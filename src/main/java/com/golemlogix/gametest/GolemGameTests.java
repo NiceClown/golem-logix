@@ -2720,6 +2720,18 @@ public class GolemGameTests {
         helper.succeed();
     }
 
+    /**
+     * Without any copper golem (Copper Age Backport is optional) and no modpack recipe for the Copper Matrix the first matrix cannot be
+     * made: players are told on joining. With the backport (minecraft:copper_golem) the anvil ritual has its golem.
+     */
+    @GameTest(template = T, timeoutTicks = 20)
+    public static void copperBootstrapKnowsGolems(GameTestHelper helper) {
+        boolean golem = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.containsKey(ResourceLocation.withDefaultNamespace("copper_golem"));
+        boolean stuck = com.golemlogix.event.CopperBootstrap.firstMatrixImpossible(helper.getLevel().getServer());
+        helper.assertTrue(stuck == !golem, "stuck " + stuck + " although a copper golem is " + (golem ? "there" : "missing"));
+        helper.succeed();
+    }
+
     @GameTest(template = T, timeoutTicks = 100)
     public static void anvilRitualNeedsWoundedGolem(GameTestHelper helper) {
         BlockPos at = new BlockPos(4, 1, 4);

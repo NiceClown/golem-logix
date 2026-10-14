@@ -1,0 +1,7 @@
+# Round 23b (-PnoBackport, no other mods): no copper golem in the game: the message on joining, in the chat history
+wait 20
+gui on
+chat
+wait 5
+shot r23b_chat
+closescreen

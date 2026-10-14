@@ -136,7 +136,7 @@
              "text": ["Cores go into processors, the Atlas Core, casings and high-capacity pipes.", "To bring 100 HP down to four, a harming potion, lava or a long fall helps."]},
             {"type": "ritual", "title": "Copper Golem", "station": "minecraft:anvil", "inputs": ["minecraft:copper_block"], "outputs": ["golem_logix:flattened_copper_matrix"],
              "condition": "A golem with 1-4 HP (out of 12).",
-             "text": ["Matrices are the basis of disks, buses, punch cards and cabinets.", "&oCopper golems come from Copper Age Backport (a copper block with a carved pumpkin on top, as in 1.21.9) or another mod with copper golems.&r"]},
+             "text": ["Matrices are the basis of disks, buses, punch cards and cabinets.", "&oCopper golems come from Copper Age Backport (a copper block with a carved pumpkin on top) or another mod. Without one the first matrices cannot be made.&r"]},
             {"type": "ritual", "title": "Snow Golem", "station": "minecraft:anvil", "inputs": ["minecraft:snow_block"], "outputs": ["golem_logix:flattened_cryo_substrate"],
              "condition": "A golem with 1-3 HP - not at full health!",
              "text": ["A snow golem has only 4 HP. Hit it once with your hand - 3 are left and the anvil will now work (snowballs do not hurt snow golems).", "Substrates go into pipes, cryo blocks and fluid disks."]}
@@ -279,7 +279,7 @@
              ]},
             {"type": "text", "title": "Advice",
              "text": [
-               "There are no crafting-table recipes for plates: only the anvil and the Saturator. Build a Saturator as early as possible - one iron block turns into two cores.",
+               "There are no crafting-table recipes for plates. Until the End they come from the anvil (with Ars Nouveau also the Dispel, with Create the mixer). The Saturator needs purpur and End rods: then one iron block turns into two cores.",
                "&oPacked ice for cryo-substrates can be mined with a Silk Touch pickaxe.&r"
              ]}
           ]
@@ -289,12 +289,12 @@
           "requires": "create",
           "pages": [
             {"type": "text", "title": "An assembly line",
-             "text": ["With Create a &lCooling Co-Processor&r can be finished on a belt instead of in the Saturator: a &lSpout&r pours in Liquid Cryo-Source, a &lDeployer&r fits an iron sheet, a &lPress&r flattens it.", "Three times round, nine steps in all. Nine of ten come out as a &lCompressed Co-Processor&r, the rest as scraps."]},
+             "text": ["With Create a &lCooling Co-Processor&r can be finished on a belt instead of in the Saturator: a &lSpout&r pours in Liquid Cryo-Source, two &lDeployers&r fit an iron sheet and a popped chorus fruit, a &lPress&r flattens it.", "Three times round, nine steps in all. Nine of ten come out as a &lCompressed Co-Processor&r, the rest as scraps."]},
             {"type": "ritual", "title": "One pass", "station": "create:spout", "inputs": ["golem_logix:incomplete_compressed_coprocessor", "fluid:golem_logix:cryo_source*250"], "outputs": ["golem_logix:incomplete_compressed_coprocessor"],
-             "condition": "Then a Deployer with an iron sheet and a Press.",
+             "condition": "Then Deployers with an iron sheet and a popped chorus fruit, then a Press.",
              "text": ["An Export Bus next to the Spout pumps the cryo-source out of the network."]},
             {"type": "text", "title": "Line or Saturator?",
-             "text": ["The Saturator: &l1000 Source&r a co-processor and nothing else.", "The line: 750 mB of cryo-source (&l750 Source&r) and three iron sheets a try, and one try in ten fails: about the same Source plus iron. It keeps the Saturator free and runs on belts side by side.", "&oPlates stay the Saturator's job: nothing makes them cheaper.&r"]}
+             "text": ["The Saturator: &l1000 Source&r a co-processor and nothing else.", "The line: 750 mB of cryo-source (&l750 Source&r), three iron sheets and three chorus fruits a try, and one try in ten fails. Like the Saturator it needs the End; it keeps the Saturator free and runs on belts side by side.", "&oPlates stay the Saturator's job: nothing makes them cheaper.&r"]}
           ]
         },
         {

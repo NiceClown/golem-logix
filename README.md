@@ -43,8 +43,9 @@ Everything comes with an illustrated, searchable **guide book** (Russian and Eng
   With Ars Nouveau, the first anvil plate opens the **Dispel method** (a battered golem's raw mind, pressed into two plates on an
   Enchanting Apparatus), and the assembled Saturator makes **Source Gems** (the Imbuement Chamber's recipes, twice as fast for a
   third more Source) and the Imbuement Chamber charges Blue Ice into cryo-substrates; with Create, a Mixer tears a block's mind in
-  Liquid Cryo-Source and a Press makes a plate of it, and an assembly line (Spout, Deployer, Press, three passes) finishes Compressed
-  Co-Processors. The assembled Saturator stays the cheapest way to make plates.
+  Liquid Cryo-Source and a Press makes a plate of it, and an assembly line (Spout, Deployers with an iron sheet and a popped chorus fruit,
+  Press, three passes) finishes Compressed Co-Processors. The Saturator (purpur and End rods: after the End) stays the cheapest way to
+  make plates; before it they come from golems, the Dispel or Create's mixer.
 - **Liquid Cryo-Source and fluid autocrafting** — the network's own fluid, made from Source when an Export Bus, a Pattern Provider
   or an Interface pumps it out (no bucket, never stored). Patterns can have fluid ingredients in mB (JEI "+" carries them over), and
   the Pattern Provider pours them into the machine together with the items.
@@ -73,8 +74,8 @@ Put `golem_logix-<version>.jar` into the `mods` folder (client and server). On a
 ## Building from source
 
 ```
-gradlew build              # build/libs/golem_logix-1.1.4.jar (JAVA_HOME must point at JDK 21)
-gradlew runGameTestServer  # 100 game tests on a real server (add -PtestMods for Ars Nouveau, JEI, Jade, Curios; -Pcreate for
+gradlew build              # build/libs/golem_logix-1.1.5.jar (JAVA_HOME must point at JDK 21)
+gradlew runGameTestServer  # 101 game tests on a real server (add -PtestMods for Ars Nouveau, JEI, Jade, Curios; -Pcreate for
                            # Create; -PnoBackport runs them without Copper Age Backport)
 ```
 
