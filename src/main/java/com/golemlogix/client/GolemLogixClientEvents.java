@@ -36,6 +36,7 @@ public class GolemLogixClientEvents {
         event.registerBlockEntityRenderer(ModBlockEntities.CRYO_JAR.get(), CryoJarRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.DISTILLATION_TOWER.get(), DistillationTowerRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.CRYO_MIXER.get(), CryoMixerRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.PERISCOPE.get(), PeriscopeEyeRenderer::new);
     }
 
     @SubscribeEvent

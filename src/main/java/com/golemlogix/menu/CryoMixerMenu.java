@@ -18,19 +18,20 @@ import net.minecraft.world.item.ItemStack;
 
 /**
  * Cryo-Mixer window: the two flasks (water, Liquid Cryo-Source), the mode (snow or ice), the pace, what it is doing, the tray with
- * the snow or ice; a column of upgrade slots on the right (Compressed Co-Processors, a Redstone Module).
+ * the snow or ice (auto-output on by default); a column of upgrade slots on the right (Compressed Co-Processors, a Redstone Module).
  */
 public class CryoMixerMenu extends GolemMenu {
     public static final int IMAGE_WIDTH = 176;
     public static final int IMAGE_HEIGHT = 182;
     public static final int OUT_X = 150, OUT_Y = 62;
     public static final int BUTTON_MODE = 1;
+    public static final int BUTTON_AUTO_OUTPUT = 2;
 
     private final ContainerLevelAccess access;
     private final ContainerData data;
 
     public static CryoMixerMenu fromNetwork(int id, Inventory inv, RegistryFriendlyByteBuf buf) {
-        return new CryoMixerMenu(id, inv, new SimpleContainer(1), new SimpleContainer(UpgradeSpec.MIXER.slots()), new SimpleContainerData(8),
+        return new CryoMixerMenu(id, inv, new SimpleContainer(1), new SimpleContainer(UpgradeSpec.MIXER.slots()), new SimpleContainerData(9),
                 null, ContainerLevelAccess.NULL);
     }
 
@@ -84,10 +85,18 @@ public class CryoMixerMenu extends GolemMenu {
         return RedstoneMode.byId(data.get(7));
     }
 
+    public boolean autoOutput() {
+        return data.get(8) != 0;
+    }
+
     @Override
     public boolean clickMenuButton(Player player, int id) {
         if (id == BUTTON_MODE) {
             data.set(4, mode() == CryoMixerBlockEntity.Mode.SNOW ? 1 : 0);
+            return true;
+        }
+        if (id == BUTTON_AUTO_OUTPUT) {
+            data.set(8, autoOutput() ? 0 : 1);
             return true;
         }
         if (id == BUTTON_REDSTONE) {

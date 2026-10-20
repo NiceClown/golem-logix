@@ -159,6 +159,8 @@ public class CryoMixerBlockEntity extends BlockEntity {
     private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.MIXER, this);
     private final RedstoneControl redstone = new RedstoneControl();
     private Mode mode = Mode.SNOW;
+    /** Auto-output (on by default): the tray hands its blocks to a neighbouring Pattern Provider first, otherwise to any inventory. */
+    private boolean autoOutput = true;
     private int progress;
     private int status;
     private long lastWork = -100;
@@ -232,6 +234,10 @@ public class CryoMixerBlockEntity extends BlockEntity {
         return status;
     }
 
+    public boolean autoOutput() {
+        return autoOutput;
+    }
+
     /** Ticks one block takes now: the mode's time shared between the base speed and every co-processor. */
     public int ticksPerBlock() {
         return Math.max(1, (int) Math.ceil(mode.ticks() / (double) (1 + upgrades.count(UpgradeType.SPEED))));
@@ -250,6 +256,14 @@ public class CryoMixerBlockEntity extends BlockEntity {
             redstone.observe(powered);
         }
         work(hasRedstone, powered, now);
+        if (autoOutput && !output.getItem(0).isEmpty() && now % com.golemlogix.system.AutoOutput.INTERVAL == 0) {
+            ItemStack tray = output.getItem(0);
+            ItemStack rest = com.golemlogix.system.AutoOutput.push(level, java.util.List.of(worldPosition, worldPosition.above()), tray);
+            if (rest.getCount() != tray.getCount()) {
+                output.setItem(0, rest);
+                changed();
+            }
+        }
         boolean nowWorking = now - lastWork < 10;
         if (nowWorking != working) {
             working = nowWorking;
@@ -309,7 +323,7 @@ public class CryoMixerBlockEntity extends BlockEntity {
         changed();
     }
 
-    /** The window's numbers: water, Cryo-Source, progress, ticks a block, mode, status, co-processors, redstone mode. */
+    /** The window's numbers: water, Cryo-Source, progress, ticks a block, mode, status, co-processors, redstone mode, auto-output. */
     public net.minecraft.world.inventory.ContainerData menuData() {
         return new net.minecraft.world.inventory.ContainerData() {
             @Override
@@ -323,6 +337,7 @@ public class CryoMixerBlockEntity extends BlockEntity {
                     case 5 -> status;
                     case 6 -> upgrades.count(UpgradeType.SPEED);
                     case 7 -> redstone.mode().ordinal();
+                    case 8 -> autoOutput ? 1 : 0;
                     default -> 0;
                 };
             }
@@ -331,6 +346,9 @@ public class CryoMixerBlockEntity extends BlockEntity {
             public void set(int index, int value) {
                 if (index == 4) {
                     setMode(Mode.byId(value));
+                } else if (index == 8) {
+                    autoOutput = value != 0;
+                    setChanged();
                 } else if (index == 7) {
                     redstone.setMode(RedstoneMode.byId(value));
                     setChanged();
@@ -339,7 +357,7 @@ public class CryoMixerBlockEntity extends BlockEntity {
 
             @Override
             public int getCount() {
-                return 8;
+                return 9;
             }
         };
     }
@@ -387,6 +405,7 @@ public class CryoMixerBlockEntity extends BlockEntity {
         tag.put("Upgrades", upgrades.createTag(registries));
         tag.putInt("Mode", mode.ordinal());
         tag.putInt("Progress", progress);
+        tag.putBoolean("AutoOutput", autoOutput);
         redstone.save(tag);
     }
 
@@ -397,6 +416,7 @@ public class CryoMixerBlockEntity extends BlockEntity {
         upgrades.fromTag(tag.getListOrEmpty("Upgrades"), registries);
         mode = Mode.byId(tag.getIntOr("Mode", 0));
         progress = tag.getIntOr("Progress", 0);
+        autoOutput = tag.getBooleanOr("AutoOutput", true);
         redstone.load(tag);
     }
 

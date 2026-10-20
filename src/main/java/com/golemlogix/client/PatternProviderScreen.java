@@ -34,7 +34,22 @@ public class PatternProviderScreen extends GolemScreen<PatternProviderMenu> {
     @Override
     protected void renderExtraBg(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
         GolemGui.inset(g, leftPos + 60, topPos + 18, 56, 56);
+        // the return slots: a column on the right (hovering it explains them)
+        GolemGui.inset(g, leftPos + PatternProviderMenu.RETURN_X - 2, topPos + PatternProviderMenu.RETURN_Y - 2, 20,
+                18 * com.golemlogix.blockentity.PatternProviderBlockEntity.RETURN_SLOTS + 2);
         Component hint = Component.translatable(menu.isBlocking() ? "gui.golem_logix.provider.hint_blocking" : "gui.golem_logix.provider.hint");
         g.textWithWordWrap(font, hint, leftPos + 8, topPos + 78, imageWidth - 16, GolemGui.CYAN_DARK);
+    }
+
+    @Override
+    protected void extractTooltip(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+        super.extractTooltip(g, mouseX, mouseY);
+        int x = leftPos + PatternProviderMenu.RETURN_X - 1, y = topPos + PatternProviderMenu.RETURN_Y - 1;
+        boolean over = mouseX >= x && mouseX < x + 18 && mouseY >= y
+                && mouseY < y + 18 * com.golemlogix.blockentity.PatternProviderBlockEntity.RETURN_SLOTS;
+        if (over && (hoveredSlot == null || !hoveredSlot.hasItem()) && menu.getCarried().isEmpty()) {
+            g.setComponentTooltipForNextFrame(font, java.util.List.of(Component.translatable("gui.golem_logix.provider.returns"),
+                    Component.translatable("gui.golem_logix.provider.returns_hint").withStyle(ChatFormatting.GRAY)), mouseX, mouseY);
+        }
     }
 }

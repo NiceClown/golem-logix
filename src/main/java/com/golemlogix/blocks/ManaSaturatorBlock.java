@@ -116,6 +116,17 @@ public class ManaSaturatorBlock extends Block implements com.golemlogix.blocks.R
             return InteractionResult.TRY_WITH_EMPTY_HAND;
         }
         if (be instanceof ManaSaturatorBlockEntity saturator) {
+            // the Forge Hammer switches auto-output (finished plates leave by themselves: into a Pattern Provider first, otherwise any inventory)
+            if (stack.getItem() instanceof com.golemlogix.items.ForgeHammerItem) {
+                if (!level.isClientSide()) {
+                    boolean on = saturator.toggleAutoOutput();
+                    player.sendOverlayMessage(Component.translatable("message.golem_logix.saturator.auto_output",
+                            Component.translatable(on ? "gui.golem_logix.auto_output.on" : "gui.golem_logix.auto_output.off")));
+                    level.playSound(null, pos, net.minecraft.sounds.SoundEvents.COMPARATOR_CLICK, net.minecraft.sounds.SoundSource.BLOCKS, 0.6f,
+                            on ? 1.4f : 0.9f);
+                }
+                return InteractionResult.SUCCESS;
+            }
             // Redstone Module: the first time it is installed into the machine, after that right-clicking with it cycles the mode
             if (stack.getItem() instanceof com.golemlogix.items.UpgradeItem up && up.type() == com.golemlogix.upgrade.UpgradeType.REDSTONE) {
                 if (!level.isClientSide()) {
@@ -205,7 +216,8 @@ public class ManaSaturatorBlock extends Block implements com.golemlogix.blocks.R
             return InteractionResult.CONSUME;
         }
         player.sendOverlayMessage(Component.translatable("message.golem_logix.saturator.status",
-                saturator.getSource(), ManaSaturatorBlockEntity.BUFFER_MAX, saturator.getCoolers(), SaturatorStructure.VENTS.length));
+                saturator.getSource(), ManaSaturatorBlockEntity.BUFFER_MAX, saturator.getCoolers(), SaturatorStructure.VENTS.length,
+                Component.translatable(saturator.autoOutput() ? "gui.golem_logix.auto_output.on" : "gui.golem_logix.auto_output.off")));
         return InteractionResult.CONSUME;
     }
 

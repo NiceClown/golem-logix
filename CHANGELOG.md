@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.0.3 (26.1.2) — Machines hand out their work; the buses come alive
+
+- **Auto-output, on by default.** The Mana Saturator and the Cryo-Mixer hand out what they make by themselves, twice a second: into
+  a neighbouring Pattern Provider first, otherwise into any neighbouring inventory (a chest, a hopper, an Interface). The mixer
+  switches it with a new button to the left of its window; the Saturator, which has no window, with a right-click of the Forge
+  Hammer (a right-click with an empty hand shows the state). The guide explains it on the pages of both machines.
+- **Return slots on the Pattern Provider (Stamping Gateway).** A column of three slots on the right of its window: whatever lands
+  there, from the machines' auto-output, a hopper or a player, goes straight into the network (to the job waiting for it first).
+  A machine fed by a provider no longer needs its own Import Bus and channel. Automation can only put items in; the punch cards
+  stay out of reach.
+- **The buses come alive**: the Vacuum Import Bus turns its turbine, the Injector Export Bus blinks its violet dot, and an ender
+  eye behind the Periscope's monocle looks around, each bus at its own pace (the item shows the eye looking straight ahead).
+- The guide's pages no longer leave one or two lines alone on the next page (the core, the array hints, channels, disks, the
+  Redstone Module).
+- 112 game tests.
+
 ## 2.0.2 (26.1.2) — The Cryo-Mixer
 
 - **New block: the Cryo-Mixer.** Two blocks high, with a water flask and a Liquid Cryo-Source flask on top, a copper module with a

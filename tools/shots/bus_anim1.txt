@@ -1,0 +1,40 @@
+# Bus animations (start -Mods): the vacuum turbine turns, the injector dot blinks, the periscope eye looks around (also facing up
+# and east); the Stamping Gateway's return slots, the Cryo-Mixer's auto-output button; the guide's layout audit
+cmd time set 6000
+cmd fill -8 -60 -6 14 -54 6 minecraft:air
+cmd setblock 0 -59 0 golem_logix:vacuum_import_bus[facing=south]
+cmd setblock 2 -59 0 golem_logix:injector_export_bus[facing=south]
+cmd setblock 4 -59 0 golem_logix:periscope_storage_bus[facing=south]
+cmd setblock 6 -60 0 golem_logix:periscope_storage_bus[facing=up]
+cmd setblock 8 -59 0 golem_logix:periscope_storage_bus[facing=east]
+cmd setblock 10 -60 0 golem_logix:pattern_provider
+cmd setblock 12 -60 0 golem_logix:cryo_mixer[section=0,facing=south]
+cmd setblock 12 -59 0 golem_logix:cryo_mixer[section=1,facing=south]
+wait 40
+look 2.5 -58.5 0.5 3.2 180 0
+wait 5
+shot buses_a
+wait 4
+shot buses_b
+wait 30
+shot buses_c
+look 6.5 -59.5 0.5 1.6 180 85
+wait 5
+shot eye_up
+look 8.5 -58.5 0.5 1.6 90 0
+wait 5
+shot eye_east
+use 10 -60 0
+wait 10
+shot provider_gui
+closescreen
+use 12 -60 0
+wait 10
+shot mixer_gui2
+closescreen
+bookaudit
+gui off
+lang ru_ru
+bookaudit
+lang en_us
+gui on

@@ -1,3 +1,6 @@
 {
-  "parent": "golem_logix:block/periscope_storage_bus_item"
+  "parent": "golem_logix:block/periscope_storage_bus_item",
+  "textures": {
+    "lens": "golem_logix:block/bus_lens_item"
+  }
 }

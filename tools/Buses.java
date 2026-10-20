@@ -136,46 +136,66 @@ final class Buses {
     /** The vacuum bus funnel (12x12): a dark funnel with turbine blades and a teal hub. */
     static Paint funnel() {
         Paint p = new Paint(12, 12, 8);
+        // the turbine turns: one blade's step per cycle of 12 frames, blended into a light blur
+        p.animFrames = 12;
+        p.frameTime = 1;
         p.slab(0, 0, 12, 12, BRASS, 2.8, 1);
         p.disc(6, 6, 5.85, at(BRASS, 1.2));
         p.discFn(6, 6, 5.5, (u, v) -> {
             double d = Math.hypot(u - 6, v - 6) / 5.5;
             return Paint.ramp(IRON, 0.05 + 0.25 * d);
         });
-        for (int b = 0; b < 9; b++) {
-            double a0 = b * 2 * Math.PI / 9;
-            for (double r = 0.9; r < 5.2; r += 0.1) {
-                double a = a0 + r * 0.16;
-                double x = 6 + r * Math.cos(a), y = 6 + r * Math.sin(a);
-                p.disc(x, y, 0.4 + r * 0.04, Paint.ramp(COPPER, 0.25 + 0.55 * (r / 5.2) + 0.1 * Math.sin(a * 3)));
-            }
-        }
-        p.ring(6, 6, 5.5, 5.85, at(BRASS, 4.0));
-        p.sphere(6, 6, 1.0, BRASS, 0.3, 1.0);
-        p.disc(6, 6, 0.5, at(CYAN, 4.8));
-        p.glowRect(5.75, 5.75, 6.25, 6.25, 0.8, at(CYAN, 4.2), 90);
         for (double[] c : new double[][]{{0.7, 0.7}, {11.3, 0.7}, {0.7, 11.3}, {11.3, 11.3}}) {
             p.rivet(c[0], c[1], 0.34, BRASS);
         }
+        // the living detail: the nine copper blades, the rim over their tips and the hub with its cyan jewel on top
+        p.animate(0.1, 0.1, 11.9, 11.9, (q, t) -> {
+            for (int b = 0; b < 9; b++) {
+                double a0 = (b + t) * 2 * Math.PI / 9;
+                for (double r = 0.9; r < 5.2; r += 0.1) {
+                    double a = a0 + r * 0.16;
+                    double x = 6 + r * Math.cos(a), y = 6 + r * Math.sin(a);
+                    q.disc(x, y, 0.4 + r * 0.04, Paint.ramp(COPPER, 0.25 + 0.55 * (r / 5.2) + 0.1 * Math.sin(a * 3)));
+                }
+            }
+            q.ring(6, 6, 5.5, 5.85, at(BRASS, 4.0));
+            q.sphere(6, 6, 1.0, BRASS, 0.3, 1.0);
+            q.disc(6, 6, 0.5, at(CYAN, 4.8));
+            q.glowRect(5.75, 5.75, 6.25, 6.25, 0.8, at(CYAN, 4.2), 90);
+        });
         return p;
     }
 
-    /** The end of the injector nozzle (6x6): a dark hole with a purple sheen. */
+    /** The end of the injector nozzle (6x6): a dark hole with a violet dot that blinks once every two seconds. */
     static Paint nozzle() {
         Paint p = new Paint(6, 6, 8);
+        p.animFrames = 20;
+        p.frameTime = 2;
         p.slab(0, 0, 6, 6, BRASS, 2.6, 1);
         p.disc(3, 3, 2.7, at(BRASS, 1.0));
         p.sphere(3, 3, 2.6, BRASS, 0.3, 0.9);
         p.disc(3, 3, 1.85, rgb(0x050607));
         p.ring(3, 3, 1.85, 2.02, at(IRON, 3.0));
-        p.disc(3, 3, 0.8, at(VIOLET, 2.2));
-        p.disc(2.85, 2.85, 0.36, at(VIOLET, 5.4));
-        p.sparkle(2.8, 2.8, argb(255, 0xFFFFFF));
+        // the living detail: the dot, dim most of the time, a short flash with a halo at the start of the cycle
+        p.animate(1.2, 1.2, 4.8, 4.8, (q, t) -> {
+            double f = t < 0.3 ? Math.sin(t / 0.3 * Math.PI) : 0;
+            if (f > 0.05) {
+                q.glowRect(2.7, 2.7, 3.3, 3.3, 0.6 + 0.6 * f, at(VIOLET, 5.0), (int) Math.round(150 * f));
+            }
+            q.disc(3, 3, 0.8, at(VIOLET, 1.4 + 2.0 * f));
+            q.disc(2.85, 2.85, 0.36, at(VIOLET, 3.4 + 2.4 * f));
+            if (f > 0.5) {
+                q.sparkle(2.8, 2.8, argb(255, 0xFFFFFF));
+            }
+        });
         return p;
     }
 
-    /** The periscope monocle (10x10): a mount with a ring of runes and a clear lens. */
-    static Paint lens() {
+    /**
+     * The periscope monocle (10x10): a mount with a ring of runes and a clear lens. On the block the eye behind the glass is
+     * drawn by the renderer (it looks around); the item's lens has it painted in the middle.
+     */
+    static Paint lens(boolean eye) {
         Paint p = new Paint(10, 10, 6.4);
         p.slab(0, 0, 10, 10, BRASS, 2.4, 1);
         p.disc(5, 5, 4.9, at(BRASS, 1.2));
@@ -191,10 +211,36 @@ final class Buses {
             double lit = 0.5 + 0.5 * (-dx * 0.5 - dy * 0.7);
             return Paint.mix(rgb(0x1b3a52), rgb(0xcfe9ff), Math.max(0, Math.min(1, 0.25 + 0.55 * lit - d * 0.2)));
         });
-        p.disc(4, 3.9, 0.55, argb(210, 0xFFFFFF));
-        p.line(3.7, 6.5, 6.7, 3.6, 0.22, argb(120, 0xFFFFFF));
-        p.ring(5, 5, 1.25, 1.4, argb(150, 0xFFFFFF));
-        p.disc(5, 5, 0.75, rgb(0x0a1018));
+        if (eye) {
+            iris(p, 5, 5, 1.3);
+            // the glint on the glass, mixed into the texels (a translucent texel would make the face translucent in 26.1)
+            p.discFn(4, 3.9, 0.55, (u, v) -> Paint.mix(p.get((int) (u * 6.4), (int) (v * 6.4)), rgb(0xFFFFFF), 0.8));
+        }
+        return p;
+    }
+
+    /** The ender-eye iris: teal-green fibres around a dark slit pupil, darker at the rim (centre and radius in units). */
+    static void iris(Paint p, double cx, double cy, double r) {
+        p.discFn(cx, cy, r, (u, v) -> {
+            double dx = (u - cx) / r, dy = (v - cy) / r, d = Math.hypot(dx, dy);
+            if (Math.hypot(dx / 0.2, dy / 0.62) <= 1) {
+                return rgb(0x050b0a);
+            }
+            double fibre = 0.5 + 0.5 * Math.sin(Math.atan2(dy, dx) * 9 + d * 5);
+            int c = Paint.mix(rgb(0x145a4c), rgb(0x8fe8c4), Math.max(0, Math.min(1, 0.15 + 0.75 * d * (0.75 + 0.25 * fibre))));
+            return d > 0.82 ? Paint.mix(c, rgb(0x0b332b), Math.min(1, (d - 0.82) / 0.18) * 0.85) : c;
+        });
+    }
+
+    /** The periscope's eye for its renderer (entity texture 16x8 units): the iris on the left, the glass glint on the right. */
+    static Paint eye() {
+        Paint p = new Paint(16, 8, 4);
+        iris(p, 4, 4, 3.9);
+        p.discFn(12, 4, 3.9, (u, v) -> {
+            double d = Math.hypot(u - 12, v - 4) / 3.9;
+            int a = (int) Math.round(220 * Math.max(0, 1 - d * d));
+            return a <= 0 ? 0 : argb(a, 0xFFFFFF);
+        });
         return p;
     }
 
@@ -219,7 +265,9 @@ final class Buses {
         socket().save(Forge2.tex("bus_socket"));
         funnel().save(Forge2.tex("bus_funnel"));
         nozzle().save(Forge2.tex("bus_nozzle"));
-        lens().save(Forge2.tex("bus_lens"));
+        lens(false).save(Forge2.tex("bus_lens"));
+        lens(true).save(Forge2.tex("bus_lens_item"));
+        eye().save(Forge2.entityTex("periscope_eye"));
         steel().save(Forge2.tex("bus_steel"));
         for (String old : new String[]{"bus_crystal_cyan", "bus_crystal_violet", "bus_crystal_ice", "bus_vial", "bus_gauge", "bus_lens_2", "bus_flange"}) {
             Files.deleteIfExists(Forge2.tex(old).toPath());

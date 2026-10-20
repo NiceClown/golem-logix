@@ -1,0 +1,9 @@
+{
+  "animation": {
+    "frametime": 2,
+    "width": 48,
+    "height": 48,
+    "interpolate": true
+  },
+  "gauge": {}
+}
