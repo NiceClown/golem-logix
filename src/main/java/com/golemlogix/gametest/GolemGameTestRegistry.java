@@ -48,6 +48,7 @@ public final class GolemGameTestRegistry {
             new Test("arraystructure", GolemGameTests::arrayStructure, 100, 0),
             new Test("arraycapacity", GolemGameTests::arrayCapacity, 100, 0),
             new Test("baretowerstart", GolemGameTests::bareTowerStart, 100, 0),
+            new Test("lonecorelinksdown", GolemGameTests::loneCoreLinksDown, 100, 0),
             new Test("storageneedschannel", GolemGameTests::storageNeedsChannel, 100, 0),
             new Test("pipesandbusesaresteps", GolemGameTests::pipesAndBusesAreSteps, 40, 0),
             new Test("onlydeviceswithchannellookactive", GolemGameTests::onlyDevicesWithChannelLookActive, 100, 0),

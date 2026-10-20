@@ -14,6 +14,8 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.inventory.InventoryMenu;
@@ -57,7 +59,8 @@ public class DistillationTowerRenderer extends com.golemlogix.client.render.Lega
     @Override
     public AABB getRenderBoundingBox(DistillationTowerBlockEntity be) {
         BlockPos p = be.getBlockPos();
-        return new AABB(p.getX() - 0.6, p.getY(), p.getZ() - 0.6, p.getX() + 1.6, p.getY() + 3.3, p.getZ() + 1.6);
+        // the outlet pipes reach over the jars standing against the tower
+        return new AABB(p.getX() - 1.1, p.getY(), p.getZ() - 1.1, p.getX() + 2.1, p.getY() + 3.3, p.getZ() + 2.1);
     }
 
     @Override
@@ -81,9 +84,16 @@ public class DistillationTowerRenderer extends com.golemlogix.client.render.Lega
         float phase = Mth.lerp(partialTick, be.phasePrev, be.phase);
         float time = level.getGameTime() + Math.floorMod(pos.asLong(), 53L) + partialTick;
 
-        pose.pushPose();
-        Quads.faceModel(pose, state.getValue(DistillationTowerBlock.FACING));
         VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
+        // the outlet pipes to the jars, in the world's own directions (before the head is turned to face the tower's front)
+        boolean piped = jarPipes(vc, pose.last(), level, pos, lightTop);
+
+        Direction facing = state.getValue(DistillationTowerBlock.FACING);
+        // the golem's corner (the feed pipe, the valve, the bracket) goes to a free side, see CryoJarRenderer.golemTurn
+        float golemTurn = CryoJarRenderer.golemTurn(level, pos, facing, 2);
+
+        pose.pushPose();
+        Quads.faceModel(pose, facing);
         PoseStack.Pose p = pose.last();
 
         // ---- the plinth
@@ -106,10 +116,13 @@ public class DistillationTowerRenderer extends com.golemlogix.client.render.Lega
         }
         box(vc, p, 1, 14.4f, 1, 15, 15.4f, 15, FRAME, WHITE, light);
         box(vc, p, 1, 33.4f, 1, 15, 34.4f, 15, FRAME, WHITE, light);
-        box(vc, p, -0.6f, 14.4f, 3.2f, 0.8f, 34f, 4.6f, COPPER, WHITE, light);
         float turn = work > 0.05f ? phase * 14f : 0f;
+        pose.pushPose();
+        pose.rotateAround(Axis.YP.rotationDegrees(golemTurn), 0.5f, 0.5f, 0.5f);
+        box(vc, pose.last(), -0.6f, 14.4f, 3.2f, 0.8f, 34f, 4.6f, COPPER, WHITE, light);
         CryoJarRenderer.wheel(vc, pose, -1.2f, 24f, 3.9f, 2.4f, turn, light);
         CryoJarRenderer.platform(vc, pose, -5f, 1.2f, 17.4f, 2.2f, 5.8f, 13.6f, 0.2f, light);
+        pose.popPose();
 
         // ---- the head: louvred brass under snow, icicles, the outlet bent to the right
         box(vc, p, 1.6f, 34.4f, 1.6f, 14.4f, 44f, 14.4f, BRASS, 0xFFD8B880, lightTop);
@@ -123,8 +136,11 @@ public class DistillationTowerRenderer extends com.golemlogix.client.render.Lega
             box(vc, p, 0.1f, 44f - i[1] * 0.8f, i[0], 0.8f, 44f, i[0] + 0.7f, ICE, WHITE, lightTop);
         }
         box(vc, p, 6.6f, 46.6f, 6.6f, 9.4f, 50.2f, 9.4f, BRASS, WHITE, lightTop);
-        box(vc, p, 2.4f, 48f, 6.6f, 6.6f, 50.2f, 9.4f, BRASS, WHITE, lightTop);
-        box(vc, p, 1.6f, 47.6f, 6.2f, 2.6f, 50.6f, 9.8f, ICE, WHITE, lightTop);
+        if (!piped) {
+            // no jar against the tower: the outlet stands open, bent to the right
+            box(vc, p, 2.4f, 48f, 6.6f, 6.6f, 50.2f, 9.4f, BRASS, WHITE, lightTop);
+            box(vc, p, 1.6f, 47.6f, 6.2f, 2.6f, 50.6f, 9.8f, ICE, WHITE, lightTop);
+        }
         box(vc, p, 6.2f, 50.2f, 6.2f, 9.8f, 50.8f, 9.8f, ICE, WHITE, lightTop);
 
         // ---- inside the glass: the coil, then (translucent) the blood and the glass itself
@@ -132,14 +148,18 @@ public class DistillationTowerRenderer extends com.golemlogix.client.render.Lega
         // the golem last: its own buffer ends the one above
         float reach = work > 0.05f ? -1.2f + 0.15f * Mth.sin(phase * 0.7f) : -0.85f;
         CopperGolemPuppet.Arms arms = new CopperGolemPuppet.Arms(reach, 0.25f, reach, -0.25f, 0.2f * Mth.sin(time * 0.013f));
+        pose.pushPose();
+        pose.rotateAround(Axis.YP.rotationDegrees(golemTurn), 0.5f, 0.5f, 0.5f);
         CopperGolemPuppet.render(pose, buffers, light, new Vector3f(-3.2f / 16f, 18f / 16f, 3.9f / 16f), new Vector3f(1f, 0f, 0f),
                 new Vector3f(0f, 1f, 0f), 0.45f, new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.1f), 1, null, arms);
+        pose.popPose();
         VertexConsumer tv = buffers.getBuffer(RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
         if (blood > 0.002f) {
             float top = COLUMN_BOTTOM + 0.6f + 7f * Math.min(1f, blood);
             box(tv, p, 2.8f, COLUMN_BOTTOM + 0.6f, 2.8f, 13.2f, top, 13.2f, BLOOD, 0xE8901018, light);
         }
-        box(tv, p, 2.6f, 15.4f, 2.6f, 13.4f, 33.4f, 13.4f, GLASS, 0x80F0F4FF, light);
+        // a hair inside the frame rings (their faces are at 15.4 and 33.4: glass in the same planes flickered)
+        box(tv, p, 2.6f, 15.43f, 2.6f, 13.4f, 33.37f, 13.4f, GLASS, 0x80F0F4FF, light);
         pose.popPose();
     }
 
@@ -170,5 +190,44 @@ public class DistillationTowerRenderer extends com.golemlogix.client.render.Lega
         float g = 0.2f + 0.5f * work * (0.8f + 0.2f * Mth.sin(time * 0.2f));
         int core = 0xFF000000 | ((int) (0x60 * g) << 16) | ((int) (0xC8 * g) << 8) | (int) (0xFF * g);
         box(vc, pose.last(), 7.4f, COLUMN_BOTTOM + 2f, 7.4f, 8.6f, COLUMN_TOP - 1.5f, 8.6f, GLOW, core, LightCoordsUtil.FULL_BRIGHT);
+    }
+
+    /**
+     * The outlet pipes to the Cryo-Source Jars standing right against the plinth (on the same ground): from the riser on the head a
+     * pipe runs over to each jar, bends down in a brass elbow and drops into the jar's vent. Returns whether any jar is piped.
+     * Pixels in the world's own frame of the plinth block (0..16, Y 0..48).
+     */
+    private static boolean jarPipes(VertexConsumer vc, PoseStack.Pose p, Level level, BlockPos base, int light) {
+        boolean any = false;
+        for (Direction d : Direction.Plane.HORIZONTAL) {
+            BlockState s = level.getBlockState(base.relative(d));
+            // a jar on the same ground; the pipe passes through the block over the jar, so that one must be empty
+            if (!(s.getBlock() instanceof com.golemlogix.blocks.CryoJarBlock)
+                    || s.getValue(com.golemlogix.blocks.CryoJarBlock.HALF) != DoubleBlockHalf.LOWER
+                    || !level.getBlockState(base.relative(d).above(2)).isAir()) {
+                continue;
+            }
+            any = true;
+            // along the pipe (from the tower's centre outwards), across it, and the height
+            run(vc, p, d, 1.4f, 14.4f, 1.0f, 47.8f, 49.8f, BRASS, WHITE, light);
+            run(vc, p, d, 7.4f, 8.4f, 1.3f, 47.5f, 50.1f, ICE, WHITE, light);
+            run(vc, p, d, 14.4f, 17.6f, 1.6f, 47.2f, 50.4f, BRASS, 0xFFE8C878, light);
+            // down to the top of the jar's vent (its icy cap ends at 32.4 px)
+            run(vc, p, d, 14.8f, 17.2f, 1.2f, 32.4f, 47.2f, BRASS, WHITE, light);
+            run(vc, p, d, 14.6f, 17.4f, 1.4f, 38.6f, 39.4f, ICE, WHITE, light);
+        }
+        return any;
+    }
+
+    /** A box along direction d: from u0 to u1 pixels out of the block centre, half as wide as w across, from y0 to y1. */
+    private static void run(VertexConsumer vc, PoseStack.Pose p, Direction d, float u0, float u1, float w, float y0, float y1,
+                            Identifier tex, int tint, int light) {
+        float a0 = 8 + (d.getAxisDirection() == Direction.AxisDirection.POSITIVE ? u0 : -u1);
+        float a1 = 8 + (d.getAxisDirection() == Direction.AxisDirection.POSITIVE ? u1 : -u0);
+        if (d.getAxis() == Direction.Axis.X) {
+            box(vc, p, a0, y0, 8 - w, a1, y1, 8 + w, tex, tint, light);
+        } else {
+            box(vc, p, 8 - w, y0, a0, 8 + w, y1, a1, tex, tint, light);
+        }
     }
 }

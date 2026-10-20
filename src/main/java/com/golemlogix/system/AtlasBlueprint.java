@@ -15,7 +15,7 @@ import java.util.Map;
 
 /**
  * Atlas Array blueprint for the book and the build "ghosts": a list of cells relative to the central bushing of the base
- * (0, 0, 0) and the list of needed items. The TOWER variant is the 8-channel starter tower, FULL the whole 3x3x4 array.
+ * (0, 0, 0) and the list of needed items. The TOWER variant is the 16-channel starter tower, FULL the whole 3x3x4 array.
  */
 public final class AtlasBlueprint {
     public enum Variant {TOWER, FULL, SATURATOR, MAINFRAME, CATALOG}

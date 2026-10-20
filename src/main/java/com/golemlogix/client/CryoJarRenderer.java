@@ -41,8 +41,11 @@ public class CryoJarRenderer extends com.golemlogix.client.render.LegacyBer<Cryo
             GLASS = tex("sat_glass"), RUNES = tex("cryo_panel_matrix"), GAUGE = tex("monitor_gauge"), FRAME = mc("weathered_copper"),
             SNOW = mc("snow"), CRYO = tex("cryo_source_still"), COPPER = mc("copper_block");
     static final int BRICK_TINT = 0xFFC89A8A, WHITE = 0xFFFFFFFF;
-    /** The flask's inside, where the Source stands. */
-    private static final float FLASK_BOTTOM = 8.5f, FLASK_TOP = 21.5f;
+    /**
+     * The flask's inside, where the Source stands: a hair inside the frame rings (the rings' faces are at 8.5 and 21.5; the glass and
+     * the Source lying in the same planes flickered).
+     */
+    private static final float FLASK_BOTTOM = 8.56f, FLASK_TOP = 21.44f;
 
     static Identifier tex(String name) {
         return Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/" + name);
@@ -74,9 +77,14 @@ public class CryoJarRenderer extends com.golemlogix.client.render.LegacyBer<Cryo
         float time = level.getGameTime() + Math.floorMod(pos.asLong(), 61L) + partialTick;
         boolean charged = be.clientSource() > 0;
 
-        pose.pushPose();
-        Quads.faceModel(pose, state.getValue(CryoJarBlock.FACING));
         VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
+        // brass sockets where network pipes dock onto the jar (in the world's own directions)
+        boolean pipeAbove = sockets(vc, pose.last(), level, pos, light);
+        Direction facing = state.getValue(CryoJarBlock.FACING);
+        float golemTurn = golemTurn(level, pos, facing, 2);
+
+        pose.pushPose();
+        Quads.faceModel(pose, facing);
         PoseStack.Pose p = pose.last();
 
         // the plinth: a dark foot, brick walls, a rune band on the front, a ledge
@@ -100,8 +108,11 @@ public class CryoJarRenderer extends com.golemlogix.client.render.LegacyBer<Cryo
         }
         box(vc, p, 1.8f, 7.6f, 1.8f, 14.2f, 8.5f, 14.2f, FRAME, WHITE, light);
         box(vc, p, 1.8f, 21.5f, 1.8f, 14.2f, 22.4f, 14.2f, FRAME, WHITE, light);
-        // the valve pipe up the right front post, with its wheel
-        box(vc, p, 1.1f, 9f, 2.3f, 2.1f, 20.5f, 3.3f, COPPER, WHITE, light);
+        // the valve pipe up the right front post, with its wheel (all of the golem's corner turns to a free side, see golemTurn)
+        pose.pushPose();
+        pose.rotateAround(Axis.YP.rotationDegrees(golemTurn), 0.5f, 0.5f, 0.5f);
+        box(vc, pose.last(), 1.1f, 9f, 2.3f, 2.1f, 20.5f, 3.3f, COPPER, WHITE, light);
+        pose.popPose();
 
         // the cap: brass with louvres, snow on top, icicles, the vent pipe
         box(vc, p, 2.2f, 22.4f, 2.2f, 13.8f, 28f, 13.8f, BRASS, 0xFFD8B880, light);
@@ -112,17 +123,22 @@ public class CryoJarRenderer extends com.golemlogix.client.render.LegacyBer<Cryo
         for (float[] i : new float[][]{{2.4f, 1.6f}, {5.2f, 0.9f}, {8.6f, 2.1f}, {11.8f, 1.2f}}) {
             box(vc, p, i[0], 28f - i[1], 1.2f, i[0] + 0.6f, 28f, 1.8f, ICE, WHITE, light);
         }
-        box(vc, p, 6.8f, 29.4f, 6.8f, 9.2f, 31.4f, 9.2f, BRASS, WHITE, light);
-        box(vc, p, 6.6f, 31.4f, 6.6f, 9.4f, 32.4f, 9.4f, ICE, WHITE, light);
+        if (!pipeAbove) {
+            box(vc, p, 6.8f, 29.4f, 6.8f, 9.2f, 31.4f, 9.2f, BRASS, WHITE, light);
+            box(vc, p, 6.6f, 31.4f, 6.6f, 9.4f, 32.4f, 9.4f, ICE, WHITE, light);
+        }
 
         // the golem on its bracket at the right side, its hands on the wheel; now and then it gives it a turn
         float turn = turnAngle(time, charged);
+        pose.pushPose();
+        pose.rotateAround(Axis.YP.rotationDegrees(golemTurn), 0.5f, 0.5f, 0.5f);
         wheel(vc, pose, 0.6f, 14.2f, 2.8f, 2.1f, turn, light);
         platform(vc, pose, -3.4f, 2.0f, 10.6f, 1.2f, 4.4f, 6.8f, 0.8f, light);
         float reach = charged ? -1.15f + 0.12f * Mth.sin(turn * Mth.DEG_TO_RAD) : -0.9f;
         CopperGolemPuppet.Arms arms = new CopperGolemPuppet.Arms(reach, 0.2f, reach, -0.2f, 0.15f * Mth.sin(time * 0.017f));
         CopperGolemPuppet.render(pose, buffers, light, new Vector3f(-1.8f / 16f, 11.2f / 16f, 2.8f / 16f), new Vector3f(1f, 0f, 0f),
                 new Vector3f(0f, 1f, 0f), 0.36f, new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.08f), 1, null, arms);
+        pose.popPose();
 
         // the Cryo-Source and the glass over it
         VertexConsumer tv = buffers.getBuffer(RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
@@ -131,8 +147,62 @@ public class CryoJarRenderer extends com.golemlogix.client.render.LegacyBer<Cryo
             int c = 0xE0FFFFFF;
             box(tv, p, 3.4f, FLASK_BOTTOM, 3.4f, 12.6f, top, 12.6f, CRYO, c, LightCoordsUtil.FULL_BRIGHT);
         }
-        box(tv, p, 3.0f, 8.5f, 3.0f, 13.0f, 21.5f, 13.0f, GLASS, 0x90E8F8FF, light);
+        box(tv, p, 3.0f, 8.53f, 3.0f, 13.0f, 21.47f, 13.0f, GLASS, 0x90E8F8FF, light);
         pose.popPose();
+    }
+
+    /**
+     * The extra turn (degrees about the vertical axis, in the model's frame) for a golem's corner: the bracket, the valve and the golem
+     * sit on the right side (the model's -X); when a block stands there (a tower, another jar, a pipe) they move to the left, the back
+     * or the front, whichever is free first. height: how many blocks up the golem reaches beside the machine.
+     */
+    static float golemTurn(Level level, BlockPos pos, Direction facing, int height) {
+        Direction[] sides = {facing.getCounterClockWise(), facing.getClockWise(), facing.getOpposite(), facing};
+        float[] turns = {0f, 180f, 90f, 270f};
+        for (int i = 0; i < sides.length; i++) {
+            boolean free = true;
+            for (int k = 0; k < height && free; k++) {
+                BlockPos q = pos.above(k).relative(sides[i]);
+                free = level.getBlockState(q).getCollisionShape(level, q).isEmpty();
+            }
+            if (free) {
+                return turns[i];
+            }
+        }
+        return 0f;
+    }
+
+    /**
+     * Brass sockets where network pipes dock onto the jar: on the sides of both halves and on the cap (where the vent pipe then gives
+     * way to the socket). Pixels in the world's own frame of the lower half (Y 0..32). Returns whether a pipe docks from above.
+     */
+    private static boolean sockets(VertexConsumer vc, PoseStack.Pose p, Level level, BlockPos pos, int light) {
+        boolean above = false;
+        for (int half = 0; half < 2; half++) {
+            for (Direction d : Direction.values()) {
+                if (d == Direction.DOWN || (d == Direction.UP && half == 0)) {
+                    continue;
+                }
+                BlockState n = level.getBlockState(pos.above(half).relative(d));
+                if (!(n.getBlock() instanceof com.golemlogix.blocks.SnowPipeBlock)
+                        || n.getValue(com.golemlogix.blocks.SnowPipeBlock.LINKS.get(d.getOpposite())) != com.golemlogix.blocks.SnowPipeBlock.Link.DEVICE) {
+                    continue;
+                }
+                if (d == Direction.UP) {
+                    above = true;
+                    box(vc, p, 4.4f, 29.4f, 4.4f, 11.6f, 32f, 11.6f, BRASS, 0xFFE8C878, light);
+                    continue;
+                }
+                // from the block's face 3 px in (to the glass), around the pipe's axis at the middle of the half
+                float y = half * 16 + 8, a0 = d.getAxisDirection() == Direction.AxisDirection.POSITIVE ? 13f : 0f, a1 = a0 + 3f;
+                if (d.getAxis() == Direction.Axis.X) {
+                    box(vc, p, a0, y - 3.6f, 4.4f, a1, y + 3.6f, 11.6f, BRASS, 0xFFE8C878, light);
+                } else {
+                    box(vc, p, 4.4f, y - 3.6f, a0, 11.6f, y + 3.6f, a1, BRASS, 0xFFE8C878, light);
+                }
+            }
+        }
+        return above;
     }
 
     /** Degrees the valve wheel has turned: a quarter turn every few seconds while the jar holds Source, otherwise still. */

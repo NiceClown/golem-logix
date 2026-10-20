@@ -75,6 +75,7 @@ public enum ChannelProvider implements IBlockComponentProvider {
             }
             t.putInt("netUsed", net.channelsUsed());
             t.putInt("netMax", net.channelCapacity());
+            t.putBoolean("tower", net.isTower());
             data.put(TAG, t);
         }
 

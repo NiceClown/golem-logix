@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.0.1 (26.1.2) — The core grows step by step; the tower pipes its jars
+
+- **Three steps of the Atlas Core.** The core alone runs a small network of **8 channels** and connects only through its bottom
+  face (a pipe, a bushing or a device right under it). On a **starter tower** (two conduits and a Cable Bushing under it) it gives
+  **16 channels**; the whole Atlas Array keeps its 64 channels a bushing, and the expanders raise them as before. Right-clicking the
+  core and Jade say which step it is on and what to build next.
+- **The guide's Atlas chapter goes step by step**: the core, the starter tower, the whole array, the expanders, with the bushings,
+  conduits, Atlants and diagnostics branching off.
+- **The Cryo-Distillation Tower pipes its jars**: from the riser on its head a pipe runs over to every Cryo-Source Jar standing right
+  against the plinth (on any side) and drops into the jar's vent. The guide now says plainly that jars must stand against the tower.
+- **Network pipes dock onto Cryo-Source Jars** (and the Creative Source Jar) with a brass socket, on the sides and on the cap.
+- **The copper golems step aside**: when a jar, a tower or a pipe stands where a golem of the tower or a jar would be, the golem,
+  its bracket and its valve move to the first free side.
+- The flask of the Cryo-Source Jar and the glass of the tower's column no longer flicker (they lay in the same planes as the frame
+  rings).
+- 108 game tests.
+
 ## 2.0.0 (26.1.2) — Golem Logix on Minecraft 26.1.2
 
 The main line of Golem Logix now runs on Minecraft 26.1.2 and NeoForge 26.1.2 (Java 25). The 1.21.1 version stays in the branch

@@ -206,8 +206,14 @@ public class GolemGameTests {
         });
     }
 
+    /** The core alone on a Cable Bushing (no conduits, so no starter tower): 8 channels, all through the bushing under it. */
+    private static void loneCoreOnBushing(GameTestHelper helper) {
+        put(helper, ORIGIN.above(), ModBlocks.ATLAS_CORE.get());
+        put(helper, ORIGIN, ModBlocks.CABLE_BUSHING.get());
+    }
+
     public static void bareTowerStart(GameTestHelper helper) {
-        // a "tower" without the array: core, two conduits, central bushing = 8 channels at the start
+        // the starter tower: core, two conduits, central bushing = 16 channels; 17 terminals in two rows along the bushing
         put(helper, CORE, ModBlocks.ATLAS_CORE.get());
         put(helper, ORIGIN.offset(0, 2, 0), ModBlocks.ATLAS_CONDUIT.get());
         put(helper, ORIGIN.offset(0, 1, 0), ModBlocks.ATLAS_CONDUIT.get());
@@ -215,24 +221,56 @@ public class GolemGameTests {
         powered(helper);
         for (int i = 1; i <= 9; i++) {
             put(helper, ORIGIN.east(i), ModBlocks.ANALOG_TERMINAL.get());
+            if (i <= 8) {
+                put(helper, ORIGIN.east(i).south(), ModBlocks.ANALOG_TERMINAL.get());
+            }
         }
         helper.runAfterDelay(5, () -> {
             GolemNetwork n = net(helper, ORIGIN);
-            helper.assertTrue(!n.structure().valid(), "no array yet");
-            helper.assertTrue(n.channelCapacity() == GolemNetwork.BARE_CORE_CHANNELS, "bare capacity " + n.channelCapacity());
-            helper.assertTrue(n.channelsUsed() == 8, "8 of 9 terminals work, got " + n.channelsUsed());
-            helper.assertTrue(!n.isDeviceActive(helper.absolutePos(ORIGIN.east(9))), "9th terminal inactive");
+            helper.assertTrue(!n.structure().valid() && n.isTower(), "a starter tower, no array yet");
+            helper.assertTrue(n.channelCapacity() == GolemNetwork.TOWER_CHANNELS && n.lineCapacity() == GolemNetwork.TOWER_CHANNELS,
+                    "tower capacity " + n.channelCapacity() + " / line " + n.lineCapacity());
+            helper.assertTrue(n.channelsUsed() == 16, "16 of 17 terminals work, got " + n.channelsUsed());
             helper.assertTrue(n.isOnline(), "powered");
             helper.succeed();
         });
     }
 
+    /**
+     * The Atlas Core alone: 8 channels, and it connects only through its bottom face (a pipe under it docks, one beside it does not).
+     * A pipe docks onto a Cryo-Source Jar too (the network draws Source from it).
+     */
+    public static void loneCoreLinksDown(GameTestHelper helper) {
+        BlockPos core = new BlockPos(5, 3, 5), below = core.below(), side = core.west(), term = new BlockPos(5, 1, 5), lost = core.east();
+        // the pipes first: placed by code they take their links from the neighbours placed after them (a player's pipe looks at once)
+        put(helper, below, ModBlocks.BASIC_SNOW_PIPE.get());
+        put(helper, side, ModBlocks.BASIC_SNOW_PIPE.get());
+        put(helper, core, ModBlocks.ATLAS_CORE.get());
+        put(helper, term, ModBlocks.ANALOG_TERMINAL.get());
+        put(helper, lost, ModBlocks.ANALOG_TERMINAL.get());
+        powered(helper);
+        BlockPos jarPipe = new BlockPos(2, 1, 2);
+        put(helper, jarPipe, ModBlocks.BASIC_SNOW_PIPE.get());
+        com.golemlogix.blocks.CryoJarBlock.place(helper.getLevel(), helper.absolutePos(jarPipe.east()), Direction.SOUTH, ModBlocks.CRYO_SOURCE_JAR.get());
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, term);
+            helper.assertTrue(n.hasCore() && !n.isTower() && n.channelCapacity() == GolemNetwork.BARE_CORE_CHANNELS,
+                    "the core alone gives " + GolemNetwork.BARE_CORE_CHANNELS + ", got " + n.channelCapacity());
+            helper.assertTrue(n.isDeviceActive(helper.absolutePos(term)), "the terminal under the core works");
+            helper.assertTrue(!n.contains(helper.absolutePos(lost)), "a terminal beside the core is not connected");
+            var links = com.golemlogix.blocks.SnowPipeBlock.LINKS;
+            var dev = com.golemlogix.blocks.SnowPipeBlock.Link.DEVICE;
+            helper.assertTrue(helper.getBlockState(below).getValue(links.get(Direction.UP)) == dev, "the pipe under the core docks onto it");
+            helper.assertTrue(helper.getBlockState(side).getValue(links.get(Direction.EAST)) == com.golemlogix.blocks.SnowPipeBlock.Link.NONE,
+                    "a pipe beside the core does not");
+            helper.assertTrue(helper.getBlockState(jarPipe).getValue(links.get(Direction.EAST)) == dev, "a pipe docks onto a Cryo-Source Jar");
+            helper.succeed();
+        });
+    }
+
     public static void storageNeedsChannel(GameTestHelper helper) {
-        // an 8-channel tower: 8 terminals took them all, the cabinet came ninth and got no channel, so it does not count as storage
-        put(helper, CORE, ModBlocks.ATLAS_CORE.get());
-        put(helper, ORIGIN.offset(0, 2, 0), ModBlocks.ATLAS_CONDUIT.get());
-        put(helper, ORIGIN.offset(0, 1, 0), ModBlocks.ATLAS_CONDUIT.get());
-        put(helper, ORIGIN, ModBlocks.CABLE_BUSHING.get());
+        // the core alone on a bushing (8 channels): 8 terminals took them all, the cabinet came ninth and got no channel, so it does not count as storage
+        loneCoreOnBushing(helper);
         powered(helper);
         for (int i = 1; i <= 8; i++) {
             put(helper, ORIGIN.east(i), ModBlocks.ANALOG_TERMINAL.get());
@@ -280,18 +318,15 @@ public class GolemGameTests {
     }
 
     public static void onlyDevicesWithChannelLookActive(GameTestHelper helper) {
-        // an 8-channel tower with 10 terminals: the ninth and tenth must not "light up" (before, every node got the flag)
-        put(helper, CORE, ModBlocks.ATLAS_CORE.get());
-        put(helper, ORIGIN.offset(0, 2, 0), ModBlocks.ATLAS_CONDUIT.get());
-        put(helper, ORIGIN.offset(0, 1, 0), ModBlocks.ATLAS_CONDUIT.get());
-        put(helper, ORIGIN, ModBlocks.CABLE_BUSHING.get());
+        // the core alone (8 channels) with 10 terminals: the ninth and tenth must not "light up" (before, every node got the flag)
+        loneCoreOnBushing(helper);
         powered(helper);
         for (int i = 1; i <= 10; i++) {
             put(helper, ORIGIN.east(i), ModBlocks.ANALOG_TERMINAL.get());
         }
         helper.runAfterDelay(5, () -> {
-            var core = helper.getBlockEntity(CORE, com.golemlogix.blockentity.AtlasCoreBlockEntity.class);
-            core.refresh(helper.getLevel(), helper.absolutePos(CORE));
+            var core = helper.getBlockEntity(ORIGIN.above(), com.golemlogix.blockentity.AtlasCoreBlockEntity.class);
+            core.refresh(helper.getLevel(), helper.absolutePos(ORIGIN.above()));
             int lit = 0;
             for (int i = 1; i <= 10; i++) {
                 if (helper.getLevel().getBlockState(helper.absolutePos(ORIGIN.east(i))).getValue(com.golemlogix.blocks.GolemProperties.ACTIVE)) {
@@ -525,12 +560,9 @@ public class GolemGameTests {
         });
     }
 
-    /** As in AE2, dense runs are served first: in an 8-channel tower the far devices on a dense pipe win over near ones on a basic pipe. */
+    /** As in AE2, dense runs are served first: with the core's 8 channels the far devices on a dense pipe win over near ones on a basic pipe. */
     public static void denseRunsComeFirst(GameTestHelper helper) {
-        put(helper, CORE, ModBlocks.ATLAS_CORE.get());
-        put(helper, ORIGIN.offset(0, 2, 0), ModBlocks.ATLAS_CONDUIT.get());
-        put(helper, ORIGIN.offset(0, 1, 0), ModBlocks.ATLAS_CONDUIT.get());
-        put(helper, ORIGIN, ModBlocks.CABLE_BUSHING.get());
+        loneCoreOnBushing(helper);
         powered(helper);
         // west: a basic pipe with 4 terminals right next to the bushing
         put(helper, new BlockPos(4, 1, 5), ModBlocks.BASIC_SNOW_PIPE.get());
@@ -549,7 +581,7 @@ public class GolemGameTests {
         }
         helper.runAfterDelay(5, () -> {
             GolemNetwork n = net(helper, near[0]);
-            helper.assertTrue(n.channelsUsed() == 8, "a tower has 8 channels, got " + n.channelsUsed());
+            helper.assertTrue(n.channelsUsed() == 8, "the core alone has 8 channels, got " + n.channelsUsed());
             for (BlockPos p : far) {
                 helper.assertTrue(n.isDeviceActive(helper.absolutePos(p)), "far terminal on the dense run has a channel: " + p);
             }
@@ -591,7 +623,7 @@ public class GolemGameTests {
                 BlockPos abs = helper.absolutePos(p);
                 helper.assertTrue(fromA.isDeviceActive(abs) == fromB.isDeviceActive(abs), "the same channels from both ends: " + p);
             }
-            helper.assertTrue(fromA.channelsUsed() == 5, "five terminals on 8 channels, got " + fromA.channelsUsed());
+            helper.assertTrue(fromA.channelsUsed() == 5, "five terminals on a tower's 16 channels, got " + fromA.channelsUsed());
             var coreB = helper.getBlockEntity(new BlockPos(9, 4, 9), com.golemlogix.blockentity.AtlasCoreBlockEntity.class);
             var coreA = helper.getBlockEntity(CORE, com.golemlogix.blockentity.AtlasCoreBlockEntity.class);
             coreB.refresh(helper.getLevel(), helper.absolutePos(new BlockPos(9, 4, 9)));

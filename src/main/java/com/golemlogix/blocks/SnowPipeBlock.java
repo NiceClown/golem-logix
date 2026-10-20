@@ -230,6 +230,10 @@ public class SnowPipeBlock extends Block implements com.golemlogix.blocks.Remova
         if (neighborState.getBlock() instanceof EternalFrostResonatorBlock) {
             return Link.DEVICE;
         }
+        // Source jars are not nodes either, but the network draws Source from them through the pipe: it docks onto them
+        if (neighborState.getBlock() instanceof CryoJarBlock || neighborState.getBlock() instanceof CreativeSourceJarBlock) {
+            return Link.DEVICE;
+        }
         if (neighborState.getBlock() instanceof SnowPipeBlock other) {
             // pipes of different thickness: the thin one enters the adapter washer on the dense one's end with its cuff, without a gap
             if (other.isDense == this.isDense) {
