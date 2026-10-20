@@ -16,6 +16,7 @@ The main line of Golem Logix now runs on Minecraft 26.1.2 and NeoForge 26.1.2 (J
 - **Data packs**: recipe ingredients use the 26.1 format (an item id, a `#tag` or a list of ids instead of `{"item": ...}`);
   `golem_logix:saturator` and `golem_logix:anvil_crushing` recipes written for 1.21.1 need the same change.
 - The JEI anvil page draws the golem pressed down under the anvil (26.1 draws entities in GUIs into their own picture).
+- The empty Curios Chronometer slot shows the outline of our Chronometer instead of a pocket watch.
 - 107 game tests, all passing with and without JEI, Jade, Curios and Neo Vitae.
 
 ## 2.0.0 (1.21.1) — The tower window; the last big release for 1.21.1
