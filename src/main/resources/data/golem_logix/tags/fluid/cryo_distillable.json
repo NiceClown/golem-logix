@@ -1,0 +1,6 @@
+{
+  "values": [
+    {"id": "neovitae:essentia_vitae_source", "required": false},
+    {"id": "neovitae:essentia_vitae_flowing", "required": false}
+  ]
+}

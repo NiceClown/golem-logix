@@ -1,0 +1,27 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "neovitae"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "I": { "item": "minecraft:snow_block" },
+    "F": { "item": "golem_logix:flattened_iron_core" },
+    "C": { "tag": "c:storage_blocks/copper" },
+    "G": { "tag": "c:glass_blocks" },
+    "B": { "item": "minecraft:bricks" },
+    "T": { "item": "neovitae:tabula_rasa" }
+  },
+  "pattern": [
+    "IFI",
+    "CGC",
+    "BTB"
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:cryo_distillation_tower"
+  }
+}

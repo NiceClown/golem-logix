@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.1.9 — Cryo-Distillation: Source from blood
+
+Source without Ars Nouveau (for packs and versions where it is not there), with Neo Vitae. Ars Nouveau jars keep working: both feed
+the same network.
+
+- **Cryo-Distillation Tower** (three blocks high, placed as one): pour **Essentia Vitae** into any of its blocks (pipes from an Ara
+  Vitae, our buses, buckets; it only takes blood and never gives it back). It literally freezes the living warmth and chaos out of
+  the blood: 20 mB a second become 20 Source, poured into the jars touching it. A coil inside glows from blood red to ice cyan,
+  frost breathes from the louvres, a copper golem turns the valve.
+- **Cryo-Source Jar** (two blocks high): holds 10 000 Source and feeds the network, the Saturator, the Forge Hammer and the
+  Chronometer like an Ars Nouveau jar; a comparator reads its level, a click shows it.
+- Both are crafted only with Neo Vitae installed (the tower needs a Tabula Rasa from the Ara Vitae); with Neo Vitae the network
+  needs Source even without Ars Nouveau. The blood is the fluid tag `golem_logix:cryo_distillable` (a modpack can add another
+  mod's blood); the rate, Source per mB and the jar size are in the config.
+- A new guide entry (Cryo-Distillation), JEI info pages; 2 new game tests (108 in all), `-Pvitae` runs them with Neo Vitae.
+
 ## 1.1.8 — The foreman comes back
 
 - **The atlant-headed foreman shows up again on a big speed-up.** In the Cryo-Calculator and the Cryo-Mainframe he was called only

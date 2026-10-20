@@ -44,6 +44,8 @@ public class ModCreativeTabs {
                         output.accept(ModBlocks.QUANTUM_CHANNEL_EXPANDER.get());
                         output.accept(ModBlocks.CREATIVE_SOURCE_JAR.get());
                         output.accept(ModBlocks.ETERNAL_FROST_RESONATOR.get());
+                        output.accept(ModBlocks.CRYO_SOURCE_JAR.get());
+                        output.accept(ModBlocks.CRYO_DISTILLATION_TOWER.get());
                         output.accept(ModBlocks.MANA_SATURATOR.get());
                         output.accept(ModItems.FORGE_HAMMER.get());
 

@@ -331,6 +331,14 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         var level = net.minecraft.client.Minecraft.getInstance().level;
         var manager = level == null ? null : level.getRecipeManager();
 
+        // 0. Cryo-distillation (Source from blood): a page on the tower and the jar where a blood mod is there
+        if (com.golemlogix.system.SourceHelper.distillationAvailable()) {
+            registration.addIngredientInfo(new ItemStack(com.golemlogix.init.ModBlocks.CRYO_DISTILLATION_TOWER.get()),
+                    mezz.jei.api.constants.VanillaTypes.ITEM_STACK, Component.translatable("jei.golem_logix.info.distillation_tower"));
+            registration.addIngredientInfo(new ItemStack(com.golemlogix.init.ModBlocks.CRYO_SOURCE_JAR.get()),
+                    mezz.jei.api.constants.VanillaTypes.ITEM_STACK, Component.translatable("jei.golem_logix.info.cryo_jar"));
+        }
+
         // 1. Anvil rituals: the golem ones from the data packs (golem_logix:anvil_crushing); the Wither one is secret and hidden
         //    until the secret is revealed
         List<AnvilCrushRecipe> anvilRecipes = new java.util.ArrayList<>();

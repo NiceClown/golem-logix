@@ -1,0 +1,25 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "neovitae"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "N": { "tag": "c:ingots/gold" },
+    "C": { "tag": "c:ingots/copper" },
+    "G": { "tag": "c:glass_blocks" },
+    "B": { "item": "minecraft:bricks" }
+  },
+  "pattern": [
+    " N ",
+    "CGC",
+    "BBB"
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:cryo_source_jar"
+  }
+}

@@ -26,5 +26,12 @@ public final class ModCapabilities {
         // Interface: handing out stock and taking into the network, from any side
         event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ModBlockEntities.INTERFACE.get(), (be, side) -> be.automation());
         event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ModBlockEntities.INTERFACE.get(), (be, side) -> be.fluids());
+        // Cryo-Distillation Tower: blood goes in through any of its blocks
+        event.registerBlock(Capabilities.FluidHandler.BLOCK,
+                (level, pos, state, be, side) -> {
+                    var tower = com.golemlogix.blocks.DistillationTowerBlock.entityOf(level, pos, state);
+                    return tower == null ? null : tower.input();
+                },
+                ModBlocks.CRYO_DISTILLATION_TOWER.get());
     }
 }

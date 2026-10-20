@@ -36,6 +36,7 @@
              "text": [
                "There is no RF or FE here. The whole network runs on magical &lSource&r from Ars Nouveau. A source can be:",
                "• a Source Jar (or any Ars Nouveau machine holding Source),",
+               "• a &lCryo-Source Jar&r filled by a Cryo-Distillation Tower (with Neo Vitae, see Cryo-Distillation),",
                "• the &lCreative Source Jar&r - infinite, for testing.",
                "The source must touch &lany block of the network&r (a bushing, bus, pipe, cabinet...).",
                "&oThe Eternal Frost Resonator does not feed the network: it sends Source through the aether to Portable Chronometers (see “Chronometer and late game”).&r"
@@ -47,7 +48,7 @@
                "Example: 40 used channels cost 1 + 10 = 11 Source per second.",
                "Infinite sources cost nothing. When Source runs out the core goes dark and the whole network falls asleep: terminals refuse to open, buses stop, calculators halt. As soon as the flow returns, everything resumes by itself.",
                "Every autocrafting step costs Source too - &l2 units&r.",
-               "&oWithout Ars Nouveau there is nowhere to get Source, so the network, the Saturator and the Chronometer work for free.&r"
+               "&oWithout Ars Nouveau and without Neo Vitae there is nowhere to get Source, so the network, the Saturator and the Chronometer work for free.&r"
              ]}
           ]
         },
@@ -110,6 +111,28 @@
                "&lBold&r marks block names and important numbers.",
                "&oItalics&r are tips and remarks."
              ]}
+          ]
+        },
+        {
+          "id": "distillation", "title": "Cryo-Distillation", "icon": "golem_logix:cryo_distillation_tower", "x": 1, "y": -1, "parents": ["source"],
+          "requires": "neovitae",
+          "pages": [
+            {"type": "text", "title": "Source from blood",
+             "text": [
+               "Where there is no Ars Nouveau, the network drinks from &lNeo Vitae&r instead.",
+               "The &lCryo-Distillation Tower&r literally freezes all the living warmth and chaos out of blood. Pure crystalline magic settles out of it and condenses into icy &lCryo-Source&r.",
+               "&oBoth ways work side by side: Ars jars and Cryo-Source Jars feed the same network.&r"
+             ]},
+            {"type": "text", "title": "How it works",
+             "text": [
+               "Pour &lEssentia Vitae&r into the tower through any of its three blocks: pipes from an Ara Vitae, our buses, buckets. It holds &l8000 mB&r.",
+               "Every second it distils &l20 mB&r into &l20 Source&r and pours it into the &lCryo-Source Jars&r (or Ars jars) touching it. When the jars are full it waits.",
+               "A jar holds &l10 000 Source&r. Put it against any block of the network, like an Ars jar."
+             ]},
+            {"type": "crafting", "recipe": "golem_logix:cryo_distillation_tower",
+             "text": ["Three blocks high: a rune plinth, a glass column with the coil, a brass head under snow. A Tabula Rasa from the Ara Vitae seals the plinth."]},
+            {"type": "crafting", "recipe": "golem_logix:cryo_source_jar",
+             "text": ["Two blocks high. Click it to see how much Source it holds; a comparator reads its level."]}
           ]
         }
       ]

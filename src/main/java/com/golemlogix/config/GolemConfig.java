@@ -27,13 +27,17 @@ public final class GolemConfig {
     public static final ModConfigSpec.IntValue BUS_FLUID_PER_OPERATION;
     public static final ModConfigSpec.IntValue BUS_INTERVAL_TICKS;
     public static final ModConfigSpec.IntValue LOCAL_WIRELESS_RANGE;
+    public static final ModConfigSpec.IntValue CRYO_JAR_CAPACITY;
+    public static final ModConfigSpec.IntValue DISTILL_RATE;
+    public static final ModConfigSpec.DoubleValue DISTILL_SOURCE_PER_MB;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
 
         b.push("network");
         REQUIRE_SOURCE = b.comment("If false the network and the Mana Saturator work without any Source (creative-like).",
-                        "Without Ars Nouveau installed Source is never required: there would be nowhere to get it from.")
+                        "Without Ars Nouveau and without a blood mod for the Cryo-Distillation Tower (Neo Vitae) Source is never required:",
+                        "there would be nowhere to get it from.")
                 .define("requireSource", true);
         CORE_SOURCE_PER_SECOND = b.comment("Source drained every second by the Atlas Core itself.")
                 .defineInRange("coreSourcePerSecond", 1, 0, 100000);
@@ -84,6 +88,16 @@ public final class GolemConfig {
         b.push("wireless");
         LOCAL_WIRELESS_RANGE = b.comment("Range in blocks of a local-tier Portable Chronometer.")
                 .defineInRange("localWirelessRange", 200, 1, 30000000);
+        b.pop();
+
+        b.push("distillation");
+        CRYO_JAR_CAPACITY = b.comment("Source a Cryo-Source Jar holds.")
+                .defineInRange("cryoJarCapacity", 10000, 100, 10000000);
+        DISTILL_RATE = b.comment("Blood (mB) a Cryo-Distillation Tower distils every second.")
+                .defineInRange("distillRate", 20, 1, 100000);
+        DISTILL_SOURCE_PER_MB = b.comment("Source the tower makes from 1 mB of blood (Essentia Vitae, or any fluid in the tag",
+                        "golem_logix:cryo_distillable).")
+                .defineInRange("distillSourcePerMb", 1.0D, 0.001D, 1000.0D);
         b.pop();
 
         SPEC = b.build();

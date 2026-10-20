@@ -150,6 +150,14 @@ public class ModBlocks {
             "tooltip.golem_logix.eternal_frost_resonator",
             () -> new EternalFrostResonatorBlock(BlockBehaviour.Properties.of()));
 
+    // Source without Ars Nouveau: blood distilled into Cryo-Source (Neo Vitae)
+    public static final DeferredBlock<com.golemlogix.blocks.CryoJarBlock> CRYO_SOURCE_JAR = registerBlock("cryo_source_jar",
+            "tooltip.golem_logix.cryo_source_jar",
+            () -> new com.golemlogix.blocks.CryoJarBlock(BlockBehaviour.Properties.of()));
+    public static final DeferredBlock<com.golemlogix.blocks.DistillationTowerBlock> CRYO_DISTILLATION_TOWER = registerBlock("cryo_distillation_tower",
+            "tooltip.golem_logix.cryo_distillation_tower",
+            () -> new com.golemlogix.blocks.DistillationTowerBlock(BlockBehaviour.Properties.of()));
+
     private static <T extends Block> DeferredBlock<T> registerBlock(String name, String tooltipKey, Supplier<T> blockSupplier) {
         DeferredBlock<T> block = BLOCKS.register(name, blockSupplier);
         ModItems.ITEMS.register(name, () -> new ModBlockItem(block.get(), tooltipKey, new Item.Properties()));

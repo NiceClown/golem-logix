@@ -28,6 +28,14 @@ public class ModBlockEntities {
             BLOCK_ENTITY_TYPES.register("eternal_frost_resonator", () ->
                     BlockEntityType.Builder.of(EternalFrostResonatorBlockEntity::new, ModBlocks.ETERNAL_FROST_RESONATOR.get()).build(null));
 
+    public static final Supplier<BlockEntityType<com.golemlogix.blockentity.CryoJarBlockEntity>> CRYO_JAR =
+            BLOCK_ENTITY_TYPES.register("cryo_source_jar", () ->
+                    BlockEntityType.Builder.of(com.golemlogix.blockentity.CryoJarBlockEntity::new, ModBlocks.CRYO_SOURCE_JAR.get()).build(null));
+
+    public static final Supplier<BlockEntityType<com.golemlogix.blockentity.DistillationTowerBlockEntity>> DISTILLATION_TOWER =
+            BLOCK_ENTITY_TYPES.register("cryo_distillation_tower", () ->
+                    BlockEntityType.Builder.of(com.golemlogix.blockentity.DistillationTowerBlockEntity::new, ModBlocks.CRYO_DISTILLATION_TOWER.get()).build(null));
+
     public static final Supplier<BlockEntityType<com.golemlogix.blockentity.TelegraphBlockEntity>> TELEGRAPH =
             BLOCK_ENTITY_TYPES.register("cryo_source_telegraph", () ->
                     BlockEntityType.Builder.of(com.golemlogix.blockentity.TelegraphBlockEntity::new, ModBlocks.CRYO_SOURCE_TELEGRAPH.get()).build(null));

@@ -451,7 +451,7 @@ public final class GolemNetwork {
                     continue;
                 }
                 BlockEntity be = lvl.getBlockEntity(p);
-                if (be != null && seenSources.add(be)) {
+                if (be != null && seenSources.add(SourceHelper.owner(be))) {
                     if (be instanceof com.golemlogix.blockentity.EternalFrostResonatorBlockEntity) {
                         resonators++;
                         peripherals.put(new Node(lvl, p), be.getBlockState().getBlock());

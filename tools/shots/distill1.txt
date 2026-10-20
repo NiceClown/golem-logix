@@ -1,0 +1,18 @@
+# Cryo-Distillation (-GradleArgs "-Pvitae"): a tower filled with Essentia Vitae pours Source into a jar; a still and a dusk still
+cmd time set 6000
+cmd fill -6 -60 -6 6 -55 6 minecraft:air
+cmd setblock 0 -60 0 golem_logix:cryo_distillation_tower[section=0,facing=south]
+cmd setblock 0 -59 0 golem_logix:cryo_distillation_tower[section=1,facing=south]
+cmd setblock 0 -58 0 golem_logix:cryo_distillation_tower[section=2,facing=south]
+cmd setblock 2 -60 0 golem_logix:cryo_source_jar[half=lower,facing=south]
+cmd setblock 2 -59 0 golem_logix:cryo_source_jar[half=upper,facing=south]
+cmd setblock 1 -60 0 golem_logix:cryo_source_jar[half=lower,facing=south]
+cmd setblock 1 -59 0 golem_logix:cryo_source_jar[half=upper,facing=south]
+hook fillfluid 0 -60 0 neovitae:essentia_vitae_source 6000
+wait 200
+look 1 -58.6 0.5 4.2 200 12
+wait 20
+shot distill1_day
+cmd time set 13200
+wait 30
+shot distill1_dusk

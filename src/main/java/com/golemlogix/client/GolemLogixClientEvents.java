@@ -33,6 +33,8 @@ public class GolemLogixClientEvents {
         event.registerBlockEntityRenderer(ModBlockEntities.CARD_CATALOG.get(), CardCatalogRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.SCHEMATIC_CONCENTRATOR.get(), ConcentratorRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.TELEGRAPH.get(), TelegraphRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.CRYO_JAR.get(), CryoJarRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.DISTILLATION_TOWER.get(), DistillationTowerRenderer::new);
     }
 
     @SubscribeEvent

@@ -934,6 +934,7 @@ public class ArtForge {
         Items.all();
         Minds.all();
         Telegraph.all();
+        Distillery.all();
         Interface.all();
         Logo.make();
         System.out.println("ArtForge: done");

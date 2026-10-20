@@ -31,6 +31,8 @@
     "golem_logix:punch_card_catalog",
     "golem_logix:catalog_part",
     "golem_logix:schematic_concentrator",
-    "golem_logix:cryo_source_telegraph"
+    "golem_logix:cryo_source_telegraph",
+    "golem_logix:cryo_source_jar",
+    "golem_logix:cryo_distillation_tower"
   ]
 }

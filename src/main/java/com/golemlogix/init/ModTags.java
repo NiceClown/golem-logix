@@ -13,6 +13,9 @@ public final class ModTags {
             TagKey.create(Registries.ENTITY_TYPE, ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "copper_golems"));
     public static final TagKey<Block> COPPER_GOLEM_STATUES =
             TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "copper_golem_statues"));
+    /** Blood the Cryo-Distillation Tower distils into Source (Essentia Vitae from Neo Vitae; modpacks may add their own). */
+    public static final TagKey<net.minecraft.world.level.material.Fluid> CRYO_DISTILLABLE =
+            TagKey.create(Registries.FLUID, ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "cryo_distillable"));
 
     private ModTags() {
     }

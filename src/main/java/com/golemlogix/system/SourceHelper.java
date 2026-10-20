@@ -45,12 +45,22 @@ public class SourceHelper {
         return net.neoforged.fml.ModList.get().isLoaded("ars_nouveau");
     }
 
+    /** Whether a blood mod for the Cryo-Distillation Tower is there: Neo Vitae, or any fluid a modpack put into the tag. */
+    public static boolean distillationAvailable() {
+        if (net.neoforged.fml.ModList.get().isLoaded("neovitae")) {
+            return true;
+        }
+        return net.minecraft.core.registries.BuiltInRegistries.FLUID.getTag(com.golemlogix.init.ModTags.CRYO_DISTILLABLE)
+                .map(t -> t.size() > 0).orElse(false);
+    }
+
     /**
-     * Whether Source has to be paid. By the requireSource setting yes, but only if Ars Nouveau is installed: without it there is nowhere to get
-     * Source in survival (the Resonator is made in the Saturator, which needs Source itself), so the network and the Saturator then work for free.
+     * Whether Source has to be paid. By the requireSource setting yes, but only if there is a way to get it in survival: Ars Nouveau,
+     * or blood for the Cryo-Distillation Tower (Neo Vitae). Without either (the Resonator is made in the Saturator, which needs Source
+     * itself) the network and the Saturator work for free.
      */
     public static boolean sourceRequired() {
-        return com.golemlogix.config.GolemConfig.REQUIRE_SOURCE.get() && arsNouveauLoaded();
+        return com.golemlogix.config.GolemConfig.REQUIRE_SOURCE.get() && (arsNouveauLoaded() || distillationAvailable());
     }
 
     /** A Source supplier connected to the network. */
@@ -128,6 +138,9 @@ public class SourceHelper {
     public static Supplier asSupplier(BlockEntity be) {
         if (be instanceof CreativeSourceJarBlockEntity) {
             return INFINITE;
+        }
+        if (be instanceof com.golemlogix.blockentity.CryoJarBlockEntity jar) {
+            return jar.owner();
         }
         if (be instanceof EternalFrostResonatorBlockEntity) {
             return null;
@@ -255,37 +268,74 @@ public class SourceHelper {
         return taken;
     }
 
-    /** Pours Source into neighbouring Ars Nouveau jars (for generators). Returns how much was poured. */
-    public static int pushSourceToNeighbours(Level level, BlockPos pos, int amount) {
-        initArsNouveau();
-        if (sourceTileClass == null || amount <= 0) {
+    /**
+     * The entity that really holds a supplier's Source: for the upper half of a Cryo-Source Jar its lower half, otherwise the entity
+     * itself. The network counts every supplier once by it (a jar touching it with both halves is one jar).
+     */
+    public static BlockEntity owner(BlockEntity be) {
+        if (be instanceof com.golemlogix.blockentity.CryoJarBlockEntity jar) {
+            BlockEntity o = jar.owner();
+            return o == null ? be : o;
+        }
+        return be;
+    }
+
+    /** Pours Source into the jar at p (a Cryo-Source Jar or an Ars Nouveau one); simulate only says how much would go in. */
+    private static int fillAt(Level level, BlockPos p, int amount, boolean simulate) {
+        if (amount <= 0 || !level.isLoaded(p)) {
             return 0;
         }
+        BlockEntity be = level.getBlockEntity(p);
+        if (be instanceof com.golemlogix.blockentity.CryoJarBlockEntity jar) {
+            return jar.fill(amount, simulate);
+        }
+        initArsNouveau();
+        if (be == null || sourceTileClass == null || !sourceTileClass.isInstance(be)) {
+            return 0;
+        }
+        try {
+            if (!(boolean) canAcceptMethod.invoke(be)) {
+                return 0;
+            }
+            int max = (int) sourceTileClass.getMethod("getMaxSource").invoke(be);
+            int cur = (int) getSourceMethod.invoke(be);
+            int add = Math.max(0, Math.min(amount, max - cur));
+            if (add > 0 && !simulate) {
+                addSourceMethod.invoke(be, add, false);
+            }
+            return add;
+        } catch (Throwable ignored) {
+            return 0;
+        }
+    }
+
+    /** Pours Source into the jars beside a block (generators). Returns how much was poured. */
+    public static int pushSourceToNeighbours(Level level, BlockPos pos, int amount) {
+        return fillAround(level, java.util.List.of(pos), amount, false);
+    }
+
+    /**
+     * Pours up to amount Source into the jars touching a machine (its blocks are skipped); a jar touched with both halves or from
+     * several blocks is counted once. Returns how much went in; simulate: how much would.
+     */
+    public static int fillAround(Level level, java.util.Collection<BlockPos> region, int amount, boolean simulate) {
+        java.util.Set<BlockPos> inside = new java.util.HashSet<>(region);
+        java.util.Set<Object> seen = new java.util.HashSet<>();
         int left = amount;
-        for (Direction dir : Direction.values()) {
-            if (left <= 0) {
-                break;
-            }
-            BlockPos p = pos.relative(dir);
-            if (!level.isLoaded(p)) {
-                continue;
-            }
-            BlockEntity be = level.getBlockEntity(p);
-            if (be == null || !sourceTileClass.isInstance(be)) {
-                continue;
-            }
-            try {
-                if (!(boolean) canAcceptMethod.invoke(be)) {
+        for (BlockPos cell : region) {
+            for (Direction dir : Direction.values()) {
+                if (left <= 0) {
+                    return amount - left;
+                }
+                BlockPos p = cell.relative(dir);
+                if (inside.contains(p) || !level.isLoaded(p)) {
                     continue;
                 }
-                int max = (int) sourceTileClass.getMethod("getMaxSource").invoke(be);
-                int cur = (int) getSourceMethod.invoke(be);
-                int add = Math.min(left, max - cur);
-                if (add > 0) {
-                    addSourceMethod.invoke(be, add, false);
-                    left -= add;
+                BlockEntity be = level.getBlockEntity(p);
+                if (be == null || !seen.add(owner(be))) {
+                    continue;
                 }
-            } catch (Throwable ignored) {
+                left -= fillAt(level, p, left, simulate);
             }
         }
         return amount - left;

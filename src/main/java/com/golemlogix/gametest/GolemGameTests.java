@@ -2271,7 +2271,7 @@ public class GolemGameTests {
                                     sig.append(t.getAsJsonObject().get("id").getAsString()).append("+");
                                 }
                             }
-                            if (page.has("recipe")) {
+                            if (page.has("recipe") && items) {
                                 ResourceLocation rid = ResourceLocation.parse(page.get("recipe").getAsString());
                                 helper.assertTrue(server.getRecipeManager().byKey(rid).isPresent(), "entry " + id + ": unknown recipe " + rid);
                             }
@@ -3761,6 +3761,92 @@ public class GolemGameTests {
                 helper.assertTrue(com.golemlogix.items.PortableChronometerItem.getCharge(plain) == com.golemlogix.items.PortableChronometerItem.MAX_CHARGE,
                         "a creative jar charges the chronometer to the top");
             }
+            helper.succeed();
+        });
+    }
+
+    // ----------------------------------------------------------- cryo-distillation (Source without Ars Nouveau)
+
+    /**
+     * Cryo-Source Jar: a two-block supplier. Both halves touch the network, yet it is one supplier holding the Source in its lower
+     * half; the network draws on it; breaking the top takes the whole jar.
+     */
+    @GameTest(template = T, timeoutTicks = 120)
+    public static void cryoJarFeedsNetwork(GameTestHelper helper) {
+        buildArray(helper, 0, 0);
+        BlockPos jarPos = new BlockPos(3, 1, 6);  // against the corner bushing (4,1,6); its top against the array above it
+        com.golemlogix.blocks.CryoJarBlock.place(helper.getLevel(), helper.absolutePos(jarPos), Direction.SOUTH,
+                ModBlocks.CRYO_SOURCE_JAR.get());
+        var lower = (com.golemlogix.blockentity.CryoJarBlockEntity) helper.getBlockEntity(jarPos);
+        var upper = (com.golemlogix.blockentity.CryoJarBlockEntity) helper.getBlockEntity(jarPos.above());
+        int cap = lower.capacity();
+        helper.assertTrue(lower.fill(5000, false) == 5000, "the jar takes Source");
+        helper.assertTrue(upper.fill(Integer.MAX_VALUE, true) == cap - 5000, "the top half reports the same jar's room");
+        helper.assertTrue(com.golemlogix.system.SourceHelper.asSupplier(upper) == lower, "the top half stands for the lower one");
+        helper.runAfterDelay(10, () -> {
+            GolemNetwork n = net(helper, ORIGIN);
+            helper.assertTrue(n.sources().size() == 1, "one jar is one supplier, got " + n.sources().size());
+            int has = n.sources().get(0).available();
+            helper.assertTrue(has > 4900 && has <= 5000, "it has the Source: " + has);
+        });
+        helper.runAfterDelay(80, () -> {
+            helper.assertTrue(net(helper, ORIGIN).isOnline(), "the jar powers the network");
+            if (com.golemlogix.system.SourceHelper.sourceRequired()) {
+                helper.assertTrue(lower.available() < 5000, "the core drinks from it: " + lower.available());
+            }
+            helper.getLevel().destroyBlock(helper.absolutePos(jarPos.above()), false);
+            helper.assertBlockNotPresent(ModBlocks.CRYO_SOURCE_JAR.get(), jarPos);
+            helper.succeed();
+        });
+    }
+
+    /**
+     * Cryo-Distillation Tower: takes only blood (the tag golem_logix:cryo_distillable) through any of its blocks and never gives it
+     * back; distils it into the jar beside it, 1 mB to 1 Source; breaking the middle takes the whole tower. Without Neo Vitae (an
+     * empty tag) only the refusals and the tower's shape are checked.
+     */
+    @GameTest(template = T, timeoutTicks = 200)
+    public static void distillationTowerFillsJar(GameTestHelper helper) {
+        var level = helper.getLevel();
+        BlockPos base = new BlockPos(3, 1, 3);
+        BlockPos jarPos = new BlockPos(4, 1, 3);
+        com.golemlogix.blocks.DistillationTowerBlock.place(level, helper.absolutePos(base), Direction.SOUTH,
+                ModBlocks.CRYO_DISTILLATION_TOWER.get());
+        com.golemlogix.blocks.CryoJarBlock.place(level, helper.absolutePos(jarPos), Direction.SOUTH, ModBlocks.CRYO_SOURCE_JAR.get());
+        var tower = (com.golemlogix.blockentity.DistillationTowerBlockEntity) helper.getBlockEntity(base);
+        var jar = (com.golemlogix.blockentity.CryoJarBlockEntity) helper.getBlockEntity(jarPos);
+        var exec = net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE;
+        var top = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.BLOCK,
+                helper.absolutePos(base.above(2)), Direction.UP);
+        helper.assertTrue(top != null, "the head takes fluids too");
+        helper.assertTrue(top.fill(new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000), exec) == 0,
+                "water is no blood");
+        net.minecraft.world.level.material.Fluid blood = net.minecraft.core.registries.BuiltInRegistries.FLUID
+                .getTag(com.golemlogix.init.ModTags.CRYO_DISTILLABLE)
+                .flatMap(t -> t.stream().map(net.minecraft.core.Holder::value).filter(f -> f.isSource(f.defaultFluidState())).findFirst())
+                .orElse(null);
+        boolean vitae = net.neoforged.fml.ModList.get().isLoaded("neovitae");
+        helper.assertTrue(blood != null || !vitae, "with Neo Vitae Essentia Vitae is blood");
+        if (vitae) {
+            helper.assertTrue(com.golemlogix.system.SourceHelper.sourceRequired() == com.golemlogix.config.GolemConfig.REQUIRE_SOURCE.get(),
+                    "with Neo Vitae the network needs Source");
+        }
+        if (blood != null) {
+            helper.assertTrue(top.fill(new net.neoforged.neoforge.fluids.FluidStack(blood, 1000), exec) == 1000, "blood goes in");
+            helper.assertTrue(top.drain(500, exec).isEmpty(), "and does not come back out");
+        }
+        net.minecraft.world.level.material.Fluid poured = blood;
+        helper.runAfterDelay(70, () -> {
+            if (poured != null) {
+                int left = tower.blood().getAmount();
+                helper.assertTrue(left < 1000 && left > 0, "the tower distils at its pace: " + left + " mB left");
+                double perMb = com.golemlogix.config.GolemConfig.DISTILL_SOURCE_PER_MB.get();
+                helper.assertTrue(jar.available() == (int) Math.floor((1000 - left) * perMb + 1e-9),
+                        "the jar got " + jar.available() + " Source for " + (1000 - left) + " mB");
+            }
+            level.destroyBlock(helper.absolutePos(base.above()), false);
+            helper.assertBlockNotPresent(ModBlocks.CRYO_DISTILLATION_TOWER.get(), base);
+            helper.assertBlockNotPresent(ModBlocks.CRYO_DISTILLATION_TOWER.get(), base.above(2));
             helper.succeed();
         });
     }
