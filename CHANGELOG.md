@@ -11,6 +11,7 @@ for critical fixes only; jars are now named after the game version (`golem_logix
   network. They drop when the tower is broken.
 - **The golems' platforms are mounted**: on the tower and the Cryo-Source Jar the little platform reaches the frame, is bolted to it
   with a brass bracket and rests on two brass struts down to the plinth.
+- The empty Curios Chronometer slot shows the outline of our Chronometer instead of a pocket watch.
 
 ## 1.1.9 — Cryo-Distillation: Source from blood
 
