@@ -586,7 +586,8 @@ public class BookScreen extends Screen {
         search.setWidth(Math.round(106 * k));
 
         // map background, tiled 256x256
-        g.enableScissor(Math.round(ox + ax * k), Math.round(oy + ay * k), Math.round(ox + (ax + aw) * k), Math.round(oy + (ay + ah) * k));
+        // in book coordinates: since 1.21.6 the scissor follows the pose (the book is drawn translated and scaled)
+        g.enableScissor(ax, ay, ax + aw, ay + ah);
         int shiftX = (int) Math.floorMod((long) Math.round(panX[categoryIndex] * zoom[categoryIndex]), 256L);
         int shiftY = (int) Math.floorMod((long) Math.round(panY[categoryIndex] * zoom[categoryIndex]), 256L);
         for (int tx = ax - shiftX - 256; tx < ax + aw; tx += 256) {

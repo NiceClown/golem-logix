@@ -1,0 +1,22 @@
+# 26.1.2 port GUI check: the book map and an article, a GolemScreen window (the distillation tower), the JEI anvil page
+book -
+wait 20
+shot port26b_bookmap
+book quickstart
+wait 20
+shot port26b_article
+closescreen
+cmd fill -4 -60 -4 4 -56 4 minecraft:air
+cmd setblock 0 -60 0 golem_logix:cryo_distillation_tower[section=0,facing=south]
+cmd setblock 0 -59 0 golem_logix:cryo_distillation_tower[section=1,facing=south]
+cmd setblock 0 -58 0 golem_logix:cryo_distillation_tower[section=2,facing=south]
+look 0.5 -59.5 0.5 3 0 10
+wait 10
+use 0 -60 0
+wait 20
+shot port26b_tower_gui
+closescreen
+jeitype golem_logix:anvil_crushing
+wait 60
+shot port26b_jei_anvil
+closescreen

@@ -1,0 +1,15 @@
+# 26.1.2 port: the JEI anvil animation frame by frame (the golem is drawn into its own picture now), and the book map clipping
+jeitype golem_logix:anvil_crushing
+wait 40
+shot port26c_anvil1
+wait 9
+shot port26c_anvil2
+wait 9
+shot port26c_anvil3
+wait 9
+shot port26c_anvil4
+closescreen
+book -
+wait 20
+shot port26c_bookmap
+closescreen
