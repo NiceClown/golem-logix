@@ -16,7 +16,6 @@ import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
@@ -144,7 +143,6 @@ public final class CopperGolemPuppet {
 
         if (anim.carrying) {
             // a crate in outstretched arms in front of the chest (in the upright frame: Z forward, Y up; 16 pixels = 1)
-            BlockRenderDispatcher dispatcher = Minecraft.getInstance().getBlockRenderer();
             float lift = Mth.sin(anim.phase * 2f) * 0.01f;
             pose.pushPose();
             pose.translate(0f, 0.64f - anim.bow * 0.14f + lift, 0.38f + anim.bow * 0.06f);
@@ -153,7 +151,7 @@ public final class CopperGolemPuppet {
             } else {
                 pose.scale(0.34f, 0.34f, 0.34f);
                 pose.translate(-0.5, -0.5, -0.5);
-                dispatcher.renderSingleBlock(Blocks.BARREL.defaultBlockState(), pose, buffers, light, OverlayTexture.NO_OVERLAY);
+                com.golemlogix.client.render.BerBuffers.block(buffers, Blocks.BARREL.defaultBlockState(), pose, light);
             }
             pose.popPose();
         }

@@ -30,7 +30,7 @@ public class GolemButton extends Button {
     }
 
     @Override
-    protected void extractWidgetRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
+    protected void extractContents(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
         setMessage(label.get());
         boolean hover = isHoveredOrFocused() && active;
         int edge = hover ? GolemGui.CYAN : GolemGui.BRASS;

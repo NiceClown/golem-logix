@@ -364,7 +364,7 @@ public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
     }
 
     protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
-        slots.fromTag(tag.getList("Slots", Tag.TAG_COMPOUND), registries);
+        slots.fromTag(tag.getListOrEmpty("Slots"), registries);
         seal = tag.getIntOr("Seal", 0);
         active = tag.getBooleanOr("Active", false);
         clientActive = active;
@@ -381,7 +381,6 @@ public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
         clientActive = tag.getBooleanOr("Active", false);
     }
 
-    
     @Override
     public ClientboundBlockEntityDataPacket getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
@@ -416,5 +415,14 @@ public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
     @Override
     public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input) {
         handleUpdateTag(input);
+    }
+
+    /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
+            r.onRemoved(state, level, pos);
+        }
     }
 }

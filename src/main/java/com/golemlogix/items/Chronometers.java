@@ -29,8 +29,8 @@ public final class Chronometers {
     @Nullable
     public static Found find(Player player) {
         Inventory inv = player.getInventory();
-        if (is(inv.getSelected())) {
-            return new Found(inv.getSelected(), inv.selected);
+        if (is(inv.getSelectedItem())) {
+            return new Found(inv.getSelectedItem(), inv.getSelectedSlot());
         }
         if (is(player.getOffhandItem())) {
             return new Found(player.getOffhandItem(), Inventory.SLOT_OFFHAND);
@@ -39,9 +39,9 @@ public final class Chronometers {
         if (!worn.isEmpty()) {
             return new Found(worn, CURIO);
         }
-        for (int i = 0; i < inv.items.size(); i++) {
-            if (is(inv.items.get(i))) {
-                return new Found(inv.items.get(i), i);
+        for (int i = 0; i < inv.getNonEquipmentItems().size(); i++) {
+            if (is(inv.getNonEquipmentItems().get(i))) {
+                return new Found(inv.getNonEquipmentItems().get(i), i);
             }
         }
         return null;
@@ -55,7 +55,7 @@ public final class Chronometers {
                 out.add(s);
             }
         }
-        for (ItemStack s : player.getInventory().offhand) {
+        for (ItemStack s : List.of(player.getOffhandItem())) {
             if (is(s)) {
                 out.add(s);
             }

@@ -68,7 +68,7 @@ public class SchematicConcentratorBlockEntity extends BlockEntity {
         be.spinPrev = be.spin;
         be.spin += 1.2f + be.holo * 4.5f;
         if (level.getGameTime() % (be.clientOpen ? 5 : 31) == 0) {
-            var r = level.random;
+            var r = level.getRandom();
             // steam from the frosted pipe on the roof (its mouth in pixels of the north-facing model: x 10.75, z 11.6)
             Direction f = state.getValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING);
             double a = Math.toRadians(180 - f.toYRot()), dx = 10.75 / 16 - 0.5, dz = 11.6 / 16 - 0.5;
@@ -86,7 +86,7 @@ public class SchematicConcentratorBlockEntity extends BlockEntity {
     }
 
     public void readUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
-        clientOpen = tag.getBoolean("Open");
+        clientOpen = tag.getBooleanOr("Open", false);
     }
 
     @Override
@@ -99,5 +99,14 @@ public class SchematicConcentratorBlockEntity extends BlockEntity {
     @Override
     public void handleUpdateTag(net.minecraft.world.level.storage.ValueInput input) {
         readUpdateTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    }
+
+    /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
+            r.onRemoved(state, level, pos);
+        }
     }
 }

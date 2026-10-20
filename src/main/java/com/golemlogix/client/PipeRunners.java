@@ -1,5 +1,6 @@
 package com.golemlogix.client;
 
+import org.jetbrains.annotations.Nullable;
 import com.golemlogix.blocks.SnowPipeBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -117,7 +118,7 @@ public final class PipeRunners {
                 return null;
             }
             BlockPos prev = comp.tour[(i - 1 + comp.period) % comp.period];
-            Direction dIn = Direction.fromDelta(a.getX() - prev.getX(), a.getY() - prev.getY(), a.getZ() - prev.getZ());
+            Direction dIn = step(a.getX() - prev.getX(), a.getY() - prev.getY(), a.getZ() - prev.getZ());
             if (dIn == null) {
                 dIn = Direction.NORTH;
             }
@@ -126,7 +127,7 @@ public final class PipeRunners {
         }
 
         // a step between neighbouring pipes a -> b: from the station (or centre) of a to the boundary, from the boundary to the centre (or station) of b
-        Direction d = Direction.fromDelta(b.getX() - a.getX(), b.getY() - a.getY(), b.getZ() - a.getZ());
+        Direction d = step(b.getX() - a.getX(), b.getY() - a.getY(), b.getZ() - a.getZ());
         if (d == null) {
             return null;
         }
@@ -325,5 +326,16 @@ public final class PipeRunners {
                 tour.add(p);
             }
         }
+    }
+
+    /** The direction of a unit step between neighbours, or null. */
+    @Nullable
+    private static Direction step(int dx, int dy, int dz) {
+        for (Direction d : Direction.values()) {
+            if (d.getStepX() == dx && d.getStepY() == dy && d.getStepZ() == dz) {
+                return d;
+            }
+        }
+        return null;
     }
 }

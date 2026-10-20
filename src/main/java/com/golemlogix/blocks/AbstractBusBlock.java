@@ -32,7 +32,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Common base of both buses: faces a container, takes 1 channel, keeps a filter.
  */
-public abstract class AbstractBusBlock extends DirectionalBlock implements GolemNode, EntityBlock {
+public abstract class AbstractBusBlock extends DirectionalBlock implements com.golemlogix.blocks.RemovalAware, GolemNode, EntityBlock {
     protected AbstractBusBlock(Properties properties) {
         super(properties.sound(SoundType.COPPER).strength(2.5f).noOcclusion().requiresCorrectToolForDrops());
         this.registerDefaultState(BusLinks.withNoLinks(this.stateDefinition.any().setValue(FACING, Direction.NORTH)));
@@ -55,15 +55,14 @@ public abstract class AbstractBusBlock extends DirectionalBlock implements Golem
     }
 
     @Override
-    protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level,
-                                     BlockPos pos, BlockPos neighborPos) {
+    protected BlockState updateShape(BlockState state, net.minecraft.world.level.LevelReader level, net.minecraft.world.level.ScheduledTickAccess ticks, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, net.minecraft.util.RandomSource random) {
         return BusLinks.update(state, direction, neighborState, level, pos);
     }
 
     /** A neighbour changed (placed, broken, redstone): an idle bus looks again at once. */
     @Override
-    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean moving) {
-        super.neighborChanged(state, level, pos, block, fromPos, moving);
+    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, @Nullable net.minecraft.world.level.redstone.Orientation orientation, boolean moving) {
+        super.neighborChanged(state, level, pos, block, orientation, moving);
         if (level.getBlockEntity(pos) instanceof BusBlockEntity bus) {
             bus.wake();
         }
@@ -113,12 +112,12 @@ public abstract class AbstractBusBlock extends DirectionalBlock implements Golem
     }
 
     /** Upgrades drop together with the bus (the filter is a ghost, nothing to drop there). */
+    /** Replaced by another block (see RemovalAware). */
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof BusBlockEntity bus) {
+    public void onRemoved(BlockState state, Level level, BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof BusBlockEntity bus) {
             net.minecraft.world.Containers.dropContents(level, pos, bus.getUpgrades());
         }
-        super.onRemove(state, level, pos, newState, isMoving);
     }
 
     @Override

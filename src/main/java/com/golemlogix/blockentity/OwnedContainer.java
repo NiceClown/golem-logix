@@ -16,7 +16,7 @@ import java.util.function.Predicate;
  * Keeps slot numbers (SimpleContainer.createTag loses them and "squeezes" items to the front, so bus filters and cabinet
  * disks would shift after a world reload).
  */
-public class OwnedContainer extends SimpleContainer {
+public class OwnedContainer extends ListeningContainer {
     private final BlockEntity owner;
     private final Predicate<ItemStack> filter;
 
@@ -46,7 +46,6 @@ public class OwnedContainer extends SimpleContainer {
         return filter.test(stack);
     }
 
-    @Override
     public ListTag createTag(HolderLookup.Provider registries) {
         ListTag list = new ListTag();
         for (int i = 0; i < getContainerSize(); i++) {
@@ -65,7 +64,6 @@ public class OwnedContainer extends SimpleContainer {
     }
 
     /** Reads both the new format (with the slot number) and the old one (without it: items go in a row from the start). */
-    @Override
     public void fromTag(ListTag tag, HolderLookup.Provider registries) {
         clearContent();
         for (int i = 0; i < tag.size(); i++) {

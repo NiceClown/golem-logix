@@ -7,7 +7,7 @@ import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
-import mezz.jei.api.recipe.RecipeType;
+import mezz.jei.api.recipe.types.IRecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -35,8 +35,8 @@ import java.util.WeakHashMap;
  * arrow points at how battered it must be (hearts and HP); the plate stands under an "=" below the golem.
  */
 public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
-    public static final RecipeType<AnvilCrushRecipe> TYPE =
-            RecipeType.create(GolemLogixMod.MOD_ID, "anvil_crushing", AnvilCrushRecipe.class);
+    public static final IRecipeType<AnvilCrushRecipe> TYPE =
+            IRecipeType.create(GolemLogixMod.MOD_ID, "anvil_crushing", AnvilCrushRecipe.class);
 
     private static final int W = 150, H = 120;
     /** The golem's column: its centre, where the anvil hangs, where the golem's feet stand, its height on screen. */
@@ -49,7 +49,6 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
     private static final Identifier HEART_HALF = Identifier.withDefaultNamespace("hud/heart/half");
     private static final Identifier HEART_EMPTY = Identifier.withDefaultNamespace("hud/heart/container");
 
-    private final IDrawable background;
     private final IDrawable icon;
     private final IDrawable slot;
     private final Component title;
@@ -57,14 +56,13 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
     private static final Map<Level, Map<EntityType<?>, Entity>> MODELS = new WeakHashMap<>();
 
     public AnvilCrushCategory(IGuiHelper guiHelper) {
-        this.background = guiHelper.createBlankDrawable(W, H);
         this.icon = guiHelper.createDrawableItemLike(Blocks.ANVIL);
         this.slot = guiHelper.getSlotDrawable();
         this.title = Component.translatable("jei.golem_logix.category.anvil_crushing");
     }
 
     @Override
-    public RecipeType<AnvilCrushRecipe> getRecipeType() {
+    public IRecipeType<AnvilCrushRecipe> getRecipeType() {
         return TYPE;
     }
 
@@ -83,13 +81,6 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
         return H;
     }
 
-    /** For older JEI versions where the size is taken only from the background. */
-    @SuppressWarnings("removal")
-    @Override
-    public IDrawable getBackground() {
-        return background;
-    }
-
     @Override
     public IDrawable getIcon() {
         return icon;
@@ -98,7 +89,7 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
     @Override
     public void setRecipe(IRecipeLayoutBuilder builder, AnvilCrushRecipe recipe, IFocusGroup focuses) {
         // the anvil and the golem are drawn as a scene; JEI still finds the ritual by them
-        builder.addInvisibleIngredients(RecipeIngredientRole.CATALYST).addItemStack(new ItemStack(Blocks.ANVIL));
+        builder.addInvisibleIngredients(RecipeIngredientRole.CRAFTING_STATION).addItemStack(new ItemStack(Blocks.ANVIL));
         builder.addInvisibleIngredients(RecipeIngredientRole.INPUT).addItemStack(recipe.golemRepresentation());
         builder.addSlot(RecipeIngredientRole.OUTPUT, OUT_X + 1, OUT_Y + 1).addItemStack(recipe.output());
     }
@@ -178,10 +169,14 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
         slot.draw(g, OUT_X, OUT_Y);
     }
 
-    /** The golem's model standing on FEET_Y, a little turned; squashed vertically and red with hurt as the anvil lands. */
+    /**
+     * The golem's model standing on FEET_Y, a little turned; pressed down and red with hurt as the anvil lands. Since 1.21.6 an entity
+     * in a GUI is drawn into its own picture at screen coordinates (the GUI pose does not apply), so the picture is placed by hand,
+     * and the squash is a shrink towards the feet.
+     */
     private static void drawGolem(GuiGraphicsExtractor g, LivingEntity golem, float squash, int hurt) {
         // by the hitbox, but no more than 22 px a block: some golems (the copper one's antenna) stand taller than their hitbox
-        float scale = Math.min(22f, GOLEM_H / Math.max(0.5f, golem.getBbHeight()));
+        float scale = Math.min(22f, GOLEM_H / Math.max(0.5f, golem.getBbHeight())) * (0.55f + 0.45f * squash);
         golem.yBodyRot = 200f;
         golem.yBodyRotO = 200f;
         golem.setYRot(200f);
@@ -189,12 +184,16 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
         golem.yHeadRotO = 200f;
         golem.setXRot(0f);
         golem.hurtTime = hurt;
-        g.pose().pushMatrix();
-        g.pose().translate(GX, FEET_Y);
-        g.pose().scale(1f + (1f - squash) * 0.35f, squash);
-        g.pose().translate(-GX, -FEET_Y);
-        InventoryScreen.renderEntityInInventory(g, GX, FEET_Y, scale, new Vector3f(), new Quaternionf().rotateZ((float) Math.PI), null, golem);
-        g.pose().popMatrix();
+        var renderer = net.minecraft.client.Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(golem);
+        var state = renderer.createRenderState(golem, 1f);
+        state.shadowPieces.clear();
+        state.outlineColor = 0;
+        float h = golem.getBbHeight() * scale;
+        // the picture: centred on the golem, tall enough for antennas and heads above the hitbox
+        org.joml.Vector2f c = g.pose().transformPosition(GX, FEET_Y - h / 2f, new org.joml.Vector2f());
+        int half = (int) Math.ceil(h * 0.8f) + 4;
+        g.entity(state, scale, new Vector3f(0f, golem.getBbHeight() / 2f, 0f), new Quaternionf().rotateZ((float) Math.PI), null,
+                (int) c.x - half, (int) c.y - half, (int) c.x + half, (int) c.y + half);
         golem.hurtTime = 0;
     }
 
@@ -202,9 +201,9 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
     private static int hearts(GuiGraphicsExtractor g, int x, int y, int hp) {
         int n = Math.max(1, (hp + 1) / 2);
         for (int i = 0; i < n; i++) {
-            g.blitSprite(HEART_EMPTY, x + i * 8, y, 9, 9);
+            g.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, HEART_EMPTY, x + i * 8, y, 9, 9);
             boolean half = i == n - 1 && hp % 2 == 1;
-            g.blitSprite(half ? HEART_HALF : HEART_FULL, x + i * 8, y, 9, 9);
+            g.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, half ? HEART_HALF : HEART_FULL, x + i * 8, y, 9, 9);
         }
         return x + n * 8 + 2;
     }
@@ -228,7 +227,7 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
         if (level == null || type == null) {
             return null;
         }
-        Entity e = MODELS.computeIfAbsent(level, l -> new HashMap<>()).computeIfAbsent(type, ty -> ty.create(level));
+        Entity e = MODELS.computeIfAbsent(level, l -> new HashMap<>()).computeIfAbsent(type, ty -> ty.create(level, net.minecraft.world.entity.EntitySpawnReason.LOAD));
         return e instanceof LivingEntity living ? living : null;
     }
 }

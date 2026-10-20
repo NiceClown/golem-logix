@@ -34,7 +34,7 @@ public final class TelegraphLinks {
     private static final Map<GlobalPos, GlobalPos> HOST_OF = new HashMap<>();
     /** Host -> its receivers, sorted (the walk order must not depend on the order the chunks loaded in). */
     private static final Map<GlobalPos, Set<GlobalPos>> RECEIVERS = new HashMap<>();
-    private static final Comparator<GlobalPos> ORDER = Comparator.<GlobalPos, String>comparing(g -> g.dimension().location().toString())
+    private static final Comparator<GlobalPos> ORDER = Comparator.<GlobalPos, String>comparing(g -> g.dimension().identifier().toString())
             .thenComparing(GlobalPos::pos);
 
     /** What a telegraph's Memory slot amounts to. */

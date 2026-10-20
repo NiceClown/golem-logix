@@ -161,7 +161,7 @@ public record PatternData(boolean crafting, List<ItemStack> inputs, List<ItemSta
             if (level == null || !crafting) {
                 return null;
             }
-            recipeChoice = Fuzzy.craftingSubstitutes(level, inputs).get(i);
+            recipeChoice = Fuzzy.craftingSubstitutes(level, inputs).get(i).orElse(null);
         }
         return Fuzzy.matcher(spec, inputs.get(i), recipeChoice);
     }

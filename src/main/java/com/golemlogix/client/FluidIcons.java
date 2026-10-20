@@ -1,15 +1,11 @@
 package com.golemlogix.client;
 
-import net.minecraft.client.renderer.texture.TextureAtlas;
 import com.golemlogix.items.FluidGhostItem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.resources.Identifier;
-import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 /** Fluids in GUI slots: the still texture of the fluid, tinted, and fluid ghosts drawn as their fluid with an mB label. */
@@ -21,18 +17,23 @@ public final class FluidIcons {
         if (fluid.isEmpty()) {
             return;
         }
-        IClientFluidTypeExtensions ext = IClientFluidTypeExtensions.of(fluid.getFluid());
-        Identifier tex = ext.getStillTexture(fluid);
-        if (tex == null) {
-            return;
-        }
-        TextureAtlasSprite sprite = Minecraft.getInstance().getTextureAtlas(TextureAtlas.LOCATION_BLOCKS).apply(tex);
-        int tint = ext.getTintColor(fluid);
-        float a = ((tint >> 24) & 0xFF) / 255f;
-        float r = ((tint >> 16) & 0xFF) / 255f;
-        float gr = ((tint >> 8) & 0xFF) / 255f;
-        float b = (tint & 0xFF) / 255f;
-        g.blit(x, y, 0, 16, 16, sprite, r, gr, b, a == 0 ? 1f : a);
+        int tint = tint(fluid);
+        g.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, still(fluid), x, y, 16, 16, (tint >>> 24) == 0 ? tint | 0xFF000000 : tint);
+    }
+
+    /** The fluid's still texture (from its fluid model, since 26.1). */
+    public static TextureAtlasSprite still(FluidStack fluid) {
+        return model(fluid).stillMaterial().sprite();
+    }
+
+    /** The fluid's colour as a stack (ARGB, white if it has no tint). */
+    public static int tint(FluidStack fluid) {
+        var source = model(fluid).fluidTintSource();
+        return source == null ? 0xFFFFFFFF : source.colorAsStack(fluid);
+    }
+
+    private static net.minecraft.client.renderer.block.FluidModel model(FluidStack fluid) {
+        return Minecraft.getInstance().getModelManager().getFluidStateModelSet().get(fluid.getFluid().defaultFluidState());
     }
 
     /** "250" below a bucket, "1.5B" from a bucket up. */

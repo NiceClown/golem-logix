@@ -16,10 +16,10 @@ import org.lwjgl.glfw.GLFW;
  * Rig for checking the ghost build hotkeys: a "foreign" binding on the Y key (like another mod's) and emulation of a press
  * INSIDE the game (the same sequence as KeyboardHandler: the binding counter + an InputEvent.Key event). OS input is not touched.
  */
-@EventBusSubscriber(modid = GolemLogixMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = GolemLogixMod.MOD_ID, value = Dist.CLIENT)
 public final class DevKeys {
     /** Foreign binding on Y; counts how many times it "fired". */
-    public static final KeyMapping CONFLICT = new KeyMapping("key.devshots.conflict", GLFW.GLFW_KEY_Y, "key.categories.devshots");
+    public static final KeyMapping CONFLICT = new KeyMapping("key.devshots.conflict", GLFW.GLFW_KEY_Y, KeyMapping.Category.MISC);
     public static int conflictClicks;
 
     private DevKeys() {
@@ -38,7 +38,7 @@ public final class DevKeys {
         InputConstants.Key key = InputConstants.Type.KEYSYM.getOrCreate(glfwKey);
         KeyMapping.set(key, true);
         KeyMapping.click(key);
-        NeoForge.EVENT_BUS.post(new InputEvent.Key(glfwKey, GLFW.glfwGetKeyScancode(glfwKey), GLFW.GLFW_PRESS, 0));
+        NeoForge.EVENT_BUS.post(new InputEvent.Key(new net.minecraft.client.input.KeyEvent(glfwKey, GLFW.glfwGetKeyScancode(glfwKey), 0), GLFW.GLFW_PRESS));
         // in the tick the game polls the bindings: count the foreign binding's fires here, as its owner would
         mc.execute(() -> {
         });

@@ -81,7 +81,7 @@ public class RecipeMonitorBlockEntity extends BlockEntity {
     public final LampWalker walker = new LampWalker(8f, 8f);
 
     private void walk(Level level) {
-        var r = level.random;
+        var r = level.getRandom();
         walker.tick(lampState() == 0, 8f, 8f, r, () -> {
             float gx = 4.5f + r.nextFloat() * 7f, gz = 4.5f + r.nextFloat() * 7f;
             if (Math.abs(gx - 8f) < 2.2f && Math.abs(gz - 8f) < 2.2f) {
@@ -128,5 +128,14 @@ public class RecipeMonitorBlockEntity extends BlockEntity {
     @Override
     public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input) {
         handleUpdateTag(input);
+    }
+
+    /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
+            r.onRemoved(state, level, pos);
+        }
     }
 }

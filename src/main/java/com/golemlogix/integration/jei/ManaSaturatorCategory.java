@@ -8,7 +8,7 @@ import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
-import mezz.jei.api.recipe.RecipeType;
+import mezz.jei.api.recipe.types.IRecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -17,20 +17,18 @@ import net.minecraft.network.chat.Component;
 
 /** Mana Saturator: a block on the anvil, an arrow, two plates; under the arrow the Source cost and the time. */
 public class ManaSaturatorCategory implements IRecipeCategory<ManaSaturatorRecipe> {
-    public static final RecipeType<ManaSaturatorRecipe> TYPE =
-            RecipeType.create(GolemLogixMod.MOD_ID, "mana_saturator", ManaSaturatorRecipe.class);
+    public static final IRecipeType<ManaSaturatorRecipe> TYPE =
+            IRecipeType.create(GolemLogixMod.MOD_ID, "mana_saturator", ManaSaturatorRecipe.class);
 
     private static final int W = 150, H = 40;
     private static final int IN_X = 26, OUT_X = 106, SLOT_Y = 4;
 
-    private final IDrawable background;
     private final IDrawable icon;
     private final IDrawable slot;
     private final IDrawable arrow;
     private final Component title;
 
     public ManaSaturatorCategory(IGuiHelper guiHelper) {
-        this.background = guiHelper.createBlankDrawable(W, H);
         this.icon = guiHelper.createDrawableItemLike(ModBlocks.MANA_SATURATOR.get());
         this.slot = guiHelper.getSlotDrawable();
         this.arrow = guiHelper.getRecipeArrow();
@@ -38,7 +36,7 @@ public class ManaSaturatorCategory implements IRecipeCategory<ManaSaturatorRecip
     }
 
     @Override
-    public RecipeType<ManaSaturatorRecipe> getRecipeType() {
+    public IRecipeType<ManaSaturatorRecipe> getRecipeType() {
         return TYPE;
     }
 
@@ -55,13 +53,6 @@ public class ManaSaturatorCategory implements IRecipeCategory<ManaSaturatorRecip
     @Override
     public int getHeight() {
         return H;
-    }
-
-    /** For older JEI versions where the size is taken only from the background. */
-    @SuppressWarnings("removal")
-    @Override
-    public IDrawable getBackground() {
-        return background;
     }
 
     @Override

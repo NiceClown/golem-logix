@@ -16,7 +16,7 @@ import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeHolder;
-import net.minecraft.world.item.crafting.RecipeManager;
+import net.minecraft.world.item.crafting.RecipeMap;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraft.world.item.crafting.ShapelessRecipe;
@@ -114,7 +114,7 @@ public final class Fuzzy {
     }
 
     public static int tagSize(TagKey<Item> tag) {
-        return BuiltInRegistries.ITEM.getTag(tag).map(HolderSet.Named::size).orElse(0);
+        return BuiltInRegistries.ITEM.get(tag).map(HolderSet.Named::size).orElse(0);
     }
 
     /** The network item types that can stand for the ghost, the exact one first. */
@@ -177,17 +177,17 @@ public final class Fuzzy {
         return t != null ? s -> s.is(t) : s -> s.is(item);
     }
 
-    /** Per recipe manager (a reload makes a new one): grid (item keys, "-" for an empty cell) -> what each cell accepts. */
-    private static final Map<RecipeManager, Map<List<Object>, List<Ingredient>>> SUBSTITUTES =
+    /** Per recipe map (a reload makes a new one): grid (item keys, "-" for an empty cell) -> what each cell accepts. */
+    private static final Map<RecipeMap, Map<List<Object>, List<Optional<Ingredient>>>> SUBSTITUTES =
             Collections.synchronizedMap(new WeakHashMap<>());
 
     /**
-     * For a crafting table grid (9 cells): in every cell, what the recipe accepts there (Ingredient.EMPTY where the cell is empty or
+     * For a crafting table grid (9 cells): in every cell, what the recipe accepts there (nothing where the cell is empty or
      * the recipe is of a special kind: then only the encoded item). Like AE2's substitutions: the recipe still works with them.
      */
-    public static List<Ingredient> craftingSubstitutes(Level level, List<ItemStack> grid) {
-        RecipeManager manager = level.getRecipeManager();
-        Map<List<Object>, List<Ingredient>> cache = SUBSTITUTES.computeIfAbsent(manager, m -> Collections.synchronizedMap(new HashMap<>()));
+    public static List<Optional<Ingredient>> craftingSubstitutes(Level level, List<ItemStack> grid) {
+        Map<List<Object>, List<Optional<Ingredient>>> cache = SUBSTITUTES.computeIfAbsent(Recipes.map(level),
+                m -> Collections.synchronizedMap(new HashMap<>()));
         List<ItemStack> nine = new ArrayList<>();
         List<Object> key = new ArrayList<>();
         for (int i = 0; i < 9; i++) {
@@ -195,31 +195,31 @@ public final class Fuzzy {
             nine.add(s.isEmpty() ? ItemStack.EMPTY : s.copyWithCount(1));
             key.add(s.isEmpty() ? "-" : ItemKey.of(s));
         }
-        List<Ingredient> cached = cache.get(key);
+        List<Optional<Ingredient>> cached = cache.get(key);
         if (cached != null) {
             return cached;
         }
-        List<Ingredient> out = new ArrayList<>(Collections.nCopies(9, Ingredient.EMPTY));
+        List<Optional<Ingredient>> out = new ArrayList<>(Collections.nCopies(9, Optional.empty()));
         CraftingInput.Positioned pos = CraftingInput.ofPositioned(3, 3, nine);
         CraftingInput in = pos.input();
-        Optional<RecipeHolder<CraftingRecipe>> found = manager.getRecipeFor(RecipeType.CRAFTING, in, level);
+        Optional<RecipeHolder<CraftingRecipe>> found = Recipes.find(level, RecipeType.CRAFTING, in);
         if (found.isPresent()) {
             CraftingRecipe recipe = found.get().value();
             if (recipe instanceof ShapedRecipe shaped && in.width() == shaped.getWidth() && in.height() == shaped.getHeight()) {
-                NonNullList<Ingredient> ings = shaped.getIngredients();
+                List<Optional<Ingredient>> ings = shaped.getIngredients();
                 int w = shaped.getWidth(), h = shaped.getHeight();
                 boolean mirrored = !fits(ings, w, h, in, false);
                 for (int y = 0; y < h; y++) {
                     for (int x = 0; x < w; x++) {
                         int cell = (pos.top() + y) * 3 + pos.left() + x;
-                        Ingredient ing = ings.get((mirrored ? w - 1 - x : x) + y * w);
-                        if (!nine.get(cell).isEmpty() && !ing.isEmpty()) {
+                        Optional<Ingredient> ing = ings.get((mirrored ? w - 1 - x : x) + y * w);
+                        if (!nine.get(cell).isEmpty() && ing.isPresent()) {
                             out.set(cell, ing);
                         }
                     }
                 }
             } else if (recipe instanceof ShapelessRecipe) {
-                List<Ingredient> pool = new ArrayList<>(recipe.getIngredients());
+                List<Ingredient> pool = new ArrayList<>(recipe.placementInfo().ingredients());
                 for (int cell = 0; cell < 9; cell++) {
                     ItemStack s = nine.get(cell);
                     if (s.isEmpty()) {
@@ -227,23 +227,22 @@ public final class Fuzzy {
                     }
                     for (int k = 0; k < pool.size(); k++) {
                         if (pool.get(k).test(s)) {
-                            out.set(cell, pool.remove(k));
+                            out.set(cell, Optional.of(pool.remove(k)));
                             break;
                         }
                     }
                 }
             }
         }
-        List<Ingredient> result = List.copyOf(out);
+        List<Optional<Ingredient>> result = List.copyOf(out);
         cache.put(key, result);
         return result;
     }
 
-    private static boolean fits(NonNullList<Ingredient> ings, int w, int h, CraftingInput in, boolean mirrored) {
+    private static boolean fits(List<Optional<Ingredient>> ings, int w, int h, CraftingInput in, boolean mirrored) {
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
-                Ingredient ing = ings.get((mirrored ? w - 1 - x : x) + y * w);
-                if (!ing.test(in.getItem(x, y))) {
+                if (!Ingredient.testOptionalIngredient(ings.get((mirrored ? w - 1 - x : x) + y * w), in.getItem(x, y))) {
                     return false;
                 }
             }

@@ -24,7 +24,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Golem Interface: on all six sides an input funnel and a network socket; one channel for handing out stock and taking items into the network.
  */
-public class InterfaceBlock extends Block implements GolemNode, EntityBlock {
+public class InterfaceBlock extends Block implements com.golemlogix.blocks.RemovalAware, GolemNode, EntityBlock {
     public InterfaceBlock(Properties properties) {
         super(properties.sound(SoundType.COPPER).strength(3.0f).requiresCorrectToolForDrops().noOcclusion());
     }
@@ -60,7 +60,7 @@ public class InterfaceBlock extends Block implements GolemNode, EntityBlock {
 
     /** A bucket (or any container) used on the interface: the fluid is poured into its tank and goes to the network. */
     @Override
-    protected net.minecraft.world.ItemInteractionResult useItemOn(net.minecraft.world.item.ItemStack stack, BlockState state, Level level,
+    protected InteractionResult useItemOn(net.minecraft.world.item.ItemStack stack, BlockState state, Level level,
                                                                    BlockPos pos, Player player, net.minecraft.world.InteractionHand hand,
                                                                    BlockHitResult hit) {
         if (net.neoforged.neoforge.fluids.FluidUtil.getFluidContained(stack).isPresent()
@@ -86,15 +86,13 @@ public class InterfaceBlock extends Block implements GolemNode, EntityBlock {
         return InteractionResult.CONSUME;
     }
 
+    /** Replaced by another block (see RemovalAware). */
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
-        if (!state.is(newState.getBlock())) {
-            if (level.getBlockEntity(pos) instanceof InterfaceBlockEntity be) {
-                Containers.dropContents(level, pos, be.getStock());
-                Containers.dropContents(level, pos, be.getInbox());
-                Containers.dropContents(level, pos, be.getUpgrades());
-            }
-            super.onRemove(state, level, pos, newState, isMoving);
+    public void onRemoved(BlockState state, Level level, BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof InterfaceBlockEntity be) {
+            Containers.dropContents(level, pos, be.getStock());
+            Containers.dropContents(level, pos, be.getInbox());
+            Containers.dropContents(level, pos, be.getUpgrades());
         }
     }
 }

@@ -37,7 +37,7 @@ import org.jetbrains.annotations.Nullable;
  * facing the player, the "bottom left" part (looking at the cabinet from the front) where you clicked, the others to the right and above.
  * The block entity with the disks lives only in the "main" bottom left part; the other parts only conduct the network and forward clicks.
  */
-public class CopperDriveBayBlock extends Block implements EntityBlock, GolemNode {
+public class CopperDriveBayBlock extends Block implements com.golemlogix.blocks.RemovalAware, EntityBlock, GolemNode {
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final EnumProperty<Part> PART = EnumProperty.create("part", Part.class);
 
@@ -118,7 +118,7 @@ public class CopperDriveBayBlock extends Block implements EntityBlock, GolemNode
         if (level instanceof Level lvl) {
             for (Part part : Part.values()) {
                 BlockPos p = partPos(master, facing, part);
-                lvl.blockUpdated(p, block);
+                lvl.updateNeighborsAt(p, block);
             }
         }
     }
@@ -150,8 +150,7 @@ public class CopperDriveBayBlock extends Block implements EntityBlock, GolemNode
 
     /** A part without its edge "partner" breaks: the whole cabinet disappears. */
     @Override
-    protected BlockState updateShape(BlockState state, Direction direction, BlockState neighbor, LevelAccessor level,
-                                     BlockPos pos, BlockPos neighborPos) {
+    protected BlockState updateShape(BlockState state, net.minecraft.world.level.LevelReader level, net.minecraft.world.level.ScheduledTickAccess ticks, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighbor, net.minecraft.util.RandomSource random) {
         Part part = state.getValue(PART);
         Direction facing = state.getValue(FACING);
         Direction sidePartner = part.right == 0 ? rightOf(facing) : rightOf(facing).getOpposite();
@@ -162,7 +161,7 @@ public class CopperDriveBayBlock extends Block implements EntityBlock, GolemNode
                 return Blocks.AIR.defaultBlockState();
             }
         }
-        return super.updateShape(state, direction, neighbor, level, pos, neighborPos);
+        return super.updateShape(state, level, ticks, pos, direction, neighborPos, neighbor, random);
     }
 
     @Override
@@ -247,18 +246,16 @@ public class CopperDriveBayBlock extends Block implements EntityBlock, GolemNode
         return InteractionResult.CONSUME;
     }
 
+    /** Replaced by another block (see RemovalAware). */
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
-        if (!state.is(newState.getBlock())) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof CopperDriveBayBlockEntity bay) {
-                for (ItemStack disk : bay.getDisks()) {
-                    if (!disk.isEmpty()) {
-                        Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, disk.copy());
-                    }
+    public void onRemoved(BlockState state, Level level, BlockPos pos) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof CopperDriveBayBlockEntity bay) {
+            for (ItemStack disk : bay.getDisks()) {
+                if (!disk.isEmpty()) {
+                    Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, disk.copy());
                 }
             }
-            super.onRemove(state, level, pos, newState, isMoving);
         }
     }
 }

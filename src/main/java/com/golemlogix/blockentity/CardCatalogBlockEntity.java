@@ -318,7 +318,7 @@ public class CardCatalogBlockEntity extends BlockEntity {
         be.drums += be.clientOpen ? 0.12f : ((level.getGameTime() + pos.asLong()) % 30 < 6 ? 0.05f : 0f);
         // steam from the roof pipe: in puffs while the window is open, now and then when idle
         if (be.formed() && level.getGameTime() % (be.clientOpen ? 4 : 23) == 0) {
-            var r = level.random;
+            var r = level.getRandom();
             Direction f = state.getValue(CardCatalogBlock.FACING);
             double a = Math.toRadians(180 - f.toYRot()), dx = 23.3 / 16 - 0.5, dz = 23.3 / 16 - 0.5;
             double wx = dx * Math.cos(a) + dz * Math.sin(a), wz = -dx * Math.sin(a) + dz * Math.cos(a);
@@ -354,11 +354,11 @@ public class CardCatalogBlockEntity extends BlockEntity {
     }
 
     protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
-        cards.fromTag(tag.getList("Cards", Tag.TAG_COMPOUND), registries);
-        providers.fromTag(tag.getList("Providers", Tag.TAG_COMPOUND), registries);
-        upgrades.fromTag(tag.getList("Upgrades", Tag.TAG_COMPOUND), registries);
+        cards.fromTag(tag.getListOrEmpty("Cards"), registries);
+        providers.fromTag(tag.getListOrEmpty("Providers"), registries);
+        upgrades.fromTag(tag.getListOrEmpty("Upgrades"), registries);
         java.util.Arrays.fill(originals, null);
-        ListTag orig = tag.getList("Originals", Tag.TAG_COMPOUND);
+        ListTag orig = tag.getListOrEmpty("Originals");
         for (int i = 0; i < orig.size(); i++) {
             CompoundTag e = orig.getCompoundOrEmpty(i);
             int cell = e.getIntOr("Cell", 0);
@@ -390,7 +390,6 @@ public class CardCatalogBlockEntity extends BlockEntity {
         clientGolems[1] = tag.getIntOr("GolemR", 0);
     }
 
-    
     @Override
     public ClientboundBlockEntityDataPacket getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
@@ -420,5 +419,14 @@ public class CardCatalogBlockEntity extends BlockEntity {
     @Override
     public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input) {
         handleUpdateTag(input);
+    }
+
+    /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
+            r.onRemoved(state, level, pos);
+        }
     }
 }

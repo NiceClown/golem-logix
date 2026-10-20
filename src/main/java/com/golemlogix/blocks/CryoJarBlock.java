@@ -98,15 +98,14 @@ public class CryoJarBlock extends Block implements EntityBlock {
 
     /** One half without the other goes too. */
     @Override
-    protected BlockState updateShape(BlockState state, Direction direction, BlockState neighbor, LevelAccessor level,
-                                     BlockPos pos, BlockPos neighborPos) {
+    protected BlockState updateShape(BlockState state, net.minecraft.world.level.LevelReader level, net.minecraft.world.level.ScheduledTickAccess ticks, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighbor, net.minecraft.util.RandomSource random) {
         DoubleBlockHalf half = state.getValue(HALF);
         Direction toOther = half == DoubleBlockHalf.LOWER ? Direction.UP : Direction.DOWN;
         if (direction == toOther && (!neighbor.is(this) || neighbor.getValue(HALF) == half
                 || neighbor.getValue(FACING) != state.getValue(FACING))) {
             return Blocks.AIR.defaultBlockState();
         }
-        return super.updateShape(state, direction, neighbor, level, pos, neighborPos);
+        return super.updateShape(state, level, ticks, pos, direction, neighborPos, neighbor, random);
     }
 
     /** Only the lower half drops the jar: breaking the upper one breaks the lower one with its drop. */
@@ -138,7 +137,7 @@ public class CryoJarBlock extends Block implements EntityBlock {
     }
 
     @Override
-    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
+    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos, Direction direction) {
         return level.getBlockEntity(lowerOf(pos, state)) instanceof CryoJarBlockEntity jar && jar.available() > 0
                 ? 1 + (int) (14L * jar.available() / Math.max(1, jar.capacity())) : 0;
     }

@@ -38,13 +38,13 @@ public final class SecretKnowledge {
 
     /** Whether the player knows that a Dispel unbinds a battered golem's mind. */
     public static boolean knowsMind(ServerPlayer player) {
-        AdvancementHolder holder = player.server.getAdvancements().get(MIND);
+        AdvancementHolder holder = player.level().getServer().getAdvancements().get(MIND);
         return holder != null && player.getAdvancements().getOrStartProgress(holder).isDone();
     }
 
     /** The player made a plate on an anvil: the Dispel method opens (once). */
     public static void plateMade(ServerPlayer player) {
-        AdvancementHolder holder = player.server.getAdvancements().get(MIND);
+        AdvancementHolder holder = player.level().getServer().getAdvancements().get(MIND);
         if (holder != null && !player.getAdvancements().getOrStartProgress(holder).isDone()) {
             player.getAdvancements().award(holder, FIRST_PLATE);
         }
@@ -52,7 +52,7 @@ public final class SecretKnowledge {
 
     /** Player state: [Wither defeated, attempt from another dimension]. */
     public static boolean[] state(ServerPlayer player) {
-        AdvancementHolder holder = player.server.getAdvancements().get(REVEALED);
+        AdvancementHolder holder = player.level().getServer().getAdvancements().get(REVEALED);
         if (holder == null) {
             return new boolean[]{false, false};
         }
@@ -88,8 +88,8 @@ public final class SecretKnowledge {
             if (event.getProgressType() == AdvancementEvent.AdvancementProgressEvent.ProgressType.GRANT) {
                 Component link = Component.translatable("message.golem_logix.secret.open_book").withStyle(style -> style
                         .withColor(ChatFormatting.AQUA).withUnderlined(true)
-                        .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/golemlogix_book dispel"))
-                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.translatable("message.golem_logix.secret.open_book_hint"))));
+                        .withClickEvent(new ClickEvent.RunCommand("/golemlogix_book dispel"))
+                        .withHoverEvent(new HoverEvent.ShowText(Component.translatable("message.golem_logix.secret.open_book_hint"))));
                 sp.sendSystemMessage(Component.translatable("message.golem_logix.mind.unlocked").withStyle(ChatFormatting.AQUA).append(" ").append(link));
             }
             return;
@@ -104,8 +104,8 @@ public final class SecretKnowledge {
             String entry = s[0] && s[1] ? "wither" : "secret_hint";
             Component link = Component.translatable("message.golem_logix.secret.open_book").withStyle(style -> style
                     .withColor(ChatFormatting.AQUA).withUnderlined(true)
-                    .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/golemlogix_book " + entry))
-                    .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.translatable("message.golem_logix.secret.open_book_hint"))));
+                    .withClickEvent(new ClickEvent.RunCommand("/golemlogix_book " + entry))
+                    .withHoverEvent(new HoverEvent.ShowText(Component.translatable("message.golem_logix.secret.open_book_hint"))));
             String key = s[0] && s[1] ? "message.golem_logix.secret.revealed" : "message.golem_logix.secret.page";
             sp.sendSystemMessage(Component.translatable(key).withStyle(ChatFormatting.LIGHT_PURPLE).append(" ").append(link));
         }

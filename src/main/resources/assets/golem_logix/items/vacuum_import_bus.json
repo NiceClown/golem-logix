@@ -1,0 +1,6 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "golem_logix:item/vacuum_import_bus"
+  }
+}

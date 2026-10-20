@@ -19,7 +19,7 @@ import net.minecraft.world.item.ItemStack;
  * Recipe Monitor: in the purple vortex of the porthole punch cards float in a circle, one for every job running in the network
  * (up to six), like the cards in the portal window of the reference. Cards appear and disappear smoothly.
  */
-public class RecipeMonitorRenderer implements BlockEntityRenderer<RecipeMonitorBlockEntity> {
+public class RecipeMonitorRenderer extends com.golemlogix.client.render.LegacyBer<RecipeMonitorBlockEntity> {
     /** Centre of the porthole on the front (model pixels) and the radius of the card orbit. */
     private static final float CX = 8f, CY = 8.5f, RADIUS = 3.6f;
 
@@ -57,8 +57,7 @@ public class RecipeMonitorRenderer implements BlockEntityRenderer<RecipeMonitorB
             pose.mulPose(Axis.ZP.rotationDegrees(Mth.sin(time * 0.05f + i * 1.7f) * 20f));
             float s = 0.2f * alive;
             pose.scale(s, s, s);
-            Minecraft.getInstance().getItemRenderer().renderStatic(card, ItemDisplayContext.FIXED, LightCoordsUtil.FULL_BRIGHT,
-                    OverlayTexture.NO_OVERLAY, pose, buffers, be.getLevel(), i);
+            com.golemlogix.client.render.BerBuffers.item(buffers, card, ItemDisplayContext.FIXED, LightCoordsUtil.FULL_BRIGHT, pose, be.getLevel(), i);
             pose.popPose();
         }
         pose.popPose();

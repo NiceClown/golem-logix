@@ -48,7 +48,7 @@ import java.util.List;
  * model to show. Clicking any part works like clicking the owner; the network connects to the sockets (one on each
  * side except the roof). Cooling Co-Processors (COOLER) go on the roof vent grilles: each one speeds up the press.
  */
-public class SaturatorPartBlock extends Block implements EntityBlock, GolemNode {
+public class SaturatorPartBlock extends Block implements com.golemlogix.blocks.RemovalAware, EntityBlock, GolemNode {
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final IntegerProperty CELL = IntegerProperty.create("cell", 0, SaturatorStructure.CELLS - 1);
     /** A Cooling Co-Processor stands on the grille. */
@@ -151,13 +151,11 @@ public class SaturatorPartBlock extends Block implements EntityBlock, GolemNode 
     }
 
     // ------------------------------------------------------------------------------ disassembly and drops
+    /** Replaced by another block (see RemovalAware). */
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock())) {
-            if (!level.isClientSide() && !SaturatorStructure.isRestoring()) {
-                SaturatorStructure.disassemble(level, controllerOf(pos, state), state.getValue(FACING), pos);
-            }
-            super.onRemove(state, level, pos, newState, movedByPiston);
+    public void onRemoved(BlockState state, Level level, BlockPos pos) {
+        if (!level.isClientSide() && !SaturatorStructure.isRestoring()) {
+            SaturatorStructure.disassemble(level, controllerOf(pos, state), state.getValue(FACING), pos);
         }
     }
 
@@ -176,7 +174,7 @@ public class SaturatorPartBlock extends Block implements EntityBlock, GolemNode 
     }
 
     @Override
-    public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
+    protected ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state, boolean includeData) {
         if (level.getBlockEntity(pos) instanceof SaturatorPartBlockEntity part && !part.getOriginal().isAir()) {
             return new ItemStack(part.getOriginal().getBlock());
         }

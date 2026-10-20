@@ -36,9 +36,9 @@ public enum CoreProvider implements IBlockComponentProvider {
         int used = core.getChannelsUsed();
         int max = core.getChannelCapacity();
         if (accessor.getServerData().contains(ChannelProvider.TAG)) {
-            var t = accessor.getServerData().getCompound(ChannelProvider.TAG);
-            used = t.getInt("netUsed");
-            max = t.getInt("netMax");
+            var t = accessor.getServerData().getCompoundOrEmpty(ChannelProvider.TAG);
+            used = t.getIntOr("netUsed", used);
+            max = t.getIntOr("netMax", max);
         }
         tooltip.add(Component.translatable("jade.golem_logix.core.channels", used, max,
                 Component.translatable(core.isFormed() ? "jade.golem_logix.core.array" : "jade.golem_logix.core.tower")));

@@ -55,7 +55,7 @@ public class PipeBlockEntity extends BlockEntity {
     }
 
     protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
-        plugs = tag.getByte("Plugs") & 63;
+        plugs = tag.getByteOr("Plugs", (byte) 0) & 63;
     }
 
     @Override
@@ -66,7 +66,7 @@ public class PipeBlockEntity extends BlockEntity {
     }
 
     public void readUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
-        plugs = tag.getByte("Plugs") & 63;
+        plugs = tag.getByteOr("Plugs", (byte) 0) & 63;
     }
 
     @Override
@@ -99,5 +99,14 @@ public class PipeBlockEntity extends BlockEntity {
     @Override
     public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input) {
         handleUpdateTag(input);
+    }
+
+    /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
+            r.onRemoved(state, level, pos);
+        }
     }
 }

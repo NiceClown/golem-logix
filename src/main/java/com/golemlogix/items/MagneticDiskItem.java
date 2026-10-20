@@ -52,7 +52,9 @@ public class MagneticDiskItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
+    public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
+                                java.util.function.Consumer<Component> lines, TooltipFlag tooltipFlag) {
+        List<Component> tooltipComponents = new com.golemlogix.items.TooltipLines(lines);
         String formattedCap = NumberFormat.getNumberInstance(Locale.US).format(capacity);
         String formattedStored = NumberFormat.getNumberInstance(Locale.US).format(getStoredCount(stack));
 
@@ -67,6 +69,6 @@ public class MagneticDiskItem extends Item {
         tooltipComponents.add(Component.translatable("tooltip.golem_logix.disk.no_type_limit")
                 .withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
 
-        super.appendHoverText(stack, context, tooltipComponents, tooltipFlag);
+        super.appendHoverText(stack, context, display, lines, tooltipFlag);
     }
 }

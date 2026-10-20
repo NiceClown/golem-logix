@@ -45,7 +45,7 @@ import org.joml.Vector3f;
  * <p>
  * Coordinates are pixels in the owner's north-facing frame: X -16..32 (three cells across), Y 0..32, Z 0..32 (front = Z 0).
  */
-public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeBlockEntity> {
+public class CryoMainframeRenderer extends com.golemlogix.client.render.LegacyBer<CryoMainframeBlockEntity> {
     private static final Identifier BRONZE = tex("sat_bronze"), BRASS = tex("sat_brass"), DARK = tex("sat_dark"),
             MATRIX = tex("cryo_panel_matrix"), GLASS = tex("sat_glass"), PANEL = tex("cryo_panel"), GAUGE = tex("monitor_gauge"),
             COPPER = Identifier.withDefaultNamespace("block/copper_block"), DECK = tex("monitor_deck");
@@ -86,7 +86,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         }
         Direction facing = state.getValue(CryoMainframeBlock.FACING);
         float time = level.getGameTime() + partialTick;
-        int light = LevelRenderer.getLightColor(level, be.getBlockPos().relative(facing));
+        int light = LevelRenderer.getLightCoords(level, be.getBlockPos().relative(facing));
         light = LightCoordsUtil.pack(Math.max(LightCoordsUtil.block(light), 7), LightCoordsUtil.sky(light));
         float doors = Mth.lerp(partialTick, be.doorsPrev, be.doors);
         float spin = Mth.lerp(partialTick, be.spinPrev, be.spin);
@@ -121,13 +121,12 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         // calculators on the shelves (as many as are inserted), at the back wall
         int calcs = be.clientCalcs();
         BlockState calc = ModBlocks.CRYO_CALCULATOR.get().defaultBlockState().setValue(GolemProperties.ACTIVE, spin > 0.5f);
-        var dispatcher = Minecraft.getInstance().getBlockRenderer();
         for (int k = 0; k < Math.min(calcs, CryoMainframeBlockEntity.CALC_SLOTS); k++) {
             int shelf = k / 6, slot = k % 6;
             pose.pushPose();
             pose.translate((-12.5f + slot * 7.2f) / 16f, (shelf == 0 ? 3.2f : 16.2f) / 16f, 22.5f / 16f);
             pose.scale(5.5f / 16f, 5.5f / 16f, 5.5f / 16f);
-            dispatcher.renderSingleBlock(calc, pose, buffers, light, OverlayTexture.NO_OVERLAY);
+            com.golemlogix.client.render.BerBuffers.block(buffers, calc, pose, light);
             pose.popPose();
         }
 
@@ -149,8 +148,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
                 pose.translate(proj.x, proj.y, proj.z);
                 pose.mulPose(Axis.YP.rotationDegrees(time * 3f + shelf * 90f));
                 pose.scale(size, size, size);
-                Minecraft.getInstance().getItemRenderer().renderStatic(current, ItemDisplayContext.FIXED, LightCoordsUtil.FULL_BRIGHT,
-                        OverlayTexture.NO_OVERLAY, pose, buffers, level, 0);
+                com.golemlogix.client.render.BerBuffers.item(buffers, current, ItemDisplayContext.FIXED, LightCoordsUtil.FULL_BRIGHT, pose, level, 0);
                 pose.popPose();
             }
             pose.popPose();
@@ -247,9 +245,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         pose.mulPose(Axis.XP.rotationDegrees(pitch));
         pose.scale(1.55f, 1.55f, 1.55f);
         pose.translate(-0.5f, -10f / 16f, -0.5f);
-        mc.getBlockRenderer().getModelRenderer().renderModel(pose.last(), buffers.getBuffer(RenderType.cutout()), null,
-                mc.getModelManager().getModel(AtlantHeadRenderer.HEAD), 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY,
-                net.neoforged.neoforge.client.model.data.ModelData.EMPTY, RenderType.cutout());
+        com.golemlogix.client.render.StandaloneModels.render(pose.last(), buffers.getBuffer(net.minecraft.client.renderer.Sheets.cutoutBlockSheet()), AtlantHeadRenderer.HEAD, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
         pose.popPose();
     }
 
@@ -288,8 +284,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
             if (rotX != 0f) {
                 hp.mulPose(Axis.XP.rotationDegrees(rotX));
             }
-            Minecraft.getInstance().getItemRenderer().renderStatic(stack, ItemDisplayContext.FIXED, light, OverlayTexture.NO_OVERLAY, hp,
-                    buffers, null, 0);
+            com.golemlogix.client.render.BerBuffers.item(buffers, stack, ItemDisplayContext.FIXED, light, hp, null, 0);
         };
     }
 
@@ -595,7 +590,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
 
     // ------------------------------------------------------------------------------------------ quads
     static TextureAtlasSprite sprite(Identifier id) {
-        return Minecraft.getInstance().getTextureAtlas(TextureAtlas.LOCATION_BLOCKS).apply(id);
+        return com.golemlogix.client.render.Sprites.block(id);
     }
 
     /** A flat wall in the z plane (facing -Z), with the texture tiled every 16 pixels. */

@@ -39,7 +39,7 @@ import org.jetbrains.annotations.Nullable;
  * stand correctly nearby; the assembled machine takes Source from the network through the "central box" (a dense frost pipe) or
  * from jars nearby. Takes no channels.
  */
-public class ManaSaturatorBlock extends Block implements EntityBlock {
+public class ManaSaturatorBlock extends Block implements com.golemlogix.blocks.RemovalAware, EntityBlock {
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     /** The machine is assembled: the neighbouring blocks are replaced by parts, and this block's model is a piece of the shared model. */
     public static final BooleanProperty FORMED = BooleanProperty.create("formed");
@@ -209,23 +209,21 @@ public class ManaSaturatorBlock extends Block implements EntityBlock {
         return InteractionResult.CONSUME;
     }
 
+    /** Replaced by another block (see RemovalAware). */
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
-        if (!state.is(newState.getBlock())) {
-            if (!level.isClientSide() && state.getValue(FORMED)) {
-                SaturatorStructure.disassemble(level, pos, state.getValue(FACING), null);
+    public void onRemoved(BlockState state, Level level, BlockPos pos) {
+        if (!level.isClientSide() && state.getValue(FORMED)) {
+            SaturatorStructure.disassemble(level, pos, state.getValue(FACING), null);
+        }
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof ManaSaturatorBlockEntity saturator) {
+            for (ItemStack s : saturator.allItems()) {
+                Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, s);
             }
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof ManaSaturatorBlockEntity saturator) {
-                for (ItemStack s : saturator.allItems()) {
-                    Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, s);
-                }
-                if (saturator.hasRedstoneModule()) {
-                    Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
-                            new ItemStack(com.golemlogix.init.ModItems.REDSTONE_MODULE.get()));
-                }
+            if (saturator.hasRedstoneModule()) {
+                Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+                        new ItemStack(com.golemlogix.init.ModItems.REDSTONE_MODULE.get()));
             }
-            super.onRemove(state, level, pos, newState, isMoving);
         }
     }
 }

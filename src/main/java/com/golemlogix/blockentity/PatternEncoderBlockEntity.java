@@ -60,7 +60,7 @@ public class PatternEncoderBlockEntity extends BlockEntity {
     }
 
     protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
-        items.fromTag(tag.getList("Items", Tag.TAG_COMPOUND), registries);
+        items.fromTag(tag.getListOrEmpty("Items"), registries);
         mode = tag.getIntOr("Mode", 0);
         fuzzy = tag.getIntOr("Fuzzy", 0);
     }
@@ -79,5 +79,14 @@ public class PatternEncoderBlockEntity extends BlockEntity {
     protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
         super.loadAdditional(input);
         loadTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    }
+
+    /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
+            r.onRemoved(state, level, pos);
+        }
     }
 }

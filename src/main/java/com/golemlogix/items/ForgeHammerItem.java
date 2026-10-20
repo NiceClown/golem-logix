@@ -59,7 +59,7 @@ public class ForgeHammerItem extends Item {
     }
 
     @Override
-    public boolean canAttackBlock(BlockState state, Level level, BlockPos pos, Player player) {
+    public boolean canDestroyBlock(ItemStack stack, BlockState state, Level level, BlockPos pos, net.minecraft.world.entity.LivingEntity user) {
         return !isAnvil(state);
     }
 
@@ -109,12 +109,14 @@ public class ForgeHammerItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
+                                java.util.function.Consumer<Component> lines, TooltipFlag flag) {
+        List<Component> tooltip = new com.golemlogix.items.TooltipLines(lines);
         tooltip.add(Component.translatable("tooltip.golem_logix.forge_hammer").withStyle(ChatFormatting.GRAY));
         if (SourceHelper.sourceRequired()) {
             tooltip.add(Component.translatable("tooltip.golem_logix.forge_hammer.charge", getCharge(stack), MAX_CHARGE, STRIKE_COST)
                     .withStyle(ChatFormatting.LIGHT_PURPLE));
         }
-        super.appendHoverText(stack, context, tooltip, flag);
+        super.appendHoverText(stack, context, display, lines, flag);
     }
 }

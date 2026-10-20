@@ -22,7 +22,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
-public class PatternProviderBlock extends Block implements GolemNode, EntityBlock {
+public class PatternProviderBlock extends Block implements com.golemlogix.blocks.RemovalAware, GolemNode, EntityBlock {
     /** Where to feed ingredients: to all sides or to one (the arrows on the faces show the choice). */
     public static final net.minecraft.world.level.block.state.properties.EnumProperty<ProviderOutput> OUTPUT =
             net.minecraft.world.level.block.state.properties.EnumProperty.create("output", ProviderOutput.class);
@@ -83,19 +83,17 @@ public class PatternProviderBlock extends Block implements GolemNode, EntityBloc
         return InteractionResult.CONSUME;
     }
 
+    /** Replaced by another block (see RemovalAware). */
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
-        if (!state.is(newState.getBlock())) {
-            if (level.getBlockEntity(pos) instanceof PatternProviderBlockEntity provider) {
-                for (int i = 0; i < PatternProviderBlockEntity.SLOTS; i++) {
-                    ItemStack s = provider.getContainer().getItem(i);
-                    if (!s.isEmpty()) {
-                        Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, s.copy());
-                    }
+    public void onRemoved(BlockState state, Level level, BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof PatternProviderBlockEntity provider) {
+            for (int i = 0; i < PatternProviderBlockEntity.SLOTS; i++) {
+                ItemStack s = provider.getContainer().getItem(i);
+                if (!s.isEmpty()) {
+                    Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, s.copy());
                 }
-                Containers.dropContents(level, pos, provider.getUpgrades());
             }
-            super.onRemove(state, level, pos, newState, isMoving);
+            Containers.dropContents(level, pos, provider.getUpgrades());
         }
     }
 }

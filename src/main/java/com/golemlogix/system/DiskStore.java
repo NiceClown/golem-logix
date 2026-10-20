@@ -4,11 +4,13 @@ import com.golemlogix.GolemLogixMod;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.NbtUtils;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.level.saveddata.SavedDataType;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import java.util.ArrayList;
@@ -39,9 +41,39 @@ public class DiskStore extends SavedData {
 
     private final Map<UUID, Disk> disks = new HashMap<>();
 
+    /** Saved as one compound (the format of 1.21.1, now in data/golem_logix/disks.dat) through the server's registries. */
+    private static final SavedDataType<DiskStore> TYPE = new SavedDataType<>(Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "disks"),
+            level -> fromLegacyFile(), level -> {
+                HolderLookup.Provider registries = registries();
+                return CompoundTag.CODEC.xmap(tag -> load(tag, registries), store -> store.save(new CompoundTag(), registries));
+            });
+
     public static DiskStore get(MinecraftServer server) {
-        return server.overworld().getDataStorage().computeIfAbsent(
-                new SavedData.Factory<>(DiskStore::new, DiskStore::load, null), NAME);
+        return server.getDataStorage().computeIfAbsent(TYPE);
+    }
+
+    private static HolderLookup.Provider registries() {
+        return net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer().registryAccess();
+    }
+
+    /** A world from 1.21.1 kept its disks in data/golem_logix_disks.dat: they move to the new file on the next save. */
+    private static DiskStore fromLegacyFile() {
+        MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server != null) {
+            java.nio.file.Path old = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.DATA).resolve(NAME + ".dat");
+            if (java.nio.file.Files.isRegularFile(old)) {
+                try {
+                    CompoundTag root = net.minecraft.nbt.NbtIo.readCompressed(old, net.minecraft.nbt.NbtAccounter.unlimitedHeap());
+                    DiskStore store = load(root.getCompoundOrEmpty("data"), server.registryAccess());
+                    store.setDirty();
+                    GolemLogixMod.LOGGER.info("Golem Logix: moved {} disks from {}", store.disks.size(), old.getFileName());
+                    return store;
+                } catch (java.io.IOException | RuntimeException e) {
+                    GolemLogixMod.LOGGER.warn("Golem Logix: could not read the old disk file {}", old, e);
+                }
+            }
+        }
+        return new DiskStore();
     }
 
     public Disk getOrNull(UUID id) {
@@ -63,10 +95,10 @@ public class DiskStore extends SavedData {
         ListTag list = tag.getListOrEmpty("Disks");
         for (int i = 0; i < list.size(); i++) {
             CompoundTag t = list.getCompoundOrEmpty(i);
-            if (!t.contains("Id")) {
+            UUID id = t.read("Id", UUIDUtil.CODEC).orElse(null);
+            if (id == null) {
                 continue;
             }
-            UUID id = NbtUtils.loadUUID(t.get("Id"));
             Disk disk = new Disk();
 
             ListTag items = t.getListOrEmpty("Items");
@@ -95,7 +127,6 @@ public class DiskStore extends SavedData {
         return store;
     }
 
-    @Override
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
         ListTag list = new ListTag();
         for (Map.Entry<UUID, Disk> e : disks.entrySet()) {
@@ -104,7 +135,7 @@ public class DiskStore extends SavedData {
                 continue;
             }
             CompoundTag t = new CompoundTag();
-            t.put("Id", NbtUtils.createUUID(e.getKey()));
+            t.store("Id", UUIDUtil.CODEC, e.getKey());
             ListTag items = new ListTag();
             for (Map.Entry<ItemKey, Integer> it : disk.items.entrySet()) {
                 CompoundTag c = new CompoundTag();

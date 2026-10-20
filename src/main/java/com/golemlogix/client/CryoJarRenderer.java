@@ -36,7 +36,7 @@ import static com.golemlogix.client.CryoMainframeRenderer.fitWall;
  * <p>
  * Pixels in the north-facing frame: the front is Z 0, the viewer's right is -X; Y 0..32 over both halves.
  */
-public class CryoJarRenderer implements BlockEntityRenderer<CryoJarBlockEntity> {
+public class CryoJarRenderer extends com.golemlogix.client.render.LegacyBer<CryoJarBlockEntity> {
     static final Identifier BRICK = mc("nether_bricks"), DARK = tex("sat_dark"), BRASS = tex("sat_brass"), ICE = tex("sat_ice"),
             GLASS = tex("sat_glass"), RUNES = tex("cryo_panel_matrix"), GAUGE = tex("monitor_gauge"), FRAME = mc("weathered_copper"),
             SNOW = mc("snow"), CRYO = tex("cryo_source_still"), COPPER = mc("copper_block");
@@ -69,7 +69,7 @@ public class CryoJarRenderer implements BlockEntityRenderer<CryoJarBlockEntity> 
             return;
         }
         BlockPos pos = be.getBlockPos();
-        int light = LevelRenderer.getLightColor(level, pos.above());
+        int light = LevelRenderer.getLightCoords(level, pos.above());
         float fill = Mth.lerp(partialTick, be.fillPrev, be.fill);
         float time = level.getGameTime() + Math.floorMod(pos.asLong(), 61L) + partialTick;
         boolean charged = be.clientSource() > 0;

@@ -42,7 +42,7 @@ import org.jetbrains.annotations.Nullable;
  * 64 channels; the main cell (front left base) holds the cards and links to distant telegraphs (see TelegraphLinks).
  * Everything is drawn by TelegraphRenderer from the main cell.
  */
-public class TelegraphBlock extends Block implements EntityBlock, GolemNode {
+public class TelegraphBlock extends Block implements com.golemlogix.blocks.RemovalAware, EntityBlock, GolemNode {
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final EnumProperty<Part> PART = EnumProperty.create("part", Part.class);
     /** Channels a telegraph carries (like a dense pipe), across its link too. */
@@ -181,8 +181,7 @@ public class TelegraphBlock extends Block implements EntityBlock, GolemNode {
 
     /** A cell whose neighbouring cell of the telegraph is gone (or became something else) goes too: the whole telegraph breaks. */
     @Override
-    protected BlockState updateShape(BlockState state, Direction direction, BlockState neighbor, LevelAccessor level,
-                                     BlockPos pos, BlockPos neighborPos) {
+    protected BlockState updateShape(BlockState state, net.minecraft.world.level.LevelReader level, net.minecraft.world.level.ScheduledTickAccess ticks, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighbor, net.minecraft.util.RandomSource random) {
         Part part = state.getValue(PART);
         Direction facing = state.getValue(FACING);
         int r = part.right, b = part.back, u = part.up;
@@ -204,7 +203,7 @@ public class TelegraphBlock extends Block implements EntityBlock, GolemNode {
         if (expected != null && (!neighbor.is(this) || neighbor.getValue(PART) != expected || neighbor.getValue(FACING) != facing)) {
             return Blocks.AIR.defaultBlockState();
         }
-        return super.updateShape(state, direction, neighbor, level, pos, neighborPos);
+        return super.updateShape(state, level, ticks, pos, direction, neighborPos, neighbor, random);
     }
 
     /**
@@ -267,11 +266,11 @@ public class TelegraphBlock extends Block implements EntityBlock, GolemNode {
         return InteractionResult.CONSUME;
     }
 
+    /** Replaced by another block (see RemovalAware). */
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof TelegraphBlockEntity be) {
+    public void onRemoved(BlockState state, Level level, BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof TelegraphBlockEntity be) {
             be.dropContents();
         }
-        super.onRemove(state, level, pos, newState, isMoving);
     }
 }

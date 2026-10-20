@@ -225,7 +225,7 @@ public class BusBlockEntity extends BlockEntity {
                 be.lastSound = now;
                 level.playSound(null, pos, be.isExport() ? ModSounds.PNEUMATIC_INJECT.get() : ModSounds.VACUUM_SUCTION.get(),
                         SoundSource.BLOCKS, 0.25f, 1.0f);
-                if (level.random.nextInt(3) == 0) {
+                if (level.getRandom().nextInt(3) == 0) {
                     level.playSound(null, pos, ModSounds.TUBE_SCURRY.get(), SoundSource.BLOCKS, 0.2f, 1.0f);
                 }
             }
@@ -499,5 +499,14 @@ public class BusBlockEntity extends BlockEntity {
     protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
         super.loadAdditional(input);
         loadTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    }
+
+    /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
+            r.onRemoved(state, level, pos);
+        }
     }
 }

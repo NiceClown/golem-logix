@@ -56,6 +56,16 @@ public final class NbtBridge {
         return net.neoforged.neoforge.fluids.FluidStack.CODEC.parse(ops(registries), tag).result().filter(s -> !s.isEmpty());
     }
 
+    /** A tank's fluid as a compound (empty for an empty tank). */
+    public static CompoundTag saveTank(net.neoforged.neoforge.fluids.capability.templates.FluidTank tank, HolderLookup.Provider registries) {
+        return tank.isEmpty() ? new CompoundTag() : (CompoundTag) saveFluid(tank.getFluid(), registries);
+    }
+
+    public static void loadTank(net.neoforged.neoforge.fluids.capability.templates.FluidTank tank, HolderLookup.Provider registries, CompoundTag tag) {
+        tank.setFluid(tag.isEmpty() ? net.neoforged.neoforge.fluids.FluidStack.EMPTY
+                : loadFluid(registries, tag).orElse(net.neoforged.neoforge.fluids.FluidStack.EMPTY));
+    }
+
     /** Registries for encoding items and fluids while saving. */
     public static HolderLookup.Provider registries(BlockEntity be) {
         if (be.getLevel() != null) {

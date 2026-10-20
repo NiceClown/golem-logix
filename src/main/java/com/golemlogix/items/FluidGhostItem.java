@@ -56,7 +56,9 @@ public class FluidGhostItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
+                                java.util.function.Consumer<Component> lines, TooltipFlag flag) {
+        List<Component> tooltip = new com.golemlogix.items.TooltipLines(lines);
         FluidStack f = fluid(stack);
         if (!f.isEmpty()) {
             tooltip.add(Component.translatable("tooltip.golem_logix.fluid_ghost.amount", f.getAmount()).withStyle(ChatFormatting.AQUA));

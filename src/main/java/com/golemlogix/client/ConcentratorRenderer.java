@@ -23,7 +23,7 @@ import net.minecraft.world.phys.AABB;
  * is open, glowing "punch cards" fan out of the screen and the rings spin faster. Everything is drawn as "eyes" (added
  * to the light, textures with a black background instead of transparency).
  */
-public class ConcentratorRenderer implements BlockEntityRenderer<SchematicConcentratorBlockEntity> {
+public class ConcentratorRenderer extends com.golemlogix.client.render.LegacyBer<SchematicConcentratorBlockEntity> {
     private static final Identifier HOLO = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/concentrator_holo.png"),
             CARD = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/concentrator_card.png");
 

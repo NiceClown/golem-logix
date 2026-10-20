@@ -23,7 +23,7 @@ public final class DevServerCommand {
 
     @SubscribeEvent
     public static void register(RegisterCommandsEvent event) {
-        event.getDispatcher().register(Commands.literal("golemlogix_dev").requires(s -> s.hasPermission(2))
+        event.getDispatcher().register(Commands.literal("golemlogix_dev").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                 .then(Commands.literal("hook").then(Commands.argument("args", StringArgumentType.greedyString()).executes(ctx -> {
                     ServerPlayer player = ctx.getSource().getPlayerOrException();
                     String[] t = StringArgumentType.getString(ctx, "args").trim().split("\\s+");

@@ -45,7 +45,7 @@ import java.util.List;
  * any fluid of the tag golem_logix:cryo_distillable) goes in through any of its blocks, Source comes out into the Cryo-Source Jars
  * (and Ars Nouveau jars) touching it. The plinth (section 0) holds the tank; everything is drawn by DistillationTowerRenderer.
  */
-public class DistillationTowerBlock extends Block implements EntityBlock {
+public class DistillationTowerBlock extends Block implements com.golemlogix.blocks.RemovalAware, EntityBlock {
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final int HEIGHT = 3;
     public static final IntegerProperty SECTION = IntegerProperty.create("section", 0, HEIGHT - 1);
@@ -126,15 +126,14 @@ public class DistillationTowerBlock extends Block implements EntityBlock {
 
     /** A section whose neighbour above or below is gone goes too: the whole tower breaks. */
     @Override
-    protected BlockState updateShape(BlockState state, Direction direction, BlockState neighbor, LevelAccessor level,
-                                     BlockPos pos, BlockPos neighborPos) {
+    protected BlockState updateShape(BlockState state, net.minecraft.world.level.LevelReader level, net.minecraft.world.level.ScheduledTickAccess ticks, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighbor, net.minecraft.util.RandomSource random) {
         int s = state.getValue(SECTION);
         int expected = direction == Direction.UP ? s + 1 : direction == Direction.DOWN ? s - 1 : -1;
         if (expected >= 0 && expected < HEIGHT && (!neighbor.is(this) || neighbor.getValue(SECTION) != expected
                 || neighbor.getValue(FACING) != state.getValue(FACING))) {
             return Blocks.AIR.defaultBlockState();
         }
-        return super.updateShape(state, direction, neighbor, level, pos, neighborPos);
+        return super.updateShape(state, level, ticks, pos, direction, neighborPos, neighbor, random);
     }
 
     /** Only the plinth drops the tower: breaking another section breaks the plinth with its drop. */
@@ -178,12 +177,12 @@ public class DistillationTowerBlock extends Block implements EntityBlock {
         return InteractionResult.SUCCESS;
     }
 
+    /** Replaced by another block (see RemovalAware). */
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof DistillationTowerBlockEntity be) {
+    public void onRemoved(BlockState state, Level level, BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof DistillationTowerBlockEntity be) {
             be.dropContents();
         }
-        super.onRemove(state, level, pos, newState, isMoving);
     }
 
     @Nullable

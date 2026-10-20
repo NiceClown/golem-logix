@@ -78,6 +78,49 @@ public class InterfaceBlockEntity extends BlockEntity {
         return fluidIntake;
     }
 
+    /** What pipes and other mods see (NeoForge resource handlers over the handlers above). */
+    private net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource> itemResources;
+    private net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource> fluidResources;
+
+    public net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource> itemResources() {
+        if (itemResources == null) {
+            itemResources = com.golemlogix.system.LegacyResources.offerItems(automation, () -> {
+                ItemStack[] copy = new ItemStack[SLOTS * 2];
+                for (int i = 0; i < SLOTS; i++) {
+                    copy[i] = stock.getItem(i).copy();
+                    copy[SLOTS + i] = inbox.getItem(i).copy();
+                }
+                return copy;
+            }, copy -> {
+                for (int i = 0; i < SLOTS; i++) {
+                    stock.setItem(i, copy[i]);
+                    inbox.setItem(i, copy[SLOTS + i]);
+                }
+            });
+        }
+        return itemResources;
+    }
+
+    public net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource> fluidResources() {
+        if (fluidResources == null) {
+            fluidResources = com.golemlogix.system.LegacyResources.offerFluids(fluidIntake, () -> {
+                net.neoforged.neoforge.fluids.FluidStack[] copy = new net.neoforged.neoforge.fluids.FluidStack[SLOTS + 1];
+                copy[0] = tank.getFluid().copy();
+                for (int i = 0; i < SLOTS; i++) {
+                    copy[i + 1] = fluidStock[i].copy();
+                }
+                return copy;
+            }, copy -> {
+                tank.setFluid(copy[0]);
+                for (int i = 0; i < SLOTS; i++) {
+                    fluidStock[i] = copy[i + 1];
+                }
+                setChanged();
+            });
+        }
+        return fluidResources;
+    }
+
     public net.neoforged.neoforge.fluids.FluidStack tankFluid() {
         return tank.getFluid();
     }
@@ -619,7 +662,6 @@ public class InterfaceBlockEntity extends BlockEntity {
         clientSpeed = tag.getIntOr("Speed", 0);
     }
 
-    
     @Override
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
@@ -632,7 +674,7 @@ public class InterfaceBlockEntity extends BlockEntity {
         tag.put("Stock", stock.createTag(registries));
         tag.put("Inbox", inbox.createTag(registries));
         tag.put("Upgrades", upgrades.createTag(registries));
-        tag.put("Tank", tank.writeToNBT(registries, new CompoundTag()));
+        tag.put("Tank", com.golemlogix.system.NbtBridge.saveTank(tank, registries));
         net.minecraft.nbt.ListTag fl = new net.minecraft.nbt.ListTag();
         for (int i = 0; i < SLOTS; i++) {
             if (!fluidStock[i].isEmpty()) {
@@ -648,13 +690,13 @@ public class InterfaceBlockEntity extends BlockEntity {
     }
 
     protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
-        config.fromTag(tag.getList("Config", Tag.TAG_COMPOUND), registries);
-        stock.fromTag(tag.getList("Stock", Tag.TAG_COMPOUND), registries);
-        inbox.fromTag(tag.getList("Inbox", Tag.TAG_COMPOUND), registries);
-        upgrades.fromTag(tag.getList("Upgrades", Tag.TAG_COMPOUND), registries);
-        tank.readFromNBT(registries, tag.getCompoundOrEmpty("Tank"));
+        config.fromTag(tag.getListOrEmpty("Config"), registries);
+        stock.fromTag(tag.getListOrEmpty("Stock"), registries);
+        inbox.fromTag(tag.getListOrEmpty("Inbox"), registries);
+        upgrades.fromTag(tag.getListOrEmpty("Upgrades"), registries);
+        com.golemlogix.system.NbtBridge.loadTank(tank, registries, tag.getCompoundOrEmpty("Tank"));
         java.util.Arrays.fill(fluidStock, net.neoforged.neoforge.fluids.FluidStack.EMPTY);
-        net.minecraft.nbt.ListTag fl = tag.getList("FluidStock", Tag.TAG_COMPOUND);
+        net.minecraft.nbt.ListTag fl = tag.getListOrEmpty("FluidStock");
         for (int k = 0; k < fl.size(); k++) {
             CompoundTag e = fl.getCompoundOrEmpty(k);
             int i = e.getByteOr("Slot", (byte) 0);
@@ -774,5 +816,14 @@ public class InterfaceBlockEntity extends BlockEntity {
     @Override
     public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input) {
         handleUpdateTag(input);
+    }
+
+    /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
+            r.onRemoved(state, level, pos);
+        }
     }
 }

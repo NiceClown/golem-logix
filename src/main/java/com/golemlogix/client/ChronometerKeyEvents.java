@@ -11,7 +11,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /** The "open Portable Chronometer" key: the server finds the Chronometer (hands, Curios slot, inventory) and opens its terminal. */
-@EventBusSubscriber(modid = GolemLogixMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
+@EventBusSubscriber(modid = GolemLogixMod.MOD_ID, value = Dist.CLIENT)
 public final class ChronometerKeyEvents {
     private ChronometerKeyEvents() {
     }

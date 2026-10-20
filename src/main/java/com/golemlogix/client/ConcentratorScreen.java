@@ -139,7 +139,9 @@ public class ConcentratorScreen extends GolemScreen<ConcentratorMenu> {
     }
 
     @Override
-    public boolean mouseClicked(double mx, double my, int button) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
+        double mx = event.x(), my = event.y();
+        int button = event.button();
         if (button == 0 && overScrollbar(mx, my) && menu.maxRow() > 0) {
             dragging = true;
             drag(my);
@@ -149,7 +151,7 @@ public class ConcentratorScreen extends GolemScreen<ConcentratorMenu> {
             search.setValue("");
             return true;
         }
-        boolean handled = super.mouseClicked(mx, my, button);
+        boolean handled = super.mouseClicked(event, doubleClick);
         if (!search.isMouseOver(mx, my) && search.isFocused()) {
             search.setFocused(false);
         }
@@ -157,18 +159,22 @@ public class ConcentratorScreen extends GolemScreen<ConcentratorMenu> {
     }
 
     @Override
-    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+    public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event, double dx, double dy) {
+        double mx = event.x(), my = event.y();
+        int button = event.button();
         if (dragging) {
             drag(my);
             return true;
         }
-        return super.mouseDragged(mx, my, button, dx, dy);
+        return super.mouseDragged(event, dx, dy);
     }
 
     @Override
-    public boolean mouseReleased(double mx, double my, int button) {
+    public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event) {
+        double mx = event.x(), my = event.y();
+        int button = event.button();
         dragging = false;
-        return super.mouseReleased(mx, my, button);
+        return super.mouseReleased(event);
     }
 
     @Override
@@ -182,26 +188,28 @@ public class ConcentratorScreen extends GolemScreen<ConcentratorMenu> {
     }
 
     @Override
-    public boolean keyPressed(int key, int scanCode, int modifiers) {
+    public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+        int key = event.key(), scanCode = event.scancode(), modifiers = event.modifiers();
         if (key == GLFW.GLFW_KEY_ESCAPE) {
-            return super.keyPressed(key, scanCode, modifiers);
+            return super.keyPressed(event);
         }
         if (search.isFocused()) {
-            search.keyPressed(key, scanCode, modifiers);
+            search.keyPressed(event);
             return true;
         }
         if (key == GLFW.GLFW_KEY_PAGE_DOWN || key == GLFW.GLFW_KEY_PAGE_UP) {
             scrollTo(row + (key == GLFW.GLFW_KEY_PAGE_DOWN ? ConcentratorMenu.ROWS : -ConcentratorMenu.ROWS));
             return true;
         }
-        return super.keyPressed(key, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     @Override
-    public boolean charTyped(char c, int modifiers) {
+    public boolean charTyped(net.minecraft.client.input.CharacterEvent event) {
+        char c = (char) event.codepoint();
         if (search.isFocused()) {
-            return search.charTyped(c, modifiers);
+            return search.charTyped(event);
         }
-        return super.charTyped(c, modifiers);
+        return super.charTyped(event);
     }
 }

@@ -25,7 +25,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Cryo-Calculator. The ACTIVE property turns on the "matrix rain" on the side panels while a job runs.
  */
-public class CryoCalculatorBlock extends Block implements GolemNode, EntityBlock {
+public class CryoCalculatorBlock extends Block implements com.golemlogix.blocks.RemovalAware, GolemNode, EntityBlock {
     public CryoCalculatorBlock(Properties properties) {
         super(properties.sound(SoundType.AMETHYST).strength(3.5f).lightLevel(state -> 4).requiresCorrectToolForDrops());
         this.registerDefaultState(this.stateDefinition.any().setValue(GolemProperties.ACTIVE, false));
@@ -72,13 +72,11 @@ public class CryoCalculatorBlock extends Block implements GolemNode, EntityBlock
         return InteractionResult.CONSUME;
     }
 
+    /** Replaced by another block (see RemovalAware). */
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
-        if (!state.is(newState.getBlock())) {
-            if (level.getBlockEntity(pos) instanceof CryoCalculatorBlockEntity cpu) {
-                cpu.dropContents();
-            }
-            super.onRemove(state, level, pos, newState, isMoving);
+    public void onRemoved(BlockState state, Level level, BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof CryoCalculatorBlockEntity cpu) {
+            cpu.dropContents();
         }
     }
 }

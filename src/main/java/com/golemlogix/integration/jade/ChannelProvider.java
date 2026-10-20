@@ -115,7 +115,7 @@ public enum ChannelProvider implements IBlockComponentProvider, IServerDataProvi
                 return;
             }
             tooltip.add(Component.translatable("jade.golem_logix.line", used, max));
-            tooltip.add(Component.translatable("jade.golem_logix.network", t.getInt("netUsed"), t.getInt("netMax")));
+            tooltip.add(Component.translatable("jade.golem_logix.network", t.getIntOr("netUsed", 0), t.getIntOr("netMax", 0)));
             return;
         }
         if (block instanceof ChannelExpanderBlock) {
@@ -169,17 +169,17 @@ public enum ChannelProvider implements IBlockComponentProvider, IServerDataProvi
     private static Component reason(CompoundTag t) {
         ChannelCalculation.Missing missing;
         try {
-            missing = ChannelCalculation.Missing.valueOf(t.getString("why"));
+            missing = ChannelCalculation.Missing.valueOf(t.getStringOr("why", ""));
         } catch (IllegalArgumentException e) {
             return null;
         }
         return switch (missing) {
-            case NETWORK_FULL -> Component.translatable("jade.golem_logix.why.full", t.getInt("netUsed"), t.getInt("netMax"))
+            case NETWORK_FULL -> Component.translatable("jade.golem_logix.why.full", t.getIntOr("netUsed", 0), t.getIntOr("netMax", 0))
                     .withStyle(ChatFormatting.RED);
             case BOTTLENECK -> {
                 int[] p = t.getIntArray("bpos").orElse(new int[0]);
                 Identifier id = Identifier.tryParse(t.getStringOr("bblock", ""));
-                Block b = id == null ? null : BuiltInRegistries.BLOCK.get(id);
+                Block b = id == null ? null : BuiltInRegistries.BLOCK.getValue(id);
                 Component name = b == null ? Component.literal("?") : b.getName();
                 yield p.length == 3 ? Component.translatable("jade.golem_logix.why.bottleneck", name, p[0], p[1], p[2])
                         .withStyle(ChatFormatting.RED) : null;

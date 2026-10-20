@@ -11,15 +11,12 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
-import net.neoforged.neoforge.client.model.data.ModelData;
 
 /** Atlant head: the head model rotated around the neck (8, 10, 8), first by the statue's facing, then towards the player. */
-public class AtlantHeadRenderer implements BlockEntityRenderer<AtlantHeadBlockEntity> {
-    public static final ModelResourceLocation HEAD = ModelResourceLocation.standalone(
-            Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/atlas_atlant_head"));
+public class AtlantHeadRenderer extends com.golemlogix.client.render.LegacyBer<AtlantHeadBlockEntity> {
+    public static final net.minecraft.resources.Identifier HEAD = com.golemlogix.client.render.StandaloneModels.ATLANT_HEAD;
 
     public AtlantHeadRenderer(BlockEntityRendererProvider.Context context) {
     }
@@ -39,8 +36,7 @@ public class AtlantHeadRenderer implements BlockEntityRenderer<AtlantHeadBlockEn
         pose.mulPose(Axis.XP.rotationDegrees(pitch));
         pose.translate(-0.5, -10 / 16.0, -0.5);
         var mc = Minecraft.getInstance();
-        mc.getBlockRenderer().getModelRenderer().renderModel(pose.last(), buffers.getBuffer(RenderType.cutout()), null,
-                mc.getModelManager().getModel(HEAD), 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY, ModelData.EMPTY, RenderType.cutout());
+        com.golemlogix.client.render.StandaloneModels.render(pose.last(), buffers.getBuffer(net.minecraft.client.renderer.Sheets.cutoutBlockSheet()), HEAD, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
         pose.popPose();
     }
 }

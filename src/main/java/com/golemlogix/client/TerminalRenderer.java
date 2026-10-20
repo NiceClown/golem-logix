@@ -23,7 +23,7 @@ import net.minecraft.world.level.block.state.BlockState;
  * (coordinates in texels of the 64x64 sheet, see tools/ArtForge.java), the tint depends on the terminal type.
  * The screen takes 14x14 texels of the front texture (x, y = 9..22 of 32).
  */
-public class TerminalRenderer implements BlockEntityRenderer<TerminalBlockEntity> {
+public class TerminalRenderer extends com.golemlogix.client.render.LegacyBer<TerminalBlockEntity> {
     private static final Identifier SHEET = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/block/terminal_anim.png");
     private static final float SHEET_SIZE = 64f;
     /** Screen size in texels and texel size in block fractions (the front texture is 32x32). */

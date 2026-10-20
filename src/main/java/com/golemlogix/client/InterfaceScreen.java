@@ -83,7 +83,9 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
     }
 
     @Override
-    public boolean mouseClicked(double mx, double my, int button) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
+        double mx = event.x(), my = event.y();
+        int button = event.button();
         // a middle-click or Ctrl+click on a config slot with a Fuzzy Card chooses its tag (before the settings window)
         if (fuzzyClick(button)) {
             return true;
@@ -106,7 +108,7 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
             }
             return true;
         }
-        return super.mouseClicked(mx, my, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override

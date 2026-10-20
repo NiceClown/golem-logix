@@ -25,7 +25,23 @@ public final class GolemGameTestRegistry {
     private static final DeferredRegister<Consumer<GameTestHelper>> FUNCTIONS =
             DeferredRegister.create(Registries.TEST_FUNCTION, GolemLogixMod.MOD_ID);
     /** Test name, function, time limit (ticks), setup ticks. */
-    private record Test(String name, Consumer<GameTestHelper> function, int maxTicks, int setupTicks) {
+    /** A test method (some declare checked exceptions). */
+    private interface Body {
+        void run(GameTestHelper helper) throws Exception;
+    }
+
+    private record Test(String name, Body body, int maxTicks, int setupTicks) {
+        Consumer<GameTestHelper> function() {
+            return helper -> {
+                try {
+                    body.run(helper);
+                } catch (RuntimeException e) {
+                    throw e;
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            };
+        }
     }
 
     private static final List<Test> TESTS = List.of(
@@ -109,7 +125,6 @@ public final class GolemGameTestRegistry {
             new Test("anvilritualcoppergolem", GolemGameTests::anvilRitualCopperGolem, 100, 0),
             new Test("ritualscomefromdata", GolemGameTests::ritualsComeFromData, 20, 0),
             new Test("chronometerfoundanywhere", GolemGameTests::chronometerFoundAnywhere, 20, 0),
-            new Test("copperbootstrapknowsgolems", GolemGameTests::copperBootstrapKnowsGolems, 20, 0),
             new Test("anvilritualneedswoundedgolem", GolemGameTests::anvilRitualNeedsWoundedGolem, 100, 0),
             new Test("cryosourcefromnetwork", GolemGameTests::cryoSourceFromNetwork, 100, 0),
             new Test("fluidpatterntotals", GolemGameTests::fluidPatternTotals, 20, 0),

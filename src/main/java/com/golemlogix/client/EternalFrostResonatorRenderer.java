@@ -20,7 +20,7 @@ import net.minecraft.world.phys.AABB;
  * bottom of the glass chamber, narrow in the exhaust pipe and spread above the roof; a flickering pillar in the middle. While a network
  * is nearby the vortex spins faster and brighter. The ribbons glow by themselves (unlit) and do not hide the chamber glass.
  */
-public class EternalFrostResonatorRenderer implements BlockEntityRenderer<EternalFrostResonatorBlockEntity> {
+public class EternalFrostResonatorRenderer extends com.golemlogix.client.render.LegacyBer<EternalFrostResonatorBlockEntity> {
     private static final Identifier VORTEX = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID,
             "textures/entity/resonator_vortex.png");
     private static final int SEGMENTS = 28;

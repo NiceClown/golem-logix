@@ -4,13 +4,16 @@ import com.golemlogix.init.ModRecipes;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.HolderLookup;
+import com.golemlogix.system.Recipes;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.PlacementInfo;
 import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeBookCategories;
+import net.minecraft.world.item.crafting.RecipeBookCategory;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
@@ -41,9 +44,9 @@ public record SaturatorRecipe(Ingredient ingredient, ItemStack result, ItemStack
     public static final int DEFAULT_SOURCE = 1000, DEFAULT_TICKS = 100;
 
     public static final MapCodec<SaturatorRecipe> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Ingredient.CODEC_NONEMPTY.fieldOf("ingredient").forGetter(SaturatorRecipe::ingredient),
-            ItemStack.STRICT_CODEC.fieldOf("result").forGetter(SaturatorRecipe::result),
-            ItemStack.STRICT_CODEC.optionalFieldOf("hand_result").forGetter(r -> r.handResult.isEmpty() ? Optional.empty() : Optional.of(r.handResult)),
+            Ingredient.CODEC.fieldOf("ingredient").forGetter(SaturatorRecipe::ingredient),
+            ItemStack.CODEC.fieldOf("result").forGetter(SaturatorRecipe::result),
+            ItemStack.CODEC.optionalFieldOf("hand_result").forGetter(r -> r.handResult.isEmpty() ? Optional.empty() : Optional.of(r.handResult)),
             Codec.intRange(0, 1_000_000).optionalFieldOf("source", DEFAULT_SOURCE).forGetter(SaturatorRecipe::source),
             Codec.intRange(1, 72_000).optionalFieldOf("ticks", DEFAULT_TICKS).forGetter(SaturatorRecipe::ticks),
             Codec.BOOL.optionalFieldOf("secret", false).forGetter(SaturatorRecipe::secret)
@@ -58,14 +61,13 @@ public record SaturatorRecipe(Ingredient ingredient, ItemStack result, ItemStack
             ByteBufCodecs.BOOL, SaturatorRecipe::secret,
             SaturatorRecipe::new);
 
-    /** The ritual for this blank, or null. Both sides have the recipes (they are synced to clients). */
+    /** The ritual for this blank, or null. Both sides have the recipes (Recipes sends them to clients). */
     @Nullable
     public static SaturatorRecipe find(@Nullable Level level, ItemStack input) {
         if (level == null || input.isEmpty()) {
             return null;
         }
-        return level.getRecipeManager().getRecipeFor(ModRecipes.SATURATOR_TYPE.get(), new SingleRecipeInput(input), level)
-                .map(RecipeHolder::value).orElse(null);
+        return Recipes.find(level, ModRecipes.SATURATOR_TYPE.get(), new SingleRecipeInput(input)).map(RecipeHolder::value).orElse(null);
     }
 
     @Override
@@ -74,45 +76,43 @@ public record SaturatorRecipe(Ingredient ingredient, ItemStack result, ItemStack
     }
 
     @Override
-    public ItemStack assemble(SingleRecipeInput input, HolderLookup.Provider registries) {
+    public ItemStack assemble(SingleRecipeInput input) {
         return result.copy();
     }
 
-    @Override
-    public boolean canCraftInDimensions(int width, int height) {
-        return true;
-    }
-
-    @Override
-    public ItemStack getResultItem(HolderLookup.Provider registries) {
-        return result;
-    }
-
-    /** Not a recipe book recipe (keeps the client recipe book from complaining about an unknown category). */
+    /** Not a recipe book recipe. */
     @Override
     public boolean isSpecial() {
         return true;
     }
 
     @Override
-    public RecipeSerializer<?> getSerializer() {
+    public boolean showNotification() {
+        return false;
+    }
+
+    @Override
+    public String group() {
+        return "";
+    }
+
+    @Override
+    public PlacementInfo placementInfo() {
+        return PlacementInfo.NOT_PLACEABLE;
+    }
+
+    @Override
+    public RecipeBookCategory recipeBookCategory() {
+        return RecipeBookCategories.CRAFTING_MISC;
+    }
+
+    @Override
+    public RecipeSerializer<SaturatorRecipe> getSerializer() {
         return ModRecipes.SATURATOR.get();
     }
 
     @Override
-    public RecipeType<?> getType() {
+    public RecipeType<SaturatorRecipe> getType() {
         return ModRecipes.SATURATOR_TYPE.get();
-    }
-
-    public static final class Serializer implements RecipeSerializer<SaturatorRecipe> {
-        @Override
-        public MapCodec<SaturatorRecipe> codec() {
-            return CODEC;
-        }
-
-        @Override
-        public StreamCodec<RegistryFriendlyByteBuf, SaturatorRecipe> streamCodec() {
-            return STREAM_CODEC;
-        }
     }
 }

@@ -191,12 +191,12 @@ public class PatternProviderBlockEntity extends BlockEntity {
                 continue;
             }
             // items and fluids go into the same machine side, and only if it takes all of them
-            IItemHandler handler = inputs.isEmpty() ? null : level.getCapability(Capabilities.Item.BLOCK, target, dir.getOpposite());
+            IItemHandler handler = inputs.isEmpty() ? null : com.golemlogix.system.LegacyResources.items(level, target, dir.getOpposite());
             if (!inputs.isEmpty() && (handler == null || !canAcceptAll(handler, inputs))) {
                 continue;
             }
             net.neoforged.neoforge.fluids.capability.IFluidHandler tanks = fluids.isEmpty() ? null
-                    : level.getCapability(Capabilities.Fluid.BLOCK, target, dir.getOpposite());
+                    : com.golemlogix.system.LegacyResources.fluids(level, target, dir.getOpposite());
             if (!fluids.isEmpty() && (tanks == null || !canAcceptFluids(tanks, fluids))) {
                 continue;
             }
@@ -260,9 +260,9 @@ public class PatternProviderBlockEntity extends BlockEntity {
     }
 
     protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
-        container.fromTag(tag.getList("Patterns", Tag.TAG_COMPOUND), registries);
-        upgrades.fromTag(tag.getList("Upgrades", Tag.TAG_COMPOUND), registries);
-        blocking = tag.getBoolean("Blocking");
+        container.fromTag(tag.getListOrEmpty("Patterns"), registries);
+        upgrades.fromTag(tag.getListOrEmpty("Upgrades"), registries);
+        blocking = tag.getBooleanOr("Blocking", false);
         redstone.load(tag);
         patterns = null;
     }
@@ -281,5 +281,14 @@ public class PatternProviderBlockEntity extends BlockEntity {
     protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
         super.loadAdditional(input);
         loadTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    }
+
+    /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
+            r.onRemoved(state, level, pos);
+        }
     }
 }

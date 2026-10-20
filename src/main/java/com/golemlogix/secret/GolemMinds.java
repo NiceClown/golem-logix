@@ -47,7 +47,7 @@ public final class GolemMinds {
      * modpacks add their own), or any golem with "copper" in its id.
      */
     public static boolean isCopperGolem(Entity entity) {
-        if (entity.getType().is(com.golemlogix.init.ModTags.COPPER_GOLEMS)) {
+        if (entity.getType().builtInRegistryHolder().is(com.golemlogix.init.ModTags.COPPER_GOLEMS)) {
             return true;
         }
         String path = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).getPath();

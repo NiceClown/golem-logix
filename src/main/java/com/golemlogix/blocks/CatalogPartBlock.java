@@ -31,7 +31,7 @@ import java.util.List;
  * Part of an assembled Punch Card Catalog (in place of shelves, copper blocks and statues). It is not drawn itself: the owner's
  * renderer draws the whole cabinet with the golems; clicks go to the owner; when broken it drops the former block and the cabinet is disassembled.
  */
-public class CatalogPartBlock extends Block implements GolemNode {
+public class CatalogPartBlock extends Block implements com.golemlogix.blocks.RemovalAware, GolemNode {
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final IntegerProperty CELL = IntegerProperty.create("cell", 0, CatalogStructure.CELLS.length - 1);
 
@@ -52,7 +52,7 @@ public class CatalogPartBlock extends Block implements GolemNode {
     }
 
     @Override
-    protected boolean propagatesSkylightDown(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos) {
+    protected boolean propagatesSkylightDown(BlockState state) {
         return true;
     }
 
@@ -86,14 +86,19 @@ public class CatalogPartBlock extends Block implements GolemNode {
         return InteractionResult.PASS;
     }
 
+    /** Replaced by another block (see RemovalAware). */
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock())) {
-            if (!level.isClientSide() && !CatalogStructure.isRestoring()) {
-                CatalogStructure.disassemble(level, controllerOf(pos, state), state.getValue(FACING), pos);
-            }
-            super.onRemove(state, level, pos, newState, movedByPiston);
+    public void onRemoved(BlockState state, Level level, BlockPos pos) {
+        if (!level.isClientSide() && !CatalogStructure.isRestoring()) {
+            CatalogStructure.disassemble(level, controllerOf(pos, state), state.getValue(FACING), pos);
         }
+    }
+
+    @Override
+    protected void affectNeighborsAfterRemoval(BlockState state, net.minecraft.server.level.ServerLevel level, BlockPos pos,
+                                               boolean movedByPiston) {
+        super.affectNeighborsAfterRemoval(state, level, pos, movedByPiston);
+        onRemoved(state, level, pos);
     }
 
     /** Drops the former block (the owner remembers it): a shelf, a copper block of the same oxidation, a golem statue. */
@@ -109,7 +114,7 @@ public class CatalogPartBlock extends Block implements GolemNode {
     }
 
     @Override
-    public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
+    protected ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state, boolean includeData) {
         BlockPos master = controllerOf(pos, state);
         return level.getBlockState(master).getBlock() instanceof CardCatalogBlock c ? new ItemStack(c) : ItemStack.EMPTY;
     }

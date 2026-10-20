@@ -174,7 +174,7 @@ public final class BusLinks {
             default -> {
             }
         }
-        return Direction.getNearest(rx, ry, rz);
+        return Direction.getApproximateNearest(rx, ry, rz);
     }
 
     /** Rotates a shape drawn facing north towards facing. */

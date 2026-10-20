@@ -10,21 +10,16 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.BakedModel;
-import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
-import net.neoforged.neoforge.client.model.data.ModelData;
 
 /**
  * Moving parts of the Interface: turbines in the funnels on all six sides and pendulums of flat metronomes on the four side faces.
  */
-public class InterfaceRenderer implements BlockEntityRenderer<InterfaceBlockEntity> {
-    public static final ModelResourceLocation TURBINE = ModelResourceLocation.standalone(
-            Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/golem_interface_turbine"));
-    public static final ModelResourceLocation PENDULUM = ModelResourceLocation.standalone(
-            Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/golem_interface_pendulum"));
+public class InterfaceRenderer extends com.golemlogix.client.render.LegacyBer<InterfaceBlockEntity> {
+    public static final net.minecraft.resources.Identifier TURBINE = com.golemlogix.client.render.StandaloneModels.TURBINE;
+    public static final net.minecraft.resources.Identifier PENDULUM = com.golemlogix.client.render.StandaloneModels.PENDULUM;
     /**
      * Metronomes lying flat on the side faces (as in tools/Interface.java: left of the funnel as seen by the viewer, axis at height 5.2,
      * in front of the body at depth 0.42 from the block plane): x, z of the axis in pixels and the rotation of the pendulum model facing outwards.
@@ -40,10 +35,9 @@ public class InterfaceRenderer implements BlockEntityRenderer<InterfaceBlockEnti
     @Override
     public void render(InterfaceBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
         var mc = Minecraft.getInstance();
-        BakedModel turbine = mc.getModelManager().getModel(TURBINE);
-        BakedModel pendulum = mc.getModelManager().getModel(PENDULUM);
-        var renderer = mc.getBlockRenderer().getModelRenderer();
-        var buffer = buffers.getBuffer(RenderType.cutout());
+        net.minecraft.resources.Identifier turbine = TURBINE;
+        net.minecraft.resources.Identifier pendulum = PENDULUM;
+        var buffer = buffers.getBuffer(net.minecraft.client.renderer.Sheets.cutoutBlockSheet());
         float spin = Mth.lerp(partialTick, be.spinPrev, be.spin);
         float activity = Mth.lerp(partialTick, be.activityPrev, be.activity);
         float phase = Mth.lerp(partialTick, be.phasePrev, be.phase);
@@ -63,8 +57,7 @@ public class InterfaceRenderer implements BlockEntityRenderer<InterfaceBlockEnti
             // neighbouring sides spin in opposite directions, like gears
             pose.mulPose(Axis.ZP.rotationDegrees(d.ordinal() % 2 == 0 ? spin : -spin));
             pose.translate(-0.5, -0.5, -0.5);
-            renderer.renderModel(pose.last(), buffer, null, turbine, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY, ModelData.EMPTY,
-                    RenderType.cutout());
+            com.golemlogix.client.render.StandaloneModels.render(pose.last(), buffer, turbine, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
             pose.popPose();
         }
 
@@ -77,8 +70,7 @@ public class InterfaceRenderer implements BlockEntityRenderer<InterfaceBlockEnti
             pose.mulPose(Axis.YP.rotationDegrees(m[2]));
             pose.mulPose(Axis.ZP.rotationDegrees(swing));
             pose.translate(-0.5, 0, -0.5);
-            renderer.renderModel(pose.last(), buffer, null, pendulum, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY, ModelData.EMPTY,
-                    RenderType.cutout());
+            com.golemlogix.client.render.StandaloneModels.render(pose.last(), buffer, pendulum, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
             pose.popPose();
         }
     }

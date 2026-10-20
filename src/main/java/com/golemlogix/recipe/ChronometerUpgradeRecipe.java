@@ -4,10 +4,10 @@ import com.golemlogix.init.ModDataComponents;
 import com.golemlogix.init.ModItems;
 import com.golemlogix.init.ModRecipes;
 import com.golemlogix.items.PortableChronometerItem;
-import net.minecraft.core.HolderLookup;
+import com.mojang.serialization.MapCodec;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.CraftingBookCategory;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CustomRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
@@ -19,9 +19,9 @@ import net.minecraft.world.level.Level;
  * Chronometer ("dimension" tier) + Interdimensional Occult Matrix -> "interdimensional".
  */
 public class ChronometerUpgradeRecipe extends CustomRecipe {
-    public ChronometerUpgradeRecipe(CraftingBookCategory category) {
-        super(category);
-    }
+    public static final ChronometerUpgradeRecipe INSTANCE = new ChronometerUpgradeRecipe();
+    public static final RecipeSerializer<ChronometerUpgradeRecipe> SERIALIZER =
+            new RecipeSerializer<>(MapCodec.unit(INSTANCE), StreamCodec.unit(INSTANCE));
 
     private record Parsed(ItemStack chronometer, int targetTier) {
     }
@@ -70,7 +70,7 @@ public class ChronometerUpgradeRecipe extends CustomRecipe {
     }
 
     @Override
-    public ItemStack assemble(CraftingInput input, HolderLookup.Provider registries) {
+    public ItemStack assemble(CraftingInput input) {
         Parsed p = parse(input);
         if (p == null) {
             return ItemStack.EMPTY;
@@ -81,12 +81,7 @@ public class ChronometerUpgradeRecipe extends CustomRecipe {
     }
 
     @Override
-    public boolean canCraftInDimensions(int width, int height) {
-        return width * height >= 2;
-    }
-
-    @Override
-    public RecipeSerializer<?> getSerializer() {
+    public RecipeSerializer<ChronometerUpgradeRecipe> getSerializer() {
         return ModRecipes.CHRONOMETER_UPGRADE.get();
     }
 }

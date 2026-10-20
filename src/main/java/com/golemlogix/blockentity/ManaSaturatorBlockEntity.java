@@ -177,6 +177,18 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         return automation;
     }
 
+    /** What pipes and other mods see: the decks as a NeoForge resource handler. */
+    private final net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource> automationResources =
+            com.golemlogix.system.LegacyResources.offerItems(automation, () -> new ItemStack[]{inDeck.copy(), outDeck.copy()}, s -> {
+                inDeck = s[0];
+                outDeck = s[1];
+                changed();
+            });
+
+    public net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource> automationResources() {
+        return automationResources;
+    }
+
     private boolean formed() {
         BlockState state = getBlockState();
         return state.hasProperty(ManaSaturatorBlock.FORMED) && state.getValue(ManaSaturatorBlock.FORMED);
@@ -677,7 +689,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
             {17.6f, 14.2f}, {17.6f, 8f}};
 
     private void walkLamp(Level level) {
-        var r = level.random;
+        var r = level.getRandom();
         walker.tick(lampState() == 0, 24f, 1.8f, r, () -> {
             // to the next point of the circle (clockwise or counterclockwise): the golem never walks straight through the crystal
             walker.ring = Math.floorMod(walker.ring + (r.nextInt(4) == 0 ? -1 : 1), RING.length);
@@ -778,7 +790,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = super.getUpdateTag(registries);
-        saveAdditional(tag, registries);
+        saveTag(tag, registries);
         return tag;
     }
 
@@ -801,5 +813,14 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
     protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
         super.loadAdditional(input);
         loadTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    }
+
+    /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
+            r.onRemoved(state, level, pos);
+        }
     }
 }

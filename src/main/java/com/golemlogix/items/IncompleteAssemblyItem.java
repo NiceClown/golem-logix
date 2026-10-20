@@ -24,7 +24,7 @@ public class IncompleteAssemblyItem extends Item {
 
     /** 0..1, or -1 if the stack carries no assembly progress. */
     public static float progress(ItemStack stack) {
-        DataComponentType<?> type = BuiltInRegistries.DATA_COMPONENT_TYPE.get(COMPONENT);
+        DataComponentType<?> type = BuiltInRegistries.DATA_COMPONENT_TYPE.getValue(COMPONENT);
         Object value = type == null ? null : stack.get(type);
         if (value == null) {
             return -1f;

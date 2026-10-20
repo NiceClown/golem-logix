@@ -19,6 +19,7 @@ import java.util.function.BooleanSupplier;
  * "Any side" (periscopes) falls back to the unsided handler and then to every side in turn, as the plain lookups did; those
  * extra caches are made only when the first ones find nothing.
  */
+@SuppressWarnings("removal")
 public final class TargetCaps {
     private final ServerLevel level;
     private final BlockPos pos;
@@ -26,12 +27,12 @@ public final class TargetCaps {
     private final Direction side;
     private final BooleanSupplier valid;
     private final Runnable onChange;
-    private final BlockCapabilityCache<IItemHandler, @Nullable Direction> items;
-    private final BlockCapabilityCache<IFluidHandler, @Nullable Direction> fluids;
+    private final BlockCapabilityCache<net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource>, @Nullable Direction> items;
+    private final BlockCapabilityCache<net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource>, @Nullable Direction> fluids;
     @Nullable
-    private BlockCapabilityCache<IItemHandler, @Nullable Direction>[] itemsAny;
+    private BlockCapabilityCache<net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource>, @Nullable Direction>[] itemsAny;
     @Nullable
-    private BlockCapabilityCache<IFluidHandler, @Nullable Direction>[] fluidsAny;
+    private BlockCapabilityCache<net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource>, @Nullable Direction>[] fluidsAny;
 
     private TargetCaps(ServerLevel level, BlockPos pos, @Nullable Direction side, BooleanSupplier valid, Runnable onChange) {
         this.level = level;
@@ -59,38 +60,38 @@ public final class TargetCaps {
 
     @Nullable
     public IItemHandler items() {
-        return items.getCapability();
+        return LegacyResources.items(items.getCapability());
     }
 
     @Nullable
     public IFluidHandler fluids() {
-        return fluids.getCapability();
+        return LegacyResources.fluids(fluids.getCapability());
     }
 
     /** The item handler on this side, or else the unsided one, or else the one on any side. */
     @Nullable
     public IItemHandler itemsAnySide() {
-        IItemHandler h = items.getCapability();
+        var h = items.getCapability();
         if (h != null) {
-            return h;
+            return LegacyResources.items(h);
         }
         if (itemsAny == null) {
             itemsAny = anyCaches(Capabilities.Item.BLOCK);
         }
-        return first(itemsAny);
+        return LegacyResources.items(first(itemsAny));
     }
 
     /** The fluid handler on this side, or else the unsided one, or else the one on any side. */
     @Nullable
     public IFluidHandler fluidsAnySide() {
-        IFluidHandler h = fluids.getCapability();
+        var h = fluids.getCapability();
         if (h != null) {
-            return h;
+            return LegacyResources.fluids(h);
         }
         if (fluidsAny == null) {
             fluidsAny = anyCaches(Capabilities.Fluid.BLOCK);
         }
-        return first(fluidsAny);
+        return LegacyResources.fluids(first(fluidsAny));
     }
 
     /** Caches for the unsided handler and for each of the six sides, in that order. */

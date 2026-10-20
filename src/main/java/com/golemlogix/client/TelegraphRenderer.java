@@ -38,7 +38,7 @@ import static com.golemlogix.client.CryoMainframeRenderer.limb;
  * Pixels in the main cell's north-facing frame: the front is Z 0, "right" (seen from the front) is -X, so the base spans X -16..16,
  * Z 0..32; the mast stands on X -16..0, Z 16..32.
  */
-public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEntity> {
+public class TelegraphRenderer extends com.golemlogix.client.render.LegacyBer<TelegraphBlockEntity> {
     private static final Identifier RUST = mc("exposed_copper"), VERDIGRIS = mc("weathered_copper"),
             CUT = mc("exposed_cut_copper"), COPPER = mc("copper_block"), BRASS = tex("sat_brass"), DARK = tex("sat_dark"),
             ICE = tex("sat_ice"), GAUGE = tex("monitor_gauge"), DIAL = tex("resonator_dial"), RUNES = tex("cryo_panel_matrix"),
@@ -91,7 +91,7 @@ public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEnti
         }
         Direction facing = state.getValue(TelegraphBlock.FACING);
         BlockPos pos = be.getBlockPos();
-        int light = LevelRenderer.getLightColor(level, pos.above());
+        int light = LevelRenderer.getLightCoords(level, pos.above());
         light = LightCoordsUtil.pack(Math.max(LightCoordsUtil.block(light), 5), LightCoordsUtil.sky(light));
         float wake = Mth.lerp(partialTick, be.wakePrev, be.wake);
         float time = level.getGameTime() + Math.floorMod(pos.asLong(), 97L) + partialTick;

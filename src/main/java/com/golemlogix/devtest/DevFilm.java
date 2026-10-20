@@ -249,7 +249,7 @@ final class DevFilm {
         }
         try {
             byte[] data = free.take();
-            RenderSystem.bindTexture(target.getColorTextureId());
+            GL11.glBindTexture(GL11.GL_TEXTURE_2D, ((com.mojang.blaze3d.opengl.GlTexture) target.getColorTexture()).glId());
             GL11.glPixelStorei(GL11.GL_PACK_ALIGNMENT, 1);
             GL11.glGetTexImage(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixels);
             pixels.get(0, data);

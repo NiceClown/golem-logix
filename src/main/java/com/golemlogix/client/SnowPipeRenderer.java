@@ -11,7 +11,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -19,7 +18,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import com.golemlogix.system.GolemNetwork;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemDisplayContext;
@@ -42,22 +40,17 @@ import java.util.Map;
  * A snowman with a pumpkin head and a crate running through powered pipes. There is one per connected pipe network
  * (see {@link PipeRunners}); in a basic pipe only its head is visible (the body does not fit), in a dense one the whole snowman.
  */
-public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
+public class SnowPipeRenderer extends com.golemlogix.client.render.LegacyBer<PipeBlockEntity> {
     public SnowPipeRenderer(BlockEntityRendererProvider.Context context) {
     }
 
-    public static final net.minecraft.client.resources.model.ModelResourceLocation PLUG_BASIC = plugModel("basic_snow_pipe_plug");
-    public static final net.minecraft.client.resources.model.ModelResourceLocation PLUG_DENSE = plugModel("dense_frost_pipe_plug");
-    public static final net.minecraft.client.resources.model.ModelResourceLocation BAND_BASIC = plugModel("basic_snow_pipe_band");
-    public static final net.minecraft.client.resources.model.ModelResourceLocation BAND_DENSE = plugModel("dense_frost_pipe_band");
+    public static final net.minecraft.resources.Identifier PLUG_BASIC = com.golemlogix.client.render.StandaloneModels.PLUG_BASIC;
+    public static final net.minecraft.resources.Identifier PLUG_DENSE = com.golemlogix.client.render.StandaloneModels.PLUG_DENSE;
+    public static final net.minecraft.resources.Identifier BAND_BASIC = com.golemlogix.client.render.StandaloneModels.BAND_BASIC;
+    public static final net.minecraft.resources.Identifier BAND_DENSE = com.golemlogix.client.render.StandaloneModels.BAND_DENSE;
     /** Warehouse dock door: a dead end with a warehouse is closed not by a plug but by a roller shutter with a lamp. */
-    public static final net.minecraft.client.resources.model.ModelResourceLocation DOCK_BASIC = plugModel("basic_snow_pipe_dock");
-    public static final net.minecraft.client.resources.model.ModelResourceLocation DOCK_DENSE = plugModel("dense_frost_pipe_dock");
-
-    private static net.minecraft.client.resources.model.ModelResourceLocation plugModel(String name) {
-        return net.minecraft.client.resources.model.ModelResourceLocation.standalone(
-                Identifier.fromNamespaceAndPath(com.golemlogix.GolemLogixMod.MOD_ID, "block/" + name));
-    }
+    public static final net.minecraft.resources.Identifier DOCK_BASIC = com.golemlogix.client.render.StandaloneModels.DOCK_BASIC;
+    public static final net.minecraft.resources.Identifier DOCK_DENSE = com.golemlogix.client.render.StandaloneModels.DOCK_DENSE;
 
     @Override
     public int getViewDistance() {
@@ -213,7 +206,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
      * - Double ceiling monorail along the whole block with a carriage
      * - The central passage stays free, and the pipe glass stays translucent!
      */
-    private static void renderWarehouseDecorations(PoseStack pose, BlockRenderDispatcher dispatcher, MultiBufferSource buffers,
+    private static void renderWarehouseDecorations(PoseStack pose, MultiBufferSource buffers,
                                                    boolean dense, int light) {
         float floorY = dense ? 0.14f : 0.27f;
         float ceilY = dense ? 0.86f : 0.73f;
@@ -224,7 +217,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
 
         // 1. Wooden plank deck of the Victorian warehouse platform
         float deckWidth = dense ? 0.60f : 0.30f;
-        box(pose, dispatcher, buffers, Blocks.DARK_OAK_PLANKS.defaultBlockState(),
+        box(pose, buffers, Blocks.DARK_OAK_PLANKS.defaultBlockState(),
                 0.50f, floorY + 0.01f, 0.54f, deckWidth, 0.02f, 0.54f, light, OverlayTexture.NO_OVERLAY);
 
         // 2. Wrought Victorian arched trusses and ribs on the walls
@@ -234,67 +227,67 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
         BlockState ironRib = Blocks.CUT_COPPER_SLAB.defaultBlockState();
 
         // Pair of posts 1 (inside the warehouse at Z = 0.28f, not crossing the plug)
-        box(pose, dispatcher, buffers, ironRib, leftX + pillarThick / 2f, pillarMidY, 0.28f, pillarThick, pillarH, pillarThick, light, OverlayTexture.NO_OVERLAY);
-        box(pose, dispatcher, buffers, ironRib, rightX - pillarThick / 2f, pillarMidY, 0.28f, pillarThick, pillarH, pillarThick, light, OverlayTexture.NO_OVERLAY);
-        box(pose, dispatcher, buffers, ironRib, 0.50f, ceilY - 0.02f, 0.28f, deckWidth, 0.03f, pillarThick, light, OverlayTexture.NO_OVERLAY);
+        box(pose, buffers, ironRib, leftX + pillarThick / 2f, pillarMidY, 0.28f, pillarThick, pillarH, pillarThick, light, OverlayTexture.NO_OVERLAY);
+        box(pose, buffers, ironRib, rightX - pillarThick / 2f, pillarMidY, 0.28f, pillarThick, pillarH, pillarThick, light, OverlayTexture.NO_OVERLAY);
+        box(pose, buffers, ironRib, 0.50f, ceilY - 0.02f, 0.28f, deckWidth, 0.03f, pillarThick, light, OverlayTexture.NO_OVERLAY);
 
         // Pair of posts 2 (along the warehouse at Z = 0.68f)
-        box(pose, dispatcher, buffers, ironRib, leftX + pillarThick / 2f, pillarMidY, 0.68f, pillarThick, pillarH, pillarThick, light, OverlayTexture.NO_OVERLAY);
-        box(pose, dispatcher, buffers, ironRib, rightX - pillarThick / 2f, pillarMidY, 0.68f, pillarThick, pillarH, pillarThick, light, OverlayTexture.NO_OVERLAY);
-        box(pose, dispatcher, buffers, ironRib, 0.50f, ceilY - 0.02f, 0.68f, deckWidth, 0.03f, pillarThick, light, OverlayTexture.NO_OVERLAY);
+        box(pose, buffers, ironRib, leftX + pillarThick / 2f, pillarMidY, 0.68f, pillarThick, pillarH, pillarThick, light, OverlayTexture.NO_OVERLAY);
+        box(pose, buffers, ironRib, rightX - pillarThick / 2f, pillarMidY, 0.68f, pillarThick, pillarH, pillarThick, light, OverlayTexture.NO_OVERLAY);
+        box(pose, buffers, ironRib, 0.50f, ceilY - 0.02f, 0.68f, deckWidth, 0.03f, pillarThick, light, OverlayTexture.NO_OVERLAY);
 
         // 3. Victorian industrial rack on the left wall
         float rackDepth = dense ? 0.09f : 0.05f;
         float rackX = leftX + rackDepth / 2f;
         // Shelf 1 (bottom) with ledgers and the archive
-        box(pose, dispatcher, buffers, Blocks.DARK_OAK_SLAB.defaultBlockState(),
+        box(pose, buffers, Blocks.DARK_OAK_SLAB.defaultBlockState(),
                 rackX, floorY + 0.12f, 0.46f, rackDepth, 0.02f, 0.32f, light, OverlayTexture.NO_OVERLAY);
-        box(pose, dispatcher, buffers, Blocks.BOOKSHELF.defaultBlockState(),
+        box(pose, buffers, Blocks.BOOKSHELF.defaultBlockState(),
                 rackX, floorY + 0.07f, 0.38f, rackDepth * 0.9f, 0.09f, 0.14f, light, OverlayTexture.NO_OVERLAY);
-        box(pose, dispatcher, buffers, Blocks.CHISELED_BOOKSHELF.defaultBlockState(),
+        box(pose, buffers, Blocks.CHISELED_BOOKSHELF.defaultBlockState(),
                 rackX, floorY + 0.07f, 0.52f, rackDepth * 0.9f, 0.09f, 0.14f, light, OverlayTexture.NO_OVERLAY);
 
         if (dense) {
             // Shelf 2 (middle, only in a dense pipe) with alchemical elixirs and instruments
-            box(pose, dispatcher, buffers, Blocks.DARK_OAK_SLAB.defaultBlockState(),
+            box(pose, buffers, Blocks.DARK_OAK_SLAB.defaultBlockState(),
                     rackX, floorY + 0.26f, 0.46f, rackDepth, 0.02f, 0.32f, light, OverlayTexture.NO_OVERLAY);
-            box(pose, dispatcher, buffers, Blocks.AMETHYST_CLUSTER.defaultBlockState(),
+            box(pose, buffers, Blocks.AMETHYST_CLUSTER.defaultBlockState(),
                     rackX, floorY + 0.20f, 0.38f, rackDepth * 0.8f, 0.11f, 0.12f, warmLight, OverlayTexture.NO_OVERLAY);
-            box(pose, dispatcher, buffers, Blocks.LIGHT_WEIGHTED_PRESSURE_PLATE.defaultBlockState(),
+            box(pose, buffers, Blocks.LIGHT_WEIGHTED_PRESSURE_PLATE.defaultBlockState(),
                     rackX, floorY + 0.28f, 0.52f, rackDepth * 0.8f, 0.02f, 0.12f, light, OverlayTexture.NO_OVERLAY);
         }
 
         // 4. Right wall: Victorian pressure gauge and distribution fittings
         float rightWallDist = dense ? 0.06f : 0.04f;
-        box(pose, dispatcher, buffers, Blocks.COPPER_BLOCK.defaultBlockState(),
+        box(pose, buffers, Blocks.COPPER_BLOCK.defaultBlockState(),
                 rightX - rightWallDist / 2f, floorY + (dense ? 0.28f : 0.16f), 0.42f, rightWallDist, dense ? 0.18f : 0.12f, 0.14f, light, OverlayTexture.NO_OVERLAY);
-        box(pose, dispatcher, buffers, Blocks.LIGHTNING_ROD.defaultBlockState(),
+        box(pose, buffers, Blocks.LIGHTNING_ROD.defaultBlockState(),
                 rightX - rightWallDist / 2f, floorY + (dense ? 0.42f : 0.26f), 0.42f, 0.025f, dense ? 0.10f : 0.06f, 0.025f, light, OverlayTexture.NO_OVERLAY);
 
         // 5. Hanging Victorian brass lantern on a chain
         float lanternY = ceilY - (dense ? 0.15f : 0.10f);
-        box(pose, dispatcher, buffers, Blocks.CHAIN.defaultBlockState(),
+        box(pose, buffers, Blocks.IRON_CHAIN.defaultBlockState(),
                 0.50f, ceilY - (dense ? 0.05f : 0.03f), 0.32f, 0.025f, dense ? 0.06f : 0.04f, 0.025f, warmLight, OverlayTexture.NO_OVERLAY);
-        box(pose, dispatcher, buffers, Blocks.LANTERN.defaultBlockState(),
+        box(pose, buffers, Blocks.LANTERN.defaultBlockState(),
                 0.50f, lanternY, 0.32f, dense ? 0.10f : 0.07f, dense ? 0.12f : 0.08f, dense ? 0.10f : 0.07f, warmLight, OverlayTexture.NO_OVERLAY);
 
         // 6. Stacks of Victorian cargo on the platform
         // Right corner: Victorian oak kegs
-        box(pose, dispatcher, buffers, Blocks.BARREL.defaultBlockState(),
+        box(pose, buffers, Blocks.BARREL.defaultBlockState(),
                 rightX - (dense ? 0.12f : 0.08f), floorY + (dense ? 0.10f : 0.06f), 0.28f, dense ? 0.16f : 0.10f, light, OverlayTexture.NO_OVERLAY);
         if (dense) {
-            box(pose, dispatcher, buffers, Blocks.BARREL.defaultBlockState(),
+            box(pose, buffers, Blocks.BARREL.defaultBlockState(),
                     rightX - 0.11f, floorY + 0.07f, 0.44f, 0.13f, light, OverlayTexture.NO_OVERLAY);
         }
 
         // Left corner: parcel chest and copper crate
-        box(pose, dispatcher, buffers, Blocks.CHEST.defaultBlockState(),
+        box(pose, buffers, Blocks.CHEST.defaultBlockState(),
                 leftX + (dense ? 0.12f : 0.08f), floorY + (dense ? 0.08f : 0.05f), 0.28f, dense ? 0.15f : 0.09f, light, OverlayTexture.NO_OVERLAY);
-        box(pose, dispatcher, buffers, Blocks.RAW_COPPER_BLOCK.defaultBlockState(),
+        box(pose, buffers, Blocks.RAW_COPPER_BLOCK.defaultBlockState(),
                 leftX + (dense ? 0.11f : 0.07f), floorY + (dense ? 0.20f : 0.12f), 0.28f, dense ? 0.09f : 0.05f, light, OverlayTexture.NO_OVERLAY);
 
         // Cast iron platform scales
-        box(pose, dispatcher, buffers, Blocks.HEAVY_CORE.defaultBlockState(),
+        box(pose, buffers, Blocks.HEAVY_CORE.defaultBlockState(),
                 leftX + (dense ? 0.12f : 0.08f), floorY + 0.04f, 0.65f, dense ? 0.08f : 0.05f, dense ? 0.05f : 0.03f, dense ? 0.08f : 0.05f, light, OverlayTexture.NO_OVERLAY);
 
         // 7. Double ceiling monorail of the warehouse with a stopper (Ceiling Monorail with Stopper)
@@ -302,16 +295,16 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
         float railY = ceilY - 0.035f;
         float railThick = dense ? 0.035f : 0.022f;
         // The rails start exactly at Z = 0.27f and never cross the plug!
-        box(pose, dispatcher, buffers, Blocks.CUT_COPPER_SLAB.defaultBlockState(),
+        box(pose, buffers, Blocks.CUT_COPPER_SLAB.defaultBlockState(),
                 0.50f - railSpan, railY, 0.54f, railThick, railThick, 0.54f, light, OverlayTexture.NO_OVERLAY);
-        box(pose, dispatcher, buffers, Blocks.CUT_COPPER_SLAB.defaultBlockState(),
+        box(pose, buffers, Blocks.CUT_COPPER_SLAB.defaultBlockState(),
                 0.50f + railSpan, railY, 0.54f, railThick, railThick, 0.54f, light, OverlayTexture.NO_OVERLAY);
         // Copper buffer stopper at the end of the monorail
-        box(pose, dispatcher, buffers, Blocks.COPPER_BLOCK.defaultBlockState(),
+        box(pose, buffers, Blocks.COPPER_BLOCK.defaultBlockState(),
                 0.50f, railY - 0.005f, 0.26f, railSpan * 2f + railThick * 1.5f, railThick * 1.4f, 0.04f, light, OverlayTexture.NO_OVERLAY);
 
         // Ceiling carriage of the manipulator on the rail
-        box(pose, dispatcher, buffers, Blocks.COPPER_BLOCK.defaultBlockState(),
+        box(pose, buffers, Blocks.COPPER_BLOCK.defaultBlockState(),
                 0.50f, railY - 0.02f, 0.40f, dense ? 0.14f : 0.09f, dense ? 0.04f : 0.025f, dense ? 0.12f : 0.08f, light, OverlayTexture.NO_OVERLAY);
     }
 
@@ -323,10 +316,8 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
         }
         boolean dense = state.getBlock() instanceof SnowPipeBlock p && p.isDense();
         var mc = Minecraft.getInstance();
-        var plugModel = mc.getModelManager().getModel(dense ? PLUG_DENSE : PLUG_BASIC);
-        var dockModel = mc.getModelManager().getModel(dense ? DOCK_DENSE : DOCK_BASIC);
-        var renderer = mc.getBlockRenderer().getModelRenderer();
-        var dispatcher = mc.getBlockRenderer();
+        var plugModel = (dense ? PLUG_DENSE : PLUG_BASIC);
+        var dockModel = (dense ? DOCK_DENSE : DOCK_BASIC);
         for (net.minecraft.core.Direction d : terminals) {
             boolean warehouse = be.getLevel() != null && isWarehouse(be.getLevel(), be.getBlockPos(), d);
             var model = warehouse ? dockModel : plugModel;
@@ -342,12 +333,11 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
                 }
             }
             pose.translate(-0.5, -0.5, -0.5);
-            renderer.renderModel(pose.last(), buffers.getBuffer(RenderType.cutout()), null, model, 1f, 1f, 1f, light,
-                    OverlayTexture.NO_OVERLAY, net.neoforged.neoforge.client.model.data.ModelData.EMPTY, RenderType.cutout());
+            com.golemlogix.client.render.StandaloneModels.render(pose.last(), buffers.getBuffer(net.minecraft.client.renderer.Sheets.cutoutBlockSheet()), model, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
 
             // If the dead end is chosen as a Warehouse (at most 1 warehouse within 3 blocks), render the Victorian warehouse decorations
             if (warehouse) {
-                renderWarehouseDecorations(pose, dispatcher, buffers, dense, light);
+                renderWarehouseDecorations(pose, buffers, dense, light);
             }
 
             pose.popPose();
@@ -390,8 +380,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
 
         boolean dense = state.getBlock() instanceof SnowPipeBlock p && p.isDense();
         var mc = Minecraft.getInstance();
-        var model = mc.getModelManager().getModel(dense ? BAND_DENSE : BAND_BASIC);
-        var renderer = mc.getBlockRenderer().getModelRenderer();
+        var model = (dense ? BAND_DENSE : BAND_BASIC);
 
         pose.pushPose();
         pose.translate(0.5, 0.5, 0.5);
@@ -402,8 +391,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
         }
         pose.translate(-0.5, -0.5, -0.5);
 
-        renderer.renderModel(pose.last(), buffers.getBuffer(RenderType.cutout()), null, model, 1f, 1f, 1f, light,
-                OverlayTexture.NO_OVERLAY, net.neoforged.neoforge.client.model.data.ModelData.EMPTY, RenderType.cutout());
+        com.golemlogix.client.render.StandaloneModels.render(pose.last(), buffers.getBuffer(net.minecraft.client.renderer.Sheets.cutoutBlockSheet()), model, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
         pose.popPose();
     }
 
@@ -424,8 +412,6 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
             return;
         }
         boolean dense = state.getBlock() instanceof SnowPipeBlock p && p.isDense();
-        BlockRenderDispatcher dispatcher = Minecraft.getInstance().getBlockRenderer();
-        ItemRenderer itemRenderer = Minecraft.getInstance().getItemRenderer();
 
         float turn = spot.turnProgress();
         boolean turning = spot.isTurning();
@@ -456,7 +442,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
             // Oriented strictly along the pipe axis (baseYaw)
             pose.pushPose();
             pose.mulPose(Axis.YP.rotationDegrees(baseYaw));
-            renderMechanicalArmAndGolem(pose, dispatcher, buffers, itemRenderer, be.getLevel(), outItem, dense, turn, time, light, overlay, spot.heading());
+            renderMechanicalArmAndGolem(pose, buffers, be.getLevel(), outItem, dense, turn, time, light, overlay, spot.heading());
             pose.popPose();
 
             // During the snowman's calm turn (turn in 0..1):
@@ -503,19 +489,19 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
                         SnowmanPuppet.Pose.holding(Math.abs(step) * 0.6f),
                         hp -> {
                             if (beforeMorph) {
-                                renderItem(itemRenderer, buffers, be.getLevel(), outItem, hp, 0, 0, 0, 0.44f, time * 3f, light, overlay);
+                                renderItem(buffers, be.getLevel(), outItem, hp, 0, 0, 0, 0.44f, time * 3f, light, overlay);
                             } else if (afterMorph) {
-                                box(hp, dispatcher, buffers, carriedBox, 0, 0, 0, boxSize, light, overlay);
+                                box(hp, buffers, carriedBox, 0, 0, 0, boxSize, light, overlay);
                             } else {
                                 float m = (tripProgress - morphStart) / (morphEnd - morphStart);
                                 if (m < 0.5f) {
                                     float p = m / 0.5f;
                                     float sc = (1f - p) * 0.44f;
-                                    renderItem(itemRenderer, buffers, be.getLevel(), outItem, hp, 0, 0, 0, sc, time * (3f + p * 12f), light, overlay);
+                                    renderItem(buffers, be.getLevel(), outItem, hp, 0, 0, 0, sc, time * (3f + p * 12f), light, overlay);
                                 } else {
                                     float p = (m - 0.5f) / 0.5f;
                                     float sc = p * boxSize;
-                                    box(hp, dispatcher, buffers, carriedBox, 0, 0, 0, sc, light, overlay);
+                                    box(hp, buffers, carriedBox, 0, 0, 0, sc, light, overlay);
                                 }
                             }
                         });
@@ -539,7 +525,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
                             downPose,
                             hp -> {
                                 if (itemScale > 0.01f) {
-                                    renderItem(itemRenderer, buffers, be.getLevel(), inItem, hp, 0, cargoY, cargoZ, itemScale, time * 3f, light, overlay);
+                                    renderItem(buffers, be.getLevel(), inItem, hp, 0, cargoY, cargoZ, itemScale, time * 3f, light, overlay);
                                 }
                             });
                 } else if (turn < 0.65f) {
@@ -565,7 +551,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
 
                     SnowmanPuppet.render(pose, buffers, light, new Vector3f(0f, feet, 0f), 180f, s, SnowmanPuppet.Head.PUMPKIN,
                             catchPose,
-                            hp -> renderItem(itemRenderer, buffers, be.getLevel(), outItem, hp, 0, 0, 0, 0.44f, time * 3f, light, overlay));
+                            hp -> renderItem(buffers, be.getLevel(), outItem, hp, 0, 0, 0, 0.44f, time * 3f, light, overlay));
                 }
             }
         } else {
@@ -573,26 +559,26 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
             final float smallBoxScale = 0.11f;
 
             if (!turning) {
-                box(pose, dispatcher, buffers, Blocks.CARVED_PUMPKIN.defaultBlockState(), 0, 0, 0, 0.19f, light, overlay);
+                box(pose, buffers, Blocks.CARVED_PUMPKIN.defaultBlockState(), 0, 0, 0, 0.19f, light, overlay);
                 // Normal run: the item morphs into a crate right on the head
                 float morphStart = 0.44f, morphEnd = 0.56f;
                 boolean beforeMorph = tripProgress < morphStart;
                 boolean afterMorph = tripProgress > morphEnd;
 
                 if (beforeMorph) {
-                    renderItem(itemRenderer, buffers, be.getLevel(), outItem, pose, 0, 0.15, 0, 0.12f, time * 3f, light, overlay);
+                    renderItem(buffers, be.getLevel(), outItem, pose, 0, 0.15, 0, 0.12f, time * 3f, light, overlay);
                 } else if (afterMorph) {
-                    box(pose, dispatcher, buffers, carriedBox, 0, 0.16, 0, smallBoxScale, light, overlay);
+                    box(pose, buffers, carriedBox, 0, 0.16, 0, smallBoxScale, light, overlay);
                 } else {
                     float m = (tripProgress - morphStart) / (morphEnd - morphStart);
                     if (m < 0.5f) {
                         float p = m / 0.5f;
                         float sc = (1f - p) * 0.12f;
-                        renderItem(itemRenderer, buffers, be.getLevel(), outItem, pose, 0, 0.15, 0, sc, time * (3f + p * 12f), light, overlay);
+                        renderItem(buffers, be.getLevel(), outItem, pose, 0, 0.15, 0, sc, time * (3f + p * 12f), light, overlay);
                     } else {
                         float p = (m - 0.5f) / 0.5f;
                         float sc = p * smallBoxScale;
-                        box(pose, dispatcher, buffers, carriedBox, 0, 0.16, 0, sc, light, overlay);
+                        box(pose, buffers, carriedBox, 0, 0.16, 0, sc, light, overlay);
                     }
                 }
             } else {
@@ -601,27 +587,27 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
                     // PHASE 1: A perky hop that drops the item from the head forward and down onto the floor
                     float pDown = turn / 0.35f;
                     float hop = (float) Math.sin(pDown * Math.PI) * 0.03f;
-                    box(pose, dispatcher, buffers, Blocks.CARVED_PUMPKIN.defaultBlockState(), 0, hop, 0, 0.19f, light, overlay);
+                    box(pose, buffers, Blocks.CARVED_PUMPKIN.defaultBlockState(), 0, hop, 0, 0.19f, light, overlay);
 
                     float flingP = Mth.clamp(pDown / 0.85f, 0f, 1f);
                     float flingY = Mth.lerp(flingP * flingP, 0.15f + hop, -0.14f);
                     float flingZ = Mth.lerp(flingP, 0.0f, 0.18f);
                     float sc = flingP > 0.70f ? (1f - (flingP - 0.70f) / 0.30f) * 0.12f : 0.12f;
                     if (sc > 0.005f) {
-                        renderItem(itemRenderer, buffers, be.getLevel(), inItem, pose, 0, flingY, flingZ, sc, time * 3f + flingP * 120f, light, overlay);
+                        renderItem(buffers, be.getLevel(), inItem, pose, 0, flingY, flingZ, sc, time * 3f + flingP * 120f, light, overlay);
                     }
                 } else if (turn < 0.65f) {
                     // PHASE 2: Empty smooth turn
-                    box(pose, dispatcher, buffers, Blocks.CARVED_PUMPKIN.defaultBlockState(), 0, 0, 0, 0.19f, light, overlay);
+                    box(pose, buffers, Blocks.CARVED_PUMPKIN.defaultBlockState(), 0, 0, 0, 0.19f, light, overlay);
                 } else if (turn < 0.80f) {
                     // PHASE 3a: The pumpkin waits for the item to drop from above
-                    box(pose, dispatcher, buffers, Blocks.CARVED_PUMPKIN.defaultBlockState(), 0, 0, 0, 0.19f, light, overlay);
+                    box(pose, buffers, Blocks.CARVED_PUMPKIN.defaultBlockState(), 0, 0, 0, 0.19f, light, overlay);
                 } else {
                     // PHASE 3b: The item is caught on top of the pumpkin with a soft cushioning
                     float pSettle = (turn - 0.80f) / 0.20f;
                     float squashHop = (float) -Math.sin((1f - pSettle) * Math.PI) * 0.03f;
-                    box(pose, dispatcher, buffers, Blocks.CARVED_PUMPKIN.defaultBlockState(), 0, squashHop, 0, 0.19f, light, overlay);
-                    renderItem(itemRenderer, buffers, be.getLevel(), outItem, pose, 0, 0.15f + squashHop, 0, 0.12f, time * 3f, light, overlay);
+                    box(pose, buffers, Blocks.CARVED_PUMPKIN.defaultBlockState(), 0, squashHop, 0, 0.19f, light, overlay);
+                    renderItem(buffers, be.getLevel(), outItem, pose, 0, 0.15f + squashHop, 0, 0.12f, time * 3f, light, overlay);
                 }
             }
         }
@@ -635,8 +621,8 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
      * - Telescopic rod and the copper golem strictly within the pipe's inner volume.
      * - The copper golem holds the new cargo and drops it with free-fall acceleration into the snowman's hands / onto the pumpkin.
      */
-    private static void renderMechanicalArmAndGolem(PoseStack pose, BlockRenderDispatcher dispatcher, MultiBufferSource buffers,
-                                                   ItemRenderer itemRenderer, @Nullable Level level, ItemStack outItem,
+    private static void renderMechanicalArmAndGolem(PoseStack pose, MultiBufferSource buffers,
+                                                   @Nullable Level level, ItemStack outItem,
                                                    boolean dense, float turn, float time, int light, int overlay, Direction heading) {
         float ceilingY = dense ? 0.28f : 0.165f;
         float targetFeetY = dense ? 0.02f : 0.01f;
@@ -650,7 +636,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
 
         // Compact ceiling flange mounting the manipulator carriage
         float bracketSize = dense ? 0.18f : 0.12f;
-        box(pose, dispatcher, buffers, Blocks.CUT_COPPER_SLAB.defaultBlockState(),
+        box(pose, buffers, Blocks.CUT_COPPER_SLAB.defaultBlockState(),
                 0, ceilingY + 0.02f, 0, bracketSize, railThick, bracketSize, light, overlay);
 
         // 2. The mechanical arm extends from the ceiling carriage
@@ -667,7 +653,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
         float currentFeetY = Mth.lerp(ext, retractedFeetY, targetFeetY);
 
         // 3. Ceiling carriage of the monorail
-        box(pose, dispatcher, buffers, Blocks.COPPER_BLOCK.defaultBlockState(),
+        box(pose, buffers, Blocks.COPPER_BLOCK.defaultBlockState(),
                 0, ceilingY, 0, dense ? 0.13f : 0.08f, dense ? 0.035f : 0.022f, dense ? 0.11f : 0.07f, light, overlay);
 
         // 4. Telescopic rod / pulley block
@@ -675,12 +661,12 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
         float rodBottom = currentFeetY + golemScale * 1.15f;
         if (rodTop > rodBottom) {
             float rodH = rodTop - rodBottom;
-            box(pose, dispatcher, buffers, Blocks.CUT_COPPER_SLAB.defaultBlockState(),
+            box(pose, buffers, Blocks.CUT_COPPER_SLAB.defaultBlockState(),
                     0, (rodTop + rodBottom) / 2f, 0, dense ? 0.035f : 0.022f, rodH, dense ? 0.035f : 0.022f, light, overlay);
         }
 
         // 5. Copper manipulator grab (cradle)
-        box(pose, dispatcher, buffers, Blocks.RAW_COPPER_BLOCK.defaultBlockState(),
+        box(pose, buffers, Blocks.RAW_COPPER_BLOCK.defaultBlockState(),
                 0, currentFeetY + golemScale * 1.15f, 0, dense ? 0.06f : 0.038f, 0.02f, dense ? 0.06f : 0.038f, light, overlay);
 
         // 6. Hanging copper golem (Copper Golem Puppet)
@@ -696,7 +682,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
                 hp -> {
                     // Cargo in the copper golem's hands until the drop
                     float cargoScale = dense ? 0.28f : 0.16f;
-                    renderItem(itemRenderer, buffers, level, outItem, hp, 0, 0, 0, cargoScale, time * 3f, light, overlay);
+                    renderItem(buffers, level, outItem, hp, 0, 0, 0, cargoScale, time * 3f, light, overlay);
                 },
                 arms);
 
@@ -711,7 +697,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
             float curZ = Mth.lerp(dropP, 0.04f, 0.0f);
             float sc = dense ? 0.28f : 0.16f;
 
-            renderItem(itemRenderer, buffers, level, outItem, pose, 0, curY, curZ, sc, time * 3f + dropP * 90f, light, overlay);
+            renderItem(buffers, level, outItem, pose, 0, curY, curZ, sc, time * 3f + dropP * 90f, light, overlay);
         }
     }
 
@@ -822,7 +808,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
         return FALLBACK_ITEMS.get(Math.floorMod(cargoId, FALLBACK_ITEMS.size()));
     }
 
-    private static void renderItem(ItemRenderer itemRenderer, MultiBufferSource buffers, @Nullable Level level, ItemStack stack,
+    private static void renderItem(MultiBufferSource buffers, @Nullable Level level, ItemStack stack,
                                    PoseStack pose, double x, double y, double z, float scale, float rotDeg, int light, int overlay) {
         if (stack.isEmpty() || scale <= 0.001f) {
             return;
@@ -831,24 +817,24 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
         pose.translate(x, y, z);
         pose.scale(scale, scale, scale);
         pose.mulPose(Axis.YP.rotationDegrees(rotDeg));
-        itemRenderer.renderStatic(stack, ItemDisplayContext.FIXED, light, overlay, pose, buffers, level, 0);
+        com.golemlogix.client.render.BerBuffers.item(buffers, stack, ItemDisplayContext.FIXED, light, pose, level, 0);
         pose.popPose();
     }
 
     /** A cube of size size centred at (x, y, z) relative to the current point. */
-    private static void box(PoseStack pose, BlockRenderDispatcher dispatcher, MultiBufferSource buffers, BlockState state,
+    private static void box(PoseStack pose, MultiBufferSource buffers, BlockState state,
                             double x, double y, double z, float size, int light, int overlay) {
-        box(pose, dispatcher, buffers, state, x, y, z, size, size, size, light, overlay);
+        box(pose, buffers, state, x, y, z, size, size, size, light, overlay);
     }
 
     /** A box of size (sx, sy, sz) centred at (x, y, z) relative to the current point. */
-    private static void box(PoseStack pose, BlockRenderDispatcher dispatcher, MultiBufferSource buffers, BlockState state,
+    private static void box(PoseStack pose, MultiBufferSource buffers, BlockState state,
                             double x, double y, double z, float sx, float sy, float sz, int light, int overlay) {
         pose.pushPose();
         pose.translate(x, y, z);
         pose.scale(sx, sy, sz);
         pose.translate(-0.5, -0.5, -0.5);
-        dispatcher.renderSingleBlock(state, pose, buffers, light, overlay);
+        com.golemlogix.client.render.BerBuffers.block(buffers, state, pose, light);
         pose.popPose();
     }
 }

@@ -16,12 +16,24 @@ public class CraftDoneToast implements Toast {
     private static final long SHOW_MS = 5000L;
     private final List<ItemStack> items;
 
+    private Visibility visibility = Visibility.SHOW;
+
     public CraftDoneToast(List<ItemStack> items) {
         this.items = items;
     }
 
     @Override
-    public Visibility render(GuiGraphicsExtractor g, ToastManager toasts, long time) {
+    public Visibility getWantedVisibility() {
+        return visibility;
+    }
+
+    @Override
+    public void update(ToastManager toasts, long time) {
+        visibility = time >= SHOW_MS ? Visibility.HIDE : Visibility.SHOW;
+    }
+
+    @Override
+    public void extractRenderState(GuiGraphicsExtractor g, net.minecraft.client.gui.Font font, long time) {
         int w = width(), h = height();
         g.fill(0, 0, w, h, GolemGui.WOOD_DARK);
         g.fill(1, 1, w - 1, h - 1, GolemGui.BRASS);
@@ -31,7 +43,6 @@ public class CraftDoneToast implements Toast {
         if (!shown.isEmpty()) {
             g.fakeItem(shown.copyWithCount(1), 8, 8);
         }
-        var font = toasts.getMinecraft().font;
         g.text(font, Component.translatable("toast.golem_logix.craft_done"), 30, 7, GolemGui.CYAN, false);
         if (!shown.isEmpty()) {
             String line = shown.getCount() + "× " + shown.getHoverName().getString();
@@ -40,6 +51,5 @@ public class CraftDoneToast implements Toast {
             }
             g.text(font, font.plainSubstrByWidth(line, w - 36), 30, 18, GolemGui.PARCHMENT, false);
         }
-        return time >= SHOW_MS ? Visibility.HIDE : Visibility.SHOW;
     }
 }

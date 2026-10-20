@@ -30,7 +30,7 @@ public class PipePlugItem extends ModItemWithTooltip {
     /** The side of the pipe closest to the click point (by the largest offset from the block centre). */
     public static Direction sideAt(BlockPos pos, Vec3 hit) {
         Vec3 d = hit.subtract(Vec3.atCenterOf(pos));
-        return Direction.getNearest(d.x, d.y, d.z);
+        return Direction.getApproximateNearest(d.x, d.y, d.z);
     }
 
     @Override

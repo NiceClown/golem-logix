@@ -387,7 +387,6 @@ public class BookScreen extends Screen {
      */
     public static List<String> auditLayout() {
         BookScreen s = new BookScreen();
-        s.font = Minecraft.getInstance().font;
         List<String> out = new ArrayList<>();
         BookModel.showAll = true;
         try {
@@ -449,7 +448,6 @@ public class BookScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
-        renderBackground(g, mouseX, mouseY, partial);
         hoverStack = ItemStack.EMPTY;
         hoverText = null;
         double bx = (mouseX - ox) / k, by = (mouseY - oy) / k;
@@ -470,7 +468,7 @@ public class BookScreen extends Screen {
         g.pose().popMatrix();
 
         if (openEntry == null) {
-            search.render(g, mouseX, mouseY, partial);
+            search.extractRenderState(g, mouseX, mouseY, partial);
         }
         if (!hoverStack.isEmpty()) {
             g.setTooltipForNextFrame(font, hoverStack, mouseX, mouseY);
@@ -593,7 +591,7 @@ public class BookScreen extends Screen {
         int shiftY = (int) Math.floorMod((long) Math.round(panY[categoryIndex] * zoom[categoryIndex]), 256L);
         for (int tx = ax - shiftX - 256; tx < ax + aw; tx += 256) {
             for (int ty = ay - shiftY - 256; ty < ay + ah; ty += 256) {
-                g.blit(MAP_BG, tx, ty, 0, 0, 256, 256, 256, 256);
+                g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, MAP_BG, tx, ty, 0, 0, 256, 256, 256, 256);
             }
         }
         // dark vignette at the edges
@@ -643,14 +641,12 @@ public class BookScreen extends Screen {
             g.pose().pushMatrix();
             g.pose().translate(ncx, ncy);
             g.pose().scale(z, z);
-            g.blit(NODES, -NODE / 2, -NODE / 2, sprite * NODE, 0, NODE, NODE, NODE * 4, NODE);
+            g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, NODES, -NODE / 2, -NODE / 2, sprite * NODE, 0, NODE, NODE, NODE * 4, NODE);
             g.item(e.icon, -8, -8);
             if (!visited.contains(e.id)) {
                 float pulse = 0.35f + 0.35f * (float) Math.sin((time + partial) * 0.15 + e.x + e.y);
-                RenderSystem.enableBlend();
-                g.setColor(1f, 1f, 1f, pulse);
-                g.blit(NODES, -NODE / 2, -NODE / 2, 3 * NODE, 0, NODE, NODE, NODE * 4, NODE);
-                g.setColor(1f, 1f, 1f, 1f);
+                g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, NODES, -NODE / 2, -NODE / 2, 3 * NODE, 0, NODE, NODE, NODE * 4, NODE,
+                        net.minecraft.util.ARGB.white(pulse));
             }
             g.pose().popMatrix();
         }
@@ -723,8 +719,8 @@ public class BookScreen extends Screen {
         clickables.clear();
         // spine and pages
         g.fill(LEFT_PAGE_X - 2, PAGES_Y - 2, RIGHT_PAGE_X + PAGE_W + 2, PAGES_Y + PAGE_H + 2, 0xFF1A0F08);
-        g.blit(PARCHMENT, LEFT_PAGE_X, PAGES_Y, 0, 0, PAGE_W, PAGE_H, 256, 256);
-        g.blit(PARCHMENT, RIGHT_PAGE_X, PAGES_Y, 0, 40, PAGE_W, PAGE_H, 256, 256);
+        g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, PARCHMENT, LEFT_PAGE_X, PAGES_Y, 0, 0, PAGE_W, PAGE_H, 256, 256);
+        g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, PARCHMENT, RIGHT_PAGE_X, PAGES_Y, 0, 40, PAGE_W, PAGE_H, 256, 256);
         for (int i = 0; i < 16; i++) {
             int a = (int) (110 * (1 - i / 16f)) << 24;
             g.fill(LEFT_PAGE_X + PAGE_W - i - 1, PAGES_Y, LEFT_PAGE_X + PAGE_W - i, PAGES_Y + PAGE_H, a);
@@ -815,20 +811,21 @@ public class BookScreen extends Screen {
             var level = Minecraft.getInstance().level;
             Identifier id = Identifier.parse(d.get("recipe").getAsString());
             if (level != null) {
-                var holder = level.getRecipeManager().byKey(id);
+                var holder = com.golemlogix.system.Recipes.byId(level, id);
                 if (holder.isPresent()) {
                     RecipeHolder<?> rh = holder.get();
-                    result = rh.value().getResultItem(level.registryAccess());
+                    result = com.golemlogix.system.RecipeItems.result(rh.value(), level);
                     if (rh.value() instanceof ShapedRecipe shaped) {
                         for (int r = 0; r < shaped.getHeight(); r++) {
                             for (int c = 0; c < shaped.getWidth(); c++) {
-                                Ingredient ing = shaped.getIngredients().get(r * shaped.getWidth() + c);
-                                cells[r * 3 + c] = ing.getItems();
+                                cells[r * 3 + c] = shaped.getIngredients().get(r * shaped.getWidth() + c)
+                                        .map(com.golemlogix.system.RecipeItems::stacks).orElse(new ItemStack[0]);
                             }
                         }
                     } else if (rh.value() instanceof ShapelessRecipe shapeless) {
-                        for (int i = 0; i < Math.min(9, shapeless.getIngredients().size()); i++) {
-                            cells[i] = shapeless.getIngredients().get(i).getItems();
+                        var ings = shapeless.placementInfo().ingredients();
+                        for (int i = 0; i < Math.min(9, ings.size()); i++) {
+                            cells[i] = com.golemlogix.system.RecipeItems.stacks(ings.get(i));
                         }
                     }
                 }
@@ -1169,7 +1166,7 @@ public class BookScreen extends Screen {
                 n += s.getCount();
             }
         }
-        for (ItemStack s : player.getInventory().offhand) {
+        for (ItemStack s : List.of(player.getOffhandItem())) {
             if (s.is(item)) {
                 n += s.getCount();
             }
@@ -1318,13 +1315,15 @@ public class BookScreen extends Screen {
         Identifier tex = tex(d.get("texture").getAsString());
         int ix = x + (PAGE_W - size) / 2;
         g.fill(ix - 2, top - 2, ix + size + 2, top + size + 2, 0x30301808);
-        g.blit(tex, ix, top, size, size, 0, 0, 288, 288, 288, 288);
+        g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, tex, ix, top, 0, 0, size, size, 288, 288, 288, 288);
     }
 
     // ----------------------------------------------------------------- input
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x(), mouseY = event.y();
+        int button = event.button();
         double bx = (mouseX - ox) / k, by = (mouseY - oy) / k;
 
         // section tabs
@@ -1340,7 +1339,7 @@ public class BookScreen extends Screen {
             }
         }
         if (openEntry != null) {
-            return clickArticle(bx, by) || super.mouseClicked(mouseX, mouseY, button);
+            return clickArticle(bx, by) || super.mouseClicked(event, doubleClick);
         }
 
         // search results
@@ -1355,7 +1354,7 @@ public class BookScreen extends Screen {
             y += 16;
         }
 
-        if (search.mouseClicked(mouseX, mouseY, button)) {
+        if (search.mouseClicked(event, doubleClick)) {
             setFocused(search);
             return true;
         }
@@ -1370,7 +1369,7 @@ public class BookScreen extends Screen {
             dragMoved = 0;
             return true;
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     private boolean clickArticle(double bx, double by) {
@@ -1399,7 +1398,9 @@ public class BookScreen extends Screen {
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dx, double dy) {
+    public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event, double dx, double dy) {
+        double mouseX = event.x(), mouseY = event.y();
+        int button = event.button();
         if (dragging && openEntry == null) {
             panX[categoryIndex] += dx / k / zoom[categoryIndex];
             panY[categoryIndex] += dy / k / zoom[categoryIndex];
@@ -1407,7 +1408,7 @@ public class BookScreen extends Screen {
             clampPan();
             return true;
         }
-        return super.mouseDragged(mouseX, mouseY, button, dx, dy);
+        return super.mouseDragged(event, dx, dy);
     }
 
     private void clampPan() {
@@ -1417,7 +1418,9 @@ public class BookScreen extends Screen {
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+    public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event) {
+        double mouseX = event.x(), mouseY = event.y();
+        int button = event.button();
         if (dragging) {
             dragging = false;
             if (dragMoved < 4 && openEntry == null) {
@@ -1432,7 +1435,7 @@ public class BookScreen extends Screen {
                     }
                 }            }
         }
-        return super.mouseReleased(mouseX, mouseY, button);
+        return super.mouseReleased(event);
     }
 
     @Override
@@ -1465,7 +1468,8 @@ public class BookScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int key, int scan, int mods) {
+    public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+        int key = event.key(), scan = event.scancode(), mods = event.modifiers();
         if (key == GLFW.GLFW_KEY_ESCAPE) {
             if (openEntry != null) {
                 closeEntry();
@@ -1475,7 +1479,7 @@ public class BookScreen extends Screen {
                 search.setValue("");
                 return true;
             }
-            return super.keyPressed(key, scan, mods);
+            return super.keyPressed(event);
         }
         if (openEntry != null) {
             if ((key == GLFW.GLFW_KEY_RIGHT || key == GLFW.GLFW_KEY_D) && spread < spreads() - 1) {
@@ -1490,7 +1494,7 @@ public class BookScreen extends Screen {
                 closeEntry();
                 return true;
             }
-            return super.keyPressed(key, scan, mods);
+            return super.keyPressed(event);
         }
         if (search.isFocused()) {
             if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
@@ -1501,7 +1505,7 @@ public class BookScreen extends Screen {
                 }
                 return true;
             }
-            search.keyPressed(key, scan, mods);
+            search.keyPressed(event);
             return true;
         }
         if (key == GLFW.GLFW_KEY_TAB || key == GLFW.GLFW_KEY_SLASH) {
@@ -1509,15 +1513,16 @@ public class BookScreen extends Screen {
             setFocused(search);
             return true;
         }
-        return super.keyPressed(key, scan, mods);
+        return super.keyPressed(event);
     }
 
     @Override
-    public boolean charTyped(char c, int mods) {
+    public boolean charTyped(net.minecraft.client.input.CharacterEvent event) {
+        char c = (char) event.codepoint();
         if (openEntry == null && search.isFocused()) {
-            return search.charTyped(c, mods);
+            return search.charTyped(event);
         }
-        return super.charTyped(c, mods);
+        return super.charTyped(event);
     }
 
     @Override

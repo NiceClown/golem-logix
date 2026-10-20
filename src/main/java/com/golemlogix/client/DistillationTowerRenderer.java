@@ -45,7 +45,7 @@ import static com.golemlogix.client.CryoMainframeRenderer.fitWall;
  * <p>
  * Pixels in the north-facing frame: the front is Z 0, the viewer's right is -X; Y 0..48.
  */
-public class DistillationTowerRenderer implements BlockEntityRenderer<DistillationTowerBlockEntity> {
+public class DistillationTowerRenderer extends com.golemlogix.client.render.LegacyBer<DistillationTowerBlockEntity> {
     private static final Identifier BLOOD = CryoJarRenderer.mc("water_still"), GLOW = CryoJarRenderer.mc("white_concrete");
     private static final float COLUMN_BOTTOM = 14.5f, COLUMN_TOP = 33.5f;
     /** The coil's colours from the bottom up: blood, ember, violet, ice. */
@@ -74,8 +74,8 @@ public class DistillationTowerRenderer implements BlockEntityRenderer<Distillati
             return;
         }
         BlockPos pos = be.getBlockPos();
-        int light = LevelRenderer.getLightColor(level, pos.above());
-        int lightTop = LevelRenderer.getLightColor(level, pos.above(2));
+        int light = LevelRenderer.getLightCoords(level, pos.above());
+        int lightTop = LevelRenderer.getLightCoords(level, pos.above(2));
         float work = Mth.lerp(partialTick, be.workPrev, be.work);
         float blood = Mth.lerp(partialTick, be.bloodPrev, be.blood);
         float phase = Mth.lerp(partialTick, be.phasePrev, be.phase);

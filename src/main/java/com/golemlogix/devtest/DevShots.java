@@ -15,7 +15,6 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.LevelSettings;
 import net.minecraft.world.level.WorldDataConfiguration;
@@ -219,7 +218,7 @@ public final class DevShots {
         Minecraft mc = Minecraft.getInstance();
         String name = pendingShot;
         pendingShot = null;
-        Screenshot.grab(mc.gameDirectory, name + ".png", mc.getMainRenderTarget(), msg -> {
+        Screenshot.grab(mc.gameDirectory, name + ".png", mc.getMainRenderTarget(), 1, msg -> {
         });
         shotTaken = true;
     }
@@ -245,8 +244,8 @@ public final class DevShots {
 
     private static void createWorld(Minecraft mc) {
         log("creating world");
-        LevelSettings settings = new LevelSettings("DevShots", GameType.CREATIVE, false, Difficulty.PEACEFUL, true,
-                new GameRules(), WorldDataConfiguration.DEFAULT);
+        LevelSettings settings = new LevelSettings("DevShots", GameType.CREATIVE,
+                new LevelSettings.DifficultySettings(Difficulty.PEACEFUL, false, false), true, WorldDataConfiguration.DEFAULT);
         // a flat world, or (golemlogix.devshots.world=normal:<seed>) a generated one to film in real landscapes
         String world = System.getProperty("golemlogix.devshots.world", "flat");
         boolean normal = world.startsWith("normal");
@@ -255,7 +254,7 @@ public final class DevShots {
         String id = "devshots_" + System.currentTimeMillis();
         var preset = normal ? WorldPresets.NORMAL : WorldPresets.FLAT;
         mc.createWorldOpenFlows().createFreshLevel(id, settings, options,
-                access -> access.registryOrThrow(Registries.WORLD_PRESET).getHolderOrThrow(preset).value().createWorldDimensions(),
+                access -> access.lookupOrThrow(Registries.WORLD_PRESET).getOrThrow(preset).value().createWorldDimensions(),
                 mc.screen);
     }
 
@@ -263,11 +262,12 @@ public final class DevShots {
         MinecraftServer server = mc.getSingleplayerServer();
         server.execute(() -> {
             ServerLevel level = server.overworld();
-            level.getGameRules().getRule(GameRules.RULE_DAYLIGHT).set(false, server);
-            level.getGameRules().getRule(GameRules.RULE_WEATHER_CYCLE).set(false, server);
-            level.getGameRules().getRule(GameRules.RULE_DOMOBSPAWNING).set(false, server);
-            level.setDayTime(6000);
-            level.setWeatherParameters(24000, 0, false, false);
+            // noon, clear and still: by commands (since 26.1 time and weather have their own clock and data)
+            var quiet = server.createCommandSourceStack().withSuppressedOutput();
+            for (String c : List.of("gamerule advance_time false", "gamerule advance_weather false", "gamerule spawn_mobs false",
+                    "time set 6000", "weather clear")) {
+                server.getCommands().performPrefixedCommand(quiet, c);
+            }
             ServerPlayer player = server.getPlayerList().getPlayers().get(0);
             player.setGameMode(GameType.CREATIVE);
             player.getAbilities().mayfly = true;
@@ -428,7 +428,7 @@ public final class DevShots {
                     return remoteCommand(rest.startsWith("/") ? rest.substring(1) : rest);
                 }
                 return onServer((server, level, player) -> {
-                    var source = player.createCommandSourceStack().withPermission(4).withSuppressedOutput();
+                    var source = player.createCommandSourceStack().withPermission(net.minecraft.server.permissions.LevelBasedPermissionSet.OWNER).withSuppressedOutput();
                     server.getCommands().performPrefixedCommand(source, rest);
                 });
             case "cam": {
@@ -440,7 +440,7 @@ public final class DevShots {
                 return onServer((server, level, player) -> {
                     player.getAbilities().flying = true;
                     player.setNoGravity(true);
-                    player.teleportTo(level, x, y - 1.62, z, yaw, pitch);
+                    player.teleportTo(level, x, y - 1.62, z, java.util.Set.of(), yaw, pitch, true);
                 });
             }
             case "look": {
@@ -458,7 +458,7 @@ public final class DevShots {
                 return onServer((server, level, player) -> {
                     player.getAbilities().flying = true;
                     player.setNoGravity(true);
-                    player.teleportTo(level, ex, ey - 1.62, ez, yaw, pitch);
+                    player.teleportTo(level, ex, ey - 1.62, ez, java.util.Set.of(), yaw, pitch, true);
                 });
             }
             case "gui":
@@ -564,7 +564,7 @@ public final class DevShots {
                         case "inventory" -> {
                             // check inventory <item>=<count>
                             String[] kv = expected.split("=");
-                            var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(kv[0]));
+                            var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(net.minecraft.resources.Identifier.parse(kv[0]));
                             int n = 0;
                             for (ItemStack s : mc.player.getInventory().getNonEquipmentItems()) {
                                 if (s.is(item)) {
@@ -598,8 +598,9 @@ public final class DevShots {
                     }
                     double x = screen.getGuiLeft() + com.golemlogix.menu.TerminalMenu.LIST_X + (idx % com.golemlogix.menu.TerminalMenu.COLS) * 18 + 9;
                     double y = screen.getGuiTop() + com.golemlogix.menu.TerminalMenu.LIST_Y + (idx / com.golemlogix.menu.TerminalMenu.COLS) * 18 + 9;
-                    screen.mouseClicked(x, y, button);
-                    screen.mouseReleased(x, y, button);
+                    var click = new net.minecraft.client.input.MouseButtonEvent(x, y, new net.minecraft.client.input.MouseButtonInfo(button, 0));
+                    screen.mouseClicked(click, false);
+                    screen.mouseReleased(click);
                     return true;
                 };
             }
@@ -626,8 +627,9 @@ public final class DevShots {
                         throw new IllegalStateException("no container screen: " + mc.screen);
                     }
                     double x = screen.getGuiLeft() + ux, y = screen.getGuiTop() + uy;
-                    screen.mouseClicked(x, y, button);
-                    screen.mouseReleased(x, y, button);
+                    var click = new net.minecraft.client.input.MouseButtonEvent(x, y, new net.minecraft.client.input.MouseButtonInfo(button, 0));
+                    screen.mouseClicked(click, false);
+                    screen.mouseReleased(click);
                     return true;
                 };
             }
@@ -644,7 +646,7 @@ public final class DevShots {
                 return mc -> {
                     for (var w : mc.screen.children()) {
                         if (w instanceof com.golemlogix.client.GolemButton b && b.getMessage().getString().contains(rest)) {
-                            b.onPress();
+                            b.onPress(new net.minecraft.client.input.KeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, 0, 0));
                             return true;
                         }
                     }
@@ -658,7 +660,7 @@ public final class DevShots {
                     if (mc.player == null || mc.gameMode == null || mc.player.containerMenu == null) {
                         throw new IllegalStateException("no open menu");
                     }
-                    mc.gameMode.handleInventoryMouseClick(mc.player.containerMenu.containerId, slot, button,
+                    mc.gameMode.handleContainerInput(mc.player.containerMenu.containerId, slot, button,
                             net.minecraft.world.inventory.ContainerInput.PICKUP, mc.player);
                     return true;
                 };
@@ -695,7 +697,7 @@ public final class DevShots {
                         throw new IllegalStateException("terminal screen is not open");
                     }
                     keepScreen = true;
-                    var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(itemId));
+                    var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(net.minecraft.resources.Identifier.parse(itemId));
                     var screen = new com.golemlogix.client.CraftRequestScreen(ts, menu, new ItemStack(item));
                     mc.setScreen(screen);
                     screen.setAmountForDev(amount);
@@ -711,7 +713,7 @@ public final class DevShots {
                     if (!(menu instanceof com.golemlogix.menu.TerminalMenu)) {
                         throw new IllegalStateException("terminal menu is not open");
                     }
-                    var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(itemId));
+                    var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(net.minecraft.resources.Identifier.parse(itemId));
                     net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(
                             new com.golemlogix.network.CraftRequestPayload(menu.containerId, new ItemStack(item), amount, false, 0));
                     return true;
@@ -742,7 +744,7 @@ public final class DevShots {
             }
             case "jei": {
                 // jei <item> [uses] : the JEI recipe window for an item (needs -PtestMods)
-                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(t[1]));
+                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(net.minecraft.resources.Identifier.parse(t[1]));
                 boolean uses = t.length > 2 && t[2].equals("uses");
                 return mc -> {
                     if (!net.neoforged.fml.ModList.get().isLoaded("jei")) {
@@ -758,7 +760,7 @@ public final class DevShots {
             case "jeitype": {
                 // jeitype <namespace:category> [item] : one JEI recipe category, or only its recipes making the item (needs -PtestMods)
                 var uid = net.minecraft.resources.Identifier.parse(t[1]);
-                ItemStack only = t.length > 2 ? new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
+                ItemStack only = t.length > 2 ? new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(
                         net.minecraft.resources.Identifier.parse(t[2]))) : ItemStack.EMPTY;
                 return mc -> {
                     keepScreen = true;
@@ -817,7 +819,7 @@ public final class DevShots {
                 // chat : the chat window with its history (messages sent on joining)
                 return mc -> {
                     keepScreen = true;
-                    mc.setScreen(new net.minecraft.client.gui.screens.ChatScreen(""));
+                    mc.setScreen(new net.minecraft.client.gui.screens.ChatScreen("", false));
                     return true;
                 };
             case "inv":
@@ -885,7 +887,7 @@ public final class DevShots {
                             MinecraftServer server = mc.getSingleplayerServer();
                             server.execute(() -> {
                                 ServerPlayer p = server.getPlayerList().getPlayers().get(0);
-                                p.teleportTo(server.overworld(), ex, ey - 1.62, ez, yaw, pitch);
+                                p.teleportTo(server.overworld(), ex, ey - 1.62, ez, java.util.Set.of(), yaw, pitch, true);
                             });
                             next[0] = tick + Math.max(2, every);
                         }
@@ -1009,7 +1011,7 @@ public final class DevShots {
                 int scale = Integer.parseInt(t[1]);
                 return mc -> {
                     mc.options.guiScale().set(scale);
-                    mc.resizeDisplay();
+                    mc.resizeGui();
                     return true;
                 };
             }
@@ -1019,7 +1021,7 @@ public final class DevShots {
                 return mc -> {
                     com.golemlogix.config.GolemClientConfig.TERMINAL_SIZE.set(size);
                     if (mc.screen != null) {
-                        mc.screen.resize(mc, mc.getWindow().getGuiScaledWidth(), mc.getWindow().getGuiScaledHeight());
+                        mc.screen.resize(mc.getWindow().getGuiScaledWidth(), mc.getWindow().getGuiScaledHeight());
                     }
                     return true;
                 };

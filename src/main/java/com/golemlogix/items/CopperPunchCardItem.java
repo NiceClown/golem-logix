@@ -35,7 +35,7 @@ public class CopperPunchCardItem extends Item {
 
     /** Shift + right-click with a written card in hand erases the recipe: the card is blank again and stacks. */
     @Override
-    public net.minecraft.world.InteractionResultHolder<ItemStack> use(net.minecraft.world.level.Level level,
+    public net.minecraft.world.InteractionResult use(net.minecraft.world.level.Level level,
                                                                        net.minecraft.world.entity.player.Player player,
                                                                        net.minecraft.world.InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
@@ -46,7 +46,7 @@ public class CopperPunchCardItem extends Item {
                 level.playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.BOOK_PAGE_TURN,
                         net.minecraft.sounds.SoundSource.PLAYERS, 0.8f, 0.8f);
             }
-            return net.minecraft.world.InteractionResultHolder.sidedSuccess(player.getItemInHand(hand), level.isClientSide());
+            return net.minecraft.world.InteractionResult.SUCCESS;
         }
         return super.use(level, player, hand);
     }
@@ -57,7 +57,9 @@ public class CopperPunchCardItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
+    public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
+                                java.util.function.Consumer<Component> lines, TooltipFlag tooltipFlag) {
+        List<Component> tooltipComponents = new com.golemlogix.items.TooltipLines(lines);
         PatternData data = stack.get(ModDataComponents.PATTERN.get());
         if (data != null) {
             tooltipComponents.add(Component.translatable(data.crafting()
@@ -88,7 +90,7 @@ public class CopperPunchCardItem extends Item {
             tooltipComponents.add(Component.translatable("tooltip.golem_logix.punch_card.blank")
                     .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
         }
-        super.appendHoverText(stack, context, tooltipComponents, tooltipFlag);
+        super.appendHoverText(stack, context, display, lines, tooltipFlag);
     }
 
     private static MutableComponent line(int count, ItemStack stack) {

@@ -32,7 +32,7 @@ import org.jetbrains.annotations.Nullable;
  * Monocle periscope: connects the container in front of it (a chest, a fluid tank) as network storage.
  * Right-click opens the priority window.
  */
-public class PeriscopeStorageBusBlock extends DirectionalBlock implements GolemNode, EntityBlock {
+public class PeriscopeStorageBusBlock extends DirectionalBlock implements com.golemlogix.blocks.RemovalAware, GolemNode, EntityBlock {
     public static final MapCodec<PeriscopeStorageBusBlock> CODEC = simpleCodec(PeriscopeStorageBusBlock::new);
 
     public PeriscopeStorageBusBlock(Properties properties) {
@@ -51,8 +51,7 @@ public class PeriscopeStorageBusBlock extends DirectionalBlock implements GolemN
     }
 
     @Override
-    protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level,
-                                     BlockPos pos, BlockPos neighborPos) {
+    protected BlockState updateShape(BlockState state, net.minecraft.world.level.LevelReader level, net.minecraft.world.level.ScheduledTickAccess ticks, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, net.minecraft.util.RandomSource random) {
         return BusLinks.update(state, direction, neighborState, level, pos);
     }
 
@@ -88,18 +87,18 @@ public class PeriscopeStorageBusBlock extends DirectionalBlock implements GolemN
         return InteractionResult.CONSUME;
     }
 
+    /** Replaced by another block (see RemovalAware). */
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof PeriscopeBlockEntity be) {
+    public void onRemoved(BlockState state, Level level, BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof PeriscopeBlockEntity be) {
             net.minecraft.world.Containers.dropContents(level, pos, be.getUpgrades());
         }
-        super.onRemove(state, level, pos, newState, isMoving);
     }
 
     /** A redstone signal nearby may have switched the storage on or off: the network is rescanned without the cache. */
     @Override
-    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean moving) {
-        super.neighborChanged(state, level, pos, block, fromPos, moving);
+    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, @Nullable net.minecraft.world.level.redstone.Orientation orientation, boolean moving) {
+        super.neighborChanged(state, level, pos, block, orientation, moving);
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof PeriscopeBlockEntity be
                 && be.getUpgrades().has(com.golemlogix.upgrade.UpgradeType.REDSTONE)) {
             com.golemlogix.system.GolemNetwork.clearCache();

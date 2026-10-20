@@ -37,7 +37,7 @@ import org.joml.Vector3f;
  * Y up (0..32), Z inwards from the front; the cabinet models use the same frame (tools/Forge2.java).
  * From the main (bottom left) cell the model faces north; {@link Quads#faceModel} rotates it by FACING.
  */
-public class DriveBayRenderer implements BlockEntityRenderer<CopperDriveBayBlockEntity> {
+public class DriveBayRenderer extends com.golemlogix.client.render.LegacyBer<CopperDriveBayBlockEntity> {
     private static final Identifier CASSETTE = tex("bay_cassette");
     private static final Identifier REEL = tex("bay_reel");
     private static final Identifier TAPE = tex("bay_tape");
@@ -322,9 +322,9 @@ public class DriveBayRenderer implements BlockEntityRenderer<CopperDriveBayBlock
      */
     private static void glassDoor(PoseStack.Pose p, MultiBufferSource buffers, int light, float hinge, float width, float dir, String tex,
                                   float angle) {
-        var atlas = Minecraft.getInstance().getTextureAtlas(TextureAtlas.LOCATION_BLOCKS);
-        TextureAtlasSprite glass = atlas.apply(Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/" + tex));
-        TextureAtlasSprite brass = atlas.apply(Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/sat_brass"));
+        var atlas = com.golemlogix.client.render.Sprites.blocks();
+        TextureAtlasSprite glass = atlas.getSprite(Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/" + tex));
+        TextureAtlasSprite brass = atlas.getSprite(Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/sat_brass"));
         float c = Mth.cos(angle * Mth.DEG_TO_RAD), s = Mth.sin(angle * Mth.DEG_TO_RAD);
         // a door point at distance d from the hinge, shifted by t along the normal (+ is into the cabinet)
         java.util.function.BiFunction<Float, Float, float[]> at =

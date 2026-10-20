@@ -281,7 +281,9 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
     // ---------------------------------------------------------------------------------- input
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x(), mouseY = event.y();
+        int button = event.button();
         int lx = leftPos + LIST_X, ly = topPos + LIST_Y;
         if (mouseX >= lx && mouseX < lx + LIST_W && mouseY >= ly && mouseY < ly + ROWS * ROW_H) {
             int idx = scroll + (int) ((mouseY - ly) / ROW_H);
@@ -292,7 +294,7 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
                 return true;
             }
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override

@@ -12,7 +12,6 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Blocks;
-import net.neoforged.neoforge.client.model.data.ModelData;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -126,15 +125,12 @@ public final class SnowmanPuppet {
             if (head == Head.PUMPKIN) {
                 pose.scale(0.625f, 0.625f, 0.625f);
                 pose.translate(-0.5f, -0.5f, -0.5f);
-                mc.getBlockRenderer().renderSingleBlock(Blocks.CARVED_PUMPKIN.defaultBlockState(), pose, buffers, light,
-                        OverlayTexture.NO_OVERLAY);
+                com.golemlogix.client.render.BerBuffers.block(buffers, Blocks.CARVED_PUMPKIN.defaultBlockState(), pose, light);
             } else {
                 // black atlant head (an 8x6x8 model, neck at (8, 10, 8)): a little bigger than the snow one, in its place
                 pose.scale(1.15f, 1.15f, 1.15f);
                 pose.translate(-0.5f, -13f / 16f, -0.5f);
-                mc.getBlockRenderer().getModelRenderer().renderModel(pose.last(), buffers.getBuffer(RenderType.cutout()), null,
-                        mc.getModelManager().getModel(AtlantHeadRenderer.HEAD), 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY,
-                        ModelData.EMPTY, RenderType.cutout());
+                com.golemlogix.client.render.StandaloneModels.render(pose.last(), buffers.getBuffer(net.minecraft.client.renderer.Sheets.cutoutBlockSheet()), AtlantHeadRenderer.HEAD, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
             }
             pose.popPose();
         }

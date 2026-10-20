@@ -24,7 +24,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.EnumMap;
 import java.util.Map;
 
-public class SnowPipeBlock extends Block implements GolemNode, EntityBlock {
+public class SnowPipeBlock extends Block implements com.golemlogix.blocks.RemovalAware, GolemNode, EntityBlock {
     public static final MapCodec<SnowPipeBlock> CODEC = simpleCodec(props -> new SnowPipeBlock(16, false, props));
 
     /**
@@ -198,7 +198,7 @@ public class SnowPipeBlock extends Block implements GolemNode, EntityBlock {
     }
 
     @Override
-    public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+    public BlockState updateShape(BlockState state, net.minecraft.world.level.LevelReader level, net.minecraft.world.level.ScheduledTickAccess ticks, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, net.minecraft.util.RandomSource random) {
         return state.setValue(LINKS.get(direction), linkTo(level, pos, neighborPos, direction));
     }
 
@@ -211,13 +211,13 @@ public class SnowPipeBlock extends Block implements GolemNode, EntityBlock {
     }
 
     /** Plugs drop together with the pipe. */
+    /** Replaced by another block (see RemovalAware). */
     @Override
-    protected void onRemove(BlockState state, net.minecraft.world.level.Level level, BlockPos pos, BlockState newState, boolean isMoving) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof PipeBlockEntity be && be.plugCount() > 0) {
+    public void onRemoved(BlockState state, net.minecraft.world.level.Level level, BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof PipeBlockEntity be && be.plugCount() > 0) {
             net.minecraft.world.Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
                     new net.minecraft.world.item.ItemStack(com.golemlogix.init.ModItems.PIPE_PLUG.get(), be.plugCount()));
         }
-        super.onRemove(state, level, pos, newState, isMoving);
     }
 
     private Link linkTo(BlockGetter level, BlockPos pos, BlockPos neighborPos, Direction dir) {

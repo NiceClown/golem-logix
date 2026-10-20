@@ -15,7 +15,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * Client: left-click with the Forge Hammer on the anvil is a strike, not breaking. While the button is held the event comes every tick:
  * strikes go no faster than the hammer cooldown (the server checks it too).
  */
-@EventBusSubscriber(modid = GolemLogixMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
+@EventBusSubscriber(modid = GolemLogixMod.MOD_ID, value = Dist.CLIENT)
 public final class HammerClientEvents {
     private static long lastStrike = -1000;
 

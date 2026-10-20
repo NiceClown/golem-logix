@@ -56,4 +56,15 @@ public final class GhostVertexConsumer implements VertexConsumer {
         delegate.setNormal(x, y, z);
         return this;
     }
+
+    @Override
+    public VertexConsumer setColor(int argb) {
+        return setColor(argb >> 16 & 0xFF, argb >> 8 & 0xFF, argb & 0xFF, argb >>> 24);
+    }
+
+    @Override
+    public VertexConsumer setLineWidth(float width) {
+        delegate.setLineWidth(width);
+        return this;
+    }
 }

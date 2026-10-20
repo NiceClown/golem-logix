@@ -215,7 +215,7 @@ public final class SnowCrew {
         pose.pushPose();
         pose.scale(size, size, size);
         pose.translate(-0.5f, -0.5f, -0.5f);
-        Minecraft.getInstance().getBlockRenderer().renderSingleBlock(PART, pose, buffers, light, OverlayTexture.NO_OVERLAY);
+        com.golemlogix.client.render.BerBuffers.block(buffers, PART, pose, light);
         pose.popPose();
     }
 

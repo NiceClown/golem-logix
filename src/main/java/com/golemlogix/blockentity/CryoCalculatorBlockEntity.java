@@ -357,7 +357,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
 
     protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
         job = tag.contains("Job") ? CraftingJob.load(tag.getCompoundOrEmpty("Job"), registries) : null;
-        upgrades.fromTag(tag.getList("Upgrades", Tag.TAG_COMPOUND), registries);
+        upgrades.fromTag(tag.getListOrEmpty("Upgrades"), registries);
         redstone.load(tag);
     }
 
@@ -367,7 +367,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
     public void setVisualWorkForDev(boolean on, @Nullable String item) {
         this.devWorking = on;
         if (item != null) {
-            var it = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(item));
+            var it = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(net.minecraft.resources.Identifier.parse(item));
             this.devItem = new ItemStack(it);
         } else {
             this.devItem = ItemStack.EMPTY;
@@ -508,5 +508,14 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
     @Override
     public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input) {
         handleUpdateTag(input);
+    }
+
+    /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
+            r.onRemoved(state, level, pos);
+        }
     }
 }

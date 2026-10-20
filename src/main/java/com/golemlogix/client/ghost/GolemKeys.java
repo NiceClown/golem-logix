@@ -11,7 +11,8 @@ import org.lwjgl.glfw.GLFW;
  * take priority over the same keys of other mods (see {@link GhostEvents#onKey}).
  */
 public final class GolemKeys {
-    public static final String CATEGORY = "key.categories.golem_logix";
+    /** Shown as "key.category.golem_logix.main". */
+    public static final KeyMapping.Category CATEGORY = new KeyMapping.Category(net.minecraft.resources.Identifier.fromNamespaceAndPath("golem_logix", "main"));
     public static final KeyMapping GHOST_CONFIRM = new KeyMapping("key.golem_logix.ghost_confirm",
             KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_Y, CATEGORY);
     public static final KeyMapping GHOST_CANCEL = new KeyMapping("key.golem_logix.ghost_cancel",

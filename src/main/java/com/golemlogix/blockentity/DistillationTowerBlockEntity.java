@@ -97,6 +97,14 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         return input;
     }
 
+    /** What pipes and other mods see: the tank (filling only) as a NeoForge resource handler. */
+    private final net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource> inputResources =
+            com.golemlogix.system.LegacyResources.offerFluids(input, () -> tank.getFluid().copy(), tank::setFluid);
+
+    public net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource> inputResources() {
+        return inputResources;
+    }
+
     public FluidStack blood() {
         return tank.getFluid();
     }
@@ -213,12 +221,12 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         work += ((clientWorking ? 1f : 0f) - work) * (clientWorking ? 0.06f : 0.03f);
         blood += (clientBlood / (float) TANK - blood) * 0.1f;
         phase += 0.02f + 0.18f * work;
-        if (clientWorking && level.random.nextInt(4) == 0) {
+        if (clientWorking && level.getRandom().nextInt(4) == 0) {
             // frost breathing out of the louvres, a wisp of steam from the outlet
-            double x = worldPosition.getX() + 0.5 + (level.random.nextDouble() - 0.5) * 0.9;
-            double z = worldPosition.getZ() + 0.5 + (level.random.nextDouble() - 0.5) * 0.9;
+            double x = worldPosition.getX() + 0.5 + (level.getRandom().nextDouble() - 0.5) * 0.9;
+            double z = worldPosition.getZ() + 0.5 + (level.getRandom().nextDouble() - 0.5) * 0.9;
             level.addParticle(ParticleTypes.SNOWFLAKE, x, worldPosition.getY() + 2.55, z, 0, 0.01, 0);
-            if (level.random.nextInt(3) == 0) {
+            if (level.getRandom().nextInt(3) == 0) {
                 level.addParticle(ParticleTypes.CLOUD, worldPosition.getX() + 0.5, worldPosition.getY() + 3.05,
                         worldPosition.getZ() + 0.5, 0, 0.03, 0);
             }
@@ -226,15 +234,15 @@ public class DistillationTowerBlockEntity extends BlockEntity {
     }
 
     protected void saveTag(CompoundTag tag, HolderLookup.Provider registries) {
-        tag.put("Tank", tank.writeToNBT(registries, new CompoundTag()));
+        tag.put("Tank", com.golemlogix.system.NbtBridge.saveTank(tank, registries));
         tag.putDouble("Carry", carry);
         tag.put("Upgrades", upgrades.createTag(registries));
     }
 
     protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
-        tank.readFromNBT(registries, tag.getCompoundOrEmpty("Tank"));
-        carry = tag.getDouble("Carry");
-        upgrades.fromTag(tag.getList("Upgrades", net.minecraft.nbt.Tag.TAG_COMPOUND), registries);
+        com.golemlogix.system.NbtBridge.loadTank(tank, registries, tag.getCompoundOrEmpty("Tank"));
+        carry = tag.getDoubleOr("Carry", 0);
+        upgrades.fromTag(tag.getListOrEmpty("Upgrades"), registries);
     }
 
     @Override
@@ -246,11 +254,10 @@ public class DistillationTowerBlockEntity extends BlockEntity {
     }
 
     public void readUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
-        clientBlood = tag.getInt("Blood");
-        clientWorking = tag.getBoolean("Working");
+        clientBlood = tag.getIntOr("Blood", 0);
+        clientWorking = tag.getBooleanOr("Working", false);
     }
 
-    
     @Override
     public ClientboundBlockEntityDataPacket getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
@@ -280,5 +287,14 @@ public class DistillationTowerBlockEntity extends BlockEntity {
     @Override
     public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input) {
         handleUpdateTag(input);
+    }
+
+    /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
+            r.onRemoved(state, level, pos);
+        }
     }
 }

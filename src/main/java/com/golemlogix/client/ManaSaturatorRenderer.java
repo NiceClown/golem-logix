@@ -18,7 +18,6 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -39,7 +38,7 @@ import net.minecraft.world.phys.AABB;
  * from the front, Y up, Z inwards, a cell = 16), as in the model; the owner stands in cell (1, 2, 0), that is X 16..32,
  * Y 32..48, Z 0..16.
  */
-public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorBlockEntity> {
+public class ManaSaturatorRenderer extends com.golemlogix.client.render.LegacyBer<ManaSaturatorBlockEntity> {
     private static final Identifier LIQUID = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/saturator_liquid.png");
     private static final Identifier PRESS = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/saturator_press.png");
     private static final Identifier GOLEM = Identifier.withDefaultNamespace("textures/entity/iron_golem/iron_golem.png");
@@ -48,12 +47,9 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
     private static final float ANVIL_TOP = 29.5f;
     private static final float GOLEM_Z = 11.2f;
     private static final float ITEM_Z = 6.2f;
-
-    private final ItemRenderer itemRenderer;
     private ModelPart golem;
 
     public ManaSaturatorRenderer(BlockEntityRendererProvider.Context context) {
-        this.itemRenderer = Minecraft.getInstance().getItemRenderer();
         this.golem = context.bakeLayer(ModelLayers.IRON_GOLEM);
     }
 
@@ -102,7 +98,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
         Direction facing = entity.getBlockState().getValue(ManaSaturatorBlock.FACING);
         float time = level.getGameTime() + partialTick;
         // the light is taken above the machine: the owner itself stands inside and does not light its own air
-        int light = LevelRenderer.getLightColor(level, entity.getBlockPos().above());
+        int light = LevelRenderer.getLightCoords(level, entity.getBlockPos().above());
         light = LightCoordsUtil.pack(Math.max(LightCoordsUtil.block(light), 10), Math.max(LightCoordsUtil.sky(light), 6));
         // ritual progress between ticks, smoothly (the server only sends the start and the end)
         float progress = entity.isCrafting()
@@ -204,8 +200,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
             pose.scale(0.5f, 0.5f, 0.5f);
             pose.mulPose(Axis.XP.rotationDegrees(-90f));
             pose.translate(-0.5f, -0.5f, -0.5f);
-            Minecraft.getInstance().getBlockRenderer().renderSingleBlock(Blocks.POPPY.defaultBlockState(), pose, buffers, light,
-                    OverlayTexture.NO_OVERLAY);
+            com.golemlogix.client.render.BerBuffers.block(buffers, Blocks.POPPY.defaultBlockState(), pose, light);
             pose.popPose();
         }
         pose.popPose();
@@ -239,7 +234,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
             pose.mulPose(Axis.ZP.rotationDegrees(15f));
             pose.scale(0.3f, 0.3f, 0.3f);
         }
-        itemRenderer.renderStatic(held, ItemDisplayContext.FIXED, light, overlay, pose, buffers, entity.getLevel(), 0);
+        com.golemlogix.client.render.BerBuffers.item(buffers, held, ItemDisplayContext.FIXED, light, pose, entity.getLevel(), 0);
         pose.popPose();
     }
 
@@ -363,7 +358,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
                     boolean block = item.getItem() instanceof BlockItem;
                     float sc = block ? 0.75f : 0.55f;
                     hp.scale(sc, sc, sc);
-                    itemRenderer.renderStatic(item, ItemDisplayContext.FIXED, light, overlay, hp, buffers, entity.getLevel(), 0);
+                    com.golemlogix.client.render.BerBuffers.item(buffers, item, ItemDisplayContext.FIXED, light, hp, entity.getLevel(), 0);
                 } : null);
     }
 
@@ -406,7 +401,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
             pose.mulPose(Axis.XP.rotationDegrees(90f));
             pose.scale(0.3f, 0.3f, 0.3f);
         }
-        itemRenderer.renderStatic(item, ItemDisplayContext.FIXED, light, overlay, pose, buffers, entity.getLevel(), 0);
+        com.golemlogix.client.render.BerBuffers.item(buffers, item, ItemDisplayContext.FIXED, light, pose, entity.getLevel(), 0);
         pose.popPose();
     }
 
@@ -450,7 +445,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
         if (item.isEmpty()) {
             return;
         }
-        int light = LevelRenderer.getLightColor(level, entity.getBlockPos().above());
+        int light = LevelRenderer.getLightCoords(level, entity.getBlockPos().above());
         float time = level.getGameTime() + partialTick;
         pose.pushPose();
         if (ManaSaturatorBlockEntity.isManualInput(level, item)) {
@@ -458,15 +453,13 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
             float size = 0.36f;
             pose.translate(0.5, 15f / 16f + size * squash * 0.5f, 0.5);
             pose.scale(size * (1f + (1f - squash) * 0.35f), size * squash, size * (1f + (1f - squash) * 0.35f));
-            Minecraft.getInstance().getItemRenderer().renderStatic(item, ItemDisplayContext.FIXED, light, OverlayTexture.NO_OVERLAY, pose,
-                    buffers, level, 0);
+            com.golemlogix.client.render.BerBuffers.item(buffers, item, ItemDisplayContext.FIXED, light, pose, level, 0);
         } else {
             pose.translate(0.5, 15.2f / 16f, 0.5);
             pose.mulPose(Axis.YP.rotationDegrees(15f * Mth.sin(time * 0.05f)));
             pose.mulPose(Axis.XP.rotationDegrees(90f));
             pose.scale(0.45f, 0.45f, 0.45f);
-            Minecraft.getInstance().getItemRenderer().renderStatic(item, ItemDisplayContext.FIXED, light, OverlayTexture.NO_OVERLAY, pose,
-                    buffers, level, 0);
+            com.golemlogix.client.render.BerBuffers.item(buffers, item, ItemDisplayContext.FIXED, light, pose, level, 0);
         }
         pose.popPose();
     }

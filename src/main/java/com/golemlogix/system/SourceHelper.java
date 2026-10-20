@@ -50,7 +50,7 @@ public class SourceHelper {
         if (net.neoforged.fml.ModList.get().isLoaded("neovitae")) {
             return true;
         }
-        return net.minecraft.core.registries.BuiltInRegistries.FLUID.getTag(com.golemlogix.init.ModTags.CRYO_DISTILLABLE)
+        return net.minecraft.core.registries.BuiltInRegistries.FLUID.get(com.golemlogix.init.ModTags.CRYO_DISTILLABLE)
                 .map(t -> t.size() > 0).orElse(false);
     }
 

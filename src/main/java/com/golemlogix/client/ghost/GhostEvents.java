@@ -15,7 +15,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
-import net.neoforged.neoforge.client.model.data.ModelData;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
@@ -23,7 +22,7 @@ import java.util.List;
 /**
  * Client game bus: projection tick, hotkeys and rendering of ghost blocks in the world.
  */
-@EventBusSubscriber(modid = GolemLogixMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
+@EventBusSubscriber(modid = GolemLogixMod.MOD_ID, value = Dist.CLIENT)
 public class GhostEvents {
 
     /**
@@ -38,9 +37,9 @@ public class GhostEvents {
             return;
         }
         KeyMapping hit = null;
-        if (GolemKeys.GHOST_CONFIRM.matches(event.getKey(), event.getScanCode())) {
+        if (GolemKeys.GHOST_CONFIRM.matches(event.getKeyEvent())) {
             hit = GolemKeys.GHOST_CONFIRM;
-        } else if (GolemKeys.GHOST_CANCEL.matches(event.getKey(), event.getScanCode())) {
+        } else if (GolemKeys.GHOST_CANCEL.matches(event.getKeyEvent())) {
             hit = GolemKeys.GHOST_CANCEL;
         }
         if (hit == null || !hit.getKeyModifier().isActive(hit.getKeyConflictContext())) {
@@ -83,8 +82,8 @@ public class GhostEvents {
     }
 
     @SubscribeEvent
-    public static void onRenderLevel(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || !GhostProjection.isActive()) {
+    public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+        if (!GhostProjection.isActive()) {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
@@ -96,9 +95,9 @@ public class GhostEvents {
             return;
         }
         PoseStack pose = event.getPoseStack();
-        Vec3 cam = event.getCamera().getPosition();
+        Vec3 cam = event.getLevelRenderState().cameraRenderState.pos;
         MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
-        float pulse = 0.5f + 0.12f * (float) Math.sin((mc.level.getGameTime() + event.getPartialTick().getGameTimeDeltaPartialTick(false)) * 0.12);
+        float pulse = 0.5f + 0.12f * (float) Math.sin((mc.level.getGameTime() + mc.getDeltaTracker().getGameTimeDeltaPartialTick(false)) * 0.12);
 
         for (GhostProjection.GhostCell cell : cells) {
             // the expected block is cold teal, a foreign block in the way is red
@@ -106,13 +105,12 @@ public class GhostEvents {
             float r = cell.wrong() ? 1.6f : 0.75f;
             float g = cell.wrong() ? 0.45f : 1.15f;
             float b = cell.wrong() ? 0.45f : 1.25f;
-            MultiBufferSource ghostBuffers = renderType -> new GhostVertexConsumer(buffers.getBuffer(RenderType.translucent()), alpha, r, g, b);
+            var ghost = new GhostVertexConsumer(buffers.getBuffer(net.minecraft.client.renderer.Sheets.translucentBlockSheet()), alpha, r, g, b);
             pose.pushPose();
             pose.translate(cell.pos().getX() - cam.x, cell.pos().getY() - cam.y, cell.pos().getZ() - cam.z);
-            mc.getBlockRenderer().renderSingleBlock(cell.state(), pose, ghostBuffers, 0xF000F0, OverlayTexture.NO_OVERLAY,
-                    ModelData.EMPTY, RenderType.translucent());
+            com.golemlogix.client.render.BlockQuads.draw(pose.last(), ghost, cell.state(), 0xF000F0, OverlayTexture.NO_OVERLAY);
             pose.popPose();
         }
-        buffers.endBatch(RenderType.translucent());
+        buffers.endBatch(net.minecraft.client.renderer.Sheets.translucentBlockSheet());
     }
 }

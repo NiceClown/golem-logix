@@ -37,7 +37,7 @@ import java.util.List;
  * The whole cabinet takes one channel in the network. Once assembled it is drawn entirely by the renderer: the glass doors open while
  * someone looks into its window.
  */
-public class CryoMainframeBlock extends HorizontalDirectionalBlock implements EntityBlock, GolemNode {
+public class CryoMainframeBlock extends HorizontalDirectionalBlock implements com.golemlogix.blocks.RemovalAware, EntityBlock, GolemNode {
     public static final MapCodec<CryoMainframeBlock> CODEC = simpleCodec(CryoMainframeBlock::new);
     public static final BooleanProperty FORMED = BooleanProperty.create("formed");
 
@@ -66,7 +66,7 @@ public class CryoMainframeBlock extends HorizontalDirectionalBlock implements En
     @Override
     protected RenderShape getRenderShape(BlockState state) {
         // the renderer draws the whole assembled cabinet
-        return state.getValue(FORMED) ? RenderShape.ENTITYBLOCK_ANIMATED : RenderShape.MODEL;
+        return state.getValue(FORMED) ? RenderShape.INVISIBLE : RenderShape.MODEL;
     }
 
     @Override
@@ -127,18 +127,16 @@ public class CryoMainframeBlock extends HorizontalDirectionalBlock implements En
         return InteractionResult.CONSUME;
     }
 
+    /** Replaced by another block (see RemovalAware). */
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
-        if (!state.is(newState.getBlock())) {
-            if (!level.isClientSide()) {
-                if (level.getBlockEntity(pos) instanceof CryoMainframeBlockEntity be) {
-                    be.dropContents();
-                }
-                if (state.getValue(FORMED)) {
-                    MainframeStructure.disassemble(level, pos, state.getValue(FACING), pos);
-                }
+    public void onRemoved(BlockState state, Level level, BlockPos pos) {
+        if (!level.isClientSide()) {
+            if (level.getBlockEntity(pos) instanceof CryoMainframeBlockEntity be) {
+                be.dropContents();
             }
-            super.onRemove(state, level, pos, newState, isMoving);
+            if (state.getValue(FORMED)) {
+                MainframeStructure.disassemble(level, pos, state.getValue(FACING), pos);
+            }
         }
     }
 }

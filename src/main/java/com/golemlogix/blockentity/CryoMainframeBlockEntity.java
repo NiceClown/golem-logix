@@ -595,10 +595,10 @@ public class CryoMainframeBlockEntity extends BlockEntity {
 
     protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
         cores.clear();
-        calculators.fromTag(tag.getList("Calculators", Tag.TAG_COMPOUND), registries);
-        upgrades.fromTag(tag.getList("Upgrades", Tag.TAG_COMPOUND), registries);
+        calculators.fromTag(tag.getListOrEmpty("Calculators"), registries);
+        upgrades.fromTag(tag.getListOrEmpty("Upgrades"), registries);
         syncCores(false);
-        ListTag jobs = tag.getList("Jobs", Tag.TAG_COMPOUND);
+        ListTag jobs = tag.getListOrEmpty("Jobs");
         for (int i = 0; i < jobs.size(); i++) {
             CompoundTag e = jobs.getCompoundOrEmpty(i);
             int idx = e.getIntOr("Core", 0);
@@ -615,13 +615,13 @@ public class CryoMainframeBlockEntity extends BlockEntity {
     public void setVisualWorkForDev(boolean on, @Nullable String item0, @Nullable String item1) {
         this.devWorking = on;
         if (item0 != null) {
-            var i0 = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(item0));
+            var i0 = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(net.minecraft.resources.Identifier.parse(item0));
             this.devItem0 = new ItemStack(i0);
         } else {
             this.devItem0 = ItemStack.EMPTY;
         }
         if (item1 != null) {
-            var i1 = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(item1));
+            var i1 = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(net.minecraft.resources.Identifier.parse(item1));
             this.devItem1 = new ItemStack(i1);
         } else {
             this.devItem1 = ItemStack.EMPTY;
@@ -682,12 +682,11 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         clientBoosted = tag.getBooleanOr("Boosted", false);
         clientOpen = tag.getBooleanOr("Open", false);
         for (int i = 0; i < 2; i++) {
-            clientCurrent[i] = tag.contains("Cur" + i) ? com.golemlogix.system.NbtBridge.loadItem(registries, tag.getCompound("Cur" + i)).orElse(ItemStack.EMPTY)
+            clientCurrent[i] = tag.contains("Cur" + i) ? com.golemlogix.system.NbtBridge.loadItem(registries, tag.getCompoundOrEmpty("Cur" + i)).orElse(ItemStack.EMPTY)
                     : ItemStack.EMPTY;
         }
     }
 
-    
     @Override
     public ClientboundBlockEntityDataPacket getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
@@ -722,5 +721,14 @@ public class CryoMainframeBlockEntity extends BlockEntity {
     @Override
     public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input) {
         handleUpdateTag(input);
+    }
+
+    /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
+            r.onRemoved(state, level, pos);
+        }
     }
 }

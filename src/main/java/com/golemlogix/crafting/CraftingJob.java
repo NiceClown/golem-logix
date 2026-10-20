@@ -484,12 +484,12 @@ public class CraftingJob {
             grid.add(ItemStack.EMPTY);
         }
         CraftingInput input = CraftingInput.of(3, 3, grid);
-        Optional<RecipeHolder<CraftingRecipe>> recipe = level.getRecipeManager().getRecipeFor(RecipeType.CRAFTING, input, level);
+        Optional<RecipeHolder<CraftingRecipe>> recipe = com.golemlogix.system.Recipes.find(level, RecipeType.CRAFTING, input);
         if (recipe.isEmpty()) {
             return null;
         }
         List<ItemStack> out = new ArrayList<>();
-        ItemStack result = recipe.get().value().assemble(input, level.registryAccess());
+        ItemStack result = recipe.get().value().assemble(input);
         if (result.isEmpty()) {
             return null;
         }
@@ -581,9 +581,7 @@ public class CraftingJob {
         } catch (IllegalArgumentException ex) {
             job.status = Status.RUNNING;
         }
-        if (tag.hasUUID("Requester")) {
-            job.requester = tag.read("Requester", net.minecraft.core.UUIDUtil.CODEC).orElse(null);
-        }
+        job.requester = tag.read("Requester", net.minecraft.core.UUIDUtil.CODEC).orElse(null);
         if (tag.contains("RequesterBus")) {
             job.requesterBus = BlockPos.of(tag.getLongOr("RequesterBus", 0L));
         }

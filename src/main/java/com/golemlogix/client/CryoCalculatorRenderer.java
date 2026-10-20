@@ -22,7 +22,7 @@ import org.joml.Vector3f;
  * When the coprocessors really speed up the work, a foreman with an atlant head appears (see {@link SnowCrew}).
  * The running "matrix rain" on the side panels is an animated texture of the model in the ACTIVE state.
  */
-public class CryoCalculatorRenderer implements BlockEntityRenderer<CryoCalculatorBlockEntity> {
+public class CryoCalculatorRenderer extends com.golemlogix.client.render.LegacyBer<CryoCalculatorBlockEntity> {
     public CryoCalculatorRenderer(BlockEntityRendererProvider.Context context) {
     }
 
@@ -44,7 +44,7 @@ public class CryoCalculatorRenderer implements BlockEntityRenderer<CryoCalculato
         float time = be.getLevel().getGameTime() + partialTick;
         float spin = Mth.lerp(partialTick, be.spinPrev, be.spin);
         float foreman = Mth.lerp(partialTick, be.foremanPrev, be.foreman);
-        int light = LevelRenderer.getLightColor(be.getLevel(), be.getBlockPos().above());
+        int light = LevelRenderer.getLightCoords(be.getLevel(), be.getBlockPos().above());
 
         float appear = spin * spin * (3 - 2 * spin);
         float bob = Mth.sin(time * 0.1f) * 0.03f;
@@ -59,8 +59,7 @@ public class CryoCalculatorRenderer implements BlockEntityRenderer<CryoCalculato
             pose.translate(proj.x, proj.y, proj.z);
             pose.mulPose(Axis.YP.rotationDegrees(time * 3f));
             pose.scale(size, size, size);
-            Minecraft.getInstance().getItemRenderer().renderStatic(current, ItemDisplayContext.FIXED, 0xF000F0, OverlayTexture.NO_OVERLAY,
-                    pose, buffers, be.getLevel(), 0);
+            com.golemlogix.client.render.BerBuffers.item(buffers, current, ItemDisplayContext.FIXED, 0xF000F0, pose, be.getLevel(), 0);
             pose.popPose();
         }
     }

@@ -17,7 +17,6 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -139,14 +138,14 @@ public class PortableChronometerItem extends Item {
     }
 
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+    public net.minecraft.world.InteractionResult use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (level.isClientSide() || !(player instanceof ServerPlayer sp)) {
-            return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
+            return net.minecraft.world.InteractionResult.SUCCESS;
         }
         // the slot the Chronometer lies in is locked while the window is open (40 = offhand)
         int locked = hand == InteractionHand.MAIN_HAND ? sp.getInventory().getSelectedSlot() : Inventory.SLOT_OFFHAND;
-        return open(sp, stack, locked) ? InteractionResultHolder.consume(stack) : InteractionResultHolder.fail(stack);
+        return open(sp, stack, locked) ? net.minecraft.world.InteractionResult.CONSUME : net.minecraft.world.InteractionResult.FAIL;
     }
 
     /**
@@ -166,7 +165,7 @@ public class PortableChronometerItem extends Item {
         if (level.dimension() != bound.dimension()) {
             ModTriggers.CHRONOMETER_DIMENSION.get().trigger(sp);
         }
-        ServerLevel netLevel = sp.server.getLevel(bound.dimension());
+        ServerLevel netLevel = sp.level().getServer().getLevel(bound.dimension());
         if (netLevel == null || !(netLevel.isLoaded(bound.pos()) && netLevel.getBlockState(bound.pos()).getBlock() instanceof AtlasCoreBlock)) {
             sp.sendOverlayMessage(Component.translatable(level.dimension() != bound.dimension()
                     ? "message.golem_logix.chronometer.other_dimension" : "message.golem_logix.chronometer.lost")
@@ -247,7 +246,9 @@ public class PortableChronometerItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
+    public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
+                                java.util.function.Consumer<Component> lines, TooltipFlag tooltipFlag) {
+        List<Component> tooltipComponents = new com.golemlogix.items.TooltipLines(lines);
         RangeTier tier = getTier(stack);
         tooltipComponents.add(Component.translatable("tooltip.golem_logix.chronometer.tier." + tier.getKey())
                 .withStyle(ChatFormatting.DARK_AQUA));
@@ -256,7 +257,7 @@ public class PortableChronometerItem extends Item {
         if (bound != null) {
             BlockPos p = bound.pos();
             tooltipComponents.add(Component.translatable("tooltip.golem_logix.chronometer.bound", p.getX(), p.getY(), p.getZ(),
-                    bound.dimension().location().toString()).withStyle(ChatFormatting.GRAY));
+                    bound.dimension().identifier().toString()).withStyle(ChatFormatting.GRAY));
         } else {
             tooltipComponents.add(Component.translatable("tooltip.golem_logix.chronometer.unbound_hint")
                     .withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
@@ -270,6 +271,6 @@ public class PortableChronometerItem extends Item {
                         .withStyle(ChatFormatting.LIGHT_PURPLE));
             }
         }
-        super.appendHoverText(stack, context, tooltipComponents, tooltipFlag);
+        super.appendHoverText(stack, context, display, lines, tooltipFlag);
     }
 }

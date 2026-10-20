@@ -8,7 +8,6 @@ import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.Blocks;
@@ -21,7 +20,7 @@ import org.joml.Vector3f;
  * - copper golems run along orbits around the crystal (three orbits on a complete array, one on the "starter tower");
  * - on a complete array, mini golems carry crates between the stacks in the corners along the top face (a ring of eight Casings around the core).
  */
-public class AtlasCoreRenderer implements BlockEntityRenderer<AtlasCoreBlockEntity> {
+public class AtlasCoreRenderer extends com.golemlogix.client.render.LegacyBer<AtlasCoreBlockEntity> {
     private static final int ORBITS = 3;
     /** Orbit centre: the crystal sticking out above the ring (in block fractions). */
     private static final float CENTER_Y = 0.95f;
@@ -47,7 +46,7 @@ public class AtlasCoreRenderer implements BlockEntityRenderer<AtlasCoreBlockEnti
         }
         float time = be.getLevel().getGameTime() + partialTick;
         // The core block itself is wedged between casings and sits "in the shade": everything drawn above it is lit with the light of the cell above the core
-        int above = LevelRenderer.getLightColor(be.getLevel(), be.getBlockPos().above());
+        int above = LevelRenderer.getLightCoords(be.getLevel(), be.getBlockPos().above());
         light = Math.max(light & 0xFFFF, above & 0xFFFF) | Math.max(light >> 16, above >> 16) << 16;
         orbits(be, time, pose, buffers, light);
         if (be.isFormed()) {
@@ -84,7 +83,7 @@ public class AtlasCoreRenderer implements BlockEntityRenderer<AtlasCoreBlockEnti
      * the glyph either stays put or smoothly moves to a new random place on the plating of its face.
      */
     private void glyphs(float time, PoseStack pose, MultiBufferSource buffers) {
-        var vc = buffers.getBuffer(net.minecraft.client.renderer.RenderTypes.eyes(GLYPH));
+        var vc = buffers.getBuffer(net.minecraft.client.renderer.rendertype.RenderTypes.eyes(GLYPH));
         PoseStack.Pose p = pose.last();
         float cycle = GLYPH_MOVE + GLYPH_STAY;
         for (int face = 0; face < 5; face++) {
@@ -141,7 +140,6 @@ public class AtlasCoreRenderer implements BlockEntityRenderer<AtlasCoreBlockEnti
 
     /** Four mini golems walk along the sides of the ring and carry crates from stack to stack (one crate each way). */
     private void ring(float time, PoseStack pose, MultiBufferSource buffers, int light) {
-        BlockRenderDispatcher dispatcher = Minecraft.getInstance().getBlockRenderer();
         // stacks of crates in the corners
         for (float[] c : CORNERS) {
             for (int k = 0; k < 2; k++) {
@@ -150,7 +148,7 @@ public class AtlasCoreRenderer implements BlockEntityRenderer<AtlasCoreBlockEnti
                 pose.mulPose(com.mojang.math.Axis.YP.rotationDegrees(k * 23f + c[0] * 40f));
                 pose.scale(0.18f, 0.18f, 0.18f);
                 pose.translate(-0.5, -0.5, -0.5);
-                dispatcher.renderSingleBlock(Blocks.BARREL.defaultBlockState(), pose, buffers, light, OverlayTexture.NO_OVERLAY);
+                com.golemlogix.client.render.BerBuffers.block(buffers, Blocks.BARREL.defaultBlockState(), pose, light);
                 pose.popPose();
             }
         }

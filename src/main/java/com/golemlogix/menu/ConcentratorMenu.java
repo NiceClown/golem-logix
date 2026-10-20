@@ -130,10 +130,10 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
             if (s.isAir() || (s.getBlock() instanceof GolemNode && !(s.getBlock() instanceof com.golemlogix.blocks.SaturatorPartBlock))) {
                 continue;
             }
-            if (level.getCapability(Capabilities.Item.BLOCK, t, d.getOpposite()) == null) {
+            if (com.golemlogix.system.LegacyResources.items(level, t, d.getOpposite()) == null) {
                 continue;
             }
-            ItemStack icon = s.getBlock().getCloneItemStack(level, t, s);
+            ItemStack icon = s.getCloneItemStack(level, t, false);
             return icon.isEmpty() ? new ItemStack(s.getBlock()) : icon;
         }
         return ItemStack.EMPTY;

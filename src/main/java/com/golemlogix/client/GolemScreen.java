@@ -25,9 +25,7 @@ import java.util.function.Supplier;
  */
 public abstract class GolemScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> {
     protected GolemScreen(T menu, Inventory inv, Component title, int width, int height) {
-        super(menu, inv, title);
-        this.imageWidth = width;
-        this.imageHeight = height;
+        super(menu, inv, title, width, height);
     }
 
     private IntSupplier priorityValue = null;
@@ -135,17 +133,18 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
     }
 
     @Override
-    protected boolean hasClickedOutside(double mouseX, double mouseY, int guiLeft, int guiTop, int button) {
+    protected boolean hasClickedOutside(double mouseX, double mouseY, int guiLeft, int guiTop) {
         for (Rect2i r : extraAreas()) {
             if (r.contains((int) mouseX, (int) mouseY)) {
                 return false;
             }
         }
-        return super.hasClickedOutside(mouseX, mouseY, guiLeft, guiTop, button);
+        return super.hasClickedOutside(mouseX, mouseY, guiLeft, guiTop);
     }
 
     @Override
-    protected void renderBg(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
+    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        super.extractBackground(g, mouseX, mouseY, partialTick);
         GolemGui.panel(g, leftPos, topPos, imageWidth, imageHeight);
         Rect2i up = upgradePanel();
         if (up != null) {
@@ -205,11 +204,11 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
 
     /** Fluid ghosts in ghost slots are drawn as their fluid; their mB label unless the screen labels slots itself. */
     @Override
-    protected void renderSlot(GuiGraphicsExtractor g, net.minecraft.world.inventory.Slot slot) {
+    protected void extractSlot(GuiGraphicsExtractor g, net.minecraft.world.inventory.Slot slot, int mouseX, int mouseY) {
         if (FluidIcons.drawGhost(g, font, slot.getItem(), slot.x, slot.y, labelFluidGhosts())) {
             return;
         }
-        super.renderSlot(g, slot);
+        super.extractSlot(g, slot, mouseX, mouseY);
         // a fuzzy ghost: "#" with a tag chosen, "≈" for the same item with any components
         if (menu instanceof com.golemlogix.menu.GolemMenu gm && slot.hasItem() && gm.fuzzyActive(slot.index)) {
             String mark = com.golemlogix.system.Fuzzy.tag(slot.getItem()) != null ? "#" : "≈";
@@ -233,8 +232,10 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        return fuzzyClick(button) || super.mouseClicked(mouseX, mouseY, button);
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x(), mouseY = event.y();
+        int button = event.button();
+        return fuzzyClick(button) || super.mouseClicked(event, doubleClick);
     }
 
     /** The item tooltip of a fuzzy ghost slot says what it takes, and how to change it. */
@@ -274,6 +275,5 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
     public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         updateSideButtons();
         super.extractRenderState(g, mouseX, mouseY, partialTick);
-        renderTooltip(g, mouseX, mouseY);
     }
 }

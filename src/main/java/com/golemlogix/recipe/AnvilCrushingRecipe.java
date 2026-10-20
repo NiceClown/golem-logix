@@ -4,7 +4,7 @@ import com.golemlogix.init.ModRecipes;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.HolderLookup;
+import com.golemlogix.system.Recipes;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.RegistryCodecs;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -16,7 +16,10 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.PlacementInfo;
 import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeBookCategories;
+import net.minecraft.world.item.crafting.RecipeBookCategory;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeInput;
 import net.minecraft.world.item.crafting.RecipeSerializer;
@@ -50,7 +53,7 @@ public record AnvilCrushingRecipe(HolderSet<EntityType<?>> entity, List<String> 
             Codec.STRING.listOf().optionalFieldOf("entity_id_contains", List.of()).forGetter(AnvilCrushingRecipe::entityIdContains),
             Codec.floatRange(0f, 1024f).optionalFieldOf("min_health", 0.5f).forGetter(AnvilCrushingRecipe::minHealth),
             Codec.floatRange(0f, 1024f).fieldOf("max_health").forGetter(AnvilCrushingRecipe::maxHealth),
-            ItemStack.STRICT_CODEC.fieldOf("result").forGetter(AnvilCrushingRecipe::result),
+            ItemStack.CODEC.fieldOf("result").forGetter(AnvilCrushingRecipe::result),
             BuiltInRegistries.ITEM.byNameCodec().optionalFieldOf("icon").forGetter(AnvilCrushingRecipe::icon)
     ).apply(i, AnvilCrushingRecipe::new));
 
@@ -85,8 +88,7 @@ public record AnvilCrushingRecipe(HolderSet<EntityType<?>> entity, List<String> 
     /** The ritual for this entity's kind (whatever its health), or null. */
     @Nullable
     public static AnvilCrushingRecipe find(Level level, Entity entity) {
-        return level.getRecipeManager().getRecipeFor(ModRecipes.ANVIL_CRUSHING_TYPE.get(), new Golem(entity.getType()), level)
-                .map(RecipeHolder::value).orElse(null);
+        return Recipes.find(level, ModRecipes.ANVIL_CRUSHING_TYPE.get(), new Golem(entity.getType())).map(RecipeHolder::value).orElse(null);
     }
 
     public boolean accepts(EntityType<?> type) {
@@ -127,18 +129,8 @@ public record AnvilCrushingRecipe(HolderSet<EntityType<?>> entity, List<String> 
     }
 
     @Override
-    public ItemStack assemble(Golem input, HolderLookup.Provider registries) {
+    public ItemStack assemble(Golem input) {
         return result.copy();
-    }
-
-    @Override
-    public boolean canCraftInDimensions(int width, int height) {
-        return true;
-    }
-
-    @Override
-    public ItemStack getResultItem(HolderLookup.Provider registries) {
-        return result;
     }
 
     @Override
@@ -147,24 +139,32 @@ public record AnvilCrushingRecipe(HolderSet<EntityType<?>> entity, List<String> 
     }
 
     @Override
-    public RecipeSerializer<?> getSerializer() {
+    public boolean showNotification() {
+        return false;
+    }
+
+    @Override
+    public String group() {
+        return "";
+    }
+
+    @Override
+    public PlacementInfo placementInfo() {
+        return PlacementInfo.NOT_PLACEABLE;
+    }
+
+    @Override
+    public RecipeBookCategory recipeBookCategory() {
+        return RecipeBookCategories.CRAFTING_MISC;
+    }
+
+    @Override
+    public RecipeSerializer<AnvilCrushingRecipe> getSerializer() {
         return ModRecipes.ANVIL_CRUSHING.get();
     }
 
     @Override
-    public RecipeType<?> getType() {
+    public RecipeType<AnvilCrushingRecipe> getType() {
         return ModRecipes.ANVIL_CRUSHING_TYPE.get();
-    }
-
-    public static final class Serializer implements RecipeSerializer<AnvilCrushingRecipe> {
-        @Override
-        public MapCodec<AnvilCrushingRecipe> codec() {
-            return CODEC;
-        }
-
-        @Override
-        public StreamCodec<RegistryFriendlyByteBuf, AnvilCrushingRecipe> streamCodec() {
-            return STREAM_CODEC;
-        }
     }
 }

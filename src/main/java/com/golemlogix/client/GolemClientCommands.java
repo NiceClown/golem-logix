@@ -25,7 +25,7 @@ public final class GolemClientCommands {
                     String entry = StringArgumentType.getString(ctx, "entry");
                     Minecraft mc = Minecraft.getInstance();
                     // after a click in chat the chat screen is still open: the book is opened on the next frame
-                    mc.tell(() -> mc.setScreen(com.golemlogix.client.book.BookScreen.openAt(entry)));
+                    mc.schedule(() -> mc.setScreen(com.golemlogix.client.book.BookScreen.openAt(entry)));
                     return 1;
                 })));
     }

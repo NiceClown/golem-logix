@@ -37,6 +37,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidUtil;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.fluids.capability.IFluidHandlerItem;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -381,7 +382,7 @@ public class TerminalMenu extends GolemMenu {
             return;
         }
         ItemStack single = carried.copyWithCount(1);
-        IFluidHandlerItem handler = single.getCapability(Capabilities.Fluid.ITEM);
+        IFluidHandlerItem handler = FluidUtil.getFluidHandler(single).orElse(null);
         if (handler == null) {
             return;
         }
@@ -406,7 +407,7 @@ public class TerminalMenu extends GolemMenu {
             return;
         }
         ItemStack single = carried.copyWithCount(1);
-        IFluidHandlerItem handler = single.getCapability(Capabilities.Fluid.ITEM);
+        IFluidHandlerItem handler = FluidUtil.getFluidHandler(single).orElse(null);
         if (handler == null) {
             return;
         }
@@ -477,8 +478,8 @@ public class TerminalMenu extends GolemMenu {
                 ItemStack key = opt.copyWithCount(1);
                 int want = max ? key.getMaxStackSize() : 1;
                 int have = netOk ? net.extractItem(key, want, false).getCount() : 0;
-                for (int k = 0; k < inv.items.size() && have < want; k++) {
-                    ItemStack st = inv.items.get(k);
+                for (int k = 0; k < inv.getNonEquipmentItems().size() && have < want; k++) {
+                    ItemStack st = inv.getNonEquipmentItems().get(k);
                     if (ItemStack.isSameItemSameComponents(st, key)) {
                         int take = Math.min(want - have, st.getCount());
                         st.shrink(take);
@@ -556,12 +557,11 @@ public class TerminalMenu extends GolemMenu {
         }
         CraftingInput input = craftSlots.asCraftInput();
         ItemStack result = ItemStack.EMPTY;
-        Optional<RecipeHolder<CraftingRecipe>> recipe = level.getServer().getRecipeManager()
-                .getRecipeFor(RecipeType.CRAFTING, input, level);
+        Optional<RecipeHolder<CraftingRecipe>> recipe = com.golemlogix.system.Recipes.find(level, RecipeType.CRAFTING, input);
         if (recipe.isPresent()) {
             RecipeHolder<CraftingRecipe> holder = recipe.get();
-            if (resultSlots.setRecipeUsed(level, sp, holder)) {
-                ItemStack assembled = holder.value().assemble(input, level.registryAccess());
+            if (resultSlots.setRecipeUsed(sp, holder)) {
+                ItemStack assembled = holder.value().assemble(input);
                 if (assembled.isItemEnabled(level.enabledFeatures())) {
                     result = assembled;
                 }
@@ -909,7 +909,7 @@ public class TerminalMenu extends GolemMenu {
 
         if (crafting && index == 0) {
             // as in the crafting table: the result moves to the inventory, the outer loop repeats until it runs out
-            stack.getItem().onCraftedBy(stack, player.level(), player);
+            stack.getItem().onCraftedBy(stack, player);
             if (!this.moveItemStackTo(stack, playerStart, playerEnd, true)) {
                 return ItemStack.EMPTY;
             }

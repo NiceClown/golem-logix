@@ -21,7 +21,6 @@ import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.fluids.capability.IFluidHandlerItem;
@@ -93,11 +92,23 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     private final List<Row> rows = new ArrayList<>();
     private final Map<ItemStack, String> nameCache = new HashMap<>();
 
+    /** The window grows with the list (TerminalSize): this field stands for the base class's fixed imageHeight. */
+    private int imageHeight;
+
     public TerminalScreen(TerminalMenu menu, Inventory inv, Component title) {
-        super(menu, inv, title);
+        super(menu, inv, title, TerminalMenu.WIDTH, TerminalMenu.imageHeight(menu.crafting, menu.rows));
         this.crafting = menu.crafting;
-        this.imageWidth = TerminalMenu.WIDTH;
         this.imageHeight = TerminalMenu.imageHeight(crafting, menu.rows);
+    }
+
+    @Override
+    public int getImageHeight() {
+        return imageHeight;
+    }
+
+    @Override
+    protected boolean hasClickedOutside(double mx, double my, int xo, int yo) {
+        return mx < xo || my < yo || mx >= xo + imageWidth || my >= yo + imageHeight;
     }
 
     private int rows() {
@@ -137,6 +148,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         menu.relayout(wantedRows());
         this.imageHeight = TerminalMenu.imageHeight(crafting, rows());
         super.init();
+        this.topPos = (this.height - this.imageHeight) / 2;
         this.titleLabelX = TerminalMenu.LIST_X;
         this.titleLabelY = 6;
         this.inventoryLabelX = TerminalMenu.LIST_X;
@@ -332,7 +344,8 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     // ------------------------------------------------------------------ render
 
     @Override
-    protected void renderBg(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
+    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        super.extractBackground(g, mouseX, mouseY, partialTick);
         if (dirty || builtVersion != menu.clientVersion) {
             rebuild();
         }
@@ -557,18 +570,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     }
 
     private void drawFluid(GuiGraphicsExtractor g, FluidStack fluid, int x, int y) {
-        IClientFluidTypeExtensions ext = IClientFluidTypeExtensions.of(fluid.getFluid());
-        Identifier tex = ext.getStillTexture(fluid);
-        if (tex == null) {
-            return;
-        }
-        TextureAtlasSprite sprite = minecraft.getTextureAtlas(TextureAtlas.LOCATION_BLOCKS).apply(tex);
-        int tint = ext.getTintColor(fluid);
-        float a = ((tint >> 24) & 0xFF) / 255f;
-        float r = ((tint >> 16) & 0xFF) / 255f;
-        float gr = ((tint >> 8) & 0xFF) / 255f;
-        float b = (tint & 0xFF) / 255f;
-        g.blit(x, y, 0, 16, 16, sprite, r, gr, b, a == 0 ? 1f : a);
+        FluidIcons.draw(g, fluid, x, y);
     }
 
     private int hoveredIndex(double mouseX, double mouseY) {
@@ -617,7 +619,6 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     @Override
     public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(g, mouseX, mouseY, partialTick);
-        renderTooltip(g, mouseX, mouseY);
         renderEntryTooltip(g, mouseX, mouseY);
     }
 
@@ -673,7 +674,9 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x(), mouseY = event.y();
+        int button = event.button();
         // scroll bar
         int lx = leftPos + TerminalMenu.LIST_X;
         int ly = topPos + TerminalMenu.LIST_Y;
@@ -689,7 +692,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
                 return true;
             }
         }
-        boolean handled = super.mouseClicked(mouseX, mouseY, button);
+        boolean handled = super.mouseClicked(event, doubleClick);
         if (!search.isHovered() && search.isFocused() && button == 0) {
             search.setFocused(false);
         }
@@ -701,7 +704,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         int idx = hoveredIndex(mouseX, mouseY);
         Row row = idx >= 0 ? rows.get(idx) : null;
 
-        IFluidHandlerItem handler = carried.isEmpty() ? null : carried.copyWithCount(1).getCapability(Capabilities.Fluid.ITEM);
+        IFluidHandlerItem handler = carried.isEmpty() ? null : net.neoforged.neoforge.fluids.FluidUtil.getFluidHandler(carried.copyWithCount(1)).orElse(null);
         boolean fullContainer = handler != null && !handler.drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.SIMULATE).isEmpty();
 
         if (viewMode == ViewMode.FLUIDS) {
@@ -774,18 +777,22 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dx, double dy) {
+    public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event, double dx, double dy) {
+        double mouseX = event.x(), mouseY = event.y();
+        int button = event.button();
         if (draggingScroll) {
             dragScroll(mouseY);
             return true;
         }
-        return super.mouseDragged(mouseX, mouseY, button, dx, dy);
+        return super.mouseDragged(event, dx, dy);
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+    public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event) {
+        double mouseX = event.x(), mouseY = event.y();
+        int button = event.button();
         draggingScroll = false;
-        return super.mouseReleased(mouseX, mouseY, button);
+        return super.mouseReleased(event);
     }
 
     @Override
@@ -801,12 +808,13 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     }
 
     @Override
-    public boolean keyPressed(int key, int scanCode, int modifiers) {
+    public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+        int key = event.key(), scanCode = event.scancode(), modifiers = event.modifiers();
         if (key == GLFW.GLFW_KEY_ESCAPE) {
-            return super.keyPressed(key, scanCode, modifiers);
+            return super.keyPressed(event);
         }
         if (search.isFocused()) {
-            search.keyPressed(key, scanCode, modifiers);
+            search.keyPressed(event);
             return true;
         }
         if (key == GLFW.GLFW_KEY_TAB || (key == GLFW.GLFW_KEY_SLASH && !search.isFocused())) {
@@ -814,14 +822,15 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
             setFocused(search);
             return true;
         }
-        return super.keyPressed(key, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     @Override
-    public boolean charTyped(char c, int modifiers) {
+    public boolean charTyped(net.minecraft.client.input.CharacterEvent event) {
+        char c = (char) event.codepoint();
         if (search.isFocused()) {
-            return search.charTyped(c, modifiers);
+            return search.charTyped(event);
         }
-        return super.charTyped(c, modifiers);
+        return super.charTyped(event);
     }
 }

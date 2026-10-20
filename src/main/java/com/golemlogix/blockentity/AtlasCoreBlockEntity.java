@@ -223,15 +223,15 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         duplicate = tag.getBooleanOr("Duplicate", false);
         // only in update packets (client visuals), never saved with the world
         if (tag.contains("CargoItems")) {
-            cargoItems = readStacks(tag.getList("CargoItems", Tag.TAG_COMPOUND), registries);
-            cargoFluids = readStacks(tag.getList("CargoFluids", Tag.TAG_COMPOUND), registries);
+            cargoItems = readStacks(tag.getListOrEmpty("CargoItems"), registries);
+            cargoFluids = readStacks(tag.getListOrEmpty("CargoFluids"), registries);
         }
     }
 
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();
-        saveAdditional(tag, registries);
+        saveTag(tag, registries);
         tag.put("CargoItems", writeStacks(cargoItems, registries));
         tag.put("CargoFluids", writeStacks(cargoFluids, registries));
         return tag;
@@ -275,5 +275,14 @@ public class AtlasCoreBlockEntity extends BlockEntity {
     protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
         super.loadAdditional(input);
         loadTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    }
+
+    /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
+            r.onRemoved(state, level, pos);
+        }
     }
 }

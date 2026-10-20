@@ -18,10 +18,12 @@ public class ModBlockItem extends BlockItem {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
+    public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
+                                java.util.function.Consumer<Component> lines, TooltipFlag tooltipFlag) {
+        List<Component> tooltipComponents = new com.golemlogix.items.TooltipLines(lines);
         if (tooltipKey != null) {
             tooltipComponents.add(Component.translatable(tooltipKey).withStyle(ChatFormatting.DARK_AQUA));
         }
-        super.appendHoverText(stack, context, tooltipComponents, tooltipFlag);
+        super.appendHoverText(stack, context, display, lines, tooltipFlag);
     }
 }

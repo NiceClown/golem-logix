@@ -35,16 +35,16 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
 
         /** The window was opened: the glass display door swings open (like a chest: by the number of viewers). */
         @Override
-        public void startOpen(net.minecraft.world.entity.player.Player player) {
-            if (!player.isSpectator()) {
+        public void startOpen(net.minecraft.world.entity.ContainerUser user) {
+            if (!(user.getLivingEntity() instanceof net.minecraft.world.entity.player.Player player) || !player.isSpectator()) {
                 viewers++;
                 signalViewers(viewers == 1);
             }
         }
 
         @Override
-        public void stopOpen(net.minecraft.world.entity.player.Player player) {
-            if (!player.isSpectator()) {
+        public void stopOpen(net.minecraft.world.entity.ContainerUser user) {
+            if (!(user.getLivingEntity() instanceof net.minecraft.world.entity.player.Player player) || !player.isSpectator()) {
                 viewers = Math.max(0, viewers - 1);
                 signalViewers(viewers == 0);
             }
@@ -166,7 +166,7 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
     }
 
     protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
-        container.fromTag(tag.getList("Disks", Tag.TAG_COMPOUND), registries);
+        container.fromTag(tag.getListOrEmpty("Disks"), registries);
         priority = tag.getIntOr("Priority", 0);
         int m = 0;
         for (int i = 0; i < SLOTS; i++) {
@@ -189,7 +189,7 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
     public void readUpdateTag(CompoundTag tag, HolderLookup.Provider lookupProvider) {
         mask = tag.getIntOr("Mask", 0);
         clientOpen = tag.getBooleanOr("Open", false);
-        container.fromTag(tag.getList("Disks", Tag.TAG_COMPOUND), lookupProvider);
+        container.fromTag(tag.getListOrEmpty("Disks"), lookupProvider);
     }
 
     @Override
@@ -216,5 +216,14 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
     @Override
     public void handleUpdateTag(net.minecraft.world.level.storage.ValueInput input) {
         readUpdateTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    }
+
+    /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
+            r.onRemoved(state, level, pos);
+        }
     }
 }

@@ -138,7 +138,7 @@ public class TelegraphScreen extends GolemScreen<TelegraphMenu> {
         }
 
         @Override
-        protected void extractWidgetRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
+        protected void extractContents(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
             boolean hover = isHoveredOrFocused() && active;
             g.fill(getX(), getY(), getX() + width, getY() + height, GolemGui.WOOD_DARK);
             g.fill(getX() + 1, getY() + 1, getX() + width - 1, getY() + height - 1, hover ? GolemGui.BRASS_L : GolemGui.BRASS);

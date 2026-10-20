@@ -35,7 +35,7 @@ public class IconButton extends Button {
     }
 
     @Override
-    protected void extractWidgetRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
+    protected void extractContents(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
         if (!visible) {
             return;
         }

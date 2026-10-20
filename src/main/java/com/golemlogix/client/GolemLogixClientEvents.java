@@ -13,7 +13,7 @@ import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 
 @SuppressWarnings("removal")
-@EventBusSubscriber(modid = GolemLogixMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = GolemLogixMod.MOD_ID, value = Dist.CLIENT)
 public class GolemLogixClientEvents {
 
     @SubscribeEvent
@@ -42,31 +42,6 @@ public class GolemLogixClientEvents {
         event.registerLayerDefinition(CopperGolemPuppet.LAYER, CopperGolemPuppet::createLayer);
     }
 
-    /** Moving parts from separate models: coprocessor fins, interface turbines, atlant head, pipe plugs. */
-    @SubscribeEvent
-    public static void registerModels(ModelEvent.RegisterAdditional event) {
-        event.register(CoolingCoprocessorRenderer.FIN);
-        event.register(InterfaceRenderer.TURBINE);
-        event.register(InterfaceRenderer.PENDULUM);
-        event.register(AtlantHeadRenderer.HEAD);
-        event.register(SnowPipeRenderer.PLUG_BASIC);
-        event.register(SnowPipeRenderer.PLUG_DENSE);
-        event.register(SnowPipeRenderer.DOCK_BASIC);
-        event.register(SnowPipeRenderer.DOCK_DENSE);
-        event.register(SnowPipeRenderer.BAND_BASIC);
-        event.register(SnowPipeRenderer.BAND_DENSE);
-    }
-
-    /** Rune glow layers on top of the mod's models. */
-    @SubscribeEvent
-    public static void wrapModels(ModelEvent.ModifyBakingResult event) {
-        GlowModels.wrap(event.getModels());
-        // a written punch card shows its result while Shift is held
-        var card = net.minecraft.client.resources.model.ModelResourceLocation.inventory(
-                net.minecraft.resources.Identifier.fromNamespaceAndPath(com.golemlogix.GolemLogixMod.MOD_ID, "copper_punch_card"));
-        event.getModels().computeIfPresent(card, (k, m) -> new PunchCardModel(m));
-    }
-
     @SubscribeEvent
     public static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(ModMenus.TERMINAL.get(), TerminalScreen::new);
@@ -84,26 +59,26 @@ public class GolemLogixClientEvents {
         event.register(ModMenus.TELEGRAPH.get(), TelegraphScreen::new);
     }
 
-    /** Liquid Cryo-Source textures (tanks, basins, JEI, the planner). */
+    /** A written punch card shows its result while Shift is held (items/copper_punch_card.json). */
     @SubscribeEvent
-    public static void registerClientExtensions(net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent event) {
+    public static void registerItemModels(net.neoforged.neoforge.client.event.RegisterItemModelsEvent event) {
+        event.register(net.minecraft.resources.Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "punch_card"), PunchCardModel.Unbaked.MAP_CODEC);
+    }
+
+    /** Liquid Cryo-Source textures (the fluid in the world, tanks, basins, JEI, the planner). */
+    @SubscribeEvent
+    public static void registerFluidModels(net.neoforged.neoforge.client.event.RegisterFluidModelsEvent event) {
         var still = net.minecraft.resources.Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/cryo_source_still");
         var flow = net.minecraft.resources.Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/cryo_source_flow");
-        event.registerFluidType(new net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions() {
-            @Override
-            public net.minecraft.resources.Identifier getStillTexture() {
-                return still;
-            }
-
-            @Override
-            public net.minecraft.resources.Identifier getFlowingTexture() {
-                return flow;
-            }
-        }, com.golemlogix.init.ModFluids.CRYO_SOURCE_TYPE.get());
+        event.register(new net.minecraft.client.renderer.block.FluidModel.Unbaked(
+                        new net.minecraft.client.resources.model.sprite.Material(still), new net.minecraft.client.resources.model.sprite.Material(flow),
+                        null, (net.neoforged.neoforge.client.fluid.FluidTintSource) null),
+                com.golemlogix.init.ModFluids.CRYO_SOURCE, com.golemlogix.init.ModFluids.CRYO_SOURCE_FLOWING);
     }
 
     @SubscribeEvent
     public static void registerKeys(RegisterKeyMappingsEvent event) {
+        event.registerCategory(com.golemlogix.client.ghost.GolemKeys.CATEGORY);
         event.register(com.golemlogix.client.ghost.GolemKeys.GHOST_CONFIRM);
         event.register(com.golemlogix.client.ghost.GolemKeys.GHOST_CANCEL);
         event.register(com.golemlogix.client.ghost.GolemKeys.OPEN_CHRONOMETER);

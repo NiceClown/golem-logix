@@ -10,7 +10,7 @@ import mezz.jei.api.constants.RecipeTypes;
 import mezz.jei.api.gui.ingredient.IRecipeSlotView;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.recipe.RecipeIngredientRole;
-import mezz.jei.api.recipe.RecipeType;
+import mezz.jei.api.recipe.types.IRecipeType;
 import mezz.jei.api.recipe.transfer.IRecipeTransferError;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
@@ -75,7 +75,7 @@ final class RecipeTransfers {
         }
 
         @Override
-        public RecipeType<RecipeHolder<CraftingRecipe>> getRecipeType() {
+        public IRecipeType<RecipeHolder<CraftingRecipe>> getRecipeType() {
             return RecipeTypes.CRAFTING;
         }
 
@@ -137,7 +137,7 @@ final class RecipeTransfers {
                 }
             }
             if (doTransfer) {
-                if ((net.minecraft.client.gui.screens.net.minecraft.client.Minecraft.getInstance().hasControlDown() || devCtrl) && !toOrder.isEmpty()) {
+                if ((net.minecraft.client.Minecraft.getInstance().hasControlDown() || devCtrl) && !toOrder.isEmpty()) {
                     List<ItemStack> items = new ArrayList<>();
                     List<Integer> counts = new ArrayList<>();
                     for (Map.Entry<ItemKey, Integer> e : toOrder.entrySet()) {
@@ -169,12 +169,11 @@ final class RecipeTransfers {
         }
 
         @Override
-        public List<Component> getTooltip() {
+        public void getTooltip(mezz.jei.api.gui.builder.ITooltipBuilder tooltip) {
+            tooltip.add(Component.translatable("jei.golem_logix.transfer.missing").withStyle(ChatFormatting.GOLD));
             if (canOrder) {
-                return List.of(Component.translatable("jei.golem_logix.transfer.missing").withStyle(ChatFormatting.GOLD),
-                        Component.translatable("jei.golem_logix.transfer.precraft").withStyle(ChatFormatting.AQUA));
+                tooltip.add(Component.translatable("jei.golem_logix.transfer.precraft").withStyle(ChatFormatting.AQUA));
             }
-            return List.of(Component.translatable("jei.golem_logix.transfer.missing").withStyle(ChatFormatting.GOLD));
         }
 
         @Override
@@ -208,7 +207,7 @@ final class RecipeTransfers {
         }
 
         @Override
-        public RecipeType<RecipeHolder<CraftingRecipe>> getRecipeType() {
+        public IRecipeType<RecipeHolder<CraftingRecipe>> getRecipeType() {
             return RecipeTypes.CRAFTING;
         }
 

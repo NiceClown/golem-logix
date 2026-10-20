@@ -36,7 +36,7 @@ import java.util.List;
  * recipes, so dozens of providers are not needed for them. Capacity is set by ordinary Pattern Providers put into its slot
  * (each gives 27 places). The whole cabinet is one device on one channel.
  */
-public class CardCatalogBlock extends HorizontalDirectionalBlock implements EntityBlock, GolemNode {
+public class CardCatalogBlock extends HorizontalDirectionalBlock implements com.golemlogix.blocks.RemovalAware, EntityBlock, GolemNode {
     public static final MapCodec<CardCatalogBlock> CODEC = simpleCodec(CardCatalogBlock::new);
     public static final BooleanProperty FORMED = BooleanProperty.create("formed");
 
@@ -64,7 +64,7 @@ public class CardCatalogBlock extends HorizontalDirectionalBlock implements Enti
 
     @Override
     protected RenderShape getRenderShape(BlockState state) {
-        return state.getValue(FORMED) ? RenderShape.ENTITYBLOCK_ANIMATED : RenderShape.MODEL;
+        return state.getValue(FORMED) ? RenderShape.INVISIBLE : RenderShape.MODEL;
     }
 
     @Override
@@ -124,18 +124,16 @@ public class CardCatalogBlock extends HorizontalDirectionalBlock implements Enti
         return InteractionResult.CONSUME;
     }
 
+    /** Replaced by another block (see RemovalAware). */
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
-        if (!state.is(newState.getBlock())) {
-            if (!level.isClientSide()) {
-                if (state.getValue(FORMED)) {
-                    CatalogStructure.disassemble(level, pos, state.getValue(FACING), pos);
-                }
-                if (level.getBlockEntity(pos) instanceof CardCatalogBlockEntity be) {
-                    be.dropContents();
-                }
+    public void onRemoved(BlockState state, Level level, BlockPos pos) {
+        if (!level.isClientSide()) {
+            if (state.getValue(FORMED)) {
+                CatalogStructure.disassemble(level, pos, state.getValue(FACING), pos);
             }
-            super.onRemove(state, level, pos, newState, isMoving);
+            if (level.getBlockEntity(pos) instanceof CardCatalogBlockEntity be) {
+                be.dropContents();
+            }
         }
     }
 }

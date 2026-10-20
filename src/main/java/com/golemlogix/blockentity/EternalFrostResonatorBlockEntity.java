@@ -49,7 +49,7 @@ public class EternalFrostResonatorBlockEntity extends BlockEntity {
             }
             be.clientLinked = linked;
         }
-        var r = level.random;
+        var r = level.getRandom();
         if (t % (be.clientLinked ? 2 : 5) == 0) {
             double a = r.nextDouble() * Math.PI * 2, rad = 0.12 + r.nextDouble() * 0.2;
             double x = pos.getX() + 0.5 + Math.cos(a) * rad, z = pos.getZ() + 0.5 + Math.sin(a) * rad;
@@ -73,6 +73,15 @@ public class EternalFrostResonatorBlockEntity extends BlockEntity {
                 sl.sendParticles(ParticleTypes.END_ROD, pos.getX() + 0.5, pos.getY() + 0.9, pos.getZ() + 0.5,
                         2, 0.08, 0.3, 0.08, 0.02);
             }
+        }
+    }
+
+    /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
+            r.onRemoved(state, level, pos);
         }
     }
 }

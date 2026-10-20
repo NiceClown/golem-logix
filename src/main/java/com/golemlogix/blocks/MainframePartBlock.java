@@ -29,7 +29,7 @@ import java.util.List;
  * the whole cabinet); clicks go to the owner; when broken it returns the former block and disassembles the cabinet. Network pipes can
  * be brought to any part: inside the cabinet all parts are linked to the owner.
  */
-public class MainframePartBlock extends Block implements GolemNode {
+public class MainframePartBlock extends Block implements com.golemlogix.blocks.RemovalAware, GolemNode {
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final IntegerProperty CELL = IntegerProperty.create("cell", 0, MainframeStructure.CELLS.length - 1);
 
@@ -50,7 +50,7 @@ public class MainframePartBlock extends Block implements GolemNode {
     }
 
     @Override
-    protected boolean propagatesSkylightDown(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos) {
+    protected boolean propagatesSkylightDown(BlockState state) {
         return true;
     }
 
@@ -87,14 +87,19 @@ public class MainframePartBlock extends Block implements GolemNode {
     }
 
     // ------------------------------------------------------------------------------ disassembly and drops
+    /** Replaced by another block (see RemovalAware). */
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock())) {
-            if (!level.isClientSide() && !MainframeStructure.isRestoring()) {
-                MainframeStructure.disassemble(level, controllerOf(pos, state), state.getValue(FACING), pos);
-            }
-            super.onRemove(state, level, pos, newState, movedByPiston);
+    public void onRemoved(BlockState state, Level level, BlockPos pos) {
+        if (!level.isClientSide() && !MainframeStructure.isRestoring()) {
+            MainframeStructure.disassemble(level, controllerOf(pos, state), state.getValue(FACING), pos);
         }
+    }
+
+    @Override
+    protected void affectNeighborsAfterRemoval(BlockState state, net.minecraft.server.level.ServerLevel level, BlockPos pos,
+                                               boolean movedByPiston) {
+        super.affectNeighborsAfterRemoval(state, level, pos, movedByPiston);
+        onRemoved(state, level, pos);
     }
 
     /** Drops the former block (glass stays whole without Silk Touch; one atlant for both halves), not the part itself. */
@@ -110,7 +115,7 @@ public class MainframePartBlock extends Block implements GolemNode {
     }
 
     @Override
-    public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
+    protected ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state, boolean includeData) {
         BlockPos master = controllerOf(pos, state);
         return level.getBlockState(master).getBlock() instanceof CryoMainframeBlock mf ? new ItemStack(mf) : ItemStack.EMPTY;
     }

@@ -49,14 +49,16 @@ public class TelegraphLinkCardItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
+                                java.util.function.Consumer<Component> lines, TooltipFlag flag) {
+        List<Component> tooltip = new com.golemlogix.items.TooltipLines(lines);
         Link link = link(stack);
         if (link == null) {
             tooltip.add(Component.translatable("tooltip.golem_logix.telegraph_link.blank").withStyle(ChatFormatting.GRAY));
         } else {
             tooltip.add(Component.translatable("tooltip.golem_logix.telegraph_link.target", link.target().pos().getX(),
                     link.target().pos().getY(), link.target().pos().getZ()).withStyle(ChatFormatting.AQUA));
-            tooltip.add(Component.literal(link.target().dimension().location().toString()).withStyle(ChatFormatting.DARK_GRAY));
+            tooltip.add(Component.literal(link.target().dimension().identifier().toString()).withStyle(ChatFormatting.DARK_GRAY));
         }
         tooltip.add(Component.translatable("tooltip.golem_logix.telegraph_link.hint").withStyle(ChatFormatting.DARK_GRAY));
     }

@@ -45,12 +45,12 @@ public class PatternEncoderMenu extends GolemMenu {
     private final net.minecraft.world.inventory.ContainerData data;
     private final Level level;
     private boolean updating = false;
-    private final net.minecraft.world.ContainerListener listener = c -> slotsChanged(c);
+    private final java.util.function.Consumer<Container> listener = this::slotsChanged;
 
     private final ContainerLevelAccess access;
 
     public static PatternEncoderMenu fromNetwork(int id, Inventory inv, RegistryFriendlyByteBuf buf) {
-        return new PatternEncoderMenu(id, inv, new SimpleContainer(SLOT_COUNT), new net.minecraft.world.inventory.SimpleContainerData(2),
+        return new PatternEncoderMenu(id, inv, new com.golemlogix.blockentity.ListeningContainer(SLOT_COUNT), new net.minecraft.world.inventory.SimpleContainerData(2),
                 ContainerLevelAccess.NULL);
     }
 
@@ -95,7 +95,7 @@ public class PatternEncoderMenu extends GolemMenu {
         addPlayerSlots(inv, 8, IMAGE_HEIGHT - 82);
         this.addDataSlots(data);
 
-        if (container instanceof SimpleContainer sc) {
+        if (container instanceof com.golemlogix.blockentity.ListeningContainer sc) {
             sc.addListener(listener);
         }
     }
@@ -450,7 +450,7 @@ public class PatternEncoderMenu extends GolemMenu {
     public void removed(Player player) {
         super.removed(player);
         // the contents stay in the encoder (blank cards, the finished card, the recipe)
-        if (container instanceof SimpleContainer sc) {
+        if (container instanceof com.golemlogix.blockentity.ListeningContainer sc) {
             sc.removeListener(listener);
         }
     }

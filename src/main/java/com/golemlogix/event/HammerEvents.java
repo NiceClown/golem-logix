@@ -10,7 +10,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
  * Server: a left-click with the Forge Hammer on the anvil does not start breaking it (the strike comes in a separate AnvilStrikePayload
  * packet sent by the client, see client.HammerClientEvents).
  */
-@EventBusSubscriber(modid = GolemLogixMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = GolemLogixMod.MOD_ID)
 public final class HammerEvents {
     private HammerEvents() {
     }

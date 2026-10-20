@@ -11,7 +11,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
-import net.minecraft.world.item.crafting.RecipeManager;
+import net.minecraft.world.item.crafting.RecipeMap;
+import com.golemlogix.system.Recipes;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 
@@ -47,8 +48,8 @@ public final class ArsImbuement {
     public record Entry(Ingredient input, ItemStack output, int chamberSource, int chamberTicks, int source, int ticks) {
     }
 
-    /** Parsed recipes per recipe manager (the server and the client have their own; a /reload makes a new one). */
-    private static final Map<RecipeManager, List<Entry>> CACHE = Collections.synchronizedMap(new WeakHashMap<>());
+    /** Parsed recipes per recipe map (the server and the client have their own; a /reload makes a new one). */
+    private static final Map<RecipeMap, List<Entry>> CACHE = Collections.synchronizedMap(new WeakHashMap<>());
 
     private ArsImbuement() {
     }
@@ -63,7 +64,7 @@ public final class ArsImbuement {
         if (level == null) {
             return List.of();
         }
-        RecipeManager manager = level.getRecipeManager();
+        RecipeMap manager = Recipes.map(level);
         List<Entry> list = CACHE.get(manager);
         if (list == null) {
             list = read(level, manager);
@@ -86,14 +87,14 @@ public final class ArsImbuement {
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private static List<Entry> read(Level level, RecipeManager manager) {
-        RecipeType<?> type = BuiltInRegistries.RECIPE_TYPE.get(TYPE);
+    private static List<Entry> read(Level level, RecipeMap manager) {
+        RecipeType<?> type = BuiltInRegistries.RECIPE_TYPE.getValue(TYPE);
         if (type == null) {
             return List.of();
         }
         DynamicOps<JsonElement> ops = level.registryAccess().createSerializationContext(JsonOps.INSTANCE);
         List<Entry> out = new ArrayList<>();
-        for (RecipeHolder<?> holder : (List<RecipeHolder<?>>) (List) manager.getAllRecipesFor((RecipeType) type)) {
+        for (RecipeHolder<?> holder : (java.util.Collection<RecipeHolder<?>>) (java.util.Collection) manager.byType((RecipeType) type)) {
             try {
                 Recipe<?> recipe = holder.value();
                 MapCodec<Recipe<?>> codec = (MapCodec<Recipe<?>>) (MapCodec) recipe.getSerializer().codec();
@@ -109,7 +110,7 @@ public final class ArsImbuement {
                 if (result.isEmpty() || !OUTPUTS.contains(BuiltInRegistries.ITEM.getKey(result.getItem()))) {
                     continue;
                 }
-                Ingredient input = o.has("input") ? Ingredient.CODEC_NONEMPTY.parse(ops, o.get("input")).result().orElse(null) : null;
+                Ingredient input = o.has("input") ? Ingredient.CODEC.parse(ops, o.get("input")).result().orElse(null) : null;
                 int source = o.has("source") ? o.get("source").getAsInt() : 0;
                 if (input == null || input.isEmpty()) {
                     continue;

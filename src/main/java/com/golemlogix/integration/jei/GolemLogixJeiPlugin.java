@@ -65,10 +65,8 @@ public class GolemLogixJeiPlugin implements IModPlugin {
             return null;
         }
         var type = types.get(0);
-        ItemStack icon = r.icon().map(ItemStack::new).orElseGet(() -> {
-            var egg = net.minecraft.world.item.SpawnEggItem.byId(type);
-            return egg != null ? new ItemStack(egg) : new ItemStack(Items.ANVIL);
-        });
+        ItemStack icon = r.icon().map(i -> new ItemStack(i)).orElseGet(() -> net.minecraft.world.item.SpawnEggItem.byId(type)
+                .map(egg -> new ItemStack(egg)).orElseGet(() -> new ItemStack(Items.ANVIL)));
         int min = net.minecraft.util.Mth.ceil(r.minHealth()), max = net.minecraft.util.Mth.floor(r.maxHealth());
         Component hp = Component.translatable("jei.golem_logix.hp.range", min, max);
         if (net.minecraft.world.entity.ai.attributes.DefaultAttributes.hasSupplier(type)) {
@@ -122,7 +120,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         List<net.minecraft.world.item.crafting.RecipeHolder<net.minecraft.world.item.crafting.CraftingRecipe>> prism = new java.util.ArrayList<>();
         var level = net.minecraft.client.Minecraft.getInstance().level;
         if (level != null) {
-            level.getRecipeManager().byKey(Identifier.fromNamespaceAndPath(com.golemlogix.GolemLogixMod.MOD_ID, "void_glass_prism"))
+            com.golemlogix.system.Recipes.byId(level, Identifier.fromNamespaceAndPath(com.golemlogix.GolemLogixMod.MOD_ID, "void_glass_prism"))
                     .filter(h -> h.value() instanceof net.minecraft.world.item.crafting.CraftingRecipe)
                     .ifPresent(h -> prism.add(cast(h)));
         }
@@ -181,7 +179,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
             return "no runtime";
         }
         var mc = net.minecraft.client.Minecraft.getInstance();
-        var holder = mc.level.getRecipeManager().byKey(recipeId).orElse(null);
+        var holder = com.golemlogix.system.Recipes.byId(mc.level, recipeId).orElse(null);
         if (holder == null) {
             return "no recipe " + recipeId;
         }
@@ -189,14 +187,14 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         Object recipe = holder;
         if (holder.value() instanceof net.minecraft.world.item.crafting.CraftingRecipe
                 || holder.value() instanceof net.minecraft.world.item.crafting.SmeltingRecipe) {
-            mezz.jei.api.recipe.RecipeType type = holder.value() instanceof net.minecraft.world.item.crafting.CraftingRecipe
+            mezz.jei.api.recipe.types.IRecipeType type = holder.value() instanceof net.minecraft.world.item.crafting.CraftingRecipe
                     ? mezz.jei.api.constants.RecipeTypes.CRAFTING : mezz.jei.api.constants.RecipeTypes.SMELTING;
             category = runtime.getRecipeManager().getRecipeCategory(type);
         } else {
             // another mod's machine (a Create mixer...): the category that shows this recipe
             for (var c : runtime.getRecipeManager().createRecipeCategoryLookup().get().toList()) {
                 var found = runtime.getRecipeManager().createRecipeLookup(c.getRecipeType()).get()
-                        .filter(r -> r == holder || (r instanceof net.minecraft.world.item.crafting.RecipeHolder<?> rh && rh.id().equals(recipeId)))
+                        .filter(r -> r == holder || (r instanceof net.minecraft.world.item.crafting.RecipeHolder<?> rh && rh.id().identifier().equals(recipeId)))
                         .findFirst();
                 if (found.isPresent()) {
                     category = c;
@@ -250,7 +248,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
     }
 
     /** Only the recipes of the category that make this item. */
-    private static <T> void showOnly(mezz.jei.api.recipe.RecipeType<T> type, ItemStack output) {
+    private static <T> void showOnly(mezz.jei.api.recipe.types.IRecipeType<T> type, ItemStack output) {
         var focus = runtime.getJeiHelpers().getFocusFactory().createFocus(RecipeIngredientRole.OUTPUT, VanillaTypes.ITEM_STACK, output);
         List<T> recipes = runtime.getRecipeManager().createRecipeLookup(type).limitFocus(List.of(focus)).get().toList();
         runtime.getRecipesGui().showRecipes(runtime.getRecipeManager().getRecipeCategory(type), recipes, List.of(focus));
@@ -329,7 +327,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
         var level = net.minecraft.client.Minecraft.getInstance().level;
-        var manager = level == null ? null : level.getRecipeManager();
+        var manager = level == null ? null : com.golemlogix.system.Recipes.map(level);
 
         // 0. Cryo-distillation (Source from blood): a page on the tower and the jar where a blood mod is there
         if (com.golemlogix.system.SourceHelper.distillationAvailable()) {
@@ -343,7 +341,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         //    until the secret is revealed
         List<AnvilCrushRecipe> anvilRecipes = new java.util.ArrayList<>();
         if (manager != null) {
-            for (var holder : manager.getAllRecipesFor(com.golemlogix.init.ModRecipes.ANVIL_CRUSHING_TYPE.get())) {
+            for (var holder : manager.byType(com.golemlogix.init.ModRecipes.ANVIL_CRUSHING_TYPE.get())) {
                 AnvilCrushRecipe r = anvilRecipe(holder.value());
                 if (r != null) {
                     anvilRecipes.add(r);
@@ -357,9 +355,9 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         List<ManaSaturatorRecipe> saturatorRecipes = new java.util.ArrayList<>();
         List<ManaSaturatorRecipe> secret = new java.util.ArrayList<>();
         if (manager != null) {
-            for (var holder : manager.getAllRecipesFor(com.golemlogix.init.ModRecipes.SATURATOR_TYPE.get())) {
+            for (var holder : manager.byType(com.golemlogix.init.ModRecipes.SATURATOR_TYPE.get())) {
                 com.golemlogix.recipe.SaturatorRecipe s = holder.value();
-                ManaSaturatorRecipe r = new ManaSaturatorRecipe(List.of(s.ingredient().getItems()), s.source(), s.result().copy(), s.ticks());
+                ManaSaturatorRecipe r = new ManaSaturatorRecipe(List.of(com.golemlogix.system.RecipeItems.stacks(s.ingredient())), s.source(), s.result().copy(), s.ticks());
                 saturatorRecipes.add(r);
                 if (s.secret()) {
                     secret.add(r);
@@ -369,7 +367,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         secretSaturator = List.copyOf(secret);
         // with Ars Nouveau: the Imbuement Chamber's Source Gem recipes, twice as fast for a third more Source
         for (var gem : com.golemlogix.integration.ars.ArsImbuement.all(level)) {
-            saturatorRecipes.add(new ManaSaturatorRecipe(List.of(gem.input().getItems()), gem.source(), gem.output(), gem.ticks()));
+            saturatorRecipes.add(new ManaSaturatorRecipe(List.of(com.golemlogix.system.RecipeItems.stacks(gem.input())), gem.source(), gem.output(), gem.ticks()));
         }
         registration.addRecipes(ManaSaturatorCategory.TYPE, saturatorRecipes);
     }

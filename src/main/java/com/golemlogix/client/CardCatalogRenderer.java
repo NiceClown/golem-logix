@@ -43,7 +43,7 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
  * Coordinates are pixels in the owner's north-facing frame: cabinet X -16..32, Y 0..32, Z 0..32 (front = Z 0), golems in
  * columns X -32..-16 and 32..48 of the front row.
  */
-public class CardCatalogRenderer implements BlockEntityRenderer<CardCatalogBlockEntity> {
+public class CardCatalogRenderer extends com.golemlogix.client.render.LegacyBer<CardCatalogBlockEntity> {
     private static final Identifier RUST = tex("resonator_body"), BRASS = tex("sat_brass"),
             DARK = tex("sat_dark"), PLATE = tex("brass_plate"), DRAWER = tex("catalog_drawer"), DRUM = tex("catalog_drum"),
             SCREEN = tex("catalog_screen"), PANEL = tex("cryo_panel"), FROST_PIPE = tex("resonator_pipe"), ICE = tex("sat_ice"),
@@ -100,7 +100,7 @@ public class CardCatalogRenderer implements BlockEntityRenderer<CardCatalogBlock
         }
         Direction facing = state.getValue(CardCatalogBlock.FACING);
         float time = level.getGameTime() + partialTick;
-        int light = LevelRenderer.getLightColor(level, be.getBlockPos().relative(facing));
+        int light = LevelRenderer.getLightCoords(level, be.getBlockPos().relative(facing));
         light = LightCoordsUtil.pack(Math.max(LightCoordsUtil.block(light), 6), LightCoordsUtil.sky(light));
         float open = Mth.lerp(partialTick, be.drawersPrev, be.drawers);
         open = open * open * (3 - 2 * open);
@@ -323,16 +323,7 @@ public class CardCatalogRenderer implements BlockEntityRenderer<CardCatalogBlock
             hp.mulPose(Axis.XP.rotationDegrees(90f));
             hp.mulPose(Axis.ZP.rotationDegrees(right ? -15f : 15f));
             hp.translate(0f, 0.15f, 0f);
-            Minecraft.getInstance().getItemRenderer().renderStatic(
-                    new net.minecraft.world.item.ItemStack(com.golemlogix.init.ModItems.COPPER_PUNCH_CARD.get()),
-                    net.minecraft.world.item.ItemDisplayContext.FIXED,
-                    light,
-                    net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY,
-                    hp,
-                    buffers,
-                    be.getLevel(),
-                    0
-            );
+            com.golemlogix.client.render.BerBuffers.item(buffers, new net.minecraft.world.item.ItemStack(com.golemlogix.init.ModItems.COPPER_PUNCH_CARD.get()), net.minecraft.world.item.ItemDisplayContext.FIXED, light, hp, be.getLevel(), 0);
         };
 
         // The inner hand is raised and rests on the outer corner of the cabinet roof;

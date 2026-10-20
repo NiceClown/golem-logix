@@ -498,7 +498,7 @@ public final class GolemNetwork {
     @Nullable
     private Node primaryCore(List<Node> cores) {
         Node best = null;
-        Comparator<Node> order = Comparator.<Node, String>comparing(n -> n.level.dimension().location().toString())
+        Comparator<Node> order = Comparator.<Node, String>comparing(n -> n.level.dimension().identifier().toString())
                 .thenComparing(n -> n.pos);
         for (Node c : cores) {
             AtlasStructure.Result r = AtlasStructure.check(c.level, c.pos);
@@ -911,15 +911,15 @@ public final class GolemNetwork {
         if (ex.owner != null && !ex.owner.isRemoved() && lvl instanceof net.minecraft.server.level.ServerLevel sl) {
             return ex.owner.targetCaps(sl, ex.target, ex.face).itemsAnySide();
         }
-        IItemHandler h = lvl.getCapability(Capabilities.Item.BLOCK, ex.target, ex.face);
+        IItemHandler h = com.golemlogix.system.LegacyResources.items(lvl, ex.target, ex.face);
         if (h == null) {
-            h = lvl.getCapability(Capabilities.Item.BLOCK, ex.target, null);
+            h = com.golemlogix.system.LegacyResources.items(lvl, ex.target, null);
         }
         for (Direction d : Direction.values()) {
             if (h != null) {
                 break;
             }
-            h = lvl.getCapability(Capabilities.Item.BLOCK, ex.target, d);
+            h = com.golemlogix.system.LegacyResources.items(lvl, ex.target, d);
         }
         return h;
     }
@@ -933,15 +933,15 @@ public final class GolemNetwork {
         if (ex.owner != null && !ex.owner.isRemoved() && lvl instanceof net.minecraft.server.level.ServerLevel sl) {
             return ex.owner.targetCaps(sl, ex.target, ex.face).fluidsAnySide();
         }
-        IFluidHandler h = lvl.getCapability(Capabilities.Fluid.BLOCK, ex.target, ex.face);
+        IFluidHandler h = com.golemlogix.system.LegacyResources.fluids(lvl, ex.target, ex.face);
         if (h == null) {
-            h = lvl.getCapability(Capabilities.Fluid.BLOCK, ex.target, null);
+            h = com.golemlogix.system.LegacyResources.fluids(lvl, ex.target, null);
         }
         for (Direction d : Direction.values()) {
             if (h != null) {
                 break;
             }
-            h = lvl.getCapability(Capabilities.Fluid.BLOCK, ex.target, d);
+            h = com.golemlogix.system.LegacyResources.fluids(lvl, ex.target, d);
         }
         return h;
     }

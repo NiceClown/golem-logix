@@ -1,0 +1,9 @@
+{
+  "model": {
+    "type": "golem_logix:punch_card",
+    "base": {
+      "type": "minecraft:model",
+      "model": "golem_logix:item/copper_punch_card"
+    }
+  }
+}

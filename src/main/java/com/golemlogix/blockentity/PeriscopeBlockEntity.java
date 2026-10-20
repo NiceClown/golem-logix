@@ -102,7 +102,7 @@ public class PeriscopeBlockEntity extends BlockEntity {
 
     protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
         priority = tag.getIntOr("Priority", 0);
-        upgrades.fromTag(tag.getList("Upgrades", Tag.TAG_COMPOUND), registries);
+        upgrades.fromTag(tag.getListOrEmpty("Upgrades"), registries);
         redstone.load(tag);
     }
 
@@ -120,5 +120,14 @@ public class PeriscopeBlockEntity extends BlockEntity {
     protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
         super.loadAdditional(input);
         loadTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    }
+
+    /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
+            r.onRemoved(state, level, pos);
+        }
     }
 }

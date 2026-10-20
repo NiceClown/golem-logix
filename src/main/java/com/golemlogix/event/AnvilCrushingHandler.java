@@ -28,7 +28,7 @@ import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 import java.util.List;
 
-@EventBusSubscriber(modid = GolemLogixMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = GolemLogixMod.MOD_ID)
 public class AnvilCrushingHandler {
     /** A freshly spawned Wither is invulnerable for 220 ticks; the anvil "collapses" it during the first 4 seconds (80 ticks). */
     public static final int WITHER_SPAWN_TICKS = 220;

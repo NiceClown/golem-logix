@@ -69,7 +69,7 @@ public class AtlasCoreBlock extends Block implements GolemNode, EntityBlock, Atl
                 player.sendSystemMessage(Component.translatable("message.golem_logix.core.unformed",
                         st.expected().getName(), m.getX(), m.getY(), m.getZ(), GolemNetwork.BARE_CORE_CHANNELS));
                 if (player instanceof ServerPlayer sp && level instanceof ServerLevel sl) {
-                    sl.sendParticles(sp, ParticleTypes.END_ROD, true, m.getX() + 0.5, m.getY() + 0.5, m.getZ() + 0.5,
+                    sl.sendParticles(sp, ParticleTypes.END_ROD, true, true, m.getX() + 0.5, m.getY() + 0.5, m.getZ() + 0.5,
                             18, 0.3, 0.3, 0.3, 0.02);
                 }
             } else {
