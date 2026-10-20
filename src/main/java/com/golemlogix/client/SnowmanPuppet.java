@@ -27,7 +27,7 @@ import java.util.function.Consumer;
  * model pixels of this frame (the snowman's height without the head is 24, shoulders at height 18).
  */
 public final class SnowmanPuppet {
-    private static final Identifier TEXTURE = Identifier.withDefaultNamespace("textures/entity/snow_golem.png");
+    private static final Identifier TEXTURE = Identifier.withDefaultNamespace("textures/entity/snow_golem/snow_golem.png");
     /** Shoulders (the left one is +X: facing +Z, the snowman's left arm points to +X). */
     private static final Vector3f LEFT_SHOULDER = new Vector3f(5f, 18f, 0f), RIGHT_SHOULDER = new Vector3f(-5f, 18f, 0f);
     /** The hands wrap a crate in front of the chest: palms on the sides of the crate. */

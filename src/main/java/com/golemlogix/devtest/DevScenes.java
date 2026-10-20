@@ -101,6 +101,31 @@ final class DevScenes {
                 String actual = in.isEmpty() ? "empty" : net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(in.getItem()).toString();
                 log.accept((actual.equals(a[4]) ? "OK" : "ERR") + " baycheck slot " + a[3] + " = " + actual + " (expected " + a[4] + ")");
             }
+            case "saturatordecks" -> {
+                // saturatordecks x y z [item count]: the input and output decks, the anvil, Source, whether a blank counts as input;
+                // with an item: OK if the output deck holds that many of it (the taker golem carries results there from the anvil)
+                if (!(level.getBlockEntity(pos(a, 0)) instanceof com.golemlogix.blockentity.ManaSaturatorBlockEntity sat)) {
+                    throw new IllegalStateException("no saturator");
+                }
+                String verdict = "";
+                if (a.length > 4) {
+                    ItemStack out = sat.outputDeck();
+                    boolean ok = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(out.getItem()).toString().equals(a[3])
+                            && out.getCount() == Integer.parseInt(a[4]);
+                    verdict = (ok ? "OK" : "ERR") + " ";
+                }
+                log.accept(verdict + "saturatordecks in=" + sat.inputDeck() + " out=" + sat.outputDeck() + " anvil=" + sat.getHeldItem()
+                        + " source=" + sat.getSource() + " ironIsInput=" + com.golemlogix.blockentity.ManaSaturatorBlockEntity.isInput(level,
+                        new ItemStack(net.minecraft.world.item.Items.IRON_BLOCK)) + " recipes=" + com.golemlogix.system.Recipes.byType(level,
+                        com.golemlogix.init.ModRecipes.SATURATOR_TYPE.get()).size());
+            }
+            case "diskstore" -> {
+                // diskstore <uuid> <items> <fluid mB>: what the server's disk store holds for a disk (a world from 1.21.1 moves its old file)
+                var disk = com.golemlogix.system.DiskStore.get(level.getServer()).getOrNull(java.util.UUID.fromString(a[0]));
+                long items = disk == null ? -1 : disk.storedItems, fluids = disk == null ? -1 : disk.storedFluids;
+                boolean ok = items == Long.parseLong(a[1]) && fluids == Long.parseLong(a[2]);
+                log.accept((ok ? "OK" : "ERR") + " diskstore " + a[0] + ": " + items + " items, " + fluids + " mB (expected " + a[1] + ", " + a[2] + ")");
+            }
             case "netfluidput" -> {
                 // netfluidput x y z <fluid> <mB>
                 com.golemlogix.system.GolemNetwork network = com.golemlogix.system.GolemNetwork.scan(level, pos(a, 0));

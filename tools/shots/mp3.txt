@@ -1,0 +1,12 @@
+# multiplayer: where the Saturator's blank goes (decks, anvil, Source) step by step
+cmd fill -6 -60 -14 6 -55 -9 minecraft:air
+hook saturator 0 -58 -12 south jar
+wait 80
+hook saturatorcheck 0 -58 -12 formed
+hook saturatordecks 0 -58 -12
+hook saturatorput 0 -58 -12 minecraft:iron_block
+hook saturatordecks 0 -58 -12
+wait 40
+hook saturatordecks 0 -58 -12
+wait 120
+hook saturatordecks 0 -58 -12

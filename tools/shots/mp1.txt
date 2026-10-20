@@ -91,4 +91,7 @@ look 0 -58.3 -12.3 2.8 180 6
 wait 6
 shot mp_saturator_hit
 wait 120
-hook saturatorheld 0 -58 -12 golem_logix:flattened_iron_core 2
+# the taker golem carries the two plates from the anvil to the output deck
+hook saturatordecks 0 -58 -12 golem_logix:flattened_iron_core 2
+# a world from 1.21.1: its old disk file (data/golem_logix_disks.dat, 500 diamonds and 2000 mB of water on one disk) is moved
+hook diskstore 11111111-2222-3333-4444-555555555555 500 2000

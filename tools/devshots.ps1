@@ -101,6 +101,7 @@ switch ($Action) {
         $jdk = Find-Jdk
         $gradle = Find-Gradle
         $extra = if ($Mods) { '-PtestMods ' } else { '' }
+        if ($GradleArgs) { $extra += "$GradleArgs " }
         $cmd = "set `"JAVA_HOME=$jdk`" && cd /d `"$root`" && call `"$gradle`" $($extra)runServer --console=plain > `"$slog`" 2>&1"
         Start-Process -FilePath cmd.exe -ArgumentList "/c $cmd" -WindowStyle Minimized
         $t0 = Get-Date
