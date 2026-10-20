@@ -2,11 +2,11 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "C": { "item": "minecraft:copper_ingot" },
-    "H": { "item": "minecraft:hopper" },
-    "V": { "item": "golem_logix:vacuum_import_bus" },
-    "X": { "item": "golem_logix:injector_export_bus" },
-    "M": { "item": "golem_logix:flattened_copper_matrix" }
+    "C": "minecraft:copper_ingot",
+    "H": "minecraft:hopper",
+    "V": "golem_logix:vacuum_import_bus",
+    "X": "golem_logix:injector_export_bus",
+    "M": "golem_logix:flattened_copper_matrix"
   },
   "pattern": [
     "CVC",

@@ -2,11 +2,11 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "A": { "item": "minecraft:amethyst_shard" },
-    "E": { "item": "minecraft:ender_eye" },
-    "G": { "item": "minecraft:gold_ingot" },
-    "I": { "item": "golem_logix:flattened_iron_core" },
-    "M": { "item": "golem_logix:flattened_copper_matrix" }
+    "A": "minecraft:amethyst_shard",
+    "E": "minecraft:ender_eye",
+    "G": "minecraft:gold_ingot",
+    "I": "golem_logix:flattened_iron_core",
+    "M": "golem_logix:flattened_copper_matrix"
   },
   "pattern": [
     "GAG",

@@ -1,26 +1,18 @@
 {
-    "key":  {
-                "S":  {
-                          "item":  "minecraft:wither_skeleton_skull"
-                      },
-                "C":  {
-                          "item":  "minecraft:copper_ingot"
-                      },
-                "T":  {
-                          "item":  "minecraft:clock"
-                      },
-                "M":  {
-                          "item":  "golem_logix:flattened_copper_matrix"
-                      }
-            },
-    "pattern":  [
-                    " S ",
-                    "CTC",
-                    " M "
-                ],
-    "result":  {
-                   "count":  1,
-                   "id":  "golem_logix:portable_chronometer"
-               },
-    "type":  "minecraft:crafting_shaped"
+  "key": {
+    "S": "minecraft:wither_skeleton_skull",
+    "C": "minecraft:copper_ingot",
+    "T": "minecraft:clock",
+    "M": "golem_logix:flattened_copper_matrix"
+  },
+  "pattern": [
+    " S ",
+    "CTC",
+    " M "
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:portable_chronometer"
+  },
+  "type": "minecraft:crafting_shaped"
 }

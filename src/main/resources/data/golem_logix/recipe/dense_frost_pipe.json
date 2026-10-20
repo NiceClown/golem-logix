@@ -1,20 +1,16 @@
 {
-    "key":  {
-                "I":  {
-                          "item":  "golem_logix:flattened_iron_core"
-                      },
-                "P":  {
-                          "item":  "golem_logix:basic_snow_pipe"
-                      }
-            },
-    "pattern":  [
-                    "PPP",
-                    "PIP",
-                    "PPP"
-                ],
-    "result":  {
-                   "count":  4,
-                   "id":  "golem_logix:dense_frost_pipe"
-               },
-    "type":  "minecraft:crafting_shaped"
+  "key": {
+    "I": "golem_logix:flattened_iron_core",
+    "P": "golem_logix:basic_snow_pipe"
+  },
+  "pattern": [
+    "PPP",
+    "PIP",
+    "PPP"
+  ],
+  "result": {
+    "count": 4,
+    "id": "golem_logix:dense_frost_pipe"
+  },
+  "type": "minecraft:crafting_shaped"
 }

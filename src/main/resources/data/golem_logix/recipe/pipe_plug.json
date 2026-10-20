@@ -2,8 +2,8 @@
   "type": "minecraft:crafting_shapeless",
   "category": "misc",
   "ingredients": [
-    { "item": "minecraft:copper_ingot" },
-    { "item": "minecraft:snowball" }
+    "minecraft:copper_ingot",
+    "minecraft:snowball"
   ],
   "result": {
     "count": 4,

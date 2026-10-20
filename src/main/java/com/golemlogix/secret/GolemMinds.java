@@ -43,8 +43,8 @@ public final class GolemMinds {
     }
 
     /**
-     * A copper golem from any mod: the tag golem_logix:copper_golems (Copper Age Backport's minecraft:copper_golem by default,
-     * modpacks add their own), or any golem with "copper" in its id.
+     * A copper golem, the game's or a mod's: the tag golem_logix:copper_golems (minecraft:copper_golem by default, modpacks add
+     * their own), or any golem with "copper" in its id.
      */
     public static boolean isCopperGolem(Entity entity) {
         if (entity.getType().builtInRegistryHolder().is(com.golemlogix.init.ModTags.COPPER_GOLEMS)) {

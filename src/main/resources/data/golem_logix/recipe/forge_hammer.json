@@ -2,11 +2,11 @@
   "type": "minecraft:crafting_shaped",
   "category": "equipment",
   "key": {
-    "C": { "item": "minecraft:copper_ingot" },
-    "I": { "item": "minecraft:iron_block" },
-    "P": { "item": "minecraft:packed_ice" },
-    "X": { "tag": "golem_logix:iron_plates" },
-    "S": { "item": "minecraft:stick" }
+    "C": "minecraft:copper_ingot",
+    "I": "minecraft:iron_block",
+    "P": "minecraft:packed_ice",
+    "X": "#golem_logix:iron_plates",
+    "S": "minecraft:stick"
   },
   "pattern": [
     "CIC",

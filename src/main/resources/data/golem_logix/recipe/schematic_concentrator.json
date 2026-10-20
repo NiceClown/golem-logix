@@ -2,11 +2,11 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "C": { "item": "minecraft:copper_ingot" },
-    "I": { "item": "minecraft:packed_ice" },
-    "M": { "item": "golem_logix:flattened_copper_matrix" },
-    "P": { "item": "golem_logix:pattern_provider" },
-    "T": { "item": "golem_logix:analog_terminal" }
+    "C": "minecraft:copper_ingot",
+    "I": "minecraft:packed_ice",
+    "M": "golem_logix:flattened_copper_matrix",
+    "P": "golem_logix:pattern_provider",
+    "T": "golem_logix:analog_terminal"
   },
   "pattern": [
     "CIC",

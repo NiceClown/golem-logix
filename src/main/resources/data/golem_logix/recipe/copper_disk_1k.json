@@ -1,23 +1,17 @@
 {
-    "key":  {
-                "C":  {
-                          "item":  "minecraft:copper_ingot"
-                      },
-                "R":  {
-                          "item":  "minecraft:redstone"
-                      },
-                "S":  {
-                          "item":  "golem_logix:flattened_copper_matrix"
-                      }
-            },
-    "pattern":  [
-                    "CCC",
-                    "RSR",
-                    "CCC"
-                ],
-    "result":  {
-                   "count":  1,
-                   "id":  "golem_logix:copper_disk_1k"
-               },
-    "type":  "minecraft:crafting_shaped"
+  "key": {
+    "C": "minecraft:copper_ingot",
+    "R": "minecraft:redstone",
+    "S": "golem_logix:flattened_copper_matrix"
+  },
+  "pattern": [
+    "CCC",
+    "RSR",
+    "CCC"
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:copper_disk_1k"
+  },
+  "type": "minecraft:crafting_shaped"
 }

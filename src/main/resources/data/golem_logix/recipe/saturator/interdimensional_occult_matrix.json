@@ -1,7 +1,9 @@
 {
   "type": "golem_logix:saturator",
-  "ingredient": {"item": "golem_logix:imploded_wither_plasma"},
-  "result": {"id": "golem_logix:interdimensional_occult_matrix"},
+  "ingredient": "golem_logix:imploded_wither_plasma",
+  "result": {
+    "id": "golem_logix:interdimensional_occult_matrix"
+  },
   "source": 2500,
   "ticks": 100,
   "secret": true

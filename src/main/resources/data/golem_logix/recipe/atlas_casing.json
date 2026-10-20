@@ -2,8 +2,8 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "I": { "item": "minecraft:iron_ingot" },
-    "P": { "item": "golem_logix:flattened_iron_core" }
+    "I": "minecraft:iron_ingot",
+    "P": "golem_logix:flattened_iron_core"
   },
   "pattern": [
     "III",

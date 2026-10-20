@@ -1,0 +1,41 @@
+# 26.1.2 port smoke check: the network rig, a cabinet, the Saturator, the Mainframe, the Catalog, the telegraph and the tower
+# render; the inventory shows the item icons; the terminal opens
+cmd time set 6000
+cmd fill -20 -60 -20 30 -50 20 minecraft:air
+hook rig 0 -60 0
+hook saturator 0 -60 10 north jar
+hook mainframe 10 -60 10 north 2 2
+hook catalog 20 -60 10 north 4 1
+hook telegraph -10 -60 10 north
+cmd setblock -12 -60 -6 golem_logix:cryo_distillation_tower[section=0,facing=south]
+cmd setblock -12 -59 -6 golem_logix:cryo_distillation_tower[section=1,facing=south]
+cmd setblock -12 -58 -6 golem_logix:cryo_distillation_tower[section=2,facing=south]
+cmd setblock -10 -60 -6 golem_logix:cryo_source_jar[half=lower,facing=south]
+cmd setblock -10 -59 -6 golem_logix:cryo_source_jar[half=upper,facing=south]
+wait 100
+look 6 -58 -1 13 200 25
+wait 20
+shot port26a_rig
+look 10 -58 10 18 160 30
+wait 20
+shot port26a_machines
+look -11 -58.5 -5.5 5 200 10
+wait 20
+shot port26a_tower
+cmd time set 18000
+wait 30
+look 6 -58 -1 13 200 25
+wait 20
+shot port26a_night
+cmd time set 6000
+hook giveall 0
+inv
+wait 20
+shot port26a_inv
+closescreen
+look 4.5 -59.5 -1.5 3 0 15
+wait 10
+use 4 -60 -2
+wait 20
+shot port26a_terminal
+closescreen

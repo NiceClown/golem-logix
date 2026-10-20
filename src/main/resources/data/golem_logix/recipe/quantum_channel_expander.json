@@ -2,9 +2,9 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "E": { "item": "golem_logix:channel_expander" },
-    "G": { "item": "minecraft:gold_ingot" },
-    "X": { "item": "golem_logix:interdimensional_occult_matrix" }
+    "E": "golem_logix:channel_expander",
+    "G": "minecraft:gold_ingot",
+    "X": "golem_logix:interdimensional_occult_matrix"
   },
   "pattern": [
     " X ",

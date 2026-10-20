@@ -2,10 +2,10 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "E": { "item": "minecraft:ender_eye" },
-    "O": { "item": "golem_logix:interdimensional_occult_matrix" },
-    "S": { "item": "golem_logix:flattened_cryo_substrate" },
-    "T": { "item": "minecraft:tinted_glass" }
+    "E": "minecraft:ender_eye",
+    "O": "golem_logix:interdimensional_occult_matrix",
+    "S": "golem_logix:flattened_cryo_substrate",
+    "T": "minecraft:tinted_glass"
   },
   "pattern": [
     "TST",

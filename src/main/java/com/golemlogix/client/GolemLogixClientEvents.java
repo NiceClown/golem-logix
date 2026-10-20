@@ -59,6 +59,12 @@ public class GolemLogixClientEvents {
         event.register(ModMenus.TELEGRAPH.get(), TelegraphScreen::new);
     }
 
+    /** The runes of the mod's blocks glow (see GlowModels). */
+    @SubscribeEvent
+    public static void wrapModels(net.neoforged.neoforge.client.event.ModelEvent.ModifyBakingResult event) {
+        GlowModels.wrap(event.getBakingResult(), event.getTextureGetter());
+    }
+
     /** A written punch card shows its result while Shift is held (items/copper_punch_card.json). */
     @SubscribeEvent
     public static void registerItemModels(net.neoforged.neoforge.client.event.RegisterItemModelsEvent event) {

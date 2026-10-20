@@ -32,7 +32,7 @@ import snownee.jade.api.config.IPluginConfig;
  * expander its exit. The numbers come from the server's network (the same one the devices work with), so the tooltip can never
  * disagree with what the devices do. A device without a channel also names what stopped it.
  */
-public enum ChannelProvider implements IBlockComponentProvider, IServerDataProvider<BlockAccessor> {
+public enum ChannelProvider implements IBlockComponentProvider {
     INSTANCE;
 
     private static final Identifier UID = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "channels");
@@ -46,32 +46,42 @@ public enum ChannelProvider implements IBlockComponentProvider, IServerDataProvi
 
     // ----------------------------------------------------------------- server
 
-    @Override
-    public boolean shouldRequestData(BlockAccessor accessor) {
-        return isNode(accessor.getBlockState());
-    }
+    /** The server side (since Jade for 1.21.6 a data provider cannot draw the tooltip as well): the same UID. */
+    public enum Server implements IServerDataProvider<BlockAccessor> {
+        INSTANCE;
 
-    @Override
-    public void appendServerData(CompoundTag data, BlockAccessor accessor) {
-        BlockPos pos = accessor.getPosition();
-        GolemNetwork net = GolemNetwork.get(accessor.getLevel(), pos);
-        GolemNetwork.NodeChannels ch = net.channelsAt(pos);
-        CompoundTag t = new CompoundTag();
-        t.putBoolean("core", net.hasCore());
-        t.putBoolean("online", net.isOnline());
-        t.putBoolean("needs", ch.needsChannel());
-        t.putBoolean("has", ch.hasChannel());
-        t.putInt("used", ch.load());
-        t.putInt("max", ch.capacity());
-        t.putString("why", ch.missing().name());
-        if (ch.bottleneck() != null) {
-            BlockPos b = ch.bottleneck();
-            t.putIntArray("bpos", new int[]{b.getX(), b.getY(), b.getZ()});
-            t.putString("bblock", BuiltInRegistries.BLOCK.getKey(accessor.getLevel().getBlockState(b).getBlock()).toString());
+        @Override
+        public boolean shouldRequestData(BlockAccessor accessor) {
+            return isNode(accessor.getBlockState());
         }
-        t.putInt("netUsed", net.channelsUsed());
-        t.putInt("netMax", net.channelCapacity());
-        data.put(TAG, t);
+
+        @Override
+        public void appendServerData(CompoundTag data, BlockAccessor accessor) {
+            BlockPos pos = accessor.getPosition();
+            GolemNetwork net = GolemNetwork.get(accessor.getLevel(), pos);
+            GolemNetwork.NodeChannels ch = net.channelsAt(pos);
+            CompoundTag t = new CompoundTag();
+            t.putBoolean("core", net.hasCore());
+            t.putBoolean("online", net.isOnline());
+            t.putBoolean("needs", ch.needsChannel());
+            t.putBoolean("has", ch.hasChannel());
+            t.putInt("used", ch.load());
+            t.putInt("max", ch.capacity());
+            t.putString("why", ch.missing().name());
+            if (ch.bottleneck() != null) {
+                BlockPos b = ch.bottleneck();
+                t.putIntArray("bpos", new int[]{b.getX(), b.getY(), b.getZ()});
+                t.putString("bblock", BuiltInRegistries.BLOCK.getKey(accessor.getLevel().getBlockState(b).getBlock()).toString());
+            }
+            t.putInt("netUsed", net.channelsUsed());
+            t.putInt("netMax", net.channelCapacity());
+            data.put(TAG, t);
+        }
+
+        @Override
+        public Identifier getUid() {
+            return UID;
+        }
     }
 
     // ----------------------------------------------------------------- client

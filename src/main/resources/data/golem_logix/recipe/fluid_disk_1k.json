@@ -2,9 +2,9 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "G": { "item": "minecraft:glass" },
-    "R": { "item": "minecraft:redstone" },
-    "S": { "item": "golem_logix:flattened_cryo_substrate" }
+    "G": "minecraft:glass",
+    "R": "minecraft:redstone",
+    "S": "golem_logix:flattened_cryo_substrate"
   },
   "pattern": [
     "GGG",

@@ -12,16 +12,33 @@ $root = Split-Path -Parent $PSScriptRoot
 $queue = Join-Path $root 'run\devshots\queue'
 $glog = Join-Path $root 'run\devshots\gradle.log'
 
-function Find-Jdk {
-    if ($env:JAVA_HOME -and (Test-Path "$env:JAVA_HOME\bin\java.exe")) { return $env:JAVA_HOME }
-    $c = Get-ChildItem 'C:\Program Files\Java' -Directory -Filter 'jdk-21*' -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($c) { return $c.FullName }
-    throw 'JDK 21 not found: set JAVA_HOME'
+# the Java the checked-out branch builds with (build.gradle: JavaLanguageVersion.of(N)): 21 for 1.21.1, 25 for 26.1.2
+function Get-JavaVersion {
+    $m = Select-String -Path (Join-Path $root 'build.gradle') -Pattern 'languageVersion\.of\((\d+)\)' | Select-Object -First 1
+    if ($m) { return [int]$m.Matches[0].Groups[1].Value }
+    return 21
 }
 
+function Find-Jdk {
+    $v = Get-JavaVersion
+    $own = Join-Path $root "jdk-$v"
+    if (Test-Path "$own\bin\java.exe") { return $own }
+    if ($env:JAVA_HOME -and (Test-Path "$env:JAVA_HOME\bin\java.exe") -and $env:JAVA_HOME -match "jdk-$v") { return $env:JAVA_HOME }
+    $c = Get-ChildItem 'C:\Program Files\Java' -Directory -Filter "jdk-$v*" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($c) { return $c.FullName }
+    throw "JDK $v not found: set JAVA_HOME"
+}
+
+# the Gradle of the wrapper properties, unpacked as gradle-dist\gradle-<version>
 function Find-Gradle {
-    $local = Join-Path $root 'gradle-dist\gradle-8.10\bin\gradle.bat'
-    if (Test-Path $local) { return $local }
+    $props = Join-Path $root 'gradle\wrapper\gradle-wrapper.properties'
+    $m = Select-String -Path $props -Pattern 'gradle-([\d.]+)-(bin|all)\.zip' -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($m) {
+        $local = Join-Path $root ('gradle-dist\gradle-' + $m.Matches[0].Groups[1].Value + '\bin\gradle.bat')
+        if (Test-Path $local) { return $local }
+    }
+    $old = Join-Path $root 'gradle-dist\gradle-8.10\bin\gradle.bat'
+    if (Test-Path $old) { return $old }
     return (Join-Path $root 'gradlew.bat')
 }
 

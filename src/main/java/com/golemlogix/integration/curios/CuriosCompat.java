@@ -25,11 +25,23 @@ public final class CuriosCompat {
     /** Puts the stack into the player's Chronometer slot (game tests); false if the player has no such slot. */
     public static boolean wear(Player player, ItemStack stack) {
         return CuriosApi.getCuriosInventory(player)
-                .flatMap(h -> h.getStacksHandler("chronometer"))
+                .flatMap(h -> {
+                    // a test's fake player never joined a level: Curios has not built its slots yet
+                    if (h.getCurios().isEmpty()) {
+                        h.reset();
+                    }
+                    return h.getStacksHandler("chronometer");
+                })
                 .map(slots -> {
                     slots.getStacks().setStackInSlot(0, stack);
                     return true;
                 })
                 .orElse(false);
+    }
+
+    /** What Curios gives this player (for test messages): the slot ids of its inventory, or "no inventory". */
+    public static String describe(Player player) {
+        return CuriosApi.getCuriosInventory(player).map(h -> "slots " + h.getCurios().keySet() + ", for players "
+                + CuriosApi.getPlayerSlots(player).keySet()).orElse("no inventory");
     }
 }

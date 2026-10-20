@@ -1,6 +1,24 @@
 # Changelog
 
-## 2.0.0 — The tower window; the last big release for 1.21.1
+## 2.0.0 (26.1.2) — Golem Logix on Minecraft 26.1.2
+
+The main line of Golem Logix now runs on Minecraft 26.1.2 and NeoForge 26.1.2 (Java 25). The 1.21.1 version stays in the branch
+`mc-1.21.1` for critical fixes; jars are named after the game version (`golem_logix-26.1.2-2.0.0.jar`).
+
+- **Copper golems are the game's own.** Copper Age Backport is no longer needed or mentioned: the anvil ritual and the Dispel take
+  the vanilla copper golem, the Punch Card Catalog the vanilla copper golem statues, and the golem puppets on the machines wear the
+  game's copper golem textures. The warning about a game without copper golems is gone with it.
+- Everything of 2.0.0 for 1.21.1 is here too: the Cryo-Distillation Tower's window with four Compressed Co-Processor slots and the
+  mounted platforms of the tower and the Cryo-Source Jar.
+- Integrations: JEI 29, Jade, Curios 15 and Neo Vitae. Ars Nouveau and Create have no 26.1.2 builds yet: their recipes and
+  integrations stay in the mod and wake up once they are ported. Without Ars Nouveau, Source comes from the Cryo-Distillation Tower.
+- **Worlds from 1.21.1**: the disk contents move to the new save file (`data/golem_logix/disks.dat`) on the first load.
+- **Data packs**: recipe ingredients use the 26.1 format (an item id, a `#tag` or a list of ids instead of `{"item": ...}`);
+  `golem_logix:saturator` and `golem_logix:anvil_crushing` recipes written for 1.21.1 need the same change.
+- The JEI anvil page draws the golem pressed down under the anvil (26.1 draws entities in GUIs into their own picture).
+- 107 game tests, all passing with and without JEI, Jade, Curios and Neo Vitae.
+
+## 2.0.0 (1.21.1) — The tower window; the last big release for 1.21.1
 
 From 2.0.0 the main line of Golem Logix is Minecraft 26.1.2 (see its own changelog in the main branch). This 1.21.1 build stays
 for critical fixes only; jars are now named after the game version (`golem_logix-1.21.1-2.0.0.jar`).

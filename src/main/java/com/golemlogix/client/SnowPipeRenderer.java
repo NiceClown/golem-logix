@@ -714,13 +714,14 @@ public class SnowPipeRenderer extends com.golemlogix.client.render.LegacyBer<Pip
         return BOX_TEMPLATES[Math.floorMod(cargoId, BOX_TEMPLATES.length)];
     }
 
-    private static final List<ItemStack> FLUID_BUCKETS = List.of(
+    /** Made on first use: since 26.1 an ItemStack cannot be created before the items get their components (renderers come earlier). */
+    private static final java.util.function.Supplier<List<ItemStack>> FLUID_BUCKETS = com.google.common.base.Suppliers.memoize(() -> List.of(
             new ItemStack(Items.WATER_BUCKET),
             new ItemStack(Items.LAVA_BUCKET),
             new ItemStack(Items.MILK_BUCKET)
-    );
+    ));
 
-    private static final List<ItemStack> FALLBACK_ITEMS = List.of(
+    private static final java.util.function.Supplier<List<ItemStack>> FALLBACK_ITEMS = com.google.common.base.Suppliers.memoize(() -> List.of(
             new ItemStack(ModItems.COPPER_PUNCH_CARD.get()),
             new ItemStack(ModItems.FLATTENED_COPPER_MATRIX.get()),
             new ItemStack(ModItems.FLATTENED_IRON_CORE.get()),
@@ -741,7 +742,7 @@ public class SnowPipeRenderer extends com.golemlogix.client.render.LegacyBer<Pip
             new ItemStack(Items.CLOCK),
             new ItemStack(Items.GOLD_INGOT),
             new ItemStack(Items.IRON_INGOT)
-    );
+    ));
 
     private static final class CargoPool {
         long expireTime = 0;
@@ -798,14 +799,14 @@ public class SnowPipeRenderer extends com.golemlogix.client.render.LegacyBer<Pip
             if (netFluids != null && !netFluids.isEmpty()) {
                 return netFluids.get(Math.floorMod(cargoId / 10, netFluids.size()));
             }
-            return FLUID_BUCKETS.get(Math.floorMod(cargoId / 10, FLUID_BUCKETS.size()));
+            return FLUID_BUCKETS.get().get(Math.floorMod(cargoId / 10, FLUID_BUCKETS.get().size()));
         }
 
         // In the other 9 cases: a real item from the network
         if (netItems != null && !netItems.isEmpty()) {
             return netItems.get(Math.floorMod(cargoId, netItems.size()));
         }
-        return FALLBACK_ITEMS.get(Math.floorMod(cargoId, FALLBACK_ITEMS.size()));
+        return FALLBACK_ITEMS.get().get(Math.floorMod(cargoId, FALLBACK_ITEMS.get().size()));
     }
 
     private static void renderItem(MultiBufferSource buffers, @Nullable Level level, ItemStack stack,

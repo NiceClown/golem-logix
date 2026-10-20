@@ -1,23 +1,17 @@
 {
-    "key":  {
-                "C":  {
-                          "item":  "minecraft:copper_ingot"
-                      },
-                "G":  {
-                          "item":  "minecraft:glass_pane"
-                      },
-                "M":  {
-                          "item":  "golem_logix:flattened_copper_matrix"
-                      }
-            },
-    "pattern":  [
-                    "CCC",
-                    "CGC",
-                    "CMC"
-                ],
-    "result":  {
-                   "count":  1,
-                   "id":  "golem_logix:analog_terminal"
-               },
-    "type":  "minecraft:crafting_shaped"
+  "key": {
+    "C": "minecraft:copper_ingot",
+    "G": "minecraft:glass_pane",
+    "M": "golem_logix:flattened_copper_matrix"
+  },
+  "pattern": [
+    "CCC",
+    "CGC",
+    "CMC"
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:analog_terminal"
+  },
+  "type": "minecraft:crafting_shaped"
 }

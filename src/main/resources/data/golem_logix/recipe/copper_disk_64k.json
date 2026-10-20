@@ -2,9 +2,9 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "C": { "item": "minecraft:gold_ingot" },
-    "D": { "item": "golem_logix:copper_disk_16k" },
-    "M": { "item": "golem_logix:flattened_copper_matrix" }
+    "C": "minecraft:gold_ingot",
+    "D": "golem_logix:copper_disk_16k",
+    "M": "golem_logix:flattened_copper_matrix"
   },
   "pattern": [
     "CMC",

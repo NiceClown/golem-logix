@@ -2,12 +2,12 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "A": { "item": "minecraft:amethyst_shard" },
-    "C": { "item": "minecraft:copper_ingot" },
-    "G": { "item": "minecraft:glass_pane" },
-    "M": { "item": "golem_logix:flattened_copper_matrix" },
-    "P": { "item": "golem_logix:copper_punch_card" },
-    "S": { "item": "golem_logix:flattened_cryo_substrate" }
+    "A": "minecraft:amethyst_shard",
+    "C": "minecraft:copper_ingot",
+    "G": "minecraft:glass_pane",
+    "M": "golem_logix:flattened_copper_matrix",
+    "P": "golem_logix:copper_punch_card",
+    "S": "golem_logix:flattened_cryo_substrate"
   },
   "pattern": [
     "CAC",

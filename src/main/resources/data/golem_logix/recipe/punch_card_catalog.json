@@ -2,11 +2,11 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "B": { "item": "minecraft:bookshelf" },
-    "C": { "item": "minecraft:copper_ingot" },
-    "K": { "item": "golem_logix:copper_punch_card" },
-    "M": { "item": "golem_logix:flattened_copper_matrix" },
-    "P": { "item": "golem_logix:pattern_provider" }
+    "B": "minecraft:bookshelf",
+    "C": "minecraft:copper_ingot",
+    "K": "golem_logix:copper_punch_card",
+    "M": "golem_logix:flattened_copper_matrix",
+    "P": "golem_logix:pattern_provider"
   },
   "pattern": [
     "CPC",

@@ -2750,7 +2750,8 @@ public class GolemGameTests {
         if (com.golemlogix.items.Chronometers.CURIOS) {
             player.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND, ItemStack.EMPTY);
             ItemStack worn = new ItemStack(ModItems.PORTABLE_CHRONOMETER.get());
-            helper.assertTrue(com.golemlogix.integration.curios.CuriosCompat.wear(player, worn), "players have a Chronometer slot");
+            helper.assertTrue(com.golemlogix.integration.curios.CuriosCompat.wear(player, worn),
+                    "players have a Chronometer slot: " + com.golemlogix.integration.curios.CuriosCompat.describe(player));
             found = com.golemlogix.items.Chronometers.find(player);
             helper.assertTrue(found != null && found.slot() == com.golemlogix.items.Chronometers.CURIO, "the Curios slot before the inventory");
             helper.assertTrue(com.golemlogix.items.Chronometers.carried(player).size() == 2, "both Chronometers are carried");

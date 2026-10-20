@@ -8,10 +8,10 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "N": { "tag": "c:ingots/gold" },
-    "C": { "tag": "c:ingots/copper" },
-    "G": { "tag": "c:glass_blocks" },
-    "B": { "item": "minecraft:bricks" }
+    "N": "#c:ingots/gold",
+    "C": "#c:ingots/copper",
+    "G": "#c:glass_blocks",
+    "B": "minecraft:bricks"
   },
   "pattern": [
     " N ",

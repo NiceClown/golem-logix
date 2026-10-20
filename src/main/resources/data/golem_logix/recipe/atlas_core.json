@@ -2,10 +2,10 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "B": { "item": "minecraft:iron_block" },
-    "C": { "item": "minecraft:copper_block" },
-    "I": { "item": "golem_logix:flattened_iron_core" },
-    "M": { "item": "golem_logix:flattened_copper_matrix" }
+    "B": "minecraft:iron_block",
+    "C": "minecraft:copper_block",
+    "I": "golem_logix:flattened_iron_core",
+    "M": "golem_logix:flattened_copper_matrix"
   },
   "pattern": [
     "IBI",

@@ -2,9 +2,9 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "C": { "item": "minecraft:copper_ingot" },
-    "I": { "item": "golem_logix:flattened_iron_core" },
-    "S": { "item": "golem_logix:flattened_cryo_substrate" }
+    "C": "minecraft:copper_ingot",
+    "I": "golem_logix:flattened_iron_core",
+    "S": "golem_logix:flattened_cryo_substrate"
   },
   "pattern": [
     " S ",

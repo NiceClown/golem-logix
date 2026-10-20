@@ -2,11 +2,11 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "A": { "item": "minecraft:amethyst_shard" },
-    "C": { "item": "minecraft:copper_block" },
-    "M": { "item": "golem_logix:flattened_copper_matrix" },
-    "P": { "item": "golem_logix:dense_frost_pipe" },
-    "R": { "item": "minecraft:lightning_rod" }
+    "A": "minecraft:amethyst_shard",
+    "C": "minecraft:copper_block",
+    "M": "golem_logix:flattened_copper_matrix",
+    "P": "golem_logix:dense_frost_pipe",
+    "R": "minecraft:lightning_rod"
   },
   "pattern": [
     " R ",

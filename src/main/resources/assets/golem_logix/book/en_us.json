@@ -159,7 +159,7 @@
              "text": ["Cores go into processors, the Atlas Core, casings and high-capacity pipes.", "To bring 100 HP down to four, a harming potion, lava or a long fall helps."]},
             {"type": "ritual", "title": "Copper Golem", "station": "minecraft:anvil", "inputs": ["minecraft:copper_block"], "outputs": ["golem_logix:flattened_copper_matrix"],
              "condition": "A golem with 1-4 HP (out of 12).",
-             "text": ["Matrices are the basis of disks, buses, punch cards and cabinets.", "&oCopper golems come from Copper Age Backport (a copper block with a carved pumpkin on top) or another mod. Without one the first matrices cannot be made.&r"]},
+             "text": ["Matrices are the basis of disks, buses, punch cards and cabinets.", "&oA copper golem: a carved pumpkin on top of a copper block.&r"]},
             {"type": "ritual", "title": "Snow Golem", "station": "minecraft:anvil", "inputs": ["minecraft:snow_block"], "outputs": ["golem_logix:flattened_cryo_substrate"],
              "condition": "A golem with 1-3 HP - not at full health!",
              "text": ["A snow golem has only 4 HP. Hit it once with your hand - 3 are left and the anvil will now work (snowballs do not hurt snow golems).", "Substrates go into pipes, cryo blocks and fluid disks."]}
@@ -254,7 +254,7 @@
              "text": ["Bring it down with a harming potion or a long fall first."]},
             {"type": "ritual", "title": "Copper Golem", "station": "ars_nouveau:glyph_dispel", "inputs": ["minecraft:copper_block"], "outputs": ["golem_logix:raw_copper_mind"],
              "condition": "A golem with 1-4 HP (out of 12).",
-             "text": ["Copper golems come from Copper Age Backport or another mod."]},
+             "text": ["A copper golem: a carved pumpkin on top of a copper block."]},
             {"type": "ritual", "title": "Snow Golem", "station": "ars_nouveau:glyph_dispel", "inputs": ["minecraft:snow_block"], "outputs": ["golem_logix:raw_snow_mind"],
              "condition": "A golem with 1-3 HP - not at full health!",
              "text": ["One hit with your hand is enough."]},

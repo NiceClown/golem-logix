@@ -9,6 +9,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.PlacementInfo;
 import net.minecraft.world.item.crafting.Recipe;
@@ -39,27 +40,38 @@ import java.util.Optional;
  * </pre>
  * The Ars Nouveau Source Gem recipes are not here: they are read from the Imbuement Chamber's own recipes (ArsImbuement).
  */
-public record SaturatorRecipe(Ingredient ingredient, ItemStack result, ItemStack handResult, int source, int ticks, boolean secret)
+public record SaturatorRecipe(Ingredient ingredient, ItemStackTemplate resultTemplate, Optional<ItemStackTemplate> handTemplate, int source, int ticks,
+                              boolean secret)
         implements Recipe<SingleRecipeInput> {
     public static final int DEFAULT_SOURCE = 1000, DEFAULT_TICKS = 100;
 
     public static final MapCodec<SaturatorRecipe> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Ingredient.CODEC.fieldOf("ingredient").forGetter(SaturatorRecipe::ingredient),
-            ItemStack.CODEC.fieldOf("result").forGetter(SaturatorRecipe::result),
-            ItemStack.CODEC.optionalFieldOf("hand_result").forGetter(r -> r.handResult.isEmpty() ? Optional.empty() : Optional.of(r.handResult)),
+            ItemStackTemplate.CODEC.fieldOf("result").forGetter(SaturatorRecipe::resultTemplate),
+            ItemStackTemplate.CODEC.optionalFieldOf("hand_result").forGetter(SaturatorRecipe::handTemplate),
             Codec.intRange(0, 1_000_000).optionalFieldOf("source", DEFAULT_SOURCE).forGetter(SaturatorRecipe::source),
             Codec.intRange(1, 72_000).optionalFieldOf("ticks", DEFAULT_TICKS).forGetter(SaturatorRecipe::ticks),
             Codec.BOOL.optionalFieldOf("secret", false).forGetter(SaturatorRecipe::secret)
-    ).apply(i, (ing, res, hand, src, t, sec) -> new SaturatorRecipe(ing, res, hand.orElse(ItemStack.EMPTY), src, t, sec)));
+    ).apply(i, SaturatorRecipe::new));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, SaturatorRecipe> STREAM_CODEC = StreamCodec.composite(
             Ingredient.CONTENTS_STREAM_CODEC, SaturatorRecipe::ingredient,
-            ItemStack.STREAM_CODEC, SaturatorRecipe::result,
-            ItemStack.OPTIONAL_STREAM_CODEC, SaturatorRecipe::handResult,
+            ItemStackTemplate.STREAM_CODEC, SaturatorRecipe::resultTemplate,
+            ByteBufCodecs.optional(ItemStackTemplate.STREAM_CODEC), SaturatorRecipe::handTemplate,
             ByteBufCodecs.VAR_INT, SaturatorRecipe::source,
             ByteBufCodecs.VAR_INT, SaturatorRecipe::ticks,
             ByteBufCodecs.BOOL, SaturatorRecipe::secret,
             SaturatorRecipe::new);
+
+    /** What the Saturator makes (a fresh stack: recipes keep templates, items get their components only after loading). */
+    public ItemStack result() {
+        return resultTemplate.create();
+    }
+
+    /** What forging by hand makes, or an empty stack. */
+    public ItemStack handResult() {
+        return handTemplate.map(ItemStackTemplate::create).orElse(ItemStack.EMPTY);
+    }
 
     /** The ritual for this blank, or null. Both sides have the recipes (Recipes sends them to clients). */
     @Nullable
@@ -77,7 +89,7 @@ public record SaturatorRecipe(Ingredient ingredient, ItemStack result, ItemStack
 
     @Override
     public ItemStack assemble(SingleRecipeInput input) {
-        return result.copy();
+        return result();
     }
 
     /** Not a recipe book recipe. */

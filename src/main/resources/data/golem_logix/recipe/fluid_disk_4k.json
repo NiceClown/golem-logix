@@ -2,8 +2,8 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "D": { "item": "golem_logix:fluid_disk_1k" },
-    "P": { "item": "minecraft:packed_ice" }
+    "D": "golem_logix:fluid_disk_1k",
+    "P": "minecraft:packed_ice"
   },
   "pattern": [
     "PPP",

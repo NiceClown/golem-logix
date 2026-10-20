@@ -159,7 +159,7 @@
              "text": ["Ядра идут на процессоры, ядро Атланта, корпус решётки и трубы высокой ёмкости.", "Чтобы сбить 100 HP до четырёх, пригодится зелье урона, лава или падение с высоты."]},
             {"type": "ritual", "title": "Медный голем", "station": "minecraft:anvil", "inputs": ["minecraft:copper_block"], "outputs": ["golem_logix:flattened_copper_matrix"],
              "condition": "Голем с 1–4 HP (из 12).",
-             "text": ["Матрицы — основа дисков, шин, перфокарт и шкафов.", "&oМедных големов даёт Copper Age Backport (медный блок, сверху вырезанная тыква) или другой мод. Без них первые матрицы не сделать.&r"]},
+             "text": ["Матрицы — основа дисков, шин, перфокарт и шкафов.", "&oМедный голем: вырезанная тыква на медном блоке.&r"]},
             {"type": "ritual", "title": "Снежный голем", "station": "minecraft:anvil", "inputs": ["minecraft:snow_block"], "outputs": ["golem_logix:flattened_cryo_substrate"],
              "condition": "Голем с 1–3 HP — не здоровый!",
              "text": ["У снеговика всего 4 HP. Ударьте его один раз рукой — останется 3, и теперь наковальня сработает (снежки снеговика не ранят).", "Подложки идут на трубы, крио-блоки и жидкостные диски."]}
@@ -254,7 +254,7 @@
              "text": ["Сначала собьёте здоровье зельем вреда или долгим падением."]},
             {"type": "ritual", "title": "Медный голем", "station": "ars_nouveau:glyph_dispel", "inputs": ["minecraft:copper_block"], "outputs": ["golem_logix:raw_copper_mind"],
              "condition": "Голем с 1-4 HP (из 12).",
-             "text": ["Медные големы — из Copper Age Backport или другого мода."]},
+             "text": ["Медный голем: вырезанная тыква на медном блоке."]},
             {"type": "ritual", "title": "Снежный голем", "station": "ars_nouveau:glyph_dispel", "inputs": ["minecraft:snow_block"], "outputs": ["golem_logix:raw_snow_mind"],
              "condition": "Голем с 1-3 HP — не с полным здоровьем!",
              "text": ["Хватит одного удара рукой."]},

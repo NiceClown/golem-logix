@@ -2,9 +2,9 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "D": { "item": "golem_logix:fluid_disk_4k" },
-    "P": { "item": "minecraft:packed_ice" },
-    "S": { "item": "golem_logix:flattened_cryo_substrate" }
+    "D": "golem_logix:fluid_disk_4k",
+    "P": "minecraft:packed_ice",
+    "S": "golem_logix:flattened_cryo_substrate"
   },
   "pattern": [
     "PSP",

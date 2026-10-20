@@ -17,7 +17,10 @@ repositories {
     maven {
         name = 'BlameJared'
         url = 'https://maven.blamejared.com/'
-        content { includeGroup 'mezz.jei' }
+        content {
+            includeGroup 'mezz.jei'
+            includeGroup 'net.mezzdev.config'   // JEI's config library (runtime only)
+        }
     }
     maven {
         name = 'Modrinth'

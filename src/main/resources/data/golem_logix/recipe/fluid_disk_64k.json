@@ -2,9 +2,9 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "B": { "item": "minecraft:blue_ice" },
-    "D": { "item": "golem_logix:fluid_disk_16k" },
-    "S": { "item": "golem_logix:flattened_cryo_substrate" }
+    "B": "minecraft:blue_ice",
+    "D": "golem_logix:fluid_disk_16k",
+    "S": "golem_logix:flattened_cryo_substrate"
   },
   "pattern": [
     "BSB",

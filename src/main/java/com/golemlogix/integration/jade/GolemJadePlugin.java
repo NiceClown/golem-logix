@@ -13,7 +13,7 @@ public class GolemJadePlugin implements IWailaPlugin {
     @Override
     public void register(IWailaCommonRegistration registration) {
         // channel numbers come from the server's network, as AE2 sends its grid state (also for blocks without a block entity)
-        registration.registerBlockDataProvider(ChannelProvider.INSTANCE, net.minecraft.world.level.block.Block.class);
+        registration.registerBlockDataProvider(ChannelProvider.Server.INSTANCE, net.minecraft.world.level.block.Block.class);
     }
 
     @Override

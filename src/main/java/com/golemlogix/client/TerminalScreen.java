@@ -92,23 +92,9 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     private final List<Row> rows = new ArrayList<>();
     private final Map<ItemStack, String> nameCache = new HashMap<>();
 
-    /** The window grows with the list (TerminalSize): this field stands for the base class's fixed imageHeight. */
-    private int imageHeight;
-
     public TerminalScreen(TerminalMenu menu, Inventory inv, Component title) {
         super(menu, inv, title, TerminalMenu.WIDTH, TerminalMenu.imageHeight(menu.crafting, menu.rows));
         this.crafting = menu.crafting;
-        this.imageHeight = TerminalMenu.imageHeight(crafting, menu.rows);
-    }
-
-    @Override
-    public int getImageHeight() {
-        return imageHeight;
-    }
-
-    @Override
-    protected boolean hasClickedOutside(double mx, double my, int xo, int yo) {
-        return mx < xo || my < yo || mx >= xo + imageWidth || my >= yo + imageHeight;
     }
 
     private int rows() {
@@ -148,7 +134,6 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         menu.relayout(wantedRows());
         this.imageHeight = TerminalMenu.imageHeight(crafting, rows());
         super.init();
-        this.topPos = (this.height - this.imageHeight) / 2;
         this.titleLabelX = TerminalMenu.LIST_X;
         this.titleLabelY = 6;
         this.inventoryLabelX = TerminalMenu.LIST_X;

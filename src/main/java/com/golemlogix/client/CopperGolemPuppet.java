@@ -26,7 +26,7 @@ import org.joml.Vector3f;
 
 /**
  * Copper golem "puppet" for block entity renderers (orbits around the core, the ring on the top face of the array).
- * The model and textures come from the Copper Age Backport mod (CC0): an 8x6x6 body, a wide head, a ball antenna, long arms.
+ * The model is the game's own copper golem (the same boxes) with its textures: an 8x6x6 body, a wide head, a ball antenna, long arms.
  * The puppet stands in an "upright" frame: feet at (0,0,0), head up (+Y), face looking forward (+Z).
  */
 public final class CopperGolemPuppet {
@@ -37,10 +37,10 @@ public final class CopperGolemPuppet {
     private static final Identifier[] EYES = new Identifier[4];
 
     static {
-        String[] prefix = {"", "exposed_", "weathered_", "oxidized_"};
+        String[] suffix = {"", "_exposed", "_weathered", "_oxidized"};
         for (int i = 0; i < 4; i++) {
-            TEXTURES[i] = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/" + prefix[i] + "copper_golem.png");
-            EYES[i] = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/" + prefix[i] + "copper_golem_eyes.png");
+            TEXTURES[i] = Identifier.withDefaultNamespace("textures/entity/copper_golem/copper_golem" + suffix[i] + ".png");
+            EYES[i] = Identifier.withDefaultNamespace("textures/entity/copper_golem/copper_golem_eyes" + suffix[i] + ".png");
         }
     }
 

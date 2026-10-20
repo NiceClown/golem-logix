@@ -2,9 +2,9 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "C": { "item": "minecraft:copper_ingot" },
-    "I": { "item": "minecraft:iron_ingot" },
-    "M": { "item": "golem_logix:flattened_copper_matrix" }
+    "C": "minecraft:copper_ingot",
+    "I": "minecraft:iron_ingot",
+    "M": "golem_logix:flattened_copper_matrix"
   },
   "pattern": [
     "III",

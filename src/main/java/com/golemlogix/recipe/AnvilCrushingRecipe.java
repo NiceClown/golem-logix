@@ -16,6 +16,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.crafting.PlacementInfo;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeBookCategories;
@@ -47,13 +48,13 @@ import java.util.Optional;
  * </pre>
  */
 public record AnvilCrushingRecipe(HolderSet<EntityType<?>> entity, List<String> entityIdContains, float minHealth, float maxHealth,
-                                  ItemStack result, Optional<Item> icon) implements Recipe<AnvilCrushingRecipe.Golem> {
+                                  ItemStackTemplate resultTemplate, Optional<Item> icon) implements Recipe<AnvilCrushingRecipe.Golem> {
     public static final MapCodec<AnvilCrushingRecipe> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             RegistryCodecs.homogeneousList(Registries.ENTITY_TYPE).fieldOf("entity").forGetter(AnvilCrushingRecipe::entity),
             Codec.STRING.listOf().optionalFieldOf("entity_id_contains", List.of()).forGetter(AnvilCrushingRecipe::entityIdContains),
             Codec.floatRange(0f, 1024f).optionalFieldOf("min_health", 0.5f).forGetter(AnvilCrushingRecipe::minHealth),
             Codec.floatRange(0f, 1024f).fieldOf("max_health").forGetter(AnvilCrushingRecipe::maxHealth),
-            ItemStack.CODEC.fieldOf("result").forGetter(AnvilCrushingRecipe::result),
+            ItemStackTemplate.CODEC.fieldOf("result").forGetter(AnvilCrushingRecipe::resultTemplate),
             BuiltInRegistries.ITEM.byNameCodec().optionalFieldOf("icon").forGetter(AnvilCrushingRecipe::icon)
     ).apply(i, AnvilCrushingRecipe::new));
 
@@ -62,7 +63,7 @@ public record AnvilCrushingRecipe(HolderSet<EntityType<?>> entity, List<String> 
             ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), AnvilCrushingRecipe::entityIdContains,
             ByteBufCodecs.FLOAT, AnvilCrushingRecipe::minHealth,
             ByteBufCodecs.FLOAT, AnvilCrushingRecipe::maxHealth,
-            ItemStack.STREAM_CODEC, AnvilCrushingRecipe::result,
+            ItemStackTemplate.STREAM_CODEC, AnvilCrushingRecipe::resultTemplate,
             ByteBufCodecs.optional(ByteBufCodecs.registry(Registries.ITEM)), AnvilCrushingRecipe::icon,
             AnvilCrushingRecipe::new);
 
@@ -83,6 +84,11 @@ public record AnvilCrushingRecipe(HolderSet<EntityType<?>> entity, List<String> 
         public boolean isEmpty() {
             return false;
         }
+    }
+
+    /** What the ritual makes (a fresh stack: recipes keep templates, items get their components only after loading). */
+    public ItemStack result() {
+        return resultTemplate.create();
     }
 
     /** The ritual for this entity's kind (whatever its health), or null. */
@@ -130,7 +136,7 @@ public record AnvilCrushingRecipe(HolderSet<EntityType<?>> entity, List<String> 
 
     @Override
     public ItemStack assemble(Golem input) {
-        return result.copy();
+        return result();
     }
 
     @Override

@@ -1,12 +1,17 @@
 {
   "type": "golem_logix:saturator",
   "ingredient": [
-    {"item": "minecraft:copper_block"},
-    {"item": "minecraft:cut_copper"},
-    {"item": "minecraft:waxed_copper_block"}
+    "minecraft:copper_block",
+    "minecraft:cut_copper",
+    "minecraft:waxed_copper_block"
   ],
-  "result": {"id": "golem_logix:flattened_copper_matrix", "count": 2},
-  "hand_result": {"id": "golem_logix:flattened_copper_matrix"},
+  "result": {
+    "id": "golem_logix:flattened_copper_matrix",
+    "count": 2
+  },
+  "hand_result": {
+    "id": "golem_logix:flattened_copper_matrix"
+  },
   "source": 1000,
   "ticks": 100
 }

@@ -1,20 +1,16 @@
 {
-    "key":  {
-                "S":  {
-                          "item":  "golem_logix:flattened_cryo_substrate"
-                      },
-                "G":  {
-                          "item":  "minecraft:glass"
-                      }
-            },
-    "pattern":  [
-                    "GGG",
-                    " S ",
-                    "GGG"
-                ],
-    "result":  {
-                   "count":  8,
-                   "id":  "golem_logix:basic_snow_pipe"
-               },
-    "type":  "minecraft:crafting_shaped"
+  "key": {
+    "S": "golem_logix:flattened_cryo_substrate",
+    "G": "minecraft:glass"
+  },
+  "pattern": [
+    "GGG",
+    " S ",
+    "GGG"
+  ],
+  "result": {
+    "count": 8,
+    "id": "golem_logix:basic_snow_pipe"
+  },
+  "type": "minecraft:crafting_shaped"
 }

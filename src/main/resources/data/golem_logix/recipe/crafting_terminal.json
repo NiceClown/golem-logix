@@ -1,18 +1,12 @@
 {
-    "ingredients":  [
-                        {
-                            "item":  "golem_logix:analog_terminal"
-                        },
-                        {
-                            "item":  "minecraft:crafting_table"
-                        },
-                        {
-                            "item":  "golem_logix:flattened_iron_core"
-                        }
-                    ],
-    "result":  {
-                   "count":  1,
-                   "id":  "golem_logix:crafting_terminal"
-               },
-    "type":  "minecraft:crafting_shapeless"
+  "ingredients": [
+    "golem_logix:analog_terminal",
+    "minecraft:crafting_table",
+    "golem_logix:flattened_iron_core"
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:crafting_terminal"
+  },
+  "type": "minecraft:crafting_shapeless"
 }

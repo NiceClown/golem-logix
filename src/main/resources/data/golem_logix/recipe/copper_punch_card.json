@@ -1,15 +1,11 @@
 {
-    "ingredients":  [
-                        {
-                            "item":  "minecraft:paper"
-                        },
-                        {
-                            "item":  "golem_logix:flattened_copper_matrix"
-                        }
-                    ],
-    "result":  {
-                   "count":  24,
-                   "id":  "golem_logix:copper_punch_card"
-               },
-    "type":  "minecraft:crafting_shapeless"
+  "ingredients": [
+    "minecraft:paper",
+    "golem_logix:flattened_copper_matrix"
+  ],
+  "result": {
+    "count": 24,
+    "id": "golem_logix:copper_punch_card"
+  },
+  "type": "minecraft:crafting_shapeless"
 }
