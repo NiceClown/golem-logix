@@ -36,6 +36,9 @@ public class ModMenus {
     public static final Supplier<MenuType<MainframeMenu>> MAINFRAME =
             MENUS.register("cryo_mainframe", () -> IMenuTypeExtension.create(MainframeMenu::fromNetwork));
 
+    public static final Supplier<MenuType<com.golemlogix.menu.DistillationTowerMenu>> DISTILLATION_TOWER =
+            MENUS.register("cryo_distillation_tower", () -> IMenuTypeExtension.create(com.golemlogix.menu.DistillationTowerMenu::fromNetwork));
+
     public static final Supplier<MenuType<CardCatalogMenu>> CARD_CATALOG =
             MENUS.register("punch_card_catalog", () -> IMenuTypeExtension.create(CardCatalogMenu::fromNetwork));
 

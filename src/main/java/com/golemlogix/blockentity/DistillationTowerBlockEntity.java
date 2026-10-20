@@ -72,6 +72,10 @@ public class DistillationTowerBlockEntity extends BlockEntity {
             return FluidStack.EMPTY;
         }
     };
+    private final com.golemlogix.upgrade.UpgradeContainer upgrades =
+            new com.golemlogix.upgrade.UpgradeContainer(com.golemlogix.upgrade.UpgradeSpec.DISTILLATION, this);
+    /** What the last batch ran into: 0 = no blood, 1 = working, 2 = no jar with room beside the tower (for the window). */
+    private int status;
     private double carry;
     private boolean working;
     private long lastWork = -100;
@@ -127,13 +131,15 @@ public class DistillationTowerBlockEntity extends BlockEntity {
     /** One batch: as much blood as the rate allows, the tank holds and the jars around can take. */
     void distil(long now) {
         if (tank.isEmpty()) {
+            status = 0;
             return;
         }
         double perMb = GolemConfig.DISTILL_SOURCE_PER_MB.get();
-        int budget = Math.max(1, GolemConfig.DISTILL_RATE.get() * PERIOD / 20);
+        int budget = Math.max(1, rate() * PERIOD / 20);
         var cells = DistillationTowerBlock.cells(worldPosition);
         int room = SourceHelper.fillAround(level, cells, Integer.MAX_VALUE, true);
         if (room <= 0) {
+            status = 2;
             return;
         }
         int byRoom = (int) Math.floor((room - carry) / perMb + 1e-9);
@@ -147,8 +153,50 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         carry = made - give;
         SourceHelper.fillAround(level, cells, give, false);
         lastWork = now;
+        status = 1;
         if (now % 40 < PERIOD) {
             level.playSound(null, worldPosition.above(), SoundEvents.BREWING_STAND_BREW, SoundSource.BLOCKS, 0.35f, 0.6f);
+        }
+    }
+
+    public com.golemlogix.upgrade.UpgradeContainer getUpgrades() {
+        return upgrades;
+    }
+
+    /** Blood a second: the base rate and the co-processors' share. */
+    public int rate() {
+        return GolemConfig.DISTILL_RATE.get() + GolemConfig.DISTILL_COPROCESSOR_BONUS.get() * upgrades.count(com.golemlogix.upgrade.UpgradeType.SPEED);
+    }
+
+    /** The window's numbers: blood mB, mB a second, Source a second x10, status, co-processors. */
+    public net.minecraft.world.inventory.ContainerData menuData() {
+        return new net.minecraft.world.inventory.ContainerData() {
+            @Override
+            public int get(int index) {
+                return switch (index) {
+                    case 0 -> tank.getFluidAmount();
+                    case 1 -> rate();
+                    case 2 -> (int) Math.round(rate() * GolemConfig.DISTILL_SOURCE_PER_MB.get() * 10);
+                    case 3 -> tank.isEmpty() ? 0 : status;
+                    case 4 -> upgrades.count(com.golemlogix.upgrade.UpgradeType.SPEED);
+                    default -> 0;
+                };
+            }
+
+            @Override
+            public void set(int index, int value) {
+            }
+
+            @Override
+            public int getCount() {
+                return 5;
+            }
+        };
+    }
+
+    public void dropContents() {
+        if (level != null) {
+            net.minecraft.world.Containers.dropContents(level, worldPosition, upgrades);
         }
     }
 
@@ -182,6 +230,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         super.saveAdditional(tag, registries);
         tag.put("Tank", tank.writeToNBT(registries, new CompoundTag()));
         tag.putDouble("Carry", carry);
+        tag.put("Upgrades", upgrades.createTag(registries));
     }
 
     @Override
@@ -189,6 +238,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         super.loadAdditional(tag, registries);
         tank.readFromNBT(registries, tag.getCompound("Tank"));
         carry = tag.getDouble("Carry");
+        upgrades.fromTag(tag.getList("Upgrades", net.minecraft.nbt.Tag.TAG_COMPOUND), registries);
     }
 
     @Override

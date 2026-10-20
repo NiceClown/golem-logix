@@ -3819,6 +3819,18 @@ public class GolemGameTests {
         var top = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.BLOCK,
                 helper.absolutePos(base.above(2)), Direction.UP);
         helper.assertTrue(top != null, "the head takes fluids too");
+        // Compressed Co-Processors speed it up: up to four, nothing else goes into those slots
+        var up = tower.getUpgrades();
+        int baseRate = tower.rate();
+        ItemStack copro = new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get());
+        helper.assertTrue(up.getContainerSize() == 4 && !up.canPlaceItem(0, new ItemStack(ModItems.FUZZY_CARD.get())),
+                "four slots, co-processors only");
+        for (int i = 0; i < 4; i++) {
+            helper.assertTrue(up.canPlaceItem(i, copro), "co-processor " + (i + 1) + " fits");
+            up.setItem(i, copro.copy());
+        }
+        helper.assertTrue(tower.rate() == baseRate + 4 * com.golemlogix.config.GolemConfig.DISTILL_COPROCESSOR_BONUS.get(),
+                "four co-processors: " + baseRate + " -> " + tower.rate() + " mB a second");
         helper.assertTrue(top.fill(new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000), exec) == 0,
                 "water is no blood");
         net.minecraft.world.level.material.Fluid blood = net.minecraft.core.registries.BuiltInRegistries.FLUID
@@ -3839,7 +3851,7 @@ public class GolemGameTests {
         helper.runAfterDelay(70, () -> {
             if (poured != null) {
                 int left = tower.blood().getAmount();
-                helper.assertTrue(left < 1000 && left > 0, "the tower distils at its pace: " + left + " mB left");
+                helper.assertTrue(left <= 800 && left > 0, "with the co-processors the tower distils fast: " + left + " mB left");
                 double perMb = com.golemlogix.config.GolemConfig.DISTILL_SOURCE_PER_MB.get();
                 helper.assertTrue(jar.available() == (int) Math.floor((1000 - left) * perMb + 1e-9),
                         "the jar got " + jar.available() + " Source for " + (1000 - left) + " mB");

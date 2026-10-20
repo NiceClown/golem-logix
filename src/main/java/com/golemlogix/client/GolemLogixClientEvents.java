@@ -78,6 +78,7 @@ public class GolemLogixClientEvents {
         event.register(ModMenus.RECIPE_MONITOR.get(), RecipeMonitorScreen::new);
         event.register(ModMenus.INTERFACE.get(), InterfaceScreen::new);
         event.register(ModMenus.MAINFRAME.get(), MainframeScreen::new);
+        event.register(ModMenus.DISTILLATION_TOWER.get(), DistillationTowerScreen::new);
         event.register(ModMenus.CARD_CATALOG.get(), CardCatalogScreen::new);
         event.register(ModMenus.CONCENTRATOR.get(), ConcentratorScreen::new);
         event.register(ModMenus.TELEGRAPH.get(), TelegraphScreen::new);

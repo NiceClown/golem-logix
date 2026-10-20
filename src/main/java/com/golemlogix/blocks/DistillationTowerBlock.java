@@ -166,13 +166,25 @@ public class DistillationTowerBlock extends Block implements EntityBlock {
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
 
+    /** An empty hand opens the window: the tank, the pace and the co-processor slots. */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         DistillationTowerBlockEntity be = entityOf(level, pos, state);
         if (!level.isClientSide() && be != null) {
-            player.displayClientMessage(be.statusLine(), true);
+            player.openMenu(new net.minecraft.world.SimpleMenuProvider(
+                    (id, inv, p) -> new com.golemlogix.menu.DistillationTowerMenu(id, inv, be.getUpgrades(), be.menuData(),
+                            net.minecraft.world.inventory.ContainerLevelAccess.create(level, be.getBlockPos())),
+                    Component.translatable("block.golem_logix.cryo_distillation_tower")), buf -> buf.writeBlockPos(be.getBlockPos()));
         }
         return InteractionResult.sidedSuccess(level.isClientSide());
+    }
+
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
+        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof DistillationTowerBlockEntity be) {
+            be.dropContents();
+        }
+        super.onRemove(state, level, pos, newState, isMoving);
     }
 
     @Nullable

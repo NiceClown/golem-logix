@@ -14,6 +14,8 @@ public record UpgradeSpec(int slots, int maxSpeed, boolean crafting, boolean red
     public static final UpgradeSpec CALCULATOR = new UpgradeSpec(5, 4, false, true, false);
     /** Cryo-Mainframe: up to 6 Compressed Co-Processors (each with the mainframe multiplier, for all cores) and redstone. */
     public static final UpgradeSpec MAINFRAME = new UpgradeSpec(7, 6, false, true, false);
+    /** Cryo-Distillation Tower: up to 4 Compressed Co-Processors, each one distils faster. */
+    public static final UpgradeSpec DISTILLATION = new UpgradeSpec(4, 4, false, false, false);
     /** Periscope and Pattern Provider: redstone only. */
     public static final UpgradeSpec REDSTONE_ONLY = new UpgradeSpec(1, 0, false, true, false);
 

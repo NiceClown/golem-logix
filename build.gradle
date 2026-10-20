@@ -31,7 +31,7 @@ repositories {
 }
 
 base {
-    archivesName = 'golem_logix'
+    archivesName = 'golem_logix-1.21.1'
 }
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)

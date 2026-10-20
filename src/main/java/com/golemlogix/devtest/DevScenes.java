@@ -620,6 +620,8 @@ final class DevScenes {
                     c = p.getUpgrades();
                 } else if (be instanceof com.golemlogix.blockentity.InterfaceBlockEntity p) {
                     c = p.getUpgrades();
+                } else if (be instanceof com.golemlogix.blockentity.DistillationTowerBlockEntity p) {
+                    c = p.getUpgrades();
                 } else {
                     throw new IllegalStateException("no machine with upgrades at " + pos(a, 0));
                 }

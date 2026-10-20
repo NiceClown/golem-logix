@@ -116,7 +116,7 @@ public class CryoJarRenderer implements BlockEntityRenderer<CryoJarBlockEntity> 
         // the golem on its bracket at the right side, its hands on the wheel; now and then it gives it a turn
         float turn = turnAngle(time, charged);
         wheel(vc, pose, 0.6f, 14.2f, 2.8f, 2.1f, turn, light);
-        box(vc, p, -3.4f, 10.6f, 1.2f, 0.6f, 11.2f, 4.4f, DARK, WHITE, light);
+        platform(vc, pose, -3.4f, 2.0f, 10.6f, 1.2f, 4.4f, 6.8f, 0.8f, light);
         float reach = charged ? -1.15f + 0.12f * Mth.sin(turn * Mth.DEG_TO_RAD) : -0.9f;
         CopperGolemPuppet.Arms arms = new CopperGolemPuppet.Arms(reach, 0.2f, reach, -0.2f, 0.15f * Mth.sin(time * 0.017f));
         CopperGolemPuppet.render(pose, buffers, light, new Vector3f(-1.8f / 16f, 11.2f / 16f, 2.8f / 16f), new Vector3f(1f, 0f, 0f),
@@ -142,6 +142,28 @@ public class CryoJarRenderer implements BlockEntityRenderer<CryoJarBlockEntity> 
         float k = cycle - (float) Math.floor(cycle);
         float ease = k < 0.25f ? Mth.sin(k / 0.25f * Mth.HALF_PI) : 1f;
         return ((float) Math.floor(cycle) + ease) * 90f;
+    }
+
+    /**
+     * The golem's little platform on the machine's right side and what holds it: a dark grated deck from x0 out to the frame at x1
+     * (y = its top), a brass bracket plate bolted to the frame, and two brass struts from the deck's outer edge down to the plinth
+     * (at y footY, x footX), so it does not hang in the air.
+     */
+    static void platform(VertexConsumer vc, PoseStack pose, float x0, float x1, float y, float z0, float z1, float footY, float footX,
+                         int light) {
+        PoseStack.Pose p = pose.last();
+        box(vc, p, x0, y - 0.6f, z0, x1, y, z1, DARK, WHITE, light);
+        box(vc, p, x0 - 0.2f, y - 0.8f, z0 - 0.2f, x0 + 0.6f, y + 0.2f, z1 + 0.2f, BRASS, WHITE, light);
+        // the bracket plate on the frame with two bolts
+        box(vc, p, x1 - 0.5f, y - 2.4f, z0 + 0.2f, x1, y + 0.6f, z1 - 0.2f, BRASS, 0xFFD8B880, light);
+        for (float z : new float[]{z0 + 0.8f, z1 - 1.2f}) {
+            box(vc, p, x1 - 0.8f, y - 1.6f, z, x1 - 0.4f, y - 1.2f, z + 0.4f, DARK, WHITE, light);
+        }
+        // two struts from under the deck's outer edge down to the plinth
+        for (float z : new float[]{z0 + 0.5f, z1 - 0.5f}) {
+            CryoMainframeRenderer.limb(vc, pose, new Vector3f(x0 + 0.6f, y - 0.6f, z), new Vector3f(footX, footY, z), 0.55f, BRASS, light);
+        }
+        box(vc, p, footX - 0.3f, footY - 0.5f, z0 + 0.1f, footX + 0.3f, footY + 0.5f, z1 - 0.1f, BRASS, 0xFFC8A060, light);
     }
 
     /** A brass hand wheel in the YZ plane (its axle along X) at x, centred at (y, z), turned by angle degrees. */

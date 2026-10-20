@@ -30,6 +30,7 @@ public final class GolemConfig {
     public static final ModConfigSpec.IntValue CRYO_JAR_CAPACITY;
     public static final ModConfigSpec.IntValue DISTILL_RATE;
     public static final ModConfigSpec.DoubleValue DISTILL_SOURCE_PER_MB;
+    public static final ModConfigSpec.IntValue DISTILL_COPROCESSOR_BONUS;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -95,6 +96,8 @@ public final class GolemConfig {
                 .defineInRange("cryoJarCapacity", 10000, 100, 10000000);
         DISTILL_RATE = b.comment("Blood (mB) a Cryo-Distillation Tower distils every second.")
                 .defineInRange("distillRate", 20, 1, 100000);
+        DISTILL_COPROCESSOR_BONUS = b.comment("Extra blood (mB a second) each Compressed Co-Processor in the tower distils.")
+                .defineInRange("distillCoprocessorBonus", 20, 0, 100000);
         DISTILL_SOURCE_PER_MB = b.comment("Source the tower makes from 1 mB of blood (Essentia Vitae, or any fluid in the tag",
                         "golem_logix:cryo_distillable).")
                 .defineInRange("distillSourcePerMb", 1.0D, 0.001D, 1000.0D);

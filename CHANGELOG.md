@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.0.0 — The tower window; the last big release for 1.21.1
+
+From 2.0.0 the main line of Golem Logix is Minecraft 26.1.2 (see its own changelog in the main branch). This 1.21.1 build stays
+for critical fixes only; jars are now named after the game version (`golem_logix-1.21.1-2.0.0.jar`).
+
+- **The Cryo-Distillation Tower has a window** (right-click with an empty hand): the blood tank, the pace (mB of blood and Source a
+  second), what it is doing (distilling, no blood, no jar with room). A column of **four slots for Compressed Co-Processors**: each
+  one distils 20 mB more a second (config `distillCoprocessorBonus`), so four make the tower five times faster for a hungry
+  network. They drop when the tower is broken.
+- **The golems' platforms are mounted**: on the tower and the Cryo-Source Jar the little platform reaches the frame, is bolted to it
+  with a brass bracket and rests on two brass struts down to the plinth.
+
 ## 1.1.9 — Cryo-Distillation: Source from blood
 
 Source without Ars Nouveau (for packs and versions where it is not there), with Neo Vitae. Ars Nouveau jars keep working: both feed

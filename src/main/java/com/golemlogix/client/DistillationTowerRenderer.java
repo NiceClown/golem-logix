@@ -107,7 +107,7 @@ public class DistillationTowerRenderer implements BlockEntityRenderer<Distillati
         box(vc, p, -0.6f, 14.4f, 3.2f, 0.8f, 34f, 4.6f, COPPER, WHITE, light);
         float turn = work > 0.05f ? phase * 14f : 0f;
         CryoJarRenderer.wheel(vc, pose, -1.2f, 24f, 3.9f, 2.4f, turn, light);
-        box(vc, p, -5f, 17.4f, 2.2f, -0.6f, 18f, 5.8f, DARK, WHITE, light);
+        CryoJarRenderer.platform(vc, pose, -5f, 1.2f, 17.4f, 2.2f, 5.8f, 13.6f, 0.2f, light);
 
         // ---- the head: louvred brass under snow, icicles, the outlet bent to the right
         box(vc, p, 1.6f, 34.4f, 1.6f, 14.4f, 44f, 14.4f, BRASS, 0xFFD8B880, lightTop);
