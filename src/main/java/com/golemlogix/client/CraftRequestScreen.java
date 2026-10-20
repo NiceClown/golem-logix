@@ -4,7 +4,7 @@ import com.golemlogix.menu.TerminalMenu;
 import com.golemlogix.network.CraftPlanPayload;
 import com.golemlogix.network.CraftRequestPayload;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -102,7 +102,7 @@ public class CraftRequestScreen extends Screen {
         lastRequest = nextRequest++;
         lastAmount = value();
         scroll = 0;
-        PacketDistributor.sendToServer(new CraftRequestPayload(menu.containerId, key, value(), true, lastRequest));
+        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new CraftRequestPayload(menu.containerId, key, value(), true, lastRequest));
     }
 
     /** Fresh plan (the answer to the last request), or null while the server is computing. */
@@ -125,7 +125,7 @@ public class CraftRequestScreen extends Screen {
         }
         startRequest = nextRequest++;
         lastRequest = startRequest;
-        PacketDistributor.sendToServer(new CraftRequestPayload(menu.containerId, key, value(), false, startRequest));
+        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new CraftRequestPayload(menu.containerId, key, value(), false, startRequest));
     }
 
     @Override
@@ -159,8 +159,8 @@ public class CraftRequestScreen extends Screen {
 
     /** Background: the world blur (Screen.render calls it itself) and the panel, before buttons and labels so the blur does not touch them. */
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.renderBackground(g, mouseX, mouseY, partialTick);
+    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        super.extractBackground(g, mouseX, mouseY, partialTick);
         GolemGui.panel(g, left, top, W, H);
         GolemGui.slot(g, left + 8, top + 28);
         GolemGui.inset(g, left + 30, top + 30, 62, 16);
@@ -182,17 +182,17 @@ public class CraftRequestScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         startButton.active = canStart();
-        super.render(g, mouseX, mouseY, partialTick);
-        g.drawString(font, title, left + 8, top + 7, GolemGui.PARCHMENT, false);
-        g.renderItem(key, left + 9, top + 29);
-        g.drawString(font, font.plainSubstrByWidth(key.getHoverName().getString(), W - 104), left + 98, top + 34, GolemGui.CYAN, false);
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
+        g.text(font, title, left + 8, top + 7, GolemGui.PARCHMENT, false);
+        g.item(key, left + 9, top + 29);
+        g.text(font, font.plainSubstrByWidth(key.getHoverName().getString(), W - 104), left + 98, top + 34, GolemGui.CYAN, false);
 
         CraftPlanPayload p = plan();
         int hy = top + 72;
         if (p == null) {
-            g.drawString(font, Component.translatable("gui.golem_logix.plan.calculating"), left + 8, hy, 0xFF8A7A60, false);
+            g.text(font, Component.translatable("gui.golem_logix.plan.calculating"), left + 8, hy, 0xFF8A7A60, false);
             return;
         }
         int statusColor = switch (p.status()) {
@@ -202,7 +202,7 @@ public class CraftRequestScreen extends Screen {
         Component head = p.status() == CraftPlanPayload.Status.OK
                 ? Component.translatable("gui.golem_logix.plan.summary", p.steps(), GolemGui.formatCount(p.executions()))
                 : Component.translatable(p.status().key());
-        g.drawString(font, font.plainSubstrByWidth(head.getString(), W - 16), left + 8, hy, statusColor, false);
+        g.text(font, font.plainSubstrByWidth(head.getString(), W - 16), left + 8, hy, statusColor, false);
 
         List<CraftPlanPayload.Entry> entries = p.entries();
         if (entries.isEmpty()) {
@@ -222,12 +222,12 @@ public class CraftRequestScreen extends Screen {
                     g.fill(x, y, x + CELL_W - 1, y + CELL_H - 1, 0x40E05A4F);
                 }
                 if (!FluidIcons.drawGhost(g, font, e.stack(), x + 3, y + 4, false)) {
-                    g.renderItem(e.stack(), x + 3, y + 4);
+                    g.item(e.stack(), x + 3, y + 4);
                 }
                 List<Component> lines = cellLines(e);
                 for (int k = 0; k < Math.min(2, lines.size()); k++) {
                     Component line = lines.get(k);
-                    g.drawString(font, line, x + 22, y + 3 + k * 10, line.getStyle().getColor() == null ? GolemGui.PARCHMENT
+                    g.text(font, line, x + 22, y + 3 + k * 10, line.getStyle().getColor() == null ? GolemGui.PARCHMENT
                             : line.getStyle().getColor().getValue() | 0xFF000000, false);
                 }
                 if (mouseX >= x && mouseX < x + CELL_W && mouseY >= y && mouseY < y + CELL_H) {
@@ -247,7 +247,7 @@ public class CraftRequestScreen extends Screen {
             if (hovered.missing() > 0) {
                 tip.add(Component.translatable("gui.golem_logix.plan.tip.missing", hovered.missing()).withStyle(ChatFormatting.RED));
             }
-            g.renderComponentTooltip(font, tip, mouseX, mouseY);
+            g.setComponentTooltipForNextFrame(font, tip, mouseX, mouseY);
         }
     }
 

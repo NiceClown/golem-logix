@@ -3,7 +3,7 @@ package com.golemlogix.client;
 import com.golemlogix.blockentity.InterfaceBlockEntity;
 import com.golemlogix.menu.InterfaceMenu;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
@@ -99,7 +99,7 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
             return true;
         }
         int c = hoveredConfig();
-        if (c >= 0 && menu.getCarried().isEmpty() && !hasShiftDown()) {
+        if (c >= 0 && menu.getCarried().isEmpty() && !net.minecraft.client.Minecraft.getInstance().hasShiftDown()) {
             // an empty hand on a slot opens the settings window (the click does not go to the server: there is nothing to take from a ghost slot)
             if (hasGear(c) && (button == 0 || button == 1)) {
                 openSlot(c);
@@ -119,7 +119,7 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
     }
 
     @Override
-    protected void renderExtraBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
+    protected void renderExtraBg(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
         for (int y : new int[]{InterfaceMenu.CONFIG_Y, InterfaceMenu.STOCK_Y, InterfaceMenu.INBOX_Y}) {
             GolemGui.inset(g, leftPos + 6, topPos + y - 2, 164, 20);
         }
@@ -149,13 +149,13 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
         }
     }
 
-    private static void box(GuiGraphics g, int x, int y, boolean hover) {
+    private static void box(GuiGraphicsExtractor g, int x, int y, boolean hover) {
         g.fill(x, y, x + BOX, y + BOX, 0xFF1A0F08);
         g.fill(x + 1, y + 1, x + BOX - 1, y + BOX - 1, hover ? GolemGui.BRASS_L : GolemGui.BRASS_DARK);
     }
 
     /** A 6x6 gear: teeth at the corners and sides, a hole in the middle. */
-    private static void gear(GuiGraphics g, int x, int y, int color) {
+    private static void gear(GuiGraphicsExtractor g, int x, int y, int color) {
         String[] rows = {"X.XX.X", ".XXXX.", "XX..XX", "XX..XX", ".XXXX.", "X.XX.X"};
         for (int r = 0; r < rows.length; r++) {
             for (int c = 0; c < rows[r].length(); c++) {
@@ -167,7 +167,7 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
     }
 
     @Override
-    protected void renderOverlay(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
+    protected void renderOverlay(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
         // fluid stock in the output row: the container drawn translucent and how many buckets
         for (int i = 0; i < InterfaceBlockEntity.SLOTS; i++) {
             if (!menu.isFluidSlot(i)) {
@@ -177,7 +177,7 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
             int x = leftPos + 8 + i * 18, y = topPos + InterfaceMenu.STOCK_Y;
             int amount = menu.fluidAmount(i);
             if (amount > 0 && !FluidIcons.drawGhost(g, font, icon, x, y, false)) {
-                g.renderItem(icon.copyWithCount(1), x, y);
+                g.item(icon.copyWithCount(1), x, y);
             }
             String text = amount >= 1000 ? InterfaceSlotScreen.bucketText(amount) : amount + "";
             small(g, text, x, y, amount > 0 ? 0xFF96F2EE : 0xFF6A7480);
@@ -191,20 +191,20 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
     }
 
     /** Small label in the bottom right corner of a slot (over the item). */
-    private void small(GuiGraphics g, String text, int x, int y, int color) {
-        g.pose().pushPose();
-        g.pose().translate(0, 0, 300);
-        g.pose().scale(0.5f, 0.5f, 1f);
-        g.drawString(font, text, (x + 17) * 2 - font.width(text), (y + 12) * 2, color, true);
-        g.pose().popPose();
+    private void small(GuiGraphicsExtractor g, String text, int x, int y, int color) {
+        g.pose().pushMatrix();
+        g.pose().translate(0, 0);
+        g.pose().scale(0.5f, 0.5f);
+        g.text(font, text, (x + 17) * 2 - font.width(text), (y + 12) * 2, color, true);
+        g.pose().popMatrix();
     }
 
     @Override
-    protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
-        super.renderLabels(g, mouseX, mouseY);
-        g.drawString(font, Component.translatable("gui.golem_logix.interface.keep"), 8, InterfaceMenu.CONFIG_Y - 11, GolemGui.CYAN, false);
-        g.drawString(font, Component.translatable("gui.golem_logix.interface.stock"), 8, InterfaceMenu.STOCK_Y - 11, GolemGui.CYAN, false);
-        g.drawString(font, Component.translatable("gui.golem_logix.interface.inbox"), 8, InterfaceMenu.INBOX_Y - 11, GolemGui.CYAN, false);
+    protected void extractLabels(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+        super.extractLabels(g, mouseX, mouseY);
+        g.text(font, Component.translatable("gui.golem_logix.interface.keep"), 8, InterfaceMenu.CONFIG_Y - 11, GolemGui.CYAN, false);
+        g.text(font, Component.translatable("gui.golem_logix.interface.stock"), 8, InterfaceMenu.STOCK_Y - 11, GolemGui.CYAN, false);
+        g.text(font, Component.translatable("gui.golem_logix.interface.inbox"), 8, InterfaceMenu.INBOX_Y - 11, GolemGui.CYAN, false);
         // how much to keep, as a number on the config slot (the ghost itself is always 1)
         for (int i = 0; i < InterfaceBlockEntity.SLOTS; i++) {
             if (menu.configItem(i).isEmpty()) {
@@ -215,16 +215,16 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
                 small(g, n >= 1000 ? InterfaceSlotScreen.bucketText(n) : n + "", x, y, 0xFF96F2EE);
             } else if (n > 1) {
                 String s = Integer.toString(n);
-                g.pose().pushPose();
-                g.pose().translate(0, 0, 300);
-                g.drawString(font, s, x + 17 - font.width(s), y + 9, 0xFFFFFFFF, true);
-                g.pose().popPose();
+                g.pose().pushMatrix();
+                g.pose().translate(0, 0);
+                g.text(font, s, x + 17 - font.width(s), y + 9, 0xFFFFFFFF, true);
+                g.pose().popMatrix();
             }
         }
     }
 
     @Override
-    protected void renderTooltip(GuiGraphics g, int mouseX, int mouseY) {
+    protected void extractTooltip(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         int c = hoveredConfig();
         if (c >= 0 && menu.getCarried().isEmpty() && hoveredSlot.hasItem()) {
             ItemStack stack = hoveredSlot.getItem();
@@ -233,24 +233,24 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
             lines.add(Component.translatable("gui.golem_logix.interface.keep_amount",
                     menu.isFluidSlot(c) ? n + " mB (" + InterfaceSlotScreen.bucketText(n) + ")" : Integer.toString(n)).withStyle(ChatFormatting.AQUA));
             lines.add(Component.translatable("gui.golem_logix.interface.slot_hint").withStyle(ChatFormatting.DARK_GRAY));
-            g.renderTooltip(font, lines, stack.getTooltipImage(), mouseX, mouseY);
+            g.setTooltipForNextFrame(font, lines, stack.getTooltipImage(), mouseX, mouseY);
             return;
         }
         if (c >= 0 && menu.getCarried().isEmpty()) {
-            g.renderComponentTooltip(font, List.of(Component.translatable("gui.golem_logix.interface.keep"),
+            g.setComponentTooltipForNextFrame(font, List.of(Component.translatable("gui.golem_logix.interface.keep"),
                     Component.translatable("gui.golem_logix.interface.empty_hint").withStyle(ChatFormatting.GRAY)), mouseX, mouseY);
             return;
         }
         if (hoveredSlot != null && !hoveredSlot.hasItem() && menu.getCarried().isEmpty()
                 && hoveredSlot.index >= 2 * InterfaceBlockEntity.SLOTS && hoveredSlot.index < 3 * InterfaceBlockEntity.SLOTS) {
-            g.renderComponentTooltip(font, List.of(Component.translatable("gui.golem_logix.interface.inbox"),
+            g.setComponentTooltipForNextFrame(font, List.of(Component.translatable("gui.golem_logix.interface.inbox"),
                     Component.translatable("gui.golem_logix.interface.inbox.hint").withStyle(ChatFormatting.GRAY)), mouseX, mouseY);
             return;
         }
-        super.renderTooltip(g, mouseX, mouseY);
+        super.extractTooltip(g, mouseX, mouseY);
         int gi = hoveredGear(mouseX, mouseY);
         if (gi >= 0) {
-            g.renderComponentTooltip(font, List.of(Component.translatable("gui.golem_logix.interface.gear"),
+            g.setComponentTooltipForNextFrame(font, List.of(Component.translatable("gui.golem_logix.interface.gear"),
                     Component.translatable("gui.golem_logix.interface.gear.hint").withStyle(ChatFormatting.GRAY)), mouseX, mouseY);
             return;
         }
@@ -258,7 +258,7 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
         if (i >= 0) {
             var fluid = InterfaceBlockEntity.containedFluid(menu.configItem(i));
             boolean fluidMode = !menu.itemMode(i);
-            g.renderComponentTooltip(font, List.of(
+            g.setComponentTooltipForNextFrame(font, List.of(
                     Component.translatable(fluidMode ? "gui.golem_logix.interface.mode_fluid" : "gui.golem_logix.interface.mode_item"),
                     Component.translatable(fluidMode ? "gui.golem_logix.interface.mode_fluid.hint" : "gui.golem_logix.interface.mode_item.hint",
                             fluid.getHoverName()).withStyle(ChatFormatting.GRAY),

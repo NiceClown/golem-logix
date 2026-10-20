@@ -53,7 +53,7 @@ public class AnalogTerminalBlock extends HorizontalDirectionalBlock implements G
             GolemNetwork net = GolemNetwork.scan(level, pos);
             String err = net.accessError(pos);
             if (err != null) {
-                sp.displayClientMessage(Component.translatable(err), true);
+                sp.sendOverlayMessage(Component.translatable(err));
                 return InteractionResult.CONSUME;
             }
             BlockPos anchor = pos;

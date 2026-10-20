@@ -85,13 +85,19 @@ public class SchematicConcentratorBlockEntity extends BlockEntity {
         return tag;
     }
 
-    @Override
-    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
+    public void readUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
         clientOpen = tag.getBoolean("Open");
     }
 
     @Override
     public ClientboundBlockEntityDataPacket getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    // ---- 1.21.6+: the game's ValueInput/ValueOutput over the CompoundTag code above
+
+    @Override
+    public void handleUpdateTag(net.minecraft.world.level.storage.ValueInput input) {
+        readUpdateTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
     }
 }

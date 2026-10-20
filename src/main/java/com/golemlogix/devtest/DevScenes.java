@@ -80,14 +80,14 @@ final class DevScenes {
             case "netput" -> {
                 // netput x y z <item> <count>: put into the network (next to the block)
                 com.golemlogix.system.GolemNetwork network = com.golemlogix.system.GolemNetwork.scan(level, pos(a, 0));
-                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[3]));
+                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(a[3]));
                 ItemStack rest = network.insertItem(new ItemStack(item, Integer.parseInt(a[4])), false);
                 log.accept("netput " + a[3] + " x" + a[4] + " -> rest " + rest.getCount());
             }
             case "netcheck" -> {
                 // netcheck x y z <item> <expected count>
                 com.golemlogix.system.GolemNetwork network = com.golemlogix.system.GolemNetwork.scan(level, pos(a, 0));
-                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[3]));
+                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(a[3]));
                 long actual = network.itemCountOf(com.golemlogix.system.ItemKey.of(new ItemStack(item)));
                 log.accept((actual == Long.parseLong(a[4]) ? "OK" : "ERR") + " netcheck " + a[3] + " = " + actual + " (expected " + a[4] + ")");
             }
@@ -104,20 +104,20 @@ final class DevScenes {
             case "netfluidput" -> {
                 // netfluidput x y z <fluid> <mB>
                 com.golemlogix.system.GolemNetwork network = com.golemlogix.system.GolemNetwork.scan(level, pos(a, 0));
-                var fluid = net.minecraft.core.registries.BuiltInRegistries.FLUID.get(net.minecraft.resources.ResourceLocation.parse(a[3]));
+                var fluid = net.minecraft.core.registries.BuiltInRegistries.FLUID.get(net.minecraft.resources.Identifier.parse(a[3]));
                 int filled = network.insertFluid(new net.neoforged.neoforge.fluids.FluidStack(fluid, Integer.parseInt(a[4])), false);
                 log.accept("netfluidput " + a[3] + " -> " + filled);
             }
             case "carry" -> {
                 // carry <item> <count>: an item on the cursor of the open window (synced)
-                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[0]));
+                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(a[0]));
                 player.containerMenu.setCarried(new ItemStack(item, Integer.parseInt(a[1])));
                 player.containerMenu.broadcastChanges();
             }
             case "netfluid" -> {
                 // netfluid x y z <fluid> <expected mB>
                 com.golemlogix.system.GolemNetwork network = com.golemlogix.system.GolemNetwork.scan(level, pos(a, 0));
-                var fluid = net.minecraft.core.registries.BuiltInRegistries.FLUID.get(net.minecraft.resources.ResourceLocation.parse(a[3]));
+                var fluid = net.minecraft.core.registries.BuiltInRegistries.FLUID.get(net.minecraft.resources.Identifier.parse(a[3]));
                 long actual = 0;
                 for (var f : network.listFluids()) {
                     if (f.getFluid() == fluid) {
@@ -138,7 +138,7 @@ final class DevScenes {
             }
             case "give" -> {
                 // give <item> <count> [slot]
-                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[0]));
+                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(a[0]));
                 player.getInventory().setItem(a.length > 2 ? Integer.parseInt(a[2]) : 0, new ItemStack(item, Integer.parseInt(a[1])));
             }
             case "fillnet" -> {
@@ -276,7 +276,7 @@ final class DevScenes {
                     BlockState s = com.golemlogix.system.CatalogStructure.fallback(i).defaultBlockState();
                     if (i == 14) {
                         s = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(
-                                net.minecraft.resources.ResourceLocation.withDefaultNamespace("oxidized_copper_golem_statue")).defaultBlockState();
+                                net.minecraft.resources.Identifier.withDefaultNamespace("oxidized_copper_golem_statue")).defaultBlockState();
                     } else if (i == 13) {
                         s = net.minecraft.world.level.block.Blocks.OXIDIZED_COPPER.defaultBlockState();
                     }
@@ -368,7 +368,7 @@ final class DevScenes {
             case "anvilput" -> {
                 // anvilput x y z <item>: put a blank on the anvil of an unassembled saturator
                 if (level.getBlockEntity(pos(a, 0)) instanceof com.golemlogix.blockentity.ManaSaturatorBlockEntity sat) {
-                    var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[3]));
+                    var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(a[3]));
                     sat.placeOnAnvil(new ItemStack(item));
                 }
             }
@@ -409,7 +409,7 @@ final class DevScenes {
                     throw new IllegalStateException("no saturator");
                 }
                 // a blank goes to the left deck (the golems will carry it), minecraft:air clears the anvil and the decks
-                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[3]));
+                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(a[3]));
                 ItemStack stack = new ItemStack(item, a.length > 4 ? Integer.parseInt(a[4]) : 1);
                 if (stack.isEmpty()) {
                     sat.setHeldItem(ItemStack.EMPTY);
@@ -487,7 +487,7 @@ final class DevScenes {
                 // itemnear x y z r <item> <expected count>: dropped items near the point
                 BlockPos at = pos(a, 0);
                 double r = Double.parseDouble(a[3]);
-                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[4]));
+                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(a[4]));
                 int n = 0;
                 for (var e : level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(at).inflate(r))) {
                     if (e.getItem().is(item)) {
@@ -500,7 +500,7 @@ final class DevScenes {
                 // mobcheck x y z r <entity> <expected count> [hp]: living mobs nearby (and their health)
                 BlockPos at = pos(a, 0);
                 double r = Double.parseDouble(a[3]);
-                var type = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(net.minecraft.resources.ResourceLocation.parse(a[4]));
+                var type = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(net.minecraft.resources.Identifier.parse(a[4]));
                 var list = level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, new net.minecraft.world.phys.AABB(at).inflate(r), e -> e.getType() == type && e.isAlive());
                 StringBuilder hp = new StringBuilder();
                 for (var e : list) {
@@ -526,7 +526,7 @@ final class DevScenes {
             case "craft" -> {
                 // craft x y z <item> <count>: an autocraft order on behalf of the player (a notification comes when it is ready)
                 com.golemlogix.system.GolemNetwork network = com.golemlogix.system.GolemNetwork.scan(level, pos(a, 0));
-                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[3]));
+                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(a[3]));
                 java.util.Map<com.golemlogix.system.ItemKey, Long> targets = new java.util.LinkedHashMap<>();
                 targets.put(com.golemlogix.system.ItemKey.of(new ItemStack(item)), Long.parseLong(a[4]));
                 var r = network.startCrafting(targets, player.getUUID(), null);
@@ -534,7 +534,7 @@ final class DevScenes {
             }
             case "netfluidcheck" -> {
                 // netfluidcheck x y z <fluid> <minimum mB>: how much fluid is in the network
-                var fluid = net.minecraft.core.registries.BuiltInRegistries.FLUID.get(net.minecraft.resources.ResourceLocation.parse(a[3]));
+                var fluid = net.minecraft.core.registries.BuiltInRegistries.FLUID.get(net.minecraft.resources.Identifier.parse(a[3]));
                 var network = com.golemlogix.system.GolemNetwork.scan(level, pos(a, 0));
                 int n = network.extractFluid(new net.neoforged.neoforge.fluids.FluidStack(fluid, 1), Integer.MAX_VALUE, true).getAmount();
                 log.accept((n >= Integer.parseInt(a[4]) ? "OK" : "ERR") + " netfluidcheck " + a[3] + " = " + n + " (at least " + a[4] + ")");
@@ -546,8 +546,8 @@ final class DevScenes {
             }
             case "fillfluid" -> {
                 // fillfluid x y z <fluid> <mB>: pour fluid into a block (another mod's tank) through its fluid handler
-                var fluid = net.minecraft.core.registries.BuiltInRegistries.FLUID.get(net.minecraft.resources.ResourceLocation.parse(a[3]));
-                var h = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.BLOCK, pos(a, 0),
+                var fluid = net.minecraft.core.registries.BuiltInRegistries.FLUID.get(net.minecraft.resources.Identifier.parse(a[3]));
+                var h = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.Fluid.BLOCK, pos(a, 0),
                         net.minecraft.core.Direction.UP);
                 int n = h == null ? -1 : h.fill(new net.neoforged.neoforge.fluids.FluidStack(fluid, Integer.parseInt(a[4])),
                         net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
@@ -555,8 +555,8 @@ final class DevScenes {
             }
             case "insertitem" -> {
                 // insertitem x y z <item> <count>: put items into a block (another mod's machine) through its item handler
-                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[3]));
-                var h = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, pos(a, 0),
+                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(a[3]));
+                var h = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.Item.BLOCK, pos(a, 0),
                         net.minecraft.core.Direction.UP);
                 ItemStack rest = h == null ? new ItemStack(item, Integer.parseInt(a[4]))
                         : net.neoforged.neoforge.items.ItemHandlerHelper.insertItem(h, new ItemStack(item, Integer.parseInt(a[4])), false);
@@ -569,18 +569,18 @@ final class DevScenes {
                 }
                 ItemStack ghost;
                 if (a[4].startsWith("fluid:")) {
-                    var fluid = net.minecraft.core.registries.BuiltInRegistries.FLUID.get(net.minecraft.resources.ResourceLocation.parse(a[4].substring(6)));
+                    var fluid = net.minecraft.core.registries.BuiltInRegistries.FLUID.get(net.minecraft.resources.Identifier.parse(a[4].substring(6)));
                     ghost = com.golemlogix.items.FluidGhostItem.of(new net.neoforged.neoforge.fluids.FluidStack(fluid, a.length > 5 ? Integer.parseInt(a[5]) : 250));
                 } else {
-                    ghost = new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[4])));
+                    ghost = new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(a[4])));
                 }
                 bus.getFilters().setItem(Integer.parseInt(a[3]), ghost);
                 log.accept("busfilter slot " + a[3] + " = " + a[4]);
             }
             case "fluidcheck" -> {
                 // fluidcheck x y z <fluid> <minimum mB>: how much of this fluid is in the block (in all its tanks)
-                var fluid = net.minecraft.core.registries.BuiltInRegistries.FLUID.get(net.minecraft.resources.ResourceLocation.parse(a[3]));
-                var h = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.BLOCK, pos(a, 0), null);
+                var fluid = net.minecraft.core.registries.BuiltInRegistries.FLUID.get(net.minecraft.resources.Identifier.parse(a[3]));
+                var h = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.Fluid.BLOCK, pos(a, 0), null);
                 int total = 0;
                 for (int t = 0; h != null && t < h.getTanks(); t++) {
                     if (h.getFluidInTank(t).is(fluid)) {
@@ -594,7 +594,7 @@ final class DevScenes {
                 if (!(level.getBlockEntity(pos(a, 0)) instanceof com.golemlogix.blockentity.InterfaceBlockEntity be)) {
                     throw new IllegalStateException("no interface at " + pos(a, 0));
                 }
-                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[4]));
+                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(a[4]));
                 be.getConfig().setItem(Integer.parseInt(a[3]), new ItemStack(item, Integer.parseInt(a[5])));
                 log.accept("iface slot " + a[3] + " keeps " + a[5] + " " + a[4]);
             }
@@ -626,7 +626,7 @@ final class DevScenes {
                     throw new IllegalStateException("no machine with upgrades at " + pos(a, 0));
                 }
                 for (int i = 3; i < a.length && i - 3 < c.getContainerSize(); i++) {
-                    var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[i]));
+                    var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(a[i]));
                     c.setItem(i - 3, new ItemStack(item));
                 }
                 log.accept("upgrades set: " + (a.length - 3));
@@ -645,7 +645,7 @@ final class DevScenes {
                 if (a.length > 3) {
                     com.golemlogix.items.PortableChronometerItem.setCharge(c, Integer.parseInt(a[3]));
                 }
-                player.getInventory().setItem(player.getInventory().selected, c);
+                player.getInventory().setItem(player.getInventory().getSelectedSlot(), c);
             }
             case "encoderfill" -> {
                 // encoderfill x y z mode(0 crafting, 1 machine) fuzzy(0|1) item[*n][#tag] ... : the encoder's grid (from cell 0), mode and fuzzy mode
@@ -674,7 +674,7 @@ final class DevScenes {
             case "upgradeset" -> {
                 // upgradeset x y z slot item : an upgrade into a bus or an interface
                 BlockEntity be = level.getBlockEntity(pos(a, 0));
-                ItemStack up = new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[4])));
+                ItemStack up = new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(a[4])));
                 if (be instanceof com.golemlogix.blockentity.BusBlockEntity bus) {
                     bus.getUpgrades().setItem(Integer.parseInt(a[3]), up);
                 } else if (be instanceof com.golemlogix.blockentity.InterfaceBlockEntity itf) {
@@ -685,12 +685,12 @@ final class DevScenes {
             }
             case "wearchrono" -> {
                 // wearchrono: the Chronometer in the hand goes into the Curios Chronometer slot (Curios only)
-                ItemStack c = player.getInventory().getSelected().copy();
+                ItemStack c = player.getInventory().getSelectedItem().copy();
                 if (!com.golemlogix.items.Chronometers.CURIOS || !com.golemlogix.items.Chronometers.is(c)
                         || !com.golemlogix.integration.curios.CuriosCompat.wear(player, c)) {
                     throw new IllegalStateException("no Curios Chronometer slot or no Chronometer in the hand");
                 }
-                player.getInventory().setItem(player.getInventory().selected, ItemStack.EMPTY);
+                player.getInventory().setItem(player.getInventory().getSelectedSlot(), ItemStack.EMPTY);
                 log.accept("chronometer worn in the Curios slot");
             }
             case "flat" -> {
@@ -703,7 +703,7 @@ final class DevScenes {
             case "biome" -> {
                 // biome <id> [x z]: the nearest such biome (scouting a generated world)
                 var key = net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.BIOME,
-                        net.minecraft.resources.ResourceLocation.parse(a[0]));
+                        net.minecraft.resources.Identifier.parse(a[0]));
                 BlockPos from = a.length > 2 ? new BlockPos(Integer.parseInt(a[1]), 64, Integer.parseInt(a[2])) : player.blockPosition();
                 var found = level.findClosestBiome3d(h -> h.is(key), from, 6400, 32, 64);
                 log.accept(found == null ? "biome " + a[0] + ": none" : "biome " + a[0] + " at " + found.getFirst().toShortString());
@@ -775,9 +775,9 @@ final class DevScenes {
             count = Integer.parseInt(spec.substring(star + 1));
             spec = spec.substring(0, star);
         }
-        ItemStack s = new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(spec)), count);
+        ItemStack s = new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(spec)), count);
         return tag == null ? s : com.golemlogix.system.Fuzzy.withTag(s,
-                net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM, net.minecraft.resources.ResourceLocation.parse(tag)));
+                net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM, net.minecraft.resources.Identifier.parse(tag)));
     }
 
     private static void refresh(ServerLevel level, BlockPos core) {

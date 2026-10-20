@@ -5,13 +5,13 @@ import com.golemlogix.blockentity.CoolingCoprocessorBlockEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelResourceLocation;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.neoforged.neoforge.client.model.data.ModelData;
 
@@ -21,7 +21,7 @@ import net.neoforged.neoforge.client.model.data.ModelData;
  */
 public class CoolingCoprocessorRenderer implements BlockEntityRenderer<CoolingCoprocessorBlockEntity> {
     public static final ModelResourceLocation FIN = ModelResourceLocation.standalone(
-            ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/cooling_coprocessor_fin"));
+            Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/cooling_coprocessor_fin"));
     /** Rest position of the fins (bottom edge, pixels) and the centre they squeeze towards. */
     private static final float[] REST = {3.5f, 5.5f, 7.5f, 9.5f, 11.5f};
     private static final float CENTER = 7.5f;

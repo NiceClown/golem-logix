@@ -118,7 +118,7 @@ public final class GhostProjection {
         }
         if (missing(mc.level).isEmpty()) {
             if (++completeTicks == 1) {
-                mc.player.displayClientMessage(Component.translatable("gui.golem_logix.ghost.complete"), true);
+                mc.player.sendOverlayMessage(Component.translatable("gui.golem_logix.ghost.complete"));
             }
             if (completeTicks > 60) {
                 clear();

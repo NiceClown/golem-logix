@@ -21,7 +21,7 @@ import mezz.jei.api.runtime.IClickableIngredient;
 import mezz.jei.api.runtime.IJeiRuntime;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
@@ -33,8 +33,8 @@ import java.util.Optional;
 
 @JeiPlugin
 public class GolemLogixJeiPlugin implements IModPlugin {
-    public static final ResourceLocation PLUGIN_UID =
-            ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "jei_plugin");
+    public static final Identifier PLUGIN_UID =
+            Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "jei_plugin");
 
     @Nullable
     private static IJeiRuntime runtime;
@@ -82,7 +82,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
     }
 
     @Override
-    public ResourceLocation getPluginUid() {
+    public Identifier getPluginUid() {
         return PLUGIN_UID;
     }
 
@@ -122,7 +122,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         List<net.minecraft.world.item.crafting.RecipeHolder<net.minecraft.world.item.crafting.CraftingRecipe>> prism = new java.util.ArrayList<>();
         var level = net.minecraft.client.Minecraft.getInstance().level;
         if (level != null) {
-            level.getRecipeManager().byKey(ResourceLocation.fromNamespaceAndPath(com.golemlogix.GolemLogixMod.MOD_ID, "void_glass_prism"))
+            level.getRecipeManager().byKey(Identifier.fromNamespaceAndPath(com.golemlogix.GolemLogixMod.MOD_ID, "void_glass_prism"))
                     .filter(h -> h.value() instanceof net.minecraft.world.item.crafting.CraftingRecipe)
                     .ifPresent(h -> prism.add(cast(h)));
         }
@@ -166,7 +166,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
      * Returns "ok", the JEI error type, or the reason the transfer is impossible.
      */
     /** The same as devTransfer, but as if Ctrl were held: what is missing is ordered through autocrafting (precraft). */
-    public static String devTransfer(ResourceLocation recipeId, boolean max, boolean ctrl) {
+    public static String devTransfer(Identifier recipeId, boolean max, boolean ctrl) {
         RecipeTransfers.devCtrl = ctrl;
         try {
             return devTransfer(recipeId, max);
@@ -176,7 +176,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public static String devTransfer(ResourceLocation recipeId, boolean max) {
+    public static String devTransfer(Identifier recipeId, boolean max) {
         if (runtime == null) {
             return "no runtime";
         }
@@ -233,7 +233,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
     }
 
     /** Open one JEI recipe category by its id (the developer rig: "golem_logix:anvil_crushing", "create:sequenced_assembly"). */
-    public static boolean showType(ResourceLocation uid, ItemStack output) {
+    public static boolean showType(Identifier uid, ItemStack output) {
         if (runtime == null) {
             return false;
         }

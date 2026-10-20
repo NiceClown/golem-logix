@@ -6,7 +6,7 @@ import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
@@ -32,10 +32,10 @@ import java.util.WeakHashMap;
  * fields ("input", "output", "source", "pedestalItems") are read from the result.
  */
 public final class ArsImbuement {
-    private static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("ars_nouveau", "imbuement");
-    private static final Set<ResourceLocation> OUTPUTS = Set.of(
-            ResourceLocation.fromNamespaceAndPath("ars_nouveau", "source_gem"),
-            ResourceLocation.fromNamespaceAndPath("ars_nouveau", "source_gem_block"));
+    private static final Identifier TYPE = Identifier.fromNamespaceAndPath("ars_nouveau", "imbuement");
+    private static final Set<Identifier> OUTPUTS = Set.of(
+            Identifier.fromNamespaceAndPath("ars_nouveau", "source_gem"),
+            Identifier.fromNamespaceAndPath("ars_nouveau", "source_gem_block"));
     /** The chamber draws Source from jars 200 per second and never finishes before 100 ticks. */
     private static final int CHAMBER_SOURCE_PER_SECOND = 200, CHAMBER_MIN_TICKS = 100;
     /** The Saturator: twice as fast, a third more Source. */

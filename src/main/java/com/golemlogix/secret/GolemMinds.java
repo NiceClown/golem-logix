@@ -10,9 +10,9 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.animal.AbstractGolem;
-import net.minecraft.world.entity.animal.IronGolem;
-import net.minecraft.world.entity.animal.SnowGolem;
+import net.minecraft.world.entity.animal.golem.AbstractGolem;
+import net.minecraft.world.entity.animal.golem.IronGolem;
+import net.minecraft.world.entity.animal.golem.SnowGolem;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -84,13 +84,13 @@ public final class GolemMinds {
         }
         if (caster == null || !knows) {
             if (caster != null) {
-                caster.displayClientMessage(Component.translatable("message.golem_logix.mind.unknown").withStyle(ChatFormatting.GRAY), true);
+                caster.sendOverlayMessage(Component.translatable("message.golem_logix.mind.unknown").withStyle(ChatFormatting.GRAY));
             }
             return true;
         }
         if (!battered(golem, kind)) {
-            caster.displayClientMessage(Component.translatable("message.golem_logix.mind.too_strong",
-                    String.format("%.0f", golem.getHealth())).withStyle(ChatFormatting.YELLOW), true);
+            caster.sendOverlayMessage(Component.translatable("message.golem_logix.mind.too_strong",
+                    String.format("%.0f", golem.getHealth())).withStyle(ChatFormatting.YELLOW));
             level.sendParticles(ParticleTypes.CRIT, golem.getX(), golem.getY() + 1.0, golem.getZ(), 12, 0.3, 0.4, 0.3, 0.1);
             return true;
         }
@@ -101,8 +101,8 @@ public final class GolemMinds {
         level.sendParticles(ParticleTypes.SOUL, golem.getX(), golem.getY() + 1.2, golem.getZ(), 12, 0.2, 0.3, 0.2, 0.03);
         level.playSound(null, golem.getX(), golem.getY(), golem.getZ(), SoundEvents.ILLUSIONER_MIRROR_MOVE, SoundSource.PLAYERS, 1.0f, 0.8f);
         level.playSound(null, golem.getX(), golem.getY(), golem.getZ(), SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 1.0f, 0.6f);
-        caster.displayClientMessage(Component.translatable("message.golem_logix.mind.unbound", mind.getName(new ItemStack(mind)))
-                .withStyle(ChatFormatting.AQUA), true);
+        caster.sendOverlayMessage(Component.translatable("message.golem_logix.mind.unbound", mind.getName(new ItemStack(mind)))
+                .withStyle(ChatFormatting.AQUA));
         golem.discard();
         return true;
     }

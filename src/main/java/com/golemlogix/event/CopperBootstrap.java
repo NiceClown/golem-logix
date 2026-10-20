@@ -5,7 +5,7 @@ import com.golemlogix.init.ModItems;
 import com.golemlogix.recipe.AnvilCrushingRecipe;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -23,7 +23,7 @@ import java.util.Set;
 @EventBusSubscriber(modid = GolemLogixMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
 public final class CopperBootstrap {
     /** The mod's own recipes that need a matrix, a copper golem or a running network first: none of them makes the first matrix. */
-    private static final Set<ResourceLocation> NOT_A_START = Set.of(
+    private static final Set<Identifier> NOT_A_START = Set.of(
             id("saturator/flattened_copper_matrix"),
             id("ars/raw_copper_mind"),
             id("create/pressing_torn_copper_mind"));
@@ -31,8 +31,8 @@ public final class CopperBootstrap {
     private CopperBootstrap() {
     }
 
-    private static ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, path);
+    private static Identifier id(String path) {
+        return Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, path);
     }
 
     /** No anvil ritual with an existing golem and no other recipe (a modpack's) makes a Copper Matrix. */

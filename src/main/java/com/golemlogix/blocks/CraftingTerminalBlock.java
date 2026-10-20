@@ -53,7 +53,7 @@ public class CraftingTerminalBlock extends HorizontalDirectionalBlock implements
             GolemNetwork net = GolemNetwork.scan(level, pos);
             String err = net.accessError(pos);
             if (err != null) {
-                sp.displayClientMessage(Component.translatable(err), true);
+                sp.sendOverlayMessage(Component.translatable(err));
                 return InteractionResult.CONSUME;
             }
             sp.openMenu(new SimpleMenuProvider(

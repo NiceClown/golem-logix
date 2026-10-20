@@ -1,12 +1,12 @@
 package com.golemlogix.client;
 
+import net.minecraft.util.LightCoordsUtil;
 import com.golemlogix.blockentity.RecipeMonitorBlockEntity;
 import com.golemlogix.blocks.RecipeMonitorBlock;
 import com.golemlogix.init.ModItems;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
@@ -57,7 +57,7 @@ public class RecipeMonitorRenderer implements BlockEntityRenderer<RecipeMonitorB
             pose.mulPose(Axis.ZP.rotationDegrees(Mth.sin(time * 0.05f + i * 1.7f) * 20f));
             float s = 0.2f * alive;
             pose.scale(s, s, s);
-            Minecraft.getInstance().getItemRenderer().renderStatic(card, ItemDisplayContext.FIXED, LightTexture.FULL_BRIGHT,
+            Minecraft.getInstance().getItemRenderer().renderStatic(card, ItemDisplayContext.FIXED, LightCoordsUtil.FULL_BRIGHT,
                     OverlayTexture.NO_OVERLAY, pose, buffers, be.getLevel(), i);
             pose.popPose();
         }

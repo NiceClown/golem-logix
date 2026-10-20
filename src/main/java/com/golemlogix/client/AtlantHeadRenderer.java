@@ -7,19 +7,19 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.ModelResourceLocation;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.neoforged.neoforge.client.model.data.ModelData;
 
 /** Atlant head: the head model rotated around the neck (8, 10, 8), first by the statue's facing, then towards the player. */
 public class AtlantHeadRenderer implements BlockEntityRenderer<AtlantHeadBlockEntity> {
     public static final ModelResourceLocation HEAD = ModelResourceLocation.standalone(
-            ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/atlas_atlant_head"));
+            Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/atlas_atlant_head"));
 
     public AtlantHeadRenderer(BlockEntityRendererProvider.Context context) {
     }

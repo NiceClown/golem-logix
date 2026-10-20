@@ -8,14 +8,14 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /** Client -> server: the "open Portable Chronometer" key (Ctrl+E by default) was pressed. */
 public record OpenChronometerPayload() implements CustomPacketPayload {
     public static final Type<OpenChronometerPayload> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "open_chronometer"));
+            new Type<>(Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "open_chronometer"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, OpenChronometerPayload> STREAM_CODEC =
             StreamCodec.unit(new OpenChronometerPayload());
@@ -33,8 +33,8 @@ public record OpenChronometerPayload() implements CustomPacketPayload {
             // a hand, the Curios slot, then anywhere in the inventory
             Chronometers.Found found = Chronometers.find(player);
             if (found == null) {
-                player.displayClientMessage(Component.translatable("message.golem_logix.chronometer.none")
-                        .withStyle(ChatFormatting.RED), true);
+                player.sendOverlayMessage(Component.translatable("message.golem_logix.chronometer.none")
+                        .withStyle(ChatFormatting.RED));
                 return;
             }
             PortableChronometerItem.open(player, found.stack(), found.slot());

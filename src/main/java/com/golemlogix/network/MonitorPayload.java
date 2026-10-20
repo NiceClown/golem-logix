@@ -6,7 +6,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -20,7 +20,7 @@ import java.util.List;
  */
 public record MonitorPayload(int containerId, String error, List<Cpu> cpus) implements CustomPacketPayload {
     public static final Type<MonitorPayload> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "monitor"));
+            new Type<>(Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "monitor"));
 
     /** One job step: what comes out and how much is left to make. */
     public record Step(ItemStack item, long left) {

@@ -1,7 +1,7 @@
 package com.golemlogix.client;
 
 import com.golemlogix.menu.PatternEncoderMenu;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
@@ -35,8 +35,8 @@ public class PatternEncoderScreen extends GolemScreen<PatternEncoderMenu> {
     }
 
     @Override
-    protected void renderOverlay(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
-        g.drawString(font, "=>", leftPos + 94, topPos + 38, GolemGui.CYAN, false);
+    protected void renderOverlay(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
+        g.text(font, "=>", leftPos + 94, topPos + 38, GolemGui.CYAN, false);
         if (menu.isCraftingMode()) {
             // in crafting table mode only the first output is available
             for (int i = 1; i < 3; i++) {

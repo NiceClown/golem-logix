@@ -1,5 +1,6 @@
 package com.golemlogix.blocks;
 
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import com.golemlogix.blockentity.SaturatorPartBlockEntity;
 import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.init.ModBlocks;
@@ -14,7 +15,6 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
@@ -30,7 +30,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.level.storage.loot.LootParams;
@@ -50,7 +49,7 @@ import java.util.List;
  * side except the roof). Cooling Co-Processors (COOLER) go on the roof vent grilles: each one speeds up the press.
  */
 public class SaturatorPartBlock extends Block implements EntityBlock, GolemNode {
-    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final IntegerProperty CELL = IntegerProperty.create("cell", 0, SaturatorStructure.CELLS - 1);
     /** A Cooling Co-Processor stands on the grille. */
     public static final BooleanProperty COOLER = BooleanProperty.create("cooler");
@@ -95,16 +94,16 @@ public class SaturatorPartBlock extends Block implements EntityBlock, GolemNode 
     }
 
     @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
                                               InteractionHand hand, BlockHitResult hit) {
         // Cooling Co-Processor: only on top, on a free vent grille
         if (stack.is(ModBlocks.COOLING_COPROCESSOR.get().asItem()) && SaturatorStructure.isVent(state.getValue(CELL))) {
             if (hit.getDirection() != Direction.UP || state.getValue(COOLER)) {
                 if (!level.isClientSide()) {
-                    player.displayClientMessage(Component.translatable(state.getValue(COOLER)
-                            ? "message.golem_logix.saturator.cooler_busy" : "message.golem_logix.saturator.cooler_top"), true);
+                    player.sendOverlayMessage(Component.translatable(state.getValue(COOLER)
+                            ? "message.golem_logix.saturator.cooler_busy" : "message.golem_logix.saturator.cooler_top"));
                 }
-                return ItemInteractionResult.sidedSuccess(level.isClientSide());
+                return InteractionResult.SUCCESS;
             }
             if (!level.isClientSide()) {
                 level.setBlock(pos, state.setValue(COOLER, true), 3);
@@ -116,17 +115,17 @@ public class SaturatorPartBlock extends Block implements EntityBlock, GolemNode 
                 ((ServerLevel) level).sendParticles(ParticleTypes.SNOWFLAKE, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5,
                         12, 0.25, 0.1, 0.25, 0.02);
                 int n = SaturatorStructure.coolers(level, controllerOf(pos, state), state.getValue(FACING));
-                player.displayClientMessage(Component.translatable("message.golem_logix.saturator.cooler_added", n,
-                        SaturatorStructure.VENTS.length), true);
+                player.sendOverlayMessage(Component.translatable("message.golem_logix.saturator.cooler_added", n,
+                        SaturatorStructure.VENTS.length));
             }
-            return ItemInteractionResult.sidedSuccess(level.isClientSide());
+            return InteractionResult.SUCCESS;
         }
         BlockPos master = controllerOf(pos, state);
         BlockState ms = level.getBlockState(master);
         if (ms.getBlock() instanceof ManaSaturatorBlock) {
             return ms.useItemOn(stack, level, player, hand, hit.withPosition(master));
         }
-        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        return InteractionResult.TRY_WITH_EMPTY_HAND;
     }
 
     @Override
@@ -141,7 +140,7 @@ public class SaturatorPartBlock extends Block implements EntityBlock, GolemNode 
                 }
                 level.playSound(null, pos, SoundEvents.COPPER_BREAK, SoundSource.BLOCKS, 1.0f, 1.0f);
             }
-            return InteractionResult.sidedSuccess(level.isClientSide());
+            return InteractionResult.SUCCESS;
         }
         BlockPos master = controllerOf(pos, state);
         BlockState ms = level.getBlockState(master);

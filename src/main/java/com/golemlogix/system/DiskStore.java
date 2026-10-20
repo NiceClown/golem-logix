@@ -60,28 +60,28 @@ public class DiskStore extends SavedData {
 
     public static DiskStore load(CompoundTag tag, HolderLookup.Provider provider) {
         DiskStore store = new DiskStore();
-        ListTag list = tag.getList("Disks", Tag.TAG_COMPOUND);
+        ListTag list = tag.getListOrEmpty("Disks");
         for (int i = 0; i < list.size(); i++) {
-            CompoundTag t = list.getCompound(i);
+            CompoundTag t = list.getCompoundOrEmpty(i);
             if (!t.contains("Id")) {
                 continue;
             }
             UUID id = NbtUtils.loadUUID(t.get("Id"));
             Disk disk = new Disk();
 
-            ListTag items = t.getList("Items", Tag.TAG_COMPOUND);
+            ListTag items = t.getListOrEmpty("Items");
             for (int j = 0; j < items.size(); j++) {
-                CompoundTag it = items.getCompound(j);
-                ItemStack stack = ItemStack.parse(provider, it.getCompound("Item")).orElse(ItemStack.EMPTY);
-                int count = it.getInt("Count");
+                CompoundTag it = items.getCompoundOrEmpty(j);
+                ItemStack stack = com.golemlogix.system.NbtBridge.loadItem(provider, it.getCompoundOrEmpty("Item")).orElse(ItemStack.EMPTY);
+                int count = it.getIntOr("Count", 0);
                 if (!stack.isEmpty() && count > 0) {
                     disk.items.put(ItemKey.of(stack), count);
                     disk.storedItems += count;
                 }
             }
-            ListTag fluids = t.getList("Fluids", Tag.TAG_COMPOUND);
+            ListTag fluids = t.getListOrEmpty("Fluids");
             for (int j = 0; j < fluids.size(); j++) {
-                FluidStack.parse(provider, fluids.getCompound(j)).ifPresent(f -> {
+                com.golemlogix.system.NbtBridge.loadFluid(provider, fluids.getCompoundOrEmpty(j)).ifPresent(f -> {
                     if (!f.isEmpty()) {
                         disk.fluids.add(f);
                         disk.storedFluids += f.getAmount();
@@ -108,14 +108,14 @@ public class DiskStore extends SavedData {
             ListTag items = new ListTag();
             for (Map.Entry<ItemKey, Integer> it : disk.items.entrySet()) {
                 CompoundTag c = new CompoundTag();
-                c.put("Item", it.getKey().toStack(1).save(provider));
+                c.put("Item", com.golemlogix.system.NbtBridge.saveItem(it.getKey().toStack(1), provider));
                 c.putInt("Count", it.getValue());
                 items.add(c);
             }
             t.put("Items", items);
             ListTag fluids = new ListTag();
             for (FluidStack f : disk.fluids) {
-                fluids.add(f.save(provider));
+                fluids.add(com.golemlogix.system.NbtBridge.saveFluid(f, provider));
             }
             t.put("Fluids", fluids);
             list.add(t);

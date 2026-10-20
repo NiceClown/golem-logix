@@ -336,9 +336,7 @@ public class CardCatalogBlockEntity extends BlockEntity {
         return clientCapacity;
     }
 
-    @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveTag(CompoundTag tag, HolderLookup.Provider registries) {
         tag.put("Cards", cards.createTag(registries));
         tag.put("Providers", providers.createTag(registries));
         tag.put("Upgrades", upgrades.createTag(registries));
@@ -355,19 +353,17 @@ public class CardCatalogBlockEntity extends BlockEntity {
         redstone.save(tag);
     }
 
-    @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
+    protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
         cards.fromTag(tag.getList("Cards", Tag.TAG_COMPOUND), registries);
         providers.fromTag(tag.getList("Providers", Tag.TAG_COMPOUND), registries);
         upgrades.fromTag(tag.getList("Upgrades", Tag.TAG_COMPOUND), registries);
         java.util.Arrays.fill(originals, null);
         ListTag orig = tag.getList("Originals", Tag.TAG_COMPOUND);
         for (int i = 0; i < orig.size(); i++) {
-            CompoundTag e = orig.getCompound(i);
-            int cell = e.getInt("Cell");
+            CompoundTag e = orig.getCompoundOrEmpty(i);
+            int cell = e.getIntOr("Cell", 0);
             if (cell >= 0 && cell < originals.length) {
-                originals[cell] = NbtUtils.readBlockState(registries.lookupOrThrow(Registries.BLOCK), e.getCompound("State"));
+                originals[cell] = NbtUtils.readBlockState(registries.lookupOrThrow(Registries.BLOCK), e.getCompoundOrEmpty("State"));
             }
         }
         redstone.load(tag);
@@ -386,22 +382,43 @@ public class CardCatalogBlockEntity extends BlockEntity {
         return tag;
     }
 
-    @Override
-    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
-        clientCards = tag.getInt("CardCount");
-        clientCapacity = tag.getInt("Capacity");
-        clientOpen = tag.getBoolean("Open");
-        clientGolems[0] = tag.getInt("GolemL");
-        clientGolems[1] = tag.getInt("GolemR");
+    public void readUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
+        clientCards = tag.getIntOr("CardCount", 0);
+        clientCapacity = tag.getIntOr("Capacity", 0);
+        clientOpen = tag.getBooleanOr("Open", false);
+        clientGolems[0] = tag.getIntOr("GolemL", 0);
+        clientGolems[1] = tag.getIntOr("GolemR", 0);
     }
 
-    @Override
-    public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider registries) {
-        handleUpdateTag(pkt.getTag(), registries);
-    }
-
+    
     @Override
     public ClientboundBlockEntityDataPacket getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    // ---- 1.21.6+: the game's ValueInput/ValueOutput over the CompoundTag code above
+
+    @Override
+    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        super.saveAdditional(output);
+        CompoundTag tag = new CompoundTag();
+        saveTag(tag, com.golemlogix.system.NbtBridge.registries(this));
+        com.golemlogix.system.NbtBridge.write(output, tag);
+    }
+
+    @Override
+    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+        super.loadAdditional(input);
+        loadTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    }
+
+    @Override
+    public void handleUpdateTag(net.minecraft.world.level.storage.ValueInput input) {
+        readUpdateTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    }
+
+    @Override
+    public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input) {
+        handleUpdateTag(input);
     }
 }

@@ -43,7 +43,7 @@ public final class GhostTargets<T extends GolemScreen<?>> implements IGhostIngre
 
                 @Override
                 public void accept(I ingredient) {
-                    PacketDistributor.sendToServer(new GhostSetPayload(menu.containerId, index, stack.copyWithCount(1)));
+                    net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new GhostSetPayload(menu.containerId, index, stack.copyWithCount(1)));
                 }
             });
         }

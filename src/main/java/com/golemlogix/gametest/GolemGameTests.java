@@ -28,11 +28,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.inventory.ContainerLevelAccess;
@@ -49,8 +48,6 @@ import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.phys.BlockHitResult;
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -62,8 +59,6 @@ import java.util.List;
  * Layout: a 3x3x4 Atlas Array with its base at ORIGIN (the core on top in the middle), a Creative Source Jar under the central bushing.
  * The network leaves through the base bushings: BAY, CPU, PROV, TERM, BUS_IN, BUS_OUT are points next to the corner bushings.
  */
-@GameTestHolder(GolemLogixMod.MOD_ID)
-@PrefixGameTestTemplate(false)
 public class GolemGameTests {
     private static final String T = "empty";
 
@@ -133,7 +128,7 @@ public class GolemGameTests {
         buildArray(helper, 0, 0);
         powered(helper);
         putBay(helper, BAY);
-        CopperDriveBayBlockEntity be = (CopperDriveBayBlockEntity) helper.getBlockEntity(BAY);
+        CopperDriveBayBlockEntity be = helper.getBlockEntity(BAY, CopperDriveBayBlockEntity.class);
         be.getContainer().setItem(0, new ItemStack(ModItems.COPPER_DISK_1K.get()));
         return BAY;
     }
@@ -156,7 +151,6 @@ public class GolemGameTests {
 
     // ----------------------------------------------------------- multiblock
 
-    @GameTest(template = T, timeoutTicks = 100)
     public static void arrayStructure(GameTestHelper helper) {
         buildArray(helper, 3, 2);
         helper.runAfterDelay(2, () -> {
@@ -190,7 +184,6 @@ public class GolemGameTests {
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 100)
     public static void arrayCapacity(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
@@ -213,7 +206,6 @@ public class GolemGameTests {
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 100)
     public static void bareTowerStart(GameTestHelper helper) {
         // a "tower" without the array: core, two conduits, central bushing = 8 channels at the start
         put(helper, CORE, ModBlocks.ATLAS_CORE.get());
@@ -235,7 +227,6 @@ public class GolemGameTests {
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 100)
     public static void storageNeedsChannel(GameTestHelper helper) {
         // an 8-channel tower: 8 terminals took them all, the cabinet came ninth and got no channel, so it does not count as storage
         put(helper, CORE, ModBlocks.ATLAS_CORE.get());
@@ -248,7 +239,7 @@ public class GolemGameTests {
         }
         BlockPos bay = ORIGIN.east(9);
         putBay(helper, bay);
-        ((CopperDriveBayBlockEntity) helper.getBlockEntity(bay)).getContainer().setItem(0, new ItemStack(ModItems.COPPER_DISK_1K.get()));
+        (helper.getBlockEntity(bay, CopperDriveBayBlockEntity.class)).getContainer().setItem(0, new ItemStack(ModItems.COPPER_DISK_1K.get()));
         helper.runAfterDelay(5, () -> {
             GolemNetwork n = net(helper, ORIGIN);
             helper.assertTrue(n.isOnline(), "powered");
@@ -264,7 +255,6 @@ public class GolemGameTests {
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 40)
     public static void pipesAndBusesAreSteps(GameTestHelper helper) {
         // pipes and buses are steps: collisions no higher than half a block (they can be walked onto without jumping), the selection box is unchanged
         BlockPos dense = new BlockPos(1, 1, 2), basic = dense.east(), bus = basic.east(), lone = new BlockPos(1, 1, 5);
@@ -289,7 +279,6 @@ public class GolemGameTests {
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 100)
     public static void onlyDevicesWithChannelLookActive(GameTestHelper helper) {
         // an 8-channel tower with 10 terminals: the ninth and tenth must not "light up" (before, every node got the flag)
         put(helper, CORE, ModBlocks.ATLAS_CORE.get());
@@ -301,7 +290,7 @@ public class GolemGameTests {
             put(helper, ORIGIN.east(i), ModBlocks.ANALOG_TERMINAL.get());
         }
         helper.runAfterDelay(5, () -> {
-            var core = (com.golemlogix.blockentity.AtlasCoreBlockEntity) helper.getBlockEntity(CORE);
+            var core = helper.getBlockEntity(CORE, com.golemlogix.blockentity.AtlasCoreBlockEntity.class);
             core.refresh(helper.getLevel(), helper.absolutePos(CORE));
             int lit = 0;
             for (int i = 1; i <= 10; i++) {
@@ -314,7 +303,6 @@ public class GolemGameTests {
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 100)
     public static void pipePlugSeparatesLines(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
@@ -340,7 +328,6 @@ public class GolemGameTests {
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 100)
     public static void expanderFaceIsAnExit(GameTestHelper helper) {
         // an expander in the wall (4,2,5): a dense pipe and three terminals at its outer face
         buildArray(helper, 1, 0);
@@ -359,7 +346,6 @@ public class GolemGameTests {
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 100)
     public static void conduitsStayInside(GameTestHelper helper) {
         // a conduit does not connect to outside blocks, a pipe next to it is not connected
         buildArray(helper, 0, 0);
@@ -379,7 +365,6 @@ public class GolemGameTests {
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 100)
     public static void atlantPlacesAsDoubleBlock(GameTestHelper helper) {
         BlockPos pos = new BlockPos(2, 1, 2);
         var level = helper.getLevel();
@@ -399,7 +384,6 @@ public class GolemGameTests {
 
     // ------------------------------------------------------- storage and network
 
-    @GameTest(template = T, timeoutTicks = 200)
     public static void storageRoundTrip(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         helper.runAfterDelay(5, () -> {
@@ -416,7 +400,7 @@ public class GolemGameTests {
             helper.assertTrue(got.getCount() == 4, "extracted 4");
             helper.assertTrue(n.itemCountOf(ItemKey.of(new ItemStack(Items.DIAMOND))) == 6, "6 diamonds left");
 
-            CopperDriveBayBlockEntity be = (CopperDriveBayBlockEntity) helper.getBlockEntity(bay);
+            CopperDriveBayBlockEntity be = helper.getBlockEntity(bay, CopperDriveBayBlockEntity.class);
             helper.assertTrue(DiskStorage.storedItems(be.getDisks().get(0)) == 6, "disk STORED must be 6");
 
             ItemStack overflow = n.insertItem(new ItemStack(Items.STONE, 64), false);
@@ -458,7 +442,6 @@ public class GolemGameTests {
         return count;
     }
 
-    @GameTest(template = T, timeoutTicks = 200)
     public static void lineLimit(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
@@ -481,7 +464,6 @@ public class GolemGameTests {
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 200)
     public static void pipeLimit(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
@@ -501,7 +483,6 @@ public class GolemGameTests {
     }
 
     /** As in AE2, a device carries as many channels as a basic pipe (its own included): a slab of 20 terminals with one entry gets 16. */
-    @GameTest(template = T, timeoutTicks = 200)
     public static void devicesCarryLikeBasicPipes(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
@@ -524,7 +505,6 @@ public class GolemGameTests {
     }
 
     /** Channels never cross the array from one exit to another: the center bushing and the expanders carry only their own devices. */
-    @GameTest(template = T, timeoutTicks = 200)
     public static void noTransitThroughTheArray(GameTestHelper helper) {
         buildArray(helper, 2, 0);
         powered(helper);
@@ -546,7 +526,6 @@ public class GolemGameTests {
     }
 
     /** As in AE2, dense runs are served first: in an 8-channel tower the far devices on a dense pipe win over near ones on a basic pipe. */
-    @GameTest(template = T, timeoutTicks = 200)
     public static void denseRunsComeFirst(GameTestHelper helper) {
         put(helper, CORE, ModBlocks.ATLAS_CORE.get());
         put(helper, ORIGIN.offset(0, 2, 0), ModBlocks.ATLAS_CONDUIT.get());
@@ -584,7 +563,6 @@ public class GolemGameTests {
     }
 
     /** Two cores in one network: the same one runs it from every device, the other one is idle and says so. */
-    @GameTest(template = T, timeoutTicks = 200)
     public static void oneCoreRunsTheNetwork(GameTestHelper helper) {
         // tower A at (5,1,5)..(5,4,5), tower B at (9,1,9)..(9,4,9), their bushings joined by a basic pipe
         for (BlockPos base : new BlockPos[]{ORIGIN, new BlockPos(9, 1, 9)}) {
@@ -614,8 +592,8 @@ public class GolemGameTests {
                 helper.assertTrue(fromA.isDeviceActive(abs) == fromB.isDeviceActive(abs), "the same channels from both ends: " + p);
             }
             helper.assertTrue(fromA.channelsUsed() == 5, "five terminals on 8 channels, got " + fromA.channelsUsed());
-            var coreB = (com.golemlogix.blockentity.AtlasCoreBlockEntity) helper.getBlockEntity(new BlockPos(9, 4, 9));
-            var coreA = (com.golemlogix.blockentity.AtlasCoreBlockEntity) helper.getBlockEntity(CORE);
+            var coreB = helper.getBlockEntity(new BlockPos(9, 4, 9), com.golemlogix.blockentity.AtlasCoreBlockEntity.class);
+            var coreA = helper.getBlockEntity(CORE, com.golemlogix.blockentity.AtlasCoreBlockEntity.class);
             coreB.refresh(helper.getLevel(), helper.absolutePos(new BlockPos(9, 4, 9)));
             coreA.refresh(helper.getLevel(), helper.absolutePos(CORE));
             helper.assertTrue(coreB.isDuplicate() && !coreA.isDuplicate(), "B is idle, A runs the network");
@@ -627,7 +605,6 @@ public class GolemGameTests {
      * The network is remembered long now, so what stands next to it must make it stale by itself: a chest put in front of a periscope
      * is network storage in the same tick, and a terminal joins at once.
      */
-    @GameTest(template = T, timeoutTicks = 200)
     public static void peripheralsFollowChanges(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
@@ -639,7 +616,7 @@ public class GolemGameTests {
             ItemKey cobble = ItemKey.of(new ItemStack(Items.COBBLESTONE));
             helper.assertTrue(GolemNetwork.get(level, abs).itemCountOf(cobble) == 0, "nothing behind the periscope yet");
             helper.setBlock(TERM.west(), Blocks.CHEST);
-            ((Container) helper.getBlockEntity(TERM.west())).setItem(0, new ItemStack(Items.COBBLESTONE, 12));
+            (helper.getBlockEntity(TERM.west(), Container.class)).setItem(0, new ItemStack(Items.COBBLESTONE, 12));
             helper.assertTrue(GolemNetwork.get(level, abs).itemCountOf(cobble) == 12, "the new chest is storage in the same tick");
             helper.setBlock(TERM.west(), Blocks.AIR);
             helper.assertTrue(GolemNetwork.get(level, abs).itemCountOf(cobble) == 0, "a removed chest is gone at once");
@@ -648,7 +625,6 @@ public class GolemGameTests {
     }
 
     /** A Cryo-Source Telegraph links an outpost: Write records the base telegraph, Memory links to it, Reset breaks every card of it. */
-    @GameTest(template = T, timeoutTicks = 200)
     public static void telegraphLinksAnOutpost(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
@@ -659,8 +635,8 @@ public class GolemGameTests {
         com.golemlogix.blocks.TelegraphBlock.place(level, helper.absolutePos(bRel), Direction.SOUTH);
         put(helper, term, ModBlocks.ANALOG_TERMINAL.get());
         helper.runAfterDelay(25, () -> {
-            var a = (com.golemlogix.blockentity.TelegraphBlockEntity) helper.getBlockEntity(aRel);
-            var b = (com.golemlogix.blockentity.TelegraphBlockEntity) helper.getBlockEntity(bRel);
+            var a = helper.getBlockEntity(aRel, com.golemlogix.blockentity.TelegraphBlockEntity.class);
+            var b = helper.getBlockEntity(bRel, com.golemlogix.blockentity.TelegraphBlockEntity.class);
             int write = com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_WRITE, memory = com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_MEMORY;
             helper.assertTrue(!net(helper, term).hasCore(), "the outpost is alone before the link");
             a.slots().setItem(write, new ItemStack(ModItems.AETHERIAL_LINKAGE.get()));
@@ -686,13 +662,12 @@ public class GolemGameTests {
      * The Write slot takes a whole stack and writes every card; blank cards clicked onto written ones join them; shift-click sends
      * blank cards to Write and a card written elsewhere to Memory, never rewriting it.
      */
-    @GameTest(template = T, timeoutTicks = 100)
     public static void telegraphWritesAStack(GameTestHelper helper) {
         var level = helper.getLevel();
         BlockPos rel = new BlockPos(2, 1, 2);
         com.golemlogix.blocks.TelegraphBlock.place(level, helper.absolutePos(rel), Direction.SOUTH);
         helper.runAfterDelay(5, () -> {
-            var be = (com.golemlogix.blockentity.TelegraphBlockEntity) helper.getBlockEntity(rel);
+            var be = helper.getBlockEntity(rel, com.golemlogix.blockentity.TelegraphBlockEntity.class);
             int write = com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_WRITE, memory = com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_MEMORY;
             var mine = new com.golemlogix.items.TelegraphLinkCardItem.Link(be.globalPos(), be.seal());
             var elsewhere = new com.golemlogix.items.TelegraphLinkCardItem.Link(
@@ -705,20 +680,20 @@ public class GolemGameTests {
             var menu = new com.golemlogix.menu.TelegraphMenu(31, player.getInventory(), be, be.slots(),
                     new net.minecraft.world.inventory.SimpleContainerData(3), net.minecraft.world.inventory.ContainerLevelAccess.NULL);
             int hotbar0 = 3 + 27, hotbar1 = hotbar0 + 1;
-            menu.clicked(hotbar0, 0, net.minecraft.world.inventory.ClickType.QUICK_MOVE, player);
+            menu.clicked(hotbar0, 0, net.minecraft.world.inventory.ContainerInput.QUICK_MOVE, player);
             ItemStack cards = be.slots().getItem(write);
             helper.assertTrue(cards.getCount() == 5 && mine.equals(com.golemlogix.items.TelegraphLinkCardItem.link(cards)),
                     "shift-click puts all 5 blank cards into Write and they are written, got " + cards.getCount());
             menu.setCarried(new ItemStack(ModItems.AETHERIAL_LINKAGE.get(), 3));
-            menu.clicked(write, 0, net.minecraft.world.inventory.ClickType.PICKUP, player);
+            menu.clicked(write, 0, net.minecraft.world.inventory.ContainerInput.PICKUP, player);
             cards = be.slots().getItem(write);
             helper.assertTrue(cards.getCount() == 8 && menu.getCarried().isEmpty() && mine.equals(com.golemlogix.items.TelegraphLinkCardItem.link(cards)),
                     "blank cards clicked onto written ones join them, got " + cards.getCount());
-            menu.clicked(hotbar1, 0, net.minecraft.world.inventory.ClickType.QUICK_MOVE, player);
+            menu.clicked(hotbar1, 0, net.minecraft.world.inventory.ContainerInput.QUICK_MOVE, player);
             helper.assertTrue(elsewhere.equals(com.golemlogix.items.TelegraphLinkCardItem.link(player.getInventory().getItem(1))),
                     "a card written elsewhere is never rewritten by shift-click");
             be.slots().setItem(write, ItemStack.EMPTY);
-            menu.clicked(hotbar1, 0, net.minecraft.world.inventory.ClickType.QUICK_MOVE, player);
+            menu.clicked(hotbar1, 0, net.minecraft.world.inventory.ContainerInput.QUICK_MOVE, player);
             ItemStack mem = be.slots().getItem(memory);
             helper.assertTrue(mem.getCount() == 1 && elsewhere.equals(com.golemlogix.items.TelegraphLinkCardItem.link(mem)),
                     "a written card goes to Memory as it is");
@@ -727,7 +702,6 @@ public class GolemGameTests {
     }
 
     /** Without a range card a telegraph stays in its dimension; the Void-Glass Prism on either end links the Nether to the base. */
-    @GameTest(template = T, timeoutTicks = 200)
     public static void telegraphReachesAnotherDimension(GameTestHelper helper) {
         var level = helper.getLevel();
         net.minecraft.server.level.ServerLevel nether = level.getServer().getLevel(net.minecraft.world.level.Level.NETHER);
@@ -750,7 +724,7 @@ public class GolemGameTests {
         nether.setBlock(termPos, ModBlocks.ANALOG_TERMINAL.get().defaultBlockState(), 3);
         helper.runAfterDelay(25, () -> {
             try {
-                var a = (com.golemlogix.blockentity.TelegraphBlockEntity) helper.getBlockEntity(aRel);
+                var a = helper.getBlockEntity(aRel, com.golemlogix.blockentity.TelegraphBlockEntity.class);
                 var bt = (com.golemlogix.blockentity.TelegraphBlockEntity) nether.getBlockEntity(b);
                 helper.assertTrue(bt != null, "the outpost telegraph stands in the Nether");
                 a.slots().setItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_WRITE, new ItemStack(ModItems.AETHERIAL_LINKAGE.get()));
@@ -778,7 +752,6 @@ public class GolemGameTests {
      * The remembered network follows the world at once (as an AE2 grid repaths when a connection changes): a new device is counted in the
      * same tick, and devices cut off from the core go dark at the end of the tick instead of glowing forever.
      */
-    @GameTest(template = T, timeoutTicks = 200)
     public static void networkFollowsChanges(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
@@ -799,23 +772,22 @@ public class GolemGameTests {
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 300)
     public static void busesMoveItems(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         // import: a bus on the bushing faces west into a chest (2,1,4)
         helper.setBlock(BUS_IN, ModBlocks.VACUUM_IMPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.WEST));
         BlockPos chest = new BlockPos(2, 1, 4);
         helper.setBlock(chest, Blocks.CHEST);
-        Container c = (Container) helper.getBlockEntity(chest);
+        Container c = helper.getBlockEntity(chest, Container.class);
         c.setItem(0, new ItemStack(Items.COBBLESTONE, 20));
 
         // export: a bus faces north into another chest (6,1,2)
         helper.setBlock(BUS_OUT, ModBlocks.INJECTOR_EXPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
-        BusBlockEntity bus = (BusBlockEntity) helper.getBlockEntity(BUS_OUT);
+        BusBlockEntity bus = helper.getBlockEntity(BUS_OUT, BusBlockEntity.class);
         bus.getFilters().setItem(0, new ItemStack(Items.COBBLESTONE));
         BlockPos chest2 = new BlockPos(6, 1, 2);
         helper.setBlock(chest2, Blocks.CHEST);
-        Container c2 = (Container) helper.getBlockEntity(chest2);
+        Container c2 = helper.getBlockEntity(chest2, Container.class);
 
         helper.runAfterDelay(120, () -> {
             helper.assertTrue(c.isEmpty(), "import bus must empty the first chest");
@@ -831,13 +803,12 @@ public class GolemGameTests {
     }
 
     /** A copy of a disk (same id, e.g. a creative middle-click) in the network shares the original's contents: it is counted once. */
-    @GameTest(template = T, timeoutTicks = 60)
     public static void copiedDiskCountsOnce(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         helper.runAfterDelay(5, () -> {
             GolemNetwork n = net(helper, bay);
             n.insertItem(new ItemStack(Items.DIAMOND, 10), false);
-            var container = ((CopperDriveBayBlockEntity) helper.getBlockEntity(bay)).getContainer();
+            var container = (helper.getBlockEntity(bay, CopperDriveBayBlockEntity.class)).getContainer();
             container.setItem(1, container.getItem(0).copy());
             GolemNetwork again = net(helper, bay);
             ItemKey diamond = ItemKey.of(new ItemStack(Items.DIAMOND));
@@ -849,16 +820,15 @@ public class GolemGameTests {
     }
 
     /** An import bus facing an empty chest falls asleep (no work every interval); the chest filling up wakes it at once. */
-    @GameTest(template = T, timeoutTicks = 200)
     public static void busSleepsAndWakes(GameTestHelper helper) {
         baseNetwork(helper);
         helper.setBlock(BUS_IN, ModBlocks.VACUUM_IMPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.WEST));
         BlockPos chest = new BlockPos(2, 1, 4);
         helper.setBlock(chest, Blocks.CHEST);
         helper.runAfterDelay(60, () -> {
-            BusBlockEntity bus = (BusBlockEntity) helper.getBlockEntity(BUS_IN);
+            BusBlockEntity bus = helper.getBlockEntity(BUS_IN, BusBlockEntity.class);
             helper.assertTrue(bus.idle(), "an import bus facing an empty chest sleeps");
-            Container c = (Container) helper.getBlockEntity(chest);
+            Container c = helper.getBlockEntity(chest, Container.class);
             c.setItem(0, new ItemStack(Items.COBBLESTONE, 5));
             helper.assertTrue(!bus.idle(), "a change in the chest next to it wakes it");
             helper.runAfterDelay(20, () -> {
@@ -872,19 +842,18 @@ public class GolemGameTests {
      * The core sends a few samples of the network's contents to clients (the snowmen's crates); nothing reads the disks from
      * another thread any more (the single player client used to read the server's storage while the server wrote it).
      */
-    @GameTest(template = T, timeoutTicks = 100)
     public static void coreSendsCargoSamples(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         helper.runAfterDelay(5, () -> {
             var level = helper.getLevel();
             net(helper, bay).insertItem(new ItemStack(Items.DIAMOND, 3), false);
-            var core = (com.golemlogix.blockentity.AtlasCoreBlockEntity) helper.getBlockEntity(CORE);
+            var core = helper.getBlockEntity(CORE, com.golemlogix.blockentity.AtlasCoreBlockEntity.class);
             core.refresh(level, helper.absolutePos(CORE));
             helper.assertTrue(core.cargoItems().stream().anyMatch(s -> s.is(Items.DIAMOND)), "the samples show the diamonds");
             var tag = core.getUpdateTag(level.registryAccess());
-            helper.assertTrue(tag.getList("CargoItems", net.minecraft.nbt.Tag.TAG_COMPOUND).size() == core.cargoItems().size(),
+            helper.assertTrue(tag.getListOrEmpty("CargoItems").size() == core.cargoItems().size(),
                     "the samples go with the core's update");
-            ItemStack disk = ((CopperDriveBayBlockEntity) helper.getBlockEntity(bay)).getContainer().getItem(0);
+            ItemStack disk = (helper.getBlockEntity(bay, CopperDriveBayBlockEntity.class)).getContainer().getItem(0);
             helper.assertTrue(!com.golemlogix.system.DiskStorage.items(disk).isEmpty(), "the server thread reads the disk");
             boolean[] emptyElsewhere = {false};
             Thread other = new Thread(() -> emptyElsewhere[0] = com.golemlogix.system.DiskStorage.items(disk).isEmpty());
@@ -899,15 +868,14 @@ public class GolemGameTests {
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 300)
     public static void interfaceKeepsStockAndAccepts(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         helper.setBlock(BUS_OUT, ModBlocks.GOLEM_INTERFACE.get().defaultBlockState());
-        var be = (com.golemlogix.blockentity.InterfaceBlockEntity) helper.getBlockEntity(BUS_OUT);
+        var be = helper.getBlockEntity(BUS_OUT, com.golemlogix.blockentity.InterfaceBlockEntity.class);
         be.getConfig().setItem(0, new ItemStack(Items.IRON_INGOT, 10));
         helper.runAfterDelay(2, () -> net(helper, bay).insertItem(new ItemStack(Items.IRON_INGOT, 32), false));
         // automation (like a hopper or another mod's pipe) sees the interface from any side
-        var handler = helper.getLevel().getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK,
+        var handler = helper.getLevel().getCapability(net.neoforged.neoforge.capabilities.Capabilities.Item.BLOCK,
                 helper.absolutePos(BUS_OUT), Direction.UP);
         helper.assertTrue(handler != null, "interface exposes an item handler");
         helper.assertTrue(handler.insertItem(0, new ItemStack(Items.DIRT), true).getCount() == 1, "stock slots refuse insertion");
@@ -936,16 +904,15 @@ public class GolemGameTests {
      * limited to a stack, clicks with an empty hand and "wheel" clicks take nothing out, Shift-click clears; fluid is
      * in mB, switching the mode converts the units; shift-click from the inventory puts into the input row, and the item goes to the network.
      */
-    @GameTest(template = T, timeoutTicks = 300)
     public static void interfaceMenuAmounts(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         helper.setBlock(BUS_OUT, ModBlocks.GOLEM_INTERFACE.get().defaultBlockState());
-        var be = (com.golemlogix.blockentity.InterfaceBlockEntity) helper.getBlockEntity(BUS_OUT);
+        var be = helper.getBlockEntity(BUS_OUT, com.golemlogix.blockentity.InterfaceBlockEntity.class);
         ServerPlayer player = testPlayer(helper);
         var menu = new com.golemlogix.menu.InterfaceMenu(77, player.getInventory(), be.getConfig(), be.getStock(), be.getInbox(),
                 be.getUpgrades(), be.menuData(), be);
         menu.setCarried(new ItemStack(Items.IRON_INGOT, 5));
-        menu.clicked(0, 0, net.minecraft.world.inventory.ClickType.PICKUP, player);
+        menu.clicked(0, 0, net.minecraft.world.inventory.ContainerInput.PICKUP, player);
         helper.assertTrue(be.getConfig().getItem(0).is(Items.IRON_INGOT) && be.getConfig().getItem(0).getCount() == 1, "ghost is one item");
         helper.assertTrue(menu.getCarried().getCount() == 5, "the carried stack is not consumed");
         helper.assertTrue(be.amount(0) == 5 && menu.amount(0) == 5, "amount comes from the carried stack, got " + be.amount(0));
@@ -954,9 +921,9 @@ public class GolemGameTests {
         menu.setAmount(0, 999);
         helper.assertTrue(be.amount(0) == 64, "item amount is capped by the stack size, got " + be.amount(0));
         menu.setCarried(ItemStack.EMPTY);
-        for (var type : new net.minecraft.world.inventory.ClickType[]{net.minecraft.world.inventory.ClickType.PICKUP,
-                net.minecraft.world.inventory.ClickType.SWAP, net.minecraft.world.inventory.ClickType.CLONE,
-                net.minecraft.world.inventory.ClickType.THROW, net.minecraft.world.inventory.ClickType.QUICK_CRAFT}) {
+        for (var type : new net.minecraft.world.inventory.ContainerInput[]{net.minecraft.world.inventory.ContainerInput.PICKUP,
+                net.minecraft.world.inventory.ContainerInput.SWAP, net.minecraft.world.inventory.ContainerInput.CLONE,
+                net.minecraft.world.inventory.ContainerInput.THROW, net.minecraft.world.inventory.ContainerInput.QUICK_CRAFT}) {
             menu.clicked(0, 0, type, player);
         }
         helper.assertTrue(menu.getCarried().isEmpty() && player.getInventory().isEmpty(), "nothing can be pulled out of a ghost slot");
@@ -971,7 +938,7 @@ public class GolemGameTests {
         helper.assertTrue(!menu.isFluidSlot(1) && be.amount(1) == 1, "item mode keeps whole buckets, got " + be.amount(1));
         menu.clickMenuButton(player, com.golemlogix.menu.InterfaceMenu.BUTTON_MODE + 1);
         helper.assertTrue(menu.isFluidSlot(1) && be.amount(1) == 1000, "back to mB, got " + be.amount(1));
-        menu.clicked(1, 0, net.minecraft.world.inventory.ClickType.QUICK_MOVE, player);
+        menu.clicked(1, 0, net.minecraft.world.inventory.ContainerInput.QUICK_MOVE, player);
         helper.assertTrue(be.getConfig().getItem(1).isEmpty(), "shift-click clears the slot");
         // input row: shift-click from the inventory
         player.getInventory().setItem(0, new ItemStack(Items.GOLD_INGOT, 7));
@@ -996,13 +963,12 @@ public class GolemGameTests {
     }
 
     /** A provider with a selected feeding side feeds only the machine on that side; the window button cycles the sides. */
-    @GameTest(template = T, timeoutTicks = 60)
     public static void providerOutputSide(GameTestHelper helper) {
         BlockPos prov = new BlockPos(3, 1, 3);
         helper.setBlock(prov, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
         helper.setBlock(prov.east(), Blocks.CHEST);
         helper.setBlock(prov.west(), Blocks.CHEST);
-        PatternProviderBlockEntity provider = (PatternProviderBlockEntity) helper.getBlockEntity(prov);
+        PatternProviderBlockEntity provider = helper.getBlockEntity(prov, PatternProviderBlockEntity.class);
         PatternData furnace = new PatternData(false, List.of(new ItemStack(Items.RAW_IRON)), List.of(new ItemStack(Items.IRON_INGOT)));
         ServerPlayer player = testPlayer(helper);
         var menu = new com.golemlogix.menu.PatternProviderMenu(21, player.getInventory(), provider.getContainer(), provider.getUpgrades(),
@@ -1016,8 +982,8 @@ public class GolemGameTests {
         for (int i = 0; i < 3; i++) {
             helper.assertTrue(provider.tryPush(furnace) != null, "pushed into the west chest");
         }
-        var west = (net.minecraft.world.Container) helper.getBlockEntity(prov.west());
-        var east = (net.minecraft.world.Container) helper.getBlockEntity(prov.east());
+        var west = helper.getBlockEntity(prov.west(), net.minecraft.world.Container.class);
+        var east = helper.getBlockEntity(prov.east(), net.minecraft.world.Container.class);
         helper.assertTrue(west.countItem(Items.RAW_IRON) == 3 && east.countItem(Items.RAW_IRON) == 0,
                 "only the west machine is fed: west " + west.countItem(Items.RAW_IRON) + ", east " + east.countItem(Items.RAW_IRON));
         helper.setBlock(prov.west(), Blocks.AIR);
@@ -1026,10 +992,9 @@ public class GolemGameTests {
     }
 
     /** Drive cabinet: while its window is open, the display door is open (all viewers count). */
-    @GameTest(template = T, timeoutTicks = 60)
     public static void driveBayDoorFollowsWindow(GameTestHelper helper) {
         putBay(helper, BAY);
-        CopperDriveBayBlockEntity bay = (CopperDriveBayBlockEntity) helper.getBlockEntity(BAY);
+        CopperDriveBayBlockEntity bay = helper.getBlockEntity(BAY, CopperDriveBayBlockEntity.class);
         ServerPlayer a = testPlayer(helper), b = testPlayer(helper);
         var m1 = new com.golemlogix.menu.DriveBayMenu(11, a.getInventory(), bay.getContainer(), bay.priorityData());
         var m2 = new com.golemlogix.menu.DriveBayMenu(12, b.getInventory(), bay.getContainer(), bay.priorityData());
@@ -1058,12 +1023,11 @@ public class GolemGameTests {
      * Co-Processor counts as two (9 steps per cycle per core); the whole cabinet takes one channel; an order goes to a cabinet core;
      * the window opens the doors; a broken part disassembles the cabinet and returns the other blocks.
      */
-    @GameTest(template = T, timeoutTicks = 400)
     public static void mainframeAssemblesAndCrafts(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         BlockPos ctl = new BlockPos(5, 1, 1);
         helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
-        PatternProviderBlockEntity provider = (PatternProviderBlockEntity) helper.getBlockEntity(PROV);
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
         provider.getContainer().setItem(0, card(craftingPattern(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.OAK_LOG))));
         int[] channelsBefore = new int[1];
         helper.runAfterDelay(5, () -> {
@@ -1077,7 +1041,7 @@ public class GolemGameTests {
             helper.assertTrue(helper.getBlockState(new BlockPos(4, 1, 1)).is(ModBlocks.MAINFRAME_PART.get()), "glass became a part");
             helper.assertTrue(helper.getBlockState(new BlockPos(3, 1, 1)).is(ModBlocks.MAINFRAME_PART.get())
                     && helper.getBlockState(new BlockPos(7, 2, 1)).is(ModBlocks.MAINFRAME_PART.get()), "the atlants are built into the cabinet");
-            var mf = (com.golemlogix.blockentity.CryoMainframeBlockEntity) helper.getBlockEntity(ctl);
+            var mf = helper.getBlockEntity(ctl, com.golemlogix.blockentity.CryoMainframeBlockEntity.class);
             mf.getCalculators().setItem(0, new ItemStack(ModBlocks.CRYO_CALCULATOR.get()));
             mf.getCalculators().setItem(5, new ItemStack(ModBlocks.CRYO_CALCULATOR.get()));
             mf.getUpgrades().setItem(0, new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get()));
@@ -1102,14 +1066,14 @@ public class GolemGameTests {
             helper.assertTrue(mf.viewers() == 0, "and close with it");
         });
         helper.runAfterDelay(50, () -> {
-            var mf = (com.golemlogix.blockentity.CryoMainframeBlockEntity) helper.getBlockEntity(ctl);
+            var mf = helper.getBlockEntity(ctl, com.golemlogix.blockentity.CryoMainframeBlockEntity.class);
             helper.assertTrue(mf.busyCores() == 0 && mf.isBoosted(), "the sped-up order is over at once and still calls the foreman");
         });
         helper.runAfterDelay(140, () -> {
             GolemNetwork n = net(helper, bay);
             helper.assertTrue(n.itemCountOf(ItemKey.of(new ItemStack(Items.OAK_PLANKS))) == 16, "the core crafted 16 planks, got "
                     + n.itemCountOf(ItemKey.of(new ItemStack(Items.OAK_PLANKS))));
-            var mf = (com.golemlogix.blockentity.CryoMainframeBlockEntity) helper.getBlockEntity(ctl);
+            var mf = helper.getBlockEntity(ctl, com.golemlogix.blockentity.CryoMainframeBlockEntity.class);
             helper.assertTrue(mf.busyCores() == 0, "the core is free again");
             // the glass was broken: the cabinet is disassembled, the other parts are glass and casings again
             helper.getLevel().destroyBlock(helper.absolutePos(new BlockPos(4, 1, 1)), true);
@@ -1147,7 +1111,7 @@ public class GolemGameTests {
 
     private static Block statue(String prefix) {
         return net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(
-                net.minecraft.resources.ResourceLocation.withDefaultNamespace(prefix + "copper_golem_statue"));
+                net.minecraft.resources.Identifier.withDefaultNamespace(prefix + "copper_golem_statue"));
     }
 
     /** A north-facing Punch Card Catalog with the owner at ctl: shelves, copper at the back, pedestals and statues (the right one oxidized). */
@@ -1170,7 +1134,6 @@ public class GolemGameTests {
      * finds a card; its pattern is visible to the network (the cabinet is one channel), a calculator crafts by it without a provider; breaking a part
      * disassembles the cabinet and returns the former blocks (the statue with the same oxidation).
      */
-    @GameTest(template = T, timeoutTicks = 300)
     public static void catalogStoresCraftingCards(GameTestHelper helper) {
         if (statue("") == Blocks.AIR || statue("oxidized_") == Blocks.AIR) {
             // no mod with copper golem statues (Copper Age Backport is optional): the Catalog cannot be built here
@@ -1191,7 +1154,7 @@ public class GolemGameTests {
             helper.assertTrue(helper.getBlockState(ctl).getValue(com.golemlogix.blocks.CardCatalogBlock.FORMED), "the catalog assembles");
             helper.assertTrue(helper.getBlockState(new BlockPos(4, 2, 1)).is(ModBlocks.CATALOG_PART.get())
                     && helper.getBlockState(new BlockPos(7, 2, 1)).is(ModBlocks.CATALOG_PART.get()), "shelves and statues became parts");
-            var cat = (com.golemlogix.blockentity.CardCatalogBlockEntity) helper.getBlockEntity(ctl);
+            var cat = helper.getBlockEntity(ctl, com.golemlogix.blockentity.CardCatalogBlockEntity.class);
             helper.assertTrue(cat.golemOxidation(1) == 3 && cat.golemOxidation(0) == 0, "golems take the statues' oxidation");
             ServerPlayer player = testPlayer(helper);
             var menu = new com.golemlogix.menu.CardCatalogMenu(93, player.getInventory(), cat, net.minecraft.world.inventory.ContainerLevelAccess.NULL);
@@ -1244,7 +1207,7 @@ public class GolemGameTests {
             helper.assertTrue(helper.getBlockState(new BlockPos(7, 2, 1)).is(statue("oxidized_")), "the oxidized statue is back");
             helper.assertTrue(helper.getBlockState(new BlockPos(4, 1, 2)).is(Blocks.WAXED_WEATHERED_COPPER), "waxed copper is back as it was");
             helper.assertTrue(!net(helper, bay).canCraft(ItemKey.of(planks)), "an unassembled catalog gives no patterns");
-            var cat = (com.golemlogix.blockentity.CardCatalogBlockEntity) helper.getBlockEntity(ctl);
+            var cat = helper.getBlockEntity(ctl, com.golemlogix.blockentity.CardCatalogBlockEntity.class);
             helper.assertTrue(cat.cardCount() == 2, "the cards stay inside");
             helper.succeed();
         });
@@ -1254,7 +1217,6 @@ public class GolemGameTests {
      * Cryo Schematic Concentrator: shows the network's providers by category (crafting-table ones under "Crafting Table", the others by the machine next to them),
      * the window slots are the providers' real slots; shift-click puts a machine card next to the machine; search keeps the needed category.
      */
-    @GameTest(template = T, timeoutTicks = 100)
     public static void concentratorGroupsProviders(GameTestHelper helper) {
         baseNetwork(helper);
         BlockPos craftProv = new BlockPos(4, 1, 7), conc = new BlockPos(6, 1, 7);
@@ -1262,8 +1224,8 @@ public class GolemGameTests {
         helper.setBlock(PROV.east(), Blocks.FURNACE);
         helper.setBlock(craftProv, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
         helper.setBlock(conc, ModBlocks.SCHEMATIC_CONCENTRATOR.get().defaultBlockState());
-        PatternProviderBlockEntity furnaceProv = (PatternProviderBlockEntity) helper.getBlockEntity(PROV);
-        PatternProviderBlockEntity crafting = (PatternProviderBlockEntity) helper.getBlockEntity(craftProv);
+        PatternProviderBlockEntity furnaceProv = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+        PatternProviderBlockEntity crafting = helper.getBlockEntity(craftProv, PatternProviderBlockEntity.class);
         ItemStack smelt = card(new PatternData(false, List.of(new ItemStack(Items.IRON_ORE)), List.of(new ItemStack(Items.IRON_INGOT))));
         ItemStack planks = card(craftingPattern(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.OAK_LOG)));
         furnaceProv.getContainer().setItem(0, smelt.copy());
@@ -1292,7 +1254,7 @@ public class GolemGameTests {
             crafting.getContainer().setItem(0, planks.copy());
             menu.view(0, "ingot");
             helper.assertTrue(menu.totalRows() == 2 && ItemStack.matches(menu.getSlot(9).getItem(), smelt), "search keeps only the furnace row");
-            var be = (com.golemlogix.blockentity.SchematicConcentratorBlockEntity) helper.getBlockEntity(conc);
+            var be = helper.getBlockEntity(conc, com.golemlogix.blockentity.SchematicConcentratorBlockEntity.class);
             helper.assertTrue(be.viewers() == 1, "the hologram opens with the window");
             menu.removed(player);
             helper.assertTrue(be.viewers() == 0, "and closes with it");
@@ -1300,15 +1262,14 @@ public class GolemGameTests {
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 400)
     public static void interfaceCraftsMissingStock(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
         helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
-        PatternProviderBlockEntity provider = (PatternProviderBlockEntity) helper.getBlockEntity(PROV);
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
         provider.getContainer().setItem(0, card(craftingPattern(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.OAK_LOG))));
         helper.setBlock(BUS_OUT, ModBlocks.GOLEM_INTERFACE.get().defaultBlockState());
-        var be = (com.golemlogix.blockentity.InterfaceBlockEntity) helper.getBlockEntity(BUS_OUT);
+        var be = helper.getBlockEntity(BUS_OUT, com.golemlogix.blockentity.InterfaceBlockEntity.class);
         be.getConfig().setItem(0, new ItemStack(Items.OAK_PLANKS, 8));
         be.getUpgrades().setItem(0, new ItemStack(ModItems.AUTOCRAFT_MODULE.get()));
         helper.runAfterDelay(2, () -> net(helper, bay).insertItem(new ItemStack(Items.OAK_LOG, 4), false));
@@ -1330,12 +1291,11 @@ public class GolemGameTests {
         return new PatternData(true, grid, List.of(output));
     }
 
-    @GameTest(template = T, timeoutTicks = 400)
     public static void autocraftTree(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
         helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
-        PatternProviderBlockEntity provider = (PatternProviderBlockEntity) helper.getBlockEntity(PROV);
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
         ItemStack plank = new ItemStack(Items.OAK_PLANKS);
         provider.getContainer().setItem(0, card(craftingPattern(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.OAK_LOG))));
         provider.getContainer().setItem(1, card(craftingPattern(new ItemStack(Items.STICK, 4),
@@ -1365,7 +1325,7 @@ public class GolemGameTests {
             long sticksNow = n.itemCountOf(ItemKey.of(new ItemStack(Items.STICK)));
             helper.assertTrue(sticksNow == 8, "expected 8 sticks, got " + sticksNow);
             helper.assertTrue(n.itemCountOf(ItemKey.of(new ItemStack(Items.OAK_PLANKS))) == 0, "no planks left");
-            CryoCalculatorBlockEntity cpu = (CryoCalculatorBlockEntity) helper.getBlockEntity(CPU);
+            CryoCalculatorBlockEntity cpu = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class);
             helper.assertTrue(cpu.isIdle(), "calculator must be idle again");
             helper.succeed();
         });
@@ -1375,14 +1335,13 @@ public class GolemGameTests {
      * The foreman: an order the co-processors sped up still calls him when it is over at once (it used to end the speed-up in the
      * same tick, so on a big speed-up he never came); he leaves a while later.
      */
-    @GameTest(template = T, timeoutTicks = 200)
     public static void calculatorForemanAfterQuickJob(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
         helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
-        PatternProviderBlockEntity provider = (PatternProviderBlockEntity) helper.getBlockEntity(PROV);
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
         provider.getContainer().setItem(0, card(craftingPattern(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.OAK_LOG))));
-        CryoCalculatorBlockEntity cpu = (CryoCalculatorBlockEntity) helper.getBlockEntity(CPU);
+        CryoCalculatorBlockEntity cpu = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class);
         cpu.getUpgrades().setItem(0, new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get()));
         ItemKey planks = ItemKey.of(new ItemStack(Items.OAK_PLANKS));
         helper.runAfterDelay(5, () -> {
@@ -1403,12 +1362,11 @@ public class GolemGameTests {
     }
 
     /** A fuzzy crafting table pattern takes what the recipe accepts in each cell: birch planks for a crafting table encoded with oak. */
-    @GameTest(template = T, timeoutTicks = 300)
     public static void fuzzyCraftingTakesSubstitutes(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
         helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
-        PatternProviderBlockEntity provider = (PatternProviderBlockEntity) helper.getBlockEntity(PROV);
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
         ItemStack oak = new ItemStack(Items.OAK_PLANKS);
         PatternData exact = craftingPattern(new ItemStack(Items.CRAFTING_TABLE), oak, oak, ItemStack.EMPTY, oak, oak);
         List<String> fuzzy = new ArrayList<>(java.util.Collections.nCopies(9, ""));
@@ -1439,15 +1397,14 @@ public class GolemGameTests {
     }
 
     /** A fuzzy processing input with a tag: any glass of #c:glass_blocks goes into the machine for "glass". */
-    @GameTest(template = T, timeoutTicks = 300)
     public static void fuzzyProcessingByTag(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
         helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
         BlockPos machine = PROV.east();
         helper.setBlock(machine, Blocks.CHEST);
-        Container machineInv = (Container) helper.getBlockEntity(machine);
-        PatternProviderBlockEntity provider = (PatternProviderBlockEntity) helper.getBlockEntity(PROV);
+        Container machineInv = helper.getBlockEntity(machine, Container.class);
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
         provider.getContainer().setItem(0, card(new PatternData(false, List.of(new ItemStack(Items.GLASS, 2)),
                 List.of(new ItemStack(Items.GLASS_PANE, 16)), List.of("#c:glass_blocks"))));
         helper.runAfterDelay(5, () -> {
@@ -1469,26 +1426,25 @@ public class GolemGameTests {
     }
 
     /** A Fuzzy Card: filters with a tag let any glass through the import bus and out of the export bus; without it, only glass. */
-    @GameTest(template = T, timeoutTicks = 300)
     public static void fuzzyCardOnBuses(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         ItemStack glassAny = com.golemlogix.system.Fuzzy.withTag(new ItemStack(Items.GLASS),
-                net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM, ResourceLocation.parse("c:glass_blocks")));
+                net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM, Identifier.parse("c:glass_blocks")));
         helper.setBlock(BUS_IN, ModBlocks.VACUUM_IMPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.WEST));
         BlockPos chestIn = new BlockPos(2, 1, 4);
         helper.setBlock(chestIn, Blocks.CHEST);
-        Container in = (Container) helper.getBlockEntity(chestIn);
+        Container in = helper.getBlockEntity(chestIn, Container.class);
         in.setItem(0, new ItemStack(Items.RED_STAINED_GLASS, 5));
         in.setItem(1, new ItemStack(Items.DIRT, 5));
-        BusBlockEntity importer = (BusBlockEntity) helper.getBlockEntity(BUS_IN);
+        BusBlockEntity importer = helper.getBlockEntity(BUS_IN, BusBlockEntity.class);
         importer.getFilters().setItem(0, glassAny.copy());
         importer.getUpgrades().setItem(0, new ItemStack(ModItems.FUZZY_CARD.get()));
 
         helper.setBlock(BUS_OUT, ModBlocks.INJECTOR_EXPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
         BlockPos chestOut = new BlockPos(6, 1, 2);
         helper.setBlock(chestOut, Blocks.CHEST);
-        Container out = (Container) helper.getBlockEntity(chestOut);
-        BusBlockEntity exporter = (BusBlockEntity) helper.getBlockEntity(BUS_OUT);
+        Container out = helper.getBlockEntity(chestOut, Container.class);
+        BusBlockEntity exporter = helper.getBlockEntity(BUS_OUT, BusBlockEntity.class);
         exporter.getFilters().setItem(0, glassAny.copy());
 
         helper.runAfterDelay(60, () -> {
@@ -1509,13 +1465,12 @@ public class GolemGameTests {
     }
 
     /** A Fuzzy Card in the Interface: a config slot of "glass" with a tag keeps any glass in stock. */
-    @GameTest(template = T, timeoutTicks = 300)
     public static void fuzzyCardOnInterface(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         helper.setBlock(BUS_OUT, ModBlocks.GOLEM_INTERFACE.get().defaultBlockState());
-        var be = (com.golemlogix.blockentity.InterfaceBlockEntity) helper.getBlockEntity(BUS_OUT);
+        var be = helper.getBlockEntity(BUS_OUT, com.golemlogix.blockentity.InterfaceBlockEntity.class);
         be.getConfig().setItem(0, com.golemlogix.system.Fuzzy.withTag(new ItemStack(Items.GLASS, 4),
-                net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM, ResourceLocation.parse("c:glass_blocks"))));
+                net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM, Identifier.parse("c:glass_blocks"))));
         be.getUpgrades().setItem(0, new ItemStack(ModItems.FUZZY_CARD.get()));
         helper.runAfterDelay(2, () -> net(helper, bay).insertItem(new ItemStack(Items.BLUE_STAINED_GLASS, 10), false));
         helper.runAfterDelay(120, () -> {
@@ -1525,7 +1480,6 @@ public class GolemGameTests {
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 400)
     public static void autocraftProcessing(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
@@ -1533,8 +1487,8 @@ public class GolemGameTests {
         // the "machine" is a chest behind the provider
         BlockPos machine = PROV.east();
         helper.setBlock(machine, Blocks.CHEST);
-        Container machineInv = (Container) helper.getBlockEntity(machine);
-        PatternProviderBlockEntity provider = (PatternProviderBlockEntity) helper.getBlockEntity(PROV);
+        Container machineInv = helper.getBlockEntity(machine, Container.class);
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
         provider.getContainer().setItem(0, card(new PatternData(false,
                 List.of(new ItemStack(Items.RAW_IRON)), List.of(new ItemStack(Items.IRON_INGOT)))));
 
@@ -1561,13 +1515,12 @@ public class GolemGameTests {
             GolemNetwork n = net(helper, bay);
             long ingots = n.itemCountOf(ItemKey.of(new ItemStack(Items.IRON_INGOT)));
             helper.assertTrue(ingots == 3, "expected 3 ingots delivered to storage, got " + ingots);
-            CryoCalculatorBlockEntity cpu = (CryoCalculatorBlockEntity) helper.getBlockEntity(CPU);
+            CryoCalculatorBlockEntity cpu = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class);
             helper.assertTrue(cpu.isIdle(), "calculator idle after delivery");
             helper.succeed();
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 100)
     public static void networkNeedsSource(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         putBay(helper, BAY);
@@ -1596,7 +1549,6 @@ public class GolemGameTests {
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 100)
     public static void formationOrientsAtlants(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
@@ -1611,10 +1563,9 @@ public class GolemGameTests {
 
     // --------------------------------------------------------------- disks
 
-    @GameTest(template = T, timeoutTicks = 200)
     public static void fluidDisks(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
-        CopperDriveBayBlockEntity be = (CopperDriveBayBlockEntity) helper.getBlockEntity(bay);
+        CopperDriveBayBlockEntity be = helper.getBlockEntity(bay, CopperDriveBayBlockEntity.class);
         be.getContainer().setItem(1, new ItemStack(ModItems.FLUID_DISK_4K.get()));
         helper.runAfterDelay(5, () -> {
             GolemNetwork n = net(helper, bay);
@@ -1630,13 +1581,12 @@ public class GolemGameTests {
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 200)
     public static void interfaceAcceptsFluids(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
-        CopperDriveBayBlockEntity drive = (CopperDriveBayBlockEntity) helper.getBlockEntity(bay);
+        CopperDriveBayBlockEntity drive = helper.getBlockEntity(bay, CopperDriveBayBlockEntity.class);
         drive.getContainer().setItem(1, new ItemStack(ModItems.FLUID_DISK_4K.get()));
         helper.setBlock(BUS_OUT, ModBlocks.GOLEM_INTERFACE.get().defaultBlockState());
-        var fluids = helper.getLevel().getCapability(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.BLOCK,
+        var fluids = helper.getLevel().getCapability(net.neoforged.neoforge.capabilities.Capabilities.Fluid.BLOCK,
                 helper.absolutePos(BUS_OUT), Direction.WEST);
         helper.assertTrue(fluids != null, "interface exposes a fluid handler");
         helper.assertTrue(fluids.fill(new FluidStack(Fluids.WATER, 2500), net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE) == 2500,
@@ -1650,13 +1600,12 @@ public class GolemGameTests {
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 300)
     public static void interfaceStocksFluidPerSlot(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
-        CopperDriveBayBlockEntity drive = (CopperDriveBayBlockEntity) helper.getBlockEntity(bay);
+        CopperDriveBayBlockEntity drive = helper.getBlockEntity(bay, CopperDriveBayBlockEntity.class);
         drive.getContainer().setItem(1, new ItemStack(ModItems.FLUID_DISK_16K.get()));
         helper.setBlock(BUS_OUT, ModBlocks.GOLEM_INTERFACE.get().defaultBlockState());
-        var be = (com.golemlogix.blockentity.InterfaceBlockEntity) helper.getBlockEntity(BUS_OUT);
+        var be = helper.getBlockEntity(BUS_OUT, com.golemlogix.blockentity.InterfaceBlockEntity.class);
         // slot 0: three water buckets in "fluid" mode (the default); slot 1: a water bucket in "item" mode
         be.getConfig().setItem(0, new ItemStack(Items.WATER_BUCKET, 3));
         be.getConfig().setItem(1, new ItemStack(Items.WATER_BUCKET, 1));
@@ -1670,7 +1619,7 @@ public class GolemGameTests {
             helper.assertTrue(be.fluidStock(0).getAmount() == 3000, "keeps 3000 mB of water, has " + be.fluidStock(0).getAmount());
             helper.assertTrue(be.getStock().getItem(0).isEmpty(), "fluid slot keeps no buckets");
             helper.assertTrue(be.getStock().getItem(1).is(Items.WATER_BUCKET), "item-mode slot keeps the bucket itself");
-            var fluids = helper.getLevel().getCapability(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.BLOCK,
+            var fluids = helper.getLevel().getCapability(net.neoforged.neoforge.capabilities.Capabilities.Fluid.BLOCK,
                     helper.absolutePos(BUS_OUT), Direction.UP);
             FluidStack out = fluids.drain(1500, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
             helper.assertTrue(out.getAmount() == 1500 && out.is(Fluids.WATER), "pipes drain the stocked water, got " + out.getAmount());
@@ -1682,7 +1631,6 @@ public class GolemGameTests {
      * Another mod's fluids (Mekanism, if loaded: gradle -Pmekanism): its buckets and its tank in a config slot are recognized as
      * fluid, the interface fills it from the network and gives it to pipes. Without Mekanism the test passes empty.
      */
-    @GameTest(template = T, timeoutTicks = 300)
     public static void interfaceModdedFluids(GameTestHelper helper) {
         if (!net.neoforged.fml.ModList.get().isLoaded("mekanism")) {
             helper.succeed();
@@ -1690,12 +1638,12 @@ public class GolemGameTests {
         }
         var items = net.minecraft.core.registries.BuiltInRegistries.ITEM;
         var fluidsReg = net.minecraft.core.registries.BuiltInRegistries.FLUID;
-        ItemStack brineBucket = new ItemStack(items.get(net.minecraft.resources.ResourceLocation.parse("mekanism:brine_bucket")), 2);
-        ItemStack heavyBucket = new ItemStack(items.get(net.minecraft.resources.ResourceLocation.parse("mekanism:heavy_water_bucket")), 1);
+        ItemStack brineBucket = new ItemStack(items.get(net.minecraft.resources.Identifier.parse("mekanism:brine_bucket")), 2);
+        ItemStack heavyBucket = new ItemStack(items.get(net.minecraft.resources.Identifier.parse("mekanism:heavy_water_bucket")), 1);
         // a Mekanism portable tank filled with sulfuric acid through its own item container
-        ItemStack tank = new ItemStack(items.get(net.minecraft.resources.ResourceLocation.parse("mekanism:basic_fluid_tank")));
-        var acid = fluidsReg.get(net.minecraft.resources.ResourceLocation.parse("mekanism:sulfuric_acid"));
-        var tankCap = tank.getCapability(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.ITEM);
+        ItemStack tank = new ItemStack(items.get(net.minecraft.resources.Identifier.parse("mekanism:basic_fluid_tank")));
+        var acid = fluidsReg.get(net.minecraft.resources.Identifier.parse("mekanism:sulfuric_acid"));
+        var tankCap = tank.getCapability(net.neoforged.neoforge.capabilities.Capabilities.Fluid.ITEM);
         helper.assertTrue(tankCap != null, "Mekanism tank item exposes a fluid handler");
         // Mekanism fills an item tank with at most a bucket at a time, so in portions
         int filled = 0;
@@ -1712,10 +1660,10 @@ public class GolemGameTests {
         helper.assertTrue(com.golemlogix.blockentity.InterfaceBlockEntity.containedFluid(filledTank).is(acid), "filled tank -> acid");
 
         BlockPos bay = baseNetwork(helper);
-        CopperDriveBayBlockEntity drive = (CopperDriveBayBlockEntity) helper.getBlockEntity(bay);
+        CopperDriveBayBlockEntity drive = helper.getBlockEntity(bay, CopperDriveBayBlockEntity.class);
         drive.getContainer().setItem(1, new ItemStack(ModItems.FLUID_DISK_64K.get()));
         helper.setBlock(BUS_OUT, ModBlocks.GOLEM_INTERFACE.get().defaultBlockState());
-        var be = (com.golemlogix.blockentity.InterfaceBlockEntity) helper.getBlockEntity(BUS_OUT);
+        var be = helper.getBlockEntity(BUS_OUT, com.golemlogix.blockentity.InterfaceBlockEntity.class);
         be.getConfig().setItem(0, brineBucket);
         be.getConfig().setItem(1, heavyBucket);
         be.getConfig().setItem(2, filledTank.copyWithCount(1));
@@ -1730,7 +1678,7 @@ public class GolemGameTests {
             helper.assertTrue(be.fluidStock(1).getAmount() == 1000, "1 bucket of heavy water kept, has " + be.fluidStock(1).getAmount());
             // one item in a slot = 1000 mB, even though the tank holds more
             helper.assertTrue(be.fluidStock(2).getAmount() == 1000 && be.fluidStock(2).is(acid), "acid by the tank kept, has " + be.fluidStock(2).getAmount());
-            var cap = helper.getLevel().getCapability(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.BLOCK,
+            var cap = helper.getLevel().getCapability(net.neoforged.neoforge.capabilities.Capabilities.Fluid.BLOCK,
                     helper.absolutePos(BUS_OUT), Direction.NORTH);
             FluidStack out = cap.drain(brine.copyWithAmount(700), net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
             helper.assertTrue(out.getAmount() == 700, "pipes drain Mekanism brine, got " + out.getAmount());
@@ -1738,7 +1686,6 @@ public class GolemGameTests {
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 100)
     public static void diskStoreRoundTrip(GameTestHelper helper) {
         var level = helper.getLevel();
         ItemStack itemDisk = new ItemStack(ModItems.COPPER_DISK_4K.get());
@@ -1780,7 +1727,6 @@ public class GolemGameTests {
      * turn it stands still and looks one way, hands over exactly the cargo it carried and leaves with what it received.
      * An L-shaped line with a branch and a vertical dead end, plus a single pipe between two devices.
      */
-    @GameTest(template = T, timeoutTicks = 20)
     public static void pipeRunnerMovesContinuously(GameTestHelper helper) {
         List<BlockPos> line = new ArrayList<>();
         for (int x = 1; x <= 6; x++) {
@@ -1853,11 +1799,10 @@ public class GolemGameTests {
     }
 
     /** Order planner: what is crafted, taken from the network and missing, row by row, missing ones first. */
-    @GameTest(template = T, timeoutTicks = 40)
     public static void craftPlannerRows(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
-        PatternProviderBlockEntity provider = (PatternProviderBlockEntity) helper.getBlockEntity(PROV);
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
         provider.getContainer().setItem(0, card(craftingPattern(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.OAK_LOG))));
         provider.getContainer().setItem(1, card(craftingPattern(new ItemStack(Items.STICK, 4), new ItemStack(Items.OAK_PLANKS),
                 ItemStack.EMPTY, ItemStack.EMPTY, new ItemStack(Items.OAK_PLANKS))));
@@ -1885,12 +1830,11 @@ public class GolemGameTests {
      * An unassembled Saturator is an anvil: the Forge Hammer turns an iron block into one core in four strikes, every strike
      * spends the hammer's charge (if Source is required); a drained hammer does not strike; only the three base plates are forged by hand.
      */
-    @GameTest(template = T, timeoutTicks = 120)
     public static void saturatorAnvilForgesByHand(GameTestHelper helper) {
         BlockPos at = new BlockPos(2, 1, 2);
         helper.setBlock(at, ModBlocks.MANA_SATURATOR.get().defaultBlockState());
         ServerPlayer player = testPlayer(helper);
-        var sat = (com.golemlogix.blockentity.ManaSaturatorBlockEntity) helper.getBlockEntity(at);
+        var sat = helper.getBlockEntity(at, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
         for (ItemStack only : new ItemStack[]{new ItemStack(ModItems.IMPLODED_WITHER_PLASMA.get()),
                 new ItemStack(ModBlocks.COOLING_COPROCESSOR.get())}) {
             helper.assertTrue(!com.golemlogix.blockentity.ManaSaturatorBlockEntity.isManualInput(helper.getLevel(), only), only + " needs the machine");
@@ -1930,7 +1874,6 @@ public class GolemGameTests {
      * The Chronometer the terminal was opened through cannot be taken out of its slot (click, Shift, Q, number key swap or F with the
      * offhand), otherwise the window would close; other inventory items move as usual.
      */
-    @GameTest(template = T, timeoutTicks = 40)
     public static void chronometerSlotIsLocked(GameTestHelper helper) {
         ServerPlayer player = testPlayer(helper);
         BlockPos anchor = helper.absolutePos(CORE);
@@ -1950,18 +1893,18 @@ public class GolemGameTests {
                 other = i;
             }
         }
-        for (var type : new net.minecraft.world.inventory.ClickType[]{net.minecraft.world.inventory.ClickType.PICKUP,
-                net.minecraft.world.inventory.ClickType.QUICK_MOVE, net.minecraft.world.inventory.ClickType.THROW,
-                net.minecraft.world.inventory.ClickType.PICKUP_ALL}) {
+        for (var type : new net.minecraft.world.inventory.ContainerInput[]{net.minecraft.world.inventory.ContainerInput.PICKUP,
+                net.minecraft.world.inventory.ContainerInput.QUICK_MOVE, net.minecraft.world.inventory.ContainerInput.THROW,
+                net.minecraft.world.inventory.ContainerInput.PICKUP_ALL}) {
             menu.clicked(locked, 0, type, player);
             helper.assertTrue(inv.getItem(0).is(ModItems.PORTABLE_CHRONOMETER.get()) && menu.getCarried().isEmpty(),
                     "the chronometer stays put after " + type);
         }
-        menu.clicked(other, 0, net.minecraft.world.inventory.ClickType.SWAP, player);
+        menu.clicked(other, 0, net.minecraft.world.inventory.ContainerInput.SWAP, player);
         helper.assertTrue(inv.getItem(0).is(ModItems.PORTABLE_CHRONOMETER.get()), "the hotbar key of its slot does not swap it out");
-        menu.clicked(dirtSlot, 0, net.minecraft.world.inventory.ClickType.PICKUP, player);
+        menu.clicked(dirtSlot, 0, net.minecraft.world.inventory.ContainerInput.PICKUP, player);
         helper.assertTrue(menu.getCarried().is(Items.DIRT), "other items still move");
-        menu.clicked(locked, 0, net.minecraft.world.inventory.ClickType.PICKUP, player);
+        menu.clicked(locked, 0, net.minecraft.world.inventory.ContainerInput.PICKUP, player);
         helper.assertTrue(menu.getCarried().is(Items.DIRT) && inv.getItem(0).is(ModItems.PORTABLE_CHRONOMETER.get()),
                 "nothing can be dropped onto the chronometer either");
         menu.setCarried(ItemStack.EMPTY);
@@ -1970,13 +1913,12 @@ public class GolemGameTests {
         inv.setItem(1, new ItemStack(Items.DIRT, 5));
         inv.offhand.set(0, new ItemStack(ModItems.PORTABLE_CHRONOMETER.get()));
         TerminalMenu off = new TerminalMenu(80, inv, helper.getLevel(), anchor, null, null, true, true, 0, net.minecraft.world.entity.player.Inventory.SLOT_OFFHAND);
-        off.clicked(dirtSlot, net.minecraft.world.entity.player.Inventory.SLOT_OFFHAND, net.minecraft.world.inventory.ClickType.SWAP, player);
+        off.clicked(dirtSlot, net.minecraft.world.entity.player.Inventory.SLOT_OFFHAND, net.minecraft.world.inventory.ContainerInput.SWAP, player);
         helper.assertTrue(inv.offhand.get(0).is(ModItems.PORTABLE_CHRONOMETER.get()) && inv.getItem(1).is(Items.DIRT),
                 "the offhand chronometer is not swapped away");
         helper.succeed();
     }
 
-    @GameTest(template = T, timeoutTicks = 200)
     public static void terminalMenuActions(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         helper.setBlock(TERM, ModBlocks.ANALOG_TERMINAL.get().defaultBlockState());
@@ -2012,7 +1954,7 @@ public class GolemGameTests {
             menu.setCarried(ItemStack.EMPTY);
             menu.handleAction(player, new TerminalActionPayload(77, Action.TO_INVENTORY, key, FluidStack.EMPTY));
             int inInv = 0;
-            for (ItemStack s : player.getInventory().items) {
+            for (ItemStack s : player.getInventory().getNonEquipmentItems()) {
                 if (s.is(Items.IRON_INGOT)) {
                     inInv += s.getCount();
                 }
@@ -2032,7 +1974,6 @@ public class GolemGameTests {
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 200)
     public static void craftingTerminalGrid(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         helper.setBlock(TERM, ModBlocks.CRAFTING_TERMINAL.get().defaultBlockState());
@@ -2060,13 +2001,12 @@ public class GolemGameTests {
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 100)
     public static void patternEncoder(GameTestHelper helper) {
         ServerPlayer player = testPlayer(helper);
         // the encoder keeps its contents itself: the window is opened on its block entity
         BlockPos encPos = new BlockPos(2, 1, 2);
         helper.setBlock(encPos, ModBlocks.PATTERN_ENCODER.get());
-        var encoder = (com.golemlogix.blockentity.PatternEncoderBlockEntity) helper.getBlockEntity(encPos);
+        var encoder = helper.getBlockEntity(encPos, com.golemlogix.blockentity.PatternEncoderBlockEntity.class);
         PatternEncoderMenu menu = new PatternEncoderMenu(79, player.getInventory(), encoder.getItems(), encoder.data(), ContainerLevelAccess.NULL);
         menu.getContainer().setItem(0, new ItemStack(Items.OAK_PLANKS));
         menu.getContainer().setItem(3, new ItemStack(Items.OAK_PLANKS));
@@ -2123,12 +2063,11 @@ public class GolemGameTests {
         helper.succeed();
     }
 
-    @GameTest(template = T, timeoutTicks = 200)
     public static void jobPersistence(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
         helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
-        PatternProviderBlockEntity provider = (PatternProviderBlockEntity) helper.getBlockEntity(PROV);
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
         provider.getContainer().setItem(0, card(new PatternData(false,
                 List.of(new ItemStack(Items.RAW_IRON, 2)), List.of(new ItemStack(Items.IRON_INGOT)))));
         helper.runAfterDelay(5, () -> {
@@ -2136,7 +2075,7 @@ public class GolemGameTests {
             n.insertItem(new ItemStack(Items.RAW_IRON, 8), false);
             GolemNetwork.StartResult r = n.startCrafting(ItemKey.of(new ItemStack(Items.IRON_INGOT)), 4);
             helper.assertTrue(r.type() == GolemNetwork.StartType.STARTED, "start " + r.type());
-            CryoCalculatorBlockEntity cpu = (CryoCalculatorBlockEntity) helper.getBlockEntity(CPU);
+            CryoCalculatorBlockEntity cpu = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class);
             CompoundTag tag = cpu.saveWithoutMetadata(helper.getLevel().registryAccess());
             CryoCalculatorBlockEntity copy = new CryoCalculatorBlockEntity(cpu.getBlockPos(), cpu.getBlockState());
             copy.loadWithComponents(tag, helper.getLevel().registryAccess());
@@ -2150,7 +2089,6 @@ public class GolemGameTests {
 
     // ------------------------------------------------------------ data
 
-    @GameTest(template = T, timeoutTicks = 100)
     public static void dataIsComplete(GameTestHelper helper) {
         var server = helper.getLevel().getServer();
         String[] recipes = {"analog_terminal", "atlas_core", "atlas_casing", "atlas_conduit", "atlas_atlant", "channel_expander",
@@ -2161,7 +2099,7 @@ public class GolemGameTests {
                 "fluid_disk_256k", "guide_book", "injector_export_bus", "mana_saturator", "pattern_encoder",
                 "pattern_provider", "periscope_storage_bus", "portable_chronometer", "vacuum_import_bus", "chronometer_upgrade"};
         for (String r : recipes) {
-            ResourceLocation id = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, r);
+            Identifier id = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, r);
             helper.assertTrue(server.getRecipeManager().byKey(id).isPresent(), "missing recipe " + r);
         }
         String[] blocks = {"creative_source_jar", "mana_saturator", "atlas_core", "atlas_casing", "atlas_conduit", "atlas_atlant",
@@ -2171,13 +2109,12 @@ public class GolemGameTests {
                 "periscope_storage_bus", "eternal_frost_resonator"};
         for (String b : blocks) {
             ResourceKey<LootTable> key = ResourceKey.create(Registries.LOOT_TABLE,
-                    ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "blocks/" + b));
+                    Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "blocks/" + b));
             helper.assertTrue(server.reloadableRegistries().getLootTable(key) != LootTable.EMPTY, "missing loot table " + b);
         }
         helper.succeed();
     }
 
-    @GameTest(template = T, timeoutTicks = 100)
     public static void chronometerUpgrade(GameTestHelper helper) {
         var level = helper.getLevel();
         var recipe = new ChronometerUpgradeRecipe(CraftingBookCategory.EQUIPMENT);
@@ -2204,15 +2141,14 @@ public class GolemGameTests {
     private static void checkItem(GameTestHelper helper, String spec, String where) {
         String id = spec.contains("*") ? spec.substring(0, spec.indexOf('*')) : spec;
         if (id.startsWith("fluid:")) {
-            ResourceLocation fl = ResourceLocation.tryParse(id.substring(6));
+            Identifier fl = Identifier.tryParse(id.substring(6));
             helper.assertTrue(fl != null && net.minecraft.core.registries.BuiltInRegistries.FLUID.containsKey(fl), "unknown fluid '" + id + "' in " + where);
             return;
         }
-        ResourceLocation rl = ResourceLocation.tryParse(id);
+        Identifier rl = Identifier.tryParse(id);
         helper.assertTrue(rl != null && net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(rl), "unknown item '" + id + "' in " + where);
     }
 
-    @GameTest(template = T, timeoutTicks = 100)
     public static void bookDataIsValid(GameTestHelper helper) throws Exception {
         var server = helper.getLevel().getServer();
         java.util.Map<String, String> signatures = new java.util.HashMap<>();
@@ -2272,7 +2208,7 @@ public class GolemGameTests {
                                 }
                             }
                             if (page.has("recipe") && items) {
-                                ResourceLocation rid = ResourceLocation.parse(page.get("recipe").getAsString());
+                                Identifier rid = Identifier.parse(page.get("recipe").getAsString());
                                 helper.assertTrue(server.getRecipeManager().byKey(rid).isPresent(), "entry " + id + ": unknown recipe " + rid);
                             }
                             if (page.has("grid")) {
@@ -2321,10 +2257,9 @@ public class GolemGameTests {
         return new BlockPos[]{BAY, BAY.east(), BAY.above(), BAY.east().above()};
     }
 
-    @GameTest(template = T, timeoutTicks = 100)
     public static void bayHasTenSlots(GameTestHelper helper) {
         putBay(helper, BAY);
-        CopperDriveBayBlockEntity be = (CopperDriveBayBlockEntity) helper.getBlockEntity(BAY);
+        CopperDriveBayBlockEntity be = helper.getBlockEntity(BAY, CopperDriveBayBlockEntity.class);
         helper.assertTrue(CopperDriveBayBlockEntity.SLOTS == 10, "cabinet must have 10 slots");
         helper.assertTrue(be.getContainer().getContainerSize() == 10 && be.getDisks().size() == 10, "container size 10");
         var menu = new com.golemlogix.menu.DriveBayMenu(0, testPlayer(helper).getInventory(), be.getContainer(), be.priorityData());
@@ -2333,7 +2268,6 @@ public class GolemGameTests {
     }
 
     /** The cabinet takes 2x2 cells: parts, direction, a block entity only in the main one. */
-    @GameTest(template = T, timeoutTicks = 100)
     public static void cabinetIsTwoByTwo(GameTestHelper helper) {
         putBay(helper, BAY);
         BlockPos[] cells = bayCells();
@@ -2352,12 +2286,11 @@ public class GolemGameTests {
     }
 
     /** Any of the four parts breaks: the whole cabinet disappears, the item drops once, the disks are not lost. */
-    @GameTest(template = T, timeoutTicks = 200)
     public static void cabinetBreaksAsOne(GameTestHelper helper) {
         BlockPos[] cells = bayCells();
         for (int victim = 0; victim < 4; victim++) {
             putBay(helper, BAY);
-            ((CopperDriveBayBlockEntity) helper.getBlockEntity(BAY)).getContainer().setItem(3, new ItemStack(ModItems.COPPER_DISK_1K.get()));
+            (helper.getBlockEntity(BAY, CopperDriveBayBlockEntity.class)).getContainer().setItem(3, new ItemStack(ModItems.COPPER_DISK_1K.get()));
             helper.getLevel().destroyBlock(helper.absolutePos(cells[victim]), true);
             for (BlockPos c : cells) {
                 helper.assertTrue(helper.getBlockState(c).isAir(), "cell " + c + " must vanish after breaking part " + victim);
@@ -2370,7 +2303,6 @@ public class GolemGameTests {
     }
 
     /** By a player's item: placed whole where there is room, and not placed if even one cell is taken. */
-    @GameTest(template = T, timeoutTicks = 100)
     public static void cabinetPlacementByPlayer(GameTestHelper helper) {
         ServerPlayer player = testPlayer(helper);
         player.setYRot(180f);   // looks north: the cabinet will face south
@@ -2395,7 +2327,6 @@ public class GolemGameTests {
     }
 
     /** The cabinet is one network device (one channel), the active state is spread to all parts. */
-    @GameTest(template = T, timeoutTicks = 200)
     public static void cabinetCountsOnce(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         helper.runAfterDelay(25, () -> {
@@ -2411,12 +2342,11 @@ public class GolemGameTests {
     }
 
     /** Bus filters keep their slots (the central slot does not move to the first one on a world reload). */
-    @GameTest(template = T, timeoutTicks = 100)
     public static void busFilterKeepsSlots(GameTestHelper helper) {
         BlockPos at = new BlockPos(2, 1, 2);
         helper.setBlock(at, ModBlocks.VACUUM_IMPORT_BUS.get());
         var registries = helper.getLevel().registryAccess();
-        BusBlockEntity be = (BusBlockEntity) helper.getBlockEntity(at);
+        BusBlockEntity be = helper.getBlockEntity(at, BusBlockEntity.class);
         be.getFilters().setItem(4, new ItemStack(Items.DIAMOND));
         be.getFilters().setItem(8, new ItemStack(Items.GOLD_INGOT));
         CompoundTag saved = be.saveWithFullMetadata(registries);
@@ -2429,7 +2359,6 @@ public class GolemGameTests {
     }
 
     /** Every block that needs a tool can be mined with a pickaxe (otherwise it would never drop), and every block has a drop and a model. */
-    @GameTest(template = T, timeoutTicks = 100)
     public static void everyBlockIsHarvestable(GameTestHelper helper) {
         for (var entry : ModBlocks.BLOCKS.getEntries()) {
             Block block = entry.get();
@@ -2454,7 +2383,6 @@ public class GolemGameTests {
     }
 
     /** A pipe joins a pipe of the same thickness with "glass", a pipe of another thickness and devices with a brass sleeve. */
-    @GameTest(template = T, timeoutTicks = 100)
     public static void pipeLinksByKind(GameTestHelper helper) {
         BlockPos p = new BlockPos(2, 1, 2);
         put(helper, p, ModBlocks.BASIC_SNOW_PIPE.get());
@@ -2476,11 +2404,10 @@ public class GolemGameTests {
     }
 
     /** Disks in the cabinet do not "squeeze" to the front on save; the old format without slot numbers is read too. */
-    @GameTest(template = T, timeoutTicks = 100)
     public static void bayKeepsSlotPositions(GameTestHelper helper) {
         putBay(helper, BAY);
         var registries = helper.getLevel().registryAccess();
-        CopperDriveBayBlockEntity be = (CopperDriveBayBlockEntity) helper.getBlockEntity(BAY);
+        CopperDriveBayBlockEntity be = helper.getBlockEntity(BAY, CopperDriveBayBlockEntity.class);
         be.getContainer().setItem(0, new ItemStack(ModItems.COPPER_DISK_1K.get()));
         be.getContainer().setItem(4, new ItemStack(ModItems.FLUID_DISK_4K.get()));
         be.getContainer().setItem(9, new ItemStack(ModItems.COPPER_DISK_256K.get()));
@@ -2494,8 +2421,8 @@ public class GolemGameTests {
         }
         // old format: entries without Slot go in a row from the first slot
         net.minecraft.nbt.ListTag old = new net.minecraft.nbt.ListTag();
-        old.add(new ItemStack(ModItems.COPPER_DISK_4K.get()).save(registries));
-        old.add(new ItemStack(ModItems.COPPER_DISK_16K.get()).save(registries));
+        old.add(com.golemlogix.system.NbtBridge.saveItem(new ItemStack(ModItems.COPPER_DISK_4K.get()), registries));
+        old.add(com.golemlogix.system.NbtBridge.saveItem(new ItemStack(ModItems.COPPER_DISK_16K.get()), registries));
         CompoundTag legacy = new CompoundTag();
         legacy.put("Disks", old);
         CopperDriveBayBlockEntity oldBe = new CopperDriveBayBlockEntity(helper.absolutePos(BAY), helper.getBlockState(BAY));
@@ -2505,7 +2432,6 @@ public class GolemGameTests {
         helper.succeed();
     }
 
-    @GameTest(template = T, timeoutTicks = 200)
     public static void bushingReportsLoad(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
@@ -2518,7 +2444,7 @@ public class GolemGameTests {
             helper.assertTrue(n.loadAt(helper.absolutePos(new BlockPos(6, 1, 4))) == 0, "other lines are idle");
             // the terminals turned on together with the network (screen animation)
             helper.assertTrue(helper.getBlockState(TERM).getValue(com.golemlogix.blocks.GolemProperties.ACTIVE), "terminal must become active");
-            helper.assertTrue(helper.getBlockEntity(TERM) instanceof com.golemlogix.blockentity.TerminalBlockEntity, "terminal has a block entity");
+            helper.assertTrue(helper.getBlockEntity(TERM, net.minecraft.world.level.block.entity.BlockEntity.class) instanceof com.golemlogix.blockentity.TerminalBlockEntity, "terminal has a block entity");
             helper.succeed();
         });
     }
@@ -2542,7 +2468,6 @@ public class GolemGameTests {
         return com.golemlogix.system.SaturatorStructure.cellPos(helper.absolutePos(controllerRel), facing, index);
     }
 
-    @GameTest(template = T, timeoutTicks = 300)
     public static void saturatorFillsFromNetwork(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
@@ -2564,8 +2489,8 @@ public class GolemGameTests {
         buildSaturator(helper, far, Direction.NORTH);
         helper.runAfterDelay(100, () -> {
             helper.assertTrue(helper.getBlockState(near).getValue(com.golemlogix.blocks.ManaSaturatorBlock.FORMED), "networked saturator forms by itself");
-            var a = (com.golemlogix.blockentity.ManaSaturatorBlockEntity) helper.getBlockEntity(near);
-            var b = (com.golemlogix.blockentity.ManaSaturatorBlockEntity) helper.getBlockEntity(far);
+            var a = helper.getBlockEntity(near, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
+            var b = helper.getBlockEntity(far, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
             helper.assertTrue(a.getSource() >= 300, "networked saturator must fill from the network, got " + a.getSource());
             if (com.golemlogix.system.SourceHelper.sourceRequired()) {
                 helper.assertTrue(b.getSource() == 0, "isolated saturator stays empty, got " + b.getSource());
@@ -2589,7 +2514,6 @@ public class GolemGameTests {
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 200)
     public static void saturatorFormsAndRestores(GameTestHelper helper) {
         BlockPos ctl = new BlockPos(5, 3, 5);
         buildSaturator(helper, ctl, Direction.WEST);
@@ -2630,14 +2554,13 @@ public class GolemGameTests {
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 420)
     public static void saturatorCrafts(GameTestHelper helper) {
         BlockPos ctl = new BlockPos(5, 3, 5);
         buildSaturator(helper, ctl, Direction.NORTH);
         // a Source jar next to the bottom left corner of the machine
         put(helper, new BlockPos(7, 1, 5), ModBlocks.CREATIVE_SOURCE_JAR.get());
         helper.runAfterDelay(30, () -> {
-            var sat = (com.golemlogix.blockentity.ManaSaturatorBlockEntity) helper.getBlockEntity(ctl);
+            var sat = helper.getBlockEntity(ctl, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
             helper.assertTrue(helper.getBlockState(ctl).getValue(com.golemlogix.blocks.ManaSaturatorBlock.FORMED), "forms");
             // right-click on any part (a side casing) with a block in hand puts the block on the anvil
             var player = testPlayer(helper);
@@ -2650,23 +2573,22 @@ public class GolemGameTests {
             helper.assertTrue(iron.getCount() == 1, "one block was taken from the hand");
         });
         helper.runAfterDelay(380, () -> {
-            var sat = (com.golemlogix.blockentity.ManaSaturatorBlockEntity) helper.getBlockEntity(ctl);
+            var sat = helper.getBlockEntity(ctl, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
             helper.assertTrue(sat.outputDeck().is(ModItems.FLATTENED_IRON_CORE.get()) && sat.outputDeck().getCount() == 2,
                     "iron block becomes two flattened cores on the right deck, got " + sat.outputDeck());
             helper.succeed();
         });
     }
     /** A real Ars Nouveau Source jar powers the network and gets drained (only with -PtestMods; without Ars Nouveau there is nothing to check). */
-    @GameTest(template = T, timeoutTicks = 200)
     public static void arsSourceJarPowersNetwork(GameTestHelper helper) {
-        ResourceLocation jarId = ResourceLocation.fromNamespaceAndPath("ars_nouveau", "source_jar");
+        Identifier jarId = Identifier.fromNamespaceAndPath("ars_nouveau", "source_jar");
         if (!com.golemlogix.system.SourceHelper.arsNouveauLoaded() || !net.minecraft.core.registries.BuiltInRegistries.BLOCK.containsKey(jarId)) {
             helper.succeed();
             return;
         }
         buildArray(helper, 0, 0);
         helper.setBlock(JAR, net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(jarId));
-        var supplier = com.golemlogix.system.SourceHelper.asSupplier(helper.getBlockEntity(JAR));
+        var supplier = com.golemlogix.system.SourceHelper.asSupplier(helper.getBlockEntity(JAR, net.minecraft.world.level.block.entity.BlockEntity.class));
         helper.assertTrue(supplier != null, "an Ars Nouveau jar is a Source supplier");
         helper.runAfterDelay(5, () -> {
             helper.assertTrue(!net(helper, ORIGIN).isOnline(), "an empty jar does not power the network");
@@ -2689,7 +2611,6 @@ public class GolemGameTests {
      * With Ars Nouveau the assembled Saturator runs the Imbuement Chamber's Source Gem recipes: twice as fast as the chamber
      * (100 -> 50 ticks for a gem, 200 -> 100 for a block) for a third more Source (500 -> 665, 2000 -> 2660). Without Ars there are none.
      */
-    @GameTest(template = T, timeoutTicks = 400)
     public static void saturatorMakesSourceGems(GameTestHelper helper) {
         var level = helper.getLevel();
         ItemStack shard = new ItemStack(Items.AMETHYST_SHARD);
@@ -2717,11 +2638,11 @@ public class GolemGameTests {
         BlockPos side = com.golemlogix.system.SaturatorStructure.cellPos(helper.absolutePos(ctl), Direction.NORTH,
                 com.golemlogix.system.SaturatorStructure.index(2, 1, 1));
         helper.runAfterDelay(30, () -> {
-            var h = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, side, null);
+            var h = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.Item.BLOCK, side, null);
             helper.assertTrue(h.insertItem(0, new ItemStack(Items.AMETHYST_SHARD, 3), false).isEmpty(), "three shards queue on the left deck");
         });
         helper.runAfterDelay(330, () -> {
-            var h = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, side, null);
+            var h = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.Item.BLOCK, side, null);
             ItemStack out = h.extractItem(1, 64, false);
             helper.assertTrue(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(out.getItem()).toString().equals("ars_nouveau:source_gem")
                             && out.getCount() == 3,
@@ -2731,7 +2652,6 @@ public class GolemGameTests {
     }
 
     /** Automation through any part of the saturator: only a blank goes in, only a finished result comes out. */
-    @GameTest(template = T, timeoutTicks = 440)
     public static void saturatorAutomation(GameTestHelper helper) {
         BlockPos ctl = new BlockPos(5, 3, 5);
         buildSaturator(helper, ctl, Direction.NORTH);
@@ -2739,7 +2659,7 @@ public class GolemGameTests {
         BlockPos side = com.golemlogix.system.SaturatorStructure.cellPos(helper.absolutePos(ctl), Direction.NORTH,
                 com.golemlogix.system.SaturatorStructure.index(2, 1, 1));
         helper.runAfterDelay(30, () -> {
-            var h = helper.getLevel().getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, side, null);
+            var h = helper.getLevel().getCapability(net.neoforged.neoforge.capabilities.Capabilities.Item.BLOCK, side, null);
             helper.assertTrue(h != null, "a saturator part exposes the anvil to automation");
             helper.assertTrue(h.insertItem(0, new ItemStack(Items.DIRT), false).getCount() == 1, "dirt is rejected");
             helper.assertTrue(h.insertItem(1, new ItemStack(Items.IRON_BLOCK), false).getCount() == 1, "the output deck takes nothing");
@@ -2747,7 +2667,7 @@ public class GolemGameTests {
             helper.assertTrue(h.extractItem(0, 64, false).isEmpty(), "the blank cannot be pulled back out");
         });
         helper.runAfterDelay(400, () -> {
-            var h = helper.getLevel().getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, side, null);
+            var h = helper.getLevel().getCapability(net.neoforged.neoforge.capabilities.Capabilities.Item.BLOCK, side, null);
             ItemStack out = h.extractItem(1, 64, false);
             // conveyor: the bringer brings the next blank while the smith forges, so all three are done in that time
             helper.assertTrue(out.is(ModItems.FLATTENED_IRON_CORE.get()) && out.getCount() == 6, "six flattened cores come out, got " + out);
@@ -2776,22 +2696,19 @@ public class GolemGameTests {
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 100)
     public static void anvilRitualIronGolem(GameTestHelper helper) {
         BlockPos at = new BlockPos(4, 1, 4);
         assertCrushed(helper, ritual(helper, net.minecraft.world.entity.EntityType.IRON_GOLEM, at, 3f), at, ModItems.FLATTENED_IRON_CORE.get());
     }
 
-    @GameTest(template = T, timeoutTicks = 100)
     public static void anvilRitualSnowGolem(GameTestHelper helper) {
         BlockPos at = new BlockPos(4, 1, 4);
         assertCrushed(helper, ritual(helper, net.minecraft.world.entity.EntityType.SNOW_GOLEM, at, 3f), at, ModItems.FLATTENED_CRYO_SUBSTRATE.get());
     }
 
     /** The copper golem comes from Copper Age Backport (minecraft:copper_golem), now optional: without it the test has nothing to crush. */
-    @GameTest(template = T, timeoutTicks = 100)
     public static void anvilRitualCopperGolem(GameTestHelper helper) {
-        var id = ResourceLocation.withDefaultNamespace("copper_golem");
+        var id = Identifier.withDefaultNamespace("copper_golem");
         if (!net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.containsKey(id)) {
             helper.succeed();
             return;
@@ -2802,7 +2719,6 @@ public class GolemGameTests {
     }
 
     /** The rituals are data (recipes golem_logix:saturator and golem_logix:anvil_crushing), so modpacks can change and add them. */
-    @GameTest(template = T, timeoutTicks = 20)
     public static void ritualsComeFromData(GameTestHelper helper) {
         var level = helper.getLevel();
         var iron = com.golemlogix.recipe.SaturatorRecipe.find(level, new ItemStack(Items.IRON_BLOCK));
@@ -2834,7 +2750,6 @@ public class GolemGameTests {
      * The hotkey's Chronometer: the main hand, the offhand, the Curios slot (with Curios), then the inventory; the recipes of this
      * pass load (the hammer with an iron plate, and with the mods: Create's assembly line, Ars Nouveau's Blue Ice imbuement).
      */
-    @GameTest(template = T, timeoutTicks = 20)
     public static void chronometerFoundAnywhere(GameTestHelper helper) {
         ServerPlayer player = testPlayer(helper);
         var inv = player.getInventory();
@@ -2868,11 +2783,11 @@ public class GolemGameTests {
                 "the hammer's head sits on an iron plate");
         var manager = level.getRecipeManager();
         if (net.neoforged.fml.ModList.get().isLoaded("create")) {
-            helper.assertTrue(manager.byKey(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "create/sequenced_compressed_coprocessor")).isPresent(),
+            helper.assertTrue(manager.byKey(Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "create/sequenced_compressed_coprocessor")).isPresent(),
                     "Create's Co-Processor assembly line loads");
         }
         if (net.neoforged.fml.ModList.get().isLoaded("ars_nouveau")) {
-            helper.assertTrue(manager.byKey(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "ars/imbuement_cryo_substrate")).isPresent(),
+            helper.assertTrue(manager.byKey(Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "ars/imbuement_cryo_substrate")).isPresent(),
                     "the Blue Ice imbuement loads");
         }
         helper.succeed();
@@ -2882,15 +2797,13 @@ public class GolemGameTests {
      * Without any copper golem (Copper Age Backport is optional) and no modpack recipe for the Copper Matrix the first matrix cannot be
      * made: players are told on joining. With the backport (minecraft:copper_golem) the anvil ritual has its golem.
      */
-    @GameTest(template = T, timeoutTicks = 20)
     public static void copperBootstrapKnowsGolems(GameTestHelper helper) {
-        boolean golem = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.containsKey(ResourceLocation.withDefaultNamespace("copper_golem"));
+        boolean golem = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.containsKey(Identifier.withDefaultNamespace("copper_golem"));
         boolean stuck = com.golemlogix.event.CopperBootstrap.firstMatrixImpossible(helper.getLevel().getServer());
         helper.assertTrue(stuck == !golem, "stuck " + stuck + " although a copper golem is " + (golem ? "there" : "missing"));
         helper.succeed();
     }
 
-    @GameTest(template = T, timeoutTicks = 100)
     public static void anvilRitualNeedsWoundedGolem(GameTestHelper helper) {
         BlockPos at = new BlockPos(4, 1, 4);
         var golem = ritual(helper, net.minecraft.world.entity.EntityType.IRON_GOLEM, at, 0f);
@@ -2914,10 +2827,10 @@ public class GolemGameTests {
 
         @net.neoforged.bus.api.SubscribeEvent
         public static void register(net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent event) {
-            event.registerBlock(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.BLOCK,
+            event.registerBlock(net.neoforged.neoforge.capabilities.Capabilities.Fluid.BLOCK,
                     (level, pos, state, be, side) -> tank(pos), Blocks.LODESTONE);
             // a "machine" with items and fluids for fluid patterns: a barrel gets a tank too
-            event.registerBlock(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.BLOCK,
+            event.registerBlock(net.neoforged.neoforge.capabilities.Capabilities.Fluid.BLOCK,
                     (level, pos, state, be, side) -> tank(pos), Blocks.BARREL);
         }
     }
@@ -2929,10 +2842,9 @@ public class GolemGameTests {
     }
 
     /** The network makes Liquid Cryo-Source from Source when it is pumped out; it is never stored, listed or put into a bucket. */
-    @GameTest(template = T, timeoutTicks = 100)
     public static void cryoSourceFromNetwork(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
-        ((CopperDriveBayBlockEntity) helper.getBlockEntity(bay)).getContainer().setItem(1, new ItemStack(ModItems.FLUID_DISK_4K.get()));
+        (helper.getBlockEntity(bay, CopperDriveBayBlockEntity.class)).getContainer().setItem(1, new ItemStack(ModItems.FLUID_DISK_4K.get()));
         helper.runAfterDelay(20, () -> {
             GolemNetwork n = net(helper, bay);
             helper.assertTrue(n.isOnline() && n.cryoSourceAvailable() >= 1000, "a powered network can make cryo-source");
@@ -2946,7 +2858,6 @@ public class GolemGameTests {
     }
 
     /** Fluid ghosts in a pattern count in mB under one fluid key. */
-    @GameTest(template = T, timeoutTicks = 20)
     public static void fluidPatternTotals(GameTestHelper helper) {
         PatternData p = new PatternData(false, List.of(new ItemStack(Items.COPPER_BLOCK),
                 com.golemlogix.items.FluidGhostItem.of(cryo(250)), com.golemlogix.items.FluidGhostItem.of(cryo(100))),
@@ -2960,7 +2871,6 @@ public class GolemGameTests {
     }
 
     /** An export bus with a cryo-source filter pours it into the tank in front of it. */
-    @GameTest(template = T, timeoutTicks = 200)
     public static void exportBusPumpsCryoSource(GameTestHelper helper) {
         baseNetwork(helper);
         helper.setBlock(BUS_OUT, ModBlocks.INJECTOR_EXPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
@@ -2968,7 +2878,7 @@ public class GolemGameTests {
         helper.setBlock(tankRel, Blocks.LODESTONE);
         var tank = TestCaps.tank(helper.absolutePos(tankRel));
         tank.setFluid(FluidStack.EMPTY);
-        var bus = (com.golemlogix.blockentity.BusBlockEntity) helper.getBlockEntity(BUS_OUT);
+        var bus = helper.getBlockEntity(BUS_OUT, com.golemlogix.blockentity.BusBlockEntity.class);
         bus.getFilters().setItem(0, com.golemlogix.items.FluidGhostItem.of(cryo(250)));
         helper.runAfterDelay(80, () -> {
             helper.assertTrue(com.golemlogix.system.CryoSource.is(tank.getFluid()) && tank.getFluidAmount() >= 1000,
@@ -2978,17 +2888,16 @@ public class GolemGameTests {
     }
 
     /** An interface keeps a stock of cryo-source in its tank, and pipes drain it. */
-    @GameTest(template = T, timeoutTicks = 200)
     public static void interfaceStocksCryoSource(GameTestHelper helper) {
         baseNetwork(helper);
         helper.setBlock(BUS_OUT, ModBlocks.GOLEM_INTERFACE.get().defaultBlockState());
-        var be = (com.golemlogix.blockentity.InterfaceBlockEntity) helper.getBlockEntity(BUS_OUT);
+        var be = helper.getBlockEntity(BUS_OUT, com.golemlogix.blockentity.InterfaceBlockEntity.class);
         be.setSlot(0, com.golemlogix.items.FluidGhostItem.of(cryo(250)), 750);
         helper.runAfterDelay(120, () -> {
             helper.assertTrue(be.isFluidSlot(0) && be.amount(0) == 750, "slot 0 keeps 750 mB");
             helper.assertTrue(com.golemlogix.system.CryoSource.is(be.fluidStock(0)) && be.fluidStock(0).getAmount() == 750,
                     "750 mB of cryo-source in stock, has " + be.fluidStock(0).getAmount());
-            var fluids = helper.getLevel().getCapability(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.BLOCK,
+            var fluids = helper.getLevel().getCapability(net.neoforged.neoforge.capabilities.Capabilities.Fluid.BLOCK,
                     helper.absolutePos(BUS_OUT), Direction.UP);
             FluidStack out = fluids.drain(500, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
             helper.assertTrue(com.golemlogix.system.CryoSource.is(out) && out.getAmount() == 500, "pipes drain it, got " + out.getAmount());
@@ -3000,7 +2909,6 @@ public class GolemGameTests {
      * Autocrafting with a fluid ingredient: a copper block + 250 mB of cryo-source -> a torn copper mind. The planner takes the
      * cryo-source from the network's Source, the provider pours it into the machine's tank along with the block.
      */
-    @GameTest(template = T, timeoutTicks = 400)
     public static void autocraftWithFluid(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
@@ -3009,8 +2917,8 @@ public class GolemGameTests {
         helper.setBlock(machine, Blocks.BARREL);
         var tank = TestCaps.tank(helper.absolutePos(machine));
         tank.setFluid(FluidStack.EMPTY);
-        Container machineInv = (Container) helper.getBlockEntity(machine);
-        PatternProviderBlockEntity provider = (PatternProviderBlockEntity) helper.getBlockEntity(PROV);
+        Container machineInv = helper.getBlockEntity(machine, Container.class);
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
         provider.getContainer().setItem(0, card(new PatternData(false,
                 List.of(new ItemStack(Items.COPPER_BLOCK), com.golemlogix.items.FluidGhostItem.of(cryo(250))),
                 List.of(new ItemStack(ModItems.TORN_COPPER_MIND.get())))));
@@ -3040,13 +2948,12 @@ public class GolemGameTests {
         });
         helper.runAfterDelay(120, () -> {
             helper.assertTrue(net(helper, bay).itemCountOf(torn) == 2, "2 torn minds delivered");
-            helper.assertTrue(((CryoCalculatorBlockEntity) helper.getBlockEntity(CPU)).isIdle(), "calculator idle");
+            helper.assertTrue((helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class)).isIdle(), "calculator idle");
             helper.succeed();
         });
     }
 
     /** A Dispel turns a battered golem into its raw mind, but only for a player who has made a plate on an anvil. */
-    @GameTest(template = T, timeoutTicks = 60)
     public static void dispelUnbindsGolemMind(GameTestHelper helper) {
         ServerPlayer player = testPlayer(helper);
         var golem = helper.spawn(net.minecraft.world.entity.EntityType.IRON_GOLEM, new BlockPos(4, 1, 4));
@@ -3071,7 +2978,6 @@ public class GolemGameTests {
      * With Ars Nouveau (-PtestMods): its real EffectResolveEvent for a Dispel on a golem reaches the mod and is cancelled (the fake
      * player does not know the method, so the golem stays and gets a hint).
      */
-    @GameTest(template = T, timeoutTicks = 40)
     public static void arsDispelEvent(GameTestHelper helper) throws Exception {
         if (!net.neoforged.fml.ModList.get().isLoaded("ars_nouveau")) {
             helper.succeed();
@@ -3101,7 +3007,6 @@ public class GolemGameTests {
                 .setValue(com.golemlogix.blocks.PeriscopeStorageBusBlock.FACING, facing));
     }
 
-    @GameTest(template = T, timeoutTicks = 200)
     public static void periscopeSeesTanks(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
@@ -3128,7 +3033,6 @@ public class GolemGameTests {
         });
     }
 
-    @GameTest(template = T, timeoutTicks = 300)
     public static void storagePriority(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
@@ -3137,14 +3041,14 @@ public class GolemGameTests {
         helper.setBlock(chestB, Blocks.CHEST);
         periscope(helper, new BlockPos(7, 1, 6), Direction.EAST);
         periscope(helper, new BlockPos(4, 1, 7), Direction.SOUTH);
-        var pa = (com.golemlogix.blockentity.PeriscopeBlockEntity) helper.getBlockEntity(new BlockPos(7, 1, 6));
-        var pb = (com.golemlogix.blockentity.PeriscopeBlockEntity) helper.getBlockEntity(new BlockPos(4, 1, 7));
+        var pa = helper.getBlockEntity(new BlockPos(7, 1, 6), com.golemlogix.blockentity.PeriscopeBlockEntity.class);
+        var pb = helper.getBlockEntity(new BlockPos(4, 1, 7), com.golemlogix.blockentity.PeriscopeBlockEntity.class);
         pb.setPriority(5);
         helper.runAfterDelay(20, () -> {
             GolemNetwork n = net(helper, ORIGIN);
             helper.assertTrue(n.insertItem(new ItemStack(Items.STONE, 10), false).isEmpty(), "stone fits");
-            var a = (net.minecraft.world.level.block.entity.ChestBlockEntity) helper.getBlockEntity(chestA);
-            var b = (net.minecraft.world.level.block.entity.ChestBlockEntity) helper.getBlockEntity(chestB);
+            var a = helper.getBlockEntity(chestA, net.minecraft.world.level.block.entity.ChestBlockEntity.class);
+            var b = helper.getBlockEntity(chestB, net.minecraft.world.level.block.entity.ChestBlockEntity.class);
             helper.assertTrue(count(a, Items.STONE) == 0 && count(b, Items.STONE) == 10, "the higher priority chest B gets the stone first");
             pa.setPriority(10);
             GolemNetwork n2 = net(helper, ORIGIN);
@@ -3166,15 +3070,14 @@ public class GolemGameTests {
         return n;
     }
 
-    @GameTest(template = T, timeoutTicks = 200)
     public static void busPriorityRank(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
         BlockPos a = new BlockPos(3, 1, 6), b = new BlockPos(4, 1, 7);
         put(helper, a, ModBlocks.VACUUM_IMPORT_BUS.get());
         put(helper, b, ModBlocks.INJECTOR_EXPORT_BUS.get());
-        var ba = (BusBlockEntity) helper.getBlockEntity(a);
-        var bb = (BusBlockEntity) helper.getBlockEntity(b);
+        var ba = helper.getBlockEntity(a, BusBlockEntity.class);
+        var bb = helper.getBlockEntity(b, BusBlockEntity.class);
         bb.setPriority(7);
         helper.runAfterDelay(10, () -> {
             GolemNetwork n = net(helper, ORIGIN);
@@ -3200,7 +3103,6 @@ public class GolemGameTests {
      * Autocrafting through the Mana Saturator: an "iron block -> 2 cores" pattern, a Provider right against a machine part puts the block on
      * the anvil itself, an import bus at another part returns the plates to the job.
      */
-    @GameTest(template = T, timeoutTicks = 700)
     public static void autocraftThroughSaturator(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         // from the corner bushing (6,1,6): pipes to the east and to the Provider; a calculator by the pipe
@@ -3218,7 +3120,7 @@ public class GolemGameTests {
         BlockPos ctl = new BlockPos(10, 3, 10);
         buildSaturator(helper, ctl, Direction.SOUTH);
         put(helper, new BlockPos(12, 1, 10), ModBlocks.CREATIVE_SOURCE_JAR.get());
-        PatternProviderBlockEntity provider = (PatternProviderBlockEntity) helper.getBlockEntity(prov);
+        PatternProviderBlockEntity provider = helper.getBlockEntity(prov, PatternProviderBlockEntity.class);
         provider.getContainer().setItem(0, card(new PatternData(false,
                 List.of(new ItemStack(Items.IRON_BLOCK)), List.of(new ItemStack(ModItems.FLATTENED_IRON_CORE.get(), 2)))));
         ItemKey core = ItemKey.of(new ItemStack(ModItems.FLATTENED_IRON_CORE.get()));
@@ -3233,25 +3135,24 @@ public class GolemGameTests {
             GolemNetwork n = net(helper, bay);
             helper.assertTrue(n.itemCountOf(core) == 2, "two cores arrived through the import bus, got " + n.itemCountOf(core));
             helper.assertTrue(n.itemCountOf(ItemKey.of(new ItemStack(Items.IRON_BLOCK))) == 0, "the iron block was used");
-            var sat = (com.golemlogix.blockentity.ManaSaturatorBlockEntity) helper.getBlockEntity(ctl);
+            var sat = helper.getBlockEntity(ctl, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
             helper.assertTrue(sat.getHeldItem().isEmpty() && sat.outputDeck().isEmpty(), "the anvil and the output deck are empty again");
             helper.succeed();
         });
     }
 
     /** Raw iron -> ingot (machine, 9 times) -> iron block (3x3 crafting table): the whole path through the import bus. */
-    @GameTest(template = T, timeoutTicks = 600)
     public static void autocraftMachineThenCrafting(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         autocraftRig(helper);
-        PatternProviderBlockEntity provider = (PatternProviderBlockEntity) helper.getBlockEntity(PROV);
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
         provider.getContainer().setItem(0, card(new PatternData(false,
                 List.of(new ItemStack(Items.RAW_IRON)), List.of(new ItemStack(Items.IRON_INGOT)))));
         ItemStack ingot = new ItemStack(Items.IRON_INGOT);
         provider.getContainer().setItem(1, card(craftingPattern(new ItemStack(Items.IRON_BLOCK),
                 ingot.copy(), ingot.copy(), ingot.copy(), ingot.copy(), ingot.copy(), ingot.copy(), ingot.copy(), ingot.copy(), ingot.copy())));
-        Container machineIn = (Container) helper.getBlockEntity(PROV.east());
-        Container machineOut = (Container) helper.getBlockEntity(MACHINE_OUT);
+        Container machineIn = helper.getBlockEntity(PROV.east(), Container.class);
+        Container machineOut = helper.getBlockEntity(MACHINE_OUT, Container.class);
 
         helper.runAfterDelay(5, () -> {
             GolemNetwork n = net(helper, bay);
@@ -3278,21 +3179,20 @@ public class GolemGameTests {
             helper.assertTrue(n.itemCountOf(ItemKey.of(new ItemStack(Items.IRON_BLOCK))) == 1, "iron block delivered, got "
                     + n.itemCountOf(ItemKey.of(new ItemStack(Items.IRON_BLOCK))));
             helper.assertTrue(n.itemCountOf(ItemKey.of(new ItemStack(Items.IRON_INGOT))) == 0, "no ingots left over");
-            helper.assertTrue(((CryoCalculatorBlockEntity) helper.getBlockEntity(CPU)).isIdle(), "calculator idle");
+            helper.assertTrue((helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class)).isIdle(), "calculator idle");
             helper.succeed();
         });
     }
 
     /** Storage is full to the top: the machine output is still accepted, and the finished item is delivered as soon as there is room. */
-    @GameTest(template = T, timeoutTicks = 500)
     public static void autocraftWithFullStorage(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         autocraftRig(helper);
-        PatternProviderBlockEntity provider = (PatternProviderBlockEntity) helper.getBlockEntity(PROV);
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
         provider.getContainer().setItem(0, card(new PatternData(false,
                 List.of(new ItemStack(Items.RAW_IRON)), List.of(new ItemStack(Items.IRON_INGOT)))));
-        Container machineIn = (Container) helper.getBlockEntity(PROV.east());
-        Container machineOut = (Container) helper.getBlockEntity(MACHINE_OUT);
+        Container machineIn = helper.getBlockEntity(PROV.east(), Container.class);
+        Container machineOut = helper.getBlockEntity(MACHINE_OUT, Container.class);
 
         helper.runAfterDelay(5, () -> {
             GolemNetwork n = net(helper, bay);
@@ -3311,17 +3211,16 @@ public class GolemGameTests {
             helper.assertTrue(machineOut.isEmpty(), "the bus must take the ingot although the storage is full");
             GolemNetwork n = net(helper, bay);
             helper.assertTrue(n.itemCountOf(ItemKey.of(new ItemStack(Items.IRON_INGOT))) == 0, "ingot waits inside the job");
-            helper.assertTrue(!((CryoCalculatorBlockEntity) helper.getBlockEntity(CPU)).isIdle(), "job still delivering");
+            helper.assertTrue(!(helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class)).isIdle(), "job still delivering");
             n.extractItem(new ItemStack(Items.STONE), 64, false);       // made room
         });
         helper.runAfterDelay(200, () -> {
             GolemNetwork n = net(helper, bay);
             helper.assertTrue(n.itemCountOf(ItemKey.of(new ItemStack(Items.IRON_INGOT))) == 1, "ingot delivered once there is room");
-            helper.assertTrue(((CryoCalculatorBlockEntity) helper.getBlockEntity(CPU)).isIdle(), "calculator idle");
+            helper.assertTrue((helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class)).isIdle(), "calculator idle");
             helper.succeed();
         });
     }
-    @GameTest(template = T, timeoutTicks = 100)
     public static void blueprintMatchesArray(GameTestHelper helper) {
         buildArray(helper, 3, 2);
         helper.runAfterDelay(2, () -> {
@@ -3349,7 +3248,6 @@ public class GolemGameTests {
     }
 
     /** The Saturator blueprint matches what assembly requires: 18 cells, the item set, rotation by the front, parts count as correct. */
-    @GameTest(template = T, timeoutTicks = 100)
     public static void saturatorBlueprint(GameTestHelper helper) {
         var need = AtlasBlueprint.requirements(AtlasBlueprint.Variant.SATURATOR);
         helper.assertTrue(need.get(ModBlocks.MANA_SATURATOR.get().asItem()) == 1, "1 saturator head");
@@ -3388,7 +3286,6 @@ public class GolemGameTests {
      * import takes nothing and export moves nothing (otherwise items would slide into the first slot and the bus would click
      * forever). Export delivers items from a real disk into this chest as usual.
      */
-    @GameTest(template = T, timeoutTicks = 300)
     public static void busSkipsItsOwnContainer(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
@@ -3399,7 +3296,7 @@ public class GolemGameTests {
         put(helper, new BlockPos(3, 1, 6), ModBlocks.BASIC_SNOW_PIPE.get());
         put(helper, new BlockPos(3, 1, 5), ModBlocks.BASIC_SNOW_PIPE.get());
         helper.setBlock(new BlockPos(2, 1, 5), ModBlocks.PERISCOPE_STORAGE_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
-        Container c = (Container) helper.getBlockEntity(chest);
+        Container c = helper.getBlockEntity(chest, Container.class);
         c.setItem(5, new ItemStack(Items.COBBLESTONE, 20));
         ItemKey cobble = ItemKey.of(new ItemStack(Items.COBBLESTONE));
         helper.runAfterDelay(60, () -> {
@@ -3407,16 +3304,16 @@ public class GolemGameTests {
             helper.assertTrue(c.getItem(5).getCount() == 20 && c.getItem(0).isEmpty(), "the import bus leaves its own chest alone");
             // in place of the import: an export with cobblestone in the filter
             helper.setBlock(BUS_IN, ModBlocks.INJECTOR_EXPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.WEST));
-            ((BusBlockEntity) helper.getBlockEntity(BUS_IN)).getFilters().setItem(0, new ItemStack(Items.COBBLESTONE));
+            (helper.getBlockEntity(BUS_IN, BusBlockEntity.class)).getFilters().setItem(0, new ItemStack(Items.COBBLESTONE));
         });
         helper.runAfterDelay(120, () -> {
             helper.assertTrue(c.getItem(5).getCount() == 20 && c.getItem(0).isEmpty(), "the export bus does not refill a chest from itself");
             putBay(helper, BAY);
-            ((CopperDriveBayBlockEntity) helper.getBlockEntity(BAY)).getContainer().setItem(0, new ItemStack(ModItems.COPPER_DISK_1K.get()));
+            (helper.getBlockEntity(BAY, CopperDriveBayBlockEntity.class)).getContainer().setItem(0, new ItemStack(ModItems.COPPER_DISK_1K.get()));
             helper.assertTrue(net(helper, ORIGIN).insertItem(new ItemStack(Items.COBBLESTONE, 5), false).isEmpty(), "5 more go to the disk");
         });
         helper.runAfterDelay(220, () -> {
-            CopperDriveBayBlockEntity be = (CopperDriveBayBlockEntity) helper.getBlockEntity(BAY);
+            CopperDriveBayBlockEntity be = helper.getBlockEntity(BAY, CopperDriveBayBlockEntity.class);
             helper.assertTrue(DiskStorage.storedItems(be.getDisks().get(0)) == 0, "the export bus delivered the disk's cobblestone");
             helper.assertTrue(count(c) == 25 && c.getItem(5).getCount() == 25, "all 25 in the chest's stack, got " + count(c));
             helper.succeed();
@@ -3424,11 +3321,10 @@ public class GolemGameTests {
     }
 
     /** Six upgrade slots: up to four speed upgrades, an Autocraft Module only on export, one module of each kind; speed upgrades are saved. */
-    @GameTest(template = T, timeoutTicks = 100)
     public static void busUpgradeSlots(GameTestHelper helper) {
         BlockPos at = new BlockPos(2, 1, 2);
         helper.setBlock(at, ModBlocks.VACUUM_IMPORT_BUS.get().defaultBlockState());
-        BusBlockEntity in = (BusBlockEntity) helper.getBlockEntity(at);
+        BusBlockEntity in = helper.getBlockEntity(at, BusBlockEntity.class);
         var up = in.getUpgrades();
         helper.assertTrue(up.getContainerSize() == 6 && up.getMaxStackSize() == 1, "six single-item upgrade slots");
         int baseInterval = in.interval();
@@ -3449,14 +3345,14 @@ public class GolemGameTests {
 
         BlockPos at2 = new BlockPos(4, 1, 2);
         helper.setBlock(at2, ModBlocks.INJECTOR_EXPORT_BUS.get().defaultBlockState());
-        var up2 = ((BusBlockEntity) helper.getBlockEntity(at2)).getUpgrades();
+        var up2 = (helper.getBlockEntity(at2, BusBlockEntity.class)).getUpgrades();
         helper.assertTrue(up2.canPlaceItem(0, new ItemStack(ModItems.AUTOCRAFT_MODULE.get())), "the export bus takes the autocraft module");
         up2.setItem(0, new ItemStack(ModItems.AUTOCRAFT_MODULE.get()));
         helper.assertTrue(!up2.canPlaceItem(1, new ItemStack(ModItems.AUTOCRAFT_MODULE.get())), "only one autocraft module");
 
         BlockPos at3 = new BlockPos(6, 1, 2);
         helper.setBlock(at3, ModBlocks.PERISCOPE_STORAGE_BUS.get().defaultBlockState());
-        var up3 = ((com.golemlogix.blockentity.PeriscopeBlockEntity) helper.getBlockEntity(at3)).getUpgrades();
+        var up3 = (helper.getBlockEntity(at3, com.golemlogix.blockentity.PeriscopeBlockEntity.class)).getUpgrades();
         helper.assertTrue(up3.getContainerSize() == 1 && !up3.canPlaceItem(0, speed)
                 && up3.canPlaceItem(0, new ItemStack(ModItems.REDSTONE_MODULE.get())), "the periscope takes only the redstone module");
 
@@ -3470,12 +3366,11 @@ public class GolemGameTests {
     }
 
     /** Cryo-Calculator: up to four Compressed Co-Processors in the slots, each +4 steps per cycle; they add up with the placed ones. */
-    @GameTest(template = T, timeoutTicks = 100)
     public static void calculatorCompressedCoprocessors(GameTestHelper helper) {
         BlockPos at = new BlockPos(4, 1, 4);
         helper.setBlock(at, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
         helper.setBlock(at.east(), ModBlocks.COOLING_COPROCESSOR.get().defaultBlockState());
-        CryoCalculatorBlockEntity cpu = (CryoCalculatorBlockEntity) helper.getBlockEntity(at);
+        CryoCalculatorBlockEntity cpu = helper.getBlockEntity(at, CryoCalculatorBlockEntity.class);
         var up = cpu.getUpgrades();
         ItemStack speed = new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get());
         helper.assertTrue(up.getContainerSize() == 5, "five upgrade slots");
@@ -3497,7 +3392,6 @@ public class GolemGameTests {
     }
 
     /** Redstone Module modes, as in AE2/RS: with signal, without signal, one action per pulse; without the module the signal does not matter. */
-    @GameTest(template = T, timeoutTicks = 100)
     public static void redstoneModes(GameTestHelper helper) {
         var rc = new com.golemlogix.upgrade.RedstoneControl();
         helper.assertTrue(rc.allows(false, false, false) && rc.allows(false, true, true), "without the module the signal does not matter");
@@ -3523,11 +3417,11 @@ public class GolemGameTests {
         // an import bus with the module in "with signal" mode stands still without a signal and works with it
         BlockPos bay = baseNetwork(helper);
         helper.setBlock(BUS_IN, ModBlocks.VACUUM_IMPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.WEST));
-        BusBlockEntity bus = (BusBlockEntity) helper.getBlockEntity(BUS_IN);
+        BusBlockEntity bus = helper.getBlockEntity(BUS_IN, BusBlockEntity.class);
         bus.getUpgrades().setItem(0, new ItemStack(ModItems.REDSTONE_MODULE.get()));
         BlockPos chest = new BlockPos(2, 1, 4);
         helper.setBlock(chest, Blocks.CHEST);
-        Container c = (Container) helper.getBlockEntity(chest);
+        Container c = helper.getBlockEntity(chest, Container.class);
         c.setItem(0, new ItemStack(Items.COBBLESTONE, 8));
         helper.runAfterDelay(40, () -> {
             helper.assertTrue(count(c) == 8, "no signal: the bus waits");
@@ -3541,16 +3435,15 @@ public class GolemGameTests {
     }
 
     /** Provider wait mode: the next portion is not loaded into the machine until the result of the previous one has come back to the job. */
-    @GameTest(template = T, timeoutTicks = 500)
     public static void providerWaitsForResult(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         autocraftRig(helper);
-        PatternProviderBlockEntity provider = (PatternProviderBlockEntity) helper.getBlockEntity(PROV);
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
         provider.getContainer().setItem(0, card(new PatternData(false,
                 List.of(new ItemStack(Items.RAW_IRON)), List.of(new ItemStack(Items.IRON_INGOT)))));
         provider.setBlocking(true);
-        Container machineIn = (Container) helper.getBlockEntity(PROV.east());
-        Container machineOut = (Container) helper.getBlockEntity(MACHINE_OUT);
+        Container machineIn = helper.getBlockEntity(PROV.east(), Container.class);
+        Container machineOut = helper.getBlockEntity(MACHINE_OUT, Container.class);
         ItemKey ingot = ItemKey.of(new ItemStack(Items.IRON_INGOT));
         helper.runAfterDelay(5, () -> {
             GolemNetwork n = net(helper, bay);
@@ -3572,18 +3465,17 @@ public class GolemGameTests {
         helper.runAfterDelay(280, () -> {
             GolemNetwork n = net(helper, bay);
             helper.assertTrue(n.itemCountOf(ingot) == 2, "both ingots delivered, got " + n.itemCountOf(ingot));
-            helper.assertTrue(((CryoCalculatorBlockEntity) helper.getBlockEntity(CPU)).isIdle(), "calculator idle");
+            helper.assertTrue((helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class)).isIdle(), "calculator idle");
             helper.succeed();
         });
     }
 
     /** Precraft (Ctrl + "+" in JEI): one job for several items at once. */
-    @GameTest(template = T, timeoutTicks = 400)
     public static void precraftSeveralTargets(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
         helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
-        PatternProviderBlockEntity provider = (PatternProviderBlockEntity) helper.getBlockEntity(PROV);
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
         ItemStack plank = new ItemStack(Items.OAK_PLANKS);
         provider.getContainer().setItem(0, card(craftingPattern(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.OAK_LOG))));
         provider.getContainer().setItem(1, card(craftingPattern(new ItemStack(Items.STICK, 4),
@@ -3610,7 +3502,7 @@ public class GolemGameTests {
             GolemNetwork n = net(helper, bay);
             helper.assertTrue(n.itemCountOf(sticks) == 4, "4 sticks, got " + n.itemCountOf(sticks));
             helper.assertTrue(n.itemCountOf(planks) >= 4, "at least 4 planks, got " + n.itemCountOf(planks));
-            helper.assertTrue(((CryoCalculatorBlockEntity) helper.getBlockEntity(CPU)).isIdle(), "calculator idle");
+            helper.assertTrue((helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class)).isIdle(), "calculator idle");
             helper.succeed();
         });
     }
@@ -3622,7 +3514,6 @@ public class GolemGameTests {
     }
 
     /** Coprocessors on the roof grilles: only on top, one per grille, they speed up the press, come off with Shift and are not lost on disassembly. */
-    @GameTest(template = T, timeoutTicks = 200)
     public static void saturatorCoolers(GameTestHelper helper) {
         BlockPos ctl = new BlockPos(5, 3, 5);
         buildSaturator(helper, ctl, Direction.NORTH);
@@ -3649,7 +3540,7 @@ public class GolemGameTests {
         });
         helper.runAfterDelay(70, () -> {
             var level = helper.getLevel();
-            var sat = (com.golemlogix.blockentity.ManaSaturatorBlockEntity) helper.getBlockEntity(ctl);
+            var sat = helper.getBlockEntity(ctl, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
             helper.assertTrue(sat.getCoolers() == 5, "the machine counted its coolers, got " + sat.getCoolers());
             helper.assertTrue(sat.speed() == com.golemlogix.blockentity.ManaSaturatorBlockEntity.BASE_SPEED
                     + 5 * com.golemlogix.blockentity.ManaSaturatorBlockEntity.SPEED_PER_COOLER, "five coolers speed it up");
@@ -3670,14 +3561,13 @@ public class GolemGameTests {
     }
 
     /** Redstone Module in the Saturator: installed by right-click, another right-click changes the mode; in "with signal" mode without a signal the golem waits. */
-    @GameTest(template = T, timeoutTicks = 400)
     public static void saturatorRedstoneModule(GameTestHelper helper) {
         BlockPos ctl = new BlockPos(5, 3, 5);
         buildSaturator(helper, ctl, Direction.NORTH);
         put(helper, new BlockPos(7, 1, 5), ModBlocks.CREATIVE_SOURCE_JAR.get());
         helper.runAfterDelay(30, () -> {
             var level = helper.getLevel();
-            var sat = (com.golemlogix.blockentity.ManaSaturatorBlockEntity) helper.getBlockEntity(ctl);
+            var sat = helper.getBlockEntity(ctl, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
             var player = testPlayer(helper);
             BlockPos abs = helper.absolutePos(ctl);
             var hit = new BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(abs), Direction.NORTH, abs, false);
@@ -3695,12 +3585,12 @@ public class GolemGameTests {
             helper.assertTrue(sat.inputDeck().is(Items.IRON_BLOCK), "the blank waits on the left deck");
         });
         helper.runAfterDelay(170, () -> {
-            var sat = (com.golemlogix.blockentity.ManaSaturatorBlockEntity) helper.getBlockEntity(ctl);
+            var sat = helper.getBlockEntity(ctl, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
             helper.assertTrue(sat.getHeldItem().is(Items.IRON_BLOCK) && !sat.isCrafting(), "without a signal the smith waits");
             helper.setBlock(new BlockPos(3, 1, 5), Blocks.REDSTONE_BLOCK);
         });
         helper.runAfterDelay(340, () -> {
-            var sat = (com.golemlogix.blockentity.ManaSaturatorBlockEntity) helper.getBlockEntity(ctl);
+            var sat = helper.getBlockEntity(ctl, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
             helper.assertTrue(sat.outputDeck().is(ModItems.FLATTENED_IRON_CORE.get()), "with a signal it forges, got " + sat.outputDeck());
             var player = testPlayer(helper);
             player.setShiftKeyDown(true);
@@ -3714,26 +3604,25 @@ public class GolemGameTests {
     }
 
     /** The Resonator does not power the network or fill jars; but a chronometer of a network with a resonator is always full. */
-    @GameTest(template = T, timeoutTicks = 200)
     public static void resonatorOnlyFeedsChronometers(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         BlockPos res = new BlockPos(3, 1, 6);     // right against the corner bushing (4,1,6)
         put(helper, res, ModBlocks.ETERNAL_FROST_RESONATOR.get());
-        ResourceLocation jarId = ResourceLocation.fromNamespaceAndPath("ars_nouveau", "source_jar");
+        Identifier jarId = Identifier.fromNamespaceAndPath("ars_nouveau", "source_jar");
         boolean ars = com.golemlogix.system.SourceHelper.arsNouveauLoaded() && net.minecraft.core.registries.BuiltInRegistries.BLOCK.containsKey(jarId);
         BlockPos arsJar = new BlockPos(2, 1, 6);  // an Ars Nouveau jar next to the resonator
         if (ars) {
             helper.setBlock(arsJar, net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(jarId));
         }
         helper.runAfterDelay(60, () -> {
-            helper.assertTrue(com.golemlogix.system.SourceHelper.asSupplier(helper.getBlockEntity(res)) == null, "the resonator is not a Source supplier");
+            helper.assertTrue(com.golemlogix.system.SourceHelper.asSupplier(helper.getBlockEntity(res, net.minecraft.world.level.block.entity.BlockEntity.class)) == null, "the resonator is not a Source supplier");
             GolemNetwork n = net(helper, ORIGIN);
             helper.assertTrue(n.hasResonator(), "the network sees its resonator");
             if (com.golemlogix.system.SourceHelper.sourceRequired()) {
                 helper.assertTrue(!n.isOnline(), "a resonator alone does not power the network");
             }
             if (ars) {
-                var supplier = com.golemlogix.system.SourceHelper.asSupplier(helper.getBlockEntity(arsJar));
+                var supplier = com.golemlogix.system.SourceHelper.asSupplier(helper.getBlockEntity(arsJar, net.minecraft.world.level.block.entity.BlockEntity.class));
                 helper.assertTrue(supplier != null && supplier.available() == 0, "the resonator does not fill Ars Nouveau jars");
             }
             powered(helper);
@@ -3771,14 +3660,13 @@ public class GolemGameTests {
      * Cryo-Source Jar: a two-block supplier. Both halves touch the network, yet it is one supplier holding the Source in its lower
      * half; the network draws on it; breaking the top takes the whole jar.
      */
-    @GameTest(template = T, timeoutTicks = 120)
     public static void cryoJarFeedsNetwork(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         BlockPos jarPos = new BlockPos(3, 1, 6);  // against the corner bushing (4,1,6); its top against the array above it
         com.golemlogix.blocks.CryoJarBlock.place(helper.getLevel(), helper.absolutePos(jarPos), Direction.SOUTH,
                 ModBlocks.CRYO_SOURCE_JAR.get());
-        var lower = (com.golemlogix.blockentity.CryoJarBlockEntity) helper.getBlockEntity(jarPos);
-        var upper = (com.golemlogix.blockentity.CryoJarBlockEntity) helper.getBlockEntity(jarPos.above());
+        var lower = helper.getBlockEntity(jarPos, com.golemlogix.blockentity.CryoJarBlockEntity.class);
+        var upper = helper.getBlockEntity(jarPos.above(), com.golemlogix.blockentity.CryoJarBlockEntity.class);
         int cap = lower.capacity();
         helper.assertTrue(lower.fill(5000, false) == 5000, "the jar takes Source");
         helper.assertTrue(upper.fill(Integer.MAX_VALUE, true) == cap - 5000, "the top half reports the same jar's room");
@@ -3805,7 +3693,6 @@ public class GolemGameTests {
      * back; distils it into the jar beside it, 1 mB to 1 Source; breaking the middle takes the whole tower. Without Neo Vitae (an
      * empty tag) only the refusals and the tower's shape are checked.
      */
-    @GameTest(template = T, timeoutTicks = 200)
     public static void distillationTowerFillsJar(GameTestHelper helper) {
         var level = helper.getLevel();
         BlockPos base = new BlockPos(3, 1, 3);
@@ -3813,10 +3700,10 @@ public class GolemGameTests {
         com.golemlogix.blocks.DistillationTowerBlock.place(level, helper.absolutePos(base), Direction.SOUTH,
                 ModBlocks.CRYO_DISTILLATION_TOWER.get());
         com.golemlogix.blocks.CryoJarBlock.place(level, helper.absolutePos(jarPos), Direction.SOUTH, ModBlocks.CRYO_SOURCE_JAR.get());
-        var tower = (com.golemlogix.blockentity.DistillationTowerBlockEntity) helper.getBlockEntity(base);
-        var jar = (com.golemlogix.blockentity.CryoJarBlockEntity) helper.getBlockEntity(jarPos);
+        var tower = helper.getBlockEntity(base, com.golemlogix.blockentity.DistillationTowerBlockEntity.class);
+        var jar = helper.getBlockEntity(jarPos, com.golemlogix.blockentity.CryoJarBlockEntity.class);
         var exec = net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE;
-        var top = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.BLOCK,
+        var top = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.Fluid.BLOCK,
                 helper.absolutePos(base.above(2)), Direction.UP);
         helper.assertTrue(top != null, "the head takes fluids too");
         // Compressed Co-Processors speed it up: up to four, nothing else goes into those slots

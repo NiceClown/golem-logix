@@ -29,7 +29,7 @@ public final class DevServerCommand {
                     String[] t = StringArgumentType.getString(ctx, "args").trim().split("\\s+");
                     String[] a = Arrays.copyOfRange(t, 1, t.length);
                     try {
-                        DevScenes.run(t[0], a, player.serverLevel(), player, msg -> player.sendSystemMessage(Component.literal("[dev] " + msg)));
+                        DevScenes.run(t[0], a, player.level(), player, msg -> player.sendSystemMessage(Component.literal("[dev] " + msg)));
                     } catch (Exception e) {
                         player.sendSystemMessage(Component.literal("[dev] ERR hook " + t[0] + ": " + e));
                         GolemLogixMod.LOGGER.error("[DevShots] hook {} failed", t[0], e);

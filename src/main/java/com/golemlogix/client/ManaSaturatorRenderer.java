@@ -1,5 +1,7 @@
 package com.golemlogix.client;
 
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.util.LightCoordsUtil;
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.ManaSaturatorBlockEntity;
 import com.golemlogix.blocks.ManaSaturatorBlock;
@@ -12,16 +14,15 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemDisplayContext;
@@ -39,9 +40,9 @@ import net.minecraft.world.phys.AABB;
  * Y 32..48, Z 0..16.
  */
 public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorBlockEntity> {
-    private static final ResourceLocation LIQUID = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/saturator_liquid.png");
-    private static final ResourceLocation PRESS = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/saturator_press.png");
-    private static final ResourceLocation GOLEM = ResourceLocation.withDefaultNamespace("textures/entity/iron_golem/iron_golem.png");
+    private static final Identifier LIQUID = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/saturator_liquid.png");
+    private static final Identifier PRESS = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/saturator_press.png");
+    private static final Identifier GOLEM = Identifier.withDefaultNamespace("textures/entity/iron_golem/iron_golem.png");
     /** A golem about 8.6 units tall (the whole chamber is 9.5): feet on the anvil behind the blank, facing the front. */
     private static final float GOLEM_SCALE = 0.2f;
     private static final float ANVIL_TOP = 29.5f;
@@ -102,7 +103,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
         float time = level.getGameTime() + partialTick;
         // the light is taken above the machine: the owner itself stands inside and does not light its own air
         int light = LevelRenderer.getLightColor(level, entity.getBlockPos().above());
-        light = LightTexture.pack(Math.max(LightTexture.block(light), 10), Math.max(LightTexture.sky(light), 6));
+        light = LightCoordsUtil.pack(Math.max(LightCoordsUtil.block(light), 10), Math.max(LightCoordsUtil.sky(light), 6));
         // ritual progress between ticks, smoothly (the server only sends the start and the end)
         float progress = entity.isCrafting()
                 ? Math.min(1f, entity.getProgressFraction() + partialTick * entity.speed() / (float) entity.currentWork())
@@ -129,10 +130,10 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
         float height = 10f * fill;
         float shift = (time * 0.006f) % 1f;
         float wob = entity.isCrafting() ? 0.04f * (float) Math.sin(time * 0.7f) : 0.01f * (float) Math.sin(time * 0.15f);
-        VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(LIQUID));
+        VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(LIQUID));
         for (float x0 : new float[]{4f, 36f}) {
             Quads.box(vc, p, lx(x0 + 8f), ly(29f), lz(4f), lx(x0), ly(29f + height) + wob / 16f, lz(12f),
-                    shift, shift, shift + 0.8f, shift + 0.8f, 0xFFFFFFFF, LightTexture.FULL_BRIGHT);
+                    shift, shift, shift + 0.8f, shift + 0.8f, 0xFFFFFFFF, LightCoordsUtil.FULL_BRIGHT);
         }
     }
 
@@ -192,7 +193,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
         pose.translate(lx(24f), ly(ANVIL_TOP), lz(GOLEM_Z));
         pose.scale(-GOLEM_SCALE, -GOLEM_SCALE, GOLEM_SCALE);
         pose.translate(0f, -1.501f, 0f);
-        VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(GOLEM));
+        VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(GOLEM));
         golem.render(pose, vc, light, OverlayTexture.NO_OVERLAY);
         if (flower) {
             pose.pushPose();
@@ -421,7 +422,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
                 continue;
             }
             if (vc == null) {
-                vc = buffers.getBuffer(RenderType.entityCutoutNoCull(PRESS));
+                vc = buffers.getBuffer(RenderTypes.entityCutout(PRESS));
             }
             float cx = 16f * SaturatorStructure.col(vent) + 8f, cz = 16f * SaturatorStructure.dep(vent) + 8f;
             pose.pushPose();

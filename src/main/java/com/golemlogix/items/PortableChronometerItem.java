@@ -112,10 +112,10 @@ public class PortableChronometerItem extends Item {
             if (!level.isClientSide()) {
                 context.getItemInHand().set(ModDataComponents.BOUND_CORE.get(),
                         GlobalPos.of(level.dimension(), context.getClickedPos()));
-                player.displayClientMessage(Component.translatable("message.golem_logix.chronometer.bound")
-                        .withStyle(ChatFormatting.AQUA), true);
+                player.sendOverlayMessage(Component.translatable("message.golem_logix.chronometer.bound")
+                        .withStyle(ChatFormatting.AQUA));
             }
-            return InteractionResult.sidedSuccess(level.isClientSide());
+            return InteractionResult.SUCCESS;
         }
         // charging from a Source jar (or any Ars Nouveau device with a Source store)
         BlockEntity be = level.getBlockEntity(context.getClickedPos());
@@ -126,14 +126,14 @@ public class PortableChronometerItem extends Item {
                 int need = MAX_CHARGE - getCharge(stack);
                 int got = need <= 0 ? 0 : jar.drain(need);
                 setCharge(stack, getCharge(stack) + got);
-                player.displayClientMessage(Component.translatable(got > 0 ? "message.golem_logix.chronometer.charged"
+                player.sendOverlayMessage(Component.translatable(got > 0 ? "message.golem_logix.chronometer.charged"
                         : "message.golem_logix.chronometer.nothing_to_charge", getCharge(stack), MAX_CHARGE)
-                        .withStyle(got > 0 ? ChatFormatting.AQUA : ChatFormatting.GRAY), true);
+                        .withStyle(got > 0 ? ChatFormatting.AQUA : ChatFormatting.GRAY));
                 if (got > 0) {
                     level.playSound(null, context.getClickedPos(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 0.8f, 1.6f);
                 }
             }
-            return InteractionResult.sidedSuccess(level.isClientSide());
+            return InteractionResult.SUCCESS;
         }
         return InteractionResult.PASS;
     }
@@ -145,7 +145,7 @@ public class PortableChronometerItem extends Item {
             return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
         }
         // the slot the Chronometer lies in is locked while the window is open (40 = offhand)
-        int locked = hand == InteractionHand.MAIN_HAND ? sp.getInventory().selected : Inventory.SLOT_OFFHAND;
+        int locked = hand == InteractionHand.MAIN_HAND ? sp.getInventory().getSelectedSlot() : Inventory.SLOT_OFFHAND;
         return open(sp, stack, locked) ? InteractionResultHolder.consume(stack) : InteractionResultHolder.fail(stack);
     }
 
@@ -158,8 +158,8 @@ public class PortableChronometerItem extends Item {
         Level level = sp.level();
         GlobalPos bound = getBound(stack);
         if (bound == null) {
-            sp.displayClientMessage(Component.translatable("message.golem_logix.chronometer.unbound")
-                    .withStyle(ChatFormatting.RED), true);
+            sp.sendOverlayMessage(Component.translatable("message.golem_logix.chronometer.unbound")
+                    .withStyle(ChatFormatting.RED));
             return false;
         }
         // trying to reach the core from another dimension is one of the secret recipe trials
@@ -168,22 +168,22 @@ public class PortableChronometerItem extends Item {
         }
         ServerLevel netLevel = sp.server.getLevel(bound.dimension());
         if (netLevel == null || !(netLevel.isLoaded(bound.pos()) && netLevel.getBlockState(bound.pos()).getBlock() instanceof AtlasCoreBlock)) {
-            sp.displayClientMessage(Component.translatable(level.dimension() != bound.dimension()
+            sp.sendOverlayMessage(Component.translatable(level.dimension() != bound.dimension()
                     ? "message.golem_logix.chronometer.other_dimension" : "message.golem_logix.chronometer.lost")
-                    .withStyle(ChatFormatting.RED), true);
+                    .withStyle(ChatFormatting.RED));
             return false;
         }
         int tier = getTier(stack).ordinal();
         if (!inRange(tier, level, sp.position(), netLevel, bound.pos())) {
-            sp.displayClientMessage(Component.translatable(level.dimension() != bound.dimension()
+            sp.sendOverlayMessage(Component.translatable(level.dimension() != bound.dimension()
                     ? "message.golem_logix.chronometer.other_dimension" : "message.golem_logix.chronometer.out_of_range")
-                    .withStyle(ChatFormatting.RED), true);
+                    .withStyle(ChatFormatting.RED));
             return false;
         }
         GolemNetwork net = GolemNetwork.scan(netLevel, bound.pos());
         String err = net.accessError(null);
         if (err != null) {
-            sp.displayClientMessage(Component.translatable(err), true);
+            sp.sendOverlayMessage(Component.translatable(err));
             return false;
         }
         // power: the network's Resonator sends Source itself, otherwise the own charge is needed
@@ -193,15 +193,15 @@ public class PortableChronometerItem extends Item {
             if (resonator) {
                 setCharge(stack, MAX_CHARGE);
             } else if (getCharge(stack) < OPEN_COST) {
-                sp.displayClientMessage(Component.translatable("message.golem_logix.chronometer.empty")
-                        .withStyle(ChatFormatting.RED), true);
+                sp.sendOverlayMessage(Component.translatable("message.golem_logix.chronometer.empty")
+                        .withStyle(ChatFormatting.RED));
                 return false;
             } else {
                 setCharge(stack, getCharge(stack) - OPEN_COST);
             }
         }
-        sp.displayClientMessage(Component.translatable("message.golem_logix.chronometer.accessing")
-                .withStyle(ChatFormatting.AQUA), true);
+        sp.sendOverlayMessage(Component.translatable("message.golem_logix.chronometer.accessing")
+                .withStyle(ChatFormatting.AQUA));
         BlockPos anchor = bound.pos();
         // the Chronometer always has a crafting grid
         sp.openMenu(new SimpleMenuProvider(

@@ -615,16 +615,11 @@ public class InterfaceBlockEntity extends BlockEntity {
         return tag;
     }
 
-    @Override
-    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
-        clientSpeed = tag.getInt("Speed");
+    public void readUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
+        clientSpeed = tag.getIntOr("Speed", 0);
     }
 
-    @Override
-    public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider registries) {
-        handleUpdateTag(pkt.getTag(), registries);
-    }
-
+    
     @Override
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
@@ -632,9 +627,7 @@ public class InterfaceBlockEntity extends BlockEntity {
 
     // ----------------------------------------------------------- persistence
 
-    @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveTag(CompoundTag tag, HolderLookup.Provider registries) {
         tag.put("Config", config.createTag(registries));
         tag.put("Stock", stock.createTag(registries));
         tag.put("Inbox", inbox.createTag(registries));
@@ -643,7 +636,7 @@ public class InterfaceBlockEntity extends BlockEntity {
         net.minecraft.nbt.ListTag fl = new net.minecraft.nbt.ListTag();
         for (int i = 0; i < SLOTS; i++) {
             if (!fluidStock[i].isEmpty()) {
-                CompoundTag e = (CompoundTag) fluidStock[i].save(registries);
+                CompoundTag e = (CompoundTag) com.golemlogix.system.NbtBridge.saveFluid(fluidStock[i], registries);
                 e.putByte("Slot", (byte) i);
                 fl.add(e);
             }
@@ -654,25 +647,23 @@ public class InterfaceBlockEntity extends BlockEntity {
         redstone.save(tag);
     }
 
-    @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
+    protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
         config.fromTag(tag.getList("Config", Tag.TAG_COMPOUND), registries);
         stock.fromTag(tag.getList("Stock", Tag.TAG_COMPOUND), registries);
         inbox.fromTag(tag.getList("Inbox", Tag.TAG_COMPOUND), registries);
         upgrades.fromTag(tag.getList("Upgrades", Tag.TAG_COMPOUND), registries);
-        tank.readFromNBT(registries, tag.getCompound("Tank"));
+        tank.readFromNBT(registries, tag.getCompoundOrEmpty("Tank"));
         java.util.Arrays.fill(fluidStock, net.neoforged.neoforge.fluids.FluidStack.EMPTY);
         net.minecraft.nbt.ListTag fl = tag.getList("FluidStock", Tag.TAG_COMPOUND);
         for (int k = 0; k < fl.size(); k++) {
-            CompoundTag e = fl.getCompound(k);
-            int i = e.getByte("Slot");
+            CompoundTag e = fl.getCompoundOrEmpty(k);
+            int i = e.getByteOr("Slot", (byte) 0);
             if (i >= 0 && i < SLOTS) {
-                fluidStock[i] = net.neoforged.neoforge.fluids.FluidStack.parseOptional(registries, e);
+                fluidStock[i] = com.golemlogix.system.NbtBridge.loadFluid(registries, e).orElse(net.neoforged.neoforge.fluids.FluidStack.EMPTY);
             }
         }
-        itemModeMask = tag.getInt("ItemModes");
-        int[] am = tag.getIntArray("Amounts");
+        itemModeMask = tag.getIntOr("ItemModes", 0);
+        int[] am = tag.getIntArray("Amounts").orElse(new int[0]);
         java.util.Arrays.fill(amount, 0);
         System.arraycopy(am, 0, amount, 0, Math.min(am.length, SLOTS));
         // worlds of older versions kept the amount as the item count in the config slot: move it to "Amounts"
@@ -757,5 +748,31 @@ public class InterfaceBlockEntity extends BlockEntity {
         public boolean isItemValid(int slot, ItemStack stack) {
             return slot >= SLOTS;
         }
+    }
+
+    // ---- 1.21.6+: the game's ValueInput/ValueOutput over the CompoundTag code above
+
+    @Override
+    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        super.saveAdditional(output);
+        CompoundTag tag = new CompoundTag();
+        saveTag(tag, com.golemlogix.system.NbtBridge.registries(this));
+        com.golemlogix.system.NbtBridge.write(output, tag);
+    }
+
+    @Override
+    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+        super.loadAdditional(input);
+        loadTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    }
+
+    @Override
+    public void handleUpdateTag(net.minecraft.world.level.storage.ValueInput input) {
+        readUpdateTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    }
+
+    @Override
+    public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input) {
+        handleUpdateTag(input);
     }
 }

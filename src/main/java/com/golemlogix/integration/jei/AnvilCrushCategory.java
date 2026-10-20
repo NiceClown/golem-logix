@@ -11,10 +11,10 @@ import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -45,9 +45,9 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
     /** One loop: hanging, falling, the blow, the plate shown. In ticks. */
     private static final float LOOP = 72f, FALL_START = 18f, IMPACT = 30f, FLAT = 36f;
     private static final int BROWN = 0xFF8A5A1E, ARROW = 0xFF6E5A44;
-    private static final ResourceLocation HEART_FULL = ResourceLocation.withDefaultNamespace("hud/heart/full");
-    private static final ResourceLocation HEART_HALF = ResourceLocation.withDefaultNamespace("hud/heart/half");
-    private static final ResourceLocation HEART_EMPTY = ResourceLocation.withDefaultNamespace("hud/heart/container");
+    private static final Identifier HEART_FULL = Identifier.withDefaultNamespace("hud/heart/full");
+    private static final Identifier HEART_HALF = Identifier.withDefaultNamespace("hud/heart/half");
+    private static final Identifier HEART_EMPTY = Identifier.withDefaultNamespace("hud/heart/container");
 
     private final IDrawable background;
     private final IDrawable icon;
@@ -104,12 +104,12 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
     }
 
     @Override
-    public void draw(AnvilCrushRecipe recipe, IRecipeSlotsView slotsView, GuiGraphics g, double mouseX, double mouseY) {
+    public void draw(AnvilCrushRecipe recipe, IRecipeSlotsView slotsView, GuiGraphicsExtractor g, double mouseX, double mouseY) {
         Minecraft mc = Minecraft.getInstance();
         Font font = mc.font;
         float t = (float) ((System.currentTimeMillis() / 50.0) % LOOP);
 
-        g.drawString(font, recipe.golemName(), 4, 3, BROWN, false);
+        g.text(font, recipe.golemName(), 4, 3, BROWN, false);
 
         // the golem: whole until the blow, then flattening, then gone while the plate is shown
         LivingEntity golem = model(mc.level, recipe.entity());
@@ -119,7 +119,7 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
         if (golem != null && squash > 0f) {
             drawGolem(g, golem, squash, t >= IMPACT ? Math.max(0, 10 - (int) ((t - IMPACT) * 1.5f)) : 0);
         } else if (golem == null && squash > 0f) {
-            g.renderItem(recipe.golemRepresentation(), GX - 8, FEET_Y - 16);
+            g.item(recipe.golemRepresentation(), GX - 8, FEET_Y - 16);
         }
 
         // the anvil: hangs, falls faster and faster, then sinks with the golem and rests where it stood
@@ -137,10 +137,10 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
         if (t < FALL_START) {
             arrowDown(g, GX, ANVIL_Y + 19, (int) fallTo + 10);
         }
-        g.pose().pushPose();
-        g.pose().translate(0, anvilY, 100);
-        g.renderItem(new ItemStack(Blocks.ANVIL), GX - 8, 0);
-        g.pose().popPose();
+        g.pose().pushMatrix();
+        g.pose().translate(0, anvilY);
+        g.item(new ItemStack(Blocks.ANVIL), GX - 8, 0);
+        g.pose().popMatrix();
 
         // the blow: sparks and frost flying off
         if (t >= IMPACT && t < IMPACT + 10) {
@@ -158,13 +158,13 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
         int midY = FEET_Y - GOLEM_H / 2;
         arrowLeft(g, GX - 22, GX - 36, midY);
         if (Float.isNaN(recipe.minHealth())) {
-            g.drawWordWrap(font, recipe.healthCondition(), 4, midY - 8, GX - 42, BROWN);
+            g.textWithWordWrap(font, recipe.healthCondition(), 4, midY - 8, GX - 42, BROWN);
         } else {
             int x = 4;
             x = hearts(g, x, midY - 5, Mth.ceil(recipe.minHealth()));
-            g.drawString(font, "–", x + 1, midY - 4, BROWN, false);
+            g.text(font, "–", x + 1, midY - 4, BROWN, false);
             hearts(g, x + 8, midY - 5, Mth.floor(recipe.maxHealth()));
-            g.drawString(font, recipe.healthCondition(), 4, midY + 7, 0xFFB0581A, false);
+            g.text(font, recipe.healthCondition(), 4, midY + 7, 0xFFB0581A, false);
         }
 
         // "=" under the golem, then the plate, which lights up once the golem is flattened
@@ -179,7 +179,7 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
     }
 
     /** The golem's model standing on FEET_Y, a little turned; squashed vertically and red with hurt as the anvil lands. */
-    private static void drawGolem(GuiGraphics g, LivingEntity golem, float squash, int hurt) {
+    private static void drawGolem(GuiGraphicsExtractor g, LivingEntity golem, float squash, int hurt) {
         // by the hitbox, but no more than 22 px a block: some golems (the copper one's antenna) stand taller than their hitbox
         float scale = Math.min(22f, GOLEM_H / Math.max(0.5f, golem.getBbHeight()));
         golem.yBodyRot = 200f;
@@ -189,17 +189,17 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
         golem.yHeadRotO = 200f;
         golem.setXRot(0f);
         golem.hurtTime = hurt;
-        g.pose().pushPose();
-        g.pose().translate(GX, FEET_Y, 0);
-        g.pose().scale(1f + (1f - squash) * 0.35f, squash, 1f);
-        g.pose().translate(-GX, -FEET_Y, 0);
+        g.pose().pushMatrix();
+        g.pose().translate(GX, FEET_Y);
+        g.pose().scale(1f + (1f - squash) * 0.35f, squash);
+        g.pose().translate(-GX, -FEET_Y);
         InventoryScreen.renderEntityInInventory(g, GX, FEET_Y, scale, new Vector3f(), new Quaternionf().rotateZ((float) Math.PI), null, golem);
-        g.pose().popPose();
+        g.pose().popMatrix();
         golem.hurtTime = 0;
     }
 
     /** Hearts for hp health points (a half heart per point), as in the HUD. Returns the x after them. */
-    private static int hearts(GuiGraphics g, int x, int y, int hp) {
+    private static int hearts(GuiGraphicsExtractor g, int x, int y, int hp) {
         int n = Math.max(1, (hp + 1) / 2);
         for (int i = 0; i < n; i++) {
             g.blitSprite(HEART_EMPTY, x + i * 8, y, 9, 9);
@@ -209,14 +209,14 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
         return x + n * 8 + 2;
     }
 
-    private static void arrowDown(GuiGraphics g, int x, int y0, int y1) {
+    private static void arrowDown(GuiGraphicsExtractor g, int x, int y0, int y1) {
         g.fill(x - 1, y0, x + 1, y1 - 3, ARROW);
         for (int i = 0; i < 4; i++) {
             g.fill(x - 4 + i, y1 - 4 + i, x + 4 - i, y1 - 3 + i, ARROW);
         }
     }
 
-    private static void arrowLeft(GuiGraphics g, int x0, int x1, int y) {
+    private static void arrowLeft(GuiGraphicsExtractor g, int x0, int x1, int y) {
         g.fill(x1 + 3, y - 1, x0, y + 1, ARROW);
         for (int i = 0; i < 4; i++) {
             g.fill(x1 + i, y - 4 + i, x1 + i + 1, y + 4 - i, ARROW);

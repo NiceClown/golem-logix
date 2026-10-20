@@ -10,7 +10,7 @@ import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.SimpleContainerData;
@@ -349,9 +349,9 @@ public class CardCatalogMenu extends GolemMenu implements ScrollableMenu {
     }
 
     @Override
-    public void clicked(int slotId, int button, ClickType clickType, Player player) {
+    public void clicked(int slotId, int button, ContainerInput clickType, Player player) {
         // a hotbar swap (number keys) would take the whole provider stack past the limit, so it is not allowed while places are taken
-        if (slotId == providerSlot && clickType == ClickType.SWAP && minProviders() > 0) {
+        if (slotId == providerSlot && clickType == ContainerInput.SWAP && minProviders() > 0) {
             return;
         }
         super.clicked(slotId, button, clickType, player);

@@ -54,7 +54,7 @@ public class ModDataComponents {
     public static final Supplier<DataComponentType<net.minecraft.tags.TagKey<net.minecraft.world.item.Item>>> FUZZY_TAG =
             COMPONENTS.registerComponentType("fuzzy_tag", b -> b
                     .persistent(net.minecraft.tags.TagKey.codec(net.minecraft.core.registries.Registries.ITEM))
-                    .networkSynchronized(net.minecraft.resources.ResourceLocation.STREAM_CODEC.map(
+                    .networkSynchronized(net.minecraft.resources.Identifier.STREAM_CODEC.map(
                             id -> net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM, id),
                             net.minecraft.tags.TagKey::location)));
 

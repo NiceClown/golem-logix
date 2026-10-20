@@ -25,7 +25,6 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.material.PushReaction;
@@ -42,7 +41,7 @@ import org.jetbrains.annotations.Nullable;
  * CryoJarRenderer from the lower half.
  */
 public class CryoJarBlock extends Block implements EntityBlock {
-    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final EnumProperty<DoubleBlockHalf> HALF = BlockStateProperties.DOUBLE_BLOCK_HALF;
 
     private static final VoxelShape LOWER_SHAPE = Shapes.or(Block.box(1, 0, 1, 15, 6, 15), Block.box(2, 6, 2, 14, 16, 14));
@@ -128,9 +127,9 @@ public class CryoJarBlock extends Block implements EntityBlock {
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!level.isClientSide() && level.getBlockEntity(lowerOf(pos, state)) instanceof CryoJarBlockEntity jar) {
-            player.displayClientMessage(Component.translatable("message.golem_logix.cryo_jar", jar.available(), jar.capacity()), true);
+            player.sendOverlayMessage(Component.translatable("message.golem_logix.cryo_jar", jar.available(), jar.capacity()));
         }
-        return InteractionResult.sidedSuccess(level.isClientSide());
+        return InteractionResult.SUCCESS;
     }
 
     @Override

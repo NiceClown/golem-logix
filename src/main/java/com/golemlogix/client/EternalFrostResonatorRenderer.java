@@ -1,16 +1,17 @@
 package com.golemlogix.client;
 
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.util.LightCoordsUtil;
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.EternalFrostResonatorBlockEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.AABB;
 
@@ -20,7 +21,7 @@ import net.minecraft.world.phys.AABB;
  * is nearby the vortex spins faster and brighter. The ribbons glow by themselves (unlit) and do not hide the chamber glass.
  */
 public class EternalFrostResonatorRenderer implements BlockEntityRenderer<EternalFrostResonatorBlockEntity> {
-    private static final ResourceLocation VORTEX = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID,
+    private static final Identifier VORTEX = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID,
             "textures/entity/resonator_vortex.png");
     private static final int SEGMENTS = 28;
     private static final float Y0 = 9.3f, Y1 = 24f;
@@ -62,7 +63,7 @@ public class EternalFrostResonatorRenderer implements BlockEntityRenderer<Eterna
         float time = be.getLevel().getGameTime() + partialTick;
         float speed = be.clientLinked ? 1f : 0.4f;
         float bright = be.clientLinked ? 1f : 0.7f;
-        VertexConsumer vc = buffers.getBuffer(RenderType.eyes(VORTEX));
+        VertexConsumer vc = buffers.getBuffer(RenderTypes.eyes(VORTEX));
         PoseStack.Pose p = pose.last();
         float scroll = time * 0.02f * (0.5f + speed);
         for (int k = 0; k < 3; k++) {
@@ -113,6 +114,6 @@ public class EternalFrostResonatorRenderer implements BlockEntityRenderer<Eterna
 
     private static void vertex(VertexConsumer vc, PoseStack.Pose p, float x, float y, float z, float u, float v, int color) {
         vc.addVertex(p, x / 16f, y / 16f, z / 16f).setColor(color).setUv(u, v).setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(LightTexture.FULL_BRIGHT).setNormal(p, 0, 1, 0);
+                .setLight(LightCoordsUtil.FULL_BRIGHT).setNormal(p, 0, 1, 0);
     }
 }

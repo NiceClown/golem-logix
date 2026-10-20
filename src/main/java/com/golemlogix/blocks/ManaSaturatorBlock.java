@@ -1,5 +1,6 @@
 package com.golemlogix.blocks;
 
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import com.golemlogix.blockentity.ManaSaturatorBlockEntity;
 import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.system.SaturatorStructure;
@@ -11,7 +12,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -27,7 +27,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -41,7 +40,7 @@ import org.jetbrains.annotations.Nullable;
  * from jars nearby. Takes no channels.
  */
 public class ManaSaturatorBlock extends Block implements EntityBlock {
-    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     /** The machine is assembled: the neighbouring blocks are replaced by parts, and this block's model is a piece of the shared model. */
     public static final BooleanProperty FORMED = BooleanProperty.create("formed");
 
@@ -85,36 +84,36 @@ public class ManaSaturatorBlock extends Block implements EntityBlock {
     }
 
     @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
         BlockEntity be = level.getBlockEntity(pos);
         if (!state.getValue(FORMED)) {
             // unassembled anvil: a blank goes onto the face for forging by hand (struck with the Forge Hammer, left-click)
             if (be instanceof ManaSaturatorBlockEntity anvil && stack.getItem() instanceof com.golemlogix.items.ForgeHammerItem) {
                 if (!level.isClientSide()) {
-                    player.displayClientMessage(Component.translatable(anvil.anvilItem().isEmpty()
-                            ? "message.golem_logix.anvil.empty" : "message.golem_logix.anvil.use_hammer"), true);
+                    player.sendOverlayMessage(Component.translatable(anvil.anvilItem().isEmpty()
+                            ? "message.golem_logix.anvil.empty" : "message.golem_logix.anvil.use_hammer"));
                 }
-                return ItemInteractionResult.sidedSuccess(level.isClientSide());
+                return InteractionResult.SUCCESS;
             }
             if (be instanceof ManaSaturatorBlockEntity anvil && ManaSaturatorBlockEntity.isInput(level, stack)) {
                 if (!level.isClientSide()) {
                     if (!ManaSaturatorBlockEntity.isManualInput(level, stack)) {
-                        player.displayClientMessage(Component.translatable("message.golem_logix.anvil.needs_machine"), true);
+                        player.sendOverlayMessage(Component.translatable("message.golem_logix.anvil.needs_machine"));
                     } else if (!anvil.anvilItem().isEmpty()) {
-                        player.displayClientMessage(Component.translatable("message.golem_logix.anvil.busy"), true);
+                        player.sendOverlayMessage(Component.translatable("message.golem_logix.anvil.busy"));
                     } else {
                         anvil.placeOnAnvil(stack);
                         if (!player.getAbilities().instabuild) {
                             stack.shrink(1);
                         }
                         level.playSound(null, pos, net.minecraft.sounds.SoundEvents.ANVIL_PLACE, net.minecraft.sounds.SoundSource.BLOCKS, 0.3f, 1.4f);
-                        player.displayClientMessage(Component.translatable("message.golem_logix.anvil.placed",
-                                ManaSaturatorBlockEntity.MANUAL_HITS), true);
+                        player.sendOverlayMessage(Component.translatable("message.golem_logix.anvil.placed",
+                                ManaSaturatorBlockEntity.MANUAL_HITS));
                     }
                 }
-                return ItemInteractionResult.sidedSuccess(level.isClientSide());
+                return InteractionResult.SUCCESS;
             }
-            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            return InteractionResult.TRY_WITH_EMPTY_HAND;
         }
         if (be instanceof ManaSaturatorBlockEntity saturator) {
             // Redstone Module: the first time it is installed into the machine, after that right-clicking with it cycles the mode
@@ -124,16 +123,16 @@ public class ManaSaturatorBlock extends Block implements EntityBlock {
                     if (installed && !player.getAbilities().instabuild) {
                         stack.shrink(1);
                     }
-                    player.displayClientMessage(Component.translatable(installed ? "message.golem_logix.saturator.redstone_added"
+                    player.sendOverlayMessage(Component.translatable(installed ? "message.golem_logix.saturator.redstone_added"
                                     : "message.golem_logix.saturator.redstone_mode",
-                            Component.translatable(saturator.redstoneMode().key())), true);
+                            Component.translatable(saturator.redstoneMode().key())));
                     level.playSound(null, pos, net.minecraft.sounds.SoundEvents.COMPARATOR_CLICK, net.minecraft.sounds.SoundSource.BLOCKS, 0.6f, 1.2f);
                 }
-                return ItemInteractionResult.sidedSuccess(level.isClientSide());
+                return InteractionResult.SUCCESS;
             }
             if (!ManaSaturatorBlockEntity.isInput(level, stack)) {
                 // a pipe, a torch and the like are simply placed next to it (for example a pipe to the inlet), not put on the anvil
-                return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
+                return InteractionResult.PASS;
             }
             // a blank goes to the left deck (the queue), the copper bringer golem will carry it
             if (!level.isClientSide()) {
@@ -141,13 +140,13 @@ public class ManaSaturatorBlock extends Block implements EntityBlock {
                     saturator.addToDeck(stack.copyWithCount(1));
                     stack.shrink(1);
                 } else {
-                    player.displayClientMessage(Component.translatable("message.golem_logix.saturator.deck_full",
-                            ManaSaturatorBlockEntity.DECK_MAX), true);
+                    player.sendOverlayMessage(Component.translatable("message.golem_logix.saturator.deck_full",
+                            ManaSaturatorBlockEntity.DECK_MAX));
                 }
             }
-            return ItemInteractionResult.sidedSuccess(level.isClientSide());
+            return InteractionResult.SUCCESS;
         }
-        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        return InteractionResult.TRY_WITH_EMPTY_HAND;
     }
 
     /** With an empty hand: take the finished items from the right deck, and if there are none, the queue of blanks from the left one. */
@@ -187,8 +186,8 @@ public class ManaSaturatorBlock extends Block implements EntityBlock {
                 SaturatorStructure.form((ServerLevel) level, pos, facing);
             } else {
                 BlockPos m = r.missingPos();
-                player.displayClientMessage(Component.translatable("message.golem_logix.saturator.unformed",
-                        r.expected().getName(), m.getX(), m.getY(), m.getZ()), false);
+                player.sendSystemMessage(Component.translatable("message.golem_logix.saturator.unformed",
+                        r.expected().getName(), m.getX(), m.getY(), m.getZ()));
                 ((ServerLevel) level).sendParticles(ParticleTypes.END_ROD, m.getX() + 0.5, m.getY() + 0.5, m.getZ() + 0.5,
                         14, 0.3, 0.3, 0.3, 0.02);
             }
@@ -205,8 +204,8 @@ public class ManaSaturatorBlock extends Block implements EntityBlock {
         if (giveBack(level, player, saturator)) {
             return InteractionResult.CONSUME;
         }
-        player.displayClientMessage(Component.translatable("message.golem_logix.saturator.status",
-                saturator.getSource(), ManaSaturatorBlockEntity.BUFFER_MAX, saturator.getCoolers(), SaturatorStructure.VENTS.length), true);
+        player.sendOverlayMessage(Component.translatable("message.golem_logix.saturator.status",
+                saturator.getSource(), ManaSaturatorBlockEntity.BUFFER_MAX, saturator.getCoolers(), SaturatorStructure.VENTS.length));
         return InteractionResult.CONSUME;
     }
 

@@ -60,8 +60,8 @@ public class PipePlugItem extends ModItemWithTooltip {
         }
         level.playSound(null, pos, plug ? SoundEvents.COPPER_PLACE : SoundEvents.COPPER_BREAK, SoundSource.BLOCKS, 0.6f, plug ? 1.2f : 1.5f);
         if (player != null) {
-            player.displayClientMessage(Component.translatable(plug ? "message.golem_logix.plug.on" : "message.golem_logix.plug.off",
-                    Component.translatable("direction.golem_logix." + side.getName())), true);
+            player.sendOverlayMessage(Component.translatable(plug ? "message.golem_logix.plug.on" : "message.golem_logix.plug.off",
+                    Component.translatable("direction.golem_logix." + side.getName())));
         }
         return InteractionResult.CONSUME;
     }

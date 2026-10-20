@@ -80,15 +80,15 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
             t.putInt("Phase", phase);
             t.putInt("Timer", timer);
             if (!hands.isEmpty()) {
-                t.put("Hands", hands.save(registries));
+                t.put("Hands", com.golemlogix.system.NbtBridge.saveItem(hands, registries));
             }
             return t;
         }
 
         void load(CompoundTag t, HolderLookup.Provider registries) {
-            phase = t.getInt("Phase");
-            timer = t.getInt("Timer");
-            hands = t.contains("Hands") ? ItemStack.parse(registries, t.getCompound("Hands")).orElse(ItemStack.EMPTY) : ItemStack.EMPTY;
+            phase = t.getIntOr("Phase", 0);
+            timer = t.getIntOr("Timer", 0);
+            hands = t.contains("Hands") ? com.golemlogix.system.NbtBridge.loadItem(registries, t.getCompoundOrEmpty("Hands")).orElse(ItemStack.EMPTY) : ItemStack.EMPTY;
         }
     }
 
@@ -739,17 +739,15 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         return MAX_PROGRESS;
     }
 
-    @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveTag(CompoundTag tag, HolderLookup.Provider registries) {
         if (!heldItem.isEmpty()) {
-            tag.put("HeldItem", heldItem.save(registries));
+            tag.put("HeldItem", com.golemlogix.system.NbtBridge.saveItem(heldItem, registries));
         }
         if (!inDeck.isEmpty()) {
-            tag.put("InDeck", inDeck.save(registries));
+            tag.put("InDeck", com.golemlogix.system.NbtBridge.saveItem(inDeck, registries));
         }
         if (!outDeck.isEmpty()) {
-            tag.put("OutDeck", outDeck.save(registries));
+            tag.put("OutDeck", com.golemlogix.system.NbtBridge.saveItem(outDeck, registries));
         }
         tag.put("Bringer", bringer.save(registries));
         tag.put("Taker", taker.save(registries));
@@ -762,20 +760,18 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         redstone.save(tag);
     }
 
-    @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        heldItem = tag.contains("HeldItem") ? ItemStack.parse(registries, tag.getCompound("HeldItem")).orElse(ItemStack.EMPTY) : ItemStack.EMPTY;
-        inDeck = tag.contains("InDeck") ? ItemStack.parse(registries, tag.getCompound("InDeck")).orElse(ItemStack.EMPTY) : ItemStack.EMPTY;
-        outDeck = tag.contains("OutDeck") ? ItemStack.parse(registries, tag.getCompound("OutDeck")).orElse(ItemStack.EMPTY) : ItemStack.EMPTY;
-        bringer.load(tag.getCompound("Bringer"), registries);
-        taker.load(tag.getCompound("Taker"), registries);
-        this.ritualProgress = tag.getInt("Progress");
-        this.manualHits = tag.getInt("ManualHits");
-        this.source = tag.getInt("Source");
-        this.isCrafting = tag.getBoolean("IsCrafting");
-        this.coolers = tag.getInt("Coolers");
-        this.redstoneModule = tag.getBoolean("RedstoneModule");
+    protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
+        heldItem = tag.contains("HeldItem") ? com.golemlogix.system.NbtBridge.loadItem(registries, tag.getCompoundOrEmpty("HeldItem")).orElse(ItemStack.EMPTY) : ItemStack.EMPTY;
+        inDeck = tag.contains("InDeck") ? com.golemlogix.system.NbtBridge.loadItem(registries, tag.getCompoundOrEmpty("InDeck")).orElse(ItemStack.EMPTY) : ItemStack.EMPTY;
+        outDeck = tag.contains("OutDeck") ? com.golemlogix.system.NbtBridge.loadItem(registries, tag.getCompoundOrEmpty("OutDeck")).orElse(ItemStack.EMPTY) : ItemStack.EMPTY;
+        bringer.load(tag.getCompoundOrEmpty("Bringer"), registries);
+        taker.load(tag.getCompoundOrEmpty("Taker"), registries);
+        this.ritualProgress = tag.getIntOr("Progress", 0);
+        this.manualHits = tag.getIntOr("ManualHits", 0);
+        this.source = tag.getIntOr("Source", 0);
+        this.isCrafting = tag.getBooleanOr("IsCrafting", false);
+        this.coolers = tag.getIntOr("Coolers", 0);
+        this.redstoneModule = tag.getBooleanOr("RedstoneModule", false);
         redstone.load(tag);
     }
 
@@ -789,5 +785,21 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
     @Override
     public ClientboundBlockEntityDataPacket getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    // ---- 1.21.6+: the game's ValueInput/ValueOutput over the CompoundTag code above
+
+    @Override
+    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        super.saveAdditional(output);
+        CompoundTag tag = new CompoundTag();
+        saveTag(tag, com.golemlogix.system.NbtBridge.registries(this));
+        com.golemlogix.system.NbtBridge.write(output, tag);
+    }
+
+    @Override
+    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+        super.loadAdditional(input);
+        loadTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
     }
 }

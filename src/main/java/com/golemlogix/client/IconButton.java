@@ -1,6 +1,6 @@
 package com.golemlogix.client;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
@@ -35,7 +35,7 @@ public class IconButton extends Button {
     }
 
     @Override
-    protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partial) {
+    protected void extractWidgetRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
         if (!visible) {
             return;
         }
@@ -48,7 +48,7 @@ public class IconButton extends Button {
         g.fill(getX(), getY(), getX() + width, getY() + height, GolemGui.WOOD_DARK);
         g.fill(getX() + 1, getY() + 1, getX() + width - 1, getY() + height - 1, hover ? GolemGui.CYAN : GolemGui.BRASS);
         g.fill(getX() + 2, getY() + 2, getX() + width - 2, getY() + height - 2, lit.getAsBoolean() ? 0xFF1B4A48 : GolemGui.WOOD);
-        g.renderItem(icon.get(), getX() + 1, getY() + 1);
+        g.item(icon.get(), getX() + 1, getY() + 1);
     }
 
     @Override

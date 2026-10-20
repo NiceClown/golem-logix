@@ -8,7 +8,7 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -159,7 +159,7 @@ public final class Fuzzy {
         if (!spec.startsWith("#")) {
             return null;
         }
-        ResourceLocation id = ResourceLocation.tryParse(spec.substring(1));
+        Identifier id = Identifier.tryParse(spec.substring(1));
         return id == null ? null : TagKey.create(Registries.ITEM, id);
     }
 

@@ -4,7 +4,7 @@ import com.golemlogix.menu.DriveBayMenu;
 import com.golemlogix.blockentity.CopperDriveBayBlockEntity;
 import com.golemlogix.items.MagneticDiskItem;
 import com.golemlogix.system.DiskStorage;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
@@ -48,7 +48,7 @@ public class DriveBayScreen extends GolemScreen<DriveBayMenu> {
     }
 
     @Override
-    protected void renderExtraBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
+    protected void renderExtraBg(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
         // the cabinet's glass door with brass shelves between the cassette rows
         int rows = DriveBayMenu.ROWS;
         GolemGui.inset(g, leftPos + 66, topPos + 15, 44, rows * 18 + 8);
@@ -63,14 +63,14 @@ public class DriveBayScreen extends GolemScreen<DriveBayMenu> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
-        super.renderLabels(g, mouseX, mouseY);
+    protected void extractLabels(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+        super.extractLabels(g, mouseX, mouseY);
         Summary s = summary();
-        g.drawString(font, Component.translatable("gui.golem_logix.drive_bay.cassettes"), INFO_X, 20, GolemGui.PARCHMENT, false);
-        g.drawString(font, s.disks + " / " + CopperDriveBayBlockEntity.SLOTS, INFO_X, 31, GolemGui.CYAN, false);
-        g.drawString(font, Component.translatable("gui.golem_logix.drive_bay.items"), INFO_X, 47, GolemGui.PARCHMENT, false);
-        g.drawString(font, GolemGui.formatCount(s.itemStored) + " / " + GolemGui.formatCount(s.itemCapacity), INFO_X, 69, GolemGui.BRASS_L, false);
-        g.drawString(font, Component.translatable("gui.golem_logix.drive_bay.fluids"), INFO_X, 79, GolemGui.PARCHMENT, false);
-        g.drawString(font, GolemGui.formatCount(s.fluidStored) + " / " + GolemGui.formatCount(s.fluidCapacity) + " mB", INFO_X, 101, GolemGui.CYAN, false);
+        g.text(font, Component.translatable("gui.golem_logix.drive_bay.cassettes"), INFO_X, 20, GolemGui.PARCHMENT, false);
+        g.text(font, s.disks + " / " + CopperDriveBayBlockEntity.SLOTS, INFO_X, 31, GolemGui.CYAN, false);
+        g.text(font, Component.translatable("gui.golem_logix.drive_bay.items"), INFO_X, 47, GolemGui.PARCHMENT, false);
+        g.text(font, GolemGui.formatCount(s.itemStored) + " / " + GolemGui.formatCount(s.itemCapacity), INFO_X, 69, GolemGui.BRASS_L, false);
+        g.text(font, Component.translatable("gui.golem_logix.drive_bay.fluids"), INFO_X, 79, GolemGui.PARCHMENT, false);
+        g.text(font, GolemGui.formatCount(s.fluidStored) + " / " + GolemGui.formatCount(s.fluidCapacity) + " mB", INFO_X, 101, GolemGui.CYAN, false);
     }
 }

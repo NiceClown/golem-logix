@@ -53,19 +53,31 @@ public class PatternEncoderBlockEntity extends BlockEntity {
         };
     }
 
-    @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveTag(CompoundTag tag, HolderLookup.Provider registries) {
         tag.put("Items", items.createTag(registries));
         tag.putInt("Mode", mode);
         tag.putInt("Fuzzy", fuzzy);
     }
 
-    @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
+    protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
         items.fromTag(tag.getList("Items", Tag.TAG_COMPOUND), registries);
-        mode = tag.getInt("Mode");
-        fuzzy = tag.getInt("Fuzzy");
+        mode = tag.getIntOr("Mode", 0);
+        fuzzy = tag.getIntOr("Fuzzy", 0);
+    }
+
+    // ---- 1.21.6+: the game's ValueInput/ValueOutput over the CompoundTag code above
+
+    @Override
+    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        super.saveAdditional(output);
+        CompoundTag tag = new CompoundTag();
+        saveTag(tag, com.golemlogix.system.NbtBridge.registries(this));
+        com.golemlogix.system.NbtBridge.write(output, tag);
+    }
+
+    @Override
+    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+        super.loadAdditional(input);
+        loadTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
     }
 }

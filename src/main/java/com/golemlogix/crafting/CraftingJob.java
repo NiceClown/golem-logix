@@ -507,14 +507,14 @@ public class CraftingJob {
     public CompoundTag save(HolderLookup.Provider provider) {
         CompoundTag tag = new CompoundTag();
         // the old format (one item) is kept for compatibility, the list of orders is saved next to it
-        tag.put("Target", target().toStack(1).save(provider));
+        tag.put("Target", com.golemlogix.system.NbtBridge.saveItem(target().toStack(1), provider));
         tag.putLong("Amount", amount());
         tag.put("Targets", saveMap(targets, provider));
         tag.putLong("Total", totalExecutions);
         tag.putLong("Done", doneExecutions);
         tag.putString("Status", status.name());
         if (requester != null) {
-            tag.putUUID("Requester", requester);
+            tag.store("Requester", net.minecraft.core.UUIDUtil.CODEC, requester);
         }
         if (requesterBus != null) {
             tag.putLong("RequesterBus", requesterBus.asLong());
@@ -546,7 +546,7 @@ public class CraftingJob {
         ListTag list = new ListTag();
         for (Map.Entry<ItemKey, Long> e : map.entrySet()) {
             CompoundTag t = new CompoundTag();
-            t.put("Item", e.getKey().toStack(1).save(provider));
+            t.put("Item", com.golemlogix.system.NbtBridge.saveItem(e.getKey().toStack(1), provider));
             t.putLong("Count", e.getValue());
             list.add(t);
         }
@@ -555,10 +555,10 @@ public class CraftingJob {
 
     private static void loadMap(ListTag list, Map<ItemKey, Long> map, HolderLookup.Provider provider) {
         for (int i = 0; i < list.size(); i++) {
-            CompoundTag t = list.getCompound(i);
-            ItemStack stack = ItemStack.parse(provider, t.getCompound("Item")).orElse(ItemStack.EMPTY);
+            CompoundTag t = list.getCompoundOrEmpty(i);
+            ItemStack stack = com.golemlogix.system.NbtBridge.loadItem(provider, t.getCompoundOrEmpty("Item")).orElse(ItemStack.EMPTY);
             if (!stack.isEmpty()) {
-                map.put(ItemKey.of(stack), t.getLong("Count"));
+                map.put(ItemKey.of(stack), t.getLongOr("Count", 0L));
             }
         }
     }
@@ -566,40 +566,40 @@ public class CraftingJob {
     @Nullable
     public static CraftingJob load(CompoundTag tag, HolderLookup.Provider provider) {
         CraftingJob job = new CraftingJob();
-        loadMap(tag.getList("Targets", Tag.TAG_COMPOUND), job.targets, provider);
+        loadMap(tag.getListOrEmpty("Targets"), job.targets, provider);
         if (job.targets.isEmpty()) {
-            ItemStack target = ItemStack.parse(provider, tag.getCompound("Target")).orElse(ItemStack.EMPTY);
+            ItemStack target = com.golemlogix.system.NbtBridge.loadItem(provider, tag.getCompoundOrEmpty("Target")).orElse(ItemStack.EMPTY);
             if (target.isEmpty()) {
                 return null;
             }
-            job.targets.put(ItemKey.of(target), tag.getLong("Amount"));
+            job.targets.put(ItemKey.of(target), tag.getLongOr("Amount", 0L));
         }
-        job.totalExecutions = tag.getLong("Total");
-        job.doneExecutions = tag.getLong("Done");
+        job.totalExecutions = tag.getLongOr("Total", 0L);
+        job.doneExecutions = tag.getLongOr("Done", 0L);
         try {
-            job.status = Status.valueOf(tag.getString("Status"));
+            job.status = Status.valueOf(tag.getStringOr("Status", ""));
         } catch (IllegalArgumentException ex) {
             job.status = Status.RUNNING;
         }
         if (tag.hasUUID("Requester")) {
-            job.requester = tag.getUUID("Requester");
+            job.requester = tag.read("Requester", net.minecraft.core.UUIDUtil.CODEC).orElse(null);
         }
         if (tag.contains("RequesterBus")) {
-            job.requesterBus = BlockPos.of(tag.getLong("RequesterBus"));
+            job.requesterBus = BlockPos.of(tag.getLongOr("RequesterBus", 0L));
         }
-        ListTag stepList = tag.getList("Steps", Tag.TAG_COMPOUND);
+        ListTag stepList = tag.getListOrEmpty("Steps");
         for (int i = 0; i < stepList.size(); i++) {
-            CompoundTag t = stepList.getCompound(i);
+            CompoundTag t = stepList.getCompoundOrEmpty(i);
             PatternData.CODEC.parse(provider.createSerializationContext(NbtOps.INSTANCE), t.get("Pattern"))
-                    .result().ifPresent(p -> job.steps.add(new StepState(p, t.getLong("Remaining"))));
+                    .result().ifPresent(p -> job.steps.add(new StepState(p, t.getLongOr("Remaining", 0L))));
         }
-        loadMap(tag.getList("Inventory", Tag.TAG_COMPOUND), job.inventory, provider);
-        loadMap(tag.getList("Awaiting", Tag.TAG_COMPOUND), job.awaiting, provider);
-        ListTag flights = tag.getList("InFlight", Tag.TAG_COMPOUND);
+        loadMap(tag.getListOrEmpty("Inventory"), job.inventory, provider);
+        loadMap(tag.getListOrEmpty("Awaiting"), job.awaiting, provider);
+        ListTag flights = tag.getListOrEmpty("InFlight");
         for (int i = 0; i < flights.size(); i++) {
-            CompoundTag t = flights.getCompound(i);
-            InFlight f = new InFlight(BlockPos.of(t.getLong("Provider")));
-            loadMap(t.getList("Left", Tag.TAG_COMPOUND), f.left, provider);
+            CompoundTag t = flights.getCompoundOrEmpty(i);
+            InFlight f = new InFlight(BlockPos.of(t.getLongOr("Provider", 0L)));
+            loadMap(t.getListOrEmpty("Left"), f.left, provider);
             if (!f.left.isEmpty()) {
                 job.inFlight.add(f);
             }

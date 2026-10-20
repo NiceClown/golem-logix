@@ -57,8 +57,8 @@ public final class RedstoneControl {
     }
 
     public void load(CompoundTag tag) {
-        mode = tag.contains("RedstoneMode") ? RedstoneMode.byId(tag.getInt("RedstoneMode")) : RedstoneMode.HIGH;
-        lastPowered = tag.getBoolean("RedstoneLast");
+        mode = tag.contains("RedstoneMode") ? RedstoneMode.byId(tag.getIntOr("RedstoneMode", 0)) : RedstoneMode.HIGH;
+        lastPowered = tag.getBooleanOr("RedstoneLast", false);
         pulse = false;
     }
 }

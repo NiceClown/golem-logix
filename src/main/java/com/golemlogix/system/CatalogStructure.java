@@ -89,7 +89,7 @@ public final class CatalogStructure {
             return Blocks.BOOKSHELF;
         }
         if (isStatueCell(cell)) {
-            Block statue = BuiltInRegistries.BLOCK.get(net.minecraft.resources.ResourceLocation.withDefaultNamespace("copper_golem_statue"));
+            Block statue = BuiltInRegistries.BLOCK.get(net.minecraft.resources.Identifier.withDefaultNamespace("copper_golem_statue"));
             return statue == Blocks.AIR ? Blocks.COPPER_BLOCK : statue;
         }
         return Blocks.COPPER_BLOCK;

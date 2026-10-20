@@ -1,5 +1,6 @@
 package com.golemlogix.client;
 
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -7,9 +8,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.client.model.data.ModelData;
 import org.jetbrains.annotations.Nullable;
@@ -27,7 +28,7 @@ import java.util.function.Consumer;
  * model pixels of this frame (the snowman's height without the head is 24, shoulders at height 18).
  */
 public final class SnowmanPuppet {
-    private static final ResourceLocation TEXTURE = ResourceLocation.withDefaultNamespace("textures/entity/snow_golem.png");
+    private static final Identifier TEXTURE = Identifier.withDefaultNamespace("textures/entity/snow_golem.png");
     /** Shoulders (the left one is +X: facing +Z, the snowman's left arm points to +X). */
     private static final Vector3f LEFT_SHOULDER = new Vector3f(5f, 18f, 0f), RIGHT_SHOULDER = new Vector3f(-5f, 18f, 0f);
     /** The hands wrap a crate in front of the chest: palms on the sides of the crate. */
@@ -92,7 +93,7 @@ public final class SnowmanPuppet {
         if (p.squash() != 0f) {
             pose.scale(1f + p.squash() * 0.5f, 1f - p.squash(), 1f + p.squash() * 0.5f);
         }
-        VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
+        VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(TEXTURE));
 
         // arms: in the "upright" frame from the shoulder to the hand (the model's stick lies along +X)
         arm(pose, vc, light, leftArm, LEFT_SHOULDER, p.leftHand());

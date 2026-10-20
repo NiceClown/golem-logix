@@ -1,19 +1,20 @@
 package com.golemlogix.client;
 
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.util.LightCoordsUtil;
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.SchematicConcentratorBlockEntity;
 import com.golemlogix.blocks.SchematicConcentratorBlock;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.AABB;
 
@@ -23,8 +24,8 @@ import net.minecraft.world.phys.AABB;
  * to the light, textures with a black background instead of transparency).
  */
 public class ConcentratorRenderer implements BlockEntityRenderer<SchematicConcentratorBlockEntity> {
-    private static final ResourceLocation HOLO = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/concentrator_holo.png"),
-            CARD = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/concentrator_card.png");
+    private static final Identifier HOLO = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/concentrator_holo.png"),
+            CARD = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/concentrator_card.png");
 
     public ConcentratorRenderer(BlockEntityRendererProvider.Context context) {
     }
@@ -48,14 +49,14 @@ public class ConcentratorRenderer implements BlockEntityRenderer<SchematicConcen
         Quads.faceModel(pose, facing);
         // screen centre on the front (pixels): x 8, y 9.3, just in front of the glass
         pose.translate(8f / 16f, 9.3f / 16f, -0.05f / 16f);
-        VertexConsumer vc = buffers.getBuffer(RenderType.eyes(HOLO));
+        VertexConsumer vc = buffers.getBuffer(RenderTypes.eyes(HOLO));
         float bright = 0.55f + 0.45f * holo + 0.05f * Mth.sin(time * 0.15f);
         // schematic rings: two layers rotating against each other
         disc(vc, pose, 5.0f, spin, bright, 0f);
         disc(vc, pose, 3.7f, -spin * 1.7f, bright * 0.7f, -0.12f);
         // fan of holographic cards in front of the screen
         if (holo > 0.01f) {
-            VertexConsumer cards = buffers.getBuffer(RenderType.eyes(CARD));
+            VertexConsumer cards = buffers.getBuffer(RenderTypes.eyes(CARD));
             for (int k = 0; k < 5; k++) {
                 float a = (k - 2) * 24f * holo;
                 float bob = Mth.sin(time * 0.12f + k * 1.3f) * 0.4f;
@@ -93,6 +94,6 @@ public class ConcentratorRenderer implements BlockEntityRenderer<SchematicConcen
 
     private static void vertex(VertexConsumer vc, PoseStack.Pose p, float x, float y, float u, float v, int color) {
         vc.addVertex(p, x, y, 0f).setColor(color).setUv(u, v).setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(LightTexture.FULL_BRIGHT).setNormal(p, 0f, 0f, -1f);
+                .setLight(LightCoordsUtil.FULL_BRIGHT).setNormal(p, 0f, 0f, -1f);
     }
 }

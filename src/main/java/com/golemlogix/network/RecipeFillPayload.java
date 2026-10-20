@@ -6,7 +6,7 @@ import com.golemlogix.menu.TerminalMenu;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -25,7 +25,7 @@ import java.util.List;
 public record RecipeFillPayload(int containerId, boolean crafting, boolean max, List<List<ItemStack>> inputs,
                                 List<ItemStack> outputs) implements CustomPacketPayload {
     public static final Type<RecipeFillPayload> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "recipe_fill"));
+            new Type<>(Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "recipe_fill"));
 
     /** Limits against bloated packets. */
     public static final int MAX_SLOTS = 9, MAX_OPTIONS = 16, MAX_OUTPUTS = 3;

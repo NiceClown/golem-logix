@@ -78,14 +78,14 @@ public class ForgeHammerItem extends Item {
             int need = MAX_CHARGE - getCharge(stack);
             int got = need <= 0 ? 0 : jar.drain(need);
             setCharge(stack, getCharge(stack) + got);
-            player.displayClientMessage(Component.translatable(got > 0 ? "message.golem_logix.hammer.charged"
+            player.sendOverlayMessage(Component.translatable(got > 0 ? "message.golem_logix.hammer.charged"
                     : "message.golem_logix.hammer.nothing_to_charge", getCharge(stack), MAX_CHARGE)
-                    .withStyle(got > 0 ? ChatFormatting.AQUA : ChatFormatting.GRAY), true);
+                    .withStyle(got > 0 ? ChatFormatting.AQUA : ChatFormatting.GRAY));
             if (got > 0) {
                 level.playSound(null, context.getClickedPos(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 0.8f, 1.2f);
             }
         }
-        return InteractionResult.sidedSuccess(level.isClientSide());
+        return InteractionResult.SUCCESS;
     }
 
     @Override

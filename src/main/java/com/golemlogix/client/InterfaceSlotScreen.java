@@ -4,7 +4,7 @@ import com.golemlogix.blockentity.InterfaceBlockEntity;
 import com.golemlogix.menu.InterfaceMenu;
 import com.golemlogix.network.InterfaceAmountPayload;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -77,7 +77,7 @@ public class InterfaceSlotScreen extends Screen {
         // only containers with fluid have a mode
         mode.visible = container;
         addRenderableWidget(new GolemButton(left + 80, top + 126, 42, 16, Component.translatable("gui.golem_logix.interface.clear"), b -> {
-            PacketDistributor.sendToServer(new InterfaceAmountPayload(menu.containerId, slot, -1));
+            net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new InterfaceAmountPayload(menu.containerId, slot, -1));
             onClose();
         }));
         addRenderableWidget(new GolemButton(left + 124, top + 126, 44, 16, Component.translatable("gui.golem_logix.interface.done"), b -> {
@@ -145,7 +145,7 @@ public class InterfaceSlotScreen extends Screen {
     }
 
     private void apply() {
-        PacketDistributor.sendToServer(new InterfaceAmountPayload(menu.containerId, slot, value()));
+        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new InterfaceAmountPayload(menu.containerId, slot, value()));
     }
 
     private void toggleMode() {
@@ -187,43 +187,43 @@ public class InterfaceSlotScreen extends Screen {
 
     /** Background: the world blur (Screen.render calls it itself) and the panel, before buttons and labels so the blur does not touch them. */
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.renderBackground(g, mouseX, mouseY, partialTick);
+    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        super.extractBackground(g, mouseX, mouseY, partialTick);
         GolemGui.panel(g, left, top, W, H);
         GolemGui.slot(g, left + 8, top + 20);
         GolemGui.inset(g, left + 58, top + 46, 66, 16);
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
-        g.drawString(font, title, left + 8, top + 7, GolemGui.PARCHMENT, false);
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
+        g.text(font, title, left + 8, top + 7, GolemGui.PARCHMENT, false);
 
         ItemStack cfg = menu.configItem(slot);
         if (!FluidIcons.drawGhost(g, font, cfg, left + 9, top + 21, false)) {
-            g.renderItem(cfg.copyWithCount(1), left + 9, top + 21);
+            g.item(cfg.copyWithCount(1), left + 9, top + 21);
         }
-        g.drawString(font, cfg.getHoverName(), left + 30, top + 20, GolemGui.CYAN, false);
+        g.text(font, cfg.getHoverName(), left + 30, top + 20, GolemGui.CYAN, false);
         var contained = InterfaceBlockEntity.containedFluid(cfg);
         Component mode = fluid
                 ? Component.translatable("gui.golem_logix.interface.keep_fluid", contained.getHoverName())
                 : Component.translatable("gui.golem_logix.interface.keep_items");
-        g.drawString(font, mode, left + 30, top + 30, 0xFFA89880, false);
+        g.text(font, mode, left + 30, top + 30, 0xFFA89880, false);
 
-        g.drawString(font, Component.translatable("gui.golem_logix.interface.amount"), left + 8, top + 52, GolemGui.PARCHMENT, false);
-        g.drawString(font, Component.translatable(fluid ? "gui.golem_logix.interface.unit_mb" : "gui.golem_logix.interface.unit_items"),
+        g.text(font, Component.translatable("gui.golem_logix.interface.amount"), left + 8, top + 52, GolemGui.PARCHMENT, false);
+        g.text(font, Component.translatable(fluid ? "gui.golem_logix.interface.unit_mb" : "gui.golem_logix.interface.unit_items"),
                 left + 128, top + 50, 0xFFA89880, false);
 
         int v = value();
         Component info = fluid
                 ? Component.translatable("gui.golem_logix.interface.fluid_info", bucketText(v), bucketText(menu.maxAmount(slot)))
                 : Component.translatable("gui.golem_logix.interface.item_info", menu.maxAmount(slot));
-        g.drawString(font, info, left + 8, top + 106, 0xFF8A7A66, false);
-        g.drawString(font, Component.translatable("gui.golem_logix.interface.type_hint").withStyle(ChatFormatting.ITALIC),
+        g.text(font, info, left + 8, top + 106, 0xFF8A7A66, false);
+        g.text(font, Component.translatable("gui.golem_logix.interface.type_hint").withStyle(ChatFormatting.ITALIC),
                 left + 8, top + 115, 0xFF6A5A48, false);
 
         if (mouseX >= left + 8 && mouseX < left + 26 && mouseY >= top + 20 && mouseY < top + 38) {
-            g.renderTooltip(font, cfg, mouseX, mouseY);
+            g.setTooltipForNextFrame(font, cfg, mouseX, mouseY);
         }
     }
 

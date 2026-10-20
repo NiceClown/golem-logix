@@ -1,5 +1,7 @@
 package com.golemlogix.client;
 
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.CopperDriveBayBlockEntity;
 import com.golemlogix.blocks.CopperDriveBayBlock;
@@ -10,13 +12,13 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.util.Mth;
@@ -36,12 +38,12 @@ import org.joml.Vector3f;
  * From the main (bottom left) cell the model faces north; {@link Quads#faceModel} rotates it by FACING.
  */
 public class DriveBayRenderer implements BlockEntityRenderer<CopperDriveBayBlockEntity> {
-    private static final ResourceLocation CASSETTE = tex("bay_cassette");
-    private static final ResourceLocation REEL = tex("bay_reel");
-    private static final ResourceLocation TAPE = tex("bay_tape");
-    private static final ResourceLocation TAPE_GLOW = tex("bay_tape_glow");
-    private static final ResourceLocation WHITE = tex("bay_white");
-    private static final ResourceLocation RUNES = tex("bay_runes_glow");
+    private static final Identifier CASSETTE = tex("bay_cassette");
+    private static final Identifier REEL = tex("bay_reel");
+    private static final Identifier TAPE = tex("bay_tape");
+    private static final Identifier TAPE_GLOW = tex("bay_tape_glow");
+    private static final Identifier WHITE = tex("bay_white");
+    private static final Identifier RUNES = tex("bay_runes_glow");
 
     /** Label colours by capacity (1k, 4k, 16k, 64k, 256k): item disks are metals, fluid disks cold tints. */
     private static final int[] ITEM_LABEL = {0xFFD9803A, 0xFF9AA4B4, 0xFFF0C850, 0xFF55E6E0, 0xFFA070FF};
@@ -63,8 +65,8 @@ public class DriveBayRenderer implements BlockEntityRenderer<CopperDriveBayBlock
     public DriveBayRenderer(BlockEntityRendererProvider.Context context) {
     }
 
-    private static ResourceLocation tex(String name) {
-        return ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/" + name + ".png");
+    private static Identifier tex(String name) {
+        return Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/" + name + ".png");
     }
 
     @Override
@@ -167,7 +169,7 @@ public class DriveBayRenderer implements BlockEntityRenderer<CopperDriveBayBlock
             // the runes on the plinth and the top beam pulse
             float pulse = 0.55f + 0.45f * Mth.sin(time * 0.09f);
             int a = (int) (255 * pulse);
-            front(buffers.getBuffer(RenderType.eyes(RUNES)), p, 0f, 0f, 32f, 32f, -0.03f, 0f, 0f, 1f, 1f, (a << 24) | 0xFFFFFF, FULL_BRIGHT);
+            front(buffers.getBuffer(RenderTypes.eyes(RUNES)), p, 0f, 0f, 32f, 32f, -0.03f, 0f, 0f, 1f, 1f, (a << 24) | 0xFFFFFF, FULL_BRIGHT);
         }
         // the glass display door: open while someone has the cabinet window open
         float open = Mth.lerp(partialTick, be.doorPrev, be.door);
@@ -181,7 +183,7 @@ public class DriveBayRenderer implements BlockEntityRenderer<CopperDriveBayBlock
     private void cassettes(CopperDriveBayBlockEntity be, PoseStack.Pose p, MultiBufferSource buffers, int light, boolean active, float time) {
         // Buffers of different types cannot be held at once: requesting a new one finishes the previous one. Hence passes by texture.
         // pass 1: cassette fronts
-        VertexConsumer body = buffers.getBuffer(RenderType.entityCutoutNoCull(CASSETTE));
+        VertexConsumer body = buffers.getBuffer(RenderTypes.entityCutout(CASSETTE));
         for (int slot = 0; slot < CopperDriveBayBlockEntity.SLOTS; slot++) {
             if (be.getDisks().get(slot).isEmpty()) {
                 continue;
@@ -191,7 +193,7 @@ public class DriveBayRenderer implements BlockEntityRenderer<CopperDriveBayBlock
             front(body, p, x0, y0, x1, y1, Z_FRONT, 0f, 0f, 1f, 1f, 0xFFFFFFFF, light);
         }
         // pass 2: side faces, labels and LEDs (solid colour)
-        VertexConsumer solid = buffers.getBuffer(RenderType.entityCutoutNoCull(WHITE));
+        VertexConsumer solid = buffers.getBuffer(RenderTypes.entityCutout(WHITE));
         for (int slot = 0; slot < CopperDriveBayBlockEntity.SLOTS; slot++) {
             ItemStack disk = be.getDisks().get(slot);
             if (disk.isEmpty()) {
@@ -215,7 +217,7 @@ public class DriveBayRenderer implements BlockEntityRenderer<CopperDriveBayBlock
             }
         }
         // pass 3: tape wound behind the reels
-        VertexConsumer tape = buffers.getBuffer(RenderType.entityCutoutNoCull(TAPE));
+        VertexConsumer tape = buffers.getBuffer(RenderTypes.entityCutout(TAPE));
         for (int slot = 0; slot < CopperDriveBayBlockEntity.SLOTS; slot++) {
             ItemStack disk = be.getDisks().get(slot);
             if (disk.isEmpty()) {
@@ -230,7 +232,7 @@ public class DriveBayRenderer implements BlockEntityRenderer<CopperDriveBayBlock
         }
         // pass 3b: teal glow of the windings (only when the network is powered), on top of the tape
         if (active) {
-            VertexConsumer glow = buffers.getBuffer(RenderType.eyes(TAPE_GLOW));
+            VertexConsumer glow = buffers.getBuffer(RenderTypes.eyes(TAPE_GLOW));
             for (int slot = 0; slot < CopperDriveBayBlockEntity.SLOTS; slot++) {
                 ItemStack disk = be.getDisks().get(slot);
                 if (disk.isEmpty()) {
@@ -245,7 +247,7 @@ public class DriveBayRenderer implements BlockEntityRenderer<CopperDriveBayBlock
             }
         }
         // pass 4: reels
-        VertexConsumer reel = buffers.getBuffer(RenderType.entityCutoutNoCull(REEL));
+        VertexConsumer reel = buffers.getBuffer(RenderTypes.entityCutout(REEL));
         for (int slot = 0; slot < CopperDriveBayBlockEntity.SLOTS; slot++) {
             if (be.getDisks().get(slot).isEmpty()) {
                 continue;
@@ -271,7 +273,7 @@ public class DriveBayRenderer implements BlockEntityRenderer<CopperDriveBayBlock
      * when an archivist comes to the doorway (and close behind it).
      */
     private void doors(PoseStack.Pose p, MultiBufferSource buffers, int light, boolean walking, float time) {
-        VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(WHITE));
+        VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(WHITE));
         for (int r = 0; r < 5; r++) {
             float yb = 28f - 4.8f * (r + 1) + 0.5f;
             float open = 0f;
@@ -320,14 +322,14 @@ public class DriveBayRenderer implements BlockEntityRenderer<CopperDriveBayBlock
      */
     private static void glassDoor(PoseStack.Pose p, MultiBufferSource buffers, int light, float hinge, float width, float dir, String tex,
                                   float angle) {
-        var atlas = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS);
-        TextureAtlasSprite glass = atlas.apply(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/" + tex));
-        TextureAtlasSprite brass = atlas.apply(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/sat_brass"));
+        var atlas = Minecraft.getInstance().getTextureAtlas(TextureAtlas.LOCATION_BLOCKS);
+        TextureAtlasSprite glass = atlas.apply(Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/" + tex));
+        TextureAtlasSprite brass = atlas.apply(Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/sat_brass"));
         float c = Mth.cos(angle * Mth.DEG_TO_RAD), s = Mth.sin(angle * Mth.DEG_TO_RAD);
         // a door point at distance d from the hinge, shifted by t along the normal (+ is into the cabinet)
         java.util.function.BiFunction<Float, Float, float[]> at =
                 (d, t) -> new float[]{hinge + dir * (d * c + t * s), GLASS_Z - d * s + t * c};
-        VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS));
+        VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
         float f = Math.min(0.7f, width * 0.15f);
         // frame: top, bottom, at the hinge, at the free edge, on both sides of the glass
         for (float t : new float[]{-0.12f, 0.12f}) {
@@ -343,7 +345,7 @@ public class DriveBayRenderer implements BlockEntityRenderer<CopperDriveBayBlock
         }
         strip(vc, p, at, h0, h1, 14f, 14.5f, -0.7f, brass, light);
         // glass
-        VertexConsumer gv = buffers.getBuffer(RenderType.entityTranslucent(InventoryMenu.BLOCK_ATLAS));
+        VertexConsumer gv = buffers.getBuffer(RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
         float[] a = at.apply(f, 0f), b = at.apply(width - f, 0f);
         float u0 = glass.getU(f / width), u1 = glass.getU(1f - f / width);
         float v0 = glass.getV(f / (GLASS_Y1 - GLASS_Y0)), v1 = glass.getV(1f - f / (GLASS_Y1 - GLASS_Y0));

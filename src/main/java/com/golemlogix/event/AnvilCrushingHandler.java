@@ -12,7 +12,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.animal.SnowGolem;
+import net.minecraft.world.entity.animal.golem.SnowGolem;
 import net.minecraft.world.entity.boss.wither.WitherBoss;
 import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -195,7 +195,7 @@ public class AnvilCrushingHandler {
         AABB searchBox = new AABB(pos).inflate(12.0);
         List<Player> players = level.getEntitiesOfClass(Player.class, searchBox);
         for (Player p : players) {
-            p.displayClientMessage(message, true); // Displays directly in Action Bar!
+            p.sendOverlayMessage(message); // Displays directly in Action Bar!
         }
     }
 }

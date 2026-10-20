@@ -5,7 +5,7 @@ import com.golemlogix.init.ModBlocks;
 import com.golemlogix.menu.CardCatalogMenu;
 import com.golemlogix.network.MenuScrollPayload;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -49,7 +49,7 @@ public class CardCatalogScreen extends GolemScreen<CardCatalogMenu> {
     }
 
     private void send() {
-        PacketDistributor.sendToServer(new MenuScrollPayload(menu.containerId, row, search.getValue()));
+        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new MenuScrollPayload(menu.containerId, row, search.getValue()));
     }
 
     private void scrollTo(int r) {
@@ -70,7 +70,7 @@ public class CardCatalogScreen extends GolemScreen<CardCatalogMenu> {
     }
 
     @Override
-    protected void renderExtraBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
+    protected void renderExtraBg(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
         int gx = leftPos + CardCatalogMenu.GRID_X, gy = topPos + CardCatalogMenu.GRID_Y;
         GolemGui.inset(g, gx - 3, gy - 3, CardCatalogMenu.COLS * 18 + 4, CardCatalogMenu.ROWS * 18 + 4);
         // scroll bar
@@ -91,7 +91,7 @@ public class CardCatalogScreen extends GolemScreen<CardCatalogMenu> {
     }
 
     @Override
-    protected void renderOverlay(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
+    protected void renderOverlay(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
         for (int i = 0; i < CardCatalogMenu.WINDOW; i++) {
             if (menu.slots.get(i) instanceof CardCatalogMenu.CardSlot s && s.locked() && !s.hasItem()) {
                 int x = leftPos + s.x, y = topPos + s.y;
@@ -106,24 +106,24 @@ public class CardCatalogScreen extends GolemScreen<CardCatalogMenu> {
         Slot p = menu.slots.get(menu.providerSlot());
         if (!p.hasItem()) {
             int x = leftPos + p.x, y = topPos + p.y;
-            g.renderItem(PROVIDER, x, y);
-            g.pose().pushPose();
-            g.pose().translate(0, 0, 300);
+            g.item(PROVIDER, x, y);
+            g.pose().pushMatrix();
+            g.pose().translate(0, 0);
             g.fill(x, y, x + 16, y + 16, 0xA8241A12);
-            g.pose().popPose();
+            g.pose().popMatrix();
         }
     }
 
     @Override
-    protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
-        super.renderLabels(g, mouseX, mouseY);
+    protected void extractLabels(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+        super.extractLabels(g, mouseX, mouseY);
         int y = CardCatalogMenu.INFO_Y + 3;
         Component info = Component.translatable("gui.golem_logix.catalog.count", menu.cardCount(), menu.capacity());
-        g.drawString(font, info, 8, y, menu.capacity() == 0 ? GolemGui.RED : GolemGui.CYAN, false);
+        g.text(font, info, 8, y, menu.capacity() == 0 ? GolemGui.RED : GolemGui.CYAN, false);
     }
 
     @Override
-    protected void renderTooltip(GuiGraphics g, int mouseX, int mouseY) {
+    protected void extractTooltip(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         if (hoveredSlot != null && menu.getCarried().isEmpty()) {
             int idx = menu.slots.indexOf(hoveredSlot);
             if (idx == menu.providerSlot()) {
@@ -134,16 +134,16 @@ public class CardCatalogScreen extends GolemScreen<CardCatalogMenu> {
                 if (hoveredSlot.hasItem()) {
                     lines.add(0, hoveredSlot.getItem().getHoverName());
                 }
-                g.renderComponentTooltip(font, lines, mouseX, mouseY);
+                g.setComponentTooltipForNextFrame(font, lines, mouseX, mouseY);
                 return;
             }
             if (hoveredSlot instanceof CardCatalogMenu.CardSlot s && s.locked() && !s.hasItem()) {
-                g.renderComponentTooltip(font, List.of(Component.translatable(menu.searching()
+                g.setComponentTooltipForNextFrame(font, List.of(Component.translatable(menu.searching()
                         ? "gui.golem_logix.catalog.not_found" : "gui.golem_logix.catalog.locked").withStyle(ChatFormatting.GRAY)), mouseX, mouseY);
                 return;
             }
         }
-        super.renderTooltip(g, mouseX, mouseY);
+        super.extractTooltip(g, mouseX, mouseY);
     }
 
     private boolean overScrollbar(double mx, double my) {
@@ -194,7 +194,7 @@ public class CardCatalogScreen extends GolemScreen<CardCatalogMenu> {
     public boolean mouseScrolled(double mx, double my, double sx, double sy) {
         int gx = leftPos + CardCatalogMenu.GRID_X, gy = topPos + CardCatalogMenu.GRID_Y;
         if (mx >= gx - 3 && mx < leftPos + CardCatalogMenu.SCROLL_X + 8 && my >= gy - 3 && my < gy + CardCatalogMenu.ROWS * 18 + 3) {
-            scrollTo(row - (int) Math.signum(sy) * (hasShiftDown() ? CardCatalogMenu.ROWS : 1));
+            scrollTo(row - (int) Math.signum(sy) * (net.minecraft.client.Minecraft.getInstance().hasShiftDown() ? CardCatalogMenu.ROWS : 1));
             return true;
         }
         return super.mouseScrolled(mx, my, sx, sy);

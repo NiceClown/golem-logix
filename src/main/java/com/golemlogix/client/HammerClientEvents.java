@@ -35,6 +35,6 @@ public final class HammerClientEvents {
         }
         lastStrike = now;
         event.getEntity().swing(InteractionHand.MAIN_HAND);
-        PacketDistributor.sendToServer(new AnvilStrikePayload(event.getPos()));
+        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new AnvilStrikePayload(event.getPos()));
     }
 }

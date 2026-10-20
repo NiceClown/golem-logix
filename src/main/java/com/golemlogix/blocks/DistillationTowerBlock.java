@@ -1,5 +1,6 @@
 package com.golemlogix.blocks;
 
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import com.golemlogix.blockentity.DistillationTowerBlockEntity;
 import com.golemlogix.init.ModBlockEntities;
 import net.minecraft.core.BlockPos;
@@ -7,7 +8,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -27,7 +27,6 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.phys.BlockHitResult;
@@ -47,7 +46,7 @@ import java.util.List;
  * (and Ars Nouveau jars) touching it. The plinth (section 0) holds the tank; everything is drawn by DistillationTowerRenderer.
  */
 public class DistillationTowerBlock extends Block implements EntityBlock {
-    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final int HEIGHT = 3;
     public static final IntegerProperty SECTION = IntegerProperty.create("section", 0, HEIGHT - 1);
 
@@ -157,13 +156,13 @@ public class DistillationTowerBlock extends Block implements EntityBlock {
 
     /** A bucket (or any fluid container) pours blood in; an empty hand shows the tank. */
     @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
                                               InteractionHand hand, BlockHitResult hit) {
         if (FluidUtil.getFluidHandler(stack).isPresent()) {
             return FluidUtil.interactWithFluidHandler(player, hand, level, pos, hit.getDirection())
-                    ? ItemInteractionResult.sidedSuccess(level.isClientSide()) : ItemInteractionResult.CONSUME;
+                    ? InteractionResult.SUCCESS : InteractionResult.CONSUME;
         }
-        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        return InteractionResult.TRY_WITH_EMPTY_HAND;
     }
 
     /** An empty hand opens the window: the tank, the pace and the co-processor slots. */
@@ -176,7 +175,7 @@ public class DistillationTowerBlock extends Block implements EntityBlock {
                             net.minecraft.world.inventory.ContainerLevelAccess.create(level, be.getBlockPos())),
                     Component.translatable("block.golem_logix.cryo_distillation_tower")), buf -> buf.writeBlockPos(be.getBlockPos()));
         }
-        return InteractionResult.sidedSuccess(level.isClientSide());
+        return InteractionResult.SUCCESS;
     }
 
     @Override

@@ -12,7 +12,7 @@ import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
@@ -143,10 +143,10 @@ public class PatternEncoderMenu extends GolemMenu {
     }
 
     @Override
-    public void clicked(int slotId, int button, ClickType clickType, Player player) {
+    public void clicked(int slotId, int button, ContainerInput clickType, Player player) {
         // fluids are only ingredients of processing patterns: never outputs and never in the crafting table grid
         boolean fluid = com.golemlogix.items.FluidGhostItem.is(ghostFor(getCarried()));
-        if (fluid && clickType == ClickType.PICKUP && isGhost(slotId)
+        if (fluid && clickType == ContainerInput.PICKUP && isGhost(slotId)
                 && ((slotId >= OUT_START && slotId < OUT_START + 3) || isCraftingMode())) {
             return;
         }
@@ -356,11 +356,11 @@ public class PatternEncoderMenu extends GolemMenu {
         // a written card lies in the output slot: overwrite it (recipe editing), no blank card is needed
         boolean rewrite = CopperPunchCardItem.hasPattern(container.getItem(CARD_OUT));
         if (!rewrite && (card.isEmpty() || !(card.getItem() instanceof CopperPunchCardItem))) {
-            player.displayClientMessage(Component.translatable("message.golem_logix.encoder.no_card"), true);
+            player.sendOverlayMessage(Component.translatable("message.golem_logix.encoder.no_card"));
             return;
         }
         if (!rewrite && !container.getItem(CARD_OUT).isEmpty()) {
-            player.displayClientMessage(Component.translatable("message.golem_logix.encoder.output_full"), true);
+            player.sendOverlayMessage(Component.translatable("message.golem_logix.encoder.output_full"));
             return;
         }
 
@@ -377,7 +377,7 @@ public class PatternEncoderMenu extends GolemMenu {
             }
             List<ItemStack> result = CraftingJob.craftResult(level, new PatternData(true, inputs, List.of()));
             if (result == null) {
-                player.displayClientMessage(Component.translatable("message.golem_logix.encoder.no_recipe"), true);
+                player.sendOverlayMessage(Component.translatable("message.golem_logix.encoder.no_recipe"));
                 return;
             }
             outputs.add(result.get(0));
@@ -398,21 +398,21 @@ public class PatternEncoderMenu extends GolemMenu {
         }
         PatternData data = new PatternData(crafting, inputs, outputs, fuzzy);
         if (!data.isValid()) {
-            player.displayClientMessage(Component.translatable("message.golem_logix.encoder.incomplete"), true);
+            player.sendOverlayMessage(Component.translatable("message.golem_logix.encoder.incomplete"));
             return;
         }
 
         if (rewrite) {
             ItemStack out = container.getItem(CARD_OUT);
             container.setItem(CARD_OUT, CopperPunchCardItem.written(out.getItem(), data));
-            player.displayClientMessage(Component.translatable("message.golem_logix.encoder.rewritten"), true);
+            player.sendOverlayMessage(Component.translatable("message.golem_logix.encoder.rewritten"));
             return;
         }
         ItemStack encoded = CopperPunchCardItem.written(card.getItem(), data);
         card.shrink(1);
         container.setItem(CARD_IN, card.isEmpty() ? ItemStack.EMPTY : card);
         container.setItem(CARD_OUT, encoded);
-        player.displayClientMessage(Component.translatable("message.golem_logix.encoder.done"), true);
+        player.sendOverlayMessage(Component.translatable("message.golem_logix.encoder.done"));
     }
 
     @Override

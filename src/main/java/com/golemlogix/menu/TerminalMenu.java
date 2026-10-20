@@ -209,13 +209,13 @@ public class TerminalMenu extends GolemMenu {
     }
 
     @Override
-    public void clicked(int slotId, int button, net.minecraft.world.inventory.ClickType clickType, Player player) {
+    public void clicked(int slotId, int button, net.minecraft.world.inventory.ContainerInput clickType, Player player) {
         if (lockedSlot >= 0) {
             // any clicks on the Chronometer slot and swapping with it by a hotbar number (or F with the offhand) do nothing
             if (slotId >= 0 && slotId == lockedMenuSlot) {
                 return;
             }
-            if (clickType == net.minecraft.world.inventory.ClickType.SWAP && button == lockedSlot) {
+            if (clickType == net.minecraft.world.inventory.ContainerInput.SWAP && button == lockedSlot) {
                 return;
             }
         }
@@ -259,7 +259,7 @@ public class TerminalMenu extends GolemMenu {
     private boolean checkAccess(ServerPlayer sp, GolemNetwork net) {
         String err = accessError(net);
         if (err != null) {
-            sp.displayClientMessage(Component.translatable(err), true);
+            sp.sendOverlayMessage(Component.translatable(err));
             return false;
         }
         return true;
@@ -381,7 +381,7 @@ public class TerminalMenu extends GolemMenu {
             return;
         }
         ItemStack single = carried.copyWithCount(1);
-        IFluidHandlerItem handler = single.getCapability(Capabilities.FluidHandler.ITEM);
+        IFluidHandlerItem handler = single.getCapability(Capabilities.Fluid.ITEM);
         if (handler == null) {
             return;
         }
@@ -406,7 +406,7 @@ public class TerminalMenu extends GolemMenu {
             return;
         }
         ItemStack single = carried.copyWithCount(1);
-        IFluidHandlerItem handler = single.getCapability(Capabilities.FluidHandler.ITEM);
+        IFluidHandlerItem handler = single.getCapability(Capabilities.Fluid.ITEM);
         if (handler == null) {
             return;
         }
@@ -416,7 +416,7 @@ public class TerminalMenu extends GolemMenu {
         }
         int accepted = net.insertFluid(sim, true);
         if (accepted <= 0) {
-            sp.displayClientMessage(Component.translatable("message.golem_logix.fluid.no_room"), true);
+            sp.sendOverlayMessage(Component.translatable("message.golem_logix.fluid.no_room"));
             return;
         }
         FluidStack drained = handler.drain(sim.copyWithAmount(accepted), IFluidHandler.FluidAction.EXECUTE);
@@ -618,8 +618,8 @@ public class TerminalMenu extends GolemMenu {
         CraftingPlan plan = result.plan() != null ? result.plan() : CraftingPlanner.plan(net, key, amount);
         sendPlan(sp, p.request(), status, plan);
         if (status == CraftPlanPayload.Status.STARTED) {
-            sp.displayClientMessage(Component.translatable("message.golem_logix.craft.started", amount, name, plan.totalExecutions())
-                    .withStyle(ChatFormatting.AQUA), true);
+            sp.sendOverlayMessage(Component.translatable("message.golem_logix.craft.started", amount, name, plan.totalExecutions())
+                    .withStyle(ChatFormatting.AQUA));
         }
         forceSync = true;
     }
@@ -772,7 +772,7 @@ public class TerminalMenu extends GolemMenu {
         int charge = PortableChronometerItem.getCharge(chrono) - PortableChronometerItem.DRAIN_PER_SECOND;
         PortableChronometerItem.setCharge(chrono, Math.max(0, charge));
         if (charge <= 0) {
-            sp.displayClientMessage(Component.translatable("message.golem_logix.chronometer.empty").withStyle(ChatFormatting.RED), true);
+            sp.sendOverlayMessage(Component.translatable("message.golem_logix.chronometer.empty").withStyle(ChatFormatting.RED));
             sp.closeContainer();
         }
     }
@@ -939,7 +939,7 @@ public class TerminalMenu extends GolemMenu {
             GolemNetwork net = network();
             if (accessError(net) != null) {
                 if (player instanceof ServerPlayer sp) {
-                    sp.displayClientMessage(Component.translatable(accessError(net)), true);
+                    sp.sendOverlayMessage(Component.translatable(accessError(net)));
                 }
                 return ItemStack.EMPTY;
             }

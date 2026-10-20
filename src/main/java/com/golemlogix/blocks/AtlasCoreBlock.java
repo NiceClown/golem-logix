@@ -63,20 +63,20 @@ public class AtlasCoreBlock extends Block implements GolemNode, EntityBlock, Atl
             AtlasStructure.Result st = net.structure();
             String sourceText = core.isInfiniteSource() ? "∞" : String.valueOf(core.getSourcePerSecond());
             if (core.isDuplicate()) {
-                player.displayClientMessage(Component.translatable("message.golem_logix.core.duplicate"), false);
+                player.sendSystemMessage(Component.translatable("message.golem_logix.core.duplicate"));
             } else if (st != null && !st.valid()) {
                 BlockPos m = st.missingPos();
-                player.displayClientMessage(Component.translatable("message.golem_logix.core.unformed",
-                        st.expected().getName(), m.getX(), m.getY(), m.getZ(), GolemNetwork.BARE_CORE_CHANNELS), false);
+                player.sendSystemMessage(Component.translatable("message.golem_logix.core.unformed",
+                        st.expected().getName(), m.getX(), m.getY(), m.getZ(), GolemNetwork.BARE_CORE_CHANNELS));
                 if (player instanceof ServerPlayer sp && level instanceof ServerLevel sl) {
                     sl.sendParticles(sp, ParticleTypes.END_ROD, true, m.getX() + 0.5, m.getY() + 0.5, m.getZ() + 0.5,
                             18, 0.3, 0.3, 0.3, 0.02);
                 }
             } else {
-                player.displayClientMessage(Component.translatable(
+                player.sendSystemMessage(Component.translatable(
                         core.isPowered() ? "message.golem_logix.core.formed_on" : "message.golem_logix.core.formed_off",
                         net.channelsUsed(), net.channelCapacity(), net.lineCapacity(), net.deviceCount(), sourceText,
-                        st == null ? 0 : st.expanders(), st == null ? 0 : st.quantumExpanders()), false);
+                        st == null ? 0 : st.expanders(), st == null ? 0 : st.quantumExpanders()));
             }
         }
         return InteractionResult.CONSUME;

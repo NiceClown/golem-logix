@@ -1,5 +1,8 @@
 package com.golemlogix.client;
 
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.util.LightCoordsUtil;
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.CardCatalogBlockEntity;
 import com.golemlogix.blocks.CardCatalogBlock;
@@ -9,14 +12,13 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.level.Level;
@@ -42,18 +44,18 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
  * columns X -32..-16 and 32..48 of the front row.
  */
 public class CardCatalogRenderer implements BlockEntityRenderer<CardCatalogBlockEntity> {
-    private static final ResourceLocation RUST = tex("resonator_body"), BRASS = tex("sat_brass"),
+    private static final Identifier RUST = tex("resonator_body"), BRASS = tex("sat_brass"),
             DARK = tex("sat_dark"), PLATE = tex("brass_plate"), DRAWER = tex("catalog_drawer"), DRUM = tex("catalog_drum"),
             SCREEN = tex("catalog_screen"), PANEL = tex("cryo_panel"), FROST_PIPE = tex("resonator_pipe"), ICE = tex("sat_ice"),
-            CARD = tex("encoder_cards"), VINE = ResourceLocation.withDefaultNamespace("block/vine"),
-            PIPE = ResourceLocation.withDefaultNamespace("block/copper_block");
-    private static final ResourceLocation[] PEDESTAL = {
-            ResourceLocation.withDefaultNamespace("block/copper_block"), ResourceLocation.withDefaultNamespace("block/exposed_copper"),
-            ResourceLocation.withDefaultNamespace("block/weathered_copper"), ResourceLocation.withDefaultNamespace("block/oxidized_copper")};
+            CARD = tex("encoder_cards"), VINE = Identifier.withDefaultNamespace("block/vine"),
+            PIPE = Identifier.withDefaultNamespace("block/copper_block");
+    private static final Identifier[] PEDESTAL = {
+            Identifier.withDefaultNamespace("block/copper_block"), Identifier.withDefaultNamespace("block/exposed_copper"),
+            Identifier.withDefaultNamespace("block/weathered_copper"), Identifier.withDefaultNamespace("block/oxidized_copper")};
     public static final int DRAWERS = 20;
 
-    private static ResourceLocation tex(String name) {
-        return ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/" + name);
+    private static Identifier tex(String name) {
+        return Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/" + name);
     }
 
     public CardCatalogRenderer(BlockEntityRendererProvider.Context context) {
@@ -99,7 +101,7 @@ public class CardCatalogRenderer implements BlockEntityRenderer<CardCatalogBlock
         Direction facing = state.getValue(CardCatalogBlock.FACING);
         float time = level.getGameTime() + partialTick;
         int light = LevelRenderer.getLightColor(level, be.getBlockPos().relative(facing));
-        light = LightTexture.pack(Math.max(LightTexture.block(light), 6), LightTexture.sky(light));
+        light = LightCoordsUtil.pack(Math.max(LightCoordsUtil.block(light), 6), LightCoordsUtil.sky(light));
         float open = Mth.lerp(partialTick, be.drawersPrev, be.drawers);
         open = open * open * (3 - 2 * open);
         float drums = Mth.lerp(partialTick, be.drumsPrev, be.drums);
@@ -111,7 +113,7 @@ public class CardCatalogRenderer implements BlockEntityRenderer<CardCatalogBlock
 
         pose.pushPose();
         Quads.faceModel(pose, facing);
-        VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS));
+        VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
         PoseStack.Pose p = pose.last();
         int white = 0xFFFFFFFF;
 
@@ -152,11 +154,11 @@ public class CardCatalogRenderer implements BlockEntityRenderer<CardCatalogBlock
         // middle: brass plate, porthole screen, fill gauge, card slot and levers
         box(vc, p, 3.2f, 3.2f, 0.3f, 12.8f, 28.6f, 1.6f, PLATE, white, light);
         box(vc, p, 3.6f, 16.4f, -0.4f, 12.4f, 27.6f, 0.3f, BRASS, 0xFFC8A060, light);
-        fitWall(vc, p, 3.4f, 17.1f, 12.6f, 26.9f, -0.5f, SCREEN, white, LightTexture.FULL_BRIGHT);
+        fitWall(vc, p, 3.4f, 17.1f, 12.6f, 26.9f, -0.5f, SCREEN, white, LightCoordsUtil.FULL_BRIGHT);
         box(vc, p, 4.2f, 14.2f, -0.4f, 11.8f, 15.6f, 0.3f, DARK, white, light);
         float fx = 4.6f + 6.8f * fill;
         if (fill > 0f) {
-            box(vc, p, 4.6f, 14.5f, -0.5f, fx, 15.3f, -0.35f, PANEL, 0xFF40F0E8, LightTexture.FULL_BRIGHT);
+            box(vc, p, 4.6f, 14.5f, -0.5f, fx, 15.3f, -0.35f, PANEL, 0xFF40F0E8, LightCoordsUtil.FULL_BRIGHT);
         }
         box(vc, p, 4.4f, 4.4f, -0.3f, 11.6f, 5.4f, 0.3f, DARK, 0xFF201810, light);
         box(vc, p, 4.0f, 3.9f, -0.5f, 12.0f, 4.4f, 0.3f, BRASS, white, light);
@@ -174,7 +176,7 @@ public class CardCatalogRenderer implements BlockEntityRenderer<CardCatalogBlock
 
         // roof: box of letter drums, gear, steaming pipe and frosted pipes
         roof(pose, vc, light, time, drums, open);
-        vc = buffers.getBuffer(RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS));
+        vc = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
         p = pose.last();
         // coolant pipes: down the left and right back edges and across the roof
         box(vc, p, -15.6f, 2, 30.4f, -12.6f, 33, 33.4f, FROST_PIPE, white, light);
@@ -189,7 +191,7 @@ public class CardCatalogRenderer implements BlockEntityRenderer<CardCatalogBlock
         }
 
         // ivy: hangs from the roof at the front corners and along the side
-        VertexConsumer vine = buffers.getBuffer(RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS));
+        VertexConsumer vine = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
         int green = 0xFF5A9A3A;
         wall(vine, pose.last(), -16.4f, 19f, -10.5f, 32.4f, -0.9f, VINE, green, light);
         wall(vine, pose.last(), 27.8f, 23f, 32.4f, 32.4f, -0.9f, VINE, green, light);
@@ -298,7 +300,7 @@ public class CardCatalogRenderer implements BlockEntityRenderer<CardCatalogBlock
     private static void sideGolem(CardCatalogBlockEntity be, PoseStack pose, MultiBufferSource buffers, int light, float time, float open, int k) {
         boolean right = k == 1;
         int ox = be.golemOxidation(k);
-        VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS));
+        VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
         // Pedestal: a full 16x16 block outside the cabinet
         float px0 = right ? 32f : -32f, px1 = right ? 48f : -16f;
         box(vc, pose.last(), px0, 0, 0.5f, px1, 6, 15.5f, PEDESTAL[Math.max(0, Math.min(3, ox))], 0xFFFFFFFF, light);

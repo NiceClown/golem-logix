@@ -63,7 +63,7 @@ public class GolemLogixClientEvents {
         GlowModels.wrap(event.getModels());
         // a written punch card shows its result while Shift is held
         var card = net.minecraft.client.resources.model.ModelResourceLocation.inventory(
-                net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.golemlogix.GolemLogixMod.MOD_ID, "copper_punch_card"));
+                net.minecraft.resources.Identifier.fromNamespaceAndPath(com.golemlogix.GolemLogixMod.MOD_ID, "copper_punch_card"));
         event.getModels().computeIfPresent(card, (k, m) -> new PunchCardModel(m));
     }
 
@@ -87,16 +87,16 @@ public class GolemLogixClientEvents {
     /** Liquid Cryo-Source textures (tanks, basins, JEI, the planner). */
     @SubscribeEvent
     public static void registerClientExtensions(net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent event) {
-        var still = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/cryo_source_still");
-        var flow = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/cryo_source_flow");
+        var still = net.minecraft.resources.Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/cryo_source_still");
+        var flow = net.minecraft.resources.Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/cryo_source_flow");
         event.registerFluidType(new net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions() {
             @Override
-            public net.minecraft.resources.ResourceLocation getStillTexture() {
+            public net.minecraft.resources.Identifier getStillTexture() {
                 return still;
             }
 
             @Override
-            public net.minecraft.resources.ResourceLocation getFlowingTexture() {
+            public net.minecraft.resources.Identifier getFlowingTexture() {
                 return flow;
             }
         }, com.golemlogix.init.ModFluids.CRYO_SOURCE_TYPE.get());
@@ -111,7 +111,7 @@ public class GolemLogixClientEvents {
 
     @SubscribeEvent
     public static void registerGuiLayers(RegisterGuiLayersEvent event) {
-        event.registerAboveAll(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "ghost_hud"),
+        event.registerAboveAll(net.minecraft.resources.Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "ghost_hud"),
                 com.golemlogix.client.ghost.GhostHud::render);
     }
 }

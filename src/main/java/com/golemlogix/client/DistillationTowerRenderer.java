@@ -1,18 +1,20 @@
 package com.golemlogix.client;
 
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.util.LightCoordsUtil;
 import com.golemlogix.blockentity.DistillationTowerBlockEntity;
 import com.golemlogix.blocks.DistillationTowerBlock;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.level.Level;
@@ -44,7 +46,7 @@ import static com.golemlogix.client.CryoMainframeRenderer.fitWall;
  * Pixels in the north-facing frame: the front is Z 0, the viewer's right is -X; Y 0..48.
  */
 public class DistillationTowerRenderer implements BlockEntityRenderer<DistillationTowerBlockEntity> {
-    private static final ResourceLocation BLOOD = CryoJarRenderer.mc("water_still"), GLOW = CryoJarRenderer.mc("white_concrete");
+    private static final Identifier BLOOD = CryoJarRenderer.mc("water_still"), GLOW = CryoJarRenderer.mc("white_concrete");
     private static final float COLUMN_BOTTOM = 14.5f, COLUMN_TOP = 33.5f;
     /** The coil's colours from the bottom up: blood, ember, violet, ice. */
     private static final int[] COIL = {0xD02424, 0xE8661E, 0xC03CB0, 0x7A5CFF, 0x5CE6F8};
@@ -81,7 +83,7 @@ public class DistillationTowerRenderer implements BlockEntityRenderer<Distillati
 
         pose.pushPose();
         Quads.faceModel(pose, state.getValue(DistillationTowerBlock.FACING));
-        VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS));
+        VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
         PoseStack.Pose p = pose.last();
 
         // ---- the plinth
@@ -90,7 +92,7 @@ public class DistillationTowerRenderer implements BlockEntityRenderer<Distillati
         box(vc, p, 0.2f, 12.6f, 0.2f, 15.8f, 14.4f, 15.8f, DARK, WHITE, light);
         float runeGlow = 0.45f + 0.55f * work * (0.75f + 0.25f * Mth.sin(time * 0.12f));
         int rune = 0xFF000000 | ((int) (0xF0 * runeGlow) << 16) | ((int) (0x30 * runeGlow) << 8) | (int) (0x28 * runeGlow);
-        fitWall(vc, p, 1.2f, 2.4f, 14.8f, 5.6f, 0.54f, RUNES, rune, LightTexture.FULL_BRIGHT);
+        fitWall(vc, p, 1.2f, 2.4f, 14.8f, 5.6f, 0.54f, RUNES, rune, LightCoordsUtil.FULL_BRIGHT);
         for (float x : new float[]{9.4f, 12.2f}) {
             box(vc, p, x, 7.2f, -0.2f, x + 1.4f, 8.6f, 0.6f, BRASS, WHITE, light);
             box(vc, p, x - 0.4f, 8.6f, -0.3f, x + 1.8f, 9.2f, 0.4f, BRASS, 0xFFE8C878, light);
@@ -132,7 +134,7 @@ public class DistillationTowerRenderer implements BlockEntityRenderer<Distillati
         CopperGolemPuppet.Arms arms = new CopperGolemPuppet.Arms(reach, 0.25f, reach, -0.25f, 0.2f * Mth.sin(time * 0.013f));
         CopperGolemPuppet.render(pose, buffers, light, new Vector3f(-3.2f / 16f, 18f / 16f, 3.9f / 16f), new Vector3f(1f, 0f, 0f),
                 new Vector3f(0f, 1f, 0f), 0.45f, new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.1f), 1, null, arms);
-        VertexConsumer tv = buffers.getBuffer(RenderType.entityTranslucent(InventoryMenu.BLOCK_ATLAS));
+        VertexConsumer tv = buffers.getBuffer(RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
         if (blood > 0.002f) {
             float top = COLUMN_BOTTOM + 0.6f + 7f * Math.min(1f, blood);
             box(tv, p, 2.8f, COLUMN_BOTTOM + 0.6f, 2.8f, 13.2f, top, 13.2f, BLOOD, 0xE8901018, light);
@@ -160,13 +162,13 @@ public class DistillationTowerRenderer implements BlockEntityRenderer<Distillati
                 float cx = Mth.cos(a) * r, cz = Mth.sin(a) * r;
                 // a slight helix: each ring leans towards the next one
                 float dy = (i / 12f) * 1.2f;
-                box(vc, p, cx - 0.75f, dy - 0.45f, cz - 0.75f, cx + 0.75f, dy + 0.45f, cz + 0.75f, GLOW, col, LightTexture.FULL_BRIGHT);
+                box(vc, p, cx - 0.75f, dy - 0.45f, cz - 0.75f, cx + 0.75f, dy + 0.45f, cz + 0.75f, GLOW, col, LightCoordsUtil.FULL_BRIGHT);
             }
             pose.popPose();
         }
         // the core of the column: a faint cold glow that brightens with the work
         float g = 0.2f + 0.5f * work * (0.8f + 0.2f * Mth.sin(time * 0.2f));
         int core = 0xFF000000 | ((int) (0x60 * g) << 16) | ((int) (0xC8 * g) << 8) | (int) (0xFF * g);
-        box(vc, pose.last(), 7.4f, COLUMN_BOTTOM + 2f, 7.4f, 8.6f, COLUMN_TOP - 1.5f, 8.6f, GLOW, core, LightTexture.FULL_BRIGHT);
+        box(vc, pose.last(), 7.4f, COLUMN_BOTTOM + 2f, 7.4f, 8.6f, COLUMN_TOP - 1.5f, 8.6f, GLOW, core, LightCoordsUtil.FULL_BRIGHT);
     }
 }

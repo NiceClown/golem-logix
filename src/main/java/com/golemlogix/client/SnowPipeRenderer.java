@@ -10,12 +10,12 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.geom.ModelPart;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
@@ -56,7 +56,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
 
     private static net.minecraft.client.resources.model.ModelResourceLocation plugModel(String name) {
         return net.minecraft.client.resources.model.ModelResourceLocation.standalone(
-                ResourceLocation.fromNamespaceAndPath(com.golemlogix.GolemLogixMod.MOD_ID, "block/" + name));
+                Identifier.fromNamespaceAndPath(com.golemlogix.GolemLogixMod.MOD_ID, "block/" + name));
     }
 
     @Override

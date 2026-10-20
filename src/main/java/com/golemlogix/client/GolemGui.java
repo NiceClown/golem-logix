@@ -1,6 +1,6 @@
 package com.golemlogix.client;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
  * Primitives for drawing interfaces in the occult-analog style: dark wood, brass edges,
@@ -27,7 +27,7 @@ public final class GolemGui {
     }
 
     /** Main window panel. */
-    public static void panel(GuiGraphics g, int x, int y, int w, int h) {
+    public static void panel(GuiGraphicsExtractor g, int x, int y, int w, int h) {
         g.fill(x, y, x + w, y + h, WOOD_DARK);
         g.fill(x + 1, y + 1, x + w - 1, y + h - 1, BRASS_DARK);
         g.fill(x + 2, y + 2, x + w - 2, y + h - 2, BRASS);
@@ -44,13 +44,13 @@ public final class GolemGui {
         rivet(g, x + w - 8, y + h - 8);
     }
 
-    private static void rivet(GuiGraphics g, int x, int y) {
+    private static void rivet(GuiGraphicsExtractor g, int x, int y) {
         g.fill(x, y, x + 3, y + 3, COPPER);
         g.fill(x, y, x + 1, y + 1, PARCHMENT);
     }
 
     /** A sunken frame (for lists, status). */
-    public static void inset(GuiGraphics g, int x, int y, int w, int h) {
+    public static void inset(GuiGraphicsExtractor g, int x, int y, int w, int h) {
         g.fill(x, y, x + w, y + h, SLOT_EDGE_DARK);
         g.fill(x + 1, y + 1, x + w - 1, y + h - 1, SLOT_BG);
         g.fill(x, y + h - 1, x + w, y + h, SLOT_EDGE_LIGHT);
@@ -58,11 +58,11 @@ public final class GolemGui {
     }
 
     /** Background of an 18x18 inventory slot (x, y are the top left corner of the slot, not of the item). */
-    public static void slot(GuiGraphics g, int x, int y) {
+    public static void slot(GuiGraphicsExtractor g, int x, int y) {
         inset(g, x, y, 18, 18);
     }
 
-    public static void bar(GuiGraphics g, int x, int y, int w, int h, double fraction, int color) {
+    public static void bar(GuiGraphicsExtractor g, int x, int y, int w, int h, double fraction, int color) {
         inset(g, x, y, w, h);
         int fill = (int) Math.round((w - 2) * Math.max(0, Math.min(1, fraction)));
         if (fill > 0) {

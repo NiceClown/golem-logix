@@ -90,7 +90,7 @@ public class SchematicConcentratorBlock extends HorizontalDirectionalBlock imple
         if (player instanceof ServerPlayer sp) {
             String err = GolemNetwork.scan(level, pos).accessError(pos);
             if (err != null) {
-                sp.displayClientMessage(Component.translatable(err), true);
+                sp.sendOverlayMessage(Component.translatable(err));
                 return InteractionResult.CONSUME;
             }
             sp.openMenu(new SimpleMenuProvider((id, inv, p) -> new ConcentratorMenu(id, inv, level, pos),

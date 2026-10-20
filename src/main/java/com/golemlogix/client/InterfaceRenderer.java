@@ -6,14 +6,14 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.neoforged.neoforge.client.model.data.ModelData;
 
@@ -22,9 +22,9 @@ import net.neoforged.neoforge.client.model.data.ModelData;
  */
 public class InterfaceRenderer implements BlockEntityRenderer<InterfaceBlockEntity> {
     public static final ModelResourceLocation TURBINE = ModelResourceLocation.standalone(
-            ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/golem_interface_turbine"));
+            Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/golem_interface_turbine"));
     public static final ModelResourceLocation PENDULUM = ModelResourceLocation.standalone(
-            ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/golem_interface_pendulum"));
+            Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/golem_interface_pendulum"));
     /**
      * Metronomes lying flat on the side faces (as in tools/Interface.java: left of the funnel as seen by the viewer, axis at height 5.2,
      * in front of the body at depth 0.42 from the block plane): x, z of the axis in pixels and the rotation of the pendulum model facing outwards.

@@ -50,7 +50,7 @@ public final class Chronometers {
     /** Every Chronometer the player carries: the inventory, the offhand and the Curios slot. */
     public static List<ItemStack> carried(Player player) {
         List<ItemStack> out = new ArrayList<>();
-        for (ItemStack s : player.getInventory().items) {
+        for (ItemStack s : player.getInventory().getNonEquipmentItems()) {
             if (is(s)) {
                 out.add(s);
             }

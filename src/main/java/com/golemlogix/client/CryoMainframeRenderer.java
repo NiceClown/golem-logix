@@ -1,5 +1,8 @@
 package com.golemlogix.client;
 
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.util.LightCoordsUtil;
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.CryoMainframeBlockEntity;
 import com.golemlogix.blocks.AtlantBlock;
@@ -15,16 +18,15 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.item.BlockItem;
@@ -44,12 +46,12 @@ import org.joml.Vector3f;
  * Coordinates are pixels in the owner's north-facing frame: X -16..32 (three cells across), Y 0..32, Z 0..32 (front = Z 0).
  */
 public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeBlockEntity> {
-    private static final ResourceLocation BRONZE = tex("sat_bronze"), BRASS = tex("sat_brass"), DARK = tex("sat_dark"),
+    private static final Identifier BRONZE = tex("sat_bronze"), BRASS = tex("sat_brass"), DARK = tex("sat_dark"),
             MATRIX = tex("cryo_panel_matrix"), GLASS = tex("sat_glass"), PANEL = tex("cryo_panel"), GAUGE = tex("monitor_gauge"),
-            COPPER = ResourceLocation.withDefaultNamespace("block/copper_block"), DECK = tex("monitor_deck");
+            COPPER = Identifier.withDefaultNamespace("block/copper_block"), DECK = tex("monitor_deck");
 
-    private static ResourceLocation tex(String name) {
-        return ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/" + name);
+    private static Identifier tex(String name) {
+        return Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/" + name);
     }
 
     public CryoMainframeRenderer(BlockEntityRendererProvider.Context context) {
@@ -85,14 +87,14 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         Direction facing = state.getValue(CryoMainframeBlock.FACING);
         float time = level.getGameTime() + partialTick;
         int light = LevelRenderer.getLightColor(level, be.getBlockPos().relative(facing));
-        light = LightTexture.pack(Math.max(LightTexture.block(light), 7), LightTexture.sky(light));
+        light = LightCoordsUtil.pack(Math.max(LightCoordsUtil.block(light), 7), LightCoordsUtil.sky(light));
         float doors = Mth.lerp(partialTick, be.doorsPrev, be.doors);
         float spin = Mth.lerp(partialTick, be.spinPrev, be.spin);
         float foreman = Mth.lerp(partialTick, be.foremanPrev, be.foreman);
 
         pose.pushPose();
         Quads.faceModel(pose, facing);
-        VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS));
+        VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
         PoseStack.Pose p = pose.last();
         int white = 0xFFFFFFFF;
 
@@ -111,7 +113,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
             box(vc, p, x, 0, 30.7f, x + 1f, 32.3f, 32.3f, BRASS, white, light);
         }
         // inside: a glowing matrix over the whole back wall and a brass shelf in the middle
-        wall(vc, p, -14, 3, 30, 28, 28.9f, MATRIX, white, LightTexture.FULL_BRIGHT);
+        wall(vc, p, -14, 3, 30, 28, 28.9f, MATRIX, white, LightCoordsUtil.FULL_BRIGHT);
         box(vc, p, -14, 15, 3, 30, 16, 29, BRASS, white, light);
         box(vc, p, -14, 3, 3, 30, 3.2f, 29, DECK, 0xFF9AA4B0, light);
         box(vc, p, -14, 16, 3, 30, 16.2f, 29, DECK, 0xFF9AA4B0, light);
@@ -147,7 +149,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
                 pose.translate(proj.x, proj.y, proj.z);
                 pose.mulPose(Axis.YP.rotationDegrees(time * 3f + shelf * 90f));
                 pose.scale(size, size, size);
-                Minecraft.getInstance().getItemRenderer().renderStatic(current, ItemDisplayContext.FIXED, LightTexture.FULL_BRIGHT,
+                Minecraft.getInstance().getItemRenderer().renderStatic(current, ItemDisplayContext.FIXED, LightCoordsUtil.FULL_BRIGHT,
                         OverlayTexture.NO_OVERLAY, pose, buffers, level, 0);
                 pose.popPose();
             }
@@ -160,7 +162,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         for (int k = 0; k < 2; k++) {
             embeddedAtlant(be, pose, buffers, light, partialTick, k, time, spin);
         }
-        vc = buffers.getBuffer(RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS));
+        vc = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
         p = pose.last();
         // frieze above the doors: a row of teal lights that run while the cabinet works and flicker quietly when idle
         box(vc, p, -16, 32, -0.5f, 32, 34, 3, BRONZE, white, light);
@@ -168,7 +170,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
             float lx = -12.6f + k * 3f;
             float glow = spin > 0.01f ? (((int) (time / 3) - k) % 14 + 14) % 14 < 4 ? 1f : 0.35f : 0.45f + 0.15f * Mth.sin(time * 0.05f + k);
             int c = 0xFF000000 | ((int) (0x30 * glow) << 16) | ((int) (0xF0 * glow) << 8) | (int) (0xE8 * glow);
-            box(vc, p, lx, 32.5f, -0.9f, lx + 1.4f, 33.6f, -0.5f, PANEL, c, LightTexture.FULL_BRIGHT);
+            box(vc, p, lx, 32.5f, -0.9f, lx + 1.4f, 33.6f, -0.5f, PANEL, c, LightCoordsUtil.FULL_BRIGHT);
         }
         // crest above the cabinet: pressure gauge and red valve wheel (the copper golem on the roof turns it)
         box(vc, p, -16.5f, 34, -1.5f, 32.5f, 37.4f, 16, BRASS, white, light);
@@ -178,7 +180,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         fitWall(vc, p, -13f, 34.4f, -8f, 37.6f, -2.45f, GAUGE, white, light);
         valve(pose, vc, 24.5f, 36f, -2.6f, 3.4f, time * (spin > 0.01f ? 2.5f : 0.3f), light);
         roofGolem(be, pose, buffers, light, time, spin);
-        vc = buffers.getBuffer(RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS));
+        vc = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
         p = pose.last();        // copper pipes over the roof and down the back wall
         box(vc, p, -15, 32, 20, 31, 33.6f, 21.6f, COPPER, white, light);
         box(vc, p, -15, 32, 25, 31, 33.6f, 26.6f, COPPER, white, light);
@@ -192,7 +194,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         pose.popPose();
     }
 
-    private static final ResourceLocation ATLANT_BODY = tex("atlant_body"), ATLANT_LIMB = tex("atlant_limb"),
+    private static final Identifier ATLANT_BODY = tex("atlant_body"), ATLANT_LIMB = tex("atlant_limb"),
             ATLANT_BELT = tex("atlant_belt"), CASING = tex("atlas_casing"), FROST_PIPE = tex("resonator_pipe"),
             ICE = tex("sat_ice");
 
@@ -205,7 +207,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
     private static void embeddedAtlant(CryoMainframeBlockEntity be, PoseStack pose, MultiBufferSource buffers, int light, float pt, int k,
                                        float time, float spin) {
         boolean right = k == 1;
-        VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS));
+        VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
         int white = 0xFFFFFFFF;
         // pedestal housing at the side and the pipes out of it
         mbox(vc, pose, right, -25, 0, 0.5f, -16, 11, 15.5f, CASING, white, light);
@@ -258,13 +260,13 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
 
     /** A box of the left atlant, or its mirror for the right one. */
     static void mbox(VertexConsumer vc, PoseStack pose, boolean mirror, float x0, float y0, float z0, float x1, float y1, float z1,
-                             ResourceLocation tex, int color, int light) {
+                             Identifier tex, int color, int light) {
         float a = mirror ? 16f - x1 : x0, b = mirror ? 16f - x0 : x1;
         box(vc, pose.last(), a, y0, z0, b, y1, z1, tex, color, light);
     }
 
     /** A limb: a bar of thickness t from point from to point to (pixels). */
-    static void limb(VertexConsumer vc, PoseStack pose, Vector3f from, Vector3f to, float t, ResourceLocation tex, int light) {
+    static void limb(VertexConsumer vc, PoseStack pose, Vector3f from, Vector3f to, float t, Identifier tex, int light) {
         Vector3f d = new Vector3f(to).sub(from);
         float len = d.length();
         if (len < 1e-3f) {
@@ -548,7 +550,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         pose.pushPose();
         pose.translate(hinge / 16f, 0f, 1f / 16f);
         pose.mulPose(Axis.YP.rotationDegrees(angle));
-        VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS));
+        VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
         PoseStack.Pose p = pose.last();
         int white = 0xFFFFFFFF;
         float x0 = Math.min(0, w), x1 = Math.max(0, w);
@@ -562,7 +564,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         float hx = w > 0 ? x1 - 3.2f : x0 + 2.2f;
         box(vc, p, hx, 13f, -1.6f, hx + 1f, 18f, -0.6f, BRASS, 0xFFFFE6A0, light);
         // glass
-        VertexConsumer glass = buffers.getBuffer(RenderType.entityTranslucent(InventoryMenu.BLOCK_ATLAS));
+        VertexConsumer glass = buffers.getBuffer(RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
         PoseStack.Pose gp = pose.last();
         wall(glass, gp, x0 + 1.4f, 4.4f, x1 - 1.4f, 15f, 0f, GLASS, 0xB0DDF6FF, light);
         wall(glass, gp, x0 + 1.4f, 16f, x1 - 1.4f, 26.6f, 0f, GLASS, 0xB0DDF6FF, light);
@@ -592,13 +594,13 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
     }
 
     // ------------------------------------------------------------------------------------------ quads
-    static TextureAtlasSprite sprite(ResourceLocation id) {
-        return Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(id);
+    static TextureAtlasSprite sprite(Identifier id) {
+        return Minecraft.getInstance().getTextureAtlas(TextureAtlas.LOCATION_BLOCKS).apply(id);
     }
 
     /** A flat wall in the z plane (facing -Z), with the texture tiled every 16 pixels. */
     static void wall(VertexConsumer vc, PoseStack.Pose p, float x0, float y0, float x1, float y1, float z,
-                             ResourceLocation tex, int color, int light) {
+                             Identifier tex, int color, int light) {
         TextureAtlasSprite s = sprite(tex);
         for (float x = x0; x < x1 - 1e-3f; x += 16f) {
             float xe = Math.min(x1, x + 16f);
@@ -614,7 +616,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
 
     /** A wall facing -Z with the whole texture squeezed to its size (dials, plates). */
     static void fitWall(VertexConsumer vc, PoseStack.Pose p, float x0, float y0, float x1, float y1, float z,
-                                ResourceLocation tex, int color, int light) {
+                                Identifier tex, int color, int light) {
         TextureAtlasSprite s = sprite(tex);
         quad(vc, p, new float[]{x1, y0, z}, new float[]{x0, y0, z}, new float[]{x0, y1, z}, new float[]{x1, y1, z},
                 s.getU0(), s.getV0(), s.getU1(), s.getV1(), color, light, 0, 0, -1);
@@ -622,7 +624,7 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
 
     /** A box (pixels); every face takes a piece of the texture by its own size (over 16 it tiles). */
     static void box(VertexConsumer vc, PoseStack.Pose p, float x0, float y0, float z0, float x1, float y1, float z1,
-                            ResourceLocation tex, int color, int light) {
+                            Identifier tex, int color, int light) {
         TextureAtlasSprite s = sprite(tex);
         // north (-Z) and south (+Z)
         tile(vc, p, s, color, light, x1 - x0, y1 - y0, (a, b) -> new float[]{x1 - a, y0 + b, z0}, 0, 0, -1);

@@ -3,7 +3,7 @@ package com.golemlogix.client;
 import com.golemlogix.menu.ConcentratorMenu;
 import com.golemlogix.network.MenuScrollPayload;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -44,7 +44,7 @@ public class ConcentratorScreen extends GolemScreen<ConcentratorMenu> {
     }
 
     private void send() {
-        PacketDistributor.sendToServer(new MenuScrollPayload(menu.containerId, row, search.getValue()));
+        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new MenuScrollPayload(menu.containerId, row, search.getValue()));
     }
 
     private void scrollTo(int r) {
@@ -64,7 +64,7 @@ public class ConcentratorScreen extends GolemScreen<ConcentratorMenu> {
     }
 
     @Override
-    protected void renderExtraBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
+    protected void renderExtraBg(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
         int gx = leftPos + ConcentratorMenu.GRID_X, gy = topPos + ConcentratorMenu.GRID_Y, h = ConcentratorMenu.ROWS * 18;
         GolemGui.inset(g, leftPos + ConcentratorMenu.ICON_X - 3, gy - 3, gx - leftPos - ConcentratorMenu.ICON_X + 9 * 18 + 6, h + 4);
         int sx = leftPos + ConcentratorMenu.SCROLL_X;
@@ -83,7 +83,7 @@ public class ConcentratorScreen extends GolemScreen<ConcentratorMenu> {
     }
 
     @Override
-    protected void renderOverlay(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
+    protected void renderOverlay(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
         List<ConcentratorMenu.RowInfo> rows = menu.clientRows();
         int gx = leftPos + ConcentratorMenu.GRID_X, gy = topPos + ConcentratorMenu.GRID_Y;
         for (int r = 0; r < ConcentratorMenu.ROWS; r++) {
@@ -99,33 +99,33 @@ public class ConcentratorScreen extends GolemScreen<ConcentratorMenu> {
                 g.fill(x0, y + 1, gx + 9 * 18 - 1, y + 17, GolemGui.BRASS_DARK);
                 g.fill(x0, y + 1, gx + 9 * 18 - 1, y + 2, GolemGui.BRASS);
                 g.fill(x0, y + 16, gx + 9 * 18 - 1, y + 17, GolemGui.WOOD_DARK);
-                g.renderItem(info.icon(), leftPos + ConcentratorMenu.ICON_X, y + 1);
-                g.drawString(font, font.plainSubstrByWidth(info.title().getString(), 9 * 18 - 8), gx + 2, y + 5, GolemGui.PARCHMENT, false);
+                g.item(info.icon(), leftPos + ConcentratorMenu.ICON_X, y + 1);
+                g.text(font, font.plainSubstrByWidth(info.title().getString(), 9 * 18 - 8), gx + 2, y + 5, GolemGui.PARCHMENT, false);
             } else if (!info.icon().isEmpty()) {
-                g.renderItem(info.icon(), leftPos + ConcentratorMenu.ICON_X, y + 1);
+                g.item(info.icon(), leftPos + ConcentratorMenu.ICON_X, y + 1);
             }
         }
         if (rows.isEmpty()) {
             Component empty = Component.translatable(search.getValue().isBlank()
                     ? "gui.golem_logix.concentrator.empty" : "gui.golem_logix.catalog.not_found");
-            g.drawCenteredString(font, empty, gx + 81, gy + 50, 0xFF8A7A60);
+            g.centeredText(font, empty, gx + 81, gy + 50, 0xFF8A7A60);
         }
     }
 
     @Override
-    protected void renderTooltip(GuiGraphics g, int mouseX, int mouseY) {
+    protected void extractTooltip(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         int ix = leftPos + ConcentratorMenu.ICON_X, gy = topPos + ConcentratorMenu.GRID_Y;
         if (menu.getCarried().isEmpty() && mouseX >= ix - 1 && mouseX < ix + 17 && mouseY >= gy && mouseY < gy + ConcentratorMenu.ROWS * 18) {
             int idx = menu.row() + (mouseY - gy) / 18;
             if (idx < menu.clientRows().size()) {
                 ConcentratorMenu.RowInfo info = menu.clientRows().get(idx);
                 if (!info.icon().isEmpty()) {
-                    g.renderTooltip(font, info.title(), mouseX, mouseY);
+                    g.setTooltipForNextFrame(font, info.title(), mouseX, mouseY);
                     return;
                 }
             }
         }
-        super.renderTooltip(g, mouseX, mouseY);
+        super.extractTooltip(g, mouseX, mouseY);
     }
 
     private boolean overScrollbar(double mx, double my) {
@@ -175,7 +175,7 @@ public class ConcentratorScreen extends GolemScreen<ConcentratorMenu> {
     public boolean mouseScrolled(double mx, double my, double sx, double sy) {
         int gy = topPos + ConcentratorMenu.GRID_Y;
         if (mx >= leftPos && mx < leftPos + imageWidth && my >= gy - 3 && my < gy + ConcentratorMenu.ROWS * 18 + 3) {
-            scrollTo(row - (int) Math.signum(sy) * (hasShiftDown() ? ConcentratorMenu.ROWS : 1));
+            scrollTo(row - (int) Math.signum(sy) * (net.minecraft.client.Minecraft.getInstance().hasShiftDown() ? ConcentratorMenu.ROWS : 1));
             return true;
         }
         return super.mouseScrolled(mx, my, sx, sy);

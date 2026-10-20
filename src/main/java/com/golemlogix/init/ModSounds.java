@@ -2,7 +2,7 @@ package com.golemlogix.init;
 
 import com.golemlogix.GolemLogixMod;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -21,6 +21,6 @@ public class ModSounds {
 
     private static Supplier<SoundEvent> registerSound(String name) {
         return SOUND_EVENTS.register(name, () -> SoundEvent.createVariableRangeEvent(
-                ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, name)));
+                Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, name)));
     }
 }

@@ -21,7 +21,7 @@ public final class ChronometerKeyEvents {
         Minecraft mc = Minecraft.getInstance();
         while (GolemKeys.OPEN_CHRONOMETER.consumeClick()) {
             if (mc.player != null && mc.screen == null) {
-                PacketDistributor.sendToServer(new OpenChronometerPayload());
+                net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new OpenChronometerPayload());
             }
         }
     }

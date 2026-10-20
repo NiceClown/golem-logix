@@ -1,11 +1,12 @@
 package com.golemlogix.client;
 
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import com.golemlogix.items.FluidGhostItem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
@@ -16,16 +17,16 @@ public final class FluidIcons {
     private FluidIcons() {
     }
 
-    public static void draw(GuiGraphics g, FluidStack fluid, int x, int y) {
+    public static void draw(GuiGraphicsExtractor g, FluidStack fluid, int x, int y) {
         if (fluid.isEmpty()) {
             return;
         }
         IClientFluidTypeExtensions ext = IClientFluidTypeExtensions.of(fluid.getFluid());
-        ResourceLocation tex = ext.getStillTexture(fluid);
+        Identifier tex = ext.getStillTexture(fluid);
         if (tex == null) {
             return;
         }
-        TextureAtlasSprite sprite = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(tex);
+        TextureAtlasSprite sprite = Minecraft.getInstance().getTextureAtlas(TextureAtlas.LOCATION_BLOCKS).apply(tex);
         int tint = ext.getTintColor(fluid);
         float a = ((tint >> 24) & 0xFF) / 255f;
         float r = ((tint >> 16) & 0xFF) / 255f;
@@ -40,7 +41,7 @@ public final class FluidIcons {
     }
 
     /** Draws a fluid ghost as its fluid (and its mB if label); false if the stack is not a fluid ghost. */
-    public static boolean drawGhost(GuiGraphics g, Font font, ItemStack stack, int x, int y, boolean label) {
+    public static boolean drawGhost(GuiGraphicsExtractor g, Font font, ItemStack stack, int x, int y, boolean label) {
         FluidStack fluid = FluidGhostItem.fluid(stack);
         if (fluid.isEmpty()) {
             return false;
@@ -48,11 +49,11 @@ public final class FluidIcons {
         draw(g, fluid, x, y);
         if (label) {
             String text = label(fluid.getAmount());
-            g.pose().pushPose();
-            g.pose().translate(0, 0, 200);
-            g.pose().scale(0.5f, 0.5f, 1f);
-            g.drawString(font, text, (x + 16) * 2 - font.width(text) - 1, (y + 16) * 2 - 8, 0xFFFFFFFF, true);
-            g.pose().popPose();
+            g.pose().pushMatrix();
+            g.pose().translate(0, 0);
+            g.pose().scale(0.5f, 0.5f);
+            g.text(font, text, (x + 16) * 2 - font.width(text) - 1, (y + 16) * 2 - 8, 0xFFFFFFFF, true);
+            g.pose().popMatrix();
         }
         return true;
     }

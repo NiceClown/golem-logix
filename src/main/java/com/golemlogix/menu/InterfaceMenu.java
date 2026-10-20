@@ -10,7 +10,7 @@ import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.inventory.Slot;
@@ -158,13 +158,13 @@ public class InterfaceMenu extends GolemMenu {
     }
 
     @Override
-    public void clicked(int slotId, int button, ClickType clickType, Player player) {
+    public void clicked(int slotId, int button, ContainerInput clickType, Player player) {
         if (isGhost(slotId)) {
             int i = this.slots.get(slotId).getContainerSlot();
             ItemStack carried = ghostFor(getCarried());
-            if (clickType == ClickType.QUICK_MOVE) {
+            if (clickType == ContainerInput.QUICK_MOVE) {
                 clearSlot(i);
-            } else if (clickType == ClickType.PICKUP && !carried.isEmpty() && be != null) {
+            } else if (clickType == ContainerInput.PICKUP && !carried.isEmpty() && be != null) {
                 // an item on the cursor: set it (the amount follows the cursor stack, then it is edited in the settings window)
                 be.setSlot(i, carried, defaultAmount(i, carried));
             }

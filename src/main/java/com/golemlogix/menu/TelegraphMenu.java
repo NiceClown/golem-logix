@@ -11,7 +11,7 @@ import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.SimpleContainerData;
@@ -87,8 +87,8 @@ public class TelegraphMenu extends GolemMenu {
 
     /** Cards clicked onto the Write slot join the cards there even when those are already written (instead of swapping). */
     @Override
-    public void clicked(int slotId, int button, ClickType type, Player player) {
-        if (slotId == TelegraphBlockEntity.SLOT_WRITE && type == ClickType.PICKUP && (button == 0 || button == 1)) {
+    public void clicked(int slotId, int button, ContainerInput type, Player player) {
+        if (slotId == TelegraphBlockEntity.SLOT_WRITE && type == ContainerInput.PICKUP && (button == 0 || button == 1)) {
             Slot write = this.slots.get(slotId);
             ItemStack carried = getCarried();
             if (write.hasItem() && TelegraphLinkCardItem.isCard(carried) && !ItemStack.isSameItemSameComponents(carried, write.getItem())

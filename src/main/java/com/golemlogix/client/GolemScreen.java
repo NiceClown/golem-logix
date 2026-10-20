@@ -4,7 +4,7 @@ import com.golemlogix.menu.GolemMenu;
 import com.golemlogix.menu.Priority;
 import com.golemlogix.upgrade.RedstoneMode;
 import com.golemlogix.upgrade.UpgradeType;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
@@ -145,7 +145,7 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
     }
 
     @Override
-    protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
+    protected void renderBg(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
         GolemGui.panel(g, leftPos, topPos, imageWidth, imageHeight);
         Rect2i up = upgradePanel();
         if (up != null) {
@@ -166,11 +166,11 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
                 int k = i - gm.upgradeStart();
                 if (!s.hasItem() && k < hints.size()) {
                     int x = leftPos + s.x, y = topPos + s.y;
-                    g.renderItem(hints.get(k), x, y);
-                    g.pose().pushPose();
-                    g.pose().translate(0, 0, 300);
+                    g.item(hints.get(k), x, y);
+                    g.pose().pushMatrix();
+                    g.pose().translate(0, 0);
                     g.fill(x, y, x + 16, y + 16, 0xA8241A12);
-                    g.pose().popPose();
+                    g.pose().popMatrix();
                 }
             }
         }
@@ -196,16 +196,16 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
     }
 
     /** Drawn UNDER the slot frames (insets, background elements). */
-    protected void renderExtraBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
+    protected void renderExtraBg(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
     }
 
     /** Drawn ON TOP of the slot frames, but under the items. */
-    protected void renderOverlay(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
+    protected void renderOverlay(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
     }
 
     /** Fluid ghosts in ghost slots are drawn as their fluid; their mB label unless the screen labels slots itself. */
     @Override
-    protected void renderSlot(GuiGraphics g, net.minecraft.world.inventory.Slot slot) {
+    protected void renderSlot(GuiGraphicsExtractor g, net.minecraft.world.inventory.Slot slot) {
         if (FluidIcons.drawGhost(g, font, slot.getItem(), slot.x, slot.y, labelFluidGhosts())) {
             return;
         }
@@ -213,19 +213,19 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
         // a fuzzy ghost: "#" with a tag chosen, "≈" for the same item with any components
         if (menu instanceof com.golemlogix.menu.GolemMenu gm && slot.hasItem() && gm.fuzzyActive(slot.index)) {
             String mark = com.golemlogix.system.Fuzzy.tag(slot.getItem()) != null ? "#" : "≈";
-            g.pose().pushPose();
-            g.pose().translate(slot.x + 10.5f, slot.y - 1f, 300);
-            g.pose().scale(0.75f, 0.75f, 1f);
-            g.drawString(font, mark, 0, 0, GolemGui.CYAN, true);
-            g.pose().popPose();
+            g.pose().pushMatrix();
+            g.pose().translate(slot.x + 10.5f, slot.y - 1f);
+            g.pose().scale(0.75f, 0.75f);
+            g.text(font, mark, 0, 0, GolemGui.CYAN, true);
+            g.pose().popMatrix();
         }
     }
 
     /** A middle-click (or Ctrl+left-click) on a fuzzy ghost slot asks the server for its next tag. True if it was such a click. */
     protected boolean fuzzyClick(int button) {
         if (menu instanceof com.golemlogix.menu.GolemMenu gm && hoveredSlot != null && hoveredSlot.hasItem()
-                && (button == 2 || (button == 0 && hasControlDown())) && gm.canCycleFuzzy(hoveredSlot.index)) {
-            net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+                && (button == 2 || (button == 0 && net.minecraft.client.Minecraft.getInstance().hasControlDown())) && gm.canCycleFuzzy(hoveredSlot.index)) {
+            net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(
                     new com.golemlogix.network.FuzzyCyclePayload(menu.containerId, hoveredSlot.index));
             return true;
         }
@@ -259,21 +259,21 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
     }
 
     @Override
-    protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
-        g.drawString(font, title, titleLabelX, titleLabelY, GolemGui.PARCHMENT, false);
-        g.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, GolemGui.PARCHMENT, false);
+    protected void extractLabels(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+        g.text(font, title, titleLabelX, titleLabelY, GolemGui.PARCHMENT, false);
+        g.text(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, GolemGui.PARCHMENT, false);
         if (priorityValue != null) {
             Component label = Component.translatable("gui.golem_logix.priority");
-            g.drawString(font, label, priorityX + (54 - font.width(label)) / 2, priorityY, GolemGui.PARCHMENT, false);
+            g.text(font, label, priorityX + (54 - font.width(label)) / 2, priorityY, GolemGui.PARCHMENT, false);
             String v = Integer.toString(priorityValue.getAsInt());
-            g.drawString(font, v, priorityX + (54 - font.width(v)) / 2, priorityY + 11, GolemGui.CYAN, false);
+            g.text(font, v, priorityX + (54 - font.width(v)) / 2, priorityY + 11, GolemGui.CYAN, false);
         }
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         updateSideButtons();
-        super.render(g, mouseX, mouseY, partialTick);
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
         renderTooltip(g, mouseX, mouseY);
     }
 }

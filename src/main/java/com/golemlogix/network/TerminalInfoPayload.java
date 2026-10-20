@@ -5,7 +5,7 @@ import com.golemlogix.menu.TerminalMenu;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -21,7 +21,7 @@ public record TerminalInfoPayload(int containerId, String error, int channelsUse
                                   int cpuBusy, int cpuTotal, List<FluidStack> fluids, int charge,
                                   boolean resonator) implements CustomPacketPayload {
     public static final Type<TerminalInfoPayload> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "terminal_info"));
+            new Type<>(Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "terminal_info"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, TerminalInfoPayload> STREAM_CODEC = StreamCodec.of(
             (buf, p) -> {

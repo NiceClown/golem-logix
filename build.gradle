@@ -1,7 +1,7 @@
 plugins {
     id 'java-library'
     id 'maven-publish'
-    id 'net.neoforged.moddev' version '2.0.5-beta'
+    id 'net.neoforged.moddev' version '2.0.148'
 }
 
 tasks.named('wrapper', Wrapper) {
@@ -24,26 +24,16 @@ repositories {
         url = 'https://api.modrinth.com/maven'
         content { includeGroup 'maven.modrinth' }
     }
-    maven {
-        name = 'CurseMaven'
-        url = 'https://www.cursemaven.com'
-    }
 }
 
 base {
-    archivesName = 'golem_logix-1.21.1'
+    archivesName = 'golem_logix-26.1.2'
 }
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 
 neoForge {
-    // build and test against a recent 21.1.x: current Ars Nouveau and JEI work with it (the mod also runs on older 21.1)
-    version = '21.1.256'
-
-    parchment {
-        mappingsVersion = '2024.11.17'
-        minecraftVersion = '1.21.1'
-    }
+    version = '26.1.2.122'
 
     runs {
         client {
@@ -80,11 +70,6 @@ neoForge {
             type = 'gameTestServer'
             systemProperty 'neoforge.enabledGameTestNamespaces', 'golem_logix'
         }
-
-        data {
-            data()
-            programArguments.addAll '--mod', 'golem_logix', '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
-        }
     }
 
     mods {
@@ -94,54 +79,32 @@ neoForge {
     }
 }
 
-sourceSets.main.resources { srcDir 'src/generated/resources' }
-
 dependencies {
     // optional integrations: compiled against their APIs, picked up in game only when installed
-    compileOnly 'mezz.jei:jei-1.21.1-neoforge-api:19.44.0.403'
-    compileOnly 'maven.modrinth:jade:15.10.6+neoforge'
+    compileOnly 'mezz.jei:jei-26.1.2-neoforge-api:29.47.0.111'
+    compileOnly 'maven.modrinth:jade:Pr1h4azo'                      // 26.1.12+neoforge
     // Curios: the Portable Chronometer's own slot (integration/curios, used only when Curios is loaded)
-    compileOnly 'maven.modrinth:curios:yohfFbgD'                    // 9.5.1+1.21.1
+    compileOnly 'maven.modrinth:curios:dRnRThvD'                    // 15.0.0+26.1.2
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.2'
 
     // Modrinth version ids, not version numbers: the same number sometimes has Fabric builds.
-    // Copper Age Backport is optional (it brings the copper golem for the anvil ritual; modpacks may use another golem or their own
-    // recipes). It is in every dev run unless -PnoBackport checks the mod without it.
-    if (!project.hasProperty('noBackport')) {
-        runtimeOnly 'maven.modrinth:backport-copper-age:ZyjDScTQ'  // 1.21.1-0.1.5.1-pre neoforge
-    }
-
     // testing with the real mods in dev runs: gradle -PtestMods runClient / runDevShots / runGameTestServer
-    // (Source from Ars Nouveau jars, JEI, Jade). They do not go into the release jar.
+    // (JEI, Jade, Curios). They do not go into the release jar. Ars Nouveau and Create have no 26.1.2 builds yet:
+    // their integrations stay in the code (reflection, conditional recipes) and wake up when they are ported.
     if (project.hasProperty('testMods')) {
-        runtimeOnly 'maven.modrinth:ars-nouveau:yWDnir1o'          // 5.13.3
-        runtimeOnly 'maven.modrinth:geckolib:Grwn5rUB'             // 4.9.3 neoforge
-        runtimeOnly 'maven.modrinth:curios:yohfFbgD'               // 9.5.1+1.21.1
-        runtimeOnly 'mezz.jei:jei-1.21.1-neoforge:19.44.0.403'
-        runtimeOnly 'maven.modrinth:jade:15.10.6+neoforge'
+        runtimeOnly 'mezz.jei:jei-26.1.2-neoforge:29.47.0.111'
+        runtimeOnly 'maven.modrinth:jade:Pr1h4azo'
+        runtimeOnly 'maven.modrinth:curios:dRnRThvD'
     }
-    // compatibility with fluids of big mods: gradle -Pmekanism ... (Mekanism buckets and tanks in the Interface)
-    if (project.hasProperty('mekanism')) {
-        runtimeOnly 'maven.modrinth:mekanism:5KzzycBT'             // 10.7.19.85 (1.21.1 neoforge)
-    }
-    // Create recipes (mixing with liquid cryo-source, pressing torn minds): gradle -Pcreate ...
-    if (project.hasProperty('create')) {
-        runtimeOnly 'maven.modrinth:create:UjX6dr61'               // 6.0.10 (1.21.1 neoforge, bundles Flywheel and Ponder)
-    }
-    // Neo Vitae (Essentia Vitae for the Cryo-Distillation Tower), without Ars Nouveau: gradle -Pvitae ...
+    // Neo Vitae (Essentia Vitae for the Cryo-Distillation Tower): gradle -Pvitae ...
     if (project.hasProperty('vitae')) {
-        runtimeOnly 'maven.modrinth:neovitae:nt0gFkED'             // 1.21.1-1.1.44
-        runtimeOnly 'maven.modrinth:modonomicon:fbS7CiY6'          // 1.21.1-1.120.7, required by Neo Vitae
+        runtimeOnly 'maven.modrinth:neovitae:1oCGcXly'             // 26.1.2-1.1.44
+        runtimeOnly 'maven.modrinth:modonomicon:aFWelvHM'          // 26.1.2-2.17.1, required by Neo Vitae
+        runtimeOnly 'maven.modrinth:geckolib:xfVfPcoC'             // 5.5.2, required by Neo Vitae
         if (!project.hasProperty('testMods')) {
-            runtimeOnly 'maven.modrinth:geckolib:Grwn5rUB'         // 4.9.3 neoforge
-            runtimeOnly 'mezz.jei:jei-1.21.1-neoforge:19.44.0.403'
+            runtimeOnly 'mezz.jei:jei-26.1.2-neoforge:29.47.0.111'
         }
-    }
-    // side by side with Applied Energistics 2 in dev runs: gradle -Pae2 ...
-    if (project.hasProperty('ae2')) {
-        runtimeOnly 'maven.modrinth:ae2:KDnFUmMm'                  // 19.2.18 (1.21.1 neoforge)
-        runtimeOnly 'maven.modrinth:guideme:hFpGwC6q'              // 21.1.19, required by AE2
     }
 }
 
@@ -176,4 +139,5 @@ tasks.named('processResources', ProcessResources) {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    options.compilerArgs += ['-Xmaxerrs', '10000']
 }

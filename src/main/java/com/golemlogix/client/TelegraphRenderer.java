@@ -1,5 +1,8 @@
 package com.golemlogix.client;
 
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.util.LightCoordsUtil;
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.TelegraphBlockEntity;
 import com.golemlogix.blocks.TelegraphBlock;
@@ -7,14 +10,13 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.level.Level;
@@ -37,7 +39,7 @@ import static com.golemlogix.client.CryoMainframeRenderer.limb;
  * Z 0..32; the mast stands on X -16..0, Z 16..32.
  */
 public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEntity> {
-    private static final ResourceLocation RUST = mc("exposed_copper"), VERDIGRIS = mc("weathered_copper"),
+    private static final Identifier RUST = mc("exposed_copper"), VERDIGRIS = mc("weathered_copper"),
             CUT = mc("exposed_cut_copper"), COPPER = mc("copper_block"), BRASS = tex("sat_brass"), DARK = tex("sat_dark"),
             ICE = tex("sat_ice"), GAUGE = tex("monitor_gauge"), DIAL = tex("resonator_dial"), RUNES = tex("cryo_panel_matrix"),
             GLASS = tex("sat_glass"), CRYSTAL = tex("core_crystal"), GEM = tex("sat_crystal"), WHITE = mc("white_concrete");
@@ -49,12 +51,12 @@ public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEnti
     /** The key's knob, right under the operator's right hand when it presses (worked out from CopperGolemPuppet's arm). */
     private static final float KEY_X = 12.9f, KEY_Z = 9.5f;
 
-    private static ResourceLocation tex(String name) {
-        return ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/" + name);
+    private static Identifier tex(String name) {
+        return Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/" + name);
     }
 
-    private static ResourceLocation mc(String name) {
-        return ResourceLocation.withDefaultNamespace("block/" + name);
+    private static Identifier mc(String name) {
+        return Identifier.withDefaultNamespace("block/" + name);
     }
 
     public TelegraphRenderer(BlockEntityRendererProvider.Context context) {
@@ -90,7 +92,7 @@ public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEnti
         Direction facing = state.getValue(TelegraphBlock.FACING);
         BlockPos pos = be.getBlockPos();
         int light = LevelRenderer.getLightColor(level, pos.above());
-        light = LightTexture.pack(Math.max(LightTexture.block(light), 5), LightTexture.sky(light));
+        light = LightCoordsUtil.pack(Math.max(LightCoordsUtil.block(light), 5), LightCoordsUtil.sky(light));
         float wake = Mth.lerp(partialTick, be.wakePrev, be.wake);
         float time = level.getGameTime() + Math.floorMod(pos.asLong(), 97L) + partialTick;
         long tick = (long) Math.floor(time);
@@ -99,7 +101,7 @@ public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEnti
 
         pose.pushPose();
         Quads.faceModel(pose, facing);
-        VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS));
+        VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
         PoseStack.Pose p = pose.last();
         int white = 0xFFFFFFFF;
         base(vc, pose, p, light, wake, time);
@@ -148,7 +150,7 @@ public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEnti
         box(vc, p, 10.5f, 2f, -0.8f, 12.5f, 3.6f, 0f, BRASS, 0xFFE0C070, light);
         float glow = 0.35f + 0.65f * wake * (0.75f + 0.25f * Mth.sin(time * 0.15f));
         int rune = 0xFF000000 | ((int) (0x40 * glow) << 16) | ((int) (0xF0 * glow) << 8) | (int) (0xE8 * glow);
-        fitWall(vc, p, -14f, 2.5f, -2f, 8.5f, -0.06f, RUNES, rune, wake > 0.05f ? LightTexture.FULL_BRIGHT : light);
+        fitWall(vc, p, -14f, 2.5f, -2f, 8.5f, -0.06f, RUNES, rune, wake > 0.05f ? LightCoordsUtil.FULL_BRIGHT : light);
         box(vc, p, -14.6f, 2f, -0.5f, -1.4f, 2.5f, 0f, BRASS, white, light);
         box(vc, p, -14.6f, 8.5f, -0.5f, -1.4f, 9f, 0f, BRASS, white, light);
         // gear dials on the right side face and on the back
@@ -187,7 +189,7 @@ public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEnti
         for (float side : new float[]{-1f, 1f}) {
             float x0 = cx + side * 7.6f - 1.2f;
             box(vc, p, x0, 18.5f, cz - 1.2f, x0 + 2.4f, 28f, cz + 1.2f, GLASS, 0xFFC8F0FF, light);
-            box(vc, p, x0 + 0.8f, 19f, cz - 0.4f, x0 + 1.6f, 26f, cz + 0.4f, WHITE, fil, wake > 0.05f ? LightTexture.FULL_BRIGHT : light);
+            box(vc, p, x0 + 0.8f, 19f, cz - 0.4f, x0 + 1.6f, 26f, cz + 0.4f, WHITE, fil, wake > 0.05f ? LightCoordsUtil.FULL_BRIGHT : light);
             box(vc, p, x0 - 0.2f, 28f, cz - 1.4f, x0 + 2.6f, 29.5f, cz + 1.4f, BRASS, white, light);
         }
         // diagonal braces
@@ -200,9 +202,9 @@ public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEnti
         pose.translate(cx / 16f, 24f / 16f, cz / 16f);
         pose.mulPose(Axis.YP.rotationDegrees(45f + time * (0.4f + 2f * flash) * wake));
         // a gem: wide in the middle, narrowing to points above and below
-        box(vc, pose.last(), -2.0f, -2.5f, -2.0f, 2.0f, 2.5f, 2.0f, GEM, crystal, LightTexture.FULL_BRIGHT);
-        box(vc, pose.last(), -1.4f, -4.5f, -1.4f, 1.4f, 4.5f, 1.4f, GEM, crystal, LightTexture.FULL_BRIGHT);
-        box(vc, pose.last(), -0.7f, -6.3f, -0.7f, 0.7f, 6.3f, 0.7f, GEM, crystal, LightTexture.FULL_BRIGHT);
+        box(vc, pose.last(), -2.0f, -2.5f, -2.0f, 2.0f, 2.5f, 2.0f, GEM, crystal, LightCoordsUtil.FULL_BRIGHT);
+        box(vc, pose.last(), -1.4f, -4.5f, -1.4f, 1.4f, 4.5f, 1.4f, GEM, crystal, LightCoordsUtil.FULL_BRIGHT);
+        box(vc, pose.last(), -0.7f, -6.3f, -0.7f, 0.7f, 6.3f, 0.7f, GEM, crystal, LightCoordsUtil.FULL_BRIGHT);
         pose.popPose();
         box(vc, p, cx - 7.2f, 31f, cz - 7.2f, cx + 7.2f, 32.5f, cz + 7.2f, BRASS, white, light);
         box(vc, p, cx - 7.4f, 32.2f, cz - 7.4f, cx + 7.4f, 33f, cz + 7.4f, ICE, white, light);
@@ -222,8 +224,8 @@ public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEnti
             box(vc, p, cx + r - 0.6f, y, cz - r, cx + r, y + 0.6f, cz + r, COPPER, white, light);
         }
         int small = color(Math.min(1f, 0.7f * b + 0.3f), Math.min(1f, 0.85f * b + 0.15f), 1f);
-        box(vc, p, cx - 3f, 34.5f, cz - 1f, cx - 1f, 39f, cz + 1f, CRYSTAL, small, LightTexture.FULL_BRIGHT);
-        box(vc, p, cx + 1f, 35.5f, cz - 1f, cx + 3f, 39.5f, cz + 1f, CRYSTAL, small, LightTexture.FULL_BRIGHT);
+        box(vc, p, cx - 3f, 34.5f, cz - 1f, cx - 1f, 39f, cz + 1f, CRYSTAL, small, LightCoordsUtil.FULL_BRIGHT);
+        box(vc, p, cx + 1f, 35.5f, cz - 1f, cx + 3f, 39.5f, cz + 1f, CRYSTAL, small, LightCoordsUtil.FULL_BRIGHT);
 
         // the dish on top: tilted to the front and slowly sweeping the sky while the telegraph works
         pose.pushPose();
@@ -247,7 +249,7 @@ public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEnti
         // the feed horn: a brass spike with a glowing tip
         limb(vc, pose, new Vector3f(0f, 1f, 0f), new Vector3f(0f, 6.5f, 0f), 0.9f, BRASS, light);
         int tip = color(0.4f + 0.6f * flash, 0.85f, 1f);
-        box(vc, pose.last(), -0.7f, 6.3f, -0.7f, 0.7f, 7.7f, 0.7f, WHITE, tip, wake > 0.05f ? LightTexture.FULL_BRIGHT : light);
+        box(vc, pose.last(), -0.7f, 6.3f, -0.7f, 0.7f, 7.7f, 0.7f, WHITE, tip, wake > 0.05f ? LightCoordsUtil.FULL_BRIGHT : light);
         pose.popPose();
     }
 
@@ -263,9 +265,9 @@ public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEnti
         box(vc, p, -7.5f, 19.2f, 1.8f, -1.5f, 20.6f, 5.2f, VERDIGRIS, white, light);
         int bulb = down ? 0xFFFFE08A : (wake > 0.05f ? 0xFF8A7440 : 0xFF4A4030);
         // the bulb hangs below the shade, so it is seen lighting up with every press
-        box(vc, p, -6.0f, 17.6f, 2.3f, -3.0f, 19.2f, 4.7f, WHITE, bulb, down ? LightTexture.FULL_BRIGHT : light);
+        box(vc, p, -6.0f, 17.6f, 2.3f, -3.0f, 19.2f, 4.7f, WHITE, bulb, down ? LightCoordsUtil.FULL_BRIGHT : light);
         if (down) {
-            box(vc, p, -7.0f, 15.05f, 1.3f, -2.0f, 15.15f, 5.7f, WHITE, 0xFF8A7A4A, LightTexture.FULL_BRIGHT);
+            box(vc, p, -7.0f, 15.05f, 1.3f, -2.0f, 15.15f, 5.7f, WHITE, 0xFF8A7A4A, LightCoordsUtil.FULL_BRIGHT);
         }
         // a ledger with a brass clasp and an inkwell
         box(vc, p, -14f, 15f, 2.5f, -9f, 16.2f, 8.5f, mc("dark_oak_planks"), 0xFF8A5A3A, light);
@@ -310,7 +312,7 @@ public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEnti
             float fade = 1f - t * 0.5f;
             int c = color(0.35f * fade, 0.95f * fade, 1f * fade);
             float z = y < 31f ? MAST_Z - 7.9f : MAST_Z - 3.2f;
-            box(vc, p, MAST_X - 1.1f, y, z, MAST_X + 1.1f, y + 2.4f, z + 1.2f, WHITE, c, LightTexture.FULL_BRIGHT);
+            box(vc, p, MAST_X - 1.1f, y, z, MAST_X + 1.1f, y + 2.4f, z + 1.2f, WHITE, c, LightCoordsUtil.FULL_BRIGHT);
         }
     }
 

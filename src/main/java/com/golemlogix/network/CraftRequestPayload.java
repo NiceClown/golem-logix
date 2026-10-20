@@ -5,7 +5,7 @@ import com.golemlogix.menu.TerminalMenu;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -18,7 +18,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
  */
 public record CraftRequestPayload(int containerId, ItemStack key, int amount, boolean preview, int request) implements CustomPacketPayload {
     public static final Type<CraftRequestPayload> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "craft_request"));
+            new Type<>(Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "craft_request"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, CraftRequestPayload> STREAM_CODEC = StreamCodec.of(
             (buf, p) -> {

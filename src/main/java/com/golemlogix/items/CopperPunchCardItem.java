@@ -42,7 +42,7 @@ public class CopperPunchCardItem extends Item {
         if (player.isShiftKeyDown() && hasPattern(stack)) {
             if (!level.isClientSide()) {
                 player.setItemInHand(hand, new ItemStack(stack.getItem(), stack.getCount()));
-                player.displayClientMessage(Component.translatable("message.golem_logix.card.cleared"), true);
+                player.sendOverlayMessage(Component.translatable("message.golem_logix.card.cleared"));
                 level.playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.BOOK_PAGE_TURN,
                         net.minecraft.sounds.SoundSource.PLAYERS, 0.8f, 0.8f);
             }

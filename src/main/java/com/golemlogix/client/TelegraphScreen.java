@@ -6,7 +6,7 @@ import com.golemlogix.items.TelegraphLinkCardItem;
 import com.golemlogix.menu.TelegraphMenu;
 import com.golemlogix.system.TelegraphLinks;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
@@ -31,7 +31,7 @@ public class TelegraphScreen extends GolemScreen<TelegraphMenu> {
     }
 
     @Override
-    protected void renderExtraBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
+    protected void renderExtraBg(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
         // the three card bays and the status window
         for (int x : new int[]{TelegraphMenu.RANGE_X, TelegraphMenu.WRITE_X, TelegraphMenu.MEMORY_X}) {
             GolemGui.inset(g, leftPos + x - 14, topPos + 18, 44, 34);
@@ -43,26 +43,26 @@ public class TelegraphScreen extends GolemScreen<TelegraphMenu> {
     }
 
     @Override
-    protected void renderOverlay(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
+    protected void renderOverlay(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
         for (int i = TelegraphBlockEntity.SLOT_WRITE; i <= TelegraphBlockEntity.SLOT_MEMORY; i++) {
             if (menu.blocked(i)) {
                 Slot s = menu.slots.get(i);
                 int x = leftPos + s.x, y = topPos + s.y;
-                g.pose().pushPose();
-                g.pose().translate(0, 0, 300);
+                g.pose().pushMatrix();
+                g.pose().translate(0, 0);
                 g.fill(x, y, x + 16, y + 16, 0xC0201410);
                 for (int k = 2; k < 14; k++) {
                     g.fill(x + k, y + k, x + k + 1, y + k + 1, GolemGui.RED);
                     g.fill(x + 15 - k, y + k, x + 16 - k, y + k + 1, GolemGui.RED);
                 }
-                g.pose().popPose();
+                g.pose().popMatrix();
             }
         }
     }
 
     @Override
-    protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
-        super.renderLabels(g, mouseX, mouseY);
+    protected void extractLabels(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+        super.extractLabels(g, mouseX, mouseY);
         label(g, "gui.golem_logix.telegraph.range", TelegraphMenu.RANGE_X, GolemGui.BRASS_L);
         label(g, "gui.golem_logix.telegraph.write", TelegraphMenu.WRITE_X, GolemGui.GREEN);
         label(g, "gui.golem_logix.telegraph.memory", TelegraphMenu.MEMORY_X, GolemGui.CYAN);
@@ -91,31 +91,31 @@ public class TelegraphScreen extends GolemScreen<TelegraphMenu> {
                 x, y + 22, menu.active() ? GolemGui.GREEN : 0xFFA89880);
     }
 
-    private void label(GuiGraphics g, String key, int slotX, int color) {
+    private void label(GuiGraphicsExtractor g, String key, int slotX, int color) {
         Component c = Component.translatable(key);
         // a long translation is squeezed into the slot's frame
         float fit = Math.min(1f, 42f / Math.max(1, font.width(c)));
-        g.pose().pushPose();
-        g.pose().translate(slotX + 8 - font.width(c) * fit / 2f, 21 + (1f - fit) * 4f, 0);
-        g.pose().scale(fit, fit, 1f);
-        g.drawString(font, c, 0, 0, color, false);
-        g.pose().popPose();
+        g.pose().pushMatrix();
+        g.pose().translate(slotX + 8 - font.width(c) * fit / 2f, 21 + (1f - fit) * 4f);
+        g.pose().scale(fit, fit);
+        g.text(font, c, 0, 0, color, false);
+        g.pose().popMatrix();
     }
 
     /** A line that never leaves the status window: a long translation is squeezed. */
-    private void drawFitted(GuiGraphics g, Component text, int x, int y, int color) {
+    private void drawFitted(GuiGraphicsExtractor g, Component text, int x, int y, int color) {
         int w = font.width(text);
         float fit = Math.min(1f, 154f / Math.max(1, w));
-        g.pose().pushPose();
-        g.pose().translate(x, y, 0);
-        g.pose().scale(fit, fit, 1f);
-        g.drawString(font, text, 0, 0, color, false);
-        g.pose().popPose();
+        g.pose().pushMatrix();
+        g.pose().translate(x, y);
+        g.pose().scale(fit, fit);
+        g.text(font, text, 0, 0, color, false);
+        g.pose().popMatrix();
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
         // what each slot is for, while it is empty
         if (menu.getCarried().isEmpty() && hoveredSlot != null && hoveredSlot.index <= TelegraphBlockEntity.SLOT_MEMORY && !hoveredSlot.hasItem()) {
             int i = hoveredSlot.index;
@@ -126,7 +126,7 @@ public class TelegraphScreen extends GolemScreen<TelegraphMenu> {
             if (menu.blocked(i)) {
                 lines.add(Component.translatable("gui.golem_logix.telegraph.blocked").withStyle(ChatFormatting.RED));
             }
-            g.renderComponentTooltip(font, lines, mouseX, mouseY);
+            g.setComponentTooltipForNextFrame(font, lines, mouseX, mouseY);
         }
     }
 
@@ -138,7 +138,7 @@ public class TelegraphScreen extends GolemScreen<TelegraphMenu> {
         }
 
         @Override
-        protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partial) {
+        protected void extractWidgetRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
             boolean hover = isHoveredOrFocused() && active;
             g.fill(getX(), getY(), getX() + width, getY() + height, GolemGui.WOOD_DARK);
             g.fill(getX() + 1, getY() + 1, getX() + width - 1, getY() + height - 1, hover ? GolemGui.BRASS_L : GolemGui.BRASS);
@@ -148,11 +148,11 @@ public class TelegraphScreen extends GolemScreen<TelegraphMenu> {
                 g.fill(getX() + r[0], getY() + r[1], getX() + r[0] + 2, getY() + r[1] + 2, GolemGui.BRASS_L);
             }
             var font = net.minecraft.client.Minecraft.getInstance().font;
-            g.pose().pushPose();
-            g.pose().translate(getX() + width / 2f, getY() + height / 2f, 0);
-            g.pose().scale(1.25f, 1.25f, 1f);
-            g.drawCenteredString(font, getMessage(), 0, -4, hover ? 0xFFFFE6A0 : GolemGui.PARCHMENT);
-            g.pose().popPose();
+            g.pose().pushMatrix();
+            g.pose().translate(getX() + width / 2f, getY() + height / 2f);
+            g.pose().scale(1.25f, 1.25f);
+            g.centeredText(font, getMessage(), 0, -4, hover ? 0xFFFFE6A0 : GolemGui.PARCHMENT);
+            g.pose().popMatrix();
         }
     }
 }

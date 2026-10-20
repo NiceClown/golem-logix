@@ -108,11 +108,11 @@ public class CardCatalogBlock extends HorizontalDirectionalBlock implements Enti
             List<CatalogStructure.Missing> missing = CatalogStructure.check(level, pos, facing);
             if (missing.isEmpty()) {
                 CatalogStructure.form(level, pos, facing);
-                player.displayClientMessage(Component.translatable("message.golem_logix.catalog.formed"), true);
+                player.sendOverlayMessage(Component.translatable("message.golem_logix.catalog.formed"));
             } else {
                 CatalogStructure.Missing m = missing.get(0);
-                player.displayClientMessage(Component.translatable("message.golem_logix.catalog.missing", missing.size(),
-                        m.block().getName(), m.pos().getX(), m.pos().getY(), m.pos().getZ()), false);
+                player.sendSystemMessage(Component.translatable("message.golem_logix.catalog.missing", missing.size(),
+                        m.block().getName(), m.pos().getX(), m.pos().getY(), m.pos().getZ()));
             }
             return InteractionResult.CONSUME;
         }

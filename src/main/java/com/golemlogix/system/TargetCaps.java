@@ -39,8 +39,8 @@ public final class TargetCaps {
         this.side = side;
         this.valid = valid;
         this.onChange = onChange;
-        this.items = BlockCapabilityCache.create(Capabilities.ItemHandler.BLOCK, level, this.pos, side, valid, onChange);
-        this.fluids = BlockCapabilityCache.create(Capabilities.FluidHandler.BLOCK, level, this.pos, side, valid, onChange);
+        this.items = BlockCapabilityCache.create(Capabilities.Item.BLOCK, level, this.pos, side, valid, onChange);
+        this.fluids = BlockCapabilityCache.create(Capabilities.Fluid.BLOCK, level, this.pos, side, valid, onChange);
     }
 
     /**
@@ -75,7 +75,7 @@ public final class TargetCaps {
             return h;
         }
         if (itemsAny == null) {
-            itemsAny = anyCaches(Capabilities.ItemHandler.BLOCK);
+            itemsAny = anyCaches(Capabilities.Item.BLOCK);
         }
         return first(itemsAny);
     }
@@ -88,7 +88,7 @@ public final class TargetCaps {
             return h;
         }
         if (fluidsAny == null) {
-            fluidsAny = anyCaches(Capabilities.FluidHandler.BLOCK);
+            fluidsAny = anyCaches(Capabilities.Fluid.BLOCK);
         }
         return first(fluidsAny);
     }

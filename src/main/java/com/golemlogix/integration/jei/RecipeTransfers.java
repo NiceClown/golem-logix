@@ -16,7 +16,7 @@ import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
 import mezz.jei.api.recipe.transfer.IUniversalRecipeTransferHandler;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.MenuType;
@@ -101,7 +101,7 @@ final class RecipeTransfers {
                     craftable.add(ItemKey.of(e.key()));
                 }
             }
-            for (ItemStack s : player.getInventory().items) {
+            for (ItemStack s : player.getInventory().getNonEquipmentItems()) {
                 if (!s.isEmpty()) {
                     have.merge(ItemKey.of(s), (long) s.getCount(), Long::sum);
                 }
@@ -137,16 +137,16 @@ final class RecipeTransfers {
                 }
             }
             if (doTransfer) {
-                if ((net.minecraft.client.gui.screens.Screen.hasControlDown() || devCtrl) && !toOrder.isEmpty()) {
+                if ((net.minecraft.client.gui.screens.net.minecraft.client.Minecraft.getInstance().hasControlDown() || devCtrl) && !toOrder.isEmpty()) {
                     List<ItemStack> items = new ArrayList<>();
                     List<Integer> counts = new ArrayList<>();
                     for (Map.Entry<ItemKey, Integer> e : toOrder.entrySet()) {
                         items.add(e.getKey().stack());
                         counts.add(e.getValue());
                     }
-                    PacketDistributor.sendToServer(new com.golemlogix.network.PrecraftPayload(menu.containerId, items, counts));
+                    net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new com.golemlogix.network.PrecraftPayload(menu.containerId, items, counts));
                 } else {
-                    PacketDistributor.sendToServer(new RecipeFillPayload(menu.containerId, true, maxTransfer, options, List.of()));
+                    net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new RecipeFillPayload(menu.containerId, true, maxTransfer, options, List.of()));
                 }
             }
             return missing.isEmpty() ? null : new Missing(missing, !toOrder.isEmpty());
@@ -178,13 +178,13 @@ final class RecipeTransfers {
         }
 
         @Override
-        public void showError(GuiGraphics g, int mouseX, int mouseY, IRecipeSlotsView recipeSlotsView, int recipeX, int recipeY) {
-            g.pose().pushPose();
-            g.pose().translate(recipeX, recipeY, 0);
+        public void showError(GuiGraphicsExtractor g, int mouseX, int mouseY, IRecipeSlotsView recipeSlotsView, int recipeX, int recipeY) {
+            g.pose().pushMatrix();
+            g.pose().translate(recipeX, recipeY);
             for (IRecipeSlotView slot : slots) {
                 slot.drawHighlight(g, 0x66FF3030);
             }
-            g.pose().popPose();
+            g.pose().popMatrix();
         }
     }
 
@@ -225,7 +225,7 @@ final class RecipeTransfers {
                 for (IRecipeSlotView view : inputs) {
                     options.add(options(view));
                 }
-                PacketDistributor.sendToServer(new RecipeFillPayload(menu.containerId, true, false, options, List.of()));
+                net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new RecipeFillPayload(menu.containerId, true, false, options, List.of()));
             }
             return null;
         }
@@ -285,7 +285,7 @@ final class RecipeTransfers {
                 inputs = inputs.subList(0, 9);
             }
             if (doTransfer) {
-                PacketDistributor.sendToServer(new RecipeFillPayload(menu.containerId, false, false, inputs, outputs));
+                net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new RecipeFillPayload(menu.containerId, false, false, inputs, outputs));
             }
             return null;
         }

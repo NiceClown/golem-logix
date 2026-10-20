@@ -1,5 +1,6 @@
 package com.golemlogix.client;
 
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import com.golemlogix.blockentity.AtlasCoreBlockEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
@@ -55,7 +56,7 @@ public class AtlasCoreRenderer implements BlockEntityRenderer<AtlasCoreBlockEnti
         }
     }
 
-    private static final net.minecraft.resources.ResourceLocation GLYPH = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(
+    private static final net.minecraft.resources.Identifier GLYPH = net.minecraft.resources.Identifier.fromNamespaceAndPath(
             com.golemlogix.GolemLogixMod.MOD_ID, "textures/entity/atlas_glyph.png");
     /** Plating cells on a side face (a = along the face, b = height) in core coordinates: the middle column and the top row. */
     private static final int[][] SIDE_CELLS = {{0, -2}, {0, -1}, {-1, 0}, {0, 0}, {1, 0}};
@@ -83,7 +84,7 @@ public class AtlasCoreRenderer implements BlockEntityRenderer<AtlasCoreBlockEnti
      * the glyph either stays put or smoothly moves to a new random place on the plating of its face.
      */
     private void glyphs(float time, PoseStack pose, MultiBufferSource buffers) {
-        var vc = buffers.getBuffer(net.minecraft.client.renderer.RenderType.eyes(GLYPH));
+        var vc = buffers.getBuffer(net.minecraft.client.renderer.RenderTypes.eyes(GLYPH));
         PoseStack.Pose p = pose.last();
         float cycle = GLYPH_MOVE + GLYPH_STAY;
         for (int face = 0; face < 5; face++) {

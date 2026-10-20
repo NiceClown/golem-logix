@@ -5,7 +5,7 @@ import com.golemlogix.menu.TerminalMenu;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -21,7 +21,7 @@ public record PrecraftPayload(int containerId, List<ItemStack> items, List<Integ
     public static final int MAX_ITEMS = 9;
 
     public static final Type<PrecraftPayload> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "precraft"));
+            new Type<>(Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "precraft"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, PrecraftPayload> STREAM_CODEC = StreamCodec.of(
             (buf, p) -> {

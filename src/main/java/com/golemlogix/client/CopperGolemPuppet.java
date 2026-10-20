@@ -1,5 +1,6 @@
 package com.golemlogix.client;
 
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import com.golemlogix.GolemLogixMod;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -14,10 +15,10 @@ import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.Blocks;
 import org.joml.Matrix3f;
@@ -31,16 +32,16 @@ import org.joml.Vector3f;
  */
 public final class CopperGolemPuppet {
     public static final ModelLayerLocation LAYER =
-            new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "copper_golem"), "main");
+            new ModelLayerLocation(Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "copper_golem"), "main");
 
-    private static final ResourceLocation[] TEXTURES = new ResourceLocation[4];
-    private static final ResourceLocation[] EYES = new ResourceLocation[4];
+    private static final Identifier[] TEXTURES = new Identifier[4];
+    private static final Identifier[] EYES = new Identifier[4];
 
     static {
         String[] prefix = {"", "exposed_", "weathered_", "oxidized_"};
         for (int i = 0; i < 4; i++) {
-            TEXTURES[i] = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/" + prefix[i] + "copper_golem.png");
-            EYES[i] = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/" + prefix[i] + "copper_golem_eyes.png");
+            TEXTURES[i] = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/" + prefix[i] + "copper_golem.png");
+            EYES[i] = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/" + prefix[i] + "copper_golem_eyes.png");
         }
     }
 
@@ -196,9 +197,9 @@ public final class CopperGolemPuppet {
         }
 
         int v = Mth.clamp(variant, 0, 3);
-        VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(TEXTURES[v]));
+        VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(TEXTURES[v]));
         m.render(pose, vc, light, OverlayTexture.NO_OVERLAY);
-        VertexConsumer eyes = buffers.getBuffer(RenderType.eyes(EYES[v]));
+        VertexConsumer eyes = buffers.getBuffer(RenderTypes.eyes(EYES[v]));
         m.render(pose, eyes, 0xF000F0, OverlayTexture.NO_OVERLAY);
 
         if (arms != null) {

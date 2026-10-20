@@ -34,6 +34,14 @@ public class GolemLogixMod {
         ModBlockEntities.BLOCK_ENTITY_TYPES.register(modEventBus);
         ModMenus.MENUS.register(modEventBus);
         ModRecipes.SERIALIZERS.register(modEventBus);
+        // game tests: the gametest package is not in the release jar, so it is reached by name and only when tests run
+        if (net.neoforged.neoforge.gametest.GameTestHooks.isGametestEnabled()) {
+            try {
+                Class.forName("com.golemlogix.gametest.GolemGameTestRegistry").getMethod("register", IEventBus.class).invoke(null, modEventBus);
+            } catch (ReflectiveOperationException e) {
+                LOGGER.warn("Golem Logix game tests are not available", e);
+            }
+        }
         ModRecipes.TYPES.register(modEventBus);
         ModSounds.SOUND_EVENTS.register(modEventBus);
         ModCreativeTabs.CREATIVE_MODE_TABS.register(modEventBus);

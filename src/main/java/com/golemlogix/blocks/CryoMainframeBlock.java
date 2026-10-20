@@ -110,11 +110,11 @@ public class CryoMainframeBlock extends HorizontalDirectionalBlock implements En
             List<MainframeStructure.Missing> missing = MainframeStructure.check(level, pos, facing);
             if (missing.isEmpty()) {
                 MainframeStructure.form(level, pos, facing);
-                player.displayClientMessage(Component.translatable("message.golem_logix.mainframe.formed"), true);
+                player.sendOverlayMessage(Component.translatable("message.golem_logix.mainframe.formed"));
             } else {
                 MainframeStructure.Missing m = missing.get(0);
-                player.displayClientMessage(Component.translatable("message.golem_logix.mainframe.missing", missing.size(),
-                        m.block().getName(), m.pos().getX(), m.pos().getY(), m.pos().getZ()), false);
+                player.sendSystemMessage(Component.translatable("message.golem_logix.mainframe.missing", missing.size(),
+                        m.block().getName(), m.pos().getX(), m.pos().getY(), m.pos().getZ()));
             }
             return InteractionResult.CONSUME;
         }

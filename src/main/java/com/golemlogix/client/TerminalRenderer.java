@@ -1,18 +1,19 @@
 package com.golemlogix.client;
 
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.util.LightCoordsUtil;
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.TerminalBlockEntity;
 import com.golemlogix.blocks.AnalogTerminalBlock;
 import com.golemlogix.blocks.GolemProperties;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -23,7 +24,7 @@ import net.minecraft.world.level.block.state.BlockState;
  * The screen takes 14x14 texels of the front texture (x, y = 9..22 of 32).
  */
 public class TerminalRenderer implements BlockEntityRenderer<TerminalBlockEntity> {
-    private static final ResourceLocation SHEET = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/block/terminal_anim.png");
+    private static final Identifier SHEET = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/block/terminal_anim.png");
     private static final float SHEET_SIZE = 64f;
     /** Screen size in texels and texel size in block fractions (the front texture is 32x32). */
     private static final int SCREEN = 14;
@@ -67,9 +68,9 @@ public class TerminalRenderer implements BlockEntityRenderer<TerminalBlockEntity
 
         pose.pushPose();
         Quads.faceModel(pose, facing);
-        VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(SHEET));
+        VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(SHEET));
         PoseStack.Pose p = pose.last();
-        final int full = LightTexture.FULL_BRIGHT;
+        final int full = LightCoordsUtil.FULL_BRIGHT;
 
         // screen background (a circle on the CRT, a square on the crafting terminal)
         sprite(vc, p, 0, 0, SCREEN, SCREEN, crt ? 0 : 16, 0, SCREEN, SCREEN, false, 0xFFFFFFFF, full, 0);

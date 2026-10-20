@@ -1,7 +1,7 @@
 package com.golemlogix.client;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
@@ -30,7 +30,7 @@ public class GolemButton extends Button {
     }
 
     @Override
-    protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partial) {
+    protected void extractWidgetRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
         setMessage(label.get());
         boolean hover = isHoveredOrFocused() && active;
         int edge = hover ? GolemGui.CYAN : GolemGui.BRASS;
@@ -46,10 +46,10 @@ public class GolemButton extends Button {
         // a long label is scaled down so it does not stick out of the button frame
         int textWidth = font.width(getMessage());
         float fit = Math.min(1f, (width - 6f) / Math.max(1, textWidth));
-        g.pose().pushPose();
-        g.pose().translate(getX() + width / 2f, getY() + height / 2f, 0);
-        g.pose().scale(fit, fit, 1f);
-        g.drawCenteredString(font, getMessage(), 0, -4, color);
-        g.pose().popPose();
+        g.pose().pushMatrix();
+        g.pose().translate(getX() + width / 2f, getY() + height / 2f);
+        g.pose().scale(fit, fit);
+        g.centeredText(font, getMessage(), 0, -4, color);
+        g.pose().popMatrix();
     }
 }

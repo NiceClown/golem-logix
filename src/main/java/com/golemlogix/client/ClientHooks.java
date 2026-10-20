@@ -34,7 +34,7 @@ public final class ClientHooks {
     /** "Order ready" notification and a short chime. */
     public static void craftDone(List<ItemStack> items) {
         Minecraft mc = Minecraft.getInstance();
-        mc.getToasts().addToast(new CraftDoneToast(items));
+        mc.getToastManager().addToast(new CraftDoneToast(items));
         mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_BELL.value(), 1.6f, 0.45f));
     }
 }

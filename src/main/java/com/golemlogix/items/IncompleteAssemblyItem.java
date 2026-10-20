@@ -2,7 +2,7 @@ package com.golemlogix.items;
 
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -14,7 +14,7 @@ import org.jetbrains.annotations.Nullable;
  * by name, so the mod needs no Create code (without Create the item is never made).
  */
 public class IncompleteAssemblyItem extends Item {
-    private static final ResourceLocation COMPONENT = ResourceLocation.fromNamespaceAndPath("create", "sequenced_assembly");
+    private static final Identifier COMPONENT = Identifier.fromNamespaceAndPath("create", "sequenced_assembly");
     @Nullable
     private static java.lang.reflect.Method progressMethod;
 

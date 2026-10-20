@@ -12,7 +12,7 @@ import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
 /** Mana Saturator: a block on the anvil, an arrow, two plates; under the arrow the Source cost and the time. */
@@ -76,7 +76,7 @@ public class ManaSaturatorCategory implements IRecipeCategory<ManaSaturatorRecip
     }
 
     @Override
-    public void draw(ManaSaturatorRecipe recipe, IRecipeSlotsView slotsView, GuiGraphics g, double mouseX, double mouseY) {
+    public void draw(ManaSaturatorRecipe recipe, IRecipeSlotsView slotsView, GuiGraphicsExtractor g, double mouseX, double mouseY) {
         Font font = Minecraft.getInstance().font;
         slot.draw(g, IN_X, SLOT_Y);
         slot.draw(g, OUT_X, SLOT_Y);
@@ -85,6 +85,6 @@ public class ManaSaturatorCategory implements IRecipeCategory<ManaSaturatorRecip
         String seconds = recipe.ticks() % 20 == 0 ? String.valueOf(recipe.ticks() / 20)
                 : String.format(java.util.Locale.ROOT, "%.1f", recipe.ticks() / 20f);
         Component cost = Component.translatable("jei.golem_logix.source_cost", recipe.sourceCost(), seconds);
-        g.drawString(font, cost, (W - font.width(cost)) / 2, SLOT_Y + 24, 0xFF5A3C9A, false);
+        g.text(font, cost, (W - font.width(cost)) / 2, SLOT_Y + 24, 0xFF5A3C9A, false);
     }
 }

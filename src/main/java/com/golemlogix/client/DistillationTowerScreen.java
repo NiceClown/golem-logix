@@ -2,7 +2,7 @@ package com.golemlogix.client;
 
 import com.golemlogix.init.ModItems;
 import com.golemlogix.menu.DistillationTowerMenu;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
@@ -23,7 +23,7 @@ public class DistillationTowerScreen extends GolemScreen<DistillationTowerMenu> 
     }
 
     @Override
-    protected void renderExtraBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
+    protected void renderExtraBg(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
         // the tank: a column filling from the bottom, with marks every quarter
         int x = leftPos + 10, y = topPos + 18, w = 18, h = 58;
         GolemGui.inset(g, x - 2, y - 2, w + 4, h + 4);
@@ -40,32 +40,32 @@ public class DistillationTowerScreen extends GolemScreen<DistillationTowerMenu> 
     }
 
     @Override
-    protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
-        super.renderLabels(g, mouseX, mouseY);
+    protected void extractLabels(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+        super.extractLabels(g, mouseX, mouseY);
         int x = 38, y = 20;
-        g.drawString(font, Component.translatable("gui.golem_logix.tower.blood", menu.blood(), menu.capacity()), x, y, GolemGui.PARCHMENT, false);
-        g.drawString(font, Component.translatable("gui.golem_logix.tower.rate", menu.rate()), x, y + 12, GolemGui.PARCHMENT, false);
+        g.text(font, Component.translatable("gui.golem_logix.tower.blood", menu.blood(), menu.capacity()), x, y, GolemGui.PARCHMENT, false);
+        g.text(font, Component.translatable("gui.golem_logix.tower.rate", menu.rate()), x, y + 12, GolemGui.PARCHMENT, false);
         String source = String.format(Locale.ROOT, menu.sourcePerSecond() == Math.rint(menu.sourcePerSecond()) ? "%.0f" : "%.1f",
                 menu.sourcePerSecond());
-        g.drawString(font, Component.translatable("gui.golem_logix.tower.source", source), x, y + 22, GolemGui.CYAN, false);
+        g.text(font, Component.translatable("gui.golem_logix.tower.source", source), x, y + 22, GolemGui.CYAN, false);
         // the co-processors: a small icon with their number
-        g.pose().pushPose();
-        g.pose().translate(x, y + 33, 0);
-        g.pose().scale(0.625f, 0.625f, 1f);
-        g.renderItem(COPROCESSOR, 0, 0);
-        g.pose().popPose();
-        g.drawString(font, Component.translatable("gui.golem_logix.tower.coprocessors", menu.coprocessors()), x + 12, y + 34,
+        g.pose().pushMatrix();
+        g.pose().translate(x, y + 33);
+        g.pose().scale(0.625f, 0.625f);
+        g.item(COPROCESSOR, 0, 0);
+        g.pose().popMatrix();
+        g.text(font, Component.translatable("gui.golem_logix.tower.coprocessors", menu.coprocessors()), x + 12, y + 34,
                 0xFFA89880, false);
         int status = menu.status();
         int color = status == 1 ? GolemGui.GREEN : status == 2 ? GolemGui.COPPER : GolemGui.RED;
-        g.drawString(font, Component.translatable("gui.golem_logix.tower.status." + status), x, y + 46, color, false);
+        g.text(font, Component.translatable("gui.golem_logix.tower.status." + status), x, y + 46, color, false);
     }
 
     @Override
-    protected void renderTooltip(GuiGraphics g, int mouseX, int mouseY) {
-        super.renderTooltip(g, mouseX, mouseY);
+    protected void extractTooltip(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+        super.extractTooltip(g, mouseX, mouseY);
         if (mouseX >= leftPos + 8 && mouseX < leftPos + 30 && mouseY >= topPos + 16 && mouseY < topPos + 78) {
-            g.renderTooltip(font, Component.translatable("gui.golem_logix.tower.tank_tip"), mouseX, mouseY);
+            g.setTooltipForNextFrame(font, Component.translatable("gui.golem_logix.tower.tank_tip"), mouseX, mouseY);
         }
     }
 }

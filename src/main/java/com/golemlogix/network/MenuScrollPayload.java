@@ -5,7 +5,7 @@ import com.golemlogix.menu.ScrollableMenu;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -15,7 +15,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
  */
 public record MenuScrollPayload(int containerId, int row, String filter) implements CustomPacketPayload {
     public static final Type<MenuScrollPayload> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "menu_scroll"));
+            new Type<>(Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "menu_scroll"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, MenuScrollPayload> STREAM_CODEC = StreamCodec.of(
             (buf, p) -> {

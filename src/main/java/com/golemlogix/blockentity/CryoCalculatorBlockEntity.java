@@ -347,9 +347,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
 
     // --------------------------------------------------------------- persistence
 
-    @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveTag(CompoundTag tag, HolderLookup.Provider registries) {
         if (job != null) {
             tag.put("Job", job.save(registries));
         }
@@ -357,10 +355,8 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         redstone.save(tag);
     }
 
-    @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        job = tag.contains("Job") ? CraftingJob.load(tag.getCompound("Job"), registries) : null;
+    protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
+        job = tag.contains("Job") ? CraftingJob.load(tag.getCompoundOrEmpty("Job"), registries) : null;
         upgrades.fromTag(tag.getList("Upgrades", Tag.TAG_COMPOUND), registries);
         redstone.load(tag);
     }
@@ -371,7 +367,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
     public void setVisualWorkForDev(boolean on, @Nullable String item) {
         this.devWorking = on;
         if (item != null) {
-            var it = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(item));
+            var it = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(item));
             this.devItem = new ItemStack(it);
         } else {
             this.devItem = ItemStack.EMPTY;
@@ -390,26 +386,20 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         tag.putBoolean("HasJob", devWorking || job != null);
         sentCurrent = devWorking && !devItem.isEmpty() ? devItem : (job != null ? job.current().stack() : hold.item(now));
         if (!sentCurrent.isEmpty()) {
-            tag.put("Current", sentCurrent.save(registries));
+            tag.put("Current", com.golemlogix.system.NbtBridge.saveItem(sentCurrent, registries));
         }
         return tag;
     }
 
-    @Override
-    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider lookupProvider) {
-        active = tag.getBoolean("Active");
-        boosted = tag.getBoolean("Boosted");
-        clientHasJob = tag.getBoolean("HasJob");
-        clientCurrent = tag.contains("Current") ? ItemStack.parse(lookupProvider, tag.getCompound("Current")).orElse(ItemStack.EMPTY)
+    public void readUpdateTag(CompoundTag tag, HolderLookup.Provider lookupProvider) {
+        active = tag.getBooleanOr("Active", false);
+        boosted = tag.getBooleanOr("Boosted", false);
+        clientHasJob = tag.getBooleanOr("HasJob", false);
+        clientCurrent = tag.contains("Current") ? com.golemlogix.system.NbtBridge.loadItem(lookupProvider, tag.getCompoundOrEmpty("Current")).orElse(ItemStack.EMPTY)
                 : ItemStack.EMPTY;
     }
 
-    /** The sendBlockUpdated packet carries the same tag as chunk loading: read only the client fields (not the job). */
-    @Override
-    public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider lookupProvider) {
-        handleUpdateTag(pkt.getTag(), lookupProvider);
-    }
-
+    
     public boolean clientHasJob() {
         return clientHasJob;
     }
@@ -492,5 +482,31 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
 
         boolean foremanWanted = (be.boosted || be.foremanLeft > 0) && be.spin > 0.4f;
         be.foreman = Math.max(0f, Math.min(1f, be.foreman + (foremanWanted ? 0.08f : -0.05f)));
+    }
+
+    // ---- 1.21.6+: the game's ValueInput/ValueOutput over the CompoundTag code above
+
+    @Override
+    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        super.saveAdditional(output);
+        CompoundTag tag = new CompoundTag();
+        saveTag(tag, com.golemlogix.system.NbtBridge.registries(this));
+        com.golemlogix.system.NbtBridge.write(output, tag);
+    }
+
+    @Override
+    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+        super.loadAdditional(input);
+        loadTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    }
+
+    @Override
+    public void handleUpdateTag(net.minecraft.world.level.storage.ValueInput input) {
+        readUpdateTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    }
+
+    @Override
+    public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input) {
+        handleUpdateTag(input);
     }
 }

@@ -1,8 +1,8 @@
 package com.golemlogix.client;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.toasts.Toast;
-import net.minecraft.client.gui.components.toasts.ToastComponent;
+import net.minecraft.client.gui.components.toasts.ToastManager;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
@@ -21,7 +21,7 @@ public class CraftDoneToast implements Toast {
     }
 
     @Override
-    public Visibility render(GuiGraphics g, ToastComponent toasts, long time) {
+    public Visibility render(GuiGraphicsExtractor g, ToastManager toasts, long time) {
         int w = width(), h = height();
         g.fill(0, 0, w, h, GolemGui.WOOD_DARK);
         g.fill(1, 1, w - 1, h - 1, GolemGui.BRASS);
@@ -29,16 +29,16 @@ public class CraftDoneToast implements Toast {
         g.fill(2, 2, 4, h - 2, GolemGui.CYAN);
         ItemStack shown = items.isEmpty() ? ItemStack.EMPTY : items.get((int) (time / 1200L % items.size()));
         if (!shown.isEmpty()) {
-            g.renderFakeItem(shown.copyWithCount(1), 8, 8);
+            g.fakeItem(shown.copyWithCount(1), 8, 8);
         }
         var font = toasts.getMinecraft().font;
-        g.drawString(font, Component.translatable("toast.golem_logix.craft_done"), 30, 7, GolemGui.CYAN, false);
+        g.text(font, Component.translatable("toast.golem_logix.craft_done"), 30, 7, GolemGui.CYAN, false);
         if (!shown.isEmpty()) {
             String line = shown.getCount() + "× " + shown.getHoverName().getString();
             if (items.size() > 1) {
                 line += "  +" + (items.size() - 1);
             }
-            g.drawString(font, font.plainSubstrByWidth(line, w - 36), 30, 18, GolemGui.PARCHMENT, false);
+            g.text(font, font.plainSubstrByWidth(line, w - 36), 30, 18, GolemGui.PARCHMENT, false);
         }
         return time >= SHOW_MS ? Visibility.HIDE : Visibility.SHOW;
     }

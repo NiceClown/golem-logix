@@ -27,7 +27,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.phys.BlockHitResult;
@@ -39,7 +38,7 @@ import org.jetbrains.annotations.Nullable;
  * The block entity with the disks lives only in the "main" bottom left part; the other parts only conduct the network and forward clicks.
  */
 public class CopperDriveBayBlock extends Block implements EntityBlock, GolemNode {
-    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final EnumProperty<Part> PART = EnumProperty.create("part", Part.class);
 
     /** Cabinet part: right = how many cells to the right of the main one (as seen from the front), up = how many above. */

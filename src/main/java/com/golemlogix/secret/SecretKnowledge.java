@@ -9,7 +9,7 @@ import net.minecraft.advancements.CriterionProgress;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -25,12 +25,12 @@ import net.neoforged.neoforge.network.PacketDistributor;
  */
 @EventBusSubscriber(modid = GolemLogixMod.MOD_ID)
 public final class SecretKnowledge {
-    public static final ResourceLocation KNOWLEDGE = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "secret_knowledge");
-    public static final ResourceLocation REVEALED = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "secret_revealed");
+    public static final Identifier KNOWLEDGE = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "secret_knowledge");
+    public static final Identifier REVEALED = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "secret_revealed");
     public static final String WITHER = "killed_wither";
     public static final String DIMENSION = "dimension_signal";
     /** The first plate made on an anvil (the falling anvil ritual or the Forge Hammer) opens the Dispel method. */
-    public static final ResourceLocation MIND = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "mind_unbound");
+    public static final Identifier MIND = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "mind_unbound");
     public static final String FIRST_PLATE = "first_plate";
 
     private SecretKnowledge() {
@@ -82,7 +82,7 @@ public final class SecretKnowledge {
         if (!(event.getEntity() instanceof ServerPlayer sp)) {
             return;
         }
-        ResourceLocation id = event.getAdvancement().id();
+        Identifier id = event.getAdvancement().id();
         if (id.equals(MIND)) {
             sync(sp);
             if (event.getProgressType() == AdvancementEvent.AdvancementProgressEvent.ProgressType.GRANT) {

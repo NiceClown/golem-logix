@@ -7,7 +7,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -153,12 +153,12 @@ public final class BookModel {
     public static ItemStack stack(String id) {
         // "fluid:<fluid id>" is a fluid (a fluid ghost, 1000 mB; "*250" sets the mB)
         if (id.startsWith("fluid:")) {
-            ResourceLocation fl = ResourceLocation.tryParse(id.substring(6));
+            Identifier fl = Identifier.tryParse(id.substring(6));
             var fluid = fl == null ? null : BuiltInRegistries.FLUID.getOptional(fl).orElse(null);
             return fluid == null || fluid == net.minecraft.world.level.material.Fluids.EMPTY ? new ItemStack(Items.BARRIER)
                     : com.golemlogix.items.FluidGhostItem.of(new net.neoforged.neoforge.fluids.FluidStack(fluid, 1000));
         }
-        ResourceLocation rl = ResourceLocation.tryParse(id);
+        Identifier rl = Identifier.tryParse(id);
         if (rl == null) {
             return new ItemStack(Items.BARRIER);
         }
@@ -168,7 +168,7 @@ public final class BookModel {
 
     private static BookModel load(String lang) {
         for (String candidate : new String[]{lang, "en_us", "ru_ru"}) {
-            ResourceLocation rl = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "book/" + candidate + ".json");
+            Identifier rl = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "book/" + candidate + ".json");
             Optional<Resource> res = Minecraft.getInstance().getResourceManager().getResource(rl);
             if (res.isEmpty()) {
                 continue;

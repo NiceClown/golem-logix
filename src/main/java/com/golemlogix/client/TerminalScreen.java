@@ -1,5 +1,6 @@
 package com.golemlogix.client;
 
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import com.golemlogix.config.GolemClientConfig;
 import com.golemlogix.menu.TerminalMenu;
 import com.golemlogix.network.TerminalActionPayload;
@@ -7,14 +8,14 @@ import com.golemlogix.network.TerminalActionPayload.Action;
 import com.golemlogix.network.TerminalInfoPayload;
 import com.golemlogix.network.TerminalListPayload;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.Slot;
@@ -331,7 +332,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     // ------------------------------------------------------------------ render
 
     @Override
-    protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
+    protected void renderBg(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
         if (dirty || builtVersion != menu.clientVersion) {
             rebuild();
         }
@@ -380,7 +381,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         }
         if (crafting) {
             int cy = topPos + TerminalMenu.craftY(rows());
-            g.drawString(font, "=>", leftPos + 102, cy + 22, GolemGui.CYAN, false);
+            g.text(font, "=>", leftPos + 102, cy + 22, GolemGui.CYAN, false);
             if (hasChargeGauge()) {
                 renderChargeGauge(g, leftPos + TerminalMenu.GAUGE_X, cy, 54);
             }
@@ -395,7 +396,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     }
 
     /** Vertical Source charge flask: a purple column in a brass mount; fed by the Resonator it is full and shimmers. */
-    private void renderChargeGauge(GuiGraphics g, int x, int y, int h) {
+    private void renderChargeGauge(GuiGraphicsExtractor g, int x, int y, int h) {
         TerminalInfoPayload info = menu.clientInfo;
         boolean resonator = info.resonator();
         double frac = resonator ? 1.0 : Math.min(1.0, info.charge() / (double) com.golemlogix.items.PortableChronometerItem.MAX_CHARGE);
@@ -419,7 +420,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         return frac > 0.9 ? GolemGui.RED : frac > 0.7 ? GolemGui.COPPER : GolemGui.CYAN_DARK;
     }
 
-    private void renderInfo(GuiGraphics g, int mouseX, int mouseY) {
+    private void renderInfo(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         int iy = topPos + TerminalMenu.infoY(rows());
         int ix = leftPos + TerminalMenu.LIST_X;
         TerminalInfoPayload info = menu.clientInfo;
@@ -428,7 +429,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
             return;
         }
         if (!info.error().isEmpty()) {
-            g.drawCenteredString(font, Component.translatable(info.error()), ix + 81, iy + 2, GolemGui.RED);
+            g.centeredText(font, Component.translatable(info.error()), ix + 81, iy + 2, GolemGui.RED);
             return;
         }
         double itemFrac = info.itemsCapacity() <= 0 ? 0 : (double) info.itemsUsed() / info.itemsCapacity();
@@ -447,10 +448,10 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
             // items, then a drop and the fluid buckets; channels on the right if there is room (otherwise they are in the tooltip)
             String items = GolemGui.formatCount(info.itemsUsed()) + "/" + GolemGui.formatCount(info.itemsCapacity());
             String buckets = GolemGui.formatBuckets(info.fluidsUsed()) + "/" + GolemGui.formatBuckets(info.fluidsCapacity());
-            g.drawString(font, items, ix + 4, iy + 2, GolemGui.PARCHMENT, true);
+            g.text(font, items, ix + 4, iy + 2, GolemGui.PARCHMENT, true);
             int fx = ix + 4 + font.width(items) + 6;
             drawDropAt(g, fx, iy + 3);
-            g.drawString(font, buckets, fx + 7, iy + 2, GolemGui.PARCHMENT, true);
+            g.text(font, buckets, fx + 7, iy + 2, GolemGui.PARCHMENT, true);
             drawChannels(g, info, fx + 7 + font.width(buckets) + 6, ix, iy);
             return;
         } else {
@@ -464,21 +465,21 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
                     ? GolemGui.formatCount(info.fluidsUsed()) + "/" + GolemGui.formatCount(info.fluidsCapacity()) + " mB"
                     : GolemGui.formatCount(info.itemsUsed()) + "/" + GolemGui.formatCount(info.itemsCapacity());
         }
-        g.drawString(font, left, ix + 4, iy + 2, GolemGui.PARCHMENT, true);
+        g.text(font, left, ix + 4, iy + 2, GolemGui.PARCHMENT, true);
         drawChannels(g, info, ix + 4 + font.width(left) + 6, ix, iy);
     }
 
     /** "Ch 9/320" at the right edge of the status line, if it does not overlap the text on the left (from = where that text ends). */
-    private void drawChannels(GuiGraphics g, TerminalInfoPayload info, int from, int ix, int iy) {
+    private void drawChannels(GuiGraphicsExtractor g, TerminalInfoPayload info, int from, int ix, int iy) {
         String right = Component.translatable("gui.golem_logix.channels_short", info.channelsUsed(), info.channelCapacity()).getString();
         int x = ix + 158 - font.width(right);
         if (x >= from) {
-            g.drawString(font, right, x, iy + 2, GolemGui.CYAN, true);
+            g.text(font, right, x, iy + 2, GolemGui.CYAN, true);
         }
     }
 
     /** A 5x6 drop before the bucket count in the status line. */
-    private void drawDropAt(GuiGraphics g, int x, int y) {
+    private void drawDropAt(GuiGraphicsExtractor g, int x, int y) {
         int edge = 0xFF0B2A52, body = 0xFF9FE8FF;
         g.fill(x + 1, y, x + 4, y + 1, edge);
         g.fill(x, y + 1, x + 5, y + 5, edge);
@@ -492,7 +493,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         return List.of(new Rect2i(leftPos + imageWidth, topPos + 2, 40, 110));
     }
 
-    private void renderEntries(GuiGraphics g, int mouseX, int mouseY) {
+    private void renderEntries(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         int lx = leftPos + TerminalMenu.LIST_X;
         int ly = topPos + TerminalMenu.LIST_Y;
         int hovered = hoveredIndex(mouseX, mouseY);
@@ -513,7 +514,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
                             : GolemGui.formatBuckets(row.fluid().getAmount());
                     drawCount(g, text, x, y, 0xFFFFFFFF);
                 } else {
-                    g.renderItem(row.stack(), x, y);
+                    g.item(row.stack(), x, y);
                     if (row.count() > 0) {
                         drawCount(g, GolemGui.formatCount(row.count()), x, y, 0xFFFFFFFF);
                     } else {
@@ -530,21 +531,21 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         }
     }
 
-    private void drawCount(GuiGraphics g, String text, int x, int y, int color) {
-        g.pose().pushPose();
-        g.pose().translate(0, 0, 200);
-        g.pose().scale(0.5f, 0.5f, 1f);
-        g.drawString(font, text, (x + 17) * 2 - font.width(text), (y + 11) * 2, color, true);
-        g.pose().popPose();
+    private void drawCount(GuiGraphicsExtractor g, String text, int x, int y, int color) {
+        g.pose().pushMatrix();
+        g.pose().translate(0, 0);
+        g.pose().scale(0.5f, 0.5f);
+        g.text(font, text, (x + 17) * 2 - font.width(text), (y + 11) * 2, color, true);
+        g.pose().popMatrix();
     }
 
     /** A small drop in the slot corner: tells a fluid from an item in the combined list. */
-    private void drawDrop(GuiGraphics g, int x, int y) {
+    private void drawDrop(GuiGraphicsExtractor g, int x, int y) {
         if (viewMode == ViewMode.FLUIDS) {
             return;
         }
-        g.pose().pushPose();
-        g.pose().translate(0, 0, 200);
+        g.pose().pushMatrix();
+        g.pose().translate(0, 0);
         int edge = 0xFF0B2A52, body = 0xFF9FE8FF;
         g.fill(x + 1, y, x + 4, y + 1, edge);
         g.fill(x, y + 1, x + 5, y + 5, edge);
@@ -552,16 +553,16 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         g.fill(x + 2, y + 1, x + 3, y + 2, body);
         g.fill(x + 1, y + 2, x + 4, y + 5, body);
         g.fill(x + 1, y + 2, x + 2, y + 3, 0xFFFFFFFF);
-        g.pose().popPose();
+        g.pose().popMatrix();
     }
 
-    private void drawFluid(GuiGraphics g, FluidStack fluid, int x, int y) {
+    private void drawFluid(GuiGraphicsExtractor g, FluidStack fluid, int x, int y) {
         IClientFluidTypeExtensions ext = IClientFluidTypeExtensions.of(fluid.getFluid());
-        ResourceLocation tex = ext.getStillTexture(fluid);
+        Identifier tex = ext.getStillTexture(fluid);
         if (tex == null) {
             return;
         }
-        TextureAtlasSprite sprite = minecraft.getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(tex);
+        TextureAtlasSprite sprite = minecraft.getTextureAtlas(TextureAtlas.LOCATION_BLOCKS).apply(tex);
         int tint = ext.getTintColor(fluid);
         float a = ((tint >> 24) & 0xFF) / 255f;
         float r = ((tint >> 16) & 0xFF) / 255f;
@@ -605,22 +606,22 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         String t = font.plainSubstrByWidth(title.getString(), 82);
-        g.drawString(font, t, titleLabelX, titleLabelY, GolemGui.PARCHMENT, false);
+        g.text(font, t, titleLabelX, titleLabelY, GolemGui.PARCHMENT, false);
         if (!crafting) {
-            g.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, GolemGui.PARCHMENT, false);
+            g.text(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, GolemGui.PARCHMENT, false);
         }
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
         renderTooltip(g, mouseX, mouseY);
         renderEntryTooltip(g, mouseX, mouseY);
     }
 
-    private void renderEntryTooltip(GuiGraphics g, int mouseX, int mouseY) {
+    private void renderEntryTooltip(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         int idx = hoveredIndex(mouseX, mouseY);
         if (idx >= 0) {
             List<Component> lines = new ArrayList<>();
@@ -639,7 +640,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
                     lines.add(Component.translatable("gui.golem_logix.craftable_hint").withStyle(ChatFormatting.AQUA));
                 }
             }
-            g.renderComponentTooltip(font, lines, mouseX, mouseY);
+            g.setComponentTooltipForNextFrame(font, lines, mouseX, mouseY);
             return;
         }
         int iy = topPos + TerminalMenu.infoY(rows());
@@ -650,14 +651,14 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
             lines.add(Component.translatable("gui.golem_logix.info.fluids", GolemGui.formatCount(info.fluidsUsed()), GolemGui.formatCount(info.fluidsCapacity())));
             lines.add(Component.translatable("gui.golem_logix.info.channels", info.channelsUsed(), info.channelCapacity()));
             lines.add(Component.translatable("gui.golem_logix.info.cpu", info.cpuBusy(), info.cpuTotal()));
-            g.renderComponentTooltip(font, lines, mouseX, mouseY);
+            g.setComponentTooltipForNextFrame(font, lines, mouseX, mouseY);
             return;
         }
         if (hasChargeGauge()) {
             int cy = topPos + TerminalMenu.craftY(rows());
             int sx = leftPos + TerminalMenu.GAUGE_X;
             if (mouseX >= sx - 1 && mouseX < sx + 11 && mouseY >= cy - 1 && mouseY < cy + 55) {
-                g.renderComponentTooltip(font, List.of(menu.clientInfo.resonator()
+                g.setComponentTooltipForNextFrame(font, List.of(menu.clientInfo.resonator()
                         ? Component.translatable("tooltip.golem_logix.chronometer.resonator").withStyle(ChatFormatting.LIGHT_PURPLE)
                         : Component.translatable("tooltip.golem_logix.chronometer.charge", menu.clientInfo.charge(),
                         com.golemlogix.items.PortableChronometerItem.MAX_CHARGE).withStyle(ChatFormatting.LIGHT_PURPLE)), mouseX, mouseY);
@@ -668,7 +669,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     // ------------------------------------------------------------------ input
 
     private void send(Action action, ItemStack key, FluidStack fluid) {
-        PacketDistributor.sendToServer(new TerminalActionPayload(menu.containerId, action, key, fluid));
+        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new TerminalActionPayload(menu.containerId, action, key, fluid));
     }
 
     @Override
@@ -700,7 +701,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         int idx = hoveredIndex(mouseX, mouseY);
         Row row = idx >= 0 ? rows.get(idx) : null;
 
-        IFluidHandlerItem handler = carried.isEmpty() ? null : carried.copyWithCount(1).getCapability(Capabilities.FluidHandler.ITEM);
+        IFluidHandlerItem handler = carried.isEmpty() ? null : carried.copyWithCount(1).getCapability(Capabilities.Fluid.ITEM);
         boolean fullContainer = handler != null && !handler.drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.SIMULATE).isEmpty();
 
         if (viewMode == ViewMode.FLUIDS) {
@@ -739,11 +740,11 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         }
         if (row.isFluid()) {
             if (minecraft.player != null) {
-                minecraft.player.displayClientMessage(Component.translatable("gui.golem_logix.fluid_need_container"), true);
+                minecraft.player.sendOverlayMessage(Component.translatable("gui.golem_logix.fluid_need_container"));
             }
             return true;
         }
-        boolean ctrl = hasControlDown();
+        boolean ctrl = net.minecraft.client.Minecraft.getInstance().hasControlDown();
         if (row.craftable() && (ctrl || row.count() <= 0) && button == 0) {
             minecraft.setScreen(new CraftRequestScreen(this, menu, row.stack()));
             return true;
@@ -753,7 +754,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         }
         ItemStack key = TerminalMenu.keyOf(row.stack());
         if (button == 0) {
-            send(hasShiftDown() ? Action.TO_INVENTORY : Action.TAKE_STACK, key, FluidStack.EMPTY);
+            send(net.minecraft.client.Minecraft.getInstance().hasShiftDown() ? Action.TO_INVENTORY : Action.TAKE_STACK, key, FluidStack.EMPTY);
         } else if (button == 1) {
             send(Action.TAKE_HALF, key, FluidStack.EMPTY);
         } else if (button == 2) {

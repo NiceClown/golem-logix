@@ -357,20 +357,16 @@ public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
 
     // ------------------------------------------------------------------ save and sync
 
-    @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveTag(CompoundTag tag, HolderLookup.Provider registries) {
         tag.put("Slots", slots.createTag(registries));
         tag.putInt("Seal", seal);
         tag.putBoolean("Active", active);
     }
 
-    @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
+    protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
         slots.fromTag(tag.getList("Slots", Tag.TAG_COMPOUND), registries);
-        seal = tag.getInt("Seal");
-        active = tag.getBoolean("Active");
+        seal = tag.getIntOr("Seal", 0);
+        active = tag.getBooleanOr("Active", false);
         clientActive = active;
     }
 
@@ -381,16 +377,11 @@ public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
         return tag;
     }
 
-    @Override
-    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
-        clientActive = tag.getBoolean("Active");
+    public void readUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
+        clientActive = tag.getBooleanOr("Active", false);
     }
 
-    @Override
-    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider registries) {
-        handleUpdateTag(pkt.getTag(), registries);
-    }
-
+    
     @Override
     public ClientboundBlockEntityDataPacket getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
@@ -399,5 +390,31 @@ public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
     /** The cell of a telegraph block entity is always the main one. */
     public TelegraphBlock.Part part() {
         return TelegraphBlock.Part.BASE;
+    }
+
+    // ---- 1.21.6+: the game's ValueInput/ValueOutput over the CompoundTag code above
+
+    @Override
+    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        super.saveAdditional(output);
+        CompoundTag tag = new CompoundTag();
+        saveTag(tag, com.golemlogix.system.NbtBridge.registries(this));
+        com.golemlogix.system.NbtBridge.write(output, tag);
+    }
+
+    @Override
+    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+        super.loadAdditional(input);
+        loadTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    }
+
+    @Override
+    public void handleUpdateTag(net.minecraft.world.level.storage.ValueInput input) {
+        readUpdateTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    }
+
+    @Override
+    public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input) {
+        handleUpdateTag(input);
     }
 }

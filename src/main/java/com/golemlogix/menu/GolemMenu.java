@@ -8,7 +8,7 @@ import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -240,7 +240,7 @@ public abstract class GolemMenu extends AbstractContainerMenu {
      * without an item, left-click +1, right-click -1, Shift clears.
      * Returns true if the click was handled.
      */
-    protected boolean handleGhostClick(int slotId, int button, ClickType clickType) {
+    protected boolean handleGhostClick(int slotId, int button, ContainerInput clickType) {
         if (!isGhost(slotId)) {
             return false;
         }
@@ -248,11 +248,11 @@ public abstract class GolemMenu extends AbstractContainerMenu {
         ItemStack cur = slot.getItem();
         ItemStack carried = getCarried();
 
-        if (clickType == ClickType.QUICK_MOVE) {
+        if (clickType == ContainerInput.QUICK_MOVE) {
             slot.set(ItemStack.EMPTY);
             return true;
         }
-        if (clickType != ClickType.PICKUP) {
+        if (clickType != ContainerInput.PICKUP) {
             return true;
         }
         carried = ghostFor(carried);
@@ -279,8 +279,8 @@ public abstract class GolemMenu extends AbstractContainerMenu {
         if (carried.isEmpty()) {
             return carried;
         }
-        net.minecraft.resources.ResourceLocation id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(carried.getItem());
-        boolean jar = id.equals(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("ars_nouveau", "source_jar"))
+        net.minecraft.resources.Identifier id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(carried.getItem());
+        boolean jar = id.equals(net.minecraft.resources.Identifier.fromNamespaceAndPath("ars_nouveau", "source_jar"))
                 || carried.is(com.golemlogix.init.ModBlocks.CREATIVE_SOURCE_JAR.get().asItem());
         return jar ? com.golemlogix.items.FluidGhostItem.of(com.golemlogix.system.CryoSource.stack(FLUID_GHOST_STEP)) : carried;
     }

@@ -5,7 +5,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
@@ -13,7 +13,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
  */
 public record SecretStatePayload(boolean wither, boolean dimension, boolean mind) implements CustomPacketPayload {
     public static final Type<SecretStatePayload> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "secret_state"));
+            new Type<>(Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "secret_state"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, SecretStatePayload> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.BOOL, SecretStatePayload::wither,

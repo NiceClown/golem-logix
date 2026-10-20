@@ -58,7 +58,7 @@ public class OwnedContainer extends SimpleContainer {
                 } else {
                     entry.putByte("Slot", (byte) i);
                 }
-                list.add(stack.save(registries, entry));
+                list.add(com.golemlogix.system.NbtBridge.saveItemInto(stack, registries, entry));
             }
         }
         return list;
@@ -69,12 +69,12 @@ public class OwnedContainer extends SimpleContainer {
     public void fromTag(ListTag tag, HolderLookup.Provider registries) {
         clearContent();
         for (int i = 0; i < tag.size(); i++) {
-            CompoundTag entry = tag.getCompound(i);
-            ItemStack stack = ItemStack.parse(registries, entry).orElse(ItemStack.EMPTY);
+            CompoundTag entry = tag.getCompoundOrEmpty(i);
+            ItemStack stack = com.golemlogix.system.NbtBridge.loadItem(registries, entry).orElse(ItemStack.EMPTY);
             if (stack.isEmpty()) {
                 continue;
             }
-            int slot = entry.contains("Slot", Tag.TAG_ANY_NUMERIC) ? entry.getInt("Slot") : -1;
+            int slot = entry.contains("Slot") ? entry.getIntOr("Slot", -1) : -1;
             if (slot >= 0 && slot < getContainerSize() && getItem(slot).isEmpty()) {
                 setItem(slot, stack);
             } else {

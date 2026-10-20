@@ -1,12 +1,12 @@
 package com.golemlogix.blocks;
 
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import com.golemlogix.system.GolemNode;
 import com.golemlogix.system.MainframeStructure;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -17,7 +17,6 @@ import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.level.storage.loot.LootParams;
@@ -31,7 +30,7 @@ import java.util.List;
  * be brought to any part: inside the cabinet all parts are linked to the owner.
  */
 public class MainframePartBlock extends Block implements GolemNode {
-    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final IntegerProperty CELL = IntegerProperty.create("cell", 0, MainframeStructure.CELLS.length - 1);
 
     public MainframePartBlock(Properties properties) {
@@ -67,14 +66,14 @@ public class MainframePartBlock extends Block implements GolemNode {
 
     // --------------------------------------------------------------------------------------- owner
     @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
                                               InteractionHand hand, BlockHitResult hit) {
         BlockPos master = controllerOf(pos, state);
         BlockState ms = level.getBlockState(master);
         if (ms.getBlock() instanceof CryoMainframeBlock) {
             return ms.useItemOn(stack, level, player, hand, hit.withPosition(master));
         }
-        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        return InteractionResult.TRY_WITH_EMPTY_HAND;
     }
 
     @Override

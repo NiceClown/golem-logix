@@ -564,9 +564,9 @@ public final class DevShots {
                         case "inventory" -> {
                             // check inventory <item>=<count>
                             String[] kv = expected.split("=");
-                            var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(kv[0]));
+                            var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(kv[0]));
                             int n = 0;
-                            for (ItemStack s : mc.player.getInventory().items) {
+                            for (ItemStack s : mc.player.getInventory().getNonEquipmentItems()) {
                                 if (s.is(item)) {
                                     n += s.getCount();
                                 }
@@ -659,7 +659,7 @@ public final class DevShots {
                         throw new IllegalStateException("no open menu");
                     }
                     mc.gameMode.handleInventoryMouseClick(mc.player.containerMenu.containerId, slot, button,
-                            net.minecraft.world.inventory.ClickType.PICKUP, mc.player);
+                            net.minecraft.world.inventory.ContainerInput.PICKUP, mc.player);
                     return true;
                 };
             }
@@ -695,7 +695,7 @@ public final class DevShots {
                         throw new IllegalStateException("terminal screen is not open");
                     }
                     keepScreen = true;
-                    var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(itemId));
+                    var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(itemId));
                     var screen = new com.golemlogix.client.CraftRequestScreen(ts, menu, new ItemStack(item));
                     mc.setScreen(screen);
                     screen.setAmountForDev(amount);
@@ -711,8 +711,8 @@ public final class DevShots {
                     if (!(menu instanceof com.golemlogix.menu.TerminalMenu)) {
                         throw new IllegalStateException("terminal menu is not open");
                     }
-                    var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(itemId));
-                    net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+                    var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(itemId));
+                    net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(
                             new com.golemlogix.network.CraftRequestPayload(menu.containerId, new ItemStack(item), amount, false, 0));
                     return true;
                 };
@@ -726,7 +726,7 @@ public final class DevShots {
                 boolean ctrl = flags.contains("ctrl");
                 return mc -> {
                     String actual = com.golemlogix.integration.jei.GolemLogixJeiPlugin.devTransfer(
-                            net.minecraft.resources.ResourceLocation.parse(recipe), max, ctrl);
+                            net.minecraft.resources.Identifier.parse(recipe), max, ctrl);
                     log((actual.equals(expected) ? "OK" : "ERR") + " jeitransfer " + recipe + " = " + actual + " (expected " + expected + ")");
                     return true;
                 };
@@ -742,7 +742,7 @@ public final class DevShots {
             }
             case "jei": {
                 // jei <item> [uses] : the JEI recipe window for an item (needs -PtestMods)
-                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(t[1]));
+                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(t[1]));
                 boolean uses = t.length > 2 && t[2].equals("uses");
                 return mc -> {
                     if (!net.neoforged.fml.ModList.get().isLoaded("jei")) {
@@ -757,9 +757,9 @@ public final class DevShots {
             }
             case "jeitype": {
                 // jeitype <namespace:category> [item] : one JEI recipe category, or only its recipes making the item (needs -PtestMods)
-                var uid = net.minecraft.resources.ResourceLocation.parse(t[1]);
+                var uid = net.minecraft.resources.Identifier.parse(t[1]);
                 ItemStack only = t.length > 2 ? new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
-                        net.minecraft.resources.ResourceLocation.parse(t[2]))) : ItemStack.EMPTY;
+                        net.minecraft.resources.Identifier.parse(t[2]))) : ItemStack.EMPTY;
                 return mc -> {
                     keepScreen = true;
                     if (!com.golemlogix.integration.jei.GolemLogixJeiPlugin.showType(uid, only)) {
@@ -772,7 +772,7 @@ public final class DevShots {
                 // chronokey: what the "open Portable Chronometer" key (Ctrl+E) sends; the rig cannot hold Ctrl down
                 return mc -> {
                     keepScreen = true;
-                    net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.golemlogix.network.OpenChronometerPayload());
+                    net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new com.golemlogix.network.OpenChronometerPayload());
                     return true;
                 };
             case "jeioverlay": {
@@ -792,7 +792,7 @@ public final class DevShots {
             case "notoasts":
                 // notoasts : clears the toasts (recipe unlocks, "order ready", advancements) before a shot
                 return mc -> {
-                    mc.getToasts().clear();
+                    mc.getToastManager().clear();
                     return true;
                 };
             case "mouse": {

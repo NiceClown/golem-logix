@@ -120,18 +120,14 @@ public class CryoJarBlockEntity extends BlockEntity implements SourceHelper.Supp
         return clientSource;
     }
 
-    @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveTag(CompoundTag tag, HolderLookup.Provider registries) {
         if (isLower()) {
             tag.putInt("Source", source);
         }
     }
 
-    @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        source = tag.getInt("Source");
+    protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
+        source = tag.getIntOr("Source", 0);
     }
 
     @Override
@@ -141,22 +137,43 @@ public class CryoJarBlockEntity extends BlockEntity implements SourceHelper.Supp
         return tag;
     }
 
-    @Override
-    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
-        clientSource = tag.getInt("Source");
+    public void readUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
+        clientSource = tag.getIntOr("Source", 0);
         if (fill == 0f && fillPrev == 0f) {
             // a jar seen for the first time shows its level at once, without filling up in front of the player
             fill = fillPrev = Math.min(1f, clientSource / (float) Math.max(1, capacity()));
         }
     }
 
-    @Override
-    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider registries) {
-        handleUpdateTag(pkt.getTag(), registries);
-    }
-
+    
     @Override
     public ClientboundBlockEntityDataPacket getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    // ---- 1.21.6+: the game's ValueInput/ValueOutput over the CompoundTag code above
+
+    @Override
+    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        super.saveAdditional(output);
+        CompoundTag tag = new CompoundTag();
+        saveTag(tag, com.golemlogix.system.NbtBridge.registries(this));
+        com.golemlogix.system.NbtBridge.write(output, tag);
+    }
+
+    @Override
+    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+        super.loadAdditional(input);
+        loadTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    }
+
+    @Override
+    public void handleUpdateTag(net.minecraft.world.level.storage.ValueInput input) {
+        readUpdateTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    }
+
+    @Override
+    public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input) {
+        handleUpdateTag(input);
     }
 }

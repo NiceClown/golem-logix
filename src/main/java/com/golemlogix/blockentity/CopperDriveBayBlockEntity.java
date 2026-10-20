@@ -160,18 +160,14 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
         }
     }
 
-    @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveTag(CompoundTag tag, HolderLookup.Provider registries) {
         tag.put("Disks", container.createTag(registries));
         tag.putInt("Priority", priority);
     }
 
-    @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
+    protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
         container.fromTag(tag.getList("Disks", Tag.TAG_COMPOUND), registries);
-        priority = tag.getInt("Priority");
+        priority = tag.getIntOr("Priority", 0);
         int m = 0;
         for (int i = 0; i < SLOTS; i++) {
             if (!container.getItem(i).isEmpty()) {
@@ -190,15 +186,35 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
         return tag;
     }
 
-    @Override
-    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider lookupProvider) {
-        mask = tag.getInt("Mask");
-        clientOpen = tag.getBoolean("Open");
+    public void readUpdateTag(CompoundTag tag, HolderLookup.Provider lookupProvider) {
+        mask = tag.getIntOr("Mask", 0);
+        clientOpen = tag.getBooleanOr("Open", false);
         container.fromTag(tag.getList("Disks", Tag.TAG_COMPOUND), lookupProvider);
     }
 
     @Override
     public ClientboundBlockEntityDataPacket getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    // ---- 1.21.6+: the game's ValueInput/ValueOutput over the CompoundTag code above
+
+    @Override
+    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        super.saveAdditional(output);
+        CompoundTag tag = new CompoundTag();
+        saveTag(tag, com.golemlogix.system.NbtBridge.registries(this));
+        com.golemlogix.system.NbtBridge.write(output, tag);
+    }
+
+    @Override
+    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+        super.loadAdditional(input);
+        loadTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    }
+
+    @Override
+    public void handleUpdateTag(net.minecraft.world.level.storage.ValueInput input) {
+        readUpdateTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
     }
 }

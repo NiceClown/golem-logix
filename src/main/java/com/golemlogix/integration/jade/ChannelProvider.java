@@ -17,7 +17,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import snownee.jade.api.BlockAccessor;
@@ -35,7 +35,7 @@ import snownee.jade.api.config.IPluginConfig;
 public enum ChannelProvider implements IBlockComponentProvider, IServerDataProvider<BlockAccessor> {
     INSTANCE;
 
-    private static final ResourceLocation UID = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "channels");
+    private static final Identifier UID = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "channels");
     /** The key of this provider's data in the server data (the core's tooltip reads the network totals from it too). */
     static final String TAG = "golem_logix_channels";
 
@@ -84,7 +84,7 @@ public enum ChannelProvider implements IBlockComponentProvider, IServerDataProvi
         }
         CompoundTag data = accessor.getServerData();
         if (data.contains(TAG)) {
-            describe(tooltip, state.getBlock(), data.getCompound(TAG));
+            describe(tooltip, state.getBlock(), data.getCompoundOrEmpty(TAG));
         }
         if (accessor.getBlockEntity() instanceof PipeBlockEntity be && be.plugMask() != 0) {
             MutableComponent sides = Component.empty();
@@ -106,9 +106,9 @@ public enum ChannelProvider implements IBlockComponentProvider, IServerDataProvi
         if (block instanceof AtlasCoreBlock || block instanceof AtlasConduitBlock) {
             return; // the controller: the core's own provider shows the network
         }
-        boolean core = t.getBoolean("core");
-        int used = t.getInt("used");
-        int max = t.getInt("max");
+        boolean core = t.getBooleanOr("core", false);
+        int used = t.getIntOr("used", 0);
+        int max = t.getIntOr("max", 0);
         if (block instanceof CableBushingBlock) {
             if (!core) {
                 tooltip.add(Component.translatable("jade.golem_logix.device.no_core").withStyle(ChatFormatting.RED));
@@ -136,13 +136,13 @@ public enum ChannelProvider implements IBlockComponentProvider, IServerDataProvi
             }
             return;
         }
-        boolean needs = t.getBoolean("needs");
-        boolean has = t.getBoolean("has");
+        boolean needs = t.getBooleanOr("needs", false);
+        boolean has = t.getBooleanOr("has", false);
         if (needs) {
             if (!core) {
                 tooltip.add(Component.translatable("jade.golem_logix.device.offline").withStyle(ChatFormatting.GRAY));
                 tooltip.add(Component.translatable("jade.golem_logix.device.no_core").withStyle(ChatFormatting.RED));
-            } else if (!t.getBoolean("online")) {
+            } else if (!t.getBooleanOr("online", false)) {
                 tooltip.add(Component.translatable("jade.golem_logix.device.offline").withStyle(ChatFormatting.GRAY));
                 tooltip.add(Component.translatable("jade.golem_logix.device.no_power").withStyle(ChatFormatting.RED));
             } else if (has) {
@@ -177,8 +177,8 @@ public enum ChannelProvider implements IBlockComponentProvider, IServerDataProvi
             case NETWORK_FULL -> Component.translatable("jade.golem_logix.why.full", t.getInt("netUsed"), t.getInt("netMax"))
                     .withStyle(ChatFormatting.RED);
             case BOTTLENECK -> {
-                int[] p = t.getIntArray("bpos");
-                ResourceLocation id = ResourceLocation.tryParse(t.getString("bblock"));
+                int[] p = t.getIntArray("bpos").orElse(new int[0]);
+                Identifier id = Identifier.tryParse(t.getStringOr("bblock", ""));
                 Block b = id == null ? null : BuiltInRegistries.BLOCK.get(id);
                 Component name = b == null ? Component.literal("?") : b.getName();
                 yield p.length == 3 ? Component.translatable("jade.golem_logix.why.bottleneck", name, p[0], p[1], p[2])
@@ -190,7 +190,7 @@ public enum ChannelProvider implements IBlockComponentProvider, IServerDataProvi
     }
 
     @Override
-    public ResourceLocation getUid() {
+    public Identifier getUid() {
         return UID;
     }
 }

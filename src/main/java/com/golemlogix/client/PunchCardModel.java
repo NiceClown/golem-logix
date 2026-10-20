@@ -29,7 +29,7 @@ public final class PunchCardModel extends BakedModelWrapper<BakedModel> {
             @Override
             public BakedModel resolve(BakedModel model, ItemStack stack, @Nullable ClientLevel level, @Nullable LivingEntity entity, int seed) {
                 PatternData data = stack.get(ModDataComponents.PATTERN.get());
-                if (data != null && (Screen.hasShiftDown() || devShift)) {
+                if (data != null && (net.minecraft.client.Minecraft.getInstance().hasShiftDown() || devShift)) {
                     ItemStack out = data.primaryOutput();
                     if (!out.isEmpty() && !out.is(stack.getItem())) {
                         return Minecraft.getInstance().getItemRenderer().getModel(out, level, entity, seed);

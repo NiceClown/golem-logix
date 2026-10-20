@@ -577,9 +577,7 @@ public class CryoMainframeBlockEntity extends BlockEntity {
     }
 
     // ------------------------------------------------------------------------------------------------ saving
-    @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveTag(CompoundTag tag, HolderLookup.Provider registries) {
         tag.put("Calculators", calculators.createTag(registries));
         tag.put("Upgrades", upgrades.createTag(registries));
         ListTag jobs = new ListTag();
@@ -595,19 +593,17 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         redstone.save(tag);
     }
 
-    @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
+    protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
         cores.clear();
         calculators.fromTag(tag.getList("Calculators", Tag.TAG_COMPOUND), registries);
         upgrades.fromTag(tag.getList("Upgrades", Tag.TAG_COMPOUND), registries);
         syncCores(false);
         ListTag jobs = tag.getList("Jobs", Tag.TAG_COMPOUND);
         for (int i = 0; i < jobs.size(); i++) {
-            CompoundTag e = jobs.getCompound(i);
-            int idx = e.getInt("Core");
+            CompoundTag e = jobs.getCompoundOrEmpty(i);
+            int idx = e.getIntOr("Core", 0);
             if (idx >= 0 && idx < cores.size()) {
-                cores.get(idx).job = CraftingJob.load(e.getCompound("Job"), registries);
+                cores.get(idx).job = CraftingJob.load(e.getCompoundOrEmpty("Job"), registries);
             }
         }
         redstone.load(tag);
@@ -619,13 +615,13 @@ public class CryoMainframeBlockEntity extends BlockEntity {
     public void setVisualWorkForDev(boolean on, @Nullable String item0, @Nullable String item1) {
         this.devWorking = on;
         if (item0 != null) {
-            var i0 = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(item0));
+            var i0 = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(item0));
             this.devItem0 = new ItemStack(i0);
         } else {
             this.devItem0 = ItemStack.EMPTY;
         }
         if (item1 != null) {
-            var i1 = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(item1));
+            var i1 = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.parse(item1));
             this.devItem1 = new ItemStack(i1);
         } else {
             this.devItem1 = ItemStack.EMPTY;
@@ -650,10 +646,10 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         tag.putBoolean("Open", viewers > 0);
         if (devWorking) {
             if (!devItem0.isEmpty()) {
-                tag.put("Cur0", devItem0.save(registries));
+                tag.put("Cur0", com.golemlogix.system.NbtBridge.saveItem(devItem0, registries));
             }
             if (!devItem1.isEmpty()) {
-                tag.put("Cur1", devItem1.save(registries));
+                tag.put("Cur1", com.golemlogix.system.NbtBridge.saveItem(devItem1, registries));
             }
         } else {
             int shown = 0;
@@ -661,7 +657,7 @@ public class CryoMainframeBlockEntity extends BlockEntity {
                 if (c.job != null && shown < 2) {
                     ItemStack cur = c.job.current().stack();
                     if (!cur.isEmpty()) {
-                        tag.put("Cur" + shown, cur.save(registries));
+                        tag.put("Cur" + shown, com.golemlogix.system.NbtBridge.saveItem(cur, registries));
                     }
                     shown++;
                 }
@@ -670,7 +666,7 @@ public class CryoMainframeBlockEntity extends BlockEntity {
             for (int i = shown; i < 2; i++) {
                 ItemStack held = holds[i].item(now);
                 if (!held.isEmpty()) {
-                    tag.put("Cur" + i, held.save(registries));
+                    tag.put("Cur" + i, com.golemlogix.system.NbtBridge.saveItem(held, registries));
                 }
             }
         }
@@ -678,25 +674,20 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         return tag;
     }
 
-    @Override
-    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
-        clientCores = tag.getInt("Cores");
-        clientBusy = tag.getInt("Busy");
-        clientCalcs = tag.getInt("Calcs");
-        clientWorkers = tag.getInt("Workers");
-        clientBoosted = tag.getBoolean("Boosted");
-        clientOpen = tag.getBoolean("Open");
+    public void readUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
+        clientCores = tag.getIntOr("Cores", 0);
+        clientBusy = tag.getIntOr("Busy", 0);
+        clientCalcs = tag.getIntOr("Calcs", 0);
+        clientWorkers = tag.getIntOr("Workers", 0);
+        clientBoosted = tag.getBooleanOr("Boosted", false);
+        clientOpen = tag.getBooleanOr("Open", false);
         for (int i = 0; i < 2; i++) {
-            clientCurrent[i] = tag.contains("Cur" + i) ? ItemStack.parse(registries, tag.getCompound("Cur" + i)).orElse(ItemStack.EMPTY)
+            clientCurrent[i] = tag.contains("Cur" + i) ? com.golemlogix.system.NbtBridge.loadItem(registries, tag.getCompound("Cur" + i)).orElse(ItemStack.EMPTY)
                     : ItemStack.EMPTY;
         }
     }
 
-    @Override
-    public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider registries) {
-        handleUpdateTag(pkt.getTag(), registries);
-    }
-
+    
     @Override
     public ClientboundBlockEntityDataPacket getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
@@ -705,5 +696,31 @@ public class CryoMainframeBlockEntity extends BlockEntity {
     /** Summary of the cabinet for Jade tooltips and checks. */
     public Map<String, Integer> stats() {
         return Map.of("cores", cores.size(), "busy", busyCores(), "workers", workersPerCore(), "calcs", calculatorCount());
+    }
+
+    // ---- 1.21.6+: the game's ValueInput/ValueOutput over the CompoundTag code above
+
+    @Override
+    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        super.saveAdditional(output);
+        CompoundTag tag = new CompoundTag();
+        saveTag(tag, com.golemlogix.system.NbtBridge.registries(this));
+        com.golemlogix.system.NbtBridge.write(output, tag);
+    }
+
+    @Override
+    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+        super.loadAdditional(input);
+        loadTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    }
+
+    @Override
+    public void handleUpdateTag(net.minecraft.world.level.storage.ValueInput input) {
+        readUpdateTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    }
+
+    @Override
+    public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input) {
+        handleUpdateTag(input);
     }
 }

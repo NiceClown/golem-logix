@@ -27,7 +27,7 @@ public class CableBushingBlock extends Block implements GolemNode, AtlasPart {
         if (level.isClientSide()) {
             return InteractionResult.SUCCESS;
         }
-        player.displayClientMessage(describe(GolemNetwork.scan(level, pos), pos), false);
+        player.sendSystemMessage(describe(GolemNetwork.scan(level, pos), pos));
         return InteractionResult.CONSUME;
     }
 

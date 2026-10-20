@@ -191,12 +191,12 @@ public class PatternProviderBlockEntity extends BlockEntity {
                 continue;
             }
             // items and fluids go into the same machine side, and only if it takes all of them
-            IItemHandler handler = inputs.isEmpty() ? null : level.getCapability(Capabilities.ItemHandler.BLOCK, target, dir.getOpposite());
+            IItemHandler handler = inputs.isEmpty() ? null : level.getCapability(Capabilities.Item.BLOCK, target, dir.getOpposite());
             if (!inputs.isEmpty() && (handler == null || !canAcceptAll(handler, inputs))) {
                 continue;
             }
             net.neoforged.neoforge.fluids.capability.IFluidHandler tanks = fluids.isEmpty() ? null
-                    : level.getCapability(Capabilities.FluidHandler.BLOCK, target, dir.getOpposite());
+                    : level.getCapability(Capabilities.Fluid.BLOCK, target, dir.getOpposite());
             if (!fluids.isEmpty() && (tanks == null || !canAcceptFluids(tanks, fluids))) {
                 continue;
             }
@@ -252,22 +252,34 @@ public class PatternProviderBlockEntity extends BlockEntity {
         return true;
     }
 
-    @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveTag(CompoundTag tag, HolderLookup.Provider registries) {
         tag.put("Patterns", container.createTag(registries));
         tag.put("Upgrades", upgrades.createTag(registries));
         tag.putBoolean("Blocking", blocking);
         redstone.save(tag);
     }
 
-    @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
+    protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
         container.fromTag(tag.getList("Patterns", Tag.TAG_COMPOUND), registries);
         upgrades.fromTag(tag.getList("Upgrades", Tag.TAG_COMPOUND), registries);
         blocking = tag.getBoolean("Blocking");
         redstone.load(tag);
         patterns = null;
+    }
+
+    // ---- 1.21.6+: the game's ValueInput/ValueOutput over the CompoundTag code above
+
+    @Override
+    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        super.saveAdditional(output);
+        CompoundTag tag = new CompoundTag();
+        saveTag(tag, com.golemlogix.system.NbtBridge.registries(this));
+        com.golemlogix.system.NbtBridge.write(output, tag);
+    }
+
+    @Override
+    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+        super.loadAdditional(input);
+        loadTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
     }
 }

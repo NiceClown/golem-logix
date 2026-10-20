@@ -106,11 +106,10 @@ public class RecipeMonitorBlockEntity extends BlockEntity {
         return tag;
     }
 
-    @Override
-    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
-        jobs = tag.getInt("Jobs");
-        online = tag.getBoolean("Online");
-        fault = tag.getBoolean("Fault");
+    public void readUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
+        jobs = tag.getIntOr("Jobs", 0);
+        online = tag.getBooleanOr("Online", false);
+        fault = tag.getBooleanOr("Fault", false);
     }
 
     @Override
@@ -118,9 +117,16 @@ public class RecipeMonitorBlockEntity extends BlockEntity {
         return ClientboundBlockEntityDataPacket.create(this);
     }
 
-    /** A block update carries the same tag as chunk loading (by default loadAdditional would read it and lose the counter). */
+    
+    // ---- 1.21.6+: the game's ValueInput/ValueOutput over the CompoundTag code above
+
     @Override
-    public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider lookupProvider) {
-        handleUpdateTag(pkt.getTag(), lookupProvider);
+    public void handleUpdateTag(net.minecraft.world.level.storage.ValueInput input) {
+        readUpdateTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    }
+
+    @Override
+    public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input) {
+        handleUpdateTag(input);
     }
 }

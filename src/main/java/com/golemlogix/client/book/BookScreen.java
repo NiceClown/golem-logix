@@ -11,11 +11,11 @@ import com.google.gson.JsonObject;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
@@ -53,12 +53,12 @@ public class BookScreen extends Screen {
     private static final int NODE = 26;
     private static final int SPACING = 46;
 
-    private static final ResourceLocation PARCHMENT = tex("parchment");
-    private static final ResourceLocation MAP_BG = tex("map_bg");
-    private static final ResourceLocation NODES = tex("nodes");
+    private static final Identifier PARCHMENT = tex("parchment");
+    private static final Identifier MAP_BG = tex("map_bg");
+    private static final Identifier NODES = tex("nodes");
 
-    private static ResourceLocation tex(String name) {
-        return ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/gui/book/" + name + ".png");
+    private static Identifier tex(String name) {
+        return Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/gui/book/" + name + ".png");
     }
 
     private static final int INK = 0xFF3B2A18;
@@ -448,15 +448,15 @@ public class BookScreen extends Screen {
     // ------------------------------------------------------------------ rendering
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partial) {
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
         renderBackground(g, mouseX, mouseY, partial);
         hoverStack = ItemStack.EMPTY;
         hoverText = null;
         double bx = (mouseX - ox) / k, by = (mouseY - oy) / k;
 
-        g.pose().pushPose();
-        g.pose().translate(ox, oy, 0);
-        g.pose().scale(k, k, 1f);
+        g.pose().pushMatrix();
+        g.pose().translate(ox, oy);
+        g.pose().scale(k, k);
 
         // the bookmark tabs before the binding: the cover lies over their spines, not the other way round
         drawTabs(g, (int) bx, (int) by);
@@ -467,21 +467,21 @@ public class BookScreen extends Screen {
             drawArticle(g, (int) bx, (int) by);
         }
         drawCorners(g);
-        g.pose().popPose();
+        g.pose().popMatrix();
 
         if (openEntry == null) {
             search.render(g, mouseX, mouseY, partial);
         }
         if (!hoverStack.isEmpty()) {
-            g.renderTooltip(font, hoverStack, mouseX, mouseY);
+            g.setTooltipForNextFrame(font, hoverStack, mouseX, mouseY);
         } else if (hoverText != null) {
-            g.renderTooltip(font, hoverText, mouseX, mouseY);
+            g.setTooltipForNextFrame(font, hoverText, mouseX, mouseY);
         } else if (openEntry == null && hoverTip != null) {
-            g.renderComponentTooltip(font, hoverTip, mouseX, mouseY);
+            g.setComponentTooltipForNextFrame(font, hoverTip, mouseX, mouseY);
         }
     }
 
-    private void drawCover(GuiGraphics g) {
+    private void drawCover(GuiGraphicsExtractor g) {
         // leather binding
         g.fill(-6, -6, W + 6, H + 6, 0xFF1A0F08);
         g.fill(-4, -4, W + 4, H + 4, 0xFF4A2E1A);
@@ -490,16 +490,16 @@ public class BookScreen extends Screen {
     }
 
     /** Brass corners of the binding, on top of all content so the interface does not overlap the cover. */
-    private void drawCorners(GuiGraphics g) {
-        g.pose().pushPose();
-        g.pose().translate(0, 0, 400);
+    private void drawCorners(GuiGraphicsExtractor g) {
+        g.pose().pushMatrix();
+        g.pose().translate(0, 0);
         for (int[] c : new int[][]{{-6, -6}, {W - 12, -6}, {-6, H - 12}, {W - 12, H - 12}}) {
             g.fill(c[0], c[1], c[0] + 18, c[1] + 18, GolemGui.BRASS_DARK);
             g.fill(c[0] + 1, c[1] + 1, c[0] + 17, c[1] + 17, GolemGui.BRASS);
             g.fill(c[0] + 5, c[1] + 5, c[0] + 13, c[1] + 13, GolemGui.BRASS_DARK);
             g.fill(c[0] + 7, c[1] + 7, c[0] + 11, c[1] + 11, GolemGui.CYAN);
         }
-        g.pose().popPose();
+        g.pose().popMatrix();
     }
 
     /** Sections that have a tab: only those where at least one entry is visible. */
@@ -537,7 +537,7 @@ public class BookScreen extends Screen {
         return i == categoryIndex ? -34 : -30;
     }
 
-    private void drawTabs(GuiGraphics g, int mx, int my) {
+    private void drawTabs(GuiGraphicsExtractor g, int mx, int my) {
         List<Integer> tabs = tabs();
         long time = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0;
         int step = tabStep(tabs.size()), th = step - 1;
@@ -552,7 +552,7 @@ public class BookScreen extends Screen {
             g.fill(x + 1, y + 1, 2, y + th - 1, hover ? GolemGui.BRASS_L : (i == categoryIndex ? GolemGui.BRASS : GolemGui.BRASS_DARK));
             g.fill(x + 3, y + 3, 2, y + th - 3, 0xFF16222B);
             g.fill(x + 3, y + 3, x + 5, y + th - 3, c.color);
-            g.renderItem(c.icon, x + 7, y + (th - 16) / 2);
+            g.item(c.icon, x + 7, y + (th - 16) / 2);
             if (hasUnread(c)) {
                 // unread entries in the section: a pulsing light in the tab corner
                 int a = (int) (140 + 115 * Math.sin(time * 0.2 + j));
@@ -574,12 +574,12 @@ public class BookScreen extends Screen {
         return cy + (int) Math.round((e.y * SPACING + panY[categoryIndex]) * zoom[categoryIndex]);
     }
 
-    private void drawMap(GuiGraphics g, int mx, int my, float partial) {
+    private void drawMap(GuiGraphicsExtractor g, int mx, int my, float partial) {
         BookModel.Category cat = category();
         int ax = 8, ay = 30, aw = W - 16, ah = H - 40;
         // header
-        g.drawString(font, "§l" + cat.title, 12, 10, GolemGui.BRASS_L, false);
-        g.drawString(font, cat.blurb, 12 + font.width("§l" + cat.title) + 8, 10, 0xFF9A8E78, false);
+        g.text(font, "§l" + cat.title, 12, 10, GolemGui.BRASS_L, false);
+        g.text(font, cat.blurb, 12 + font.width("§l" + cat.title) + 8, 10, 0xFF9A8E78, false);
         // search field
         g.fill(W - 130, 6, W - 16, 22, 0xFF1A0F08);
         g.fill(W - 129, 7, W - 17, 21, 0xFF0B1620);
@@ -640,11 +640,11 @@ public class BookScreen extends Screen {
                 hovered = e;
             }
             int sprite = e.gold ? 2 : hover ? 1 : 0;
-            g.pose().pushPose();
-            g.pose().translate(ncx, ncy, 0);
-            g.pose().scale(z, z, 1f);
+            g.pose().pushMatrix();
+            g.pose().translate(ncx, ncy);
+            g.pose().scale(z, z);
             g.blit(NODES, -NODE / 2, -NODE / 2, sprite * NODE, 0, NODE, NODE, NODE * 4, NODE);
-            g.renderItem(e.icon, -8, -8);
+            g.item(e.icon, -8, -8);
             if (!visited.contains(e.id)) {
                 float pulse = 0.35f + 0.35f * (float) Math.sin((time + partial) * 0.15 + e.x + e.y);
                 RenderSystem.enableBlend();
@@ -652,12 +652,12 @@ public class BookScreen extends Screen {
                 g.blit(NODES, -NODE / 2, -NODE / 2, 3 * NODE, 0, NODE, NODE, NODE * 4, NODE);
                 g.setColor(1f, 1f, 1f, 1f);
             }
-            g.pose().popPose();
+            g.pose().popMatrix();
         }
         g.disableScissor();
         // map zoom
         String zoomText = Component.translatable("gui.golem_logix.book.zoom", Math.round(zoom[categoryIndex] * 100)).getString();
-        g.drawString(font, zoomText, ax + aw - 6 - font.width(zoomText), ay + ah - 12, 0xFF6FA5B5, true);
+        g.text(font, zoomText, ax + aw - 6 - font.width(zoomText), ay + ah - 12, 0xFF6FA5B5, true);
         if (hovered != null) {
             List<Component> tip = new ArrayList<>();
             tip.add(Component.literal(hovered.title).withStyle(ChatFormatting.GOLD));
@@ -672,7 +672,7 @@ public class BookScreen extends Screen {
 
     private List<Component> hoverTip = null;
 
-    private static void line(GuiGraphics g, int x1, int y1, int x2, int y2, int c) {
+    private static void line(GuiGraphicsExtractor g, int x1, int y1, int x2, int y2, int c) {
         int minX = Math.min(x1, x2), maxX = Math.max(x1, x2), minY = Math.min(y1, y2), maxY = Math.max(y1, y2);
         g.fill(minX - 1, minY - 1, maxX + 1, maxY + 1, c);
         g.fill(minX - 2, minY - 2, maxX + 2, maxY + 2, (c & 0x00FFFFFF) | 0x18000000);
@@ -699,27 +699,27 @@ public class BookScreen extends Screen {
         return out.size() > 9 ? new ArrayList<>(out.subList(0, 9)) : out;
     }
 
-    private void drawSearchResults(GuiGraphics g, int mx, int my) {
+    private void drawSearchResults(GuiGraphicsExtractor g, int mx, int my) {
         List<BookModel.Entry> res = searchResults();
         if (res.isEmpty() && search.getValue().trim().length() >= 2) {
             g.fill(W - 200, 24, W - 10, 38, 0xF0101820);
-            g.drawString(font, Component.translatable("gui.golem_logix.book.nothing"), W - 194, 28, 0xFF9A8E78, false);
+            g.text(font, Component.translatable("gui.golem_logix.book.nothing"), W - 194, 28, 0xFF9A8E78, false);
             return;
         }
         int y = 24;
         for (BookModel.Entry e : res) {
             boolean hover = mx >= W - 200 && mx < W - 10 && my >= y && my < y + 16;
             g.fill(W - 200, y, W - 10, y + 16, hover ? 0xF0233444 : 0xF0101820);
-            g.renderItem(e.icon, W - 198, y);
-            g.drawString(font, font.plainSubstrByWidth(e.title, 120), W - 178, y + 4, hover ? GolemGui.CYAN : GolemGui.PARCHMENT, false);
-            g.drawString(font, font.plainSubstrByWidth(e.category.title, 50), W - 56, y + 4, 0xFF6C7A86, false);
+            g.item(e.icon, W - 198, y);
+            g.text(font, font.plainSubstrByWidth(e.title, 120), W - 178, y + 4, hover ? GolemGui.CYAN : GolemGui.PARCHMENT, false);
+            g.text(font, font.plainSubstrByWidth(e.category.title, 50), W - 56, y + 4, 0xFF6C7A86, false);
             y += 16;
         }
     }
 
     // ----------------------------------------------------------------- entry
 
-    private void drawArticle(GuiGraphics g, int mx, int my) {
+    private void drawArticle(GuiGraphicsExtractor g, int mx, int my) {
         clickables.clear();
         // spine and pages
         g.fill(LEFT_PAGE_X - 2, PAGES_Y - 2, RIGHT_PAGE_X + PAGE_W + 2, PAGES_Y + PAGE_H + 2, 0xFF1A0F08);
@@ -750,19 +750,19 @@ public class BookScreen extends Screen {
         return PAGES_Y + PAGE_H + 6;
     }
 
-    private void navButton(GuiGraphics g, int mx, int my, int x, String label, boolean enabled, Component tip) {
+    private void navButton(GuiGraphicsExtractor g, int mx, int my, int x, String label, boolean enabled, Component tip) {
         int w = 40, h = 14, y = navY();
         boolean hover = enabled && mx >= x && mx < x + w && my >= y && my < y + h;
         g.fill(x, y, x + w, y + h, 0xFF1A0F08);
         g.fill(x + 1, y + 1, x + w - 1, y + h - 1, !enabled ? 0xFF2C1D12 : hover ? GolemGui.BRASS_L : GolemGui.BRASS);
         g.fill(x + 2, y + 2, x + w - 2, y + h - 2, !enabled ? 0xFF33241A : 0xFF3A2314);
-        g.drawCenteredString(font, label, x + w / 2, y + 3, !enabled ? 0xFF6A5640 : hover ? 0xFFFFE9A8 : GolemGui.PARCHMENT);
+        g.centeredText(font, label, x + w / 2, y + 3, !enabled ? 0xFF6A5640 : hover ? 0xFFFFE9A8 : GolemGui.PARCHMENT);
         if (hover) {
             hoverText = tip;
         }
     }
 
-    private void drawView(GuiGraphics g, View v, int x, int y, int mx, int my, int pageNo) {
+    private void drawView(GuiGraphicsExtractor g, View v, int x, int y, int mx, int my, int pageNo) {
         switch (v.kind()) {
             case TEXT -> {
                 if (v.title() != null) {
@@ -779,22 +779,22 @@ public class BookScreen extends Screen {
             case TASKS -> drawTasks(g, v, x, y, mx, my);
         }
         for (Line l : v.lines()) {
-            g.drawString(font, l.seq(), x + l.x(), y + l.y(), l.color(), false);
+            g.text(font, l.seq(), x + l.x(), y + l.y(), l.color(), false);
         }
         String no = Integer.toString(pageNo);
-        g.drawString(font, no, x + (pageNo % 2 == 1 ? 8 : PAGE_W - 8 - font.width(no)), y + PAGE_H - 11, INK_DIM, false);
+        g.text(font, no, x + (pageNo % 2 == 1 ? 8 : PAGE_W - 8 - font.width(no)), y + PAGE_H - 11, INK_DIM, false);
     }
 
     private int headingHeight(String title) {
         return 7 + font.split(styled("\u00a7l" + title), PAGE_W - 12).size() * LINE_H + 4;
     }
 
-    private void heading(GuiGraphics g, String title, int x, int y) {
+    private void heading(GuiGraphicsExtractor g, String title, int x, int y) {
         String t = "§l" + title;
         List<FormattedCharSequence> lines = font.split(styled(t), PAGE_W - 12);
         int yy = y + 7;
         for (FormattedCharSequence l : lines) {
-            g.drawString(font, l, x + 6, yy, INK_GOLD, false);
+            g.text(font, l, x + 6, yy, INK_GOLD, false);
             yy += LINE_H;
         }
         g.fill(x + 6, yy, x + PAGE_W - 6, yy + 1, 0x80804A0A);
@@ -813,7 +813,7 @@ public class BookScreen extends Screen {
         ItemStack result = ItemStack.EMPTY;
         if (d.has("recipe")) {
             var level = Minecraft.getInstance().level;
-            ResourceLocation id = ResourceLocation.parse(d.get("recipe").getAsString());
+            Identifier id = Identifier.parse(d.get("recipe").getAsString());
             if (level != null) {
                 var holder = level.getRecipeManager().byKey(id);
                 if (holder.isPresent()) {
@@ -849,7 +849,7 @@ public class BookScreen extends Screen {
         return new Grid(cells, result);
     }
 
-    private void drawCrafting(GuiGraphics g, View v, int x, int y, int mx, int my) {
+    private void drawCrafting(GuiGraphicsExtractor g, View v, int x, int y, int mx, int my) {
         Grid grid = resolveGrid(v.data());
         heading(g, v.title(), x, y);
         int x0 = x + 30, y0 = y + v.hh() + 6;
@@ -861,7 +861,7 @@ public class BookScreen extends Screen {
                 ItemStack[] alts = grid.cells()[r * 3 + c];
                 if (alts.length > 0) {
                     ItemStack s = alts[(int) (t % alts.length)];
-                    g.renderItem(s, sx, sy);
+                    g.item(s, sx, sy);
                     if (mx >= sx && mx < sx + 16 && my >= sy && my < sy + 16) {
                         hoverStack = s;
                     }
@@ -878,8 +878,8 @@ public class BookScreen extends Screen {
         int rx = x0 + 80, ry = y0 + 18;
         GolemGui.slot(g, rx - 1, ry - 1);
         if (!grid.result().isEmpty()) {
-            g.renderItem(grid.result(), rx, ry);
-            g.renderItemDecorations(font, grid.result(), rx, ry);
+            g.item(grid.result(), rx, ry);
+            g.itemDecorations(font, grid.result(), rx, ry);
             if (mx >= rx && mx < rx + 16 && my >= ry && my < ry + 16) {
                 hoverStack = grid.result();
             }
@@ -899,18 +899,18 @@ public class BookScreen extends Screen {
         return s;
     }
 
-    private void slotWithItem(GuiGraphics g, ItemStack s, int sx, int sy, int mx, int my) {
+    private void slotWithItem(GuiGraphicsExtractor g, ItemStack s, int sx, int sy, int mx, int my) {
         GolemGui.slot(g, sx - 1, sy - 1);
         if (!com.golemlogix.client.FluidIcons.drawGhost(g, font, s, sx, sy, true)) {
-            g.renderItem(s, sx, sy);
-            g.renderItemDecorations(font, s, sx, sy);
+            g.item(s, sx, sy);
+            g.itemDecorations(font, s, sx, sy);
         }
         if (mx >= sx && mx < sx + 16 && my >= sy && my < sy + 16) {
             hoverStack = s;
         }
     }
 
-    private void drawRitual(GuiGraphics g, View v, int x, int y, int mx, int my) {
+    private void drawRitual(GuiGraphicsExtractor g, View v, int x, int y, int mx, int my) {
         JsonObject d = v.data();
         if (v.title() != null) {
             heading(g, v.title(), x, y);
@@ -925,7 +925,7 @@ public class BookScreen extends Screen {
             cx += 18;
         }
         if (!station.isEmpty()) {
-            g.drawString(font, "+", cx + 3, cy + 4, INK_GOLD, false);
+            g.text(font, "+", cx + 3, cy + 4, INK_GOLD, false);
             cx += 12;
             slotWithItem(g, station, cx + 1, cy, mx, my);
             cx += 18;
@@ -943,22 +943,22 @@ public class BookScreen extends Screen {
             List<FormattedCharSequence> cond = font.split(styled("§o" + d.get("condition").getAsString().replace('&', '§')), PAGE_W - 16);
             int yy = y + v.hh() + 8 + 22;
             for (FormattedCharSequence l : cond) {
-                g.drawString(font, l, x + 8, yy, INK_DIM, false);
+                g.text(font, l, x + 8, yy, INK_DIM, false);
                 yy += LINE_H;
             }
         }
     }
 
-    private void drawSpotlight(GuiGraphics g, View v, int x, int y, int mx, int my) {
+    private void drawSpotlight(GuiGraphicsExtractor g, View v, int x, int y, int mx, int my) {
         JsonObject d = v.data();
         ItemStack s = parseStack(d.get("item").getAsString());
         heading(g, v.title(), x, y);
         int iy = y + v.hh() + 6;
-        g.pose().pushPose();
-        g.pose().translate(x + PAGE_W / 2f - 24, iy, 0);
-        g.pose().scale(3f, 3f, 1f);
-        g.renderItem(s, 0, 0);
-        g.pose().popPose();
+        g.pose().pushMatrix();
+        g.pose().translate(x + PAGE_W / 2f - 24, iy);
+        g.pose().scale(3f, 3f);
+        g.item(s, 0, 0);
+        g.pose().popMatrix();
         if (mx >= x + PAGE_W / 2 - 24 && mx < x + PAGE_W / 2 + 24 && my >= iy && my < iy + 48) {
             hoverStack = s;
         }
@@ -966,7 +966,7 @@ public class BookScreen extends Screen {
 
     // ---------------------------------------------------------- array schematic
 
-    private void drawBlueprint(GuiGraphics g, View v, int x, int y, int mx, int my) {
+    private void drawBlueprint(GuiGraphicsExtractor g, View v, int x, int y, int mx, int my) {
         JsonObject d = v.data();
         int layer = d.get("layer").getAsInt();
         if (v.title() != null) {
@@ -977,7 +977,7 @@ public class BookScreen extends Screen {
                 new ItemStack(ModBlocks.QUANTUM_CHANNEL_EXPANDER.get())};
         int cell = 24;
         int gx = x + (PAGE_W - cell * 3) / 2, gy = y + v.hh() + 14;
-        g.drawCenteredString(font, "▲ N", x + PAGE_W / 2, gy - 11, INK_DIM);
+        g.centeredText(font, "▲ N", x + PAGE_W / 2, gy - 11, INK_DIM);
         for (int r = 0; r < 3; r++) {
             for (int c = 0; c < 3; c++) {
                 boolean corner = r != 1 && c != 1, center = r == 1 && c == 1;
@@ -991,7 +991,7 @@ public class BookScreen extends Screen {
                 int sx = gx + c * cell + 3, sy = gy + r * cell + 3;
                 g.fill(sx - 3, sy - 3, sx + cell - 3, sy + cell - 3, 0xFF2A1A0E);
                 g.fill(sx - 2, sy - 2, sx + cell - 4, sy + cell - 4, 0xFF16222B);
-                g.renderItem(s, sx, sy);
+                g.item(s, sx, sy);
                 if (mx >= sx && mx < sx + 16 && my >= sy && my < sy + 16) {
                     hoverStack = s;
                 }
@@ -1001,7 +1001,7 @@ public class BookScreen extends Screen {
 
     // ---------------------------------------------------------------- table
 
-    private void drawTable(GuiGraphics g, View v, int x, int y) {
+    private void drawTable(GuiGraphicsExtractor g, View v, int x, int y) {
         JsonObject d = v.data();
         int yy = y + 8;
         if (v.title() != null) {
@@ -1018,7 +1018,7 @@ public class BookScreen extends Screen {
         for (int c = 0; c < header.size(); c++) {
             List<FormattedCharSequence> ls = cellLines(header.get(c), widths[c] - 3, true);
             for (int i = 0; i < ls.size(); i++) {
-                g.drawString(font, ls.get(i), xx, yy + i * LINE_H, INK_GOLD, false);
+                g.text(font, ls.get(i), xx, yy + i * LINE_H, INK_GOLD, false);
             }
             hl = Math.max(hl, ls.size());
             xx += widths[c];
@@ -1040,7 +1040,7 @@ public class BookScreen extends Screen {
             xx = x + 6;
             for (int c = 0; c < cells.size(); c++) {
                 for (int i = 0; i < cells.get(c).size(); i++) {
-                    g.drawString(font, cells.get(c).get(i), xx, yy + i * LINE_H, INK, false);
+                    g.text(font, cells.get(c).get(i), xx, yy + i * LINE_H, INK, false);
                 }
                 xx += widths[c];
             }
@@ -1164,7 +1164,7 @@ public class BookScreen extends Screen {
             return 0;
         }
         int n = 0;
-        for (ItemStack s : player.getInventory().items) {
+        for (ItemStack s : player.getInventory().getNonEquipmentItems()) {
             if (s.is(item)) {
                 n += s.getCount();
             }
@@ -1177,7 +1177,7 @@ public class BookScreen extends Screen {
         return n;
     }
 
-    private static void drawCheck(GuiGraphics g, int x, int y, boolean ok) {
+    private static void drawCheck(GuiGraphicsExtractor g, int x, int y, boolean ok) {
         if (ok) {
             int c = 0xFF2E7D32;
             g.fill(x, y + 4, x + 2, y + 6, c);
@@ -1194,7 +1194,7 @@ public class BookScreen extends Screen {
         }
     }
 
-    private void drawChecklist(GuiGraphics g, View v, int x, int y, int mx, int my) {
+    private void drawChecklist(GuiGraphicsExtractor g, View v, int x, int y, int mx, int my) {
         if (v.title() != null) {
             heading(g, v.title(), x, y);
         }
@@ -1209,10 +1209,10 @@ public class BookScreen extends Screen {
             String counts = have + "/" + entry.getValue();
             g.fill(x + 6, yy, x + 24, yy + 18, 0xFF2A1A0E);
             g.fill(x + 7, yy + 1, x + 23, yy + 17, 0xFF16222B);
-            g.renderItem(s, x + 7, yy + 1);
-            g.drawString(font, font.plainSubstrByWidth(s.getHoverName().getString(), PAGE_W - 28 - 24 - font.width(counts) - 4),
+            g.item(s, x + 7, yy + 1);
+            g.text(font, font.plainSubstrByWidth(s.getHoverName().getString(), PAGE_W - 28 - 24 - font.width(counts) - 4),
                     x + 28, yy + 5, INK, false);
-            g.drawString(font, counts, x + PAGE_W - 22 - font.width(counts), yy + 5, ok ? 0xFF2E7D32 : 0xFF9B2C2C, false);
+            g.text(font, counts, x + PAGE_W - 22 - font.width(counts), yy + 5, ok ? 0xFF2E7D32 : 0xFF9B2C2C, false);
             drawCheck(g, x + PAGE_W - 18, yy + 4, ok);
             if (mx >= x + 7 && mx < x + 23 && my >= yy + 1 && my < yy + 17) {
                 hoverStack = s;
@@ -1223,11 +1223,11 @@ public class BookScreen extends Screen {
             ItemStack s = new ItemStack(ModBlocks.CHANNEL_EXPANDER.get());
             g.fill(x + 6, yy, x + 24, yy + 18, 0xFF2A1A0E);
             g.fill(x + 7, yy + 1, x + 23, yy + 17, 0xFF16222B);
-            g.renderItem(s, x + 7, yy + 1);
+            g.item(s, x + 7, yy + 1);
             String counts = Integer.toString(have(ModBlocks.CHANNEL_EXPANDER.get().asItem()));
-            g.drawString(font, font.plainSubstrByWidth(s.getHoverName().getString() + " " + Component.translatable("gui.golem_logix.book.optional").getString(),
+            g.text(font, font.plainSubstrByWidth(s.getHoverName().getString() + " " + Component.translatable("gui.golem_logix.book.optional").getString(),
                     PAGE_W - 28 - 24 - font.width(counts) - 4), x + 28, yy + 5, INK_DIM, false);
-            g.drawString(font, counts, x + PAGE_W - 22 - font.width(counts), yy + 5, INK_DIM, false);
+            g.text(font, counts, x + PAGE_W - 22 - font.width(counts), yy + 5, INK_DIM, false);
             if (mx >= x + 7 && mx < x + 23 && my >= yy + 1 && my < yy + 17) {
                 hoverStack = s;
             }
@@ -1235,7 +1235,7 @@ public class BookScreen extends Screen {
         }
         // total
         drawCheck(g, x + 8, yy + 4, all);
-        g.drawString(font, Component.translatable(all ? "gui.golem_logix.book.have_all" : "gui.golem_logix.book.have_not_all"),
+        g.text(font, Component.translatable(all ? "gui.golem_logix.book.have_all" : "gui.golem_logix.book.have_not_all"),
                 x + 24, yy + 5, all ? 0xFF2E7D32 : 0xFF9B2C2C, false);
         yy += 18;
         // ghost button
@@ -1245,7 +1245,7 @@ public class BookScreen extends Screen {
         g.fill(bx, yy, bx + bw, yy + bh, 0xFF1A0F08);
         g.fill(bx + 1, yy + 1, bx + bw - 1, yy + bh - 1, hover ? GolemGui.CYAN : GolemGui.BRASS);
         g.fill(bx + 2, yy + 2, bx + bw - 2, yy + bh - 2, showing ? 0xFF1B4A48 : 0xFF3A2314);
-        g.drawCenteredString(font, Component.translatable(showing ? "gui.golem_logix.book.ghost_hide" : "gui.golem_logix.book.ghost_show"),
+        g.centeredText(font, Component.translatable(showing ? "gui.golem_logix.book.ghost_hide" : "gui.golem_logix.book.ghost_show"),
                 bx + bw / 2, yy + 4, hover ? 0xFFFFE9A8 : GolemGui.PARCHMENT);
         clickables.add(new Clickable(bx, yy, bw, bh, () -> {
             if (showing) {
@@ -1279,7 +1279,7 @@ public class BookScreen extends Screen {
     }
 
     /** The list of trials with marks: passed = a green tick and struck-through text, not yet = an empty brass frame. */
-    private void drawTasks(GuiGraphics g, View v, int x, int y, int mx, int my) {
+    private void drawTasks(GuiGraphicsExtractor g, View v, int x, int y, int mx, int my) {
         if (v.title() != null) {
             heading(g, v.title(), x, y);
         }
@@ -1298,7 +1298,7 @@ public class BookScreen extends Screen {
             String text = (done ? "§m" : "") + task.get("text").getAsString().replace('&', '§');
             int ty = yy + 2;
             for (FormattedCharSequence l : font.split(styled(text), PAGE_W - 30)) {
-                g.drawString(font, l, x + 24, ty, done ? INK_DIM : INK, false);
+                g.text(font, l, x + 24, ty, done ? INK_DIM : INK, false);
                 ty += LINE_H;
             }
             yy = Math.max(yy + 14, ty) + 4;
@@ -1307,7 +1307,7 @@ public class BookScreen extends Screen {
 
     // ---------------------------------------------------------- illustrations
 
-    private void drawImage(GuiGraphics g, View v, int x, int y) {
+    private void drawImage(GuiGraphicsExtractor g, View v, int x, int y) {
         JsonObject d = v.data();
         int size = d.has("size") ? d.get("size").getAsInt() : 144;
         int top = y + 8;
@@ -1315,7 +1315,7 @@ public class BookScreen extends Screen {
             heading(g, v.title(), x, y);
             top = y + v.hh() + 4;
         }
-        ResourceLocation tex = tex(d.get("texture").getAsString());
+        Identifier tex = tex(d.get("texture").getAsString());
         int ix = x + (PAGE_W - size) / 2;
         g.fill(ix - 2, top - 2, ix + size + 2, top + size + 2, 0x30301808);
         g.blit(tex, ix, top, size, size, 0, 0, 288, 288, 288, 288);
@@ -1526,7 +1526,7 @@ public class BookScreen extends Screen {
     }
 
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partial) {
+    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
         g.fill(0, 0, width, height, 0xB0000000);
     }
 }

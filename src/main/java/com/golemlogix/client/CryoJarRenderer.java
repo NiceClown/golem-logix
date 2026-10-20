@@ -1,5 +1,8 @@
 package com.golemlogix.client;
 
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.util.LightCoordsUtil;
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.CryoJarBlockEntity;
 import com.golemlogix.blocks.CryoJarBlock;
@@ -7,14 +10,13 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.level.Level;
@@ -35,19 +37,19 @@ import static com.golemlogix.client.CryoMainframeRenderer.fitWall;
  * Pixels in the north-facing frame: the front is Z 0, the viewer's right is -X; Y 0..32 over both halves.
  */
 public class CryoJarRenderer implements BlockEntityRenderer<CryoJarBlockEntity> {
-    static final ResourceLocation BRICK = mc("nether_bricks"), DARK = tex("sat_dark"), BRASS = tex("sat_brass"), ICE = tex("sat_ice"),
+    static final Identifier BRICK = mc("nether_bricks"), DARK = tex("sat_dark"), BRASS = tex("sat_brass"), ICE = tex("sat_ice"),
             GLASS = tex("sat_glass"), RUNES = tex("cryo_panel_matrix"), GAUGE = tex("monitor_gauge"), FRAME = mc("weathered_copper"),
             SNOW = mc("snow"), CRYO = tex("cryo_source_still"), COPPER = mc("copper_block");
     static final int BRICK_TINT = 0xFFC89A8A, WHITE = 0xFFFFFFFF;
     /** The flask's inside, where the Source stands. */
     private static final float FLASK_BOTTOM = 8.5f, FLASK_TOP = 21.5f;
 
-    static ResourceLocation tex(String name) {
-        return ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/" + name);
+    static Identifier tex(String name) {
+        return Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/" + name);
     }
 
-    static ResourceLocation mc(String name) {
-        return ResourceLocation.withDefaultNamespace("block/" + name);
+    static Identifier mc(String name) {
+        return Identifier.withDefaultNamespace("block/" + name);
     }
 
     public CryoJarRenderer(BlockEntityRendererProvider.Context context) {
@@ -74,7 +76,7 @@ public class CryoJarRenderer implements BlockEntityRenderer<CryoJarBlockEntity> 
 
         pose.pushPose();
         Quads.faceModel(pose, state.getValue(CryoJarBlock.FACING));
-        VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS));
+        VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
         PoseStack.Pose p = pose.last();
 
         // the plinth: a dark foot, brick walls, a rune band on the front, a ledge
@@ -83,7 +85,7 @@ public class CryoJarRenderer implements BlockEntityRenderer<CryoJarBlockEntity> 
         box(vc, p, 0.8f, 6.4f, 0.8f, 15.2f, 7.6f, 15.2f, DARK, WHITE, light);
         float glow = charged ? 0.55f + 0.45f * (0.8f + 0.2f * Mth.sin(time * 0.08f)) : 0.18f;
         int rune = 0xFF000000 | ((int) (0x50 * glow) << 16) | ((int) (0xF0 * glow) << 8) | (int) (0xF0 * glow);
-        fitWall(vc, p, 1.6f, 1.8f, 14.4f, 4.4f, 0.94f, RUNES, rune, charged ? LightTexture.FULL_BRIGHT : light);
+        fitWall(vc, p, 1.6f, 1.8f, 14.4f, 4.4f, 0.94f, RUNES, rune, charged ? LightCoordsUtil.FULL_BRIGHT : light);
         // two brass valves on the left of the front, a gauge on the right
         for (float x : new float[]{10.2f, 12.6f}) {
             box(vc, p, x, 4.4f, 0.3f, x + 1.2f, 5.6f, 1f, BRASS, WHITE, light);
@@ -123,11 +125,11 @@ public class CryoJarRenderer implements BlockEntityRenderer<CryoJarBlockEntity> 
                 new Vector3f(0f, 1f, 0f), 0.36f, new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.08f), 1, null, arms);
 
         // the Cryo-Source and the glass over it
-        VertexConsumer tv = buffers.getBuffer(RenderType.entityTranslucent(InventoryMenu.BLOCK_ATLAS));
+        VertexConsumer tv = buffers.getBuffer(RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
         if (fill > 0.002f) {
             float top = FLASK_BOTTOM + (FLASK_TOP - FLASK_BOTTOM) * Math.min(1f, fill);
             int c = 0xE0FFFFFF;
-            box(tv, p, 3.4f, FLASK_BOTTOM, 3.4f, 12.6f, top, 12.6f, CRYO, c, LightTexture.FULL_BRIGHT);
+            box(tv, p, 3.4f, FLASK_BOTTOM, 3.4f, 12.6f, top, 12.6f, CRYO, c, LightCoordsUtil.FULL_BRIGHT);
         }
         box(tv, p, 3.0f, 8.5f, 3.0f, 13.0f, 21.5f, 13.0f, GLASS, 0x90E8F8FF, light);
         pose.popPose();

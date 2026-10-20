@@ -471,21 +471,33 @@ public class BusBlockEntity extends BlockEntity {
 
     // ----------------------------------------------------------- persistence
 
-    @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveTag(CompoundTag tag, HolderLookup.Provider registries) {
         tag.put("Filters", filters.createTag(registries));
         tag.put("Upgrades", upgrades.createTag(registries));
         tag.putInt("Priority", priority);
         redstone.save(tag);
     }
 
-    @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        filters.fromTag(tag.getList("Filters", Tag.TAG_COMPOUND), registries);
-        upgrades.fromTag(tag.getList("Upgrades", Tag.TAG_COMPOUND), registries);
-        priority = tag.getInt("Priority");
+    protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
+        filters.fromTag(tag.getListOrEmpty("Filters"), registries);
+        upgrades.fromTag(tag.getListOrEmpty("Upgrades"), registries);
+        priority = tag.getIntOr("Priority", 0);
         redstone.load(tag);
+    }
+
+    // ---- 1.21.6+: the game's ValueInput/ValueOutput over the CompoundTag code above
+
+    @Override
+    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        super.saveAdditional(output);
+        CompoundTag tag = new CompoundTag();
+        saveTag(tag, com.golemlogix.system.NbtBridge.registries(this));
+        com.golemlogix.system.NbtBridge.write(output, tag);
+    }
+
+    @Override
+    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+        super.loadAdditional(input);
+        loadTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
     }
 }

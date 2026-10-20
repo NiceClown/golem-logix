@@ -68,7 +68,7 @@ public class InterfaceBlock extends Block implements GolemNode, EntityBlock {
             if (!level.isClientSide()) {
                 net.neoforged.neoforge.fluids.FluidUtil.interactWithFluidHandler(player, hand, be.fluids());
             }
-            return net.minecraft.world.ItemInteractionResult.sidedSuccess(level.isClientSide());
+            return net.minecraft.world.InteractionResult.SUCCESS;
         }
         return super.useItemOn(stack, state, level, pos, player, hand, hit);
     }

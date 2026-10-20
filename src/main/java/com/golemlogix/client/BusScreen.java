@@ -1,7 +1,7 @@
 package com.golemlogix.client;
 
 import com.golemlogix.menu.BusMenu;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
@@ -19,12 +19,12 @@ public class BusScreen extends GolemScreen<BusMenu> {
     }
 
     @Override
-    protected void renderExtraBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
+    protected void renderExtraBg(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
         if (!menu.isPeriscope()) {
             GolemGui.inset(g, leftPos + BusMenu.FILTER_X, topPos + 18, 56, 56);
         }
         Component hint = Component.translatable(menu.isPeriscope() ? "gui.golem_logix.bus.periscope_hint"
                 : menu.isExport() ? "gui.golem_logix.bus.export_hint" : "gui.golem_logix.bus.import_hint");
-        g.drawWordWrap(font, hint, leftPos + 8, topPos + 90, imageWidth - 16, GolemGui.CYAN_DARK);
+        g.textWithWordWrap(font, hint, leftPos + 8, topPos + 90, imageWidth - 16, GolemGui.CYAN_DARK);
     }
 }

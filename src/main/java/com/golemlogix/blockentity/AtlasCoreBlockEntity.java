@@ -201,9 +201,7 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         }
     }
 
-    @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveTag(CompoundTag tag, HolderLookup.Provider registries) {
         tag.putBoolean("Powered", powered);
         tag.putBoolean("Formed", formed);
         tag.putInt("ChannelsUsed", channelsUsed);
@@ -214,17 +212,15 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         tag.putBoolean("Duplicate", duplicate);
     }
 
-    @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        powered = tag.getBoolean("Powered");
-        formed = tag.getBoolean("Formed");
-        channelsUsed = tag.getInt("ChannelsUsed");
-        channelCapacity = tag.getInt("ChannelCapacity");
-        devices = tag.getInt("Devices");
-        sourcePerSecond = tag.getInt("SourcePerSecond");
-        infiniteSource = tag.getBoolean("InfiniteSource");
-        duplicate = tag.getBoolean("Duplicate");
+    protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
+        powered = tag.getBooleanOr("Powered", false);
+        formed = tag.getBooleanOr("Formed", false);
+        channelsUsed = tag.getIntOr("ChannelsUsed", 0);
+        channelCapacity = tag.getIntOr("ChannelCapacity", 0);
+        devices = tag.getIntOr("Devices", 0);
+        sourcePerSecond = tag.getIntOr("SourcePerSecond", 0);
+        infiniteSource = tag.getBooleanOr("InfiniteSource", false);
+        duplicate = tag.getBooleanOr("Duplicate", false);
         // only in update packets (client visuals), never saved with the world
         if (tag.contains("CargoItems")) {
             cargoItems = readStacks(tag.getList("CargoItems", Tag.TAG_COMPOUND), registries);
@@ -244,7 +240,7 @@ public class AtlasCoreBlockEntity extends BlockEntity {
     private static ListTag writeStacks(List<ItemStack> stacks, HolderLookup.Provider registries) {
         ListTag list = new ListTag();
         for (ItemStack s : stacks) {
-            list.add(s.save(registries));
+            list.add(com.golemlogix.system.NbtBridge.saveItem(s, registries));
         }
         return list;
     }
@@ -252,7 +248,7 @@ public class AtlasCoreBlockEntity extends BlockEntity {
     private static List<ItemStack> readStacks(ListTag list, HolderLookup.Provider registries) {
         List<ItemStack> out = new ArrayList<>();
         for (int i = 0; i < list.size(); i++) {
-            ItemStack s = ItemStack.parseOptional(registries, list.getCompound(i));
+            ItemStack s = com.golemlogix.system.NbtBridge.loadItem(registries, list.getCompoundOrEmpty(i)).orElse(ItemStack.EMPTY);
             if (!s.isEmpty()) {
                 out.add(s);
             }
@@ -263,5 +259,21 @@ public class AtlasCoreBlockEntity extends BlockEntity {
     @Override
     public ClientboundBlockEntityDataPacket getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    // ---- 1.21.6+: the game's ValueInput/ValueOutput over the CompoundTag code above
+
+    @Override
+    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        super.saveAdditional(output);
+        CompoundTag tag = new CompoundTag();
+        saveTag(tag, com.golemlogix.system.NbtBridge.registries(this));
+        com.golemlogix.system.NbtBridge.write(output, tag);
+    }
+
+    @Override
+    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+        super.loadAdditional(input);
+        loadTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
     }
 }

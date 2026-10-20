@@ -5,7 +5,7 @@ import com.golemlogix.menu.TerminalMenu;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -21,7 +21,7 @@ import java.util.List;
 public record CraftPlanPayload(int containerId, int request, Status status, int steps, long executions,
                                List<Entry> entries) implements CustomPacketPayload {
     public static final Type<CraftPlanPayload> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "craft_plan"));
+            new Type<>(Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "craft_plan"));
     /** The plan sends no more rows than this (the window scrolls; the rest does not matter in huge orders). */
     public static final int MAX_ENTRIES = 256;
 
