@@ -1,6 +1,5 @@
 package com.golemlogix.client;
 
-import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.util.LightCoordsUtil;
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.EternalFrostResonatorBlockEntity;
@@ -63,7 +62,7 @@ public class EternalFrostResonatorRenderer extends com.golemlogix.client.render.
         float time = be.getLevel().getGameTime() + partialTick;
         float speed = be.clientLinked ? 1f : 0.4f;
         float bright = be.clientLinked ? 1f : 0.7f;
-        VertexConsumer vc = buffers.getBuffer(RenderTypes.eyes(VORTEX));
+        VertexConsumer vc = buffers.getBuffer(com.golemlogix.client.render.GlowTypes.glow(VORTEX));
         PoseStack.Pose p = pose.last();
         float scroll = time * 0.02f * (0.5f + speed);
         for (int k = 0; k < 3; k++) {

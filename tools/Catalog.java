@@ -453,11 +453,15 @@ final class Catalog {
         p.disc(8, 6.5, 6.2, at(BRASS, 2.0));
         p.ring(8, 6.5, 5.3, 6.1, at(BRASS, 3.8));
         p.ring(8, 6.5, 5.75, 5.9, at(BRASS, 5.0));
+        // the glint on the glass is mixed into the screen: a translucent texel would put the whole face into the translucent
+        // layer, which 26.1 draws after the hologram and over it
         p.discFn(8, 6.5, 5.3, (u, v) -> {
             double d = Math.hypot(u - 8, v - 6.5) / 5.3;
-            return Paint.ramp(CYAN, 0.3 + 0.5 * (1 - d));
+            int c = Paint.ramp(CYAN, 0.3 + 0.5 * (1 - d));
+            double t = Math.max(0, Math.min(1, ((u - 4.2) * 2.2 + (v - 4.6) * -2.0) / (2.2 * 2.2 + 2.0 * 2.0)));
+            boolean glint = Math.hypot(u - (4.2 + 2.2 * t), v - (4.6 - 2.0 * t)) <= 0.15;
+            return glint ? Paint.mix(c, rgb(0xFFFFFF), 90 / 255.0) : c;
         });
-        p.line(4.2, 4.6, 6.4, 2.6, 0.3, argb(90, 0xFFFFFF));
         // card slot, lamps, lever
         p.slab(4.0, 13.0, 12.0, 14.4, IRON, 0.6, 1);
         p.rect(4.6, 13.5, 11.4, 13.9, rgb(0x050505));

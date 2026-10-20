@@ -36,6 +36,10 @@ public class ModBlockEntities {
             BLOCK_ENTITY_TYPES.register("cryo_distillation_tower", () ->
                     new BlockEntityType<>(com.golemlogix.blockentity.DistillationTowerBlockEntity::new, ModBlocks.CRYO_DISTILLATION_TOWER.get()));
 
+    public static final Supplier<BlockEntityType<com.golemlogix.blockentity.CryoMixerBlockEntity>> CRYO_MIXER =
+            BLOCK_ENTITY_TYPES.register("cryo_mixer", () ->
+                    new BlockEntityType<>(com.golemlogix.blockentity.CryoMixerBlockEntity::new, ModBlocks.CRYO_MIXER.get()));
+
     public static final Supplier<BlockEntityType<com.golemlogix.blockentity.TelegraphBlockEntity>> TELEGRAPH =
             BLOCK_ENTITY_TYPES.register("cryo_source_telegraph", () ->
                     new BlockEntityType<>(com.golemlogix.blockentity.TelegraphBlockEntity::new, ModBlocks.CRYO_SOURCE_TELEGRAPH.get()));

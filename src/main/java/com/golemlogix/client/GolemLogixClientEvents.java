@@ -35,6 +35,12 @@ public class GolemLogixClientEvents {
         event.registerBlockEntityRenderer(ModBlockEntities.TELEGRAPH.get(), TelegraphRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.CRYO_JAR.get(), CryoJarRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.DISTILLATION_TOWER.get(), DistillationTowerRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.CRYO_MIXER.get(), CryoMixerRenderer::new);
+    }
+
+    @SubscribeEvent
+    public static void registerPipelines(net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent event) {
+        event.registerPipeline(com.golemlogix.client.render.GlowTypes.ADDITIVE_EYES);
     }
 
     @SubscribeEvent
@@ -54,6 +60,7 @@ public class GolemLogixClientEvents {
         event.register(ModMenus.INTERFACE.get(), InterfaceScreen::new);
         event.register(ModMenus.MAINFRAME.get(), MainframeScreen::new);
         event.register(ModMenus.DISTILLATION_TOWER.get(), DistillationTowerScreen::new);
+        event.register(ModMenus.CRYO_MIXER.get(), CryoMixerScreen::new);
         event.register(ModMenus.CARD_CATALOG.get(), CardCatalogScreen::new);
         event.register(ModMenus.CONCENTRATOR.get(), ConcentratorScreen::new);
         event.register(ModMenus.TELEGRAPH.get(), TelegraphScreen::new);

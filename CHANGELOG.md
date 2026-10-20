@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.0.2 (26.1.2) — The Cryo-Mixer
+
+- **New block: the Cryo-Mixer.** Two blocks high, with a water flask and a Liquid Cryo-Source flask on top, a copper module with a
+  turning gear, louvred brass sides and a copper golem at the valve. It freezes water with Cryo-Source in two modes switched in its
+  window: **snow** (a snow block a second from 250 mB of water and 25 mB of Cryo-Source) for snow golems and the plates for pipes,
+  or **ice** (a block of ice every 5 seconds from 1000 + 100 mB) to pack into Packed Ice for Cryo-Substrate. Up to four Compressed
+  Co-Processors speed it up (four make it five times faster), a Redstone Module puts it on a signal. Water goes in by bucket or by
+  any pipe, Cryo-Source through an Export Bus from the network's Source; the snow or ice waits in the tray for the window or an
+  Import Bus. A guide entry in the Rituals chapter, a JEI page with both modes.
+- **JEI:** the Mana Saturator's page draws a small projection of the whole multiblock; a new page shows forging by hand on the
+  anvil (a block and four Forge Hammer strikes make a plate).
+- **The guide no longer leans on other mods**: the channels, devices, disks, fuzzy cards, orders and the concentrator are explained
+  on their own, without "like in AE2/RS".
+- Right-clicking the search field of a terminal or of the guide clears it.
+- The mod's advancement tab shows its packed ice background again.
+- **The Schematic Concentrator's hologram is back on its screen.** On 26.1 one nearly opaque texel (the glint on the glass) put
+  the whole front into the translucent layer, which the game draws after the hologram and over it; the glow itself is added to
+  the light again as on 1.21.1 (the game's own glow now blends as translucent). The Eternal Frost Resonator's vortex uses the same
+  glow. The faces of the Recipe Monitor's portal and the Interface's metronome had the same stray texels and are solid again.
+- The Cryo-Mixer window squeezes a line that is too long for its panel (the ice pace, longer translations).
+- 109 game tests.
+
 ## 2.0.1 (26.1.2) — The core grows step by step; the tower pipes its jars
 
 - **Three steps of the Atlas Core.** The core alone runs a small network of **8 channels** and connects only through its bottom

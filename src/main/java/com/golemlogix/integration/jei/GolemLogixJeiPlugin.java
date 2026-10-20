@@ -314,7 +314,9 @@ public class GolemLogixJeiPlugin implements IModPlugin {
     public void registerCategories(IRecipeCategoryRegistration registration) {
         registration.addRecipeCategories(
                 new AnvilCrushCategory(registration.getJeiHelpers().getGuiHelper()),
-                new ManaSaturatorCategory(registration.getJeiHelpers().getGuiHelper())
+                new ManaSaturatorCategory(registration.getJeiHelpers().getGuiHelper()),
+                new HandForgingCategory(registration.getJeiHelpers().getGuiHelper()),
+                new CryoMixerCategory(registration.getJeiHelpers().getGuiHelper())
         );
     }
 
@@ -322,6 +324,10 @@ public class GolemLogixJeiPlugin implements IModPlugin {
     public void registerRecipeCatalysts(IRecipeCatalystRegistration registration) {
         registration.addRecipeCatalyst(new ItemStack(Blocks.ANVIL), AnvilCrushCategory.TYPE);
         registration.addRecipeCatalyst(new ItemStack(ModBlocks.MANA_SATURATOR.get()), ManaSaturatorCategory.TYPE);
+        // by hand: the hammer on the Saturator's anvil before the machine is assembled
+        registration.addRecipeCatalyst(new ItemStack(com.golemlogix.init.ModItems.FORGE_HAMMER.get()), HandForgingCategory.TYPE);
+        registration.addRecipeCatalyst(new ItemStack(ModBlocks.MANA_SATURATOR.get()), HandForgingCategory.TYPE);
+        registration.addRecipeCatalyst(new ItemStack(ModBlocks.CRYO_MIXER.get()), CryoMixerCategory.TYPE);
     }
 
     @Override
@@ -354,6 +360,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         // 2. Mana Saturator: its recipes from the data packs (golem_logix:saturator), the secret ones hidden like the Wither
         List<ManaSaturatorRecipe> saturatorRecipes = new java.util.ArrayList<>();
         List<ManaSaturatorRecipe> secret = new java.util.ArrayList<>();
+        List<HandForgingCategory.Recipe> byHand = new java.util.ArrayList<>();
         if (manager != null) {
             for (var holder : manager.byType(com.golemlogix.init.ModRecipes.SATURATOR_TYPE.get())) {
                 com.golemlogix.recipe.SaturatorRecipe s = holder.value();
@@ -361,6 +368,10 @@ public class GolemLogixJeiPlugin implements IModPlugin {
                 saturatorRecipes.add(r);
                 if (s.secret()) {
                     secret.add(r);
+                }
+                // the recipes with a "hand_result" can also be forged by hand with the Forge Hammer
+                if (!s.handResult().isEmpty() && !s.secret()) {
+                    byHand.add(new HandForgingCategory.Recipe(List.of(com.golemlogix.system.RecipeItems.stacks(s.ingredient())), s.handResult()));
                 }
             }
         }
@@ -370,5 +381,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
             saturatorRecipes.add(new ManaSaturatorRecipe(List.of(com.golemlogix.system.RecipeItems.stacks(gem.input())), gem.source(), gem.output(), gem.ticks()));
         }
         registration.addRecipes(ManaSaturatorCategory.TYPE, saturatorRecipes);
+        registration.addRecipes(HandForgingCategory.TYPE, byHand);
+        registration.addRecipes(CryoMixerCategory.TYPE, CryoMixerCategory.recipes());
     }
 }

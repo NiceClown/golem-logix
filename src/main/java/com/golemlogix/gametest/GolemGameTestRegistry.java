@@ -152,7 +152,8 @@ public final class GolemGameTestRegistry {
             new Test("saturatorredstonemodule", GolemGameTests::saturatorRedstoneModule, 400, 0),
             new Test("resonatoronlyfeedschronometers", GolemGameTests::resonatorOnlyFeedsChronometers, 200, 0),
             new Test("cryojarfeedsnetwork", GolemGameTests::cryoJarFeedsNetwork, 120, 0),
-            new Test("distillationtowerfillsjar", GolemGameTests::distillationTowerFillsJar, 200, 0)
+            new Test("distillationtowerfillsjar", GolemGameTests::distillationTowerFillsJar, 200, 0),
+            new Test("cryomixersnowandice", GolemGameTests::cryoMixerSnowAndIce, 300, 0)
     );
 
     private GolemGameTestRegistry() {

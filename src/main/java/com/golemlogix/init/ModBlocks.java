@@ -157,6 +157,10 @@ public class ModBlocks {
     public static final DeferredBlock<com.golemlogix.blocks.DistillationTowerBlock> CRYO_DISTILLATION_TOWER = registerBlock("cryo_distillation_tower",
             "tooltip.golem_logix.cryo_distillation_tower",
             () -> new com.golemlogix.blocks.DistillationTowerBlock(props()));
+    // water and Liquid Cryo-Source frozen into snow (for snow golems) or ice
+    public static final DeferredBlock<com.golemlogix.blocks.CryoMixerBlock> CRYO_MIXER = registerBlock("cryo_mixer",
+            "tooltip.golem_logix.cryo_mixer",
+            () -> new com.golemlogix.blocks.CryoMixerBlock(props()));
 
     /** The block being built right now: since 1.21.2 its properties must carry its id. */
     private static net.minecraft.resources.Identifier building;

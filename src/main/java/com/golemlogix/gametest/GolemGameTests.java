@@ -3758,4 +3758,73 @@ public class GolemGameTests {
             helper.succeed();
         });
     }
+
+    /** Cryo-Mixer: each fluid into its own flask, snow fast and ice slow, co-processors, the tray only gives, the Redstone Module. */
+    public static void cryoMixerSnowAndIce(GameTestHelper helper) {
+        var level = helper.getLevel();
+        BlockPos base = new BlockPos(3, 1, 3);
+        com.golemlogix.blocks.CryoMixerBlock.place(level, helper.absolutePos(base), Direction.SOUTH, ModBlocks.CRYO_MIXER.get());
+        var mixer = helper.getBlockEntity(base, com.golemlogix.blockentity.CryoMixerBlockEntity.class);
+        var exec = net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE;
+        var bottom = com.golemlogix.system.LegacyResources.fluids(level, helper.absolutePos(base), Direction.NORTH);
+        var top = com.golemlogix.system.LegacyResources.fluids(level, helper.absolutePos(base.above()), Direction.UP);
+        var tray = com.golemlogix.system.LegacyResources.items(level, helper.absolutePos(base), Direction.NORTH);
+        helper.assertTrue(bottom != null && top != null && tray != null, "both blocks take fluids, the tray is reachable");
+        helper.assertTrue(bottom.fill(new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.WATER, 8000), exec) == 8000,
+                "water goes in below");
+        helper.assertTrue(top.fill(new net.neoforged.neoforge.fluids.FluidStack(com.golemlogix.init.ModFluids.CRYO_SOURCE.get(), 1000), exec) == 1000,
+                "Liquid Cryo-Source goes in on top");
+        helper.assertTrue(mixer.water().getAmount() == 8000 && mixer.cryo().getAmount() == 1000, "each into its own flask");
+        helper.assertTrue(top.fill(new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.LAVA, 1000), exec) == 0,
+                "lava is neither");
+        helper.assertTrue(top.drain(500, exec).isEmpty() && bottom.drain(500, exec).isEmpty(), "nothing flows back out");
+        helper.assertTrue(tray.insertItem(0, new ItemStack(Items.SNOW_BLOCK), true).getCount() == 1, "nothing goes into the tray");
+        var snow = com.golemlogix.blockentity.CryoMixerBlockEntity.Mode.SNOW;
+        var ice = com.golemlogix.blockentity.CryoMixerBlockEntity.Mode.ICE;
+        helper.assertTrue(snow.ticks() < ice.ticks() && snow.output().is(Items.SNOW_BLOCK) && ice.output().is(Items.ICE),
+                "snow is fast, ice is slow");
+        mixer.setMode(snow);
+        var up = mixer.getUpgrades();
+        ItemStack copro = new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get());
+        for (int i = 0; i < 4; i++) {
+            helper.assertTrue(up.canPlaceItem(i, copro), "co-processor " + (i + 1) + " fits");
+            up.setItem(i, copro.copy());
+        }
+        int fast = (int) Math.ceil(snow.ticks() / 5.0);
+        helper.assertTrue(mixer.ticksPerBlock() == fast, "four co-processors: " + snow.ticks() + " -> " + mixer.ticksPerBlock() + " ticks");
+        helper.runAfterDelay(fast * 3 + 2, () -> {
+            int n = mixer.getOutput().getItem(0).getCount();
+            helper.assertTrue(mixer.getOutput().getItem(0).is(Items.SNOW_BLOCK) && n >= 3, "snow in the tray: " + n);
+            helper.assertTrue(mixer.water().getAmount() == 8000 - n * snow.water() && mixer.cryo().getAmount() == 1000 - n * snow.cryo(),
+                    "each snow block takes " + snow.water() + " + " + snow.cryo() + " mB");
+            mixer.setMode(ice);
+            helper.runAfterDelay(3, () -> {
+                helper.assertTrue(mixer.status() == com.golemlogix.blockentity.CryoMixerBlockEntity.TRAY_FULL
+                        && mixer.getOutput().getItem(0).is(Items.SNOW_BLOCK), "ice waits while snow lies in the tray");
+                int waterLeft = mixer.water().getAmount(), cryoLeft = mixer.cryo().getAmount();
+                helper.assertTrue(tray.extractItem(0, 64, false).getCount() == n && mixer.getOutput().getItem(0).isEmpty(),
+                        "an Import Bus takes the snow");
+                int slow = (int) Math.ceil(ice.ticks() / 5.0);
+                helper.runAfterDelay(slow + 2, () -> {
+                    int k = mixer.getOutput().getItem(0).getCount();
+                    helper.assertTrue(mixer.getOutput().getItem(0).is(Items.ICE) && k >= 1, "ice in the tray: " + k);
+                    helper.assertTrue(mixer.water().getAmount() == waterLeft - k * ice.water()
+                            && mixer.cryo().getAmount() == cryoLeft - k * ice.cryo(), "each block of ice takes " + ice.water() + " + " + ice.cryo() + " mB");
+                    // the Redstone Module: "high" without a signal stops it, a signal starts it again
+                    up.setItem(4, new ItemStack(ModItems.REDSTONE_MODULE.get()));
+                    mixer.menuData().set(7, com.golemlogix.upgrade.RedstoneMode.HIGH.ordinal());
+                    helper.runAfterDelay(2, () -> {
+                        helper.assertTrue(mixer.status() == com.golemlogix.blockentity.CryoMixerBlockEntity.PAUSED, "no signal, no ice");
+                        helper.setBlock(base.east(), Blocks.REDSTONE_BLOCK);
+                        helper.runAfterDelay(2, () -> {
+                            helper.assertTrue(mixer.status() == com.golemlogix.blockentity.CryoMixerBlockEntity.WORKING, "a signal starts it");
+                            level.destroyBlock(helper.absolutePos(base.above()), false);
+                            helper.assertBlockNotPresent(ModBlocks.CRYO_MIXER.get(), base);
+                            helper.succeed();
+                        });
+                    });
+                });
+            });
+        });
+    }
 }

@@ -9,7 +9,7 @@
     "description": {
       "translate": "advancements.golem_logix.root.description"
     },
-    "background": "minecraft:textures/block/packed_ice.png",
+    "background": "minecraft:block/packed_ice",
     "frame": "task",
     "show_toast": false,
     "announce_to_chat": false

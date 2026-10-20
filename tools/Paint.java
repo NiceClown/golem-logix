@@ -166,7 +166,8 @@ public final class Paint {
         int r = (int) (((a >> 16) & 255) * (1 - t) + ((b >> 16) & 255) * t);
         int g = (int) (((a >> 8) & 255) * (1 - t) + ((b >> 8) & 255) * t);
         int bl = (int) ((a & 255) * (1 - t) + (b & 255) * t);
-        int al = (int) (aa * (1 - t) + ba * t);
+        // rounded: truncating made 254 out of two opaque colours, and one such texel puts a whole face into 26.1's translucent layer
+        int al = (int) Math.round(aa * (1 - t) + ba * t);
         return (al << 24) | (r << 16) | (g << 8) | bl;
     }
 

@@ -1,0 +1,39 @@
+# Cryo-Mixer (start -Mods): the model making snow, its window in both modes; the Schematic Concentrator's hologram and the
+# Eternal Frost Resonator's vortex (26.1 glow blending); the JEI pages of the Saturator, hand forging and the mixer
+cmd time set 6000
+cmd fill -8 -60 -6 12 -54 6 minecraft:air
+cmd setblock 0 -60 0 golem_logix:cryo_mixer[section=0,facing=south]
+cmd setblock 0 -59 0 golem_logix:cryo_mixer[section=1,facing=south]
+hook fillfluid 0 -60 0 minecraft:water 6000
+hook fillfluid 0 -59 0 golem_logix:cryo_source 2000
+cmd setblock 4 -60 0 golem_logix:schematic_concentrator[facing=south]
+cmd setblock 7 -60 0 golem_logix:eternal_frost_resonator[facing=south]
+wait 80
+look 0.5 -59 0.5 4 200 20
+wait 10
+shot mixer_front
+look 0.5 -59 0.5 4 20 25
+wait 5
+shot mixer_back
+look 4.5 -59.5 0.5 2.2 180 5
+wait 5
+shot concentrator_front
+look 7.5 -59.5 0.5 3 180 15
+wait 5
+shot resonator
+use 0 -60 0
+wait 10
+shot mixer_gui
+uibutton Mode: snow
+wait 10
+shot mixer_gui_ice
+closescreen
+jeitype golem_logix:mana_saturator
+wait 10
+shot jei_saturator
+jeitype golem_logix:hand_forging
+wait 10
+shot jei_hand_forging
+jeitype golem_logix:cryo_mixer
+wait 10
+shot jei_mixer

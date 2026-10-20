@@ -33,5 +33,18 @@ public final class ModCapabilities {
                     return tower == null ? null : tower.inputResources();
                 },
                 ModBlocks.CRYO_DISTILLATION_TOWER.get());
+        // Cryo-Mixer: water and Cryo-Source go in through either block, the snow or ice comes out of the tray
+        event.registerBlock(Capabilities.Fluid.BLOCK,
+                (level, pos, state, be, side) -> {
+                    var mixer = com.golemlogix.blocks.CryoMixerBlock.entityOf(level, pos, state);
+                    return mixer == null ? null : mixer.fluidResources();
+                },
+                ModBlocks.CRYO_MIXER.get());
+        event.registerBlock(Capabilities.Item.BLOCK,
+                (level, pos, state, be, side) -> {
+                    var mixer = com.golemlogix.blocks.CryoMixerBlock.entityOf(level, pos, state);
+                    return mixer == null ? null : mixer.itemResources();
+                },
+                ModBlocks.CRYO_MIXER.get());
     }
 }

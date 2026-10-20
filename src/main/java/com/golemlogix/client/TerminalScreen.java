@@ -662,6 +662,13 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
         double mouseX = event.x(), mouseY = event.y();
         int button = event.button();
+        // a right-click on the search field clears it
+        if (button == 1 && search.isMouseOver(mouseX, mouseY)) {
+            search.setValue("");
+            search.setFocused(true);
+            setFocused(search);
+            return true;
+        }
         // scroll bar
         int lx = leftPos + TerminalMenu.LIST_X;
         int ly = topPos + TerminalMenu.LIST_Y;

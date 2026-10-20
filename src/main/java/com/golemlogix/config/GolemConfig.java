@@ -31,6 +31,12 @@ public final class GolemConfig {
     public static final ModConfigSpec.IntValue DISTILL_RATE;
     public static final ModConfigSpec.DoubleValue DISTILL_SOURCE_PER_MB;
     public static final ModConfigSpec.IntValue DISTILL_COPROCESSOR_BONUS;
+    public static final ModConfigSpec.IntValue MIXER_SNOW_WATER;
+    public static final ModConfigSpec.IntValue MIXER_SNOW_CRYO;
+    public static final ModConfigSpec.IntValue MIXER_SNOW_TICKS;
+    public static final ModConfigSpec.IntValue MIXER_ICE_WATER;
+    public static final ModConfigSpec.IntValue MIXER_ICE_CRYO;
+    public static final ModConfigSpec.IntValue MIXER_ICE_TICKS;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -101,6 +107,22 @@ public final class GolemConfig {
         DISTILL_SOURCE_PER_MB = b.comment("Source the tower makes from 1 mB of blood (Essentia Vitae, or any fluid in the tag",
                         "golem_logix:cryo_distillable).")
                 .defineInRange("distillSourcePerMb", 1.0D, 0.001D, 1000.0D);
+        b.pop();
+
+        b.push("mixer");
+        MIXER_SNOW_WATER = b.comment("Cryo-Mixer, snow mode (fast): water (mB) for one snow block.")
+                .defineInRange("snowWater", 250, 1, 64000);
+        MIXER_SNOW_CRYO = b.comment("Cryo-Mixer, snow mode: Liquid Cryo-Source (mB) for one snow block.")
+                .defineInRange("snowCryo", 25, 0, 64000);
+        MIXER_SNOW_TICKS = b.comment("Cryo-Mixer, snow mode: ticks for one snow block without Compressed Co-Processors",
+                        "(each co-processor adds the base speed once more).")
+                .defineInRange("snowTicks", 20, 1, 72000);
+        MIXER_ICE_WATER = b.comment("Cryo-Mixer, ice mode (slow): water (mB) for one block of ice.")
+                .defineInRange("iceWater", 1000, 1, 64000);
+        MIXER_ICE_CRYO = b.comment("Cryo-Mixer, ice mode: Liquid Cryo-Source (mB) for one block of ice.")
+                .defineInRange("iceCryo", 100, 0, 64000);
+        MIXER_ICE_TICKS = b.comment("Cryo-Mixer, ice mode: ticks for one block of ice without Compressed Co-Processors.")
+                .defineInRange("iceTicks", 100, 1, 72000);
         b.pop();
 
         SPEC = b.build();

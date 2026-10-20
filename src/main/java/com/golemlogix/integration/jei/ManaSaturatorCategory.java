@@ -14,14 +14,27 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
 
-/** Mana Saturator: a block on the anvil, an arrow, two plates; under the arrow the Source cost and the time. */
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
+/**
+ * Mana Saturator: on the left a small projection of the whole multiblock (the blocks it is built of, stacked like the machine),
+ * on the right a block on the anvil, an arrow, two plates; under them the Source cost and the time.
+ */
 public class ManaSaturatorCategory implements IRecipeCategory<ManaSaturatorRecipe> {
     public static final IRecipeType<ManaSaturatorRecipe> TYPE =
             IRecipeType.create(GolemLogixMod.MOD_ID, "mana_saturator", ManaSaturatorRecipe.class);
 
-    private static final int W = 150, H = 40;
-    private static final int IN_X = 26, OUT_X = 106, SLOT_Y = 4;
+    private static final int W = 150, H = 54;
+    private static final int IN_X = 58, OUT_X = 126, SLOT_Y = 10;
+    /** The projection's box on the left; the blocks' icons are scaled to fill it. */
+    private static final int PROJ_X = 1, PROJ_Y = 1, PROJ_W = 52, PROJ_H = 52;
+    private float projectionScale = 1f;
+    @org.jetbrains.annotations.Nullable
+    private List<Voxel> projection;
 
     private final IDrawable icon;
     private final IDrawable slot;
@@ -76,6 +89,53 @@ public class ManaSaturatorCategory implements IRecipeCategory<ManaSaturatorRecip
         String seconds = recipe.ticks() % 20 == 0 ? String.valueOf(recipe.ticks() / 20)
                 : String.format(java.util.Locale.ROOT, "%.1f", recipe.ticks() / 20f);
         Component cost = Component.translatable("jei.golem_logix.source_cost", recipe.sourceCost(), seconds);
-        g.text(font, cost, (W - font.width(cost)) / 2, SLOT_Y + 24, 0xFF5A3C9A, false);
+        int right = PROJ_X + PROJ_W + 2;
+        g.text(font, cost, right + (W - right - font.width(cost)) / 2, SLOT_Y + 26, 0xFF5A3C9A, false);
+        for (Voxel v : projection()) {
+            g.pose().pushMatrix();
+            g.pose().translate(v.x(), v.y());
+            g.pose().scale(projectionScale, projectionScale);
+            g.item(v.stack(), 0, 0);
+            g.pose().popMatrix();
+        }
+    }
+
+    /** One block of the projection: its icon and where it goes. */
+    private record Voxel(ItemStack stack, float x, float y) {
+    }
+
+    /**
+     * The machine's blueprint (front to the north) as block icons in the GUI's own isometric view: east goes up-left, south up-right,
+     * the far blocks are drawn first. Made once (the items need their components, which they get only after loading).
+     */
+    private List<Voxel> projection() {
+        if (projection == null) {
+            List<com.golemlogix.system.AtlasBlueprint.Cell> cells = new ArrayList<>(
+                    com.golemlogix.system.SaturatorBlueprint.cells(net.minecraft.core.Direction.NORTH));
+            cells.sort(Comparator.comparingInt((com.golemlogix.system.AtlasBlueprint.Cell c) -> -(c.dx() + c.dz()))
+                    .thenComparingInt(com.golemlogix.system.AtlasBlueprint.Cell::dy));
+            // a block icon is a cube with 10 px edges: its neighbours sit 7.07 px aside and 3.54 px up, a layer 8.66 px higher
+            float half = 7.07f, quarter = 3.54f, rise = 8.66f, icon = 16;
+            float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
+            float[][] at = new float[cells.size()][];
+            for (int i = 0; i < cells.size(); i++) {
+                var c = cells.get(i);
+                float x = (c.dz() - c.dx()) * half, y = -(c.dx() + c.dz()) * quarter - c.dy() * rise;
+                at[i] = new float[]{x, y};
+                minX = Math.min(minX, x);
+                minY = Math.min(minY, y);
+                maxX = Math.max(maxX, x + icon);
+                maxY = Math.max(maxY, y + icon);
+            }
+            float k = Math.min(1.25f, Math.min(PROJ_W / (maxX - minX), PROJ_H / (maxY - minY)));
+            projectionScale = k;
+            float ox = PROJ_X + (PROJ_W - (maxX - minX) * k) / 2 - minX * k, oy = PROJ_Y + (PROJ_H - (maxY - minY) * k) / 2 - minY * k;
+            List<Voxel> out = new ArrayList<>();
+            for (int i = 0; i < cells.size(); i++) {
+                out.add(new Voxel(new ItemStack(cells.get(i).state().getBlock()), ox + at[i][0] * k, oy + at[i][1] * k));
+            }
+            projection = out;
+        }
+        return projection;
     }
 }

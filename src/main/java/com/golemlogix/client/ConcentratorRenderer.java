@@ -1,10 +1,10 @@
 package com.golemlogix.client;
 
-import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.util.LightCoordsUtil;
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.SchematicConcentratorBlockEntity;
 import com.golemlogix.blocks.SchematicConcentratorBlock;
+import com.golemlogix.client.render.GlowTypes;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -20,7 +20,7 @@ import net.minecraft.world.phys.AABB;
 
 /**
  * Cryo Schematic Concentrator hologram: teal rings with a schematic slowly rotate on the round front screen; while the window
- * is open, glowing "punch cards" fan out of the screen and the rings spin faster. Everything is drawn as "eyes" (added
+ * is open, glowing "punch cards" fan out of the screen and the rings spin faster. Everything is drawn glowing ({@link GlowTypes}: added
  * to the light, textures with a black background instead of transparency).
  */
 public class ConcentratorRenderer extends com.golemlogix.client.render.LegacyBer<SchematicConcentratorBlockEntity> {
@@ -49,14 +49,14 @@ public class ConcentratorRenderer extends com.golemlogix.client.render.LegacyBer
         Quads.faceModel(pose, facing);
         // screen centre on the front (pixels): x 8, y 9.3, just in front of the glass
         pose.translate(8f / 16f, 9.3f / 16f, -0.05f / 16f);
-        VertexConsumer vc = buffers.getBuffer(RenderTypes.eyes(HOLO));
+        VertexConsumer vc = buffers.getBuffer(GlowTypes.glow(HOLO));
         float bright = 0.55f + 0.45f * holo + 0.05f * Mth.sin(time * 0.15f);
         // schematic rings: two layers rotating against each other
         disc(vc, pose, 5.0f, spin, bright, 0f);
         disc(vc, pose, 3.7f, -spin * 1.7f, bright * 0.7f, -0.12f);
         // fan of holographic cards in front of the screen
         if (holo > 0.01f) {
-            VertexConsumer cards = buffers.getBuffer(RenderTypes.eyes(CARD));
+            VertexConsumer cards = buffers.getBuffer(GlowTypes.glow(CARD));
             for (int k = 0; k < 5; k++) {
                 float a = (k - 2) * 24f * holo;
                 float bob = Mth.sin(time * 0.12f + k * 1.3f) * 0.4f;
