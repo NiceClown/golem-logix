@@ -124,6 +124,8 @@ have the same structure.
 
 MIT, see `LICENSE`. The copper golem puppets use the game's own copper golem model and textures.
 
+How the mod is made, what the author did and where generative AI was used: see [AI_DISCLOSURE.md](AI_DISCLOSURE.md).
+
 The channel system follows the design of [Applied Energistics 2](https://github.com/AppliedEnergistics/Applied-Energistics-2)
 by AlgorithmX2 and TeamAppliedEnergistics (its code is LGPL-3.0): channels are handed out from the controller along the shortest
 routes with dense cables first, a device carries as much as a normal cable, and the Jade tooltips use the same wording
