@@ -26,7 +26,10 @@ public class ModelPreview {
     static BufferedImage tex(String ref) throws Exception {
         String key = ref.replace("golem_logix:", "");
         if (TEX.containsKey(key)) return TEX.get(key);
-        File f = RES.resolve("textures/" + key + ".png").toFile();
+        // vanilla textures come from a folder of extracted ones, if given (-Dpreview.vanilla=dir, files by their base name)
+        File f = key.startsWith("minecraft:")
+                ? new File(System.getProperty("preview.vanilla", "."), key.substring(key.lastIndexOf('/') + 1) + ".png")
+                : RES.resolve("textures/" + key + ".png").toFile();
         BufferedImage img = f.exists() ? ImageIO.read(f) : null;
         TEX.put(key, img);
         return img;

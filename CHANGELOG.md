@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.0.4 (26.1.2) — Copper Atlants and a dressed Atlas Array
+
+- **The Atlants are redrawn in the game's own style**: iron golem statues clad in copper gone green, with vines like the vanilla
+  iron golem's, a glowing rune on the chest and cyan eyes; they hold the array up with raised arms. The same figures carry the
+  Cryo-Mainframe, and the snowman foreman of a sped-up Cryo-Calculator wears the new copper head.
+- **The Atlas Array in oxidized copper**: rune plates on the casings, ice pipes in the conduits. An assembled array grows a
+  column of glowing ice between the Atlants on every side (unless a channel expander stands there), icicles under the top layer
+  and a balcony rail of brass and spruce around the top.
+- **The Cryo-Mainframe's shelves** have an even frosted floor under the snowmen instead of a pattern of rune tiles.
+- **All block textures share one pixel density** (32 px a block), so neighbouring blocks no longer mix fine and coarse pixels.
+- 112 game tests.
+
 ## 2.0.3 (26.1.2) — Machines hand out their work; the buses come alive
 
 - **Auto-output, on by default.** The Mana Saturator and the Cryo-Mixer hand out what they make by themselves, twice a second: into

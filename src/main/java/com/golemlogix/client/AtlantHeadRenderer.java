@@ -14,7 +14,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 
-/** Atlant head: the head model rotated around the neck (8, 10, 8), first by the statue's facing, then towards the player. */
+/** Atlant head: the head model rotated around the neck (8, 6, 8), first by the statue's facing, then towards the player. */
 public class AtlantHeadRenderer extends com.golemlogix.client.render.LegacyBer<AtlantHeadBlockEntity> {
     public static final net.minecraft.resources.Identifier HEAD = com.golemlogix.client.render.StandaloneModels.ATLANT_HEAD;
 
@@ -30,11 +30,11 @@ public class AtlantHeadRenderer extends com.golemlogix.client.render.LegacyBer<A
         float pitch = Mth.lerp(partialTick, be.pitchPrev, be.pitch);
         pose.pushPose();
         Quads.faceModel(pose, be.getBlockState().getValue(AtlantBlock.FACING));
-        pose.translate(0.5, 10 / 16.0, 0.5);
+        pose.translate(0.5, 6 / 16.0, 0.5);
         // the model faces north (-Z); a positive yaw turns towards a player from right to left, pitch is a nod upwards
         pose.mulPose(Axis.YP.rotationDegrees(-yaw));
         pose.mulPose(Axis.XP.rotationDegrees(pitch));
-        pose.translate(-0.5, -10 / 16.0, -0.5);
+        pose.translate(-0.5, -6 / 16.0, -0.5);
         var mc = Minecraft.getInstance();
         com.golemlogix.client.render.StandaloneModels.render(pose.last(), buffers.getBuffer(net.minecraft.client.renderer.Sheets.cutoutBlockSheet()), HEAD, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
         pose.popPose();

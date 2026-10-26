@@ -127,9 +127,9 @@ public final class SnowmanPuppet {
                 pose.translate(-0.5f, -0.5f, -0.5f);
                 com.golemlogix.client.render.BerBuffers.block(buffers, Blocks.CARVED_PUMPKIN.defaultBlockState(), pose, light);
             } else {
-                // black atlant head (an 8x6x8 model, neck at (8, 10, 8)): a little bigger than the snow one, in its place
+                // the copper atlant head (7x8x7 with the nose, centred at (8, 10, 6)): a little bigger than the snow one, in its place
                 pose.scale(1.15f, 1.15f, 1.15f);
-                pose.translate(-0.5f, -13f / 16f, -0.5f);
+                pose.translate(-0.5f, -10f / 16f, -6f / 16f);
                 com.golemlogix.client.render.StandaloneModels.render(pose.last(), buffers.getBuffer(net.minecraft.client.renderer.Sheets.cutoutBlockSheet()), AtlantHeadRenderer.HEAD, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
             }
             pose.popPose();

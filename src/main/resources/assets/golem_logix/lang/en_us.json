@@ -210,7 +210,7 @@
   "block.golem_logix.quantum_channel_expander": "Quantum Channel Expander",
   "tooltip.golem_logix.atlas_casing": "Iron wall of the Atlas Array. Fills the sides and the crown of the 3x3x4 multiblock.",
   "tooltip.golem_logix.atlas_conduit": "Copper-and-rune bus inside the array. Links only to other array parts.",
-  "tooltip.golem_logix.atlas_atlant": "Two-block iron golem statue. Four of them hold the Atlas Array up at its corners.",
+  "tooltip.golem_logix.atlas_atlant": "Two-block iron golem statue clad in weathered copper. Four of them hold the Atlas Array up at its corners.",
   "tooltip.golem_logix.channel_expander": "Built into a side cell of the two middle layers: +16 channels on EVERY bushing line.",
   "tooltip.golem_logix.quantum_channel_expander": "Built into a side cell of the two middle layers: +32 channels on EVERY bushing line.",
   "message.golem_logix.core.unformed": "The Atlas Core works alone (through its bottom face only): channels %s/%s. A starter tower under it (two conduits on a Cable Bushing) gives 16, the whole Atlas Array 64 a line. Next for the array: %s at [%s, %s, %s].",

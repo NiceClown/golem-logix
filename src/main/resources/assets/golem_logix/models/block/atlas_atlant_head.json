@@ -2,46 +2,33 @@
   "parent": "minecraft:block/block",
   "ambientocclusion": false,
   "textures": {
-    "particle": "golem_logix:block/atlant_body",
-    "body": "golem_logix:block/atlant_body",
-    "belt": "golem_logix:block/atlant_belt",
+    "particle": "golem_logix:block/atlant_head",
+    "limb": "golem_logix:block/atlant_limb",
     "head": "golem_logix:block/atlant_head"
   },
   "elements": [
     {
-      "from": [4.8, 10, 5],
-      "to": [11.2, 15.5, 10.5],
+      "from": [4.5, 6, 3],
+      "to": [11.5, 14, 10],
       "faces": {
-        "north": {"uv": [0, 0, 16, 16], "texture": "#head"},
-        "south": {"texture": "#body"},
-        "east": {"texture": "#body"},
-        "west": {"texture": "#body"},
-        "up": {"texture": "#body"},
-        "down": {"texture": "#body"}
+        "north": {"texture": "#head"},
+        "south": {"texture": "#limb"},
+        "east": {"texture": "#limb"},
+        "west": {"texture": "#limb"},
+        "up": {"texture": "#limb"},
+        "down": {"texture": "#limb"}
       }
     },
     {
-      "from": [4.2, 13, 4.2],
-      "to": [11.8, 15.4, 4.95],
+      "from": [7.25, 7, 1.5],
+      "to": [8.75, 10, 3],
       "faces": {
-        "north": {"texture": "#belt"},
-        "south": {"texture": "#belt"},
-        "east": {"texture": "#belt"},
-        "west": {"texture": "#belt"},
-        "up": {"texture": "#belt"},
-        "down": {"texture": "#belt"}
-      }
-    },
-    {
-      "from": [7, 15.5, 5],
-      "to": [9, 16.5, 10.5],
-      "faces": {
-        "north": {"uv": [7, 0, 9, 1], "texture": "#belt"},
-        "south": {"uv": [7, 0, 9, 1], "texture": "#belt"},
-        "east": {"uv": [5.5, 0, 11, 1], "texture": "#belt"},
-        "west": {"uv": [5, 0, 10.5, 1], "texture": "#belt"},
-        "up": {"texture": "#belt"},
-        "down": {"texture": "#belt"}
+        "north": {"texture": "#head"},
+        "south": {"texture": "#head"},
+        "east": {"texture": "#head"},
+        "west": {"texture": "#head"},
+        "up": {"texture": "#head"},
+        "down": {"texture": "#head"}
       }
     }
   ]

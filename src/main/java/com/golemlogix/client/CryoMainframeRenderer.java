@@ -48,7 +48,7 @@ import org.joml.Vector3f;
 public class CryoMainframeRenderer extends com.golemlogix.client.render.LegacyBer<CryoMainframeBlockEntity> {
     private static final Identifier BRONZE = tex("sat_bronze"), BRASS = tex("sat_brass"), DARK = tex("sat_dark"),
             MATRIX = tex("cryo_panel_matrix"), GLASS = tex("sat_glass"), PANEL = tex("cryo_panel"), GAUGE = tex("monitor_gauge"),
-            COPPER = Identifier.withDefaultNamespace("block/copper_block"), DECK = tex("monitor_deck");
+            COPPER = Identifier.withDefaultNamespace("block/copper_block"), FLOOR = tex("mainframe_floor");
 
     private static Identifier tex(String name) {
         return Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/" + name);
@@ -115,8 +115,8 @@ public class CryoMainframeRenderer extends com.golemlogix.client.render.LegacyBe
         // inside: a glowing matrix over the whole back wall and a brass shelf in the middle
         wall(vc, p, -14, 3, 30, 28, 28.9f, MATRIX, white, LightCoordsUtil.FULL_BRIGHT);
         box(vc, p, -14, 15, 3, 30, 16, 29, BRASS, white, light);
-        box(vc, p, -14, 3, 3, 30, 3.2f, 29, DECK, 0xFF9AA4B0, light);
-        box(vc, p, -14, 16, 3, 30, 16.2f, 29, DECK, 0xFF9AA4B0, light);
+        box(vc, p, -14, 3, 3, 30, 3.2f, 29, FLOOR, white, light);
+        box(vc, p, -14, 16, 3, 30, 16.2f, 29, FLOOR, white, light);
 
         // calculators on the shelves (as many as are inserted), at the back wall
         int calcs = be.clientCalcs();
@@ -243,8 +243,8 @@ public class CryoMainframeRenderer extends com.golemlogix.client.render.LegacyBe
         pose.translate(neck.x / 16f, neck.y / 16f, neck.z / 16f);
         pose.mulPose(Axis.YP.rotationDegrees(-yaw + (right ? -12f : 12f)));
         pose.mulPose(Axis.XP.rotationDegrees(pitch));
-        pose.scale(1.55f, 1.55f, 1.55f);
-        pose.translate(-0.5f, -10f / 16f, -0.5f);
+        pose.scale(0.95f, 0.95f, 0.95f);
+        pose.translate(-0.5f, -6f / 16f, -0.5f);
         com.golemlogix.client.render.StandaloneModels.render(pose.last(), buffers.getBuffer(net.minecraft.client.renderer.Sheets.cutoutBlockSheet()), AtlantHeadRenderer.HEAD, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
         pose.popPose();
     }

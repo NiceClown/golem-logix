@@ -13,7 +13,7 @@ import org.joml.Vector3f;
  * A crew of snowman assemblers on a 16x16 platform (the Cryo-Calculator roof, a Cryo-Mainframe shelf). At work each one
  * in its own rhythm bends down for an ice part, lifts it over its head and tosses it into the item projection, then happily
  * hops. When idle they do cute silly things: look around, hop in circles, wave, doze.
- * The foreman with a black atlant head appears only when the coprocessors really speed up the work, and urges
+ * The foreman with a copper atlant head appears only when the coprocessors really speed up the work, and urges
  * the others on: waves its stick arm and nods.
  */
 public final class SnowCrew {

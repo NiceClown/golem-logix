@@ -316,81 +316,6 @@ public class ArtForge {
     }
 
     // ============================================================ TEXTURES
-    static void atlasCasing() throws Exception {
-        Tex t = ironPlate(11, true);
-        // brass corners at the seam and a thin teal vein
-        for (int[] c : new int[][]{{13, 13}, {18, 13}, {13, 18}, {18, 18}}) t.rivet(c[0], c[1], BRASS, BRASS_L);
-        // no purple glyph on the plating itself: on an assembled array there is one per face and it wanders over it (AtlasCoreRenderer)
-        t.save("atlas_casing");
-        Paint glyph = new Paint(4, 4, 16);
-        glyph.glowRect(1.2, 0.9, 2.8, 3.1, 1.0, Paint.at(Paint.VIOLET, 3.6), 110);
-        glyph.rune(1.2, 0.7, 2.6, 11, Paint.at(Paint.VIOLET, 5.8), Paint.at(Paint.VIOLET, 3.4));
-        glyph.save(RES.resolve("textures/entity/atlas_glyph.png").toFile());
-    }
-
-    static void atlasCasingTop() throws Exception {
-        Tex t = ironPlate(12, false);
-        // brass inlay as a frame and a rune cross in the middle
-        t.fill(4, 4, 24, 24, BRASS_D);
-        t.fill(5, 5, 22, 22, IRON);
-        t.speckle(5, 5, 22, 22, 0.06, 13);
-        t.outline(5, 5, 22, 22, BRASS);
-        t.outline(6, 6, 20, 20, IRON_D);
-        for (int[] c : new int[][]{{5, 5}, {25, 5}, {5, 25}, {25, 25}}) t.rivet(c[0], c[1], BRASS_L, 0xFFFFFFFF);
-        t.fill(15, 9, 2, 14, CYAN_D);
-        t.fill(9, 15, 14, 2, CYAN_D);
-        t.glow(16, 16, CYAN);
-        for (int k : new int[]{10, 22}) {
-            t.glow(16, k, CYAN_D);
-            t.glow(k, 16, CYAN_D);
-        }
-        t.save("atlas_casing_top");
-    }
-
-    static void atlasConduit() throws Exception {
-        // a tunnel of copper and teal pulses over an iron frame
-        Tex t = ironPlate(21, false);
-        t.fill(0, 11, S, 10, IRON_D);
-        t.fill(0, 12, S, 8, shade(COPPER, 0.5));
-        for (int x = 0; x < S; x++) {
-            int c = (x % 4 < 2) ? COPPER : COPPER_D;
-            t.put(x, 13, c);
-            t.put(x, 14, shade(c, 1.15));
-            t.put(x, 17, shade(c, 0.9));
-            t.put(x, 18, c);
-        }
-        t.fill(0, 15, S, 2, CYAN_D);
-        t.bevel(0, 0, S, S, IRON_L, IRON_D);
-        // animation: a blue light runs along the vein from left to right and leaves a filled line behind; once it is full, the vein goes out
-        // and everything starts again (frames one under another, the glow layer has the same frames)
-        int frames = 40;
-        BufferedImage img = new BufferedImage(S, S * frames, BufferedImage.TYPE_INT_ARGB);
-        BufferedImage glowImg = new BufferedImage(S, S * frames, BufferedImage.TYPE_INT_ARGB);
-        for (int f = 0; f < frames; f++) {
-            int fill = Math.min(S, f * S / 32);
-            boolean fade = f >= 34;
-            for (int j = 0; j < S; j++) {
-                for (int i = 0; i < S; i++) {
-                    int c = t.px[j * S + i];
-                    boolean lit = false;
-                    if ((j == 15 || j == 16) && i < fill) {
-                        int head = fill - 1 - i;
-                        c = head < 2 && !fade ? rgb(CYAN_L) : rgb(fade ? mix(rgb(CYAN), rgb(CYAN_D), (f - 33) / 6.0) : CYAN);
-                        lit = true;
-                    }
-                    img.setRGB(i, f * S + j, c);
-                    glowImg.setRGB(i, f * S + j, lit ? c : 0);
-                }
-            }
-        }
-        File f = RES.resolve("textures/block/atlas_conduit.png").toFile();
-        ImageIO.write(img, "png", f);
-        ImageIO.write(glowImg, "png", RES.resolve("textures/block/atlas_conduit_glow.png").toFile());
-        String meta = "{\n  \"animation\": {\n    \"frametime\": 2,\n    \"interpolate\": false\n  }\n}\n";
-        Files.writeString(RES.resolve("textures/block/atlas_conduit.png.mcmeta"), meta);
-        Files.writeString(RES.resolve("textures/block/atlas_conduit_glow.png.mcmeta"), meta);
-    }
-
     static void expander(String name, int glow, int glowDark, int glowLight, int frame, int frameDark) throws Exception {
         Tex t = ironPlate(31, false);
         // a window with a grate and crystals
@@ -432,142 +357,6 @@ public class ArtForge {
             t.rivet((int) Math.round(16 + 10.2 * Math.cos(ang)) - 1, (int) Math.round(16 + 10.2 * Math.sin(ang)) - 1, BRASS_D, BRASS_L);
         }
         t.save("cable_bushing");
-    }
-
-    static void atlant() throws Exception {
-        // Base metal: heavy dark gun cast iron with noble etching
-        Tex body = new Tex(IRON);
-        body.speckle(0, 0, S, S, 0.05, 51);
-        body.bevel(0, 0, S, S, IRON_D, IRON_D);
-        body.bevel(1, 1, S - 2, S - 2, IRON_L, shade(IRON_D, 1.2));
-
-        // Strong chest plate relief: a central armour shield with deep bevels
-        body.fill(4, 4, 24, 24, IRON_D);
-        body.bevel(4, 4, 24, 24, IRON_L, 0xFF14161C);
-        body.fill(6, 6, 20, 20, 0xFF2A2D35);
-        body.bevel(6, 6, 20, 20, IRON_L, IRON_D);
-
-        // Steel rivets around the chest plate
-        for (int x : new int[]{5, 26}) {
-            for (int y = 6; y <= 26; y += 5) body.rivet(x, y, IRON_D, IRON_L);
-        }
-
-        // A single centred Occult Resonance Core of the Atlant (a symmetrical reactor)
-        // Outer bronze ring/mount of the core
-        body.disc(16, 16, 5.5, 0xFF5A4A2C);
-        body.disc(16, 16, 4.8, 0xFF1E2128);
-        body.bevel(12, 12, 9, 9, 0xFF786438, 0xFF101216);
-        // Inner dark cryo bed and a glowing crystal focus
-        body.disc(16, 16, 3.2, 0xFF08141C);
-        body.disc(16, 16, 2.0, CYAN_D);
-        body.put(15, 15, CYAN_L);
-        body.put(16, 15, CYAN_L);
-        body.put(15, 16, CYAN);
-        body.put(16, 16, CYAN);
-
-        // Strict contour energy channels running from the core along the armour seams
-        for (int y = 7; y <= 24; y++) {
-            if (y < 12 || y > 19) {
-                body.put(15, y, CYAN_D);
-                body.put(16, y, CYAN);
-            }
-        }
-        for (int x = 8; x <= 23; x++) {
-            if (x < 12 || x > 19) {
-                body.put(x, 15, CYAN_D);
-                body.put(x, 16, CYAN);
-            }
-        }
-        // Bronze clamp sleeves at the ends of the energy channels
-        body.fill(7, 14, 2, 4, 0xFF5A4A2C);
-        body.fill(23, 14, 2, 4, 0xFF5A4A2C);
-
-        // Restrained cryo frost along the top edge and in the armour recesses
-        for (int x = 2; x < 30; x++) {
-            if ((x * 13 + 7) % 6 == 0) body.put(x, 2, 0xFF96B8C8);
-            if ((x * 17 + 3) % 7 == 0) body.put(x, 3, 0xFF6D8C9C);
-        }
-        body.save("atlant_body");
-
-        // A clean moulded gun armour plate for the anatomical relief (abs, pectorals, thighs)
-        Tex plate = new Tex(0x282B32);
-        plate.speckle(0, 0, S, S, 0.04, 55);
-        plate.bevel(0, 0, S, S, IRON_D, 0xFF14161C);
-        plate.bevel(1, 1, S - 2, S - 2, IRON_L, IRON_D);
-        plate.bevel(3, 3, S - 6, S - 6, 0xFF353942, 0xFF181A20);
-        plate.rivet(4, 4, IRON_D, IRON_L);
-        plate.rivet(27, 4, IRON_D, IRON_L);
-        plate.rivet(4, 27, IRON_D, IRON_L);
-        plate.rivet(27, 27, IRON_D, IRON_L);
-        plate.save("atlant_plate");
-
-        // Limbs: strong segmented cast iron plates with deep grooves (no chaotic runes)
-        Tex limb = new Tex(0x282B32);
-        limb.speckle(0, 0, S, S, 0.05, 52);
-        limb.bevel(0, 0, S, S, IRON_D, IRON_D);
-        limb.bevel(1, 1, S - 2, S - 2, IRON_L, shade(IRON_D, 1.2));
-        // Horizontal relief armour segments
-        for (int y = 6; y < S; y += 8) {
-            limb.fill(2, y, 28, 2, 0xFF14161C);
-            limb.fill(2, y + 2, 28, 1, IRON_L);
-            limb.rivet(4, y - 2, IRON_D, IRON_L);
-            limb.rivet(26, y - 2, IRON_D, IRON_L);
-        }
-        // A dark copper tube along the limb
-        for (int y = 3; y < 29; y++) {
-            limb.put(15, y, 0xFF3D2614);
-            limb.put(16, y, 0xFF6D4526);
-            limb.put(17, y, 0xFF4D301A);
-        }
-        limb.save("atlant_limb");
-
-        // Belt and harness: dark blued steel with aged bronze
-        Tex belt = plate(0x4A3E2A, 0x6E5E42, 0x2A2316, 53, false, 0);
-        for (int x = 3; x < S; x += 8) belt.rivet(x, 14, 0x2A2316, 0x8A7654);
-        belt.fill(0, 6, S, 2, 0xFF14161C);
-        belt.fill(0, 24, S, 2, 0xFF14161C);
-        // A massive central buckle housing
-        belt.fill(10, 5, 12, 22, 0xFF22252C);
-        belt.bevel(10, 5, 12, 22, 0xFF786438, 0xFF121418);
-        // A cryogenic energy cell
-        belt.fill(13, 10, 6, 12, 0xFF0A1820);
-        belt.bevel(13, 10, 6, 12, CYAN_D, 0xFF040E14);
-        belt.fill(14, 12, 4, 8, CYAN);
-        belt.glow(15, 15, CYAN_L);
-        belt.glow(16, 16, CYAN_L);
-        belt.save("atlant_belt");
-
-        // Head: a monumental automaton diving helmet
-        Tex head = new Tex(IRON);
-        head.speckle(0, 0, S, S, 0.05, 54);
-        head.bevel(0, 0, S, S, IRON_D, IRON_D);
-        head.bevel(1, 1, S - 2, S - 2, IRON_L, shade(IRON_D, 1.2));
-        // A massive armoured brow
-        head.fill(2, 6, 28, 4, 0xFF161820);
-        head.bevel(2, 6, 28, 4, IRON_L, 0xFF101216);
-        head.rivet(4, 7, 0xFF4A3E2A, 0xFF786438);
-        head.rivet(26, 7, 0xFF4A3E2A, 0xFF786438);
-
-        // A horizontal mono visor: a deep dark eye socket with a glowing azure eyepiece
-        head.fill(7, 11, 18, 6, 0xFF0E1014);
-        head.bevel(7, 11, 18, 6, 0xFF524428, 0xFF080A0E); // dark bronze mount
-        head.fill(9, 12, 14, 4, 0xFF091720);
-        head.fill(10, 13, 12, 2, CYAN);
-        for (int x = 11; x <= 18; x++) {
-            head.glow(x, 13, CYAN_L);
-            head.glow(x, 14, CYAN);
-        }
-
-        // Breather vent grate
-        head.fill(10, 19, 12, 9, 0xFF14161C);
-        head.bevel(10, 19, 12, 9, IRON_L, 0xFF0A0C0E);
-        for (int y = 21; y <= 26; y += 2) {
-            head.fill(12, y, 8, 1, 0xFF080A0C);
-            head.fill(12, y + 1, 8, 1, 0xFF353A45);
-        }
-        head.disc(16, 28, 2, 0xFF5E4E2C);
-        head.put(16, 28, 0xFF2A2316);
-        head.save("atlant_head");
     }
 
     static void coreParts() throws Exception {
@@ -910,13 +699,11 @@ public class ArtForge {
     static void all() throws Exception {
         terminalAnim();
         bookArt();
-        atlasCasing();
-        atlasCasingTop();
-        atlasConduit();
+        AtlasArt.textures();
         expander("channel_expander", CYAN, CYAN_D, CYAN_L, BRASS, BRASS_D);
         expander("quantum_channel_expander", VIOLET, VIOLET_D, 0xE4D6FF, GOLD, 0xFF7a5f12);
         bushing();
-        atlant();
+        Atlant.textures();
         coreParts();
         brassPlate();
         cryo();

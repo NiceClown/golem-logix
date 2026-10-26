@@ -246,7 +246,7 @@ public class Models {
         checkCoplanar(name, els);
         StringBuilder sb = new StringBuilder("{\n  \"parent\": \"minecraft:block/block\",\n  \"ambientocclusion\": false,\n");
         if (translucent) sb.append("  \"render_type\": \"minecraft:translucent\",\n");
-        sb.append("  \"textures\": {\n    \"particle\": \"").append(NS).append(particle).append("\"");
+        sb.append("  \"textures\": {\n    \"particle\": \"").append(particle.contains(":") ? "" : NS).append(particle).append("\"");
         // a name with a namespace ("minecraft:block/snow") as is, otherwise a mod texture
         for (String[] t : textures) sb.append(",\n    \"").append(t[0]).append("\": \"").append(t[1].contains(":") ? "" : NS).append(t[1]).append("\"");
         sb.append("\n  },\n  \"elements\": [\n");
@@ -325,70 +325,48 @@ public class Models {
                 e(6, 19, 6, 10, 22, 10).all("#crystal").glow(15));
         single("atlas_core", "atlas_core");
         item("atlas_core", "atlas_core");
+        // what an assembled array grows (AtlasCoreRenderer): an ice column on the north side of a cell (two blocks tall,
+        // copper caps), icicles under the north edge of the top layer and a balcony rail of brass and spruce over it
+        model("atlas_ice_column", false, "atlas_ice_column",
+                new String[][]{{"ice", "atlas_ice_column"}, {"cap", "atlas_casing"}},
+                e(3, 0, -3, 13, 2, 0).all("#cap"),
+                e(4.5, 2, -2.25, 11.5, 16, 0).all("#ice"),
+                e(4.5, 16, -2.25, 11.5, 30, 0).all("#ice"),
+                e(3, 30, -3, 13, 32, 0).all("#cap"));
+        model("atlas_icicles", false, "minecraft:block/packed_ice",
+                new String[][]{{"ice", "minecraft:block/packed_ice"}},
+                e(1, 12, 0, 3, 16, 2).all("#ice"), e(1.5, 10, 0.5, 2.5, 12, 1.5).all("#ice"),
+                e(5, 14, 0, 6.5, 16, 1.5).all("#ice"),
+                e(8, 11, 0, 10, 16, 2).all("#ice"), e(8.5, 8, 0.5, 9.5, 11, 1.5).all("#ice"),
+                e(12, 13, 0, 13.5, 16, 1.5).all("#ice"), e(12.25, 11.5, 0.25, 13.25, 13, 1.25).all("#ice"));
+        for (boolean end : new boolean[]{false, true}) {
+            // the last cell of a side stops short of the corner: the next side's rail covers it
+            double to = end ? 13.5 : 16;
+            model(end ? "atlas_rail_end" : "atlas_rail", false, "brass_plate",
+                    new String[][]{{"brass", "brass_plate"}, {"wood", "minecraft:block/spruce_planks"}},
+                    e(1, 16, 0.25, 3, 21, 2.25).all("#brass"), e(7, 16, 0.5, 9, 21, 2).all("#brass"),
+                    e(0, 18, 0.75, to, 19, 1.75).all("#brass"),
+                    e(0, 21, 0, to, 22.5, 2.5).all("#wood"));
+        }
 
-        // Atlant: a muscular athletic silhouette with a thin profile along Z (depth ~5-6 voxels)
-        // Lower half: greaves, relief calves, knee caps, quadriceps, an athletic belt
+        // Atlant: a caryatid in the iron golem's manner (tools/Atlant.java draws it), a broad torso on short legs, the arms
+        // raised to hold the array; plain boxes, the default UVs keep every face at the same texel density
         model("atlas_atlant_lower", false, "atlant_body",
-                new String[][]{{"body", "atlant_body"}, {"limb", "atlant_limb"}, {"belt", "atlant_belt"}, {"plate", "atlant_plate"}},
-                // boot greaves (a firm stance, a thin profile Z 4.2..10.2)
-                e(2.8, 0, 4.2, 7.2, 2.0, 10.2).all("#belt"), e(8.8, 0, 4.2, 13.2, 2.0, 10.2).all("#belt"),
-                // relief calves (base)
-                e(3.2, 2.0, 5.0, 6.8, 6.5, 9.8).all("#limb"), e(9.2, 2.0, 5.0, 12.8, 6.5, 9.8).all("#limb"),
-                // calf muscle relief (front bulge)
-                e(3.6, 2.5, 4.3, 6.4, 5.5, 4.95).all("#plate"), e(9.6, 2.5, 4.3, 12.4, 5.5, 4.95).all("#plate"),
-                // relief knee guards/caps
-                e(2.8, 5.5, 4.1, 7.2, 7.2, 4.9).all("#belt"), e(8.8, 5.5, 4.1, 13.2, 7.2, 4.9).all("#belt"),
-                // muscular quadriceps (thighs)
-                e(3.2, 6.5, 4.8, 6.8, 10.5, 9.8).all("#limb"), e(9.2, 6.5, 4.8, 12.8, 10.5, 9.8).all("#limb"),
-                // the relief front plate of the thigh
-                e(3.5, 7.2, 4.2, 6.5, 10.2, 4.75).all("#plate"), e(9.5, 7.2, 4.2, 12.5, 10.2, 4.75).all("#plate"),
-                // athletic belt and buckle (narrowing at the waist)
-                e(2.5, 10.5, 4.8, 13.5, 13.5, 10.0).all("#belt"),
-                e(6.2, 10.8, 4.0, 9.8, 13.8, 5.0).all("#belt"),
-                // the lower torso (a V-shaped narrowing to the waist)
-                e(3.5, 13.5, 5.0, 12.5, 16.0, 9.8).all("#body"),
-                e(7.0, 13.5, 4.2, 9.0, 16.0, 4.95).all("#belt"));
-        // Upper half: a relief torso, a six-pack, pectorals, lats (V wings), deltoids, biceps, supporting arms
+                new String[][]{{"body", "atlant_body"}, {"limb", "atlant_limb"}, {"belt", "atlant_belt"}},
+                e(2.5, 0, 5.5, 7.5, 1.5, 10.5).all("#belt"), e(8.5, 0, 5.5, 13.5, 1.5, 10.5).all("#belt"),
+                e(3, 1.5, 6, 7, 10, 10).all("#limb"), e(9, 1.5, 6, 13, 10, 10).all("#limb"),
+                e(4.5, 10, 6, 11.5, 13, 10).all("#belt"),
+                e(1.5, 13, 4, 14.5, 16, 12).all("#body"));
         model("atlas_atlant_upper", false, "atlant_body",
-                new String[][]{{"body", "atlant_body"}, {"limb", "atlant_limb"}, {"belt", "atlant_belt"}, {"head", "atlant_head"}, {"plate", "atlant_plate"}},
-                // the lower part of the torso (base)
-                e(3.8, 0, 4.8, 12.2, 3.5, 9.6).all("#body"),
-                // relief abs: the lower blocks
-                e(4.4, 0.4, 4.0, 7.6, 1.8, 4.75).all("#plate"),
-                e(8.4, 0.4, 4.0, 11.6, 1.8, 4.75).all("#plate"),
-                // relief abs: the middle blocks
-                e(4.4, 2.0, 3.9, 7.6, 3.4, 4.75).all("#plate"),
-                e(8.4, 2.0, 3.9, 11.6, 3.4, 4.75).all("#plate"),
-                // back lats (a V-shaped silhouette)
-                e(1.8, 2.5, 4.6, 3.4, 6.8, 9.2).all("#body"),
-                e(12.6, 2.5, 4.6, 14.2, 6.8, 9.2).all("#body"),
-                // a strong relief torso (the rib cage with the central Occult Core)
-                e(3.2, 3.5, 4.4, 12.8, 9.0, 9.6).all("#body"),
-                // protruding pectorals (chest muscles)
-                e(3.6, 4.2, 3.4, 7.6, 8.4, 4.35).all("#plate"),
-                e(8.4, 4.2, 3.4, 12.4, 8.4, 4.35).all("#plate"),
-                // neck collar
-                e(5.0, 8.5, 5.5, 11.0, 10.0, 9.5).all("#belt"),
-                // wide relief deltoid pauldrons
-                e(-0.8, 4.5, 3.8, 3.2, 9.5, 9.8).all("#belt"),
-                e(12.8, 4.5, 3.8, 16.8, 9.5, 9.8).all("#belt"),
-                // bicep arms
-                e(-0.2, 9.5, 4.2, 3.5, 14.0, 9.6).all("#limb"),
-                e(12.5, 9.5, 4.2, 16.2, 14.0, 9.6).all("#limb"),
-                // the relief peak of the bicep
-                e(0.2, 10.5, 3.5, 3.2, 13.0, 4.15).all("#plate"),
-                e(12.8, 10.5, 3.5, 15.8, 13.0, 4.15).all("#plate"),
-                // the gesture of holding the matrix: widened supporting hands at the top cut Y 14..16
-                e(0, 14.0, 3.0, 4.0, 16.0, 10.5).all("#belt"),
-                e(12.0, 14.0, 3.0, 16.0, 16.0, 10.5).all("#belt"),
-                e(0, 15.0, 2.0, 4.0, 16.0, 2.95).all("#belt"),
-                e(12.0, 15.0, 2.0, 16.0, 16.0, 2.95).all("#belt"));
-        // the head is separate: the renderer (AtlantHeadRenderer) turns it to the player, the neck is at (8, 10, 8)
-        model("atlas_atlant_head", false, "atlant_body",
-                new String[][]{{"body", "atlant_body"}, {"belt", "atlant_belt"}, {"head", "atlant_head"}},
-                e(4.8, 10, 5.0, 11.2, 15.5, 10.5).all("#body").face("north", "#head", 0, 0, 16, 16),
-                e(4.2, 13, 4.2, 11.8, 15.4, 4.95).all("#belt"), // helmet brow relief
-                e(7.0, 15.5, 5.0, 9.0, 16.5, 10.5).all("#belt"));
+                new String[][]{{"body", "atlant_body"}, {"limb", "atlant_limb"}, {"belt", "atlant_belt"}},
+                e(1.5, 0, 4, 14.5, 6, 12).all("#body"),
+                e(0, 2, 6, 3, 14, 10).all("#limb"), e(13, 2, 6, 16, 14, 10).all("#limb"),
+                e(-0.5, 14, 5, 3.5, 16, 11).all("#belt"), e(12.5, 14, 5, 16.5, 16, 11).all("#belt"));
+        // the head is separate: the renderer (AtlantHeadRenderer) turns it to the player, the neck is at (8, 6, 8)
+        model("atlas_atlant_head", false, "atlant_head",
+                new String[][]{{"limb", "atlant_limb"}, {"head", "atlant_head"}},
+                e(4.5, 6, 3, 11.5, 14, 10).all("#limb").face("north", "#head"),
+                e(7.25, 7, 1.5, 8.75, 10, 3).all("#head"));
         facing4Half("atlas_atlant");
         item("atlas_atlant", "atlas_atlant_lower");
 
