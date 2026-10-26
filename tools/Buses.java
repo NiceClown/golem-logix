@@ -77,7 +77,7 @@ final class Buses {
     /** The 6x6 roof of the technical block: a dark rune panel in a brass frame and a brass pad with a star in the middle. */
     static Paint top(int variant) {
         int[] ac = VIOLET, star = variant == 0 ? CYAN : variant == 1 ? VIOLET : FROST;
-        Paint p = new Paint(6, 6, 8);
+        Paint p = new Paint(6, 6, K);
         p.slab(0, 0, 6, 6, BRASS, 3.0, 1);
         p.slab(0.55, 0.55, 5.45, 5.45, IRON, 0.7, 1);
         p.grain(0.55, 0.55, 5.45, 5.45, 0.06, 321 + variant);
@@ -99,7 +99,7 @@ final class Buses {
 
     /** A 6x6 side panel of the technical block: a brass frame, dark iron, a socket nest in the middle. */
     static Paint side(int variant) {
-        Paint p = new Paint(6, 6, 8);
+        Paint p = new Paint(6, 6, K);
         p.slab(0, 0, 6, 6, BRASS, 3.0, 1);
         p.slab(0.5, 0.5, 5.5, 5.5, IRON, 1.5, 1);
         p.grain(0.5, 0.5, 5.5, 5.5, 0.07, 311 + variant);
@@ -120,7 +120,7 @@ final class Buses {
 
     /** An end cap socket (4x4): a brass ring around a dark hole. */
     static Paint socket() {
-        Paint p = new Paint(4, 4, 12);
+        Paint p = new Paint(4, 4, K);
         p.slab(0, 0, 4, 4, BRASS, 2.8, 1);
         p.sphere(2, 2, 1.75, BRASS, 0.2, 0.95);
         p.disc(2, 2, 1.25, at(IRON, 0.2));
@@ -135,7 +135,7 @@ final class Buses {
 
     /** The vacuum bus funnel (12x12): a dark funnel with turbine blades and a teal hub. */
     static Paint funnel() {
-        Paint p = new Paint(12, 12, 8);
+        Paint p = new Paint(12, 12, K);
         // the turbine turns: one blade's step per cycle of 12 frames, blended into a light blur
         p.animFrames = 12;
         p.frameTime = 1;
@@ -168,7 +168,7 @@ final class Buses {
 
     /** The end of the injector nozzle (6x6): a dark hole with a violet dot that blinks once every two seconds. */
     static Paint nozzle() {
-        Paint p = new Paint(6, 6, 8);
+        Paint p = new Paint(6, 6, K);
         p.animFrames = 20;
         p.frameTime = 2;
         p.slab(0, 0, 6, 6, BRASS, 2.6, 1);
@@ -196,14 +196,20 @@ final class Buses {
      * drawn by the renderer (it looks around); the item's lens has it painted in the middle.
      */
     static Paint lens(boolean eye) {
-        Paint p = new Paint(10, 10, 6.4);
+        Paint p = new Paint(10, 10, K);
         p.slab(0, 0, 10, 10, BRASS, 2.4, 1);
         p.disc(5, 5, 4.9, at(BRASS, 1.2));
         p.sphere(5, 5, 4.8, BRASS, 0.3, 0.95);
         p.disc(5, 5, 3.95, at(IRON, 0.4));
         for (int i = 0; i < 12; i++) {
             double a = i * Math.PI / 6;
-            p.rune(5 + Math.cos(a) * 3.45 - 0.3, 5 + Math.sin(a) * 3.45 - 0.5, 1.0, i * 3 + 1, at(CYAN, 5.2), 0);
+            if (K >= 4) {
+                p.rune(5 + Math.cos(a) * 3.45 - 0.3, 5 + Math.sin(a) * 3.45 - 0.5, 1.0, i * 3 + 1, at(CYAN, 5.2), 0);
+            } else {
+                // two pixels are too few for a rune: glowing marks like a dial's, every third one bigger
+                double r = i % 3 == 0 ? 0.45 : 0.26, x = 5 + Math.cos(a) * 3.35, y = 5 + Math.sin(a) * 3.35;
+                p.glowRect(x - r, y - r, x + r, y + r, 0.01, at(CYAN, i % 3 == 0 ? 5.6 : 4.8), 255);
+            }
         }
         p.disc(5, 5, 2.75, at(BRASS, 1.4));
         p.discFn(5, 5, 2.58, (u, v) -> {
@@ -565,6 +571,9 @@ final class Buses {
         oct(per, 3, 3, 0, 13, 13, 1.4, 2.2, "plate", "plate", "plate", "lens", "plate");
         oct(per, 5, 5, 1.4, 11, 11, Z0, 1.2, "plate", "plate", "plate", null, null);
         bus("periscope_storage_bus", 2, per, new String[][]{{"lens", "bus_lens"}});
+        // the item has no renderer: its lens has the eye painted in the middle
+        Files.writeString(Forge2.RES.resolve("models/item/periscope_storage_bus.json"), "{\n  \"parent\": \"golem_logix:block/periscope_storage_bus_item\",\n"
+                + "  \"textures\": {\n    \"lens\": \"golem_logix:block/bus_lens_item\"\n  }\n}\n");
     }
 
     static void all() throws Exception {

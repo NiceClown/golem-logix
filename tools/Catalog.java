@@ -379,7 +379,41 @@ final class Catalog {
         // The 8-phase animation of the azure archivist right in the CRT screen texture
         p.animate(2.5, 2.5, 13.5, 13.5, (q, t) -> {
             int f = (int) Math.floor(t * 8) % 8;
-            drawArchivistScreenFrame(q, f);
+            if (K >= 4) {
+                drawArchivistScreenFrame(q, f);
+                return;
+            }
+            // the archivist is pixel art on the 64-pixel grid: it is drawn there and reduced to this grid, every block of
+            // pixels taking its commonest colour (the brighter one on a tie), so the figure keeps its shape and palette
+            Paint big = new Paint(16, 16, 4);
+            drawArchivistScreenFrame(big, f);
+            int s = 4 / K;
+            for (int y = 0; y < q.h; y++) {
+                for (int x = 0; x < q.w; x++) {
+                    java.util.Map<Integer, Integer> count = new java.util.HashMap<>();
+                    for (int j = 0; j < s; j++) {
+                        for (int i = 0; i < s; i++) {
+                            int c = big.get(x * s + i, y * s + j);
+                            if ((c >>> 24) != 0) {
+                                count.merge(c, 1, Integer::sum);
+                            }
+                        }
+                    }
+                    if (count.isEmpty()) {
+                        continue;
+                    }
+                    int best = 0, bestN = -1, bestL = -1;
+                    for (var e : count.entrySet()) {
+                        int c = e.getKey(), l = ((c >> 16) & 255) + ((c >> 8) & 255) + (c & 255);
+                        if (e.getValue() > bestN || (e.getValue() == bestN && l > bestL)) {
+                            best = c;
+                            bestN = e.getValue();
+                            bestL = l;
+                        }
+                    }
+                    q.px(x, y, best);
+                }
+            }
         });
 
         // Porthole glass highlight over the screen

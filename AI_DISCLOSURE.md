@@ -12,7 +12,6 @@ plainly what AI made and what the author did.
 | **Concept references** | Most concept images that guided the look of the machines were made with Google Gemini from the author's descriptions. They were private references only: never published, and no texture is traced or converted from them. |
 | **Texts** | The guide book, tooltips, changelog, README and project pages were drafted with AI from the author's descriptions. The Russian translation was proofread by the author, a native speaker. |
 | **Tests** | The automated in-game tests were written with AI alongside the code. |
-| **Promo video** | The footage is real in-game recording. The editing, captions and synthesised music were made by scripts written with AI. |
 
 ## What is not AI
 

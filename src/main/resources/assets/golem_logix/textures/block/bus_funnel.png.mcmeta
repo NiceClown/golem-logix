@@ -1,8 +1,8 @@
 {
   "animation": {
     "frametime": 1,
-    "width": 96,
-    "height": 96,
+    "width": 24,
+    "height": 24,
     "interpolate": true
   },
   "gauge": {}

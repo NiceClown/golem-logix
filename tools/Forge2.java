@@ -11,7 +11,7 @@ import java.util.*;
 public final class Forge2 {
     static final Path RES = Path.of("src/main/resources/assets/golem_logix");
     static final String NS = "golem_logix:block/";
-    static final int K = 4;
+    static final int K = 2;
     static final Path PREVIEW = Path.of("build/preview");
 
     static final int[] BRASS = Paint.BRASS, BRONZE = Paint.BRONZE, IRON = Paint.IRON, CYAN = Paint.CYAN, VIOLET = Paint.VIOLET,
