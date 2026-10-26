@@ -330,6 +330,33 @@
             {"type": "text", "title": "Before the Saturator",
              "text": ["No golem and no machine: only the Imbuement Chamber, early in Ars Nouveau.", "But it is dear: Blue Ice is nine packed ice, and the Saturator makes two substrates out of one packed ice for the same Source."]}
           ]
+        },
+        {
+          "id": "cryo_mixer", "title": "Cryo-Mixer", "icon": "golem_logix:cryo_mixer", "x": 3, "y": 1, "parents": ["plates"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:cryo_mixer",
+             "text": ["Two blocks high: a rune plinth, louvred sides, a copper module and two flasks on top - water on the left, Liquid Cryo-Source on the right."]},
+            {"type": "text", "title": "Snow and ice from the network",
+             "text": [
+               "The mixer freezes water with &lLiquid Cryo-Source&r. Two modes, switched in its window:",
+               "• &lsnow&r - fast: a snow block every second (250 mB of water and 25 mB of Cryo-Source). Two snow blocks and a carved pumpkin make a snow golem, and snow golems make the plates for pipes;",
+               "• &lice&r - slow: a block of ice every 5 seconds (1000 mB and 100 mB). Nine blocks of ice make Packed Ice, by hand or by autocraft - the blank for Cryo-Substrate in the Saturator.",
+               "&oThe snow or ice lands in the tray in front: take it from the window or with an Import Bus.&r"
+             ]},
+            {"type": "text", "title": "Filling the flasks",
+             "text": [
+               "• &lWater&r: a bucket by hand, or any pipe or bus that carries water (for example water on a fluid disk and an Export Bus).",
+               "• &lLiquid Cryo-Source&r: an &lExport Bus&r facing the mixer with a Cryo-Source ghost in its filter pumps it straight out of the network's Source. It cannot be poured by hand.",
+               "Both go in through either block of the mixer, each into its own flask; nothing flows back out."
+             ]},
+            {"type": "text", "title": "Upgrades",
+             "text": [
+               "Slots on the right of the window:",
+               "• up to &l4 Compressed Co-Processors&r: each adds the base speed once more (four make it five times faster);",
+               "• a &lRedstone Module&r: the mixer works by signal; in pulse mode every pulse makes one block.",
+               "The golem at the side turns the valve while it works; if something stands there, it moves to a free side."
+             ]}
+          ]
         }
       ]
     },
@@ -542,7 +569,7 @@
              "text": [
                "Every network device (terminal, cabinet, bus, provider...) takes &l1 channel&r. A channel is a path from the core to the device through a bushing and pipes.",
                "A channel has four limits:",
-               "• &lTotal network capacity&r - set by the array (8 / 320 / more).",
+               "• &lTotal network capacity&r - set by the core: alone 8, on a starter tower 16, in the array 320 and more.",
                "• &lBushing line&r - no more channels pass through one bushing than the line capacity.",
                "• &lPipes&r - a basic pipe passes 16 channels, a dense one 64.",
                "• &lDevices&r - a device passes on 16, like a basic pipe.",
@@ -550,7 +577,7 @@
              ]},
             {"type": "text", "title": "Who gets a channel first",
              "text": [
-               "Channels are handed out as in &lAE2&r: from the core along the &lshortest path&r to each device.",
+               "Channels are handed out from the core along the &lshortest path&r: each device gets the route with the fewest blocks between it and the core.",
                "&lDense runs go first&r: devices on dense pipes, then on basic pipes, then devices that hang on other devices.",
                "A device gets a channel only if &levery block&r on its path still has room; otherwise it waits.",
                "&oChannels never cross the array: each bushing counts only its own devices.&r"
@@ -592,7 +619,7 @@
             {"type": "text", "title": "Devices attach directly",
              "text": [
                "A device needs no pipe if it stands against a bushing, another pipe or another network device: nodes conduct channels through each other.",
-               "So terminals and cabinets can be chained, but, as in AE2, a device passes on &lat most 16 channels&r (like a basic pipe), its own included. Run a dense pipe along big rows of devices.",
+               "So terminals and cabinets can be chained, but a device passes on &lat most 16 channels&r (like a basic pipe), its own included: the seventeenth device of a chain stays silent. Run a dense pipe along big rows of devices.",
                "# Source supply",
                "A jar must touch any node (not necessarily the core). It takes no channel and does not carry the network. The Eternal Frost Resonator is attached the same way - but it powers chronometers, not the network."
              ]},
@@ -629,7 +656,7 @@
              "text": ["At the bottom of the terminal screen you see “Ch 12/64” - used and available channels; the tooltip shows everything else."]},
             {"type": "text", "title": "Jade tooltips",
              "text": [
-               "Look at a block with Jade (as in AE2):",
+               "Look at a block with Jade:",
                "• a device: &lDevice Online&r, &lDevice Missing Channel&r with the full block that stopped it, or &lDevice Offline&r (no core or no Source);",
                "• a pipe: “12 of 16 Channels”;",
                "• a bushing: its line and the whole network; an expander: its exit."
@@ -701,7 +728,7 @@
           "pages": [
             {"type": "text", "title": "Pure capacity",
              "text": [
-               "A disk stores items in the Refined Storage way: capacity is counted in &lpieces&r and you can store any number of types - there is no artificial limit.",
+               "A disk counts its capacity in &lpieces&r: a 1k disk holds 1,000 items of any kinds together - one type or a thousand different ones. There is no separate limit on the number of types.",
                "# Capacities",
                "• 1k - 1,000 items, 4k - 4,000, 16k - 16,000, 64k - 64,000, &l256k - 256,000&r.",
                "A disk can be pulled out, carried and put into another cabinet: all of its contents stay on it."
@@ -959,7 +986,7 @@
                ["Without signal", "while unpowered"],
                ["Per pulse", "one action per pulse"]
              ],
-             "text": ["Like the AE2 redstone card and the RS redstone mode. The mode button appears left of the machine window while the module is installed."]},
+             "text": ["The module decides when the machine may work. While it sits in an upgrade slot a mode button appears left of the machine window; each click picks the next mode."]},
             {"type": "text", "title": "For every machine",
              "text": [
                "• &lImport and export buses&r - move items by signal; per pulse - one batch.",
@@ -1059,7 +1086,7 @@
              ]},
             {"type": "text", "title": "Fuzzy mode",
              "text": [
-               "The &l≈&r button turns on &lfuzzy mode&r, like RS's fuzzy patterns and AE2's substitutions. The exact item is still taken first.",
+               "The &l≈&r button turns on &lfuzzy mode&r: the card accepts not only the exact item it was written with but also its relatives. The exact item is still taken first, the others only when it runs out.",
                "# Crafting table",
                "Each cell takes what the recipe accepts there: any planks for a crafting table. The recipe always works."
              ]},
@@ -1140,7 +1167,7 @@
                "2. &lCtrl+LMB&r on an item (or a click on an item with zero stock - it is marked “C”) opens the order window.",
                "3. Enter the amount or press ±1, ±10, ±100.",
                "4. “Preview” shows in chat what is needed and what is missing. “Start” launches the job.",
-               "Finished items land in storage, and an &l“Order ready”&r plate pops up in the corner of your screen - just like in AE2.",
+               "Finished items land in storage, and an &l“Order ready”&r plate with the item and its count pops up in the corner of your screen; several orders take turns on it.",
                "&oFrom JEI the missing ingredients of a recipe are ordered with one button: Ctrl + “+” (see “Crafting Terminal”).&r"
              ]},
             {"type": "text", "title": "How the plan is built",
@@ -1229,7 +1256,7 @@
           "id": "ac_concentrator", "title": "Cryo Schematic Concentrator", "icon": "golem_logix:schematic_concentrator", "x": 3, "y": -1, "parents": ["ac_catalog"],
           "pages": [
             {"type": "crafting", "recipe": "golem_logix:schematic_concentrator",
-             "text": ["A rusty cube with a big round holographic screen: &levery punch card of the network in one window&r — like the RS autocrafting manager or the AE2 pattern access terminal. Takes 1 channel."]},
+             "text": ["A rusty cube with a big round holographic screen: &levery punch card of the network in one window&r - the cards of all Pattern Providers and Punch Card Catalogs, grouped by machine, with a search. Take, put and swap cards without walking to each provider. Takes 1 channel."]},
             {"type": "text", "title": "Categories",
              "text": [
                "Right-click to open a list of every Pattern Provider of the network (with a channel) and the places of every Catalog, by category:",

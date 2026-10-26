@@ -157,6 +157,10 @@ public class ModBlocks {
     public static final DeferredBlock<com.golemlogix.blocks.DistillationTowerBlock> CRYO_DISTILLATION_TOWER = registerBlock("cryo_distillation_tower",
             "tooltip.golem_logix.cryo_distillation_tower",
             () -> new com.golemlogix.blocks.DistillationTowerBlock(BlockBehaviour.Properties.of()));
+    // water and Liquid Cryo-Source frozen into snow (for snow golems) or ice
+    public static final DeferredBlock<com.golemlogix.blocks.CryoMixerBlock> CRYO_MIXER = registerBlock("cryo_mixer",
+            "tooltip.golem_logix.cryo_mixer",
+            () -> new com.golemlogix.blocks.CryoMixerBlock(BlockBehaviour.Properties.of()));
 
     private static <T extends Block> DeferredBlock<T> registerBlock(String name, String tooltipKey, Supplier<T> blockSupplier) {
         DeferredBlock<T> block = BLOCKS.register(name, blockSupplier);

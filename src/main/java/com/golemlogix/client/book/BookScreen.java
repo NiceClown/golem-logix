@@ -1355,6 +1355,12 @@ public class BookScreen extends Screen {
             y += 16;
         }
 
+        // a right-click on the search field clears it
+        if (button == 1 && search.isMouseOver(mouseX, mouseY)) {
+            search.setValue("");
+            setFocused(search);
+            return true;
+        }
         if (search.mouseClicked(mouseX, mouseY, button)) {
             setFocused(search);
             return true;

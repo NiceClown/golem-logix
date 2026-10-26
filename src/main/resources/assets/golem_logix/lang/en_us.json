@@ -512,5 +512,20 @@
   "gui.golem_logix.telegraph.working": "Working: the message goes through",
   "gui.golem_logix.telegraph.idle": "Idle: no link or no Source",
   "gui.golem_logix.telegraph.reset": "RESET",
-  "gui.golem_logix.telegraph.reset.tooltip": "Erases the card in Memory and gives this telegraph a new seal: every card written for it stops working."
+  "gui.golem_logix.telegraph.reset.tooltip": "Erases the card in Memory and gives this telegraph a new seal: every card written for it stops working.",
+  "block.golem_logix.cryo_mixer": "Cryo-Mixer",
+  "tooltip.golem_logix.cryo_mixer": "Freezes water with Liquid Cryo-Source into snow blocks (fast) or ice (slow). Two blocks high.",
+  "gui.golem_logix.mixer.mode.snow": "Mode: snow (fast)",
+  "gui.golem_logix.mixer.mode.ice": "Mode: ice (slow)",
+  "gui.golem_logix.mixer.mode_tip": "Snow is fast and cheap: snow blocks for snow golems. Ice is slow: pack it into Packed Ice for the Cryo-Substrate.",
+  "gui.golem_logix.mixer.makes": "Makes: %s",
+  "gui.golem_logix.mixer.pace": "1 in %s s: %s + %s mB",
+  "gui.golem_logix.mixer.status.0": "Idle",
+  "gui.golem_logix.mixer.status.1": "Freezing",
+  "gui.golem_logix.mixer.status.2": "Not enough water",
+  "gui.golem_logix.mixer.status.3": "Not enough Cryo-Source",
+  "gui.golem_logix.mixer.status.4": "The tray is full",
+  "gui.golem_logix.mixer.status.5": "Paused by redstone",
+  "gui.golem_logix.mixer.water_tip": "Water: %s / %s mB",
+  "gui.golem_logix.mixer.cryo_tip": "Liquid Cryo-Source: %s / %s mB"
 }

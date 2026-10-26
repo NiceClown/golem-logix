@@ -673,6 +673,13 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // a right-click on the search field clears it
+        if (button == 1 && search.isMouseOver(mouseX, mouseY)) {
+            search.setValue("");
+            search.setFocused(true);
+            setFocused(search);
+            return true;
+        }
         // scroll bar
         int lx = leftPos + TerminalMenu.LIST_X;
         int ly = topPos + TerminalMenu.LIST_Y;

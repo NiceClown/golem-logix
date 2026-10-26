@@ -1,0 +1,33 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "GCG",
+    "SMS",
+    "BKB"
+  ],
+  "key": {
+    "G": {
+      "tag": "c:glass_blocks"
+    },
+    "C": {
+      "tag": "c:ingots/copper"
+    },
+    "S": {
+      "item": "minecraft:snow_block"
+    },
+    "M": {
+      "item": "golem_logix:flattened_copper_matrix"
+    },
+    "B": {
+      "item": "minecraft:bricks"
+    },
+    "K": {
+      "item": "minecraft:cauldron"
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "golem_logix:cryo_mixer"
+  }
+}

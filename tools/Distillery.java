@@ -14,6 +14,7 @@ final class Distillery {
     static void all() throws Exception {
         jar().save(Items.itemTex("cryo_source_jar"));
         tower().save(Items.itemTex("cryo_distillation_tower"));
+        mixer().save(Items.itemTex("cryo_mixer"));
     }
 
     /** Dark bricks with mortar lines and a rune band in the given colour. */
@@ -96,6 +97,64 @@ final class Distillery {
         frame(p, x0, 5.6, x1, 11.0);
         head(p, x0 + 0.2, 3.6, x1 - 0.2, 5.6, (x0 + x1) / 2);
         golem(p, x1 + 0.9, 6.4);
+        return p;
+    }
+
+    /**
+     * The Cryo-Mixer: a rune plinth, louvred brass sides under snow around a verdigris copper module with a gear, a tray of snow and
+     * ice at the front; on top two flasks with snowy rims (water on the left, swirling Cryo-Source on the right) joined by a pipe;
+     * the little golem on the right.
+     */
+    static Paint mixer() {
+        Paint p = Items.canvas();
+        Items.shadow(p, 7.6, 15.1, 6.2, 0.9);
+        plinth(p, 1.8, 12.2, 13.6, 15.0, Paint.rgb(0x58f0e8));
+        // louvred brass sides with snow on top, the copper module between them
+        for (double[] s : new double[][]{{2.2, 5.4}, {10.0, 13.2}}) {
+            p.slab(s[0], 7.8, s[1], 12.2, BRASS, 3.4, 1);
+            for (double y = 8.4; y < 11.8; y += 0.9) {
+                p.rect(s[0] - 0.3, y, s[1] + 0.3, y + 0.4, Items.at(BRASS, 4.8));
+                p.rect(s[0] - 0.3, y + 0.4, s[1] + 0.3, y + 0.55, Items.at(BRASS, 1.8));
+            }
+            p.rect(s[0] - 0.4, 7.2, s[1] + 0.4, 7.8, Paint.rgb(0xeef6fa));
+            p.icicle(s[0], 7.8, 0.9, 0.4);
+            p.icicle(s[1] - 0.6, 7.8, 1.2, 0.4);
+        }
+        p.slab(5.4, 7.0, 10.0, 12.2, Items.VERDIGRIS, 3.2, 1);
+        p.rect(5.4, 7.0, 10.0, 7.5, Items.at(Items.VERDIGRIS, 4.4));
+        p.rect(5.8, 9.0, 6.4, 9.6, Items.at(COPPER, 3.0));
+        // the gear on the module's face
+        p.ring(8.4, 9.8, 0.5, 1.5, Items.at(BRASS, 4.6));
+        for (double[] t : new double[][]{{8.2, 7.9}, {8.2, 11.3}, {6.5, 9.6}, {9.9, 9.6}}) {
+            p.rect(t[0], t[1], t[0] + 0.5, t[1] + 0.5, Items.at(BRASS, 4.0));
+        }
+        // the tray at the front with a snow block and an ice block
+        p.rect(2.0, 11.2, 6.6, 12.6, Items.at(BRASS, 3.0));
+        p.rect(2.0, 11.2, 6.6, 11.6, Items.at(BRASS, 4.6));
+        p.slab(2.6, 9.8, 4.4, 11.4, new int[]{0x8aa0b0, 0xa8bccc, 0xc4d6e2, 0xdae8f0, 0xeef6fa, 0xf8fcfe, 0xffffff}, 4.4, 1);
+        p.slab(4.4, 10.2, 6.0, 11.4, CYAN, 3.6, 1);
+        // the flasks: water on the left, Cryo-Source with its spiral on the right; snowy rims, a pipe between them
+        p.fill(2.6, 2.0, 6.4, 7.2, (u, v) -> Paint.ramp(new int[]{0x0c1c4a, 0x14306c, 0x1c4890, 0x2a62b4, 0x4280d0, 0x62a0e6, 0x8ac0f4},
+                0.45 + 0.15 * Math.sin(u * 2.1 + v * 0.7) - 0.1 * (v - 2.0) / 5.2));
+        p.fill(9.4, 2.0, 13.2, 7.2, (u, v) -> Paint.ramp(CYAN, 0.55 + 0.2 * Math.sin(u * 1.6 - v * 1.1) - 0.12 * (v - 2.0) / 5.2));
+        int[] spiral = {0x5ce6f8, 0x7a5cff, 0xc03cb0};
+        for (int k = 0; k < 3; k++) {
+            double y = 6.2 - k * 1.5;
+            int c = Paint.rgb(spiral[k]);
+            p.line(9.8, y + 0.4, 12.8, y - 0.3, 0.4, c);
+            p.glowRect(9.8, y - 0.4, 12.8, y + 0.6, 0.6, c, 70);
+        }
+        for (double[] f : new double[][]{{2.6, 6.4}, {9.4, 13.2}}) {
+            p.rect(f[0] + 0.3, 2.4, f[0] + 0.8, 6.8, Paint.argb(140, 0xffffff));
+            p.rect(f[0] - 0.4, 7.0, f[1] + 0.4, 7.6, Items.at(BRASS, 3.6));
+            p.rect(f[0] - 0.5, 1.2, f[1] + 0.5, 2.0, Paint.rgb(0xeef6fa));
+            p.icicle(f[0] - 0.2, 2.0, 1.0, 0.4);
+            p.icicle(f[1] - 0.4, 2.0, 0.8, 0.4);
+        }
+        p.line(4.5, 1.1, 4.5, 0.4, 0.5, Items.at(COPPER, 3.4));
+        p.line(4.5, 0.4, 7.7, 0.4, 0.5, Items.at(COPPER, 3.6));
+        p.line(7.7, 0.4, 7.7, 7.0, 0.5, Items.at(COPPER, 3.0));
+        golem(p, 13.7, 7.6);
         return p;
     }
 
