@@ -77,6 +77,13 @@ public final class AtlasStructure {
         }
     }
 
+    /** The starter tower: the core on two Atlas Conduits and a Cable Bushing, one above the other (the first step to the array). */
+    public static boolean isTower(Level level, BlockPos corePos) {
+        return level.getBlockState(corePos.below()).is(ModBlocks.ATLAS_CONDUIT.get())
+                && level.getBlockState(corePos.below(2)).is(ModBlocks.ATLAS_CONDUIT.get())
+                && level.getBlockState(corePos.below(3)).is(ModBlocks.CABLE_BUSHING.get());
+    }
+
     public static Result check(Level level, BlockPos corePos) {
         BlockPos origin = corePos.below(3);
         int expanders = 0;

@@ -137,7 +137,8 @@ public class DistillationTowerRenderer implements BlockEntityRenderer<Distillati
             float top = COLUMN_BOTTOM + 0.6f + 7f * Math.min(1f, blood);
             box(tv, p, 2.8f, COLUMN_BOTTOM + 0.6f, 2.8f, 13.2f, top, 13.2f, BLOOD, 0xE8901018, light);
         }
-        box(tv, p, 2.6f, 15.4f, 2.6f, 13.4f, 33.4f, 13.4f, GLASS, 0x80F0F4FF, light);
+        // a hair inside the frame rings (their faces are at 15.4 and 33.4: glass in the same planes flickered)
+        box(tv, p, 2.6f, 15.43f, 2.6f, 13.4f, 33.37f, 13.4f, GLASS, 0x80F0F4FF, light);
         pose.popPose();
     }
 

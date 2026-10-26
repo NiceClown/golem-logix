@@ -126,8 +126,8 @@
             {"type": "text", "title": "How it works",
              "text": [
                "Pour &lEssentia Vitae&r into the tower through any of its three blocks: pipes from an Ara Vitae, our buses, buckets. It holds &l8000 mB&r.",
-               "Every second it distils &l20 mB&r into &l20 Source&r and pours it into the &lCryo-Source Jars&r (or Ars jars) touching it. When the jars are full it waits.",
-               "A jar holds &l10 000 Source&r. Put it against any block of the network, like an Ars jar."
+               "Every second it distils &l20 mB&r into &l20 Source&r and pours it into the &lCryo-Source Jars&r (or Ars jars) standing &lright against it&r - a jar even one block away gets nothing. When the jars are full it waits.",
+               "Put the jars against the plinth, on the same ground: then a pipe runs from the tower's head over to each jar and drops into its vent. Any side will do, and the copper golem on the tower moves aside by itself.", "A jar holds &l10 000 Source&r. Put it against any block of the network, like an Ars jar: a network pipe docks onto it with a brass socket."
              ]},
             {"type": "crafting", "recipe": "golem_logix:cryo_distillation_tower",
              "text": ["Three blocks high: a rune plinth, a glass column with the coil, a brass head under snow. A Tabula Rasa from the Ara Vitae seals the plinth."]},
@@ -336,32 +336,79 @@
     {
       "id": "array",
       "title": "Atlas Array",
-      "blurb": "the 3x3x4 multiblock",
+      "blurb": "from one core to a 3x3x4 monument",
       "icon": "golem_logix:atlas_core",
       "color": "7fd0e8",
       "entries": [
         {
-          "id": "array_overview", "title": "The Atlas Array: overview", "icon": "golem_logix:atlas_core", "x": 0, "y": 0, "gold": true,
+          "id": "array_overview", "title": "The Atlas Core: step by step", "icon": "golem_logix:atlas_core", "x": 0, "y": 0, "gold": true,
           "pages": [
-            {"type": "text", "title": "A monument for the network",
+            {"type": "text", "title": "A network grows with its core",
              "text": [
-               "The heart of a developed base is an iron tower 3x3x4: four Atlants at the corners carry a crown with the Core on their shoulders, and five Cable Bushings at the base let channels out.",
-               "The array is not just decoration, it &ldefines the size of the network&r:",
-               "• a completed array gives &l5 lines × 64 = 320 channels&r;",
-               "• &lChannel Expanders&r in its walls raise the capacity of every line;",
-               "• without the array the core gives only &l8 channels&r to start."
+               "The &lAtlas Core&r is the network's mind. How many devices it serves at once - its &lchannels&r - depends on what you build under it, step by step:",
+               "1. &lthe core alone&r: &l8 channels&r, through its bottom face;",
+               "2. &la starter tower&r - two conduits and a Cable Bushing under the core: &l16 channels&r;",
+               "3. &lthe whole Atlas Array&r, an iron monument 3x3x4: five bushings of &l64 channels&r, &l320&r in all;",
+               "4. &lChannel Expanders&r in the array's walls raise every line.",
+               "&oEvery step is built on top of the previous one: nothing is taken apart.&r"
              ]},
-            {"type": "image", "texture": "array_full", "title": "What it looks like",
-             "text": ["The core with its crystal is at the very top. Copper electron-golems orbit around it, and mini-golems carry crates around the ring of casings."]}
+            {"type": "image", "texture": "array_full", "title": "The last step",
+             "text": ["The finished array: the core with its crystal on top, copper electron-golems orbit it, mini-golems carry crates around the ring of casings."]}
           ]
         },
         {
-          "id": "array_assembly", "title": "Building layer by layer", "icon": "golem_logix:atlas_casing", "x": 1, "y": 0, "parents": ["array_overview"], "gold": true,
+          "id": "array_core", "title": "Step 1: the Atlas Core", "icon": "golem_logix:atlas_core", "x": 1, "y": 0, "parents": ["array_overview"], "gold": true,
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:atlas_core",
+             "text": ["The core is the network's mind and its only Source consumer.", "The crystal glows and electrons orbit it: three for a complete array, one for a tower."]},
+            {"type": "text", "title": "The core alone",
+             "text": [
+               "Placed on its own, the core already runs a small network of &l8 channels&r.",
+               "It connects &lonly through its bottom face&r: put a pipe, a bushing or a device right under it. Pipes and devices beside the core or on top of it do not connect - the crystal stands on its network as on a pedestal.",
+               "Source: a jar touching any block of the network.",
+               "&oWhen you have two conduits and a bushing, set them under the core: that is the starter tower.&r"
+             ]},
+            {"type": "text", "title": "Core rules",
+             "text": [
+               "• A network must have &lexactly one&r core. A second core in the same network stays idle (right-clicking it tells you so).",
+               "• In a tower or an array the core links only to their parts: channels leave through the Cable Bushings.",
+               "• Once a second the core recounts the network, drains Source, lights up the pipes and wakes the cabinets.",
+               "# Right-click on the core",
+               "Shows the channels (used/capacity) and what to build next: the block and its coordinates, with sparks at the spot."
+             ]}
+          ]
+        },
+        {
+          "id": "array_tower", "title": "Step 2: the starter tower", "icon": "golem_logix:atlas_conduit", "x": 2, "y": 0, "parents": ["array_core"], "gold": true,
+          "pages": [
+            {"type": "checklist", "variant": "tower", "title": "Materials list",
+             "text": [
+               "Checked against your inventory. The button shows the ghost blocks of the tower: the bushing, two conduits above it and the core on top.",
+               "The ghosts follow the block you look at; &lY&r locks them, &lN&r cancels them."
+             ]},
+            {"type": "text", "title": "16 channels",
+             "text": [
+               "Until you have iron for the whole array, put a &lsmall tower&r under the core - a column of four blocks:",
+               "• the core on top,",
+               "• two Atlas Conduits under it,",
+               "• a Cable Bushing at the bottom (attach pipes and devices to it),",
+               "• a Source supply touching any block of the network.",
+               "Such a network gives &l16 channels&r - for terminals, a couple of cabinets and buses. Its one line goes through the bushing.",
+               "&oThe tower is the central column of the future array: build the monument around it, nothing is taken apart.&r"
+             ]}
+          ]
+        },
+        {
+          "id": "array_assembly", "title": "Step 3: the whole Atlas Array", "icon": "golem_logix:atlas_casing", "x": 3, "y": 0, "parents": ["array_tower"], "gold": true,
           "pages": [
             {"type": "checklist", "variant": "full", "title": "Materials list",
-             "text": ["The list is checked against your inventory: a green tick - you have enough.", "The button turns on &lghost blocks&r: turquoise ones show what to place and where, red ones are foreign blocks in the way. The ghosts follow the block you look at; press &lG&r to lock them and &lH&r to remove them. Near a Core the projection snaps onto it.", "&oThe lower and upper halves of an Atlant are a single item; casing can be partly replaced by expanders.&r"]},
+             "text": [
+               "The list is checked against your inventory: a green tick - you have enough.",
+               "The button turns on &lghost blocks&r: turquoise ones show what to place and where, red ones are foreign blocks in the way. The ghosts follow the block you look at; press &lG&r to lock them and &lH&r to remove them. Near a Core the projection snaps onto it.",
+               "&oThe lower and upper halves of an Atlant are a single item; casing can be partly replaced by expanders.&r"
+             ]},
             {"type": "image", "texture": "array_layers", "title": "Exploded view",
-             "text": ["Four layers, bottom to top. It is convenient to build layer by layer; the Core is placed last."]},
+             "text": ["Four layers, bottom to top. Your starter tower is already the central column, with the Core on top."]},
             {"type": "blueprint", "layer": 0, "title": "Layer 1 - the base",
              "text": ["&lBushings&r at the corners and in the center, &lconduits&r on the sides.", "Bushings are the only places where the network leaves the array: attach pipes and devices to them."]},
             {"type": "blueprint", "layer": 1, "title": "Layer 2 - the Atlants' legs",
@@ -374,92 +421,13 @@
              "text": [
                "Right-click the core to see what is missing: you get the block name and coordinates, and sparks flash at the right spot.",
                "An Atlant is placed like a door - one item, two blocks. When the array is complete the Atlants turn to face outward by themselves.",
+               "The finished array gives &lfive lines of 64 channels&r - 320 in all.",
                "&oThe order of layers does not matter - only that everything stands in its place at the end.&r"
              ]}
           ]
         },
         {
-          "id": "array_core", "title": "Atlas Core", "icon": "golem_logix:atlas_core", "x": 1, "y": -1, "parents": ["array_overview"],
-          "pages": [
-            {"type": "crafting", "recipe": "golem_logix:atlas_core",
-             "text": ["The core is the network's mind and its only Source consumer.", "The crystal glows and electrons orbit it: three for a complete array, one for a tower."]},
-            {"type": "text", "title": "Core rules",
-             "text": [
-               "• A network must have &lexactly one&r core. A second core in the same network stays idle (right-clicking it tells you so).",
-               "• The core links only to array parts (conduits, bushings), not to pipes directly - channels leave through bushings.",
-               "• Once a second the core recounts the network, drains Source, lights up the pipes and wakes the cabinets.",
-               "# Right-click on the core",
-               "Shows channels (used/capacity), line capacity, device count and Source drain. If the array is incomplete it names the missing block."
-             ]}
-          ]
-        },
-        {
-          "id": "array_atlants", "title": "Atlants", "icon": "golem_logix:atlas_atlant", "x": 2, "y": -1, "parents": ["array_assembly", "array_core"],
-          "pages": [
-            {"type": "crafting", "recipe": "golem_logix:atlas_atlant",
-             "text": ["An iron golem colossus two blocks tall. Four Atlants hold the array up by its corners."]},
-            {"type": "text", "title": "About the statue",
-             "text": [
-               "• Placed with &lone item into two blocks&r (like a door), so free space above is required.",
-               "• Both halves break together; the item drops once.",
-               "• The lower half stands on layer 2 of the array, the upper half on layer 3. Mix the halves up and the array will not count.",
-               "• When the array forms the Atlants turn themselves: northern ones face north, southern ones face south.",
-               "&oAtlants give no channels and connect nothing - they are the monument's load-bearing supports.&r"
-             ]}
-          ]
-        },
-        {
-          "id": "array_casing", "title": "Casing and conduits", "icon": "golem_logix:atlas_conduit", "x": 2, "y": 0, "parents": ["array_assembly"],
-          "pages": [
-            {"type": "crafting", "recipe": "golem_logix:atlas_casing",
-             "text": ["The iron walls of the monument: the side cells of the two middle layers and the whole crown. The top of every casing is inlaid with brass."]},
-            {"type": "crafting", "recipe": "golem_logix:atlas_conduit",
-             "text": ["A copper-and-rune bus: the base (sides) and the central column up to the core."]},
-            {"type": "text", "title": "A quirk of the conduit",
-             "text": [
-               "The conduit links &lonly to other array parts&r: the core, bushings and other conduits. A pipe, terminal or cabinet placed against it &lwill not connect&r.",
-               "This is so channels can leave only through bushings - otherwise line capacity could be bypassed.",
-               "Casing connects nothing - it only completes the monument."
-             ]}
-          ]
-        },
-        {
-          "id": "array_bushings", "title": "Cable Bushings and lines", "icon": "golem_logix:cable_bushing", "x": 2, "y": 1, "parents": ["array_assembly", "array_tower"],
-          "pages": [
-            {"type": "crafting", "recipe": "golem_logix:cable_bushing",
-             "text": ["A brass “exit” socket of the array. Five bushings at the base are five independent lines."]},
-            {"type": "text", "title": "Lines",
-             "text": [
-               "Every bushing gives &lone line&r: &l64 channels&r for a basic array. All devices connected through this bushing (and through pipes behind it) share its line.",
-               "A corner bushing has two or three free faces: each can take its own pipe. The center bushing sits in a shaft, but a power source can be put under it.",
-               "Right-clicking a bushing prints in chat &lhow many channels are used&r on its line and in the whole network; the same is shown in the tooltip above the block (Jade).",
-               "# Tip",
-               "Spread heavy sections over &ldifferent bushings&r: four corners give four lines, and the total capacity of the network is the sum of all lines."
-             ]},
-            {"type": "table", "title": "Capacity", "header": ["Line", "Network (5 lines)"], "widths": [74, 74],
-             "rows": [["64 (base)", "320"], ["+16 (1 exp.)", "400"], ["+128 (8 exp.)", "960"], ["+256 (8 quantum)", "1600"]],
-             "text": ["More on expansion in the article “Expanding channels”."]}
-          ]
-        },
-        {
-          "id": "array_tower", "title": "Starter tower", "icon": "golem_logix:atlas_conduit", "x": 1, "y": 1, "parents": ["array_overview"],
-          "pages": [
-            {"type": "checklist", "variant": "tower", "title": "Materials list",
-             "text": ["Checked against your inventory. The button shows the ghost blocks of the tower: place the bushing, and above it two conduits and the core.", "The ghosts follow the block you look at; &lY&r locks them, &lN&r cancels them."]},
-            {"type": "text", "title": "8 channels to start",
-             "text": [
-               "Until you have iron for the whole array, the network can be started with a &lsmall tower&r - just a chain of the core, conduits and a bushing:",
-               "• the core on top,",
-               "• two Atlas Conduits under it,",
-               "• a Cable Bushing at the bottom (attach devices to it),",
-               "• a Source supply touching any block.",
-               "Such a network gives &l8 channels&r - for a terminal, a cabinet and a couple of buses. The bushing limits its single line to the same eight.",
-               "&oWhen you have saved for casing and Atlants, build the monument around the tower - it becomes a full array without being taken apart.&r"
-             ]}
-          ]
-        },
-        {
-          "id": "array_expanders", "title": "Expanding channels", "icon": "golem_logix:quantum_channel_expander", "x": 3, "y": 0, "parents": ["array_casing", "array_bushings"], "gold": true,
+          "id": "array_expanders", "title": "Step 4: expanding channels", "icon": "golem_logix:quantum_channel_expander", "x": 4, "y": 0, "parents": ["array_assembly"], "gold": true,
           "pages": [
             {"type": "text", "title": "More channels",
              "text": [
@@ -486,16 +454,70 @@
              "text": ["The network capacity is the sum of its five lines."]},
             {"type": "text", "title": "Important",
              "text": [
-               "The expander must be &lbuilt into the wall&r: the array is checked as a whole. If you pull a block out, the core reports what is missing and the network falls back to 8 channels.",
+               "The expander must be &lbuilt into the wall&r: the array is checked as a whole. If you pull a block out, the core reports what is missing, and until the array is whole again the network has the starter tower's 16 channels (if the central column still stands).",
                "Pipes still limit their own stretches: to pass more than 64 channels through one bushing, run several pipes from it or use dense pipes."
              ]}
           ]
         },
         {
-          "id": "array_diagnosis", "title": "When something is wrong", "icon": "minecraft:spyglass", "x": 3, "y": -1, "parents": ["array_core"],
+          "id": "array_bushings", "title": "Cable Bushings and lines", "icon": "golem_logix:cable_bushing", "x": 2, "y": -1, "parents": ["array_tower"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:cable_bushing",
+             "text": ["A brass “exit” socket of the array. Five bushings at the base are five independent lines."]},
+            {"type": "text", "title": "Lines",
+             "text": [
+               "Every bushing gives &lone line&r: &l64 channels&r in an array, &l16&r in a starter tower. All devices connected through this bushing (and through pipes behind it) share its line.",
+               "A corner bushing has two or three free faces: each can take its own pipe. The center bushing sits in a shaft, but a power source can be put under it.",
+               "Right-clicking a bushing prints in chat &lhow many channels are used&r on its line and in the whole network; the same is shown in the tooltip above the block (Jade).",
+               "# Tip",
+               "Spread heavy sections over &ldifferent bushings&r: four corners give four lines, and the total capacity of the network is the sum of all lines."
+             ]},
+            {"type": "table", "title": "Capacity", "header": ["Line", "Network (5 lines)"], "widths": [74, 74],
+             "rows": [
+               ["64 (base)", "320"],
+               ["+16 (1 exp.)", "400"],
+               ["+128 (8 exp.)", "960"],
+               ["+256 (8 quantum)", "1600"]
+             ],
+             "text": ["More on expansion in the article “Expanding channels”."]}
+          ]
+        },
+        {
+          "id": "array_casing", "title": "Casing and conduits", "icon": "golem_logix:atlas_conduit", "x": 2, "y": 1, "parents": ["array_tower"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:atlas_casing",
+             "text": ["The iron walls of the monument: the side cells of the two middle layers and the whole crown. The top of every casing is inlaid with brass."]},
+            {"type": "crafting", "recipe": "golem_logix:atlas_conduit",
+             "text": ["A copper-and-rune bus: the base (sides) and the central column up to the core."]},
+            {"type": "text", "title": "A quirk of the conduit",
+             "text": [
+               "The conduit links &lonly to other array parts&r: the core, bushings and other conduits. A pipe, terminal or cabinet placed against it &lwill not connect&r.",
+               "This is so channels can leave only through bushings - otherwise line capacity could be bypassed.",
+               "Casing connects nothing - it only completes the monument."
+             ]}
+          ]
+        },
+        {
+          "id": "array_atlants", "title": "Atlants", "icon": "golem_logix:atlas_atlant", "x": 3, "y": -1, "parents": ["array_assembly"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:atlas_atlant",
+             "text": ["An iron golem colossus two blocks tall. Four Atlants hold the array up by its corners."]},
+            {"type": "text", "title": "About the statue",
+             "text": [
+               "• Placed with &lone item into two blocks&r (like a door), so free space above is required.",
+               "• Both halves break together; the item drops once.",
+               "• The lower half stands on layer 2 of the array, the upper half on layer 3. Mix the halves up and the array will not count.",
+               "• When the array forms the Atlants turn themselves: northern ones face north, southern ones face south.",
+               "&oAtlants give no channels and connect nothing - they are the monument's load-bearing supports.&r"
+             ]}
+          ]
+        },
+        {
+          "id": "array_diagnosis", "title": "When something is wrong", "icon": "minecraft:spyglass", "x": 1, "y": 1, "parents": ["array_core"],
           "pages": [
             {"type": "table", "title": "Core messages", "header": ["Message", "Cause"], "widths": [74, 74],
              "rows": [
+               ["Core alone", "8 ch., bottom face"],
                ["Incomplete", "a block is missing"],
                ["Array OFFLINE", "no Source"],
                ["Another core", "a core is already there"],

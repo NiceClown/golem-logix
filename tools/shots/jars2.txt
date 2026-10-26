@@ -1,0 +1,30 @@
+# Cryo-Distillation (-GradleArgs "-Pvitae"): jars on both sides of the tower get its outlet pipes, the tower's golem moves to the back,
+# the left jar's golem moves away from the tower; a lone jar with network pipes docked onto its side and its cap
+cmd time set 6000
+cmd fill -8 -60 -6 10 -54 6 minecraft:air
+cmd setblock 0 -60 0 golem_logix:cryo_distillation_tower[section=0,facing=south]
+cmd setblock 0 -59 0 golem_logix:cryo_distillation_tower[section=1,facing=south]
+cmd setblock 0 -58 0 golem_logix:cryo_distillation_tower[section=2,facing=south]
+cmd setblock 1 -60 0 golem_logix:cryo_source_jar[half=lower,facing=south]
+cmd setblock 1 -59 0 golem_logix:cryo_source_jar[half=upper,facing=south]
+cmd setblock -1 -60 0 golem_logix:cryo_source_jar[half=lower,facing=south]
+cmd setblock -1 -59 0 golem_logix:cryo_source_jar[half=upper,facing=south]
+cmd setblock 6 -60 0 golem_logix:cryo_source_jar[half=lower,facing=south]
+cmd setblock 6 -59 0 golem_logix:cryo_source_jar[half=upper,facing=south]
+cmd setblock 7 -60 0 golem_logix:basic_snow_pipe
+cmd setblock 8 -60 0 golem_logix:basic_snow_pipe
+cmd setblock 6 -58 0 golem_logix:basic_snow_pipe
+hook fillfluid 0 -60 0 neovitae:essentia_vitae_source 6000
+wait 200
+look 0.5 -58.5 0.5 6 180 18
+wait 20
+shot jars2_front
+look 0.5 -57.5 0.5 5 200 50
+wait 10
+shot jars2_top
+look 0.5 -58.5 0.5 6 0 18
+wait 10
+shot jars2_back
+look 6.5 -59 0.5 4 140 22
+wait 10
+shot jars2_docked

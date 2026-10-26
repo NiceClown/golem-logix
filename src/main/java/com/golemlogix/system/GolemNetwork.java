@@ -52,13 +52,16 @@ import java.util.WeakHashMap;
  * Every device takes one channel. {@link ChannelCalculation} hands the channels out as Applied Energistics 2 does: from the
  * controller (the core with the conduits of its array) along the shortest routes, dense carriers first, and a device gets a
  * channel only if every node on its route has room. Limits: a basic snow pipe carries 16, a dense frost pipe 64, a Cable Bushing
- * its line (64 in a complete Atlas Array, raised by Channel Expanders in the walls; 8 in a starter tower), the outer face of an
+ * its line (64 in a complete Atlas Array, raised by Channel Expanders in the walls; 16 in a starter tower), the outer face of an
  * expander its exit, a telegraph 64, a device as much as a basic pipe (config "deviceChannels"). The whole network has the sum
- * of its five lines (8 without the array).
+ * of its five lines; a starter tower (the core on two conduits and a bushing) has 16, the core alone 8.
  */
 public final class GolemNetwork {
     public static final int MAX_NODES = 16384;
+    /** The Atlas Core alone, without even a starter tower under it. */
     public static final int BARE_CORE_CHANNELS = 8;
+    /** The starter tower: the core on two conduits and a Cable Bushing. */
+    public static final int TOWER_CHANNELS = 16;
 
     /** A node of a network: a block in a level (Level compares by identity). */
     public record Node(Level level, BlockPos pos) {
@@ -73,6 +76,8 @@ public final class GolemNetwork {
     private BlockPos corePos;
     private AtlasCoreBlockEntity core;
     private AtlasStructure.Result structure;
+    /** The core stands on a starter tower (and the array is not complete). */
+    private boolean tower;
     private int lineCapacity = BARE_CORE_CHANNELS;
     private int channelCapacity = BARE_CORE_CHANNELS;
     private int channelsUsed;
@@ -476,8 +481,9 @@ public final class GolemNetwork {
                         + GolemConfig.QUANTUM_BONUS.get() * structure.quantumExpanders();
                 channelCapacity = lineCapacity * AtlasStructure.BUSHINGS;
             } else {
-                lineCapacity = BARE_CORE_CHANNELS;
-                channelCapacity = BARE_CORE_CHANNELS;
+                tower = AtlasStructure.isTower(coreLevel, corePos);
+                lineCapacity = tower ? TOWER_CHANNELS : BARE_CORE_CHANNELS;
+                channelCapacity = lineCapacity;
             }
             allocateChannels(links, nodeIndex.get(primary));
             // storages and providers without a channel stay silent, like terminals and buses
@@ -672,6 +678,11 @@ public final class GolemNetwork {
     /** There is a core and it is powered with Source. */
     public boolean isOnline() {
         return core != null && core.isPowered();
+    }
+
+    /** The core stands on a starter tower (and the whole array is not built yet). */
+    public boolean isTower() {
+        return tower;
     }
 
     public int channelCapacity() {

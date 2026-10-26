@@ -30,10 +30,14 @@ public class AtlasCoreBlock extends Block implements GolemNode, EntityBlock, Atl
         super(properties.sound(SoundType.ANVIL).strength(6.0f).requiresCorrectToolForDrops().noOcclusion().lightLevel(state -> 10));
     }
 
-    /** The core links only to parts of the array: devices connect through Cable Bushings. */
+    /**
+     * The core links to parts of the array, and through its bottom face to anything: in a tower or an array a conduit stands there
+     * (devices connect through Cable Bushings), while a core alone takes a pipe or a device under it (8 channels). Never sideways or
+     * upwards: a pipe there would go round the bushings' lines.
+     */
     @Override
-    public boolean canLink(BlockState other) {
-        return other.getBlock() instanceof AtlasPart;
+    public boolean canLink(BlockState self, BlockState other, net.minecraft.core.Direction toOther) {
+        return toOther == net.minecraft.core.Direction.DOWN || other.getBlock() instanceof AtlasPart;
     }
 
     @Nullable
@@ -66,8 +70,9 @@ public class AtlasCoreBlock extends Block implements GolemNode, EntityBlock, Atl
                 player.displayClientMessage(Component.translatable("message.golem_logix.core.duplicate"), false);
             } else if (st != null && !st.valid()) {
                 BlockPos m = st.missingPos();
-                player.displayClientMessage(Component.translatable("message.golem_logix.core.unformed",
-                        st.expected().getName(), m.getX(), m.getY(), m.getZ(), GolemNetwork.BARE_CORE_CHANNELS), false);
+                // the core alone, or on a starter tower: what it gives now, and the next block the whole array needs
+                player.displayClientMessage(Component.translatable(net.isTower() ? "message.golem_logix.core.tower" : "message.golem_logix.core.unformed",
+                        net.channelsUsed(), net.channelCapacity(), st.expected().getName(), m.getX(), m.getY(), m.getZ()), false);
                 if (player instanceof ServerPlayer sp && level instanceof ServerLevel sl) {
                     sl.sendParticles(sp, ParticleTypes.END_ROD, true, m.getX() + 0.5, m.getY() + 0.5, m.getZ() + 0.5,
                             18, 0.3, 0.3, 0.3, 0.02);

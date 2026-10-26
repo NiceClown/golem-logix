@@ -39,8 +39,11 @@ public class CryoJarRenderer implements BlockEntityRenderer<CryoJarBlockEntity> 
             GLASS = tex("sat_glass"), RUNES = tex("cryo_panel_matrix"), GAUGE = tex("monitor_gauge"), FRAME = mc("weathered_copper"),
             SNOW = mc("snow"), CRYO = tex("cryo_source_still"), COPPER = mc("copper_block");
     static final int BRICK_TINT = 0xFFC89A8A, WHITE = 0xFFFFFFFF;
-    /** The flask's inside, where the Source stands. */
-    private static final float FLASK_BOTTOM = 8.5f, FLASK_TOP = 21.5f;
+    /**
+     * The flask's inside, where the Source stands: a hair inside the frame rings (the rings' faces are at 8.5 and 21.5; the glass and
+     * the Source lying in the same planes flickered).
+     */
+    private static final float FLASK_BOTTOM = 8.56f, FLASK_TOP = 21.44f;
 
     static ResourceLocation tex(String name) {
         return ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/" + name);
