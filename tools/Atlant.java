@@ -121,22 +121,30 @@ final class Atlant {
     }
 
     /**
-     * The head's face, where its front samples the texture (u 4.5..11.5, v 2..10): a heavy brow, deep eye sockets with a
-     * cyan light, the long nose of the iron golem (its own element samples u 7.25..8.75, v 6..9) and a vine over a cheek.
+     * The head's face in the iron golem's layout, where its front samples the texture (u 4..12, v 0..10): smooth copper
+     * above, the heavy brow over two small deep-set eyes with the mod's cyan light, the long nose (its own element samples
+     * u 7..9, v 5..9) with its shadow, a darker chin, and a vine down one side as on the vanilla golem.
      */
     static Paint head() {
         Paint p = new Paint(16, 16, K);
-        patina(p, 404, 0.4, 0);
-        p.rect(5, 3, 11, 3.5, rgb(COPPER[7]));
-        p.rect(5, 3.5, 11, 4.5, SEAM);
-        p.rect(5.5, 4.5, 7.5, 6, rgb(0x2a140c));
-        p.rect(8.5, 4.5, 10.5, 6, rgb(0x2a140c));
-        p.glowRect(6, 5, 7, 5.5, 0.01, rgb(0x45d6d2), 255);
-        p.glowRect(9, 5, 10, 5.5, 0.01, rgb(0x45d6d2), 255);
-        p.rect(7.25, 6, 8.75, 9, rgb(COPPER[5]));
-        p.rect(7.25, 6, 7.75, 9, rgb(COPPER[7]));
+        patina(p, 404, 0.3, 0);
+        // the brow: a ledge with light on top and a shadow under it, across the whole face
+        p.rect(4, 2.5, 12, 3, rgb(COPPER[8]));
+        p.rect(4, 3, 12, 4, rgb(COPPER[5]));
+        p.rect(4, 4, 12, 4.5, SEAM);
+        // the eyes: dark sockets right under the brow, a cyan glint in each
+        p.rect(5, 4.5, 7, 5.5, rgb(0x2a140c));
+        p.rect(9, 4.5, 11, 5.5, rgb(0x2a140c));
+        p.glowRect(5.5, 4.5, 6.5, 5.5, 0.01, rgb(0x45d6d2), 255);
+        p.glowRect(9.5, 4.5, 10.5, 5.5, 0.01, rgb(0x45d6d2), 255);
+        // the nose and the cheeks' shade on both sides of it
+        p.rect(7, 5, 9, 9, rgb(COPPER[6]));
+        p.rect(7, 5, 7.5, 9, rgb(COPPER[8]));
+        p.rect(8.5, 5, 9, 9, rgb(COPPER[4]));
         p.rect(6.5, 9, 9.5, 9.5, SEAM);
-        vine(p, 10, 4.5, 10, 4);
+        // the mouth line and the chin
+        p.rect(6, 9.5, 10, 10, rgb(COPPER[2]));
+        vine(p, 11, 0, 10, 4);
         return p;
     }
 

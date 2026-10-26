@@ -115,8 +115,10 @@ public class CryoMainframeRenderer extends com.golemlogix.client.render.LegacyBe
         // inside: a glowing matrix over the whole back wall and a brass shelf in the middle
         wall(vc, p, -14, 3, 30, 28, 28.9f, MATRIX, white, LightCoordsUtil.FULL_BRIGHT);
         box(vc, p, -14, 15, 3, 30, 16, 29, BRASS, white, light);
-        box(vc, p, -14, 3, 3, 30, 3.2f, 29, FLOOR, white, light);
-        box(vc, p, -14, 16, 3, 30, 16.2f, 29, FLOOR, white, light);
+        box(vc, p, -14, 3, 3, 30, 3.2f, 29, BRONZE, white, light);
+        box(vc, p, -14, 16, 3, 30, 16.2f, 29, BRONZE, white, light);
+        shelfFloor(vc, p, 3.21f, light);
+        shelfFloor(vc, p, 16.21f, light);
 
         // calculators on the shelves (as many as are inserted), at the back wall
         int calcs = be.clientCalcs();
@@ -630,6 +632,13 @@ public class CryoMainframeRenderer extends com.golemlogix.client.render.LegacyBe
         // top and bottom
         tile(vc, p, s, color, light, x1 - x0, z1 - z0, (a, b) -> new float[]{x0 + a, y1, z1 - b}, 0, 1, 0);
         tile(vc, p, s, color, light, x1 - x0, z1 - z0, (a, b) -> new float[]{x0 + a, y0, z0 + b}, 0, -1, 0);
+    }
+
+    /** The floor picture of a shelf over its whole top (x -14..30, z 3..29 pixels): 44 x 26 units of the 48 x 32 texture. */
+    private static void shelfFloor(VertexConsumer vc, PoseStack.Pose p, float y, int light) {
+        TextureAtlasSprite s = sprite(FLOOR);
+        quad(vc, p, new float[]{-14, y, 29}, new float[]{30, y, 29}, new float[]{30, y, 3}, new float[]{-14, y, 3},
+                s.getU(0f), s.getV(0f), s.getU(44f / 48f), s.getV(26f / 32f), 0xFFFFFFFF, light, 0, 1, 0);
     }
 
     private interface Map2 {

@@ -8,7 +8,9 @@
 - **The Atlas Array in oxidized copper**: rune plates on the casings, ice pipes in the conduits. An assembled array grows a
   column of glowing ice between the Atlants on every side (unless a channel expander stands there), icicles under the top layer
   and a balcony rail of brass and spruce around the top.
-- **The Cryo-Mainframe's shelves** have an even frosted floor under the snowmen instead of a pattern of rune tiles.
+- **The Atlant's head is the vanilla iron golem's**: tall, with the long nose and the heavy brow, in copper with cyan eyes.
+- **The Cryo-Mainframe's shelves** have one floor picture each instead of a pattern of rune tiles: a deck of bronze plates with
+  snow drifted against the walls, hoarfrost and a dim rune under the crew's projection.
 - **All block textures share one pixel density** (32 px a block), so neighbouring blocks no longer mix fine and coarse pixels.
 - 112 game tests.
 

@@ -364,9 +364,10 @@ public class Models {
                 e(-0.5, 14, 5, 3.5, 16, 11).all("#belt"), e(12.5, 14, 5, 16.5, 16, 11).all("#belt"));
         // the head is separate: the renderer (AtlantHeadRenderer) turns it to the player, the neck is at (8, 6, 8)
         model("atlas_atlant_head", false, "atlant_head",
-                new String[][]{{"limb", "atlant_limb"}, {"head", "atlant_head"}},
-                e(4.5, 6, 3, 11.5, 14, 10).all("#limb").face("north", "#head"),
-                e(7.25, 7, 1.5, 8.75, 10, 3).all("#head"));
+                new String[][]{{"body", "atlant_body"}, {"head", "atlant_head"}},
+                // the iron golem's head: tall (8 x 10 x 8), the long nose low on the face
+                e(4, 6, 2, 12, 16, 10).all("#body").face("north", "#head"),
+                e(7, 7, 0, 9, 11, 2).all("#head"));
         facing4Half("atlas_atlant");
         item("atlas_atlant", "atlas_atlant_lower");
 

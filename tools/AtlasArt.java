@@ -129,17 +129,77 @@ final class AtlasArt {
     }
 
     /**
-     * The floor of the mainframe's shelves under the snowmen: even frosted stone, one calm tone with a fine grain and no
-     * pattern, so the 16-pixel tiles of a long shelf join without a seam.
+     * The floor of a mainframe shelf (44 x 26 units of the 48 x 32 canvas, the front edge on top), drawn as one picture over the
+     * whole shelf: a deck of bronze plates with brass rivets, snow drifted against the back and the side walls, patches of ice
+     * with glints, and a dim rune under the crew's projection.
      */
     static Paint shelfFloor() {
-        int[] tones = {0xa9c4d4, 0xb2ccdb, 0xb9d2e0, 0xc1d8e4};
-        Paint p = new Paint(16, 16, K);
+        Paint p = new Paint(48, 32, K);
+        double w = 44, h = 26;
+        // big plates (11 x 8.5) with a light edge on the top and left, a dark seam on the bottom and right
         for (int j = 0; j < p.h; j++) {
             for (int i = 0; i < p.w; i++) {
-                double t = Atlant.hash(i / 2, j / 2, 31);
-                p.px(i, j, rgb(tones[t < 0.2 ? 0 : t < 0.6 ? 1 : t < 0.93 ? 2 : 3]));
+                double u = (i + 0.5) / K, v = (j + 0.5) / K;
+                double pu = u % 11, pv = v % 8.75;
+                double tone = Atlant.hash(i / 2, j / 2, 41) * 0.45 + Atlant.noise(i, j, 12, 42) * 0.55;
+                int c = Paint.BRONZE[(int) (2.4 + tone * 2)];
+                if (pu > 10.5 || pv > 8.25) {
+                    c = Paint.BRONZE[0];
+                } else if (pu < 0.5 || pv < 0.5) {
+                    c = Paint.BRONZE[4];
+                }
+                p.px(i, j, rgb(c));
             }
+        }
+        for (double v = 0; v < h; v += 8.75) {
+            for (double u = 0; u < w; u += 11) {
+                for (double[] r : new double[][]{{u + 1, v + 1}, {u + 9, v + 1}, {u + 1, v + 7.25}, {u + 9, v + 7.25}}) {
+                    p.rect(r[0], r[1], r[0] + 0.5, r[1] + 0.5, rgb(Paint.BRASS[5]));
+                }
+            }
+        }
+        // the rune under the projection (the middle of the front half), dim cyan lines cut into the plates
+        double cx = 22, cy = 7, r = 4.2;
+        for (int j = 0; j < p.h; j++) {
+            for (int i = 0; i < p.w; i++) {
+                double u = (i + 0.5) / K - cx, v = (j + 0.5) / K - cy, d = Math.hypot(u, v);
+                if (Math.abs(d - r) < 0.3 || Math.abs(d - r * 0.55) < 0.25
+                        || (d < r && (Math.abs(u) < 0.25 || Math.abs(v) < 0.25))) {
+                    p.px(i, j, rgb(Paint.CYAN[2]));
+                }
+            }
+        }
+        for (int j = 0; j < p.h; j++) {
+            for (int i = 0; i < p.w; i++) {
+                double u = (i + 0.5) / K, v = (j + 0.5) / K;
+                if (u > w || v > h) {
+                    continue;
+                }
+                // hoarfrost: scattered pale pixels where it is cold, never a fill
+                double frost = Atlant.noise(i, j, 12, 51);
+                if (frost > 0.6 && Atlant.hash(i, j, 52) > 1.6 - frost) {
+                    p.px(i, j, rgb(Paint.FROST[Atlant.hash(i, j, 54) > 0.7 ? 5 : 3]));
+                }
+                // ragged snow drifts against the back wall, thin ones along the sides
+                double back = h - v, side = Math.min(u, w - u);
+                double drift = Math.max(3.2 * Atlant.noise(i, j, 7, 53) + 0.8 - back * 0.55,
+                        1.6 * Atlant.noise(i, j, 5, 55) + 0.2 - side * 0.6);
+                if (drift > 0.55) {
+                    p.px(i, j, rgb(Paint.FROST[drift > 1.4 ? 6 : drift > 0.9 ? 5 : 4]));
+                } else if (drift > 0.35) {
+                    p.px(i, j, rgb(Paint.FROST[2]));
+                }
+            }
+        }
+        // a few lumps of snow kicked onto the deck by the crew, and ice glints
+        for (int n = 0; n < 9; n++) {
+            double x = 3 + Atlant.hash(n, 1, 61) * 38, y = 3 + Atlant.hash(n, 2, 61) * 17;
+            if (Math.hypot(x - cx, y - cy) < r + 1) {
+                continue;
+            }
+            p.rect(x, y, x + 1.5, y + 1, rgb(Paint.FROST[5]));
+            p.rect(x + 0.5, y - 0.5, x + 1, y, rgb(Paint.FROST[6]));
+            p.rect(x, y + 1, x + 1.5, y + 1.5, rgb(Paint.FROST[2]));
         }
         return p;
     }
