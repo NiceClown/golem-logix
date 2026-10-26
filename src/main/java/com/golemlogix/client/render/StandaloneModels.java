@@ -31,6 +31,7 @@ public final class StandaloneModels {
     public static final Identifier PENDULUM = add("block/golem_interface_pendulum");
     public static final Identifier ATLANT_HEAD = add("block/atlas_atlant_head");
     public static final Identifier ATLAS_ICE_COLUMN = add("block/atlas_ice_column");
+    public static final Identifier ATLAS_ICE_COLUMN_TOP = add("block/atlas_ice_column_top");
     public static final Identifier ATLAS_ICICLES = add("block/atlas_icicles");
     public static final Identifier ATLAS_RAIL = add("block/atlas_rail");
     public static final Identifier ATLAS_RAIL_END = add("block/atlas_rail_end");

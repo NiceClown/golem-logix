@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.5 (26.1.2) — Warm metal, cold light
+
+- **The Atlas Array in copper and brass**: copper rune plates in brass frames, hoarfrost creeping in from the corners and rare
+  flecks of patina; the Cable Bushing matches it (a brass ring round a cyan core on copper).
+- **Light flows up the ice columns** between the Atlants of an assembled array, in slow pulses.
+- **The Atlants are iron and copper**: the iron golem's grey iron frame with copper over it (the chest plate with its rune, the
+  bands at the joints, the belt, the hands and feet, the brow).
+- The array's dress (columns, icicles, rail) is modelled inside its cells, so no face samples outside its texture.
+
 ## 2.0.4 (26.1.2) — Copper Atlants and a dressed Atlas Array
 
 - **The Atlants are redrawn in the game's own style**: iron golem statues clad in copper gone green, with vines like the vanilla

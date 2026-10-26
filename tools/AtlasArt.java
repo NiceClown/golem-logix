@@ -1,15 +1,13 @@
 /**
- * The Atlas Array in the game's own materials: rune plates of oxidized copper (the vanilla oxidized copper tones), ice
- * pipes at the base, columns of glowing ice between the Atlants, icicles and a brass rail on top. Flat tones and dark
- * seams like the vanilla copper blocks; the mod's accent is the cyan light of the runes and the ice.
+ * The Atlas Array in warm metal with cold inlays: copper plates in brass frames (the vanilla copper tones), cyan runes,
+ * hoarfrost in the corners and a few flecks of patina; ice pipes at the base, columns of ice with light flowing up between
+ * the Atlants, icicles and a brass rail on top. Flat tones and dark seams like the vanilla copper blocks.
  */
 final class AtlasArt {
     static final int K = Forge2.K;
-    /** Oxidized copper, dark to light (sampled from oxidized_copper), with the copper that shows through scratches. */
-    static final int[] OXID = {0x2c4d41, 0x3b6655, 0x396e59, 0x3e816b, 0x4c9484, 0x53a178, 0x59b292, 0x6ec59f};
+    static final int[] COPPER = Atlant.COPPER;
     static final int[] ICE = {0x4f7fd0, 0x7ca5f4, 0x92b9fe, 0xa1c3ff, 0xbcd4ff, 0xd8e6ff, 0xf2f8ff};
-    static final int RUNE = 0xff1f3a31;
-    static final int SCRATCH = 0xffc26b4c;
+    static final int RUNE = 0xff3a1a10;
 
     private AtlasArt() {
     }
@@ -18,34 +16,53 @@ final class AtlasArt {
         return 0xff000000 | c;
     }
 
-    /** Oxidized copper in 2-pixel blocks with a few copper scratches; bright 0 = the middle tones. */
-    static void oxidized(Paint p, int seed, double bright) {
+    /** Copper in 2-pixel blocks over a rectangle (units); bright shifts the tones (0 = the middle ones). */
+    static void copper(Paint p, double x0, double y0, double x1, double y1, int seed, double bright) {
+        for (int j = (int) (y0 * p.k); j < (int) (y1 * p.k); j++) {
+            for (int i = (int) (x0 * p.k); i < (int) (x1 * p.k); i++) {
+                double tone = Atlant.hash(i / 2, j / 2, seed) * 0.55 + Atlant.noise(i, j, 8, seed + 1) * 0.45;
+                p.px(i, j, rgb(COPPER[(int) Math.min(COPPER.length - 1, Math.max(0, 2.5 + tone * 4 + bright))]));
+            }
+        }
+    }
+
+    /** A brass frame of width bw (units): a light outer edge on top and left, a sunk inner edge (shadow top-left). */
+    static void brassFrame(Paint p, double x0, double y0, double x1, double y1, double bw) {
+        p.rect(x0, y0, x1, y1, rgb(Paint.BRASS[4]));
+        p.rect(x0, y0, x1, y0 + 0.5, rgb(Paint.BRASS[6]));
+        p.rect(x0, y0, x0 + 0.5, y1, rgb(Paint.BRASS[5]));
+        p.rect(x0, y1 - 0.5, x1, y1, rgb(Paint.BRASS[2]));
+        p.rect(x1 - 0.5, y0, x1, y1, rgb(Paint.BRASS[3]));
+        p.rect(x0 + bw - 0.5, y0 + bw - 0.5, x1 - bw + 0.5, y0 + bw, rgb(Paint.BRASS[2]));
+        p.rect(x0 + bw - 0.5, y0 + bw - 0.5, x0 + bw, y1 - bw + 0.5, rgb(Paint.BRASS[2]));
+        p.rect(x0 + bw - 0.5, y1 - bw, x1 - bw + 0.5, y1 - bw + 0.5, rgb(Paint.BRASS[6]));
+        p.rect(x1 - bw, y0 + bw - 0.5, x1 - bw + 0.5, y1 - bw + 0.5, rgb(Paint.BRASS[5]));
+    }
+
+    /** The cold inlays: hoarfrost creeping in from the corners and rare flecks of patina, never a fill. */
+    static void cold(Paint p, int seed, double reach) {
+        double w = p.w / p.k, h = p.h / p.k;
         for (int j = 0; j < p.h; j++) {
             for (int i = 0; i < p.w; i++) {
-                double tone = Atlant.hash(i / 2, j / 2, seed) * 0.55 + Atlant.noise(i, j, 8, seed + 1) * 0.45;
-                p.px(i, j, rgb(OXID[(int) Math.min(OXID.length - 1, Math.max(0, 2 + tone * 4 + bright))]));
-                if (Atlant.hash(i, j, seed + 5) > 0.996) {
-                    p.px(i, j, SCRATCH);
+                double u = (i + 0.5) / p.k, v = (j + 0.5) / p.k;
+                double d = Math.min(Math.min(Math.hypot(u, v), Math.hypot(w - u, v)),
+                        Math.min(Math.hypot(u, h - v), Math.hypot(w - u, h - v)));
+                double f = reach * (0.6 + 0.8 * Atlant.noise(i, j, 6, seed)) - d;
+                if (f > 0 && Atlant.hash(i, j, seed + 1) < 0.35 + f * 0.3) {
+                    p.px(i, j, rgb(Paint.FROST[f > 1.2 ? 6 : f > 0.5 ? 5 : 3]));
+                } else if (Atlant.hash(i / 2, j / 2, seed + 2) > 0.985) {
+                    p.px(i, j, rgb(Atlant.PATINA[3 + (int) (Atlant.hash(i, j, seed + 3) * 3)]));
                 }
             }
         }
     }
 
-    /** A raised frame: a light edge on top and left, a dark one on the bottom and right (as on the vanilla cut copper). */
-    static void frame(Paint p, double x0, double y0, double x1, double y1) {
-        p.rect(x0, y0, x1, y0 + 0.5, rgb(OXID[7]));
-        p.rect(x0, y0, x0 + 0.5, y1, rgb(OXID[7]));
-        p.rect(x0, y1 - 0.5, x1, y1, rgb(OXID[0]));
-        p.rect(x1 - 0.5, y0, x1, y1, rgb(OXID[0]));
-    }
-
-    /** The array's rune engraved in a square of side 2r around (cx, cy): a ring, a cross and four ticks, with a cyan core. */
+    /** The array's rune cut into the plate around (cx, cy): a ring, a cross and a cyan core with two sparks. */
     static void rune(Paint p, double cx, double cy, double r) {
         for (int j = 0; j < p.h; j++) {
             for (int i = 0; i < p.w; i++) {
                 double u = (i + 0.5) / p.k - cx, v = (j + 0.5) / p.k - cy;
-                double d = Math.hypot(u, v);
-                if (Math.abs(d - r * 0.8) < 0.3) {
+                if (Math.abs(Math.hypot(u, v) - r * 0.8) < 0.3) {
                     p.px(i, j, RUNE);
                 }
             }
@@ -70,73 +87,119 @@ final class AtlasArt {
         }
     }
 
-    /** The side of a casing: a rune plate in a raised frame, rivets in the corners. */
+    /** Brass rivets of the given size, inset from the four corners. */
+    static void rivets(Paint p, double in, double size) {
+        for (double[] c : new double[][]{{in, in}, {16 - in - size, in}, {in, 16 - in - size}, {16 - in - size, 16 - in - size}}) {
+            p.rect(c[0], c[1], c[0] + size, c[1] + size, rgb(Paint.BRASS[2]));
+            p.rect(c[0], c[1], c[0] + size / 2, c[1] + size / 2, rgb(Paint.BRASS[6]));
+        }
+    }
+
+    /** The side of a casing: a copper rune plate sunk in a brass frame, frost in the corners. */
     static Paint casing() {
         Paint p = new Paint(16, 16, K);
-        oxidized(p, 11, 0);
-        frame(p, 0, 0, 16, 16);
-        frame(p, 2, 2, 14, 14);
-        rune(p, 8, 8, 4);
-        for (double[] c : new double[][]{{0.75, 0.75}, {14.25, 0.75}, {0.75, 14.25}, {14.25, 14.25}}) {
-            p.rect(c[0], c[1], c[0] + 1, c[1] + 1, rgb(0xa07a28));
-            p.rect(c[0], c[1], c[0] + 0.5, c[1] + 0.5, rgb(0xe0bc58));
-        }
+        brassFrame(p, 0, 0, 16, 16, 1.5);
+        copper(p, 1.5, 1.5, 14.5, 14.5, 11, 0);
+        rune(p, 8, 8, 4.5);
+        cold(p, 12, 2.4);
+        rivets(p, 0.5, 1);
         return p;
     }
 
-    /** The top of a casing: four tiles of cut copper around a small rune, like the floor of the array's balcony. */
+    /** The top of a casing: four copper tiles in brass seams around a small rune, the floor of the array's balcony. */
     static Paint casingTop() {
         Paint p = new Paint(16, 16, K);
-        oxidized(p, 12, 0.5);
-        for (int a = 0; a < 2; a++) {
-            for (int b = 0; b < 2; b++) {
-                frame(p, a * 8, b * 8, a * 8 + 8, b * 8 + 8);
-            }
-        }
-        p.rect(5.5, 5.5, 10.5, 10.5, rgb(OXID[1]));
-        frame(p, 5.5, 5.5, 10.5, 10.5);
-        rune(p, 8, 8, 2);
+        brassFrame(p, 0, 0, 16, 16, 1);
+        copper(p, 1, 1, 15, 15, 13, 0.4);
+        p.rect(7.75, 1, 8.25, 15, rgb(Paint.BRASS[2]));
+        p.rect(1, 7.75, 15, 8.25, rgb(Paint.BRASS[2]));
+        p.rect(5.5, 5.5, 10.5, 10.5, rgb(Paint.BRASS[4]));
+        copper(p, 6, 6, 10, 10, 14, -0.6);
+        rune(p, 8, 8, 1.8);
+        cold(p, 15, 2.0);
         return p;
     }
 
-    /** The conduit: a copper sleeve with a window on a pipe of glowing ice (vertical, as it stands in the starter tower). */
+    /** The conduit: a copper sleeve in brass bands with a window on a pipe of ice (vertical, as in the starter tower). */
     static Paint conduit() {
         Paint p = new Paint(16, 16, K);
-        oxidized(p, 21, -0.5);
-        frame(p, 0, 0, 16, 16);
-        p.rect(4, 0, 12, 16, rgb(OXID[0]));
+        brassFrame(p, 0, 0, 16, 16, 1);
+        copper(p, 1, 0, 15, 16, 21, -0.4);
+        p.rect(4, 0, 12, 16, RUNE);
         ice(p, 4.5, 0, 11.5, 16, 3);
         p.glowRect(7, 0, 9, 16, 0.01, rgb(0xd8f6ff), 120);
         for (double y : new double[]{0, 7, 14}) {
-            p.rect(3.5, y, 12.5, y + 2, rgb(OXID[3]));
-            p.rect(3.5, y, 12.5, y + 0.5, rgb(OXID[7]));
-            p.rect(3.5, y + 1.5, 12.5, y + 2, rgb(OXID[0]));
+            p.rect(3.5, y, 12.5, y + 2, rgb(Paint.BRASS[4]));
+            p.rect(3.5, y, 12.5, y + 0.5, rgb(Paint.BRASS[6]));
+            p.rect(3.5, y + 1.5, 12.5, y + 2, rgb(Paint.BRASS[2]));
         }
+        cold(p, 22, 2.2);
         return p;
     }
 
-    /** The ice column between the Atlants (the renderer stands it on a side of the array): ice with a glowing heart. */
+    /** The cable bushing: a copper plate, a brass ring with rivets round a dark socket, a cyan core and frost on the rim. */
+    static Paint bushing() {
+        Paint p = new Paint(16, 16, K);
+        brassFrame(p, 0, 0, 16, 16, 1);
+        copper(p, 1, 1, 15, 15, 41, 0);
+        p.disc(8, 8, 6.25, rgb(Paint.BRASS[2]));
+        p.disc(8, 8, 5.75, rgb(Paint.BRASS[4]));
+        p.ring(8, 8, 5, 5.75, rgb(Paint.BRASS[5]));
+        p.disc(8, 8, 4.5, rgb(COPPER[0]));
+        p.ring(8, 8, 3.75, 4.5, rgb(Paint.BRASS[3]));
+        p.disc(8, 8, 3.25, rgb(0x120c0a));
+        p.glowRect(7, 7, 9, 9, 0.01, rgb(0x20a8a6), 255);
+        p.glowRect(7.5, 7.5, 8.5, 8.5, 0.01, rgb(0x96f2ee), 255);
+        for (int a = 0; a < 8; a++) {
+            double ang = a * Math.PI / 4;
+            double x = 8 + 5.1 * Math.cos(ang), y = 8 + 5.1 * Math.sin(ang);
+            p.rect(x - 0.5, y - 0.5, x + 0.5, y + 0.5, rgb(Paint.BRASS[2]));
+            p.rect(x - 0.5, y - 0.5, x, y, rgb(Paint.BRASS[6]));
+        }
+        cold(p, 42, 2.6);
+        return p;
+    }
+
+    /**
+     * The ice column between the Atlants (the renderer stands it on a side of the array, one segment a block): ice with a
+     * glowing heart and pulses of light flowing up it; two pulses a segment, so the two segments join into one stream.
+     */
     static Paint column() {
         Paint p = new Paint(16, 16, K);
+        p.animFrames = 32;
+        p.frameTime = 2;
         ice(p, 0, 0, 16, 16, 7);
-        p.glowRect(6.5, 0, 9.5, 16, 0.01, rgb(0xbff6ff), 150);
-        p.glowRect(7.5, 0, 8.5, 16, 0.01, rgb(0xf2ffff), 230);
         for (double y = 1; y < 16; y += 5) {
             p.rect(3, y, 6, y + 0.5, rgb(ICE[6]));
             p.rect(10, y + 2, 13, y + 2.5, rgb(ICE[0]));
         }
+        p.animate(0, 0, 16, 16, (q, t) -> {
+            for (int j = 0; j < q.h; j++) {
+                double v = (j + 0.5) / q.k;
+                // the texture's top is the segment's top: a pulse moves to smaller v as t grows
+                double phase = ((v / 8 + 2 * t) % 1 + 1) % 1;
+                double pulse = Math.pow(Math.max(0, 1 - Math.abs(phase - 0.5) * 3.2), 2);
+                for (int i = 0; i < q.w; i++) {
+                    double u = (i + 0.5) / q.k, core = Math.max(0, 1 - Math.abs(u - 8) / (1.6 + 2.2 * pulse));
+                    int a = (int) (255 * Math.min(1, core * (0.35 + 0.65 * pulse)));
+                    if (a > 8) {
+                        q.over(i, j, Paint.argb(a, rgb(pulse > 0.5 ? 0xf2ffff : 0xbff6ff)));
+                    }
+                }
+            }
+        });
         return p;
     }
 
     /**
      * The floor of a mainframe shelf (44 x 26 units of the 48 x 32 canvas, the front edge on top), drawn as one picture over the
-     * whole shelf: a deck of bronze plates with brass rivets, snow drifted against the back and the side walls, patches of ice
-     * with glints, and a dim rune under the crew's projection.
+     * whole shelf: a deck of bronze plates with brass rivets, snow drifted against the back and the side walls, hoarfrost,
+     * and a dim rune under the crew's projection.
      */
     static Paint shelfFloor() {
         Paint p = new Paint(48, 32, K);
         double w = 44, h = 26;
-        // big plates (11 x 8.5) with a light edge on the top and left, a dark seam on the bottom and right
+        // big plates (11 x 8.75) with a light edge on the top and left, a dark seam on the bottom and right
         for (int j = 0; j < p.h; j++) {
             for (int i = 0; i < p.w; i++) {
                 double u = (i + 0.5) / K, v = (j + 0.5) / K;
@@ -191,7 +254,7 @@ final class AtlasArt {
                 }
             }
         }
-        // a few lumps of snow kicked onto the deck by the crew, and ice glints
+        // a few lumps of snow kicked onto the deck by the crew
         for (int n = 0; n < 9; n++) {
             double x = 3 + Atlant.hash(n, 1, 61) * 38, y = 3 + Atlant.hash(n, 2, 61) * 17;
             if (Math.hypot(x - cx, y - cy) < r + 1) {
@@ -209,6 +272,7 @@ final class AtlasArt {
         casing().save(Forge2.tex("atlas_casing"));
         casingTop().save(Forge2.tex("atlas_casing_top"));
         conduit().save(Forge2.tex("atlas_conduit"));
+        bushing().save(Forge2.tex("cable_bushing"));
         column().save(Forge2.tex("atlas_ice_column"));
         // the purple glyph that wanders over the faces of an assembled array (AtlasCoreRenderer)
         Paint glyph = new Paint(4, 4, 16);

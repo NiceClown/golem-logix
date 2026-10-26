@@ -140,15 +140,17 @@ public class AtlasCoreRenderer extends com.golemlogix.client.render.LegacyBer<At
             var lower = be.getBlockPos().offset(ox, -2, oz);
             if (be.getLevel().getBlockState(lower).is(casing) && be.getLevel().getBlockState(lower.above()).is(casing)) {
                 pose.pushPose();
-                pose.translate(0, -2, -1);
+                pose.translate(0, -2, -2);
                 StandaloneModels.render(pose.last(), vc, StandaloneModels.ATLAS_ICE_COLUMN, 1f, 1f, 1f, 0xF000F0, OverlayTexture.NO_OVERLAY);
+                pose.translate(0, 1, 0);
+                StandaloneModels.render(pose.last(), vc, StandaloneModels.ATLAS_ICE_COLUMN_TOP, 1f, 1f, 1f, 0xF000F0, OverlayTexture.NO_OVERLAY);
                 pose.popPose();
             }
             for (int x = -1; x <= 1; x++) {
                 pose.pushPose();
                 pose.translate(x, -1, -1);
                 StandaloneModels.render(pose.last(), vc, StandaloneModels.ATLAS_ICICLES, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
-                pose.translate(0, 1, 0);
+                pose.translate(0, 2, 0);
                 StandaloneModels.render(pose.last(), vc, x == 1 ? StandaloneModels.ATLAS_RAIL_END : StandaloneModels.ATLAS_RAIL, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
                 pose.popPose();
             }

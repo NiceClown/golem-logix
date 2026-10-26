@@ -341,24 +341,6 @@ public class ArtForge {
         t.save(name);
     }
 
-    static void bushing() throws Exception {
-        Tex t = ironPlate(41, false);
-        t.disc(16, 16, 12.5, BRASS_D);
-        t.disc(16, 16, 11.5, BRASS);
-        t.ring(16, 16, 10, 11.5, BRASS_L);
-        t.disc(16, 16, 9, IRON_D);
-        t.ring(16, 16, 7.5, 9, shade(BRASS, 0.7));
-        t.disc(16, 16, 6.5, 0xFF0D1417);
-        t.disc(16, 16, 3.5, CYAN_D);
-        t.disc(16, 16, 2.2, CYAN);
-        t.put(15, 15, CYAN_L);
-        for (int a = 0; a < 8; a++) {
-            double ang = a * Math.PI / 4;
-            t.rivet((int) Math.round(16 + 10.2 * Math.cos(ang)) - 1, (int) Math.round(16 + 10.2 * Math.sin(ang)) - 1, BRASS_D, BRASS_L);
-        }
-        t.save("cable_bushing");
-    }
-
     static void coreParts() throws Exception {
         // core crystal: facets, glow from the centre
         Tex c = new Tex(CYAN_D);
@@ -702,7 +684,6 @@ public class ArtForge {
         AtlasArt.textures();
         expander("channel_expander", CYAN, CYAN_D, CYAN_L, BRASS, BRASS_D);
         expander("quantum_channel_expander", VIOLET, VIOLET_D, 0xE4D6FF, GOLD, 0xFF7a5f12);
-        bushing();
         Atlant.textures();
         coreParts();
         brassPlate();

@@ -325,14 +325,17 @@ public class Models {
                 e(6, 19, 6, 10, 22, 10).all("#crystal").glow(15));
         single("atlas_core", "atlas_core");
         item("atlas_core", "atlas_core");
-        // what an assembled array grows (AtlasCoreRenderer): an ice column on the north side of a cell (two blocks tall,
-        // copper caps), icicles under the north edge of the top layer and a balcony rail of brass and spruce over it
+        // what an assembled array grows (AtlasCoreRenderer): an ice column on the north side of the two Atlant layers (two
+        // segments drawn in the cells in front, brass caps), icicles under the north edge of the top layer, a balcony rail over
+        // it; every element stays inside its cell, so the default UVs stay on the texture
         model("atlas_ice_column", false, "atlas_ice_column",
-                new String[][]{{"ice", "atlas_ice_column"}, {"cap", "atlas_casing"}},
-                e(3, 0, -3, 13, 2, 0).all("#cap"),
-                e(4.5, 2, -2.25, 11.5, 16, 0).all("#ice"),
-                e(4.5, 16, -2.25, 11.5, 30, 0).all("#ice"),
-                e(3, 30, -3, 13, 32, 0).all("#cap"));
+                new String[][]{{"ice", "atlas_ice_column"}, {"cap", "brass_plate"}},
+                e(3, 0, 13, 13, 2, 16).all("#cap"),
+                e(4.5, 2, 13.75, 11.5, 16, 16).all("#ice"));
+        model("atlas_ice_column_top", false, "atlas_ice_column",
+                new String[][]{{"ice", "atlas_ice_column"}, {"cap", "brass_plate"}},
+                e(4.5, 0, 13.75, 11.5, 14, 16).all("#ice"),
+                e(3, 14, 13, 13, 16, 16).all("#cap"));
         model("atlas_icicles", false, "minecraft:block/packed_ice",
                 new String[][]{{"ice", "minecraft:block/packed_ice"}},
                 e(1, 12, 0, 3, 16, 2).all("#ice"), e(1.5, 10, 0.5, 2.5, 12, 1.5).all("#ice"),
@@ -344,9 +347,9 @@ public class Models {
             double to = end ? 13.5 : 16;
             model(end ? "atlas_rail_end" : "atlas_rail", false, "brass_plate",
                     new String[][]{{"brass", "brass_plate"}, {"wood", "minecraft:block/spruce_planks"}},
-                    e(1, 16, 0.25, 3, 21, 2.25).all("#brass"), e(7, 16, 0.5, 9, 21, 2).all("#brass"),
-                    e(0, 18, 0.75, to, 19, 1.75).all("#brass"),
-                    e(0, 21, 0, to, 22.5, 2.5).all("#wood"));
+                    e(1, 0, 0.25, 3, 5, 2.25).all("#brass"), e(7, 0, 0.5, 9, 5, 2).all("#brass"),
+                    e(0, 2, 0.75, to, 3, 1.75).all("#brass"),
+                    e(0, 5, 0, to, 6.5, 2.5).all("#wood"));
         }
 
         // Atlant: a caryatid in the iron golem's manner (tools/Atlant.java draws it), a broad torso on short legs, the arms
@@ -361,7 +364,7 @@ public class Models {
                 new String[][]{{"body", "atlant_body"}, {"limb", "atlant_limb"}, {"belt", "atlant_belt"}},
                 e(1.5, 0, 4, 14.5, 6, 12).all("#body"),
                 e(0, 2, 6, 3, 14, 10).all("#limb"), e(13, 2, 6, 16, 14, 10).all("#limb"),
-                e(-0.5, 14, 5, 3.5, 16, 11).all("#belt"), e(12.5, 14, 5, 16.5, 16, 11).all("#belt"));
+                e(0, 14, 5, 3.5, 16, 11).all("#belt"), e(12.5, 14, 5, 16, 16, 11).all("#belt"));
         // the head is separate: the renderer (AtlantHeadRenderer) turns it to the player, the neck is at (8, 6, 8)
         model("atlas_atlant_head", false, "atlant_head",
                 new String[][]{{"body", "atlant_body"}, {"head", "atlant_head"}},
