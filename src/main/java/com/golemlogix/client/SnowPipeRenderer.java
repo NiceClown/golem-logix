@@ -46,8 +46,6 @@ public class SnowPipeRenderer extends com.golemlogix.client.render.LegacyBer<Pip
 
     public static final net.minecraft.resources.Identifier PLUG_BASIC = com.golemlogix.client.render.StandaloneModels.PLUG_BASIC;
     public static final net.minecraft.resources.Identifier PLUG_DENSE = com.golemlogix.client.render.StandaloneModels.PLUG_DENSE;
-    public static final net.minecraft.resources.Identifier BAND_BASIC = com.golemlogix.client.render.StandaloneModels.BAND_BASIC;
-    public static final net.minecraft.resources.Identifier BAND_DENSE = com.golemlogix.client.render.StandaloneModels.BAND_DENSE;
     /** Warehouse dock door: a dead end with a warehouse is closed not by a plug but by a roller shutter with a lamp. */
     public static final net.minecraft.resources.Identifier DOCK_BASIC = com.golemlogix.client.render.StandaloneModels.DOCK_BASIC;
     public static final net.minecraft.resources.Identifier DOCK_DENSE = com.golemlogix.client.render.StandaloneModels.DOCK_DENSE;
@@ -344,57 +342,6 @@ public class SnowPipeRenderer extends com.golemlogix.client.render.LegacyBer<Pip
         }
     }
 
-    /**
-     * Support brackets with a gauge: rendered strictly every 4 blocks (a 4-block interval along the run).
-     * The straight sections between them are smooth seamless glass tubes without extra rings.
-     */
-    private static void brackets(PipeBlockEntity be, BlockState state, PoseStack pose, MultiBufferSource buffers, int light) {
-        net.minecraft.core.BlockPos pos = be.getBlockPos();
-        if (Math.floorMod(pos.getX() + pos.getY() + pos.getZ(), 4) != 0) {
-            return;
-        }
-
-        var north = state.getValue(SnowPipeBlock.NORTH);
-        var south = state.getValue(SnowPipeBlock.SOUTH);
-        var east = state.getValue(SnowPipeBlock.EAST);
-        var west = state.getValue(SnowPipeBlock.WEST);
-        var up = state.getValue(SnowPipeBlock.UP);
-        var down = state.getValue(SnowPipeBlock.DOWN);
-
-        boolean zLinked = north != SnowPipeBlock.Link.NONE && south != SnowPipeBlock.Link.NONE;
-        boolean xLinked = east != SnowPipeBlock.Link.NONE && west != SnowPipeBlock.Link.NONE;
-        boolean yLinked = up != SnowPipeBlock.Link.NONE && down != SnowPipeBlock.Link.NONE;
-
-        net.minecraft.core.Direction.Axis straightAxis = null;
-        if (zLinked && east == SnowPipeBlock.Link.NONE && west == SnowPipeBlock.Link.NONE && up == SnowPipeBlock.Link.NONE && down == SnowPipeBlock.Link.NONE) {
-            straightAxis = net.minecraft.core.Direction.Axis.Z;
-        } else if (xLinked && north == SnowPipeBlock.Link.NONE && south == SnowPipeBlock.Link.NONE && up == SnowPipeBlock.Link.NONE && down == SnowPipeBlock.Link.NONE) {
-            straightAxis = net.minecraft.core.Direction.Axis.X;
-        } else if (yLinked && north == SnowPipeBlock.Link.NONE && south == SnowPipeBlock.Link.NONE && east == SnowPipeBlock.Link.NONE && west == SnowPipeBlock.Link.NONE) {
-            straightAxis = net.minecraft.core.Direction.Axis.Y;
-        }
-
-        if (straightAxis == null) {
-            return;
-        }
-
-        boolean dense = state.getBlock() instanceof SnowPipeBlock p && p.isDense();
-        var mc = Minecraft.getInstance();
-        var model = (dense ? BAND_DENSE : BAND_BASIC);
-
-        pose.pushPose();
-        pose.translate(0.5, 0.5, 0.5);
-        if (straightAxis == net.minecraft.core.Direction.Axis.X) {
-            pose.mulPose(Axis.YP.rotationDegrees(90));
-        } else if (straightAxis == net.minecraft.core.Direction.Axis.Y) {
-            pose.mulPose(Axis.XP.rotationDegrees(90));
-        }
-        pose.translate(-0.5, -0.5, -0.5);
-
-        com.golemlogix.client.render.StandaloneModels.render(pose.last(), buffers.getBuffer(net.minecraft.client.renderer.Sheets.cutoutBlockSheet()), model, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
-        pose.popPose();
-    }
-
     @Override
     public void render(PipeBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
         BlockState state = be.getBlockState();
@@ -402,7 +349,6 @@ public class SnowPipeRenderer extends com.golemlogix.client.render.LegacyBer<Pip
             return;
         }
         plugs(be, state, pose, buffers, light);
-        brackets(be, state, pose, buffers, light);
         if (!state.getValue(GolemProperties.ACTIVE)) {
             return;
         }

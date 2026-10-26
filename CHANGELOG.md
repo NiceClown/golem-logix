@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.0.7 (26.1.2) — New pipes, and faster
+
+- **The pipes are redrawn.** The brass bands with painted gauges are gone: every block joint is now held by a copper clamp
+  with a bolted ear, a thin layer of snow lies inside the tube, hoarfrost grows on the glass by the clamps, and pulses of cold
+  light run along a powered pipe. Straight runs vary by themselves: some blocks carry a small gauge with a trembling needle,
+  a red valve wheel or a brass name plate with the rune.
+- **Junctions are copper manifold boxes** with ice portholes; **devices are met by a bolted flange** on a dark gasket with a
+  copper collar.
+- **Faster**: everything but the glass is now part of the baked block model, so no renderer draws the pipes' fittings every
+  frame. On a field of 6 100 pipes: 204 FPS instead of 101 up close, 806 instead of 764 from afar.
+
 ## 2.0.6 (26.1.2) — The mainframe is lived in
 
 - **The Cryo-Mainframe's shelves are furnished** at their free end and on the walls, out of the crews' way. Downstairs is the
