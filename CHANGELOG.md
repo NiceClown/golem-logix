@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.6 (26.1.2) — The mainframe is lived in
+
+- **The Cryo-Mainframe's shelves are furnished** at their free end and on the walls, out of the crews' way. Downstairs is the
+  store: barrels, a crate of snowballs, a wall shelf with books and a potted orchid, a notice board. Upstairs is the bedroom:
+  a cot with a pillow and a blanket, a picture of blue ice, hooks with the golems' wrenches. Both floors have two lanterns,
+  a garland of little flags and a drift of snow in the front corner.
+
 ## 2.0.5 (26.1.2) — Warm metal, cold light
 
 - **The Atlas Array in copper and brass**: copper rune plates in brass frames, hoarfrost creeping in from the corners and rare

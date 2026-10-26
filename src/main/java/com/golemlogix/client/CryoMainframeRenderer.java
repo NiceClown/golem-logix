@@ -120,6 +120,11 @@ public class CryoMainframeRenderer extends com.golemlogix.client.render.LegacyBe
         shelfFloor(vc, p, 3.21f, light);
         shelfFloor(vc, p, 16.21f, light);
 
+        // the crews live here: furniture at the free right end of the shelves and on the walls, lanterns under the ceilings
+        furnish(pose, buffers, light);
+        vc = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
+        p = pose.last();
+
         // calculators on the shelves (as many as are inserted), at the back wall
         int calcs = be.clientCalcs();
         BlockState calc = ModBlocks.CRYO_CALCULATOR.get().defaultBlockState().setValue(GolemProperties.ACTIVE, spin > 0.5f);
@@ -632,6 +637,98 @@ public class CryoMainframeRenderer extends com.golemlogix.client.render.LegacyBe
         // top and bottom
         tile(vc, p, s, color, light, x1 - x0, z1 - z0, (a, b) -> new float[]{x0 + a, y1, z1 - b}, 0, 1, 0);
         tile(vc, p, s, color, light, x1 - x0, z1 - z0, (a, b) -> new float[]{x0 + a, y0, z0 + b}, 0, -1, 0);
+    }
+
+    private static final Identifier SPRUCE = Identifier.withDefaultNamespace("block/spruce_planks"),
+            STRIPPED = Identifier.withDefaultNamespace("block/stripped_spruce_log"), WOOL = Identifier.withDefaultNamespace("block/white_wool"),
+            BLANKET = Identifier.withDefaultNamespace("block/light_blue_wool"), RED = Identifier.withDefaultNamespace("block/red_wool"),
+            BLUE = Identifier.withDefaultNamespace("block/blue_wool"), PAPER = Identifier.withDefaultNamespace("block/white_concrete"),
+            SNOW = Identifier.withDefaultNamespace("block/snow"), BLUE_ICE = Identifier.withDefaultNamespace("block/blue_ice");
+
+    /**
+     * The cabinet as a home for its crews (pixels, shelf floors at 3.2 and 16.2, ceilings at 15 and 28.9). The golems walk
+     * between x = -12 and 20 and the snowmen work in the middle, so the furniture keeps to the right end (x > 22) and the walls.
+     * Downstairs is the store: barrels, a crate of snowballs, a wall shelf with a potted orchid and books, a notice board.
+     * Upstairs is the bedroom: a cot with a blanket, a picture of ice over it, hooks with the golems' wrenches. Each floor
+     * has two lanterns, a garland of flags and a drift of snow in the front corner.
+     */
+    private static void furnish(PoseStack pose, MultiBufferSource buffers, int light) {
+        VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
+        PoseStack.Pose p = pose.last();
+        int white = 0xFFFFFFFF;
+        for (float floor : new float[]{3.2f, 16.2f}) {
+            box(vc, p, -14, floor, 3, -10.5f, floor + 0.8f, 5.5f, SNOW, white, light);
+            box(vc, p, -13, floor + 0.8f, 3, -11.5f, floor + 1.4f, 4.5f, SNOW, white, light);
+        }
+        // downstairs: a crate of snowballs
+        box(vc, p, 23.5f, 3.2f, 3.5f, 29.5f, 6, 8.5f, STRIPPED, white, light);
+        box(vc, p, 24, 6, 4, 29, 6.3f, 8, SNOW, white, light);
+        for (float[] b : new float[][]{{24.4f, 4.4f}, {26.3f, 4.6f}, {27.6f, 6.2f}, {25, 6.4f}, {26.6f, 5.2f}}) {
+            box(vc, p, b[0], 6.3f, b[1], b[0] + 1.3f, 7.5f, b[1] + 1.3f, SNOW, white, light);
+        }
+        // the wall shelf on the right: a board on two brackets, books on it
+        box(vc, p, 26, 10, 9, 30, 10.6f, 20, SPRUCE, white, light);
+        box(vc, p, 29, 8.5f, 10, 30, 10, 10.8f, STRIPPED, white, light);
+        box(vc, p, 29, 8.5f, 18, 30, 10, 18.8f, STRIPPED, white, light);
+        box(vc, p, 27, 10.6f, 15, 29.5f, 13.4f, 15.8f, RED, white, light);
+        box(vc, p, 27, 10.6f, 15.8f, 29.5f, 13, 16.6f, BLUE, white, light);
+        box(vc, p, 27, 10.6f, 16.6f, 29.5f, 12.4f, 17.3f, BRASS, white, light);
+        // the notice board on the left wall: papers and a red pin
+        box(vc, p, -14, 6, 7, -13.4f, 12, 15, SPRUCE, white, light);
+        box(vc, p, -13.4f, 6.8f, 8, -13.2f, 9.8f, 10.5f, PAPER, white, light);
+        box(vc, p, -13.4f, 8.2f, 11, -13.2f, 11.2f, 13.5f, PAPER, white, light);
+        box(vc, p, -13.4f, 7, 12, -13.1f, 7.8f, 14, PAPER, white, light);
+        box(vc, p, -13.2f, 9.2f, 9, -12.8f, 9.6f, 9.4f, RED, white, light);
+        // upstairs: the cot, its pillow and blanket
+        box(vc, p, 23.5f, 16.2f, 4, 29.5f, 17.6f, 14, STRIPPED, white, light);
+        box(vc, p, 24, 17.6f, 4.5f, 29, 18.6f, 13.5f, WOOL, white, light);
+        box(vc, p, 24.5f, 18.6f, 4.8f, 28.5f, 19.4f, 6.8f, WOOL, white, light);
+        box(vc, p, 23.8f, 18.6f, 7.5f, 29.2f, 18.9f, 13.6f, BLANKET, white, light);
+        box(vc, p, 23.5f, 16.2f, 13.5f, 29.5f, 20.5f, 14.2f, STRIPPED, white, light);
+        // a picture of ice over the cot, in a spruce frame
+        box(vc, p, 29.4f, 21, 5.5f, 30, 25.5f, 12, STRIPPED, white, light);
+        box(vc, p, 29.2f, 21.6f, 6.1f, 29.4f, 24.9f, 11.4f, BLUE_ICE, white, light);
+        // the wrench hooks on the left wall: a brass rail and two copper wrenches
+        box(vc, p, -14, 24, 6, -13.4f, 24.6f, 15, BRASS, white, light);
+        for (float z : new float[]{8f, 12f}) {
+            box(vc, p, -13.6f, 20.5f, z, -13f, 24, z + 0.7f, COPPER, white, light);
+            box(vc, p, -13.6f, 20, z - 0.4f, -13f, 21, z + 1.1f, COPPER, white, light);
+        }
+        // a garland of little flags under each ceiling, just behind the glass, sagging between its ends
+        Identifier[] flags = {RED, BLANKET, WOOL, BLUE};
+        // upstairs it hangs a little lower: the brass frame of the doors covers the top 1.5 pixels
+        for (float ceiling : new float[]{15f, 27.6f}) {
+            for (int k = 0; k < 13; k++) {
+                float x = -12.5f + k * 3.3f, t = (x + 12.5f) / 39.6f, sag = 1.0f * 4f * t * (1f - t);
+                float y = ceiling - 0.8f - sag;
+                box(vc, p, x, y, 3.6f, x + 3.3f, y + 0.25f, 3.8f, WOOL, 0xFFB8B0A0, light);
+                box(vc, p, x + 0.6f, y - 1.6f, 3.6f, x + 2.2f, y, 3.75f, flags[k % flags.length], white, light);
+            }
+        }
+        // barrels by the crate downstairs and a potted orchid on the shelf, two lanterns on every floor
+        block(pose, buffers, net.minecraft.world.level.block.Blocks.BARREL.defaultBlockState(), 26.5f, 3.2f, 14.5f, 0.3f, 15f, light);
+        block(pose, buffers, net.minecraft.world.level.block.Blocks.BARREL.defaultBlockState(), 26.5f, 8f, 14.5f, 0.3f, -20f, light);
+        block(pose, buffers, net.minecraft.world.level.block.Blocks.POTTED_BLUE_ORCHID.defaultBlockState(), 27.8f, 10.6f, 11.5f, 0.45f, 0f, light);
+        block(pose, buffers, net.minecraft.world.level.block.Blocks.BARREL.defaultBlockState(), 21.8f, 16.2f, 4.2f, 0.28f, 40f, light);
+        BlockState lantern = net.minecraft.world.level.block.Blocks.LANTERN.defaultBlockState()
+                .setValue(net.minecraft.world.level.block.LanternBlock.HANGING, true);
+        for (float ceiling : new float[]{15f, 28.9f}) {
+            for (float x : new float[]{0f, 19f}) {
+                block(pose, buffers, lantern, x, ceiling - 0.35f * 16f, 11f, 0.35f, 0f, LightCoordsUtil.FULL_BRIGHT);
+            }
+        }
+    }
+
+    /** A vanilla block, scaled, standing with the middle of its base at (x, y, z) pixels and turned by yaw degrees. */
+    private static void block(PoseStack pose, MultiBufferSource buffers, BlockState state, float x, float y, float z, float scale,
+                              float yaw, int light) {
+        pose.pushPose();
+        pose.translate(x / 16f, y / 16f, z / 16f);
+        pose.mulPose(Axis.YP.rotationDegrees(yaw));
+        pose.scale(scale, scale, scale);
+        pose.translate(-0.5f, 0f, -0.5f);
+        com.golemlogix.client.render.BerBuffers.block(buffers, state, pose, light);
+        pose.popPose();
     }
 
     /** The floor picture of a shelf over its whole top (x -14..30, z 3..29 pixels): 44 x 26 units of the 48 x 32 texture. */
