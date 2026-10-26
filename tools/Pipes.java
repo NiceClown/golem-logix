@@ -4,7 +4,8 @@ import java.util.*;
  * The mod's pipes: the basic one is a clear ice tube, the dense one deep blue ice. Every block joint is held by a copper
  * clamp with a bolted ear, a thin layer of snow lies inside along the tube and hoarfrost grows on the glass by the clamps;
  * on a powered network pulses of cold light run along the glass. Straight runs pick a random look per block (the block
- * state's weighted models): plain, with a small gauge, with a valve wheel or with a brass name plate. Junctions are a copper
+ * state's weighted models): plain, with a round gauge or with a gate valve and its handwheel; the snow in horizontal pipes
+ * picks its drifts apart from that. Junctions are a copper
  * manifold box with ice portholes, devices are met by a bolted flange on a dark gasket with a copper collar. Everything
  * except the glass is opaque and baked into the chunk: no renderer draws it per frame.
  * The models face NORTH, the other sides come from rotations in the block state.
@@ -83,9 +84,9 @@ final class Pipes {
             for (int i = 0; i < p.w; i++) {
                 double along = across ? (j + 0.5) / K : (i + 0.5) / K;
                 double d = Math.min(along, 16 - along);
-                double f = 2.6 * (0.45 + 0.8 * Atlant.noise(i, j, 5, sd)) - d;
-                if (f > 0 && Atlant.hash(i, j, sd + 1) < 0.25 + f * 0.25) {
-                    p.over(i, j, argb(f > 0.9 ? 235 : 190, FROST[f > 0.9 ? 6 : 4]));
+                double f = 1.8 * (0.45 + 0.8 * Atlant.noise(i, j, 5, sd)) - d;
+                if (f > 0 && Atlant.hash(i, j, sd + 1) < 0.12 + f * 0.18) {
+                    p.over(i, j, argb(f > 0.8 ? 200 : 140, FROST[f > 0.8 ? 6 : 5]));
                 }
             }
         }
@@ -211,37 +212,77 @@ final class Pipes {
         return p;
     }
 
-    /** A small gauge dial (on a stem over a clamp): cream face, dark ticks, a needle that trembles. */
+    /**
+     * The gauge's dial, the whole square of its face: a brass bezel round a cream face (the corners are the brass of the
+     * body), seven ticks and a red mark, a glass glint, and a needle that trembles high on the scale.
+     */
     static Paint dial() {
         Paint p = new Paint(16, 16, K);
         p.animFrames = 16;
         p.frameTime = 2;
-        p.fill(0, 0, 16, 16, (u, v) -> rgb(0xefe6cf));
-        p.ring(8, 8, 6.5, 8.5, at(BRASS, 3.0));
+        p.fill(0, 0, 16, 16, (u, v) -> {
+            double r = Math.hypot(u - 8, v - 8);
+            if (r > 7.6) {
+                return at(BRASS, 3.4);
+            }
+            if (r > 6.4) {
+                return at(BRASS, r > 7.0 ? 2.0 : 5.0);
+            }
+            return r > 6.0 ? rgb(0x3a3026) : rgb(0xefe6cf);
+        });
         for (int i = 0; i < 7; i++) {
             double a = Math.toRadians(150 + i * 40);
-            p.line(8 + Math.cos(a) * 4.6, 8 + Math.sin(a) * 4.6, 8 + Math.cos(a) * 5.8, 8 + Math.sin(a) * 5.8, 0.6, rgb(0x2a2420));
+            p.line(8 + Math.cos(a) * 4.2, 8 + Math.sin(a) * 4.2, 8 + Math.cos(a) * 5.6, 8 + Math.sin(a) * 5.6, 0.7,
+                    i >= 5 ? rgb(0xb02018) : rgb(0x2a2420));
         }
+        p.line(5.2, 4.2, 7.0, 3.4, 0.6, argb(200, 0xffffff));
         p.animate(1, 1, 15, 15, (q, t) -> {
-            double a = Math.toRadians(250 + 12 * Math.sin(2 * Math.PI * t) + 4 * Math.sin(6 * Math.PI * t));
-            q.line(8, 8, 8 + Math.cos(a) * 5, 8 + Math.sin(a) * 5, 0.7, rgb(0x8a1c14));
-            q.disc(8, 8, 0.9, rgb(0x2a2420));
+            double a = Math.toRadians(330 + 10 * Math.sin(2 * Math.PI * t) + 4 * Math.sin(6 * Math.PI * t));
+            q.line(8, 8, 8 + Math.cos(a) * 5, 8 + Math.sin(a) * 5, 0.8, rgb(0x8a1c14));
+            q.disc(8, 8, 1.0, rgb(0x2a2420));
         });
         return p;
     }
 
-    /** The name plate on a clamp: brass with a dark border and the mod's rune, its core glowing cyan. */
-    static Paint plate() {
+    /** The handwheel: red paint on iron, a light edge on top, the paint worn through to the iron here and there. */
+    static Paint wheel() {
         Paint p = new Paint(16, 16, K);
-        p.slab(0, 0, 16, 16, BRASS, 3.6, 1);
-        p.rect(1.5, 1.5, 14.5, 2.5, at(BRASS, 1.4));
-        p.rect(1.5, 13.5, 14.5, 14.5, at(BRASS, 1.4));
-        p.rect(1.5, 1.5, 2.5, 14.5, at(BRASS, 1.4));
-        p.rect(13.5, 1.5, 14.5, 14.5, at(BRASS, 1.4));
-        p.ring(8, 8, 3.6, 4.6, at(BRASS, 1.2));
-        p.rect(7.5, 3.5, 8.5, 12.5, at(BRASS, 1.2));
-        p.rect(3.5, 7.5, 12.5, 8.5, at(BRASS, 1.2));
-        p.glowRect(7, 7, 9, 9, 0.01, at(CYAN, 4.6), 255);
+        int[] red = {0x4a0f0c, 0x6e1812, 0x8f2219, 0xae2e20, 0xc84030};
+        for (int j = 0; j < p.h; j++) {
+            for (int i = 0; i < p.w; i++) {
+                double tone = Atlant.hash(i / 2, j / 2, 471) * 0.6 + Atlant.noise(i, j, 6, 472) * 0.4;
+                int c = red[(int) Math.min(red.length - 1, 1 + tone * 3.2)];
+                if (j % 4 == 0) {
+                    c = red[4];
+                }
+                if (Atlant.hash(i, j, 473) > 0.96) {
+                    c = at(IRON, 3.0);
+                }
+                p.px(i, j, rgb(c));
+            }
+        }
+        return p;
+    }
+
+    /**
+     * The snow inside a pipe: packed snow with blue shade in its hollows and at its edges, low ridges blown along the tube,
+     * rare glints of ice; never one flat white.
+     */
+    static Paint snow() {
+        Paint p = new Paint(16, 16, K);
+        for (int j = 0; j < p.h; j++) {
+            for (int i = 0; i < p.w; i++) {
+                double u = (i + 0.5) / K, v = (j + 0.5) / K;
+                double ridge = 0.5 + 0.5 * Math.sin(v * 1.3 + Atlant.noise(i, j, 6, 481) * 3);
+                double edge = Math.max(0, Math.abs(u - 8) - 1.6) / 2.2;
+                double t = 0.55 + 0.35 * ridge - 0.45 * edge + (Atlant.hash(i / 2, j / 2, 482) - 0.5) * 0.25;
+                int c = t > 0.85 ? FROST[6] : t > 0.62 ? FROST[5] : t > 0.42 ? FROST[4] : t > 0.25 ? FROST[3] : FROST[2];
+                if (Atlant.hash(i, j, 483) > 0.985) {
+                    c = rgb(0xe2fffe);
+                }
+                p.px(i, j, rgb(c));
+            }
+        }
         return p;
     }
 
@@ -330,7 +371,8 @@ final class Pipes {
         clamp(true).save(Forge2.tex("pipe_dense_clamp"));
         bolt().save(Forge2.tex("pipe_bolt"));
         dial().save(Forge2.tex("pipe_dial"));
-        plate().save(Forge2.tex("pipe_plate"));
+        wheel().save(Forge2.tex("pipe_wheel"));
+        snow().save(Forge2.tex("pipe_snow"));
         manifold(false, 3.4, 12.6).save(Forge2.tex("pipe_manifold"));
         manifold(true, 1.4, 14.6).save(Forge2.tex("pipe_dense_manifold"));
         flange().save(Forge2.tex("pipe_flange"));
@@ -344,10 +386,10 @@ final class Pipes {
         return new String[][]{{"su", p + "_u"}, {"sv", p + "_v"}, {"sd", p + "_d"},
                 {"lu", p + "_u_lit"}, {"lv", p + "_v_lit"}, {"ld", p + "_d_lit"},
                 {"clamp", dense ? "pipe_dense_clamp" : "pipe_clamp"}, {"bolt", "pipe_bolt"}, {"gauge", "pipe_dial"},
-                {"plate", "pipe_plate"}, {"manifold", dense ? "pipe_dense_manifold" : "pipe_manifold"},
+                {"wheel", "pipe_wheel"}, {"manifold", dense ? "pipe_dense_manifold" : "pipe_manifold"},
                 {"flange", "pipe_flange"}, {"hub", dense ? "pipe_dense_hub" : "pipe_hub"}, {"plug", "pipe_plug"}, {"dock", "pipe_dock"},
                 {"dial", "resonator_dial"}, {"ice", "sat_ice"}, {"brass", "sat_brass"}, {"copper", "resonator_pipe"}, {"dark", "sat_dark"},
-                {"snow", "minecraft:block/snow"}, {"valve", "minecraft:block/red_terracotta"}};
+                {"snow", "pipe_snow"}};
     }
 
     static final double[] UV = {0, 0, 16, 16};
@@ -438,8 +480,8 @@ final class Pipes {
         String particle = dense ? "pipe_dense_u" : "pipe_glass_u";
         PARTS.clear();
 
-        // one clamp at every block joint (each block carries it at its own north end), with a bolted ear on top; the snow
-        // lying inside on the flat bottom of the tube; both are opaque, so they cost nothing to sort
+        // one clamp at every block joint (each block carries it at its own north end), with a bolted ear on top; opaque,
+        // so it costs nothing to sort
         double cl = lo - (dense ? 0.7 : 0.6), ch = 16 - cl, cc = c + (dense ? 0.35 : 0.3);
         List<Models.El> clamps = new ArrayList<>();
         ring(clamps, cl, ch, 0.06, 1.0, cc, "clamp", dense ? 0.8 : 0.65);
@@ -448,37 +490,68 @@ final class Pipes {
         // the bolt through the ear: its head on one side
         double by0 = ch + (dense ? 0.3 : 0.25);
         clamps.add(Models.e(8 + ew, by0, 0.53 - bw / 1.2, 8 + ew + 0.35, by0 + 2 * bw, 0.53 + bw / 1.2).only("#bolt", "up", "down", "north", "south", "east"));
-        List<Models.El> snow = new ArrayList<>();
-        snow.add(Models.e(lo + c + 0.1, lo + 0.05, 0, hi - c - 0.1, lo + (dense ? 1.0 : 0.7), 16).only("#snow", "up", "east", "west"));
 
-        // the looks of a straight block: plain, a gauge on a stem over a middle clamp, a valve wheel, a brass name plate
+        // the looks of a straight block: plain, a round gauge on a fitting over a middle clamp, a gate valve with a handwheel
         double mz0 = 7.0, mz1 = 9.0;
         List<Models.El> midClamp = new ArrayList<>();
         ring(midClamp, cl, ch, mz0, mz1, cc, "clamp", dense ? 0.8 : 0.65);
         java.util.Map<String, List<Models.El>> looks = new java.util.LinkedHashMap<>();
         looks.put("", new ArrayList<>());
+
+        // the gauge: a brass fitting and nut, an octagonal body (a square and the same square turned by 45 degrees) whose two
+        // dials face the sides of the pipe, so it reads from where one walks along it
         List<Models.El> gauge = new ArrayList<>(midClamp);
-        double gs = dense ? 1.6 : 1.3;
-        gauge.add(Models.e(7.6, ch, 7.6, 8.4, ch + 1.2, 8.4).all("#brass"));
-        gauge.add(Models.e(8 - gs - 0.25, ch + 1.2, 7.3, 8 + gs + 0.25, ch + 1.2 + 2 * gs + 0.5, 8.7).all("#brass"));
-        gauge.add(Models.e(8 - gs, ch + 1.45, 7.2, 8 + gs, ch + 1.45 + 2 * gs, 7.3).only("#gauge", "north"));
-        gauge.add(Models.e(8 - gs, ch + 1.45, 8.7, 8 + gs, ch + 1.45 + 2 * gs, 8.8).only("#gauge", "south"));
+        double gsz = dense ? 3.6 : 3.0, gcy = ch + 1.3 + 0.62 * gsz, half = gsz / 2;
+        gauge.add(Models.e(7.4, ch, 7.4, 8.6, ch + 0.8, 8.6).only("#brass", "north", "south", "east", "west"));
+        gauge.add(Models.e(7.1, ch + 0.8, 7.1, 8.9, ch + 1.3, 8.9).all("#bolt"));
+        gauge.add(Models.e(7.0, gcy - half, 8 - half, 9.0, gcy + half, 8 + half).all("#brass"));
+        gauge.add(Models.e(7.15, gcy - half, 8 - half, 8.85, gcy + half, 8 + half).all("#brass").rot("x", 45, 8, gcy, 8));
+        double dial = half * 0.92;
+        gauge.add(Models.e(9.0, gcy - dial, 8 - dial, 9.05, gcy + dial, 8 + dial).only("#gauge", "east"));
+        gauge.add(Models.e(6.95, gcy - dial, 8 - dial, 7.0, gcy + dial, 8 + dial).only("#gauge", "west"));
         looks.put("_gauge", gauge);
+
+        // the valve: an octagonal bonnet on the clamp, an iron stem and a red handwheel (an octagonal rim, two spokes, a hub)
         List<Models.El> valve = new ArrayList<>(midClamp);
-        double vr = dense ? 2.4 : 2.0, vy = ch + 1.5;
-        valve.add(Models.e(7.6, ch, 7.6, 8.4, vy, 8.4).all("#brass"));
-        valve.add(Models.e(8 - vr, vy, 8 - vr, 8 + vr, vy + 0.5, 8 - vr + 0.5).all("#valve"));
-        valve.add(Models.e(8 - vr, vy, 8 + vr - 0.5, 8 + vr, vy + 0.5, 8 + vr).all("#valve"));
-        valve.add(Models.e(8 - vr, vy, 8 - vr + 0.5, 8 - vr + 0.5, vy + 0.5, 8 + vr - 0.5).all("#valve"));
-        valve.add(Models.e(8 + vr - 0.5, vy, 8 - vr + 0.5, 8 + vr, vy + 0.5, 8 + vr - 0.5).all("#valve"));
-        valve.add(Models.e(7.75, vy, 8 - vr + 0.5, 8.25, vy + 0.45, 8 + vr - 0.5).all("#valve"));
-        valve.add(Models.e(8 - vr + 0.5, vy, 7.75, 7.75, vy + 0.45, 8.25).all("#valve"));
-        valve.add(Models.e(8.25, vy, 7.75, 8 + vr - 0.5, vy + 0.45, 8.25).all("#valve"));
-        valve.add(Models.e(7.6, vy + 0.45, 7.6, 8.4, vy + 0.8, 8.4).all("#brass"));
+        double bh = dense ? 1.5 : 1.2, bs2 = dense ? 1.3 : 1.05;
+        valve.add(Models.e(8 - bs2, ch, 8 - bs2, 8 + bs2, ch + bh, 8 + bs2).only("#brass", "up", "north", "south", "east", "west"));
+        valve.add(Models.e(8 - bs2, ch + 0.05, 8 - bs2, 8 + bs2, ch + bh - 0.1, 8 + bs2).only("#brass", "up", "north", "south", "east", "west")
+                .rot("y", 45, 8, ch, 8));
+        double wy0 = ch + bh + (dense ? 1.2 : 1.0), wy1 = wy0 + (dense ? 0.6 : 0.5);
+        valve.add(Models.e(7.65, ch + bh, 7.65, 8.35, wy0, 8.35).only("#bolt", "north", "south", "east", "west"));
+        double ap = dense ? 2.9 : 2.4, rt = dense ? 0.6 : 0.5, edge = 2 * ap * Math.tan(Math.PI / 8) + 0.1;
+        for (int k = 0; k < 4; k++) {
+            // the four straight sides of the rim, then the four diagonal ones (a little lower, so their tops never meet in one plane)
+            double[] sx = {0, 0, -1, 1}, sz = {-1, 1, 0, 0};
+            double cx = 8 + sx[k] * (ap - rt / 2), cz = 8 + sz[k] * (ap - rt / 2);
+            double hx = sx[k] == 0 ? edge / 2 : rt / 2, hz = sz[k] == 0 ? edge / 2 : rt / 2;
+            valve.add(Models.e(cx - hx, wy0, cz - hz, cx + hx, wy1, cz + hz).all("#wheel"));
+            double ang = Math.PI / 4 + k * Math.PI / 2, dx = 8 + Math.cos(ang) * (ap - rt / 2), dz = 8 + Math.sin(ang) * (ap - rt / 2);
+            valve.add(Models.e(dx - edge / 2, wy0 + 0.03, dz - rt / 2, dx + edge / 2, wy1 - 0.03, dz + rt / 2).all("#wheel")
+                    .rot("y", k % 2 == 0 ? 45 : -45, dx, wy0, dz));
+        }
+        valve.add(Models.e(8 - ap + rt, wy0 + 0.06, 7.8, 8 + ap - rt, wy1 - 0.08, 8.2).only("#wheel", "up", "down", "north", "south"));
+        valve.add(Models.e(7.8, wy0 + 0.08, 8 - ap + rt, 8.2, wy1 - 0.1, 8 + ap - rt).only("#wheel", "up", "down", "east", "west"));
+        valve.add(Models.e(7.45, wy0 - 0.1, 7.45, 8.55, wy1 + 0.15, 8.55).all("#brass"));
         looks.put("_valve", valve);
-        List<Models.El> plate = new ArrayList<>(midClamp);
-        plate.add(Models.e(ch, 6.2, 5.6, ch + 0.3, 9.8, 10.4).all("#brass").face("east", "#plate", 0, 0, 16, 16));
-        looks.put("_plate", plate);
+
+        // the snow inside the horizontal pipes: a thin layer on the flat bottom and, by the block, one of a few drifts on it
+        // (the block state picks the drift apart from the look); a vertical pipe has none
+        double sx0 = lo + c + 0.1, sx1 = hi - c - 0.1, sy0 = lo + 0.05, sy1 = lo + (dense ? 0.55 : 0.4);
+        double mx0 = sx0 + (dense ? 0.9 : 0.6), mx1 = sx1 - (dense ? 0.9 : 0.6), my1 = sy1 + (dense ? 0.6 : 0.45);
+        java.util.Map<String, List<Models.El>> drifts = new java.util.LinkedHashMap<>();
+        double[][][] mounds = {{}, {{2.5, 7.5}}, {{9.0, 13.5}}, {{1.0, 3.5}, {11.5, 14.5}}};
+        for (int k = 0; k < mounds.length; k++) {
+            List<Models.El> d = new ArrayList<>();
+            d.add(Models.e(sx0, sy0, 0, sx1, sy1, 16).only("#snow", "up", "east", "west"));
+            for (double[] m : mounds[k]) {
+                d.add(Models.e(mx0, sy1, m[0], mx1, my1, m[1]).only("#snow", "up", "north", "south", "east", "west"));
+                d.add(Models.e(mx0 + 0.5, my1, m[0] + 0.8, mx1 - 0.5, my1 + 0.25, m[1] - 0.8).only("#snow", "up", "north", "south", "east", "west"));
+            }
+            drifts.put("_snow" + (k == 0 ? "" : "_" + (char) ('a' + k - 1)), d);
+            Models.model(name + "_snow" + (k == 0 ? "" : "_" + (char) ('a' + k - 1)), false, "pipe_snow", tex, d.toArray(new Models.El[0]));
+        }
+        Models.model(name + "_arm_snow", false, "pipe_snow", tex, Models.e(sx0, sy0, 0, sx1, sy1, lo).only("#snow", "up", "east", "west"));
 
         for (int glow : new int[]{0, GLOW}) {
             String sfx = glow > 0 ? "_lit" : "";
@@ -486,7 +559,6 @@ final class Pipes {
             List<Models.El> straight = new ArrayList<>();
             tube(straight, lo, hi, 0, 16, c, gv, gu, gd, glow);
             straight.addAll(clamps);
-            straight.addAll(snow);
             for (var look : looks.entrySet()) {
                 List<Models.El> all = new ArrayList<>(straight);
                 all.addAll(look.getValue());
@@ -494,11 +566,10 @@ final class Pipes {
             }
             PARTS.put("straight", straight);
 
-            // a sleeve to the junction box: a tube with its snow and the clamp at the block's edge
+            // a sleeve to the junction box: a tube and the clamp at the block's edge
             List<Models.El> arm = new ArrayList<>();
             tube(arm, lo, hi, 0, lo, c, gv, gu, gd, glow);
             ring(arm, cl, ch, 0.1, 1.0, cc, "clamp", dense ? 0.8 : 0.65);
-            arm.add(Models.e(lo + c + 0.1, lo + 0.05, 0, hi - c - 0.1, lo + (dense ? 1.0 : 0.7), lo).only("#snow", "up", "east", "west"));
             Models.model(name + "_arm" + sfx, true, particle, tex, arm.toArray(new Models.El[0]));
             PARTS.put("arm", arm);
 
@@ -571,7 +642,9 @@ final class Pipes {
 
         // what the block state draws together in one orientation
         for (List<Models.El> look : looks.values()) {
-            checkTogether(name + " straight+look+cap", PARTS.get("straight"), look, cap);
+            for (List<Models.El> d : drifts.values()) {
+                checkTogether(name + " straight+look+snow+cap", PARTS.get("straight"), look, d, cap);
+            }
         }
         checkTogether(name + " hub+arm+cap", hub, PARTS.get("arm"), cap);
         if (dense) {
@@ -583,7 +656,7 @@ final class Pipes {
         List<Models.El> item = new ArrayList<>();
         tube(item, lo, hi, 0, 16, c, "sv", "su", "sd");
         item.addAll(clamps);
-        item.addAll(snow);
+        item.addAll(drifts.get("_snow"));
         item.addAll(gauge);
         Models.model(name + "_item", true, particle, tex, item.toArray(new Models.El[0]));
         Models.item(name, name + "_item");
@@ -632,11 +705,19 @@ final class Pipes {
             for (int p = 0; p < 2; p++) {
                 // the game picks one by the block's position: most blocks are plain, every few has a gauge, a valve or a plate
                 List<String> pick = new ArrayList<>();
-                for (String[] look : new String[][]{{"", "6"}, {"_gauge", "2"}, {"_valve", "1"}, {"_plate", "1"}}) {
+                for (String[] look : new String[][]{{"", "6"}, {"_gauge", "2"}, {"_valve", "2"}}) {
                     pick.add("{\"model\": \"" + Forge2.NS + name + "_straight" + look[0] + lit[p] + "\"" + ax[2] + ", \"weight\": " + look[1] + "}");
                 }
                 parts.add("    {\"when\": {\"AND\": [" + ax[1] + ", " + power[p] + "]}, \"apply\": [" + String.join(", ", pick) + "]}");
             }
+        }
+        // snow lies only in horizontal pipes: the straight ones along z and x, and the sleeves to the four sides
+        for (int k = 0; k < 2; k++) {
+            List<String> pick = new ArrayList<>();
+            for (String[] d : new String[][]{{"_snow", "3"}, {"_snow_a", "2"}, {"_snow_b", "2"}, {"_snow_c", "2"}}) {
+                pick.add("{\"model\": \"" + Forge2.NS + name + d[0] + "\"" + axes[k][2] + ", \"weight\": " + d[1] + "}");
+            }
+            parts.add("    {\"when\": " + axes[k][1] + ", \"apply\": [" + String.join(", ", pick) + "]}");
         }
         String ns = notStraight();
         parts.add("    {\"when\": " + ns + ", \"apply\": {\"model\": \"" + Forge2.NS + name + "_hub\"}}");
@@ -646,6 +727,10 @@ final class Pipes {
                         + Forge2.NS + name + "_arm" + lit[p] + "\"" + r[1] + "}}");
                 parts.add("    {\"when\": {\"AND\": [" + c(r[0], "none") + ", " + ns + ", " + power[p] + "]}, \"apply\": {\"model\": \""
                         + Forge2.NS + name + "_end" + lit[p] + "\"" + r[1] + "}}");
+            }
+            if (!r[0].equals("up") && !r[0].equals("down")) {
+                parts.add("    {\"when\": {\"AND\": [" + c(r[0], LINKED) + ", " + ns + "]}, \"apply\": {\"model\": \"" + Forge2.NS + name
+                        + "_arm_snow\"" + r[1] + "}}");
             }
             // a sleeve only at a device: at a joint with a thin pipe its place is taken by the adapter washer
             parts.add("    {\"when\": " + c(r[0], "device") + ", \"apply\": {\"model\": \"" + Forge2.NS + name + "_cap\"" + r[1] + "}}");

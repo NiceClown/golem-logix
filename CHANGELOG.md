@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.8 (26.1.2) — Pipe fittings with volume
+
+- **The gauge on a pipe is a real round gauge** on a brass fitting and nut, with its dials facing the sides of the pipe, so it
+  reads from where one walks along it; the needle trembles high on the scale.
+- **The valve is a gate valve**: an octagonal brass bonnet, an iron stem and a red handwheel with a rim, spokes and a hub.
+  The flat name plate is gone.
+- **The snow inside the pipes** is packed snow with blue shade and blown ridges, with a few drifts that change from block to
+  block; it lies only in horizontal pipes. The hoarfrost on the glass by the clamps is lighter.
+
 ## 2.0.7 (26.1.2) — New pipes, and faster
 
 - **The pipes are redrawn.** The brass bands with painted gauges are gone: every block joint is now held by a copper clamp

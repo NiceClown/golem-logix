@@ -13,7 +13,7 @@
     "clamp": "golem_logix:block/pipe_dense_clamp",
     "bolt": "golem_logix:block/pipe_bolt",
     "gauge": "golem_logix:block/pipe_dial",
-    "plate": "golem_logix:block/pipe_plate",
+    "wheel": "golem_logix:block/pipe_wheel",
     "manifold": "golem_logix:block/pipe_dense_manifold",
     "flange": "golem_logix:block/pipe_flange",
     "hub": "golem_logix:block/pipe_dense_hub",
@@ -24,8 +24,7 @@
     "brass": "golem_logix:block/sat_brass",
     "copper": "golem_logix:block/resonator_pipe",
     "dark": "golem_logix:block/sat_dark",
-    "snow": "minecraft:block/snow",
-    "valve": "minecraft:block/red_terracotta"
+    "snow": "golem_logix:block/pipe_snow"
   },
   "elements": [
     {

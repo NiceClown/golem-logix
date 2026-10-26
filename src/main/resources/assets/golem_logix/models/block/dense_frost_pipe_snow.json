@@ -1,0 +1,39 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "golem_logix:block/pipe_snow",
+    "su": "golem_logix:block/pipe_dense_u",
+    "sv": "golem_logix:block/pipe_dense_v",
+    "sd": "golem_logix:block/pipe_dense_d",
+    "lu": "golem_logix:block/pipe_dense_u_lit",
+    "lv": "golem_logix:block/pipe_dense_v_lit",
+    "ld": "golem_logix:block/pipe_dense_d_lit",
+    "clamp": "golem_logix:block/pipe_dense_clamp",
+    "bolt": "golem_logix:block/pipe_bolt",
+    "gauge": "golem_logix:block/pipe_dial",
+    "wheel": "golem_logix:block/pipe_wheel",
+    "manifold": "golem_logix:block/pipe_dense_manifold",
+    "flange": "golem_logix:block/pipe_flange",
+    "hub": "golem_logix:block/pipe_dense_hub",
+    "plug": "golem_logix:block/pipe_plug",
+    "dock": "golem_logix:block/pipe_dock",
+    "dial": "golem_logix:block/resonator_dial",
+    "ice": "golem_logix:block/sat_ice",
+    "brass": "golem_logix:block/sat_brass",
+    "copper": "golem_logix:block/resonator_pipe",
+    "dark": "golem_logix:block/sat_dark",
+    "snow": "golem_logix:block/pipe_snow"
+  },
+  "elements": [
+    {
+      "from": [4.3, 2.05, 0],
+      "to": [11.700000000000001, 2.55, 16],
+      "faces": {
+        "up": {"texture": "#snow"},
+        "east": {"texture": "#snow"},
+        "west": {"texture": "#snow"}
+      }
+    }
+  ]
+}
