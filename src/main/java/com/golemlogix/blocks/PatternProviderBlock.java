@@ -77,7 +77,8 @@ public class PatternProviderBlock extends Block implements GolemNode, EntityBloc
         }
         if (level.getBlockEntity(pos) instanceof PatternProviderBlockEntity provider) {
             player.openMenu(new SimpleMenuProvider(
-                    (id, inv, p) -> new PatternProviderMenu(id, inv, provider.getContainer(), provider.getUpgrades(), provider.menuData()),
+                    (id, inv, p) -> new PatternProviderMenu(id, inv, provider.getContainer(), provider.getReturns(), provider.getUpgrades(),
+                            provider.menuData()),
                     Component.translatable("block.golem_logix.pattern_provider")));
         }
         return InteractionResult.CONSUME;
@@ -93,6 +94,7 @@ public class PatternProviderBlock extends Block implements GolemNode, EntityBloc
                         Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, s.copy());
                     }
                 }
+                Containers.dropContents(level, pos, provider.getReturns());
                 Containers.dropContents(level, pos, provider.getUpgrades());
             }
             super.onRemove(state, level, pos, newState, isMoving);

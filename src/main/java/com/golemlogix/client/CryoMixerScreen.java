@@ -32,6 +32,13 @@ public class CryoMixerScreen extends GolemScreen<CryoMixerMenu> {
                 () -> Component.translatable("gui.golem_logix.mixer.mode." + menu.mode().name().toLowerCase(Locale.ROOT)),
                 () -> Component.translatable("gui.golem_logix.mixer.mode_tip"), () -> false,
                 b -> minecraft.gameMode.handleInventoryButtonClick(menu.containerId, CryoMixerMenu.BUTTON_MODE)));
+        // auto-output: a hopper hands the blocks out (to a Pattern Provider first), a chest keeps them in the tray
+        addSideButton(() -> new ItemStack(menu.autoOutput() ? Items.HOPPER : Items.CHEST),
+                () -> Component.translatable("gui.golem_logix.auto_output.title").append("\n")
+                        .append(Component.translatable(menu.autoOutput() ? "gui.golem_logix.auto_output.on" : "gui.golem_logix.auto_output.off")
+                                .withStyle(net.minecraft.ChatFormatting.AQUA)).append("\n")
+                        .append(Component.translatable("gui.golem_logix.auto_output.hint").withStyle(net.minecraft.ChatFormatting.GRAY)),
+                () -> true, menu::autoOutput, CryoMixerMenu.BUTTON_AUTO_OUTPUT);
         addRedstoneButton(menu::redstoneMode);
     }
 

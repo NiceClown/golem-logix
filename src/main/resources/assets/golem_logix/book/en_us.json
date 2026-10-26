@@ -212,6 +212,13 @@
                "The Saturator has no window, so the &lRedstone Module&r goes straight into the machine: right-click any part with the module.",
                "Right-clicking again with a module switches the mode (with signal, without signal, per pulse, ignore). Any wall of the machine takes the signal.",
                "Sneak and right-click the machine with an empty hand (not on a radiator) to take the module out. Jade shows the current mode."
+             ]},
+            {"type": "text", "title": "Auto-output",
+             "text": [
+               "Finished plates do not wait on the right deck: &lauto-output&r is &lon by default&r. Twice a second the machine hands them to a neighbouring &lStamping Gateway&r first - its return slots send them into the network, so no Import Bus and no extra channel are needed.",
+               "Only when no Gateway stands next to the machine (or it is full) the plates go into any neighbouring inventory: a chest, a hopper, an Interface.",
+               "Right-click any part with the &lForge Hammer&r to switch auto-output off or on again; a right-click with an empty hand shows the state.",
+               "&oSwitched off, the plates stay on the deck for your hand or an Import Bus.&r"
              ]}
           ]
         },
@@ -341,7 +348,7 @@
                "The mixer freezes water with &lLiquid Cryo-Source&r. Two modes, switched in its window:",
                "• &lsnow&r - fast: a snow block every second (250 mB of water and 25 mB of Cryo-Source). Two snow blocks and a carved pumpkin make a snow golem, and snow golems make the plates for pipes;",
                "• &lice&r - slow: a block of ice every 5 seconds (1000 mB and 100 mB). Nine blocks of ice make Packed Ice, by hand or by autocraft - the blank for Cryo-Substrate in the Saturator.",
-               "&oThe snow or ice lands in the tray in front: take it from the window or with an Import Bus.&r"
+               "&oThe snow or ice lands in the tray in front and leaves it by itself (see “Auto-output”).&r"
              ]},
             {"type": "text", "title": "Filling the flasks",
              "text": [
@@ -355,6 +362,11 @@
                "• up to &l4 Compressed Co-Processors&r: each adds the base speed once more (four make it five times faster);",
                "• a &lRedstone Module&r: the mixer works by signal; in pulse mode every pulse makes one block.",
                "The golem at the side turns the valve while it works; if something stands there, it moves to a free side."
+             ]},
+            {"type": "text", "title": "Auto-output",
+             "text": [
+               "&lAuto-output&r is &lon by default&r: the tray hands its snow or ice to a neighbouring &lStamping Gateway&r first (into the network through its return slots), and only without one into any neighbouring inventory.",
+               "The &lhopper&r button to the left of the window switches it off: a &lchest&r on the button means the blocks wait in the tray for the window or an Import Bus."
              ]}
           ]
         }
@@ -391,7 +403,7 @@
             {"type": "text", "title": "The core alone",
              "text": [
                "Placed on its own, the core already runs a small network of &l8 channels&r.",
-               "It connects &lonly through its bottom face&r: put a pipe, a bushing or a device right under it. Pipes and devices beside the core or on top of it do not connect - the crystal stands on its network as on a pedestal.",
+               "It connects &lonly through its bottom face&r: put a pipe, a bushing or a device right under it; pipes and devices beside it or on top do not connect.",
                "Source: a jar touching any block of the network.",
                "&oWhen you have two conduits and a bushing, set them under the core: that is the starter tower.&r"
              ]},
@@ -446,7 +458,7 @@
              "text": ["Corners and sides: &lcasing&r, center: the &lAtlas Core&r.", "The core crystal rises above the ring of casings."]},
             {"type": "text", "title": "Building hints",
              "text": [
-               "Right-click the core to see what is missing: you get the block name and coordinates, and sparks flash at the right spot.",
+               "Right-click the core to see what is missing: the block name, its coordinates and sparks at the right spot.",
                "An Atlant is placed like a door - one item, two blocks. When the array is complete the Atlants turn to face outward by themselves.",
                "The finished array gives &lfive lines of 64 channels&r - 320 in all.",
                "&oThe order of layers does not matter - only that everything stands in its place at the end.&r"
@@ -577,7 +589,7 @@
              ]},
             {"type": "text", "title": "Who gets a channel first",
              "text": [
-               "Channels are handed out from the core along the &lshortest path&r: each device gets the route with the fewest blocks between it and the core.",
+               "Channels go out from the core along the &lshortest path&r: each device gets the route with the fewest blocks to the core.",
                "&lDense runs go first&r: devices on dense pipes, then on basic pipes, then devices that hang on other devices.",
                "A device gets a channel only if &levery block&r on its path still has room; otherwise it waits.",
                "&oChannels never cross the array: each bushing counts only its own devices.&r"
@@ -1109,12 +1121,12 @@
                "• For machine recipes the Provider looks for an adjacent &lnon-network&r block with an inventory (furnace, crate, machine, or an assembled Mana Saturator) and puts all ingredients of one batch into it.",
                "• With several neighbors it tries them in turn. If a machine cannot take everything at once, the batch is postponed and retried.",
                "• The button to the left of the window picks the &loutput side&r: all sides (as before) or a single one — then the provider feeds only the machine on that side. Handy when machines stand side by side. The arrow on the block's faces points at the chosen side; a sun with rays means it feeds all sides.",
-               "• The machine must return its output to the network - put a &lVacuum Import Bus&r next to it.",
+               "• The result comes back into the &lreturn slots&r (the column on the right of the window) and goes straight into the network. The mod's machines put it there themselves (auto-output); for a furnace or another mod's machine let it push into the Gateway, or put a &lVacuum Import Bus&r next to it.",
                "&oCrafting-table recipes do not concern the provider: the calculator carries them out.&r"
              ]},
             {"type": "text", "title": "Waiting for the result",
              "text": [
-               "The &lclock&r button to the left of the window turns waiting on: until the result of the previous batch has come back to the job (through an import bus), the next batch of ingredients &lis not loaded&r.",
+               "The &lclock&r button to the left of the window turns waiting on: until the result of the previous batch has come back to the job (through the return slots or an import bus), the next batch of ingredients &lis not loaded&r.",
                "This is for machines that get confused by the ingredients of two recipes at once, or that make one item at a time.",
                "Without waiting (a hopper on the button) the Provider loads batches as soon as the machine accepts them.",
                "The slot to the right of the window takes a &lRedstone Module&r."

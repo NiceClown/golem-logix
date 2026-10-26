@@ -1038,7 +1038,7 @@ public class GolemGameTests {
         PatternProviderBlockEntity provider = (PatternProviderBlockEntity) helper.getBlockEntity(prov);
         PatternData furnace = new PatternData(false, List.of(new ItemStack(Items.RAW_IRON)), List.of(new ItemStack(Items.IRON_INGOT)));
         ServerPlayer player = testPlayer(helper);
-        var menu = new com.golemlogix.menu.PatternProviderMenu(21, player.getInventory(), provider.getContainer(), provider.getUpgrades(),
+        var menu = new com.golemlogix.menu.PatternProviderMenu(21, player.getInventory(), provider.getContainer(), provider.getReturns(), provider.getUpgrades(),
                 provider.menuData());
         helper.assertTrue(provider.output() == com.golemlogix.blocks.ProviderOutput.ALL, "all sides by default");
         // all -> down -> up -> north -> south -> west
@@ -3963,6 +3963,114 @@ public class GolemGameTests {
                     });
                 });
             });
+        });
+    }
+
+    /** Pattern Provider return slots: anything put in from outside goes into the network; nothing comes back out, the cards are unreachable. */
+    @GameTest(template = T, timeoutTicks = 100)
+    public static void providerReturnSlots(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity provider = ((PatternProviderBlockEntity) helper.getBlockEntity(PROV));
+        provider.getContainer().setItem(0, card(new PatternData(false,
+                List.of(new ItemStack(Items.RAW_IRON)), List.of(new ItemStack(Items.IRON_INGOT)))));
+        ItemKey ingot = ItemKey.of(new ItemStack(Items.IRON_INGOT));
+        helper.runAfterDelay(5, () -> {
+            var handler = helper.getLevel().getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, helper.absolutePos(PROV), Direction.UP);
+            helper.assertTrue(handler != null && handler.getSlots() == PatternProviderBlockEntity.RETURN_SLOTS, "only the return slots are reachable");
+            helper.assertTrue(handler.insertItem(0, new ItemStack(Items.IRON_INGOT, 5), false).isEmpty(), "a machine hands back five ingots");
+            helper.assertTrue(handler.extractItem(0, 64, false).isEmpty(), "nothing can be pulled back out");
+        });
+        helper.runAfterDelay(30, () -> {
+            helper.assertTrue(net(helper, bay).itemCountOf(ingot) == 5, "the ingots went into the network, got " + net(helper, bay).itemCountOf(ingot));
+            helper.assertTrue(provider.getReturns().isEmpty(), "the return slots are empty again");
+            helper.assertTrue(provider.getContainer().getItem(0).has(com.golemlogix.init.ModDataComponents.PATTERN.get()), "the card stayed in place");
+            helper.succeed();
+        });
+    }
+
+    /** Cryo-Mixer auto-output: into a neighbouring Pattern Provider first, then into a chest; switched off it keeps the tray. */
+    @GameTest(template = T, timeoutTicks = 200)
+    public static void mixerAutoOutput(GameTestHelper helper) {
+        var level = helper.getLevel();
+        BlockPos base = new BlockPos(3, 1, 3);
+        com.golemlogix.blocks.CryoMixerBlock.place(level, helper.absolutePos(base), Direction.SOUTH, ModBlocks.CRYO_MIXER.get());
+        BlockPos chest = base.west(), prov = base.above().east();
+        helper.setBlock(chest, Blocks.CHEST);
+        helper.setBlock(prov, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        var mixer = ((com.golemlogix.blockentity.CryoMixerBlockEntity) helper.getBlockEntity(base));
+        helper.assertTrue(mixer.autoOutput(), "auto-output is on by default");
+        var exec = net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE;
+        mixer.input().fill(new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.WATER, 8000), exec);
+        mixer.input().fill(new net.neoforged.neoforge.fluids.FluidStack(com.golemlogix.init.ModFluids.CRYO_SOURCE.get(), 1000), exec);
+        for (int i = 0; i < 4; i++) {
+            mixer.getUpgrades().setItem(i, new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get()));
+        }
+        Container box = (Container) ((net.minecraft.world.level.block.entity.BlockEntity) helper.getBlockEntity(chest));
+        PatternProviderBlockEntity provider = ((PatternProviderBlockEntity) helper.getBlockEntity(prov));
+        helper.runAfterDelay(30, () -> {
+            helper.assertTrue(count(provider.getReturns(), Items.SNOW_BLOCK) >= 2, "the snow goes to the provider first, got "
+                    + count(provider.getReturns(), Items.SNOW_BLOCK));
+            helper.assertTrue(box.isEmpty(), "not into the chest while a provider takes it");
+            helper.setBlock(prov, Blocks.AIR);
+        });
+        helper.runAfterDelay(60, () -> {
+            helper.assertTrue(count(box, Items.SNOW_BLOCK) >= 2, "without a provider the chest gets it, got " + count(box, Items.SNOW_BLOCK));
+            mixer.menuData().set(8, 0);
+        });
+        helper.runAfterDelay(65, () -> {
+            int inChest = count(box, Items.SNOW_BLOCK);
+            helper.runAfterDelay(30, () -> {
+                helper.assertTrue(!mixer.autoOutput() && count(box, Items.SNOW_BLOCK) == inChest, "switched off, nothing more leaves");
+                helper.assertTrue(mixer.getOutput().getItem(0).getCount() >= 3, "the snow piles up in the tray");
+                helper.succeed();
+            });
+        });
+    }
+
+    /** Mana Saturator auto-output: plates go into a chest; the Forge Hammer switches it off; a Pattern Provider has priority. */
+    @GameTest(template = T, timeoutTicks = 700)
+    public static void saturatorAutoOutput(GameTestHelper helper) {
+        BlockPos ctl = new BlockPos(5, 3, 5);
+        buildSaturator(helper, ctl, Direction.NORTH);
+        put(helper, new BlockPos(7, 1, 5), ModBlocks.CREATIVE_SOURCE_JAR.get());
+        BlockPos chest = new BlockPos(3, 2, 5);
+        helper.setBlock(chest, Blocks.CHEST);
+        Container box = (Container) ((net.minecraft.world.level.block.entity.BlockEntity) helper.getBlockEntity(chest));
+        var player = testPlayer(helper);
+        BlockPos abs = helper.absolutePos(ctl);
+        var hit = new BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(abs), Direction.NORTH, abs, false);
+        int[] made = new int[1];
+        Runnable feed = () -> helper.getLevel().getBlockState(abs).useItemOn(new ItemStack(Items.IRON_BLOCK), helper.getLevel(), player,
+                net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+        helper.runAfterDelay(30, () -> {
+            var sat = ((com.golemlogix.blockentity.ManaSaturatorBlockEntity) helper.getBlockEntity(ctl));
+            helper.assertTrue(sat.autoOutput(), "auto-output is on by default");
+            feed.run();
+        });
+        helper.runAfterDelay(250, () -> {
+            var sat = ((com.golemlogix.blockentity.ManaSaturatorBlockEntity) helper.getBlockEntity(ctl));
+            made[0] = count(box, ModItems.FLATTENED_IRON_CORE.get());
+            helper.assertTrue(made[0] > 0 && sat.outputDeck().isEmpty(), "the cores went into the chest by itself, chest " + made[0]);
+            helper.getLevel().getBlockState(abs).useItemOn(new ItemStack(ModItems.FORGE_HAMMER.get()), helper.getLevel(), player,
+                    net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+            helper.assertTrue(!sat.autoOutput(), "the Forge Hammer switches auto-output off");
+            feed.run();
+        });
+        helper.runAfterDelay(510, () -> {
+            var sat = ((com.golemlogix.blockentity.ManaSaturatorBlockEntity) helper.getBlockEntity(ctl));
+            helper.assertTrue(sat.outputDeck().is(ModItems.FLATTENED_IRON_CORE.get()) && sat.outputDeck().getCount() == made[0]
+                    && count(box, ModItems.FLATTENED_IRON_CORE.get()) == made[0], "switched off, the cores stay on the deck");
+            helper.setBlock(new BlockPos(5, 1, 7), ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+            sat.toggleAutoOutput();
+        });
+        helper.runAfterDelay(540, () -> {
+            var sat = ((com.golemlogix.blockentity.ManaSaturatorBlockEntity) helper.getBlockEntity(ctl));
+            PatternProviderBlockEntity provider = ((PatternProviderBlockEntity) helper.getBlockEntity(new BlockPos(5, 1, 7)));
+            helper.assertTrue(count(provider.getReturns(), ModItems.FLATTENED_IRON_CORE.get()) == made[0] && sat.outputDeck().isEmpty(),
+                    "with a provider behind it the cores go there, not into the chest");
+            helper.assertTrue(count(box, ModItems.FLATTENED_IRON_CORE.get()) == made[0], "the chest got nothing more");
+            helper.succeed();
         });
     }
 }

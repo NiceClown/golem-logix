@@ -32,9 +32,14 @@ import java.util.List;
  * into adjacent machines (any neighbour that is not a network node).
  * Wait-for-result mode: the next portion is not loaded until the job has received the output of the previous one.
  * A Redstone Module stops feeding on a signal (or feeds one portion per pulse).
+ * Return slots: what the machines hand back (their auto-output puts results here first) or a player puts in goes into the
+ * network, so a machine fed by a provider needs no Import Bus and no channel of its own.
  */
 public class PatternProviderBlockEntity extends BlockEntity {
     public static final int SLOTS = 9;
+    public static final int RETURN_SLOTS = 3;
+    /** How often the return slots are emptied into the network (ticks). */
+    private static final int RETURN_INTERVAL = 5;
 
     private final OwnedContainer container = new OwnedContainer(SLOTS, this,
             s -> s.has(ModDataComponents.PATTERN.get())) {
@@ -45,6 +50,7 @@ public class PatternProviderBlockEntity extends BlockEntity {
             com.golemlogix.system.GolemNetwork.patternsChanged();
         }
     };
+    private final OwnedContainer returns = new OwnedContainer(RETURN_SLOTS, this, s -> true);
     private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.REDSTONE_ONLY, this);
     private final RedstoneControl redstone = new RedstoneControl();
 
@@ -62,6 +68,71 @@ public class PatternProviderBlockEntity extends BlockEntity {
 
     public UpgradeContainer getUpgrades() {
         return upgrades;
+    }
+
+    public OwnedContainer getReturns() {
+        return returns;
+    }
+
+    /**
+     * Automation access from any side: only the return slots, and only to put in (anything; it goes into the network). The
+     * punch cards are not reachable, and nothing can be taken back out, otherwise a hopper under the provider would pull it.
+     */
+    private final IItemHandler automation = new IItemHandler() {
+        @Override
+        public int getSlots() {
+            return RETURN_SLOTS;
+        }
+
+        @Override
+        public ItemStack getStackInSlot(int slot) {
+            return returns.getItem(slot);
+        }
+
+        @Override
+        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            if (stack.isEmpty()) {
+                return stack;
+            }
+            ItemStack cur = returns.getItem(slot);
+            if (!cur.isEmpty() && !ItemStack.isSameItemSameComponents(cur, stack)) {
+                return stack;
+            }
+            int room = Math.min(stack.getMaxStackSize(), 64) - cur.getCount();
+            if (room <= 0) {
+                return stack;
+            }
+            int n = Math.min(room, stack.getCount());
+            if (!simulate) {
+                if (cur.isEmpty()) {
+                    returns.setItem(slot, stack.copyWithCount(n));
+                } else {
+                    cur.grow(n);
+                    returns.setChanged();
+                }
+            }
+            return n == stack.getCount() ? ItemStack.EMPTY : stack.copyWithCount(stack.getCount() - n);
+        }
+
+        @Override
+        public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public int getSlotLimit(int slot) {
+            return 64;
+        }
+
+        @Override
+        public boolean isItemValid(int slot, ItemStack stack) {
+            return true;
+        }
+    };
+
+    /** The return slots for pipes, hoppers and the machines' auto-output. */
+    public IItemHandler automation() {
+        return automation;
     }
 
     public boolean isBlocking() {
@@ -126,10 +197,38 @@ public class PatternProviderBlockEntity extends BlockEntity {
         return redstone.allows(installed, installed && level.hasNeighborSignal(worldPosition), consume);
     }
 
-    /** Remembers the signal level every tick: this way a short pulse between calculator cycles is not lost. */
+    /** Remembers the signal level every tick (a short pulse between calculator cycles is not lost) and empties the return slots. */
     public static void serverTick(Level level, BlockPos pos, BlockState state, PatternProviderBlockEntity be) {
         if (be.upgrades.has(UpgradeType.REDSTONE)) {
             be.redstone.observe(level.hasNeighborSignal(pos));
+        }
+        if (Math.floorMod(level.getGameTime() + pos.asLong(), RETURN_INTERVAL) == 0) {
+            be.flushReturns(level, pos);
+        }
+    }
+
+    /** Return slots -> network: first to the jobs waiting for these items, the rest into storage; what does not fit stays. */
+    private void flushReturns(Level level, BlockPos pos) {
+        boolean any = false;
+        for (int i = 0; i < RETURN_SLOTS && !any; i++) {
+            any = !returns.getItem(i).isEmpty();
+        }
+        if (!any) {
+            return;
+        }
+        com.golemlogix.system.GolemNetwork net = com.golemlogix.system.GolemNetwork.get(level, pos);
+        if (!net.isOnline() || !net.isDeviceActive(pos)) {
+            return;
+        }
+        for (int i = 0; i < RETURN_SLOTS; i++) {
+            ItemStack in = returns.getItem(i);
+            if (in.isEmpty()) {
+                continue;
+            }
+            ItemStack leftover = net.insertFromMachine(in.copy());
+            if (leftover.getCount() != in.getCount()) {
+                returns.setItem(i, leftover);
+            }
         }
     }
 
@@ -256,6 +355,7 @@ public class PatternProviderBlockEntity extends BlockEntity {
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.put("Patterns", container.createTag(registries));
+        tag.put("Returns", returns.createTag(registries));
         tag.put("Upgrades", upgrades.createTag(registries));
         tag.putBoolean("Blocking", blocking);
         redstone.save(tag);
@@ -265,6 +365,7 @@ public class PatternProviderBlockEntity extends BlockEntity {
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         container.fromTag(tag.getList("Patterns", Tag.TAG_COMPOUND), registries);
+        returns.fromTag(tag.getList("Returns", Tag.TAG_COMPOUND), registries);
         upgrades.fromTag(tag.getList("Upgrades", Tag.TAG_COMPOUND), registries);
         blocking = tag.getBoolean("Blocking");
         redstone.load(tag);

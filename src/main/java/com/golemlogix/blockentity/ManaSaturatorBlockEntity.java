@@ -50,6 +50,8 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
     private int coolers = 0;
     /** Redstone Module (installed by right-clicking the machine) and its mode. */
     private boolean redstoneModule = false;
+    /** Auto-output (on by default; the Forge Hammer switches it): finished items leave the right deck by themselves. */
+    private boolean autoOutput = true;
     private final com.golemlogix.upgrade.RedstoneControl redstone = new com.golemlogix.upgrade.RedstoneControl();
     /** Internal Source buffer: refilled from the network (or neighbouring jars) and spent on saturation. */
     public static final int BUFFER_MAX = 5000;
@@ -361,6 +363,17 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         return installed;
     }
 
+    public boolean autoOutput() {
+        return autoOutput;
+    }
+
+    /** Right-click with the Forge Hammer: auto-output on or off; returns the new state. */
+    public boolean toggleAutoOutput() {
+        autoOutput = !autoOutput;
+        setChanged();
+        return autoOutput;
+    }
+
     /** Remove the Redstone Module (Shift + right-click with an empty hand); true if it was installed. */
     public boolean removeRedstoneModule() {
         if (!redstoneModule) {
@@ -642,6 +655,14 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
                 }
             }
         }
+        // auto-output: the finished items go to a neighbouring Pattern Provider first, otherwise into any neighbouring inventory
+        if (entity.autoOutput && !entity.outDeck.isEmpty() && t % com.golemlogix.system.AutoOutput.INTERVAL == 0) {
+            ItemStack rest = com.golemlogix.system.AutoOutput.push(level, SaturatorStructure.cells(pos, facing), entity.outDeck);
+            if (rest.getCount() != entity.outDeck.getCount()) {
+                entity.outDeck = rest;
+                changed = true;
+            }
+        }
         if (changed) {
             entity.changed();
         }
@@ -759,6 +780,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         tag.putBoolean("IsCrafting", isCrafting);
         tag.putInt("Coolers", coolers);
         tag.putBoolean("RedstoneModule", redstoneModule);
+        tag.putBoolean("AutoOutput", autoOutput);
         redstone.save(tag);
     }
 
@@ -776,6 +798,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         this.isCrafting = tag.getBoolean("IsCrafting");
         this.coolers = tag.getInt("Coolers");
         this.redstoneModule = tag.getBoolean("RedstoneModule");
+        this.autoOutput = !tag.contains("AutoOutput") || tag.getBoolean("AutoOutput");
         redstone.load(tag);
     }
 

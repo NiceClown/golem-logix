@@ -23,6 +23,8 @@ public final class ModCapabilities {
                 (level, pos, state, be, side) -> level.getBlockEntity(SaturatorPartBlock.controllerOf(pos, state))
                         instanceof ManaSaturatorBlockEntity saturator ? saturator.automation() : null,
                 ModBlocks.SATURATOR_PART.get());
+        // Pattern Provider: its return slots take what the machines hand back (into the network)
+        event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ModBlockEntities.PATTERN_PROVIDER.get(), (be, side) -> be.automation());
         // Interface: handing out stock and taking into the network, from any side
         event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ModBlockEntities.INTERFACE.get(), (be, side) -> be.automation());
         event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ModBlockEntities.INTERFACE.get(), (be, side) -> be.fluids());
