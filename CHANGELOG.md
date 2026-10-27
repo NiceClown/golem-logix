@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.0.10 (26.1.2) — Autocrafting finds the gateway at the machine
+
+- **Fixed: an autocraft step could wait forever** when the same recipe sat on two Stamping Gateways with different fuzziness and
+  the order picked the gateway with no machine beside it (the plates then went to storage without the job seeing them). A step
+  now tries every gateway holding the same recipe, its own pattern first, and hands the portion to the one whose machine takes it.
+  Jobs already waiting like that go on by themselves.
+- **A new job status: "No machine beside the Stamping Gateway"**, instead of a silent "Waiting for a machine", when no gateway
+  with the pattern has a machine on the side it feeds (the Recipe Monitor shows it as a fault).
+- The log no longer fills with "Failed to retrieve texture ..._glow" warnings when another mod (a map, for example) draws the
+  mod's blocks.
+- 116 game tests (new: plates through the Saturator in a row, a second pattern after the first, a recipe tree through the
+  Saturator, a gateway at the wing with a fuzzy pattern beside a second gateway with no machine).
+
 ## 2.0.9 (26.1.2) — The array assembles; heat lamps on the pipes
 
 - **The Atlas Array assembles into one structure.** While the array is whole, its casings take their part of it: the ice columns

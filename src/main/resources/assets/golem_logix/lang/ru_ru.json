@@ -190,6 +190,7 @@
   "gui.golem_logix.calc.status.running": "Вычисление...",
   "gui.golem_logix.calc.status.waiting_machine": "Ждём машину",
   "gui.golem_logix.calc.status.no_provider": "Ни один Штамповочный Шлюз не хранит этот шаблон",
+  "gui.golem_logix.calc.status.no_machine": "Рядом со Штамповочным шлюзом нет машины",
   "gui.golem_logix.calc.status.no_source": "Не хватает Source",
   "gui.golem_logix.calc.status.invalid_pattern": "Неверный шаблон",
   "gui.golem_logix.calc.status.delivering": "Выдача результатов...",

@@ -190,6 +190,7 @@
   "gui.golem_logix.calc.status.running": "Computing...",
   "gui.golem_logix.calc.status.waiting_machine": "Waiting for a machine",
   "gui.golem_logix.calc.status.no_provider": "No Stamping Gateway holds this pattern",
+  "gui.golem_logix.calc.status.no_machine": "No machine beside the Stamping Gateway",
   "gui.golem_logix.calc.status.no_source": "Not enough Source",
   "gui.golem_logix.calc.status.invalid_pattern": "Invalid pattern",
   "gui.golem_logix.calc.status.delivering": "Delivering results...",

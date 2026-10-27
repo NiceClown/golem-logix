@@ -2692,6 +2692,52 @@ public class GolemGameTests {
         });
     }
 
+    /**
+     * The player's layout: the gateway stands on a pipe beside the left wing (not at the port) with a fuzzy pattern, and another
+     * gateway with no machine holds the same plate; the portions find the gateway at the machine and the plates come back into the job.
+     */
+    public static void saturatorGatewayAtWing(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        for (BlockPos p : new BlockPos[]{new BlockPos(7, 1, 6), new BlockPos(8, 1, 6), new BlockPos(9, 1, 6), new BlockPos(9, 1, 7),
+                new BlockPos(9, 1, 8), new BlockPos(10, 1, 6), new BlockPos(11, 1, 6), new BlockPos(11, 1, 7), new BlockPos(11, 1, 8),
+                new BlockPos(11, 1, 9)}) {
+            put(helper, p, ModBlocks.BASIC_SNOW_PIPE.get());
+        }
+        BlockPos prov = new BlockPos(11, 2, 9);
+        put(helper, prov, ModBlocks.PATTERN_PROVIDER.get());
+        BlockPos near = new BlockPos(9, 3, 9);
+        buildSaturator(helper, near, Direction.NORTH);
+        PatternProviderBlockEntity provider = helper.getBlockEntity(prov, PatternProviderBlockEntity.class);
+        ItemKey core = ItemKey.of(new ItemStack(ModItems.FLATTENED_IRON_CORE.get()));
+        provider.getContainer().setItem(0, card(new PatternData(false, List.of(new ItemStack(Items.IRON_BLOCK)),
+                List.of(new ItemStack(ModItems.FLATTENED_IRON_CORE.get(), 2)), List.of(com.golemlogix.system.Fuzzy.ANY_COMPONENTS))));
+        // as in the player's world: a second gateway away from any machine holds the same plate with another fuzziness
+        BlockPos lone = new BlockPos(8, 1, 7);
+        put(helper, lone, ModBlocks.PATTERN_PROVIDER.get());
+        helper.getBlockEntity(lone, PatternProviderBlockEntity.class).getContainer().setItem(0, card(new PatternData(false,
+                List.of(new ItemStack(Items.IRON_BLOCK)), List.of(new ItemStack(ModItems.FLATTENED_IRON_CORE.get(), 2)),
+                List.of("#c:storage_blocks/iron"))));
+        helper.runAfterDelay(100, () -> {
+            GolemNetwork n = net(helper, bay);
+            helper.assertTrue(n.contains(helper.absolutePos(prov)), "the gateway is in the network");
+            n.insertItem(new ItemStack(Items.IRON_BLOCK, 2), false);
+            GolemNetwork.StartResult r = n.startCrafting(core, 4);
+            helper.assertTrue(r.type() == GolemNetwork.StartType.STARTED, "start " + r.type());
+        });
+        helper.runAtTickTime(900, () -> {
+            GolemNetwork n = net(helper, bay);
+            var cpu = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class);
+            var sat = helper.getBlockEntity(near, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
+            var job = cpu.getJob();
+            String state = "cores " + n.itemCountOf(core) + ", job " + (job == null ? "none" : job.status() + " awaiting " + job.awaiting()
+                    + " inventory " + job.inventory()) + ", returns " + provider.getReturns().getItem(0) + ", decks " + sat.inputDeck() + " / "
+                    + sat.getHeldItem() + " / " + sat.outputDeck();
+            helper.assertTrue(n.itemCountOf(core) == 4 && cpu.isIdle(), "plates through a gateway at the wing: " + state);
+            helper.succeed();
+        });
+    }
+
     public static void saturatorFormsAndRestores(GameTestHelper helper) {
         BlockPos ctl = new BlockPos(5, 3, 5);
         buildSaturator(helper, ctl, Direction.WEST);

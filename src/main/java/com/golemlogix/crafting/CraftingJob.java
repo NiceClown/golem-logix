@@ -61,7 +61,9 @@ public class CraftingJob {
         INVALID_PATTERN,
         DELIVERING,
         DONE,
-        PAUSED
+        PAUSED,
+        /** No gateway with the pattern has a machine beside it (on the side it feeds). */
+        NO_MACHINE
     }
 
     private final Map<ItemKey, Long> targets = new LinkedHashMap<>();
@@ -267,27 +269,43 @@ public class CraftingJob {
                         add(inventory, r);
                     }
                 } else {
-                    PatternProviderBlockEntity provider = net.providerFor(s.pattern);
-                    if (provider == null) {
+                    // every gateway with this recipe, the one holding this very pattern first: the portion goes to the first
+                    // whose machine takes it (the same plate may sit on a gateway that has no machine beside it)
+                    List<PatternProviderBlockEntity> candidates = net.providersFor(s.pattern);
+                    if (candidates.isEmpty()) {
                         blocked = Status.NO_PROVIDER;
-                        break;
-                    }
-                    // wait mode: until the result of the previous portion has come back, no new one is loaded
-                    if (provider.isBlocking() && net.providerBusy(provider.getBlockPos())) {
-                        blocked = Status.WAITING_MACHINE;
-                        break;
-                    }
-                    if (!provider.redstoneAllows(false)) {
-                        blocked = Status.PAUSED;
                         break;
                     }
                     if (!net.hasSource(GolemConfig.CRAFT_STEP_SOURCE.get())) {
                         blocked = Status.NO_SOURCE;
                         break;
                     }
-                    List<ItemStack> pushed = provider.tryPush(s.pattern, taken.stacks());
-                    if (pushed == null) {
-                        blocked = Status.WAITING_MACHINE;
+                    PatternProviderBlockEntity provider = null;
+                    List<ItemStack> pushed = null;
+                    Status why = Status.NO_MACHINE;
+                    for (PatternProviderBlockEntity p : candidates) {
+                        // wait mode: until the result of the previous portion has come back, no new one is loaded
+                        if (p.isBlocking() && net.providerBusy(p.getBlockPos())) {
+                            why = Status.WAITING_MACHINE;
+                            continue;
+                        }
+                        if (!p.redstoneAllows(false)) {
+                            if (why == Status.NO_MACHINE) {
+                                why = Status.PAUSED;
+                            }
+                            continue;
+                        }
+                        if (p.hasMachine()) {
+                            why = Status.WAITING_MACHINE;
+                        }
+                        pushed = p.tryPush(s.pattern, taken.stacks());
+                        if (pushed != null) {
+                            provider = p;
+                            break;
+                        }
+                    }
+                    if (provider == null) {
+                        blocked = why;
                         break;
                     }
                     provider.redstoneAllows(true);

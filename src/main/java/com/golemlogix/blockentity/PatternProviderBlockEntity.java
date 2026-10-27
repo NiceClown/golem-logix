@@ -263,6 +263,29 @@ public class PatternProviderBlockEntity extends BlockEntity {
         return getPatterns().contains(pattern);
     }
 
+    /** Whether a machine stands on a side it feeds (a block with an item or fluid inventory that is not a network device). */
+    public boolean hasMachine() {
+        if (level == null) {
+            return false;
+        }
+        Direction only = output().direction();
+        for (Direction dir : only == null ? Direction.values() : new Direction[]{only}) {
+            BlockPos target = worldPosition.relative(dir);
+            if (!level.isLoaded(target)) {
+                continue;
+            }
+            net.minecraft.world.level.block.Block block = level.getBlockState(target).getBlock();
+            if (block instanceof GolemNode && !(block instanceof com.golemlogix.blocks.SaturatorPartBlock)) {
+                continue;
+            }
+            if (com.golemlogix.system.LegacyResources.items(level, target, dir.getOpposite()) != null
+                    || com.golemlogix.system.LegacyResources.fluids(level, target, dir.getOpposite()) != null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Tries to unload the ingredients of one pattern execution into a neighbouring machine.
      * Returns the list of what could not be accepted (usually empty), or null if the machine is not ready.

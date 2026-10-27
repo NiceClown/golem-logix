@@ -73,6 +73,11 @@ public final class GlowModels {
             if (!GolemLogixMod.MOD_ID.equals(name.getNamespace()) || name.getPath().endsWith("_glow")) {
                 return Optional.empty();
             }
+            // most textures have no glow layer: ask the atlas only for one that exists (a missing sprite is logged with a stack trace)
+            Identifier file = name.withPath(p -> "textures/" + p + "_glow.png");
+            if (net.minecraft.client.Minecraft.getInstance().getResourceManager().getResource(file).isEmpty()) {
+                return Optional.empty();
+            }
             TextureAtlasSprite g = textures.apply(name.withSuffix("_glow"));
             return g == null || g.contents().name().equals(MissingTextureAtlasSprite.getLocation()) ? Optional.empty() : Optional.of(g);
         }).orElse(null);

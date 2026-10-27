@@ -49,6 +49,7 @@ public final class GolemGameTestRegistry {
             new Test("arraydressesitself", GolemGameTests::arrayDressesItself, 120, 0),
             new Test("saturatorautocraftsplates", GolemGameTests::saturatorAutocraftsPlates, 3400, 0),
             new Test("saturatorplatetree", GolemGameTests::saturatorPlateTree, 2000, 0),
+            new Test("saturatorgatewayatwing", GolemGameTests::saturatorGatewayAtWing, 1000, 0),
             new Test("arraycapacity", GolemGameTests::arrayCapacity, 100, 0),
             new Test("baretowerstart", GolemGameTests::bareTowerStart, 100, 0),
             new Test("lonecorelinksdown", GolemGameTests::loneCoreLinksDown, 100, 0),
