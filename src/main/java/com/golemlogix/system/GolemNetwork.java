@@ -842,6 +842,11 @@ public final class GolemNetwork {
                 continue;
             }
             BlockState state = n.level.getBlockState(n.pos);
+            if (state.getBlock() instanceof com.golemlogix.blocks.SnowPipeBlock pipe && com.golemlogix.blocks.SnowPipeBlock.hasLamp(state, n.pos)
+                    && n.level.getBlockEntity(n.pos) instanceof com.golemlogix.blockentity.PipeBlockEntity be) {
+                // a heat lamp on the pipe reads the channels running through it
+                be.setLamp(active && channels != null ? channels.load(i) : 0, pipe.channelCapacity());
+            }
             if (!state.hasProperty(GolemProperties.ACTIVE) || !(state.getBlock() instanceof GolemNode node)
                     || state.getBlock() instanceof com.golemlogix.blocks.CryoCalculatorBlock) {
                 continue;

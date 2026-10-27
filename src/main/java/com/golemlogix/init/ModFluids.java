@@ -30,7 +30,17 @@ public final class ModFluids {
                     .canDrown(false)));
 
     public static final DeferredHolder<Fluid, BaseFlowingFluid.Source> CRYO_SOURCE = FLUIDS.register("cryo_source",
-            () -> new BaseFlowingFluid.Source(properties()));
+            () -> new BaseFlowingFluid.Source(properties()) {
+                /** JEI and every fluid tooltip say where it comes from: there is no bucket or spring of it in the world. */
+                @Override
+                public void appendHoverText(net.neoforged.neoforge.fluids.FluidStack stack, net.minecraft.world.item.Item.TooltipContext context,
+                                            net.minecraft.world.item.component.TooltipDisplay display,
+                                            java.util.function.Consumer<net.minecraft.network.chat.Component> builder,
+                                            net.minecraft.world.item.TooltipFlag flag) {
+                    builder.accept(net.minecraft.network.chat.Component.translatable("fluid.golem_logix.cryo_source.hint")
+                            .withStyle(net.minecraft.ChatFormatting.GRAY));
+                }
+            });
 
     public static final DeferredHolder<Fluid, BaseFlowingFluid.Flowing> CRYO_SOURCE_FLOWING = FLUIDS.register("flowing_cryo_source",
             () -> new BaseFlowingFluid.Flowing(properties()));

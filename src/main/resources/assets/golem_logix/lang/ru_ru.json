@@ -492,6 +492,7 @@
   "tooltip.golem_logix.fluid_ghost": "Жидкость в фильтре или шаблоне",
   "tooltip.golem_logix.fluid_ghost.amount": "%s mB",
   "fluid_type.golem_logix.cryo_source": "Жидкий крио-источник",
+  "fluid.golem_logix.cryo_source.hint": "Получается только сетью: Пневмо-инжектор подачи, Штамповочный шлюз или Интерфейс Голема превращают в неё Source. Ни ведра, ни источника в мире.",
   "message.golem_logix.mind.unknown": "Внутри голема что-то шевелится, но вы ещё не знаете, как это высвободить. Сделайте первую пластину на наковальне",
   "message.golem_logix.mind.too_strong": "Разум голема держится: у него %s HP (нужно 4 или меньше)",
   "message.golem_logix.mind.unbound": "Разум голема высвободился: %s",

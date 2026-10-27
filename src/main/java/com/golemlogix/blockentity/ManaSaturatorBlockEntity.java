@@ -312,12 +312,12 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         double x = pos.getX() + 0.5, y = pos.getY() + 0.97, z = pos.getZ() + 0.5;
         level.playSound(null, pos, net.minecraft.sounds.SoundEvents.ANVIL_LAND, SoundSource.BLOCKS, 0.4f, 1.2f + manualHits * 0.06f);
         level.playSound(null, pos, net.minecraft.sounds.SoundEvents.AMETHYST_BLOCK_HIT, SoundSource.BLOCKS, 0.7f, 1.5f);
-        level.sendParticles(ParticleTypes.ENCHANTED_HIT, x, y, z, 8, 0.15, 0.03, 0.15, 0.1);
-        level.sendParticles(ParticleTypes.SNOWFLAKE, x, y, z, 4, 0.2, 0.05, 0.2, 0.02);
+        level.sendParticles(ParticleTypes.ENCHANTED_HIT, x, y, z, 3, 0.15, 0.03, 0.15, 0.1);
+        level.sendParticles(ParticleTypes.CRIT, x, y, z, 2, 0.1, 0.02, 0.1, 0.15);
         if (manualHits >= MANUAL_HITS) {
             heldItem = manualOutputFor(level, heldItem);
             manualHits = 0;
-            level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, x, y, z, 6, 0.15, 0.05, 0.15, 0.02);
+            level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, x, y, z, 3, 0.15, 0.05, 0.15, 0.02);
             level.playSound(null, pos, ModSounds.ANVIL_CRUSH.get(), SoundSource.BLOCKS, 0.9f, 1.5f);
             changed();
             // the first plate made on an anvil opens the Dispel method
@@ -648,7 +648,8 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
                     sl.playSound(null, pos.getX(), pos.getY(), pos.getZ(), net.minecraft.sounds.SoundEvents.IRON_GOLEM_ATTACK,
                             SoundSource.BLOCKS, 0.5f, 1.3f);
                     sl.sendParticles(ParticleTypes.ENCHANTED_HIT, pos.getX() + 0.5, pos.getY() - 0.05, pos.getZ() + 0.5,
-                            6, 0.15, 0.05, 0.15, 0.08);
+                            2, 0.12, 0.03, 0.12, 0.08);
+                    sl.sendParticles(ParticleTypes.CRIT, pos.getX() + 0.5, pos.getY() - 0.05, pos.getZ() + 0.5, 2, 0.1, 0.02, 0.1, 0.12);
                 }
                 if (entity.ritualProgress >= work) {
                     held.shrink(1);
@@ -658,8 +659,10 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
                     } else {
                         entity.heldItem = recipeOutput.copy();
                     }
-                    sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, pos.getX() + 0.5, pos.getY() + 0.1, pos.getZ() + 0.5, 35, 0.3, 0.3, 0.3, 0.1);
-                    sl.sendParticles(ParticleTypes.SNOWFLAKE, pos.getX() + 0.5, pos.getY() + 0.1, pos.getZ() + 0.5, 25, 0.3, 0.3, 0.3, 0.05);
+                    // a plate is done: a short burst, low and wide, so the smith stays in sight
+                    sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, pos.getX() + 0.5, pos.getY() - 0.05, pos.getZ() + 0.5, 6, 0.35, 0.05, 0.35, 0.03);
+                    sl.sendParticles(ParticleTypes.SNOWFLAKE, pos.getX() + 0.5, pos.getY() + 0.3, pos.getZ() + 0.5, 6, 0.4, 0.1, 0.4, 0.02);
+                    sl.sendParticles(ParticleTypes.END_ROD, pos.getX() + 0.5, pos.getY() + 0.1, pos.getZ() + 0.5, 3, 0.3, 0.05, 0.3, 0.03);
                     sl.playSound(null, pos.getX(), pos.getY(), pos.getZ(), ModSounds.ANVIL_CRUSH.get(), SoundSource.BLOCKS, 1.0f, 1.4f);
                     entity.ritualProgress = 0;
                     entity.isCrafting = false;
@@ -691,13 +694,18 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         if (isCrafting && ritualProgress < work) {
             ritualProgress = Math.min(work, ritualProgress + speed());
         }
-        if (isCrafting) {
-            double cx = pos.getX() + 0.5, cy = pos.getY() + 0.1, cz = pos.getZ() + 0.5;
-            double angle = level.getGameTime() * 0.2;
-            double radius = 0.6 * (1.0 - getProgressFraction() * 0.5);
-            level.addParticle(ParticleTypes.SOUL_FIRE_FLAME, cx + Math.cos(angle) * radius, cy, cz + Math.sin(angle) * radius, 0, 0.02, 0);
-            level.addParticle(ParticleTypes.SNOWFLAKE, cx + (Math.random() - 0.5) * 0.4, cy + (Math.random() - 0.5) * 0.4,
-                    cz + (Math.random() - 0.5) * 0.4, 0, 0, 0);
+        // while it works: now and then one small particle at the chamber's edges, never a cloud over the smith - a cold flame
+        // licking the anvil's corner, a snowflake drifting down a corner post, a spark off the plate, a mote rising from the rod
+        if (isCrafting && level.getGameTime() % 4 == 0) {
+            var r = level.getRandom();
+            double cx = pos.getX() + 0.5, cy = pos.getY() - 0.1, cz = pos.getZ() + 0.5;
+            double side = r.nextBoolean() ? 0.42 : -0.42, depth = (r.nextDouble() - 0.5) * 0.7;
+            switch (r.nextInt(4)) {
+                case 0 -> level.addParticle(ParticleTypes.SOUL_FIRE_FLAME, cx + side, cy, cz + depth, 0, 0.01, 0);
+                case 1 -> level.addParticle(ParticleTypes.SNOWFLAKE, cx + side, cy + 0.5, cz + depth, 0, -0.02, 0);
+                case 2 -> level.addParticle(ParticleTypes.ELECTRIC_SPARK, cx + side * 0.8, cy + 0.05, cz + depth, 0, 0.02, 0);
+                default -> level.addParticle(ParticleTypes.END_ROD, cx + side, cy - 0.3, cz + depth, 0, 0.015, 0);
+            }
         }
     }
 

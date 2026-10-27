@@ -342,6 +342,43 @@ public class SnowPipeRenderer extends com.golemlogix.client.render.LegacyBer<Pip
         }
     }
 
+    /**
+     * The heat lamp on a straight pipe (every sixth block, see SnowPipeBlock.hasLamp): its brass case from the baked lamp model, and on
+     * its smoked glass the number of channels running through the pipe, glowing cyan while there is room, amber when it fills,
+     * red when it is (nearly) full. Turned with the pipe: on the east side of a north-south or vertical run, on the south of an
+     * east-west one.
+     */
+    private static void heatLamp(PipeBlockEntity be, BlockState state, PoseStack pose, MultiBufferSource buffers, int light) {
+        boolean dense = state.getBlock() instanceof SnowPipeBlock p && p.isDense();
+        net.minecraft.core.Direction.Axis axis = SnowPipeBlock.straightAxis(state);
+        pose.pushPose();
+        pose.translate(0.5, 0.5, 0.5);
+        if (axis == net.minecraft.core.Direction.Axis.X) {
+            pose.mulPose(Axis.YP.rotationDegrees(-90));
+        } else if (axis == net.minecraft.core.Direction.Axis.Y) {
+            pose.mulPose(Axis.XP.rotationDegrees(-90));
+        }
+        pose.translate(-0.5, -0.5, -0.5);
+        com.golemlogix.client.render.StandaloneModels.render(pose.last(), buffers.getBuffer(net.minecraft.client.renderer.Sheets.cutoutBlockSheet()),
+                dense ? com.golemlogix.client.render.StandaloneModels.LAMP_DENSE : com.golemlogix.client.render.StandaloneModels.LAMP_BASIC,
+                1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
+        // the number on the glass: the glass faces +x at the lamp's front (the clamp's outer edge + the case)
+        int load = be.lampLoad(), cap = Math.max(1, be.lampCapacity());
+        float ratio = load / (float) cap;
+        int color = load == 0 ? 0xFF6A5A4C : ratio < 0.5f ? 0xFF6FF4FF : ratio < 0.85f ? 0xFFFFB347 : 0xFFFF5038;
+        String text = String.valueOf(load);
+        var font = Minecraft.getInstance().font;
+        float front = (dense ? 14.7f : 12.6f) + 2.42f;
+        float height = dense ? 3.4f : 3.0f;
+        float s = height / 16f / 8f;
+        pose.translate(front / 16f, 8.2f / 16f, 0.5f);
+        pose.mulPose(Axis.YP.rotationDegrees(90));
+        pose.scale(s, -s, s);
+        font.drawInBatch(text, -font.width(text) / 2f, -4f, color, false, pose.last().pose(), buffers,
+                net.minecraft.client.gui.Font.DisplayMode.POLYGON_OFFSET, 0, 0xF000F0);
+        pose.popPose();
+    }
+
     @Override
     public void render(PipeBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
         BlockState state = be.getBlockState();
@@ -349,6 +386,9 @@ public class SnowPipeRenderer extends com.golemlogix.client.render.LegacyBer<Pip
             return;
         }
         plugs(be, state, pose, buffers, light);
+        if (SnowPipeBlock.hasLamp(state, be.getBlockPos())) {
+            heatLamp(be, state, pose, buffers, light);
+        }
         if (!state.getValue(GolemProperties.ACTIVE)) {
             return;
         }

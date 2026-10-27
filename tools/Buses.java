@@ -74,23 +74,41 @@ final class Buses {
         p.sphere(cx, cy, r * 0.22, ramp, 0.8, 1.0);
     }
 
-    /** The 6x6 roof of the technical block: a dark rune panel in a brass frame and a brass pad with a star in the middle. */
+    /**
+     * The 6x6 roof of the technical block: a dark rune panel in a brass frame whose sign says from above what the bus does - the
+     * Import Bus four cyan arrows pointing in, the Export Bus four amber arrows pointing out, the Periscope a violet watching eye -
+     * each in its own colour, with its own row of runes along the edges.
+     */
     static Paint top(int variant) {
-        int[] ac = VIOLET, star = variant == 0 ? CYAN : variant == 1 ? VIOLET : FROST;
+        int[] ac = variant == 0 ? CYAN : variant == 1 ? new int[]{0x2a1404, 0x5a2c08, 0x8a4a10, 0xc07018, 0xf0a030, 0xffd070, 0xfff0c0}
+                : VIOLET;
         Paint p = new Paint(6, 6, K);
         p.slab(0, 0, 6, 6, BRASS, 3.0, 1);
         p.slab(0.55, 0.55, 5.45, 5.45, IRON, 0.7, 1);
         p.grain(0.55, 0.55, 5.45, 5.45, 0.06, 321 + variant);
-        p.glowRect(1.0, 0.8, 5.0, 1.8, 0.4, at(ac, 3.2), 55);
-        p.glowRect(1.0, 4.2, 5.0, 5.2, 0.4, at(ac, 3.2), 55);
-        int[][] glyphs = {{1, 12, 13, 8}, {16, 8, 11, 12}, {13, 1, 8, 16}};
-        for (int i = 0; i < 4; i++) {
-            p.rune(1.15 + i * 1.0, 0.8, 1.0, glyphs[variant][i], at(ac, 5.4), 0);
-            p.rune(1.15 + i * 1.0, 4.2, 1.0, glyphs[variant][3 - i], at(ac, 5.4), 0);
+        int core = at(ac, 5.2), dim = at(ac, 3.0);
+        double w = 0.5;
+        if (variant == 2) {
+            // the eye: an almond of two arcs, the iris ring and a bright pupil
+            for (double t = 0; t <= 1.0001; t += 0.05) {
+                double x = 1.0 + 4.0 * t, y = 0.95 * Math.sin(Math.PI * t);
+                p.line(x, 3 - y, x + 0.2, 3 - y, w, core);
+                p.line(x, 3 + y, x + 0.2, 3 + y, w, core);
+            }
+            p.ring(3, 3, 0.75, 1.05, dim);
+            p.glowRect(2.75, 2.75, 3.25, 3.25, 0.01, at(ac, 6.0), 255);
+        } else {
+            // four arrowheads on the sides: pointing at the centre (in) or out at the frame (out)
+            boolean in = variant == 0;
+            for (int k = 0; k < 4; k++) {
+                double ax = k == 0 ? 0 : k == 1 ? 0 : k == 2 ? 1 : -1, ay = k == 0 ? 1 : k == 1 ? -1 : 0;
+                double far = in ? 2.4 : 2.5, near = in ? 0.85 : 0.95, half = in ? 1.25 : 1.15;
+                double baseD = in ? far : near, tipD = in ? near : far;
+                double bx = 3 + ax * baseD, by = 3 + ay * baseD, tx = 3 + ax * tipD, ty = 3 + ay * tipD;
+                p.poly(new double[]{bx - ay * half, bx + ay * half, tx}, new double[]{by - ax * half, by + ax * half, ty}, core);
+            }
+            p.glowRect(2.75, 2.75, 3.25, 3.25, 0.01, dim, 255);
         }
-        p.slab(1.6, 1.8, 4.4, 4.2, BRASS, 3.3, 1);
-        p.rect(1.85, 2.05, 4.15, 3.95, rgb(0x0a0c10));
-        star(p, 3, 3, 0.95, star);
         for (double[] c : new double[][]{{0.28, 0.28}, {5.72, 0.28}, {0.28, 5.72}, {5.72, 5.72}}) {
             p.rivet(c[0], c[1], 0.17, BRASS);
         }

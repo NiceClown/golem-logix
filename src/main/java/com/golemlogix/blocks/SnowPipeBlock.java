@@ -120,6 +120,39 @@ public class SnowPipeBlock extends Block implements com.golemlogix.blocks.Remova
         return CODEC;
     }
 
+    /** The axis of a straight pipe (linked on both ends of it and nowhere else), or null. */
+    @Nullable
+    public static Direction.Axis straightAxis(BlockState state) {
+        for (Direction.Axis axis : Direction.Axis.values()) {
+            Direction pos = Direction.fromAxisAndDirection(axis, Direction.AxisDirection.POSITIVE);
+            if (!linked(state, pos) || !linked(state, pos.getOpposite())) {
+                continue;
+            }
+            boolean other = false;
+            for (Direction d : Direction.values()) {
+                if (d.getAxis() != axis && linked(state, d)) {
+                    other = true;
+                }
+            }
+            return other ? null : axis;
+        }
+        return null;
+    }
+
+    /**
+     * Whether a heat lamp hangs on this pipe: a straight block every sixth along its run (the other coordinates shift the count,
+     * so parallel runs do not light up in rows). The server sends such pipes their channel load, the renderer draws the lamp.
+     */
+    public static boolean hasLamp(BlockState state, BlockPos pos) {
+        Direction.Axis axis = straightAxis(state);
+        if (axis == null) {
+            return false;
+        }
+        int along = axis.choose(pos.getX(), pos.getY(), pos.getZ());
+        int a = axis == Direction.Axis.X ? pos.getY() : pos.getX(), b = axis == Direction.Axis.Z ? pos.getY() : pos.getZ();
+        return Math.floorMod(along + 7 * a + 13 * b, 6) == 3;
+    }
+
     public int getMaxChannels() {
         return maxChannels;
     }

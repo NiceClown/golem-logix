@@ -424,16 +424,37 @@ final class Saturator {
     }
 
     /** Top of the beam: bronze sheets, vent slots, frost. */
-    static Paint topTile() {
-        Paint p = new Paint(16, 16, K);
-        Forge2.beam(p, 0, 0, 16, 16, 2.7, true, 1431);
-        p.slab(1.0, 1.0, 15.0, 15.0, BRONZE, 2.1, 1);
-        Terminals.vent(p, 4.5, 4.5, 11.5, 11.5, 5);
-        for (double[] c : new double[][]{{2.0, 2.0}, {14.0, 2.0}, {2.0, 14.0}, {14.0, 14.0}}) {
-            p.screw(c[0], c[1], 0.55, BRASS, c[0]);
+    /**
+     * The roof over the whole machine (48 x 32 units, cut into the six cells by {@link Big3.Face#colDep}): one even bronze deck with a
+     * single grid of rivets running across the block joints, the five same louvred vents for the Cooling Co-Processors and a rune ring
+     * round the crystal of the owner cell. Every piece is symmetric in its cell (no rim, no frost bands, no seams on the joints), so
+     * the deck reads the same from every side and the blocks under it do not show.
+     */
+    static Paint roof() {
+        Paint p = new Paint(48, 32, K);
+        p.slab(0, 0, 48, 32, BRONZE, 2.3, 0);
+        p.grain(0, 0, 48, 32, 0.04, 1441);
+        for (double x = 2; x < 48; x += 4) {
+            for (double z = 2; z < 32; z += 4) {
+                p.screw(x, z, 0.35, BRASS, x + z);
+            }
         }
-        p.frostLine(0, 16, 0, 0.9, 1432);
-        p.frostLine(0, 16, 15.2, 0.7, 1433);
+        for (int c = 0; c < 3; c++) {
+            for (int d = 0; d < 2; d++) {
+                if (c == 1 && d == 0) {
+                    continue;
+                }
+                double cx = 16 * c + 8, cz = 16 * d + 8;
+                p.slab(cx - 4.2, cz - 4.2, cx + 4.2, cz + 4.2, BRASS, 3.0, 1);
+                Terminals.vent(p, cx - 3.5, cz - 3.5, cx + 3.5, cz + 3.5, 5);
+            }
+        }
+        p.ring(24, 8, 5.6, 6.2, at(VIOLET, 3.2));
+        for (int i = 0; i < 8; i++) {
+            double a = i * Math.PI / 4;
+            double x = 24 + Math.cos(a) * 5.9, z = 8 + Math.sin(a) * 5.9;
+            p.glowRect(x - 0.25, z - 0.25, x + 0.25, z + 0.25, 0.01, at(VIOLET, 5.2), 255);
+        }
         return p;
     }
 
@@ -791,7 +812,7 @@ final class Saturator {
         Big3.Face front = Big3.Face.colRow("sat_f"), back = Big3.Face.colRow("sat_b"), left = Big3.Face.depRow("sat_l"),
                 right = Big3.Face.depRow("sat_r");
         Big3.Face bronze = Big3.Face.of("sat_bronze"), brass = Big3.Face.of("sat_brass"), dark = Big3.Face.of("sat_dark"),
-                deck = Big3.Face.of("sat_deck"), top = Big3.Face.of("sat_top"), glass = Big3.Face.of("sat_glass"),
+                deck = Big3.Face.of("sat_deck"), top = Big3.Face.colDep("sat_roof"), glass = Big3.Face.of("sat_glass"),
                 wall = Big3.Face.of("sat_wall"), crystalF = Big3.Face.of("sat_crystal").glow(15);
         Big3.Face anvil = Big3.Face.map("sat_anvil", (x, y, z) -> new double[]{(31 - x) * 16 / 14, (z - 2) * 16 / 12}).glow(11);
         Big3.Face chamber = Big3.Face.map("sat_chamber", (x, y, z) -> new double[]{x - 16, (40 - y) * 16 / 24});
@@ -1004,7 +1025,12 @@ final class Saturator {
         bronzeTile().save(Forge2.tex("sat_bronze"));
         darkTile().save(Forge2.tex("sat_dark"));
         deckTile().save(Forge2.tex("sat_deck"));
-        topTile().save(Forge2.tex("sat_top"));
+        Paint roof = roof();
+        for (int c = 0; c < 3; c++) {
+            for (int d = 0; d < 2; d++) {
+                roof.crop(16 * c, 16 * d, 16, 16).save(Forge2.tex("sat_roof_" + c + d));
+            }
+        }
         anvilTop().save(Forge2.tex("sat_anvil"));
         anvilSide().save(Forge2.tex("sat_anvil_side"));
         satAnvilBase().save(Forge2.tex("sat_anvil_base"));

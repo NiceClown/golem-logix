@@ -45,6 +45,28 @@ public class PipeBlockEntity extends BlockEntity {
         }
     }
 
+    /** The heat lamp's reading (see SnowPipeBlock.hasLamp): channels running through this pipe and how many it carries. */
+    private int lampLoad, lampCapacity;
+
+    public int lampLoad() {
+        return lampLoad;
+    }
+
+    public int lampCapacity() {
+        return lampCapacity;
+    }
+
+    /** Server: the network's walk gives a lamp pipe its load; the client hears only of a change. */
+    public void setLamp(int load, int capacity) {
+        if (load != lampLoad || capacity != lampCapacity) {
+            lampLoad = load;
+            lampCapacity = capacity;
+            if (level != null && !level.isClientSide()) {
+                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 2);
+            }
+        }
+    }
+
     /** Whether side dir of the block at pos is closed by a plug (a non-pipe has no plugs). */
     public static boolean plugged(BlockGetter level, BlockPos pos, Direction dir) {
         return level.getBlockEntity(pos) instanceof PipeBlockEntity be && be.isPlugged(dir);
@@ -62,11 +84,15 @@ public class PipeBlockEntity extends BlockEntity {
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = super.getUpdateTag(registries);
         tag.putByte("Plugs", (byte) plugs);
+        tag.putInt("LampLoad", lampLoad);
+        tag.putInt("LampCapacity", lampCapacity);
         return tag;
     }
 
     public void readUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
         plugs = tag.getByteOr("Plugs", (byte) 0) & 63;
+        lampLoad = tag.getIntOr("LampLoad", 0);
+        lampCapacity = tag.getIntOr("LampCapacity", 0);
     }
 
     @Override

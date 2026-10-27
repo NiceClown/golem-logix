@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Models the renderers draw by hand (turbines, fins, the atlant head, pipe plugs and docks): baked as standalone quad collections and
+ * Models the renderers draw by hand (turbines, fins, the atlant head, pipe plugs, docks and heat lamps): baked as standalone quad collections and
  * drawn quad by quad into a buffer.
  */
 @EventBusSubscriber(modid = GolemLogixMod.MOD_ID, value = Dist.CLIENT)
@@ -34,6 +34,8 @@ public final class StandaloneModels {
     public static final Identifier PLUG_DENSE = add("block/dense_frost_pipe_plug");
     public static final Identifier DOCK_BASIC = add("block/basic_snow_pipe_dock");
     public static final Identifier DOCK_DENSE = add("block/dense_frost_pipe_dock");
+    public static final Identifier LAMP_BASIC = add("block/basic_snow_pipe_lamp");
+    public static final Identifier LAMP_DENSE = add("block/dense_frost_pipe_lamp");
 
     private StandaloneModels() {
     }

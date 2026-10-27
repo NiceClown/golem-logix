@@ -19,7 +19,7 @@ final class Big3 {
         double[] at(double x, double y, double z);
     }
 
-    enum Mode {SHARED, COL_ROW, DEP_ROW}
+    enum Mode {SHARED, COL_ROW, DEP_ROW, COL_DEP}
 
     static final class Face {
         final String tex;
@@ -45,6 +45,11 @@ final class Big3 {
         /** A per-cell texture: _{col}{row} is added to the name. */
         static Face colRow(String tex) {
             return new Face(tex, null, 0, Mode.COL_ROW);
+        }
+
+        /** A per-cell texture of the roof (seen from above): _{col}{dep} is added to the name. */
+        static Face colDep(String tex) {
+            return new Face(tex, null, 0, Mode.COL_DEP);
         }
 
         /** A per-cell texture of the side walls: _{dep}{row} is added to the name. */
@@ -214,6 +219,7 @@ final class Big3 {
             case SHARED -> f.tex;
             case COL_ROW -> f.tex + "_" + col + row;
             case DEP_ROW -> f.tex + "_" + dep + row;
+            case COL_DEP -> f.tex + "_" + col + dep;
         };
         cell.vars.add(var);
         StringBuilder sb = new StringBuilder("        \"" + dir + "\": {\"texture\": \"#" + var + "\"");

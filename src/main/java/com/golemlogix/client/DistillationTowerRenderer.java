@@ -41,8 +41,9 @@ import static com.golemlogix.client.CryoMainframeRenderer.fitWall;
 
 /**
  * The Cryo-Distillation Tower, three blocks high, drawn from its plinth. The plinth: dark bricks with blood-red runes, two brass
- * valves and a gauge. The column: a glass case in a verdigris frame; blood pools at its bottom and a coil climbs it, glowing from
- * blood red through orange and violet to icy cyan as the blood rises and freezes into Source. The head: louvred brass under snow and
+ * valves and a gauge. The column: a glass case in a verdigris frame; blood fills it as high as the tank is full, and a coil climbs
+ * it, its rings under the blood glowing from blood red through orange and violet to icy cyan as the blood rises and freezes into
+ * Source. The head: louvred brass under snow and
  * icicles with the outlet bent to the side. A copper golem on the right turns the valve on the feed pipe while the tower works.
  * <p>
  * Pixels in the north-facing frame: the front is Z 0, the viewer's right is -X; Y 0..48.
@@ -144,7 +145,7 @@ public class DistillationTowerRenderer extends com.golemlogix.client.render.Lega
         box(vc, p, 6.2f, 50.2f, 6.2f, 9.8f, 50.8f, 9.8f, ICE, WHITE, lightTop);
 
         // ---- inside the glass: the coil, then (translucent) the blood and the glass itself
-        coil(vc, pose, phase, work, time);
+        coil(vc, pose, phase, work, time, blood);
         // the golem last: its own buffer ends the one above
         float reach = work > 0.05f ? -1.2f + 0.15f * Mth.sin(phase * 0.7f) : -0.85f;
         CopperGolemPuppet.Arms arms = new CopperGolemPuppet.Arms(reach, 0.25f, reach, -0.25f, 0.2f * Mth.sin(time * 0.013f));
@@ -154,22 +155,38 @@ public class DistillationTowerRenderer extends com.golemlogix.client.render.Lega
                 new Vector3f(0f, 1f, 0f), 0.45f, new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.1f), 1, null, arms);
         pose.popPose();
         VertexConsumer tv = buffers.getBuffer(RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
+        // the blood stands in the column as high as the tank is full (the whole column is the tank)
         if (blood > 0.002f) {
-            float top = COLUMN_BOTTOM + 0.6f + 7f * Math.min(1f, blood);
+            float top = level(blood);
             box(tv, p, 2.8f, COLUMN_BOTTOM + 0.6f, 2.8f, 13.2f, top, 13.2f, BLOOD, 0xE8901018, light);
+            // the surface: a lighter skin that trembles while the tower works
+            float wave = work > 0.05f ? 0.12f * Mth.sin(time * 0.35f) : 0f;
+            box(tv, p, 2.9f, top - 0.25f + wave, 2.9f, 13.1f, top + wave, 13.1f, BLOOD, 0xF0C02838, LightCoordsUtil.FULL_BRIGHT);
         }
         // a hair inside the frame rings (their faces are at 15.4 and 33.4: glass in the same planes flickered)
         box(tv, p, 2.6f, 15.43f, 2.6f, 13.4f, 33.37f, 13.4f, GLASS, 0x80F0F4FF, light);
         pose.popPose();
     }
 
-    /** The coil: five glowing rings stacked up the column, a pulse running up them while the tower works. */
-    private static void coil(VertexConsumer vc, PoseStack pose, float phase, float work, float time) {
+    /** The height (pixels) the blood reaches in the column for a tank this full (0..1). */
+    private static float level(float blood) {
+        return COLUMN_BOTTOM + 0.6f + (COLUMN_TOP - COLUMN_BOTTOM - 1.2f) * Math.min(1f, blood);
+    }
+
+    /**
+     * The coil: five rings stacked up the column, a pulse running up them while the tower works. Only the rings under the blood glow
+     * (the rest stand dark and cold), so the column shows from afar how full the tower is.
+     */
+    private static void coil(VertexConsumer vc, PoseStack pose, float phase, float work, float time, float blood) {
+        float surface = blood > 0.002f ? level(blood) : COLUMN_BOTTOM;
         int rings = COIL.length;
         for (int k = 0; k < rings; k++) {
             float y = COLUMN_BOTTOM + 2.6f + k * 3.6f;
             float pulse = 0.5f + 0.5f * Mth.sin(phase * 1.6f - k * 1.2f);
             float b = 0.35f + 0.65f * (0.25f + 0.75f * work) * (0.55f + 0.45f * pulse);
+            if (y > surface) {
+                b = 0.12f;
+            }
             int c = COIL[k];
             int col = 0xFF000000 | ((int) (((c >> 16) & 255) * b) << 16) | ((int) (((c >> 8) & 255) * b) << 8) | (int) ((c & 255) * b);
             pose.pushPose();

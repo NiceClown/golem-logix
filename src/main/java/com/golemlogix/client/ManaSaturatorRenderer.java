@@ -241,9 +241,12 @@ public class ManaSaturatorRenderer extends com.golemlogix.client.render.LegacyBe
     // ============================================================================ copper carrier golems and decks
     /** A carrier golem about 4.5 units tall: it passes between the glass column and the press chamber. */
     private static final float CARRIER_SCALE = 0.28f;
-    /** The bringer's path from the left back deck to the anvil (machine coordinates x, y, z): past the column, a step onto the plate. */
-    private static final float[][] PATH_IN = {{11.4f, 28f, 21.2f}, {14.8f, 28f, 16.0f}, {14.8f, 28f, 9.4f}, {16.5f, 28.9f, 8.3f},
-            {19.3f, 29.5f, 7.8f}};
+    /**
+     * The bringer's path from the left back deck to the anvil (machine coordinates x, y, z): along the deck clear of the column's
+     * bands, to the deck's edge, then a hop over the gap up onto the anvil plate (it no longer walks through the plate's edge).
+     */
+    private static final float[][] PATH_IN = {{11.4f, 28f, 21.2f}, {14.7f, 28f, 16.0f}, {14.7f, 28f, 9.4f}, {15.3f, 28f, 8.4f},
+            {16.6f, 30.2f, 8.0f}, {18.0f, 29.5f, 7.9f}, {19.3f, 29.5f, 7.8f}};
     /** The taker's path: mirrored, from the right deck. */
     private static final float[][] PATH_OUT = mirror(PATH_IN);
     /** Where the blank (left deck) and the finished item (right deck) lie, on the rune circles of the decks. */

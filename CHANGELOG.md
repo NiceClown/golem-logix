@@ -1,5 +1,28 @@
 # Changelog
 
+## 2.0.9 (26.1.2) — The array assembles; heat lamps on the pipes
+
+- **The Atlas Array assembles into one structure.** While the array is whole, its casings take their part of it: the ice columns
+  between the Atlants, the balcony rail round the crown and the icicles over the Atlants now belong to the casings' own models
+  instead of being drawn on top every frame - no more flicker or stray textures. Arrays of existing worlds assemble by themselves
+  within a second of loading; a missing block takes the dress off again. The light in the ice columns runs visibly upwards.
+- **The Atlants' heads are in proportion** to their bodies (on the array, the Cryo-Mainframe and the snowman foreman).
+- **Heat lamps on the pipes.** Every sixth straight pipe block carries a brass heat lamp that shows how many channels run through
+  it: cyan while there is room, amber as it fills, red when it is (nearly) full. The gauges on the pipes are gone.
+- **Pipe junctions are open cast fittings** (copper edges, brass corners): the runners and the warehouses at dead ends are in sight
+  again (the closed boxes had hidden them). **Devices are met by a brass flange** with bolts and a copper collar; the dark gasket is
+  gone.
+- **The Mana Saturator's roof is one even deck** with a single grid of rivets, five vents and the rune ring round the crystal, the
+  same from every side. Its particles are few and varied and stay at the chamber's edges, so the smith stays in sight; the copper
+  carriers hop onto the anvil instead of walking through its edge.
+- **The three buses read from above**: the Import Bus shows cyan arrows pointing in, the Export Bus amber arrows pointing out, the
+  Periscope a violet eye.
+- **The Cryo-Distillation Tower fills as its tank does**: the blood stands in the column as high as the tank is full, and only the
+  coil's rings under it glow.
+- **Liquid Cryo-Source says where it comes from** in its tooltip (JEI and elsewhere): only the network makes it.
+- The guide's pictures of the Atlas Array are redrawn.
+- 113 game tests.
+
 ## 2.0.8 (26.1.2) — Pipe fittings with volume
 
 - **The gauge on a pipe is a real round gauge** on a brass fitting and nut, with its dials facing the sides of the pipe, so it

@@ -492,6 +492,7 @@
   "tooltip.golem_logix.fluid_ghost": "A fluid in a filter or a pattern",
   "tooltip.golem_logix.fluid_ghost.amount": "%s mB",
   "fluid_type.golem_logix.cryo_source": "Liquid Cryo-Source",
+  "fluid.golem_logix.cryo_source.hint": "Made only by the network: an Injector Export Bus, a Stamping Gateway or a Golem Interface turns Source into it. No bucket, no spring.",
   "message.golem_logix.mind.unknown": "Something stirs inside the golem, but you do not know how to unbind it yet. Make your first plate on an anvil",
   "message.golem_logix.mind.too_strong": "The golem's mind holds on: it has %s HP (4 or less is needed)",
   "message.golem_logix.mind.unbound": "The golem's mind came loose: %s",
