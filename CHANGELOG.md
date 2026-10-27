@@ -22,6 +22,7 @@ and pipes of 26.1.2 are not carried over), and so do the JEI pages.
   into the network (to the job waiting for it first), so a machine fed by a provider no longer needs its own Import Bus.
 - A right-click on the search field of a terminal or of the guide clears it.
 - The flask of the Cryo-Source Jar and the glass of the tower's column no longer flicker.
+- On joining a world a red chat notice says that this 1.21.1 build is an alpha backport and links the issues page.
 - 113 game tests.
 
 ## 2.0.0 — The tower window; the last big release for 1.21.1
