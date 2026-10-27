@@ -1,8 +1,28 @@
 {
   "variants": {
-    "facing=north": {"model": "golem_logix:block/channel_counter"},
-    "facing=east": {"model": "golem_logix:block/channel_counter", "y": 90},
-    "facing=south": {"model": "golem_logix:block/channel_counter", "y": 180},
-    "facing=west": {"model": "golem_logix:block/channel_counter", "y": 270}
+    "facing=north,mount=floor": {"model": "golem_logix:block/channel_counter_floor"},
+    "facing=east,mount=floor": {"model": "golem_logix:block/channel_counter_floor", "y": 90},
+    "facing=south,mount=floor": {"model": "golem_logix:block/channel_counter_floor", "y": 180},
+    "facing=west,mount=floor": {"model": "golem_logix:block/channel_counter_floor", "y": 270},
+    "facing=north,mount=pipe_basic": {"model": "golem_logix:block/channel_counter_pipe_basic"},
+    "facing=east,mount=pipe_basic": {"model": "golem_logix:block/channel_counter_pipe_basic", "y": 90},
+    "facing=south,mount=pipe_basic": {"model": "golem_logix:block/channel_counter_pipe_basic", "y": 180},
+    "facing=west,mount=pipe_basic": {"model": "golem_logix:block/channel_counter_pipe_basic", "y": 270},
+    "facing=north,mount=pipe_dense": {"model": "golem_logix:block/channel_counter_pipe_dense"},
+    "facing=east,mount=pipe_dense": {"model": "golem_logix:block/channel_counter_pipe_dense", "y": 90},
+    "facing=south,mount=pipe_dense": {"model": "golem_logix:block/channel_counter_pipe_dense", "y": 180},
+    "facing=west,mount=pipe_dense": {"model": "golem_logix:block/channel_counter_pipe_dense", "y": 270},
+    "facing=north,mount=side_block": {"model": "golem_logix:block/channel_counter_side_block"},
+    "facing=east,mount=side_block": {"model": "golem_logix:block/channel_counter_side_block", "y": 90},
+    "facing=south,mount=side_block": {"model": "golem_logix:block/channel_counter_side_block", "y": 180},
+    "facing=west,mount=side_block": {"model": "golem_logix:block/channel_counter_side_block", "y": 270},
+    "facing=north,mount=side_basic": {"model": "golem_logix:block/channel_counter_side_basic"},
+    "facing=east,mount=side_basic": {"model": "golem_logix:block/channel_counter_side_basic", "y": 90},
+    "facing=south,mount=side_basic": {"model": "golem_logix:block/channel_counter_side_basic", "y": 180},
+    "facing=west,mount=side_basic": {"model": "golem_logix:block/channel_counter_side_basic", "y": 270},
+    "facing=north,mount=side_dense": {"model": "golem_logix:block/channel_counter_side_dense"},
+    "facing=east,mount=side_dense": {"model": "golem_logix:block/channel_counter_side_dense", "y": 90},
+    "facing=south,mount=side_dense": {"model": "golem_logix:block/channel_counter_side_dense", "y": 180},
+    "facing=west,mount=side_dense": {"model": "golem_logix:block/channel_counter_side_dense", "y": 270}
   }
 }

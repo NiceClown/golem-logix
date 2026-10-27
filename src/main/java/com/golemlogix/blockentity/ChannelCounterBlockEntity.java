@@ -12,7 +12,8 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Channel Counter: once a second it reads the network's channels in use and its capacity, and tells the client only of a change.
+ * Channel Counter: once a second it reads the channels running through the node it is fixed to and that node's capacity, and
+ * tells the client only of a change.
  * The mode (in use / capacity) is the player's choice and is saved with the block.
  */
 public class ChannelCounterBlockEntity extends BlockEntity {
@@ -49,13 +50,22 @@ public class ChannelCounterBlockEntity extends BlockEntity {
         }
     }
 
+    /** Once a second: the channels running through the node it is fixed to, and the most that node carries. */
     public void serverTick() {
         if (level == null || (level.getGameTime() + worldPosition.asLong()) % 20 != 0) {
             return;
         }
-        GolemNetwork net = GolemNetwork.get(level, worldPosition);
-        boolean on = net.hasCore() && net.isOnline();
-        int u = on ? net.channelsUsed() : 0, c = on ? net.channelCapacity() : 0;
+        BlockPos node = com.golemlogix.blocks.ChannelCounterBlock.attached(worldPosition, getBlockState());
+        boolean on = false;
+        int u = 0, c = 0;
+        if (level.getBlockState(node).getBlock() instanceof com.golemlogix.system.GolemNode) {
+            GolemNetwork net = GolemNetwork.get(level, node);
+            GolemNetwork.NodeChannels ch = net.channelsAt(node);
+            on = net.hasCore() && net.isOnline() && ch.member();
+            u = on ? ch.load() : 0;
+            // a node with no limit of its own (the core, a device) shows the network's
+            c = on ? (ch.capacity() > 0 && ch.capacity() < 100000 ? ch.capacity() : net.channelCapacity()) : 0;
+        }
         if (on != online || u != used || c != capacity) {
             online = on;
             used = u;

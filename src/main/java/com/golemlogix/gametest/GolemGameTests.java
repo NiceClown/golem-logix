@@ -583,6 +583,33 @@ public class GolemGameTests {
         });
     }
 
+    /** The Channel Counter reads the node it is fixed to, as a heat lamp does: the entry terminal's 16, not the far one's load. */
+    public static void counterShowsItsNode(GameTestHelper helper) {
+        buildArray(helper, 0, 0);
+        powered(helper);
+        for (int x = 7; x <= 10; x++) {
+            for (int y = 1; y <= 5; y++) {
+                put(helper, new BlockPos(x, y, 6), ModBlocks.ANALOG_TERMINAL.get());
+            }
+        }
+        BlockPos side = new BlockPos(7, 1, 7), top = new BlockPos(10, 6, 6);
+        helper.setBlock(side, ModBlocks.CHANNEL_COUNTER.get().defaultBlockState()
+                .setValue(com.golemlogix.blocks.ChannelCounterBlock.FACING, net.minecraft.core.Direction.SOUTH)
+                .setValue(com.golemlogix.blocks.ChannelCounterBlock.MOUNT, com.golemlogix.blocks.ChannelCounterBlock.Mount.SIDE_BLOCK));
+        helper.setBlock(top, ModBlocks.CHANNEL_COUNTER.get().defaultBlockState());
+        helper.runAfterDelay(45, () -> {
+            GolemNetwork n = net(helper, ORIGIN);
+            var entry = helper.getBlockEntity(side, com.golemlogix.blockentity.ChannelCounterBlockEntity.class);
+            var far = helper.getBlockEntity(top, com.golemlogix.blockentity.ChannelCounterBlockEntity.class);
+            int farLoad = n.loadAt(helper.absolutePos(new BlockPos(10, 5, 6)));
+            helper.assertTrue(entry.online() && entry.used() == 16 && entry.capacity() == 16,
+                    "the side counter shows the entry terminal's 16 of 16, got " + entry.used() + "/" + entry.capacity());
+            helper.assertTrue(far.online() && far.used() == farLoad && farLoad != 16,
+                    "the counter on top shows the far terminal's " + farLoad + ", got " + far.used());
+            helper.succeed();
+        });
+    }
+
     /** Channels never cross the array from one exit to another: the center bushing and the expanders carry only their own devices. */
     public static void noTransitThroughTheArray(GameTestHelper helper) {
         buildArray(helper, 2, 0);

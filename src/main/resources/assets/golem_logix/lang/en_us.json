@@ -278,7 +278,7 @@
   "jade.golem_logix.core.alone": "the core alone",
   "block.golem_logix.recipe_monitor": "Recipe Monitor",
   "block.golem_logix.channel_counter": "Channel Counter",
-  "tooltip.golem_logix.channel_counter": "Nixie tubes with the network's channels in use (cyan, amber, red as it fills); right-click shows the capacity. Takes no channel.",
+  "tooltip.golem_logix.channel_counter": "Nixie tubes with the channels running through the pipe or node it stands on or hangs on (cyan, amber, red as it fills), lit on both sides; right-click shows its capacity. Takes no channel.",
   "tooltip.golem_logix.recipe_monitor": "Brass cabinet with a portal porthole: watch and control every Cryo-Calculator of the network.",
   "item.golem_logix.compressed_coprocessor": "Compressed Co-Processor",
   "item.golem_logix.incomplete_compressed_coprocessor": "Incomplete Compressed Co-Processor",

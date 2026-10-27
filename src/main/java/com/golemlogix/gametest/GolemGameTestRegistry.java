@@ -64,6 +64,7 @@ public final class GolemGameTestRegistry {
             new Test("linelimit", GolemGameTests::lineLimit, 200, 0),
             new Test("pipelimit", GolemGameTests::pipeLimit, 200, 0),
             new Test("devicescarrylikebasicpipes", GolemGameTests::devicesCarryLikeBasicPipes, 200, 0),
+            new Test("countershowsitsnode", GolemGameTests::counterShowsItsNode, 200, 0),
             new Test("notransitthroughthearray", GolemGameTests::noTransitThroughTheArray, 200, 0),
             new Test("denserunscomefirst", GolemGameTests::denseRunsComeFirst, 200, 0),
             new Test("onecorerunsthenetwork", GolemGameTests::oneCoreRunsTheNetwork, 200, 0),

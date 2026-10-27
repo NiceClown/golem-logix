@@ -148,26 +148,77 @@ final class Nixie {
     static void tube(List<Models.El> l, double x0, double y0, double z0, double w, double h, double d) {
         double zm = z0 + d / 2;
         l.add(Models.e(x0 + 0.2, y0, z0 + 0.2, x0 + w - 0.2, y0 + 0.8, z0 + d - 0.2).only("#socket", "north", "south", "east", "west", "up"));
-        l.add(Models.e(x0 + 0.5, y0 + 1.2, zm - 0.05, x0 + w - 0.5, y0 + h - 0.6, zm + 0.05).only("#mesh", "north", "south"));
+        l.add(Models.e(x0 + 0.3, y0 + 1.2, zm - 0.05, x0 + w - 0.3, y0 + h - 0.6, zm + 0.05).only("#mesh", "north", "south"));
         l.add(Models.e(x0, y0 + 0.8, z0, x0 + w, y0 + h, z0 + d).only("#glass", "north", "south", "east", "west", "up"));
         l.add(Models.e(x0 + 0.5, y0 + h, z0 + 0.5, x0 + w - 0.5, y0 + h + 0.6, z0 + d - 0.5).only("#glass", "north", "south", "east", "west", "up"));
     }
 
     /**
-     * The Channel Counter: four tubes in a row on a walnut base with a brass edge, the digits facing north (the renderer writes the
-     * number on the tubes' mesh planes at z 8).
+     * The Channel Counter (facing north; the digits are lit on both sides of the meshes at z 8): three small tubes on a walnut base
+     * with a brass edge, and how it is fixed - a plain foot on a block; astride a horizontal pipe running along x, two brass straps
+     * round the tube's top (clear of the pipe's own clamps) with bolts and stems up to the base; on the side of a pipe behind it
+     * (south) an L-shaped brass bracket whose shoe rests against the tube at its axis; on the side of a block a wall plate.
      */
-    static void counterModel() throws Exception {
-        List<Models.El> l = new ArrayList<>();
-        l.add(Models.e(0.5, 0, 3.5, 15.5, 2.6, 12.5).all("#wood"));
-        l.add(Models.e(0.5, 2.6, 3.5, 15.5, 3.0, 12.5).only("#brass", "north", "south", "east", "west", "up"));
-        for (int i = 0; i < 4; i++) {
-            tube(l, 1.25 + i * 3.5, 3.0, 6.0, 3.0, 9.0, 4.0);
+    static void counterModels() throws Exception {
+        String[][] tex = {{"wood", "nixie_wood"}, {"brass", "sat_brass"}, {"socket", "nixie_socket"}, {"mesh", "nixie_mesh"},
+                {"glass", "nixie_glass"}, {"bolt", "pipe_bolt"}};
+        List<Models.El> body = new ArrayList<>();
+        body.add(Models.e(3.5, 0, 6, 12.5, 1.6, 10).all("#wood"));
+        body.add(Models.e(3.5, 1.6, 6, 12.5, 1.9, 10).only("#brass", "north", "south", "east", "west", "up"));
+        for (double cx : new double[]{5.55, 8.0, 10.45}) {
+            tube(body, cx - 1.1, 1.9, 6.7, 2.2, 6.6, 2.6);
         }
-        Models.model("channel_counter", true, "nixie_wood", new String[][]{{"wood", "nixie_wood"}, {"brass", "sat_brass"},
-                {"socket", "nixie_socket"}, {"mesh", "nixie_mesh"}, {"glass", "nixie_glass"}}, l.toArray(new Models.El[0]));
-        Models.facing4("channel_counter", "channel_counter");
-        Models.item("channel_counter", "channel_counter");
+        String[] mounts = {"floor", "pipe_basic", "pipe_dense", "side_block", "side_basic", "side_dense"};
+        for (String m : mounts) {
+            List<Models.El> l = new ArrayList<>(body);
+            switch (m) {
+                case "pipe_basic", "pipe_dense" -> {
+                    // the tube below spans 4..12 (basic) or 2..14 (dense) of its cell: the straps hug it a hair off its faces,
+                    // between the pipe's clamps (at the joints and at the middle)
+                    double lo = m.equals("pipe_dense") ? 2 : 4;
+                    double z0 = lo - 0.65, z1 = 16 - z0, top = 0.05 - lo;
+                    for (double x : new double[]{3.6, 11.0}) {
+                        l.add(Models.e(x, top, z0, x + 1.4, top + 0.6, z1).all("#brass"));
+                        l.add(Models.e(x, -8, z0, x + 1.4, top, z0 + 0.6).only("#brass", "north", "south", "east", "west", "down"));
+                        l.add(Models.e(x, -8, z1 - 0.6, x + 1.4, top, z1).only("#brass", "north", "south", "east", "west", "down"));
+                        l.add(Models.e(x + 0.4, -6.2, z0 - 0.3, x + 1.0, -5.6, z0).all("#bolt"));
+                        l.add(Models.e(x + 0.4, -6.2, z1, x + 1.0, -5.6, z1 + 0.3).all("#bolt"));
+                        l.add(Models.e(x + 0.4, top + 0.6, 7.3, x + 1.0, 0, 8.7).only("#brass", "north", "south", "east", "west"));
+                    }
+                }
+                case "side_basic", "side_dense" -> {
+                    // the pipe behind: its tube's near face at z 20 (basic) or 18 (dense), its axis at y 8
+                    double shoe = m.equals("side_dense") ? 17.3 : 19.3;
+                    l.add(Models.e(7.4, 0.4, 10, 8.6, 1.4, 13).only("#brass", "up", "down", "east", "west"));
+                    l.add(Models.e(7.4, 0.4, 13, 8.6, 8.6, 14).all("#brass"));
+                    l.add(Models.e(7.4, 7.4, 14, 8.6, 8.6, shoe).only("#brass", "up", "down", "east", "west"));
+                    l.add(Models.e(5.6, 5.6, shoe, 10.4, 10.4, shoe + 0.6).all("#brass"));
+                    for (double[] b : new double[][]{{6.0, 6.0}, {9.4, 6.0}, {6.0, 9.4}, {9.4, 9.4}}) {
+                        l.add(Models.e(b[0], b[1], shoe - 0.3, b[0] + 0.6, b[1] + 0.6, shoe).all("#bolt"));
+                    }
+                }
+                case "side_block" -> {
+                    l.add(Models.e(7.4, 0.4, 10, 8.6, 1.4, 15.4).only("#brass", "up", "down", "east", "west"));
+                    l.add(Models.e(5.6, -1.4, 15.4, 10.4, 4.6, 16).only("#brass", "north", "east", "west", "up", "down"));
+                    for (double[] b : new double[][]{{6.0, -1.0}, {9.4, -1.0}, {6.0, 3.6}, {9.4, 3.6}}) {
+                        l.add(Models.e(b[0], b[1], 15.1, b[0] + 0.6, b[1] + 0.6, 15.4).all("#bolt"));
+                    }
+                }
+                default -> {
+                }
+            }
+            Models.model("channel_counter_" + m, true, "nixie_wood", tex, l.toArray(new Models.El[0]));
+        }
+        String[][] facings = {{"north", ""}, {"east", ", \"y\": 90"}, {"south", ", \"y\": 180"}, {"west", ", \"y\": 270"}};
+        List<String> lines = new ArrayList<>();
+        for (String m : mounts) {
+            for (String[] f : facings) {
+                lines.add("    \"facing=" + f[0] + ",mount=" + m + "\": {\"model\": \"" + Forge2.NS + "channel_counter_" + m + "\"" + f[1] + "}");
+            }
+        }
+        Forge2.write(Forge2.RES.resolve("blockstates/channel_counter.json"),
+                "{\n  \"variants\": {\n" + String.join(",\n", lines) + "\n  }\n}\n");
+        Models.item("channel_counter", "channel_counter_floor");
         Forge2.write(Forge2.RES.resolve("items/channel_counter.json"),
                 "{\n  \"model\": {\n    \"type\": \"minecraft:model\",\n    \"model\": \"golem_logix:item/channel_counter\"\n  }\n}\n");
     }
@@ -178,6 +229,6 @@ final class Nixie {
         glass().save(Forge2.tex("nixie_glass"));
         walnut().save(Forge2.tex("nixie_wood"));
         socket().save(Forge2.tex("nixie_socket"));
-        counterModel();
+        counterModels();
     }
 }

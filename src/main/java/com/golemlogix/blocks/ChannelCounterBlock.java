@@ -2,9 +2,9 @@ package com.golemlogix.blocks;
 
 import com.golemlogix.blockentity.ChannelCounterBlockEntity;
 import com.golemlogix.init.ModBlockEntities;
-import com.golemlogix.system.GolemNode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -25,37 +25,84 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Locale;
+
 /**
- * Channel Counter: four nixie tubes on a walnut base that show the network's channels - how many are in use (glowing cyan, amber
- * or red as the network fills), or after a right-click how many it can carry. For a player without Jade, or for the look of it.
- * It joins the network like a device but takes no channel.
+ * Channel Counter: three nixie tubes on a small walnut base, lit on both sides with the channels running through the block it is
+ * fixed to (a pipe, a bushing, any network node) - what the heat lamps on the pipes show, wherever the player wants it; a
+ * right-click shows that block's capacity instead. It is not a network device itself (pipes do not reach for it), it only reads
+ * the node it sits on: on top of it (a saddle round a pipe, or a plain foot) or on its side (a bracket to a pipe, or a wall plate).
  */
-public class ChannelCounterBlock extends Block implements GolemNode, EntityBlock {
+public class ChannelCounterBlock extends Block implements EntityBlock {
+    /** How it is fixed: standing on a block or a pipe, or hanging on the side of one. */
+    public enum Mount implements StringRepresentable {
+        FLOOR, PIPE_BASIC, PIPE_DENSE, SIDE_BLOCK, SIDE_BASIC, SIDE_DENSE;
+
+        public boolean side() {
+            return this == SIDE_BLOCK || this == SIDE_BASIC || this == SIDE_DENSE;
+        }
+
+        @Override
+        public String getSerializedName() {
+            return name().toLowerCase(Locale.ROOT);
+        }
+    }
+
+    /** The side the tubes face (they are lit on the back too); on a side mount, away from what it hangs on. */
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
-    private static final VoxelShape SHAPE_Z = Block.box(0.5, 0, 3.5, 15.5, 13.6, 12.5);
-    private static final VoxelShape SHAPE_X = Block.box(3.5, 0, 0.5, 12.5, 13.6, 15.5);
+    public static final EnumProperty<Mount> MOUNT = EnumProperty.create("mount", Mount.class);
+    private static final VoxelShape STAND_Z = Block.box(3.5, 0, 6, 12.5, 9.2, 10), STAND_X = Block.box(6, 0, 3.5, 10, 9.2, 12.5);
 
     public ChannelCounterBlock(Properties properties) {
-        super(properties.sound(SoundType.WOOD).strength(1.5f).lightLevel(state -> 5).noOcclusion());
-        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
+        super(properties.sound(SoundType.WOOD).strength(1.0f).lightLevel(state -> 4).noOcclusion());
+        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(MOUNT, Mount.FLOOR));
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
+        builder.add(FACING, MOUNT);
+    }
+
+    /** Where the node it reads stands: under it, or behind it on a side mount. */
+    public static BlockPos attached(BlockPos pos, BlockState state) {
+        return state.getValue(MOUNT).side() ? pos.relative(state.getValue(FACING).getOpposite()) : pos.below();
     }
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+        Level level = context.getLevel();
+        Direction face = context.getClickedFace();
+        Direction toPlayer = context.getHorizontalDirection().getOpposite();
+        if (face.getAxis().isHorizontal()) {
+            // on the side of something: the tubes look away from it; the bracket reaches for a pipe running across, anything else
+            // (a block, a pipe's end or joint) takes the wall plate
+            BlockState wall = level.getBlockState(context.getClickedPos().relative(face.getOpposite()));
+            Direction.Axis axis = wall.getBlock() instanceof SnowPipeBlock ? SnowPipeBlock.straightAxis(wall) : null;
+            Mount m = axis != null && axis != face.getAxis()
+                    ? (((SnowPipeBlock) wall.getBlock()).isDense() ? Mount.SIDE_DENSE : Mount.SIDE_BASIC) : Mount.SIDE_BLOCK;
+            return defaultBlockState().setValue(FACING, face).setValue(MOUNT, m);
+        }
+        BlockState below = level.getBlockState(context.getClickedPos().below());
+        if (below.getBlock() instanceof SnowPipeBlock p) {
+            Direction.Axis axis = SnowPipeBlock.straightAxis(below);
+            if (axis != null && axis.isHorizontal()) {
+                // astride a horizontal pipe: the row of tubes runs along it, the face turned to the player's side of it
+                var at = context.getPlayer() != null ? context.getPlayer().position() : context.getClickLocation();
+                BlockPos pos = context.getClickedPos();
+                Direction facing = axis == Direction.Axis.X ? (at.z > pos.getZ() + 0.5 ? Direction.SOUTH : Direction.NORTH)
+                        : (at.x > pos.getX() + 0.5 ? Direction.EAST : Direction.WEST);
+                return defaultBlockState().setValue(FACING, facing).setValue(MOUNT, p.isDense() ? Mount.PIPE_DENSE : Mount.PIPE_BASIC);
+            }
+        }
+        return defaultBlockState().setValue(FACING, toPlayer).setValue(MOUNT, Mount.FLOOR);
     }
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return state.getValue(FACING).getAxis() == Direction.Axis.Z ? SHAPE_Z : SHAPE_X;
+        return state.getValue(FACING).getAxis() == Direction.Axis.Z ? STAND_Z : STAND_X;
     }
 
-    /** A right-click switches between the channels in use and the channels the network can carry. */
+    /** A right-click switches between the channels running through the node and the most it can carry. */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof ChannelCounterBlockEntity be) {

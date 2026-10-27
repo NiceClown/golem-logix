@@ -9,12 +9,15 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import org.joml.Vector3f;
 
 /**
- * Channel Counter: the digits in its four nixie tubes (the base, the tubes and their meshes are the baked model). Channels in use
- * glow in the load colours, the capacity in the classic nixie orange. Leading zeros stay dark, and an offline network leaves every
- * tube dark.
+ * Channel Counter: the digits in its three nixie tubes, on both sides of the meshes so they read from the front and from behind
+ * (the base, the tubes and their meshes are the baked model). The channels through the node glow in the load colours, its
+ * capacity in the classic nixie orange; leading zeros stay dark, and with no network every tube is dark.
  */
 public class ChannelCounterRenderer extends com.golemlogix.client.render.LegacyBer<ChannelCounterBlockEntity> {
     private static final int NIXIE_ORANGE = 0xFFFF8A2A;
+    /** The tubes of the model: centres along x, the mesh plane at z 8, the digit's centre height and size (pixels). */
+    private static final float[] TUBE_X = {5.55f, 8.0f, 10.45f};
+    private static final float MESH_Z = 8f, DIGIT_Y = 5.6f, DIGIT_W = 1.9f, DIGIT_H = 4.6f, GAP = 0.13f;
 
     public ChannelCounterRenderer(BlockEntityRendererProvider.Context context) {
     }
@@ -24,17 +27,18 @@ public class ChannelCounterRenderer extends com.golemlogix.client.render.LegacyB
         if (!be.online() || !be.getBlockState().hasProperty(ChannelCounterBlock.FACING)) {
             return;
         }
-        String text = String.valueOf(Math.min(9999, be.showsCapacity() ? be.capacity() : be.used()));
+        String text = String.valueOf(Math.min(999, be.showsCapacity() ? be.capacity() : be.used()));
         int color = be.showsCapacity() ? NIXIE_ORANGE : NixieDigits.loadColor(be.used(), be.capacity());
         pose.pushPose();
         Quads.faceModel(pose, be.getBlockState().getValue(ChannelCounterBlock.FACING));
-        // the model's tubes stand at x 1.25 + i * 3.5 (3 wide) with their meshes at z 8; the digits face north just in front of them,
-        // and seen from the north the tube at the smallest x is on the right: it shows the ones
-        Vector3f right = new Vector3f(-1, 0, 0), up = new Vector3f(0, 1, 0);
+        Vector3f up = new Vector3f(0, 1, 0);
         for (int place = 0; place < text.length(); place++) {
             int digit = text.charAt(text.length() - 1 - place) - '0';
-            float x = 1.25f + place * 3.5f + 1.5f;
-            NixieDigits.digit(pose.last(), buffers, digit, new Vector3f(x, 8.4f, 7.88f), 2.6f, 6.6f, right, up, color);
+            // from the front (north) the ones are on the right, at the smallest x; from behind, at the largest
+            NixieDigits.digit(pose.last(), buffers, digit, new Vector3f(TUBE_X[place], DIGIT_Y, MESH_Z - GAP), DIGIT_W, DIGIT_H,
+                    new Vector3f(-1, 0, 0), up, color);
+            NixieDigits.digit(pose.last(), buffers, digit, new Vector3f(TUBE_X[2 - place], DIGIT_Y, MESH_Z + GAP), DIGIT_W, DIGIT_H,
+                    new Vector3f(1, 0, 0), up, color);
         }
         pose.popPose();
     }
