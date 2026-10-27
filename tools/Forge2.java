@@ -819,6 +819,7 @@ public final class Forge2 {
         cabinet();
         Buses.all();
         Pipes.all();
+        Nixie.all();
         Terminals.all();
         Saturator.all();
     }

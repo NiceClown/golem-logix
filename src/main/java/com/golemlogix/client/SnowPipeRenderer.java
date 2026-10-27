@@ -343,39 +343,35 @@ public class SnowPipeRenderer extends com.golemlogix.client.render.LegacyBer<Pip
     }
 
     /**
-     * The heat lamp on a straight pipe (every sixth block, see SnowPipeBlock.hasLamp): its brass case from the baked lamp model, and on
-     * its smoked glass the number of channels running through the pipe, glowing cyan while there is room, amber when it fills,
-     * red when it is (nearly) full. Turned with the pipe: on the east side of a north-south or vertical run, on the south of an
-     * east-west one.
+     * The heat lamp on a straight horizontal pipe (every sixth block, see SnowPipeBlock.hasLamp): two nixie tubes on a walnut base
+     * from the baked lamp model, and in them the number of channels running through the pipe, glowing cyan while there is room,
+     * amber when it fills, red when it is (nearly) full. On the east side of a north-south run, on the south of an east-west one.
      */
     private static void heatLamp(PipeBlockEntity be, BlockState state, PoseStack pose, MultiBufferSource buffers, int light) {
         boolean dense = state.getBlock() instanceof SnowPipeBlock p && p.isDense();
-        net.minecraft.core.Direction.Axis axis = SnowPipeBlock.straightAxis(state);
         pose.pushPose();
-        pose.translate(0.5, 0.5, 0.5);
-        if (axis == net.minecraft.core.Direction.Axis.X) {
+        if (SnowPipeBlock.straightAxis(state) == net.minecraft.core.Direction.Axis.X) {
+            pose.translate(0.5, 0.5, 0.5);
             pose.mulPose(Axis.YP.rotationDegrees(-90));
-        } else if (axis == net.minecraft.core.Direction.Axis.Y) {
-            pose.mulPose(Axis.XP.rotationDegrees(-90));
+            pose.translate(-0.5, -0.5, -0.5);
         }
-        pose.translate(-0.5, -0.5, -0.5);
         com.golemlogix.client.render.StandaloneModels.render(pose.last(), buffers.getBuffer(net.minecraft.client.renderer.Sheets.cutoutBlockSheet()),
                 dense ? com.golemlogix.client.render.StandaloneModels.LAMP_DENSE : com.golemlogix.client.render.StandaloneModels.LAMP_BASIC,
                 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
-        // the number on the glass: the glass faces +x at the lamp's front (the clamp's outer edge + the case)
-        int load = be.lampLoad(), cap = Math.max(1, be.lampCapacity());
-        float ratio = load / (float) cap;
-        int color = load == 0 ? 0xFF6A5A4C : ratio < 0.5f ? 0xFF6FF4FF : ratio < 0.85f ? 0xFFFFB347 : 0xFFFF5038;
-        String text = String.valueOf(load);
-        var font = Minecraft.getInstance().font;
-        float front = (dense ? 14.7f : 12.6f) + 2.42f;
-        float height = dense ? 3.4f : 3.0f;
-        float s = height / 16f / 8f;
-        pose.translate(front / 16f, 8.2f / 16f, 0.5f);
-        pose.mulPose(Axis.YP.rotationDegrees(90));
-        pose.scale(s, -s, s);
-        font.drawInBatch(text, -font.width(text) / 2f, -4f, color, false, pose.last().pose(), buffers,
-                net.minecraft.client.gui.Font.DisplayMode.POLYGON_OFFSET, 0, 0xF000F0);
+        // the digits face east, in front of the tubes' mesh planes; seen from there the tens tube is on the left (south)
+        int load = Math.min(99, be.lampLoad());
+        int color = com.golemlogix.client.render.NixieDigits.loadColor(load, be.lampCapacity());
+        float x = (dense ? 14.7f : 12.6f) + 2.62f;
+        org.joml.Vector3f right = new org.joml.Vector3f(0, 0, -1), up = new org.joml.Vector3f(0, 1, 0);
+        if (load >= 10) {
+            com.golemlogix.client.render.NixieDigits.digit(pose.last(), buffers, load / 10, new org.joml.Vector3f(x, 8f, 9.35f), 2.2f, 4.4f,
+                    right, up, color);
+        }
+        com.golemlogix.client.render.NixieDigits.digit(pose.last(), buffers, load % 10, new org.joml.Vector3f(x, 8f, 6.65f), 2.2f, 4.4f,
+                right, up, color);
+        com.golemlogix.client.render.StandaloneModels.render(pose.last(), buffers.getBuffer(net.minecraft.client.renderer.Sheets.translucentBlockSheet()),
+                dense ? com.golemlogix.client.render.StandaloneModels.LAMP_GLASS_DENSE : com.golemlogix.client.render.StandaloneModels.LAMP_GLASS_BASIC,
+                1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
         pose.popPose();
     }
 

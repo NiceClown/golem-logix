@@ -36,6 +36,8 @@ public final class StandaloneModels {
     public static final Identifier DOCK_DENSE = add("block/dense_frost_pipe_dock");
     public static final Identifier LAMP_BASIC = add("block/basic_snow_pipe_lamp");
     public static final Identifier LAMP_DENSE = add("block/dense_frost_pipe_lamp");
+    public static final Identifier LAMP_GLASS_BASIC = add("block/basic_snow_pipe_lamp_glass");
+    public static final Identifier LAMP_GLASS_DENSE = add("block/dense_frost_pipe_lamp_glass");
 
     private StandaloneModels() {
     }

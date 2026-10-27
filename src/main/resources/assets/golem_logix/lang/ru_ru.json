@@ -277,6 +277,8 @@
   "jade.golem_logix.core.tower": "стартовая башня",
   "jade.golem_logix.core.alone": "одно ядро",
   "block.golem_logix.recipe_monitor": "Монитор Рецептов",
+  "block.golem_logix.channel_counter": "Счётчик каналов",
+  "tooltip.golem_logix.channel_counter": "Газоразрядные лампы с числом занятых каналов сети (бирюзовые, янтарные, красные по заполнению); правый клик показывает ёмкость. Канал не занимает.",
   "tooltip.golem_logix.recipe_monitor": "Латунный шкаф с иллюминатором-порталом: здесь видно и можно отменить работу всех Крио-Калькуляторов сети.",
   "item.golem_logix.compressed_coprocessor": "Сжатый Сопроцессор",
   "item.golem_logix.incomplete_compressed_coprocessor": "Незавершённый сжатый сопроцессор",

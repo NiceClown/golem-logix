@@ -1,0 +1,202 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "render_type": "minecraft:translucent",
+  "textures": {
+    "particle": "golem_logix:block/nixie_wood",
+    "wood": "golem_logix:block/nixie_wood",
+    "brass": "golem_logix:block/sat_brass",
+    "socket": "golem_logix:block/nixie_socket",
+    "mesh": "golem_logix:block/nixie_mesh",
+    "glass": "golem_logix:block/nixie_glass"
+  },
+  "elements": [
+    {
+      "from": [0.5, 0, 3.5],
+      "to": [15.5, 2.6, 12.5],
+      "faces": {
+        "north": {"texture": "#wood"},
+        "south": {"texture": "#wood"},
+        "east": {"texture": "#wood"},
+        "west": {"texture": "#wood"},
+        "up": {"texture": "#wood"},
+        "down": {"texture": "#wood"}
+      }
+    },
+    {
+      "from": [0.5, 2.6, 3.5],
+      "to": [15.5, 3, 12.5],
+      "faces": {
+        "north": {"texture": "#brass"},
+        "south": {"texture": "#brass"},
+        "east": {"texture": "#brass"},
+        "west": {"texture": "#brass"},
+        "up": {"texture": "#brass"}
+      }
+    },
+    {
+      "from": [1.45, 3, 6.2],
+      "to": [4.05, 3.8, 9.8],
+      "faces": {
+        "north": {"texture": "#socket"},
+        "south": {"texture": "#socket"},
+        "east": {"texture": "#socket"},
+        "west": {"texture": "#socket"},
+        "up": {"texture": "#socket"}
+      }
+    },
+    {
+      "from": [1.75, 4.2, 7.95],
+      "to": [3.75, 11.4, 8.05],
+      "faces": {
+        "north": {"texture": "#mesh"},
+        "south": {"texture": "#mesh"}
+      }
+    },
+    {
+      "from": [1.25, 3.8, 6],
+      "to": [4.25, 12, 10],
+      "faces": {
+        "north": {"texture": "#glass"},
+        "south": {"texture": "#glass"},
+        "east": {"texture": "#glass"},
+        "west": {"texture": "#glass"},
+        "up": {"texture": "#glass"}
+      }
+    },
+    {
+      "from": [1.75, 12, 6.5],
+      "to": [3.75, 12.6, 9.5],
+      "faces": {
+        "north": {"texture": "#glass"},
+        "south": {"texture": "#glass"},
+        "east": {"texture": "#glass"},
+        "west": {"texture": "#glass"},
+        "up": {"texture": "#glass"}
+      }
+    },
+    {
+      "from": [4.95, 3, 6.2],
+      "to": [7.55, 3.8, 9.8],
+      "faces": {
+        "north": {"texture": "#socket"},
+        "south": {"texture": "#socket"},
+        "east": {"texture": "#socket"},
+        "west": {"texture": "#socket"},
+        "up": {"texture": "#socket"}
+      }
+    },
+    {
+      "from": [5.25, 4.2, 7.95],
+      "to": [7.25, 11.4, 8.05],
+      "faces": {
+        "north": {"texture": "#mesh"},
+        "south": {"texture": "#mesh"}
+      }
+    },
+    {
+      "from": [4.75, 3.8, 6],
+      "to": [7.75, 12, 10],
+      "faces": {
+        "north": {"texture": "#glass"},
+        "south": {"texture": "#glass"},
+        "east": {"texture": "#glass"},
+        "west": {"texture": "#glass"},
+        "up": {"texture": "#glass"}
+      }
+    },
+    {
+      "from": [5.25, 12, 6.5],
+      "to": [7.25, 12.6, 9.5],
+      "faces": {
+        "north": {"texture": "#glass"},
+        "south": {"texture": "#glass"},
+        "east": {"texture": "#glass"},
+        "west": {"texture": "#glass"},
+        "up": {"texture": "#glass"}
+      }
+    },
+    {
+      "from": [8.45, 3, 6.2],
+      "to": [11.05, 3.8, 9.8],
+      "faces": {
+        "north": {"texture": "#socket"},
+        "south": {"texture": "#socket"},
+        "east": {"texture": "#socket"},
+        "west": {"texture": "#socket"},
+        "up": {"texture": "#socket"}
+      }
+    },
+    {
+      "from": [8.75, 4.2, 7.95],
+      "to": [10.75, 11.4, 8.05],
+      "faces": {
+        "north": {"texture": "#mesh"},
+        "south": {"texture": "#mesh"}
+      }
+    },
+    {
+      "from": [8.25, 3.8, 6],
+      "to": [11.25, 12, 10],
+      "faces": {
+        "north": {"texture": "#glass"},
+        "south": {"texture": "#glass"},
+        "east": {"texture": "#glass"},
+        "west": {"texture": "#glass"},
+        "up": {"texture": "#glass"}
+      }
+    },
+    {
+      "from": [8.75, 12, 6.5],
+      "to": [10.75, 12.6, 9.5],
+      "faces": {
+        "north": {"texture": "#glass"},
+        "south": {"texture": "#glass"},
+        "east": {"texture": "#glass"},
+        "west": {"texture": "#glass"},
+        "up": {"texture": "#glass"}
+      }
+    },
+    {
+      "from": [11.95, 3, 6.2],
+      "to": [14.55, 3.8, 9.8],
+      "faces": {
+        "north": {"texture": "#socket"},
+        "south": {"texture": "#socket"},
+        "east": {"texture": "#socket"},
+        "west": {"texture": "#socket"},
+        "up": {"texture": "#socket"}
+      }
+    },
+    {
+      "from": [12.25, 4.2, 7.95],
+      "to": [14.25, 11.4, 8.05],
+      "faces": {
+        "north": {"texture": "#mesh"},
+        "south": {"texture": "#mesh"}
+      }
+    },
+    {
+      "from": [11.75, 3.8, 6],
+      "to": [14.75, 12, 10],
+      "faces": {
+        "north": {"texture": "#glass"},
+        "south": {"texture": "#glass"},
+        "east": {"texture": "#glass"},
+        "west": {"texture": "#glass"},
+        "up": {"texture": "#glass"}
+      }
+    },
+    {
+      "from": [12.25, 12, 6.5],
+      "to": [14.25, 12.6, 9.5],
+      "faces": {
+        "north": {"texture": "#glass"},
+        "south": {"texture": "#glass"},
+        "east": {"texture": "#glass"},
+        "west": {"texture": "#glass"},
+        "up": {"texture": "#glass"}
+      }
+    }
+  ]
+}

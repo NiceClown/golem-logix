@@ -123,6 +123,11 @@ public class ModBlocks {
             "tooltip.golem_logix.recipe_monitor",
             () -> new RecipeMonitorBlock(props()));
 
+    // nixie tubes with the network's channels
+    public static final DeferredBlock<com.golemlogix.blocks.ChannelCounterBlock> CHANNEL_COUNTER = registerBlock("channel_counter",
+            "tooltip.golem_logix.channel_counter",
+            () -> new com.golemlogix.blocks.ChannelCounterBlock(props()));
+
     // World Interaction Buses
     public static final DeferredBlock<VacuumImportBusBlock> VACUUM_IMPORT_BUS = registerBlock("vacuum_import_bus",
             "tooltip.golem_logix.vacuum_import_bus",

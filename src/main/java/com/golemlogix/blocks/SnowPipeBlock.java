@@ -140,12 +140,13 @@ public class SnowPipeBlock extends Block implements com.golemlogix.blocks.Remova
     }
 
     /**
-     * Whether a heat lamp hangs on this pipe: a straight block every sixth along its run (the other coordinates shift the count,
+     * Whether a heat lamp hangs on this pipe: a straight horizontal block every sixth along its run (the other coordinates shift the count,
      * so parallel runs do not light up in rows). The server sends such pipes their channel load, the renderer draws the lamp.
      */
     public static boolean hasLamp(BlockState state, BlockPos pos) {
+        // horizontal runs only: the tubes stand upright
         Direction.Axis axis = straightAxis(state);
-        if (axis == null) {
+        if (axis == null || axis == Direction.Axis.Y) {
             return false;
         }
         int along = axis.choose(pos.getX(), pos.getY(), pos.getZ());

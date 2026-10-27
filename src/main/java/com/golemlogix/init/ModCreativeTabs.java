@@ -93,6 +93,7 @@ public class ModCreativeTabs {
                         output.accept(ModBlocks.CRYO_MAINFRAME.get());
                         output.accept(ModBlocks.COOLING_COPROCESSOR.get());
                         output.accept(ModBlocks.RECIPE_MONITOR.get());
+                        output.accept(ModBlocks.CHANNEL_COUNTER.get());
 
                         // Buses
                         output.accept(ModBlocks.VACUUM_IMPORT_BUS.get());

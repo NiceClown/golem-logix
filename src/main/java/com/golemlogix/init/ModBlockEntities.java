@@ -80,6 +80,10 @@ public class ModBlockEntities {
             BLOCK_ENTITY_TYPES.register("recipe_monitor", () ->
                     new BlockEntityType<>(RecipeMonitorBlockEntity::new, ModBlocks.RECIPE_MONITOR.get()));
 
+    public static final Supplier<BlockEntityType<com.golemlogix.blockentity.ChannelCounterBlockEntity>> CHANNEL_COUNTER =
+            BLOCK_ENTITY_TYPES.register("channel_counter", () ->
+                    new BlockEntityType<>(com.golemlogix.blockentity.ChannelCounterBlockEntity::new, ModBlocks.CHANNEL_COUNTER.get()));
+
     public static final Supplier<BlockEntityType<PipeBlockEntity>> SNOW_PIPE =
             BLOCK_ENTITY_TYPES.register("snow_pipe", () ->
                     new BlockEntityType<>(PipeBlockEntity::new,

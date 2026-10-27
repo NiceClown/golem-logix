@@ -5,7 +5,7 @@ import java.util.*;
  * clamp with a bolted ear, a thin layer of snow lies inside along the tube and hoarfrost grows on the glass by the clamps;
  * on a powered network pulses of cold light run along the glass. Straight runs pick a random look per block (the block
  * state's weighted models): plain or with a gate valve and its handwheel; the snow in horizontal pipes picks its drifts apart
- * from that, and every sixth straight block carries a heat lamp the renderer writes the channel count on. Junctions are an
+ * from that, and every sixth straight horizontal block carries a heat lamp, two nixie tubes the renderer lights with the channel count. Junctions are an
  * open cast fitting (copper edges, brass corners), devices are met by a bolted brass flange with a copper collar. Everything
  * except the glass and the lamp's number is opaque and baked into the chunk.
  * The models face NORTH, the other sides come from rotations in the block state.
@@ -168,19 +168,6 @@ final class Pipes {
         return p;
     }
 
-    /** The heat lamp's smoked glass: dark, a faint warm grid of the filament behind it and a pale reflection in a corner. */
-    static Paint lampGlass() {
-        Paint p = new Paint(16, 16, K);
-        p.fill(0, 0, 16, 16, (u, v) -> {
-            double d = Math.hypot(u - 8, v - 8) / 11;
-            int c = Paint.mix(rgb(0x2a1c14), rgb(0x0e0a08), Math.min(1, d));
-            return ((int) u + (int) v) % 4 == 0 ? Paint.mix(c, rgb(0x5a3018), 0.35) : c;
-        });
-        p.line(2.5, 3.5, 5.5, 2.0, 0.6, argb(150, 0xffffff));
-        p.line(2.5, 5.0, 3.6, 4.4, 0.5, argb(110, 0xffffff));
-        return p;
-    }
-
     /** The handwheel: red paint on iron, a light edge on top, the paint worn through to the iron here and there. */
     static Paint wheel() {
         Paint p = new Paint(16, 16, K);
@@ -307,7 +294,6 @@ final class Pipes {
         clamp(false).save(Forge2.tex("pipe_clamp"));
         clamp(true).save(Forge2.tex("pipe_dense_clamp"));
         bolt().save(Forge2.tex("pipe_bolt"));
-        lampGlass().save(Forge2.tex("pipe_lamp"));
         wheel().save(Forge2.tex("pipe_wheel"));
         snow().save(Forge2.tex("pipe_snow"));
         flange().save(Forge2.tex("pipe_flange"));
@@ -320,7 +306,8 @@ final class Pipes {
         String p = dense ? "pipe_dense" : "pipe_glass";
         return new String[][]{{"su", p + "_u"}, {"sv", p + "_v"}, {"sd", p + "_d"},
                 {"lu", p + "_u_lit"}, {"lv", p + "_v_lit"}, {"ld", p + "_d_lit"},
-                {"clamp", dense ? "pipe_dense_clamp" : "pipe_clamp"}, {"bolt", "pipe_bolt"}, {"lamp", "pipe_lamp"},
+                {"clamp", dense ? "pipe_dense_clamp" : "pipe_clamp"}, {"bolt", "pipe_bolt"}, {"wood", "nixie_wood"}, {"socket", "nixie_socket"},
+                {"mesh", "nixie_mesh"}, {"nglass", "nixie_glass"},
                 {"wheel", "pipe_wheel"},
                 {"flange", "pipe_flange"}, {"hub", dense ? "pipe_dense_hub" : "pipe_hub"}, {"plug", "pipe_plug"}, {"dock", "pipe_dock"},
                 {"dial", "resonator_dial"}, {"ice", "sat_ice"}, {"brass", "sat_brass"}, {"copper", "resonator_pipe"}, {"dark", "sat_dark"},
@@ -458,14 +445,22 @@ final class Pipes {
         valve.add(Models.e(7.45, wy0 - 0.1, 7.45, 8.55, wy1 + 0.15, 8.55).all("#brass"));
         looks.put("_valve", valve);
 
-        // the heat lamp on the east side of a straight pipe (SnowPipeRenderer turns it with the pipe and writes the channel count on
-        // its glass): a middle clamp, a brass arm, a brass case with a dome, the smoked glass the number glows on
-        List<Models.El> lamp = new ArrayList<>(midClamp);
-        double lx = ch, lw = dense ? 7 : 6, lh = dense ? 5.5 : 5;
+        // the heat lamp on the east side of a straight pipe: two nixie tubes on a walnut base held off the middle clamp by a brass
+        // bracket (SnowPipeRenderer turns it with the pipe and lights the digits on the tubes' mesh planes at x lx + 2.6)
+        List<Models.El> lamp = new ArrayList<>(midClamp), lampGlass = new ArrayList<>();
+        double lx = ch;
         lamp.add(Models.e(lx, 7.4, 7.4, lx + 1.0, 8.6, 8.6).only("#brass", "up", "down", "north", "south"));
-        lamp.add(Models.e(lx + 1.0, 8 - lh / 2, 8 - lw / 2, lx + 2.3, 8 + lh / 2, 8 + lw / 2).all("#brass"));
-        lamp.add(Models.e(lx + 2.3, 8 - lh / 2 + 0.5, 8 - lw / 2 + 0.5, lx + 2.4, 8 + lh / 2 - 0.5, 8 + lw / 2 - 0.5).only("#lamp", "east"));
-        lamp.add(Models.e(lx + 1.3, 8 + lh / 2, 7, lx + 2.0, 8 + lh / 2 + 0.7, 9).only("#brass", "up", "north", "south", "east", "west"));
+        lamp.add(Models.e(lx + 1.0, 3.8, 7.2, lx + 1.4, 11.6, 8.8).all("#brass"));
+        lamp.add(Models.e(lx + 1.4, 3.8, 4.9, lx + 3.8, 4.6, 11.1).all("#wood"));
+        for (double zc : new double[]{8 - 1.35, 8 + 1.35}) {
+            double z0 = zc - 1.2, z1 = zc + 1.2;
+            lamp.add(Models.e(lx + 1.75, 4.6, z0 + 0.15, lx + 3.45, 5.2, z1 - 0.15).only("#socket", "north", "south", "east", "west", "up"));
+            lamp.add(Models.e(lx + 2.45, 5.6, z0 + 0.4, lx + 2.55, 10.4, z1 - 0.4).only("#mesh", "east", "west"));
+            lampGlass.add(Models.e(lx + 1.6, 5.2, z0, lx + 3.6, 11, z1).only("#nglass", "north", "south", "east", "west", "up"));
+            lampGlass.add(Models.e(lx + 1.9, 11, z0 + 0.4, lx + 3.3, 11.5, z1 - 0.4).only("#nglass", "north", "south", "east", "west", "up"));
+        }
+        // the tubes' glass is a model of its own: the renderer draws it translucent, after the digits
+        Models.model(name + "_lamp_glass", true, particle, tex, lampGlass.toArray(new Models.El[0]));
         Models.model(name + "_lamp", false, particle, tex, lamp.toArray(new Models.El[0]));
 
         // the snow inside the horizontal pipes: a thin layer on the flat bottom and, by the block, one of a few drifts on it
