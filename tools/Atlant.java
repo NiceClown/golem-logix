@@ -128,25 +128,25 @@ final class Atlant {
     }
 
     /**
-     * The head's face in the iron golem's layout, where its front samples the texture (u 4..12, v 0..10): grey iron, a copper
-     * brow over two small deep-set eyes with the mod's cyan light, the long iron nose (its own element samples u 7..9,
-     * v 5..9) with its shadow, the mouth line, and a vine down one side as on the vanilla golem.
+     * The head's face in the iron golem's layout, where its front samples the texture (u 5..11, v 3..10): grey iron, a copper
+     * brow over two small deep-set eyes with the mod's cyan light, the long iron nose (its own element samples u 7.25..8.75,
+     * v 6.5..9) with its shadow, the mouth line, and a vine down one side as on the vanilla golem.
      */
     static Paint head() {
         Paint p = new Paint(16, 16, K);
         metal(p, 0, 0, 16, 16, IRON, 3, 404);
-        copperBand(p, 4, 2.5, 12, 4, 405);
-        p.rect(4, 4, 12, 4.5, SEAM);
-        p.rect(5, 4.5, 7, 5.5, rgb(0x231f1b));
-        p.rect(9, 4.5, 11, 5.5, rgb(0x231f1b));
-        p.glowRect(5.5, 4.5, 6.5, 5.5, 0.01, rgb(0x45d6d2), 255);
-        p.glowRect(9.5, 4.5, 10.5, 5.5, 0.01, rgb(0x45d6d2), 255);
-        p.rect(7, 5, 9, 9, rgb(IRON[5]));
-        p.rect(7, 5, 7.5, 9, rgb(IRON[7]));
-        p.rect(8.5, 5, 9, 9, rgb(IRON[3]));
+        copperBand(p, 5, 4, 11, 5.5, 405);
+        p.rect(5, 5.5, 11, 6, SEAM);
+        p.rect(6, 6, 7.5, 7, rgb(0x231f1b));
+        p.rect(8.5, 6, 10, 7, rgb(0x231f1b));
+        p.glowRect(6.5, 6, 7.5, 6.5, 0.01, rgb(0x45d6d2), 255);
+        p.glowRect(8.5, 6, 9.5, 6.5, 0.01, rgb(0x45d6d2), 255);
+        p.rect(7.25, 6.5, 8.75, 9, rgb(IRON[5]));
+        p.rect(7.25, 6.5, 7.75, 9, rgb(IRON[7]));
+        p.rect(8.25, 6.5, 8.75, 9, rgb(IRON[3]));
         p.rect(6.5, 9, 9.5, 9.5, SEAM);
-        p.rect(6, 9.5, 10, 10, rgb(IRON[2]));
-        vine(p, 11, 0, 10, 4);
+        p.rect(6.5, 9.5, 9.5, 10, rgb(IRON[2]));
+        vine(p, 10.5, 3, 10, 4);
         return p;
     }
 

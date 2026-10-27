@@ -20,6 +20,13 @@ public class Models {
         double rotAngle = 0;
         double[] rotOrigin = null;
         int light = 0;
+        /** The faces are culled against a full neighbour on their own side (a full-block element). */
+        boolean cull = false;
+
+        El cull() {
+            this.cull = true;
+            return this;
+        }
 
         /** Glow of the element's faces (0..15): in the dark the part stays bright, like glowstone. */
         El glow(int level) {
@@ -80,6 +87,9 @@ public class Models {
                 }
                 if (light > 0) {
                     v = v.substring(0, v.length() - 1) + ", \"neoforge_data\": {\"block_light\": " + light + ", \"sky_light\": " + light + "}}";
+                }
+                if (cull) {
+                    v = v.substring(0, v.length() - 1) + ", \"cullface\": \"" + e.getKey() + "\"}";
                 }
                 sb.append("        \"").append(e.getKey()).append("\": ").append(v).append(++i < faces.size() ? ",\n" : "\n");
             }
@@ -291,12 +301,71 @@ public class Models {
         write(RES.resolve("blockstates/" + name + ".json"), sb.append("  }\n}\n").toString());
     }
 
+    /**
+     * The casing's looks in an assembled array (AtlasCasingBlock.Part), each the plate itself plus the dress on its outer north side
+     * (the block state turns it): the two halves of the glowing ice column standing in front of the side walls, the balcony rail of
+     * brass and spruce on the crown edge, and on a crown corner the rail round both outer edges with icicles over the Atlant (kept
+     * clear of its raised hands). Baked with the casing, the dress costs no renderer and never fights its neighbours' faces.
+     */
+    static void casingParts() throws Exception {
+        String[][] tex = {{"side", "atlas_casing"}, {"top", "atlas_casing_top"}, {"ice", "atlas_ice_column"}, {"cap", "brass_plate"},
+                {"brass", "brass_plate"}, {"wood", "minecraft:block/spruce_planks"}, {"icicle", "minecraft:block/packed_ice"}};
+        java.util.function.Supplier<El> plate = () -> e(0, 0, 0, 16, 16, 16).only("#side", "north", "south", "east", "west", "down")
+                .face("up", "#top").cull();
+        model("atlas_casing_column_low", false, "atlas_casing", tex, plate.get(),
+                e(3, 0, -3, 13, 2, 0).only("#cap", "north", "east", "west", "up", "down"),
+                e(4.5, 2, -2.25, 11.5, 16, 0).only("#ice", "north", "east", "west").glow(15));
+        model("atlas_casing_column_high", false, "atlas_casing", tex, plate.get(),
+                e(4.5, 0, -2.25, 11.5, 14, 0).only("#ice", "north", "east", "west").glow(15),
+                e(3, 14, -3, 13, 16, 0).only("#cap", "north", "east", "west", "up", "down"));
+        // the rail along the north edge, from x0 to x1 (posts at the given x), standing on the crown
+        java.util.function.BiFunction<double[], double[], List<El>> railNorth = (span, posts) -> {
+            List<El> l = new ArrayList<>();
+            for (double p : posts) {
+                l.add(e(p, 16, 0.25, p + 2, 21, 2.25).only("#brass", "north", "south", "east", "west"));
+            }
+            l.add(e(span[0], 18, 0.75, span[1], 19, 1.75).only("#brass", "north", "south", "up", "down", "east", "west"));
+            l.add(e(span[0], 21, 0, span[1], 22.5, 2.5).all("#wood"));
+            return l;
+        };
+        List<El> edge = new ArrayList<>(List.of(plate.get()));
+        edge.addAll(railNorth.apply(new double[]{0, 16}, new double[]{1, 7, 13}));
+        model("atlas_casing_top_edge", false, "atlas_casing", tex, edge.toArray(new El[0]));
+        List<El> corner = new ArrayList<>(List.of(plate.get()));
+        corner.addAll(railNorth.apply(new double[]{0, 16}, new double[]{1, 7, 13}));
+        // the west rail goes on from the corner post; its wood and bar start where the north ones end
+        corner.add(e(0.25, 16, 7, 2.25, 21, 9).only("#brass", "north", "south", "east", "west"));
+        corner.add(e(0.25, 16, 13, 2.25, 21, 15).only("#brass", "north", "south", "east", "west"));
+        corner.add(e(0.75, 18, 1.75, 1.75, 19, 16).only("#brass", "east", "west", "up", "down", "south"));
+        corner.add(e(0, 21, 2.5, 2.5, 22.5, 16).only("#wood", "east", "west", "up", "down", "south"));
+        // icicles under both outer edges, outside the Atlant's hands (4.5..11.5 on either axis)
+        double[][] icicles = {{1, 0, 3, 2, 4, 6}, {12.5, 0, 14, 1.5, 3, 4.5}, {0, 3, 1.5, 4.5, 2.5, 4}, {0, 12, 1.5, 13.5, 3.5, 5}};
+        for (double[] i : icicles) {
+            corner.add(e(i[0], -i[4], i[1], i[2], 0, i[3]).only("#icicle", "north", "south", "east", "west", "down"));
+            double w = (i[2] - i[0]) / 4, d = (i[3] - i[1]) / 4;
+            corner.add(e(i[0] + w, -i[5], i[1] + d, i[2] - w, -i[4], i[3] - d).only("#icicle", "north", "south", "east", "west", "down"));
+        }
+        model("atlas_casing_top_corner", false, "atlas_casing", tex, corner.toArray(new El[0]));
+        // the block state: no part = the plain plate; the parts turn to their outer side
+        StringBuilder sb = new StringBuilder("{\n  \"variants\": {\n");
+        String[][] facings = {{"north", ""}, {"east", ", \"y\": 90"}, {"south", ", \"y\": 180"}, {"west", ", \"y\": 270"}};
+        String[][] parts = {{"none", "atlas_casing"}, {"column_low", "atlas_casing_column_low"}, {"column_high", "atlas_casing_column_high"},
+                {"top_edge", "atlas_casing_top_edge"}, {"top_corner", "atlas_casing_top_corner"}};
+        List<String> lines = new ArrayList<>();
+        for (String[] p : parts) {
+            for (String[] fc : facings) {
+                lines.add("    \"facing=" + fc[0] + ",part=" + p[0] + "\": {\"model\": \"" + NS + p[1] + "\"" + (p[0].equals("none") ? "" : fc[1]) + "}");
+            }
+        }
+        write(RES.resolve("blockstates/atlas_casing.json"), sb.append(String.join(",\n", lines)).append("\n  }\n}\n").toString());
+    }
+
     static void generate() throws Exception {
         // ============================================================ multiblock
         write(RES.resolve("models/block/atlas_casing.json"),
                 "{\n  \"parent\": \"minecraft:block/cube_bottom_top\",\n  \"textures\": {\n    \"top\": \"" + NS + "atlas_casing_top\",\n"
                         + "    \"bottom\": \"" + NS + "atlas_casing\",\n    \"side\": \"" + NS + "atlas_casing\"\n  }\n}\n");
-        single("atlas_casing", "atlas_casing");
+        casingParts();
         item("atlas_casing", "atlas_casing");
 
         cube("atlas_conduit", "atlas_conduit");
@@ -325,33 +394,6 @@ public class Models {
                 e(6, 19, 6, 10, 22, 10).all("#crystal").glow(15));
         single("atlas_core", "atlas_core");
         item("atlas_core", "atlas_core");
-        // what an assembled array grows (AtlasCoreRenderer): an ice column on the north side of the two Atlant layers (two
-        // segments drawn in the cells in front, brass caps), icicles under the north edge of the top layer, a balcony rail over
-        // it; every element stays inside its cell, so the default UVs stay on the texture
-        model("atlas_ice_column", false, "atlas_ice_column",
-                new String[][]{{"ice", "atlas_ice_column"}, {"cap", "brass_plate"}},
-                e(3, 0, 13, 13, 2, 16).all("#cap"),
-                e(4.5, 2, 13.75, 11.5, 16, 16).all("#ice"));
-        model("atlas_ice_column_top", false, "atlas_ice_column",
-                new String[][]{{"ice", "atlas_ice_column"}, {"cap", "brass_plate"}},
-                e(4.5, 0, 13.75, 11.5, 14, 16).all("#ice"),
-                e(3, 14, 13, 13, 16, 16).all("#cap"));
-        model("atlas_icicles", false, "minecraft:block/packed_ice",
-                new String[][]{{"ice", "minecraft:block/packed_ice"}},
-                e(1, 12, 0, 3, 16, 2).all("#ice"), e(1.5, 10, 0.5, 2.5, 12, 1.5).all("#ice"),
-                e(5, 14, 0, 6.5, 16, 1.5).all("#ice"),
-                e(8, 11, 0, 10, 16, 2).all("#ice"), e(8.5, 8, 0.5, 9.5, 11, 1.5).all("#ice"),
-                e(12, 13, 0, 13.5, 16, 1.5).all("#ice"), e(12.25, 11.5, 0.25, 13.25, 13, 1.25).all("#ice"));
-        for (boolean end : new boolean[]{false, true}) {
-            // the last cell of a side stops short of the corner: the next side's rail covers it
-            double to = end ? 13.5 : 16;
-            model(end ? "atlas_rail_end" : "atlas_rail", false, "brass_plate",
-                    new String[][]{{"brass", "brass_plate"}, {"wood", "minecraft:block/spruce_planks"}},
-                    e(1, 0, 0.25, 3, 5, 2.25).all("#brass"), e(7, 0, 0.5, 9, 5, 2).all("#brass"),
-                    e(0, 2, 0.75, to, 3, 1.75).all("#brass"),
-                    e(0, 5, 0, to, 6.5, 2.5).all("#wood"));
-        }
-
         // Atlant: a caryatid in the iron golem's manner (tools/Atlant.java draws it), a broad torso on short legs, the arms
         // raised to hold the array; plain boxes, the default UVs keep every face at the same texel density
         model("atlas_atlant_lower", false, "atlant_body",
@@ -368,9 +410,9 @@ public class Models {
         // the head is separate: the renderer (AtlantHeadRenderer) turns it to the player, the neck is at (8, 6, 8)
         model("atlas_atlant_head", false, "atlant_head",
                 new String[][]{{"body", "atlant_body"}, {"head", "atlant_head"}},
-                // the iron golem's head: tall (8 x 10 x 8), the long nose low on the face
-                e(4, 6, 2, 12, 16, 10).all("#body").face("north", "#head"),
-                e(7, 7, 0, 9, 11, 2).all("#head"));
+                // the iron golem's head in proportion to the statue (6 x 7 x 6 on a 13-wide torso), the long nose low on the face
+                e(5, 6, 3, 11, 13, 9).all("#body").face("north", "#head"),
+                e(7.25, 7, 1.5, 8.75, 9.5, 3).all("#head"));
         facing4Half("atlas_atlant");
         item("atlas_atlant", "atlas_atlant_lower");
 

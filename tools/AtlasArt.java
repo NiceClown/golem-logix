@@ -168,22 +168,28 @@ final class AtlasArt {
         Paint p = new Paint(16, 16, K);
         p.animFrames = 32;
         p.frameTime = 2;
-        ice(p, 0, 0, 16, 16, 7);
+        // deep ice, so the light running up it reads from afar: darker facets, a few pale streaks
+        for (int j = 0; j < p.h; j++) {
+            for (int i = 0; i < p.w; i++) {
+                double facet = Atlant.noise(i + j, j - i, 9, 7);
+                p.px(i, j, rgb(ICE[(int) Math.min(2, facet * 3)]));
+            }
+        }
         for (double y = 1; y < 16; y += 5) {
-            p.rect(3, y, 6, y + 0.5, rgb(ICE[6]));
-            p.rect(10, y + 2, 13, y + 2.5, rgb(ICE[0]));
+            p.rect(3, y, 6, y + 0.5, rgb(ICE[4]));
+            p.rect(10, y + 2, 13, y + 2.5, rgb(0x3a62b0));
         }
         p.animate(0, 0, 16, 16, (q, t) -> {
             for (int j = 0; j < q.h; j++) {
                 double v = (j + 0.5) / q.k;
-                // the texture's top is the segment's top: a pulse moves to smaller v as t grows
+                // the texture's top is the segment's top: a pulse moves to smaller v as t grows (two a segment)
                 double phase = ((v / 8 + 2 * t) % 1 + 1) % 1;
-                double pulse = Math.pow(Math.max(0, 1 - Math.abs(phase - 0.5) * 3.2), 2);
+                double pulse = Math.pow(Math.max(0, 1 - Math.abs(phase - 0.5) * 2.6), 1.6);
                 for (int i = 0; i < q.w; i++) {
-                    double u = (i + 0.5) / q.k, core = Math.max(0, 1 - Math.abs(u - 8) / (1.6 + 2.2 * pulse));
-                    int a = (int) (255 * Math.min(1, core * (0.35 + 0.65 * pulse)));
+                    double u = (i + 0.5) / q.k, core = Math.max(0, 1 - Math.abs(u - 8) / (2.0 + 6.0 * pulse));
+                    int a = (int) (255 * Math.min(1, core * (0.12 + 0.95 * pulse)));
                     if (a > 8) {
-                        q.over(i, j, Paint.argb(a, rgb(pulse > 0.5 ? 0xf2ffff : 0xbff6ff)));
+                        q.over(i, j, Paint.argb(a, rgb(pulse > 0.6 ? 0xf2ffff : pulse > 0.3 ? 0xa8f4ff : 0x6fd8f0)));
                     }
                 }
             }

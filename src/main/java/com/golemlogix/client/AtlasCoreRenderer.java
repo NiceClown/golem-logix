@@ -2,7 +2,6 @@ package com.golemlogix.client;
 
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import com.golemlogix.blockentity.AtlasCoreBlockEntity;
-import com.golemlogix.client.render.StandaloneModels;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -19,9 +18,8 @@ import org.joml.Vector3f;
 /**
  * Powered Atlas Core:
  * - copper golems run along orbits around the crystal (three orbits on a complete array, one on the "starter tower");
- * - on a complete array, mini golems carry crates between the stacks in the corners along the top face (a ring of eight Casings around the core);
- * - a complete array grows its dress: a column of glowing ice between the Atlants on every side (unless an expander stands
- *   there), icicles under the top layer and a balcony rail of brass and spruce around the top.
+ * - on a complete array, mini golems carry crates between the stacks in the corners along the top face (a ring of eight Casings around the core).
+ * The array's dress (the ice columns, the rail, the icicles) belongs to the casings' own models, see AtlasCasingBlock.
  */
 public class AtlasCoreRenderer extends com.golemlogix.client.render.LegacyBer<AtlasCoreBlockEntity> {
     private static final int ORBITS = 3;
@@ -53,7 +51,6 @@ public class AtlasCoreRenderer extends com.golemlogix.client.render.LegacyBer<At
         light = Math.max(light & 0xFFFF, above & 0xFFFF) | Math.max(light >> 16, above >> 16) << 16;
         orbits(be, time, pose, buffers, light);
         if (be.isFormed()) {
-            dress(be, pose, buffers, light);
             ring(time, pose, buffers, light);
             glyphs(time, pose, buffers);
         }
@@ -120,41 +117,6 @@ public class AtlasCoreRenderer extends com.golemlogix.client.render.LegacyBer<At
             Vector3f at = new Vector3f(c).add(new Vector3f(right).mul(k[0] * h)).add(new Vector3f(up).mul(k[1] * h));
             vc.addVertex(p, at.x, at.y, at.z).setColor(color).setUv(k[2], k[3]).setOverlay(OverlayTexture.NO_OVERLAY)
                     .setLight(0xF000F0).setNormal(p, n.x, n.y, n.z);
-        }
-    }
-
-    /**
-     * The four sides, each drawn as the north one turned around the core's vertical axis: the ice column on the middle
-     * cells of the two Atlant layers, icicles under the three top cells, the rail over them.
-     */
-    private void dress(AtlasCoreBlockEntity be, PoseStack pose, MultiBufferSource buffers, int light) {
-        var vc = buffers.getBuffer(net.minecraft.client.renderer.Sheets.cutoutBlockSheet());
-        var casing = com.golemlogix.init.ModBlocks.ATLAS_CASING.get();
-        for (int side = 0; side < 4; side++) {
-            pose.pushPose();
-            pose.translate(0.5, 0, 0.5);
-            pose.mulPose(com.mojang.math.Axis.YP.rotationDegrees(-90f * side));
-            pose.translate(-0.5, 0, -0.5);
-            // the middle cells of this side in world offsets: north (0, -1), then turned like the pose
-            int ox = side == 1 ? 1 : side == 3 ? -1 : 0, oz = side == 0 ? -1 : side == 2 ? 1 : 0;
-            var lower = be.getBlockPos().offset(ox, -2, oz);
-            if (be.getLevel().getBlockState(lower).is(casing) && be.getLevel().getBlockState(lower.above()).is(casing)) {
-                pose.pushPose();
-                pose.translate(0, -2, -2);
-                StandaloneModels.render(pose.last(), vc, StandaloneModels.ATLAS_ICE_COLUMN, 1f, 1f, 1f, 0xF000F0, OverlayTexture.NO_OVERLAY);
-                pose.translate(0, 1, 0);
-                StandaloneModels.render(pose.last(), vc, StandaloneModels.ATLAS_ICE_COLUMN_TOP, 1f, 1f, 1f, 0xF000F0, OverlayTexture.NO_OVERLAY);
-                pose.popPose();
-            }
-            for (int x = -1; x <= 1; x++) {
-                pose.pushPose();
-                pose.translate(x, -1, -1);
-                StandaloneModels.render(pose.last(), vc, StandaloneModels.ATLAS_ICICLES, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
-                pose.translate(0, 2, 0);
-                StandaloneModels.render(pose.last(), vc, x == 1 ? StandaloneModels.ATLAS_RAIL_END : StandaloneModels.ATLAS_RAIL, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
-                pose.popPose();
-            }
-            pose.popPose();
         }
     }
 

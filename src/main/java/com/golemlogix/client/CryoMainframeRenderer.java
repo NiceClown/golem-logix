@@ -250,7 +250,7 @@ public class CryoMainframeRenderer extends com.golemlogix.client.render.LegacyBe
         pose.translate(neck.x / 16f, neck.y / 16f, neck.z / 16f);
         pose.mulPose(Axis.YP.rotationDegrees(-yaw + (right ? -12f : 12f)));
         pose.mulPose(Axis.XP.rotationDegrees(pitch));
-        pose.scale(0.95f, 0.95f, 0.95f);
+        pose.scale(1.15f, 1.15f, 1.15f);
         pose.translate(-0.5f, -6f / 16f, -0.5f);
         com.golemlogix.client.render.StandaloneModels.render(pose.last(), buffers.getBuffer(net.minecraft.client.renderer.Sheets.cutoutBlockSheet()), AtlantHeadRenderer.HEAD, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
         pose.popPose();

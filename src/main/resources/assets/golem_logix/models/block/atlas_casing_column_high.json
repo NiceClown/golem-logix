@@ -1,0 +1,48 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "golem_logix:block/atlas_casing",
+    "side": "golem_logix:block/atlas_casing",
+    "top": "golem_logix:block/atlas_casing_top",
+    "ice": "golem_logix:block/atlas_ice_column",
+    "cap": "golem_logix:block/brass_plate",
+    "brass": "golem_logix:block/brass_plate",
+    "wood": "minecraft:block/spruce_planks",
+    "icicle": "minecraft:block/packed_ice"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0],
+      "to": [16, 16, 16],
+      "faces": {
+        "north": {"texture": "#side", "cullface": "north"},
+        "south": {"texture": "#side", "cullface": "south"},
+        "east": {"texture": "#side", "cullface": "east"},
+        "west": {"texture": "#side", "cullface": "west"},
+        "down": {"texture": "#side", "cullface": "down"},
+        "up": {"texture": "#top", "cullface": "up"}
+      }
+    },
+    {
+      "from": [4.5, 0, -2.25],
+      "to": [11.5, 14, 0],
+      "faces": {
+        "north": {"texture": "#ice", "neoforge_data": {"block_light": 15, "sky_light": 15}},
+        "east": {"uv": [0, 2, 2.25, 16], "texture": "#ice", "neoforge_data": {"block_light": 15, "sky_light": 15}},
+        "west": {"uv": [13.75, 2, 16, 16], "texture": "#ice", "neoforge_data": {"block_light": 15, "sky_light": 15}}
+      }
+    },
+    {
+      "from": [3, 14, -3],
+      "to": [13, 16, 0],
+      "faces": {
+        "north": {"texture": "#cap"},
+        "east": {"uv": [0, 0, 3, 2], "texture": "#cap"},
+        "west": {"uv": [13, 0, 16, 2], "texture": "#cap"},
+        "up": {"uv": [3, 13, 13, 16], "texture": "#cap"},
+        "down": {"uv": [3, 0, 13, 3], "texture": "#cap"}
+      }
+    }
+  ]
+}

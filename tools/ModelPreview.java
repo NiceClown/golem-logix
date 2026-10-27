@@ -141,7 +141,8 @@ public class ModelPreview {
         for (String part : spec.split(" ")) {
             String[] p = part.split("@");
             String[] c = p[1].split(",");
-            int ox = Integer.parseInt(c[0]) * 16, oy = Integer.parseInt(c[1]) * 16, oz = Integer.parseInt(c[2]) * 16;
+            int ox = (int) Math.round(Double.parseDouble(c[0]) * 16), oy = (int) Math.round(Double.parseDouble(c[1]) * 16),
+                    oz = (int) Math.round(Double.parseDouble(c[2]) * 16);
             double rot = Math.toRadians(p.length > 2 ? Double.parseDouble(p[2]) : 0);
             for (Face f : facesOf(p[0])) {
                 Face g = new Face();

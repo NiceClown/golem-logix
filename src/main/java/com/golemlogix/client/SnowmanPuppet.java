@@ -127,8 +127,9 @@ public final class SnowmanPuppet {
                 pose.translate(-0.5f, -0.5f, -0.5f);
                 com.golemlogix.client.render.BerBuffers.block(buffers, Blocks.CARVED_PUMPKIN.defaultBlockState(), pose, light);
             } else {
-                // the copper atlant head (the iron golem's 8x10x8, centred at (8, 11, 6)): in the snow head's place
-                pose.translate(-0.5f, -11f / 16f, -6f / 16f);
+                // the copper atlant head (6x7x6, centred at (8, 9.5, 6)), a little bigger than the snow one, in its place
+                pose.scale(1.2f, 1.2f, 1.2f);
+                pose.translate(-0.5f, -9.5f / 16f, -6f / 16f);
                 com.golemlogix.client.render.StandaloneModels.render(pose.last(), buffers.getBuffer(net.minecraft.client.renderer.Sheets.cutoutBlockSheet()), AtlantHeadRenderer.HEAD, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
             }
             pose.popPose();

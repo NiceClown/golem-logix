@@ -177,6 +177,8 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         if (newFormed && !formed) {
             AtlasStructure.orientAtlants(level, pos);
         }
+        // the casings wear the assembled look while the array around this core is whole (also a duplicate core's array)
+        AtlasStructure.dress(level, pos, duplicate ? AtlasStructure.check(level, pos).valid() : newFormed);
         boolean newInfinite = net.hasInfiniteSource() || !com.golemlogix.system.SourceHelper.sourceRequired();
         int newSps = newInfinite ? 0 : cost;
         boolean changed = newFormed != formed || newPowered != powered || net.channelsUsed() != channelsUsed
@@ -281,6 +283,10 @@ public class AtlasCoreBlockEntity extends BlockEntity {
     @Override
     public void preRemoveSideEffects(BlockPos pos, BlockState state) {
         super.preRemoveSideEffects(pos, state);
+        if (level != null && !level.isClientSide()) {
+            // without its core the array is just blocks again
+            AtlasStructure.dress(level, pos, false);
+        }
         if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
             r.onRemoved(state, level, pos);
         }

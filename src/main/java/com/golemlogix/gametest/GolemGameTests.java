@@ -149,6 +149,50 @@ public class GolemGameTests {
         return GolemNetwork.scan(helper.getLevel(), helper.absolutePos(rel));
     }
 
+    /**
+     * An assembled array dresses its casings (the side columns, the crown's rail and corners), keeps a gap where an expander stands,
+     * dresses itself again from plain casings (an array of a world from before the dress) without being rebuilt, and undresses
+     * within a second when a block goes.
+     */
+    public static void arrayDressesItself(GameTestHelper helper) {
+        buildArray(helper, 1, 0);
+        var part = com.golemlogix.blocks.AtlasCasingBlock.PART;
+        var facing = com.golemlogix.blocks.AtlasCasingBlock.FACING;
+        java.util.function.BiFunction<BlockPos, com.golemlogix.blocks.AtlasCasingBlock.Part, Boolean> is = (p, want) ->
+                helper.getBlockState(ORIGIN.offset(p)).getValue(part) == want;
+        Runnable dressed = () -> {
+            helper.assertTrue(is.apply(new BlockPos(0, 1, -1), com.golemlogix.blocks.AtlasCasingBlock.Part.COLUMN_LOW)
+                    && is.apply(new BlockPos(0, 2, -1), com.golemlogix.blocks.AtlasCasingBlock.Part.COLUMN_HIGH)
+                    && helper.getBlockState(ORIGIN.offset(0, 1, -1)).getValue(facing) == Direction.NORTH, "the north column stands");
+            helper.assertTrue(is.apply(new BlockPos(1, 1, 0), com.golemlogix.blocks.AtlasCasingBlock.Part.COLUMN_LOW)
+                    && helper.getBlockState(ORIGIN.offset(1, 1, 0)).getValue(facing) == Direction.EAST, "the east column faces east");
+            helper.assertTrue(is.apply(new BlockPos(-1, 2, 0), com.golemlogix.blocks.AtlasCasingBlock.Part.NONE),
+                    "no column over an expander");
+            helper.assertTrue(is.apply(new BlockPos(0, 3, -1), com.golemlogix.blocks.AtlasCasingBlock.Part.TOP_EDGE)
+                    && is.apply(new BlockPos(-1, 3, -1), com.golemlogix.blocks.AtlasCasingBlock.Part.TOP_CORNER)
+                    && helper.getBlockState(ORIGIN.offset(-1, 3, -1)).getValue(facing) == Direction.NORTH
+                    && helper.getBlockState(ORIGIN.offset(1, 3, 1)).getValue(facing) == Direction.SOUTH, "the crown has its rail and corners");
+        };
+        var core = helper.getBlockEntity(CORE, com.golemlogix.blockentity.AtlasCoreBlockEntity.class);
+        core.refresh(helper.getLevel(), helper.absolutePos(CORE));
+        dressed.run();
+        // an array of an older world: plain casings around a formed core; the core's own second check dresses it
+        for (BlockPos p : BlockPos.betweenClosed(ORIGIN.offset(-1, 1, -1), ORIGIN.offset(1, 3, 1))) {
+            if (helper.getBlockState(p).getBlock() instanceof com.golemlogix.blocks.AtlasCasingBlock) {
+                helper.setBlock(p.immutable(), ModBlocks.ATLAS_CASING.get().defaultBlockState());
+            }
+        }
+        helper.runAfterDelay(25, () -> {
+            dressed.run();
+            helper.setBlock(ORIGIN.offset(1, 3, 0), Blocks.AIR);
+            helper.runAfterDelay(25, () -> {
+                helper.assertTrue(is.apply(new BlockPos(0, 3, -1), com.golemlogix.blocks.AtlasCasingBlock.Part.NONE)
+                        && is.apply(new BlockPos(0, 1, -1), com.golemlogix.blocks.AtlasCasingBlock.Part.NONE), "a broken array undresses");
+                helper.succeed();
+            });
+        });
+    }
+
     // ----------------------------------------------------------- multiblock
 
     public static void arrayStructure(GameTestHelper helper) {
