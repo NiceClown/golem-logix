@@ -47,6 +47,8 @@ public final class GolemGameTestRegistry {
     private static final List<Test> TESTS = List.of(
             new Test("arraystructure", GolemGameTests::arrayStructure, 100, 0),
             new Test("arraydressesitself", GolemGameTests::arrayDressesItself, 120, 0),
+            new Test("saturatorautocraftsplates", GolemGameTests::saturatorAutocraftsPlates, 3400, 0),
+            new Test("saturatorplatetree", GolemGameTests::saturatorPlateTree, 2000, 0),
             new Test("arraycapacity", GolemGameTests::arrayCapacity, 100, 0),
             new Test("baretowerstart", GolemGameTests::bareTowerStart, 100, 0),
             new Test("lonecorelinksdown", GolemGameTests::loneCoreLinksDown, 100, 0),

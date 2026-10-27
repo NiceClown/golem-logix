@@ -2581,6 +2581,117 @@ public class GolemGameTests {
         });
     }
 
+    /**
+     * Autocrafting plates on the Mana Saturator through a Stamping Gateway at its port: several executions in a row (not only the
+     * first) are fed, forged, handed back by the auto-output into the gateway's return slots and delivered.
+     */
+    public static void saturatorAutocraftsPlates(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        for (int x = 7; x <= 9; x++) {
+            put(helper, new BlockPos(x, 1, 6), ModBlocks.BASIC_SNOW_PIPE.get());
+        }
+        put(helper, new BlockPos(9, 1, 7), ModBlocks.BASIC_SNOW_PIPE.get());
+        BlockPos prov = new BlockPos(9, 1, 8);
+        put(helper, prov, ModBlocks.PATTERN_PROVIDER.get());
+        BlockPos near = new BlockPos(9, 3, 9);
+        buildSaturator(helper, near, Direction.NORTH);
+        PatternProviderBlockEntity provider = helper.getBlockEntity(prov, PatternProviderBlockEntity.class);
+        ItemKey core = ItemKey.of(new ItemStack(ModItems.FLATTENED_IRON_CORE.get()));
+        ItemKey matrix = ItemKey.of(new ItemStack(ModItems.FLATTENED_COPPER_MATRIX.get()));
+        provider.getContainer().setItem(0, card(new PatternData(false, List.of(new ItemStack(Items.IRON_BLOCK)),
+                List.of(new ItemStack(ModItems.FLATTENED_IRON_CORE.get())))));
+        provider.getContainer().setItem(1, card(new PatternData(false, List.of(new ItemStack(Items.COPPER_BLOCK)),
+                List.of(new ItemStack(ModItems.FLATTENED_COPPER_MATRIX.get(), 2)))));
+        // the gateway waits for each result before the next portion (the mode most bases use with one machine)
+        provider.setBlocking(true);
+        helper.runAfterDelay(100, () -> {
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.IRON_BLOCK, 4), false);
+            GolemNetwork.StartResult r = n.startCrafting(core, 4);
+            helper.assertTrue(r.type() == GolemNetwork.StartType.STARTED, "start " + r.type());
+        });
+        helper.runAtTickTime(1500, () -> {
+            GolemNetwork n = net(helper, bay);
+            var cpu = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class);
+            var sat = helper.getBlockEntity(near, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
+            var job = cpu.getJob();
+            String state = "cores " + n.itemCountOf(core) + ", job " + (job == null ? "none" : job.status() + " awaiting " + job.awaiting()
+                    + " inventory " + job.inventory()) + ", returns " + provider.getReturns().getItem(0) + ", decks " + sat.inputDeck() + " / "
+                    + sat.getHeldItem() + " / " + sat.outputDeck();
+            helper.assertTrue(n.itemCountOf(core) == 8 && cpu.isIdle(), "four blocks pressed one after another, two plates each: " + state);
+            // a second order after the first one is done: another plate on the same gateway (a second pattern)
+            n.insertItem(new ItemStack(Items.COPPER_BLOCK, 2), false);
+            n.insertItem(new ItemStack(Items.IRON_BLOCK, 1), false);
+            GolemNetwork.StartResult r = n.startCrafting(matrix, 4);
+            helper.assertTrue(r.type() == GolemNetwork.StartType.STARTED, "second order starts: " + r.type());
+        });
+        helper.runAtTickTime(2600, () -> {
+            GolemNetwork n = net(helper, bay);
+            var cpu = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class);
+            var job = cpu.getJob();
+            String state = "matrices " + n.itemCountOf(matrix) + ", job " + (job == null ? "none" : job.status() + " awaiting " + job.awaiting()
+                    + " inventory " + job.inventory()) + ", returns " + provider.getReturns().getItem(0);
+            helper.assertTrue(n.itemCountOf(matrix) == 4 && cpu.isIdle(), "the second pattern works after the first: " + state);
+            // and the first pattern again
+            GolemNetwork.StartResult r = n.startCrafting(core, 1);
+            helper.assertTrue(r.type() == GolemNetwork.StartType.STARTED, "third order starts: " + r.type());
+        });
+        helper.runAtTickTime(3300, () -> {
+            GolemNetwork n = net(helper, bay);
+            var cpu = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class);
+            var job = cpu.getJob();
+            String state = "cores " + n.itemCountOf(core) + ", job " + (job == null ? "none" : job.status() + " awaiting " + job.awaiting()
+                    + " inventory " + job.inventory()) + ", returns " + provider.getReturns().getItem(0);
+            helper.assertTrue(n.itemCountOf(core) == 10 && cpu.isIdle(), "the first pattern again: " + state);
+            helper.succeed();
+        });
+    }
+
+    /**
+     * A recipe tree through the Saturator: a Compressed Co-Processor needs a Cooling Co-Processor (crafted from two kinds of plates
+     * the Saturator makes first) pressed in the Saturator again - three machine patterns and a crafting one on one gateway.
+     */
+    public static void saturatorPlateTree(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        for (int x = 7; x <= 9; x++) {
+            put(helper, new BlockPos(x, 1, 6), ModBlocks.BASIC_SNOW_PIPE.get());
+        }
+        put(helper, new BlockPos(9, 1, 7), ModBlocks.BASIC_SNOW_PIPE.get());
+        BlockPos prov = new BlockPos(9, 1, 8);
+        put(helper, prov, ModBlocks.PATTERN_PROVIDER.get());
+        BlockPos near = new BlockPos(9, 3, 9);
+        buildSaturator(helper, near, Direction.NORTH);
+        PatternProviderBlockEntity provider = helper.getBlockEntity(prov, PatternProviderBlockEntity.class);
+        ItemStack core = new ItemStack(ModItems.FLATTENED_IRON_CORE.get()), sub = new ItemStack(ModItems.FLATTENED_CRYO_SUBSTRATE.get());
+        ItemStack cooler = new ItemStack(ModBlocks.COOLING_COPROCESSOR.get()), compressed = new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get());
+        provider.getContainer().setItem(0, card(new PatternData(false, List.of(new ItemStack(Items.IRON_BLOCK)), List.of(core.copyWithCount(2)))));
+        provider.getContainer().setItem(1, card(new PatternData(false, List.of(new ItemStack(Items.PACKED_ICE)), List.of(sub.copyWithCount(2)))));
+        provider.getContainer().setItem(2, card(new PatternData(false, List.of(cooler.copy()), List.of(compressed.copy()))));
+        provider.getContainer().setItem(3, card(craftingPattern(cooler.copy(), ItemStack.EMPTY, sub.copy(), ItemStack.EMPTY,
+                new ItemStack(Items.COPPER_INGOT), core.copy(), new ItemStack(Items.COPPER_INGOT), ItemStack.EMPTY, sub.copy(), ItemStack.EMPTY)));
+        helper.runAfterDelay(100, () -> {
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.IRON_BLOCK), false);
+            n.insertItem(new ItemStack(Items.PACKED_ICE), false);
+            n.insertItem(new ItemStack(Items.COPPER_INGOT, 2), false);
+            GolemNetwork.StartResult r = n.startCrafting(ItemKey.of(compressed), 1);
+            helper.assertTrue(r.type() == GolemNetwork.StartType.STARTED, "start " + r.type());
+        });
+        helper.runAtTickTime(1900, () -> {
+            GolemNetwork n = net(helper, bay);
+            var cpu = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class);
+            var sat = helper.getBlockEntity(near, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
+            var job = cpu.getJob();
+            String state = "compressed " + n.itemCountOf(ItemKey.of(compressed)) + ", job " + (job == null ? "none" : job.status() + " awaiting "
+                    + job.awaiting() + " inventory " + job.inventory()) + ", returns " + provider.getReturns().getItem(0) + ", decks "
+                    + sat.inputDeck() + " / " + sat.getHeldItem() + " / " + sat.outputDeck();
+            helper.assertTrue(n.itemCountOf(ItemKey.of(compressed)) == 1 && cpu.isIdle(), "the tree is crafted to the end: " + state);
+            helper.succeed();
+        });
+    }
+
     public static void saturatorFormsAndRestores(GameTestHelper helper) {
         BlockPos ctl = new BlockPos(5, 3, 5);
         buildSaturator(helper, ctl, Direction.WEST);
