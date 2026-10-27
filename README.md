@@ -13,8 +13,10 @@ Everything comes with an illustrated, searchable **guide book** (Russian and Eng
 
 ## Features
 
-- **Atlas Array** — a 3x3x4 multiblock with the Atlas Core on top and five Cable Bushings at the base. A bare core gives 8 channels,
-  each bushing adds a 64-channel line (320 total); Channel and Quantum Channel Expanders in the walls raise every line (up to 1600).
+- **Atlas Core and Array** — the network grows with what stands under its core: the core alone gives 8 channels (through its bottom
+  face), a starter tower (two conduits and a Cable Bushing under it) 16, and the whole Atlas Array, a 3x3x4 multiblock with five
+  bushings at the base, a 64-channel line per bushing (320 total); Channel and Quantum Channel Expanders in the walls raise every
+  line (up to 1600).
   The guide book can project ghost blocks showing what to place where (`Y` confirms, `N` cancels).
 - **Drive Cabinet (2x2)** — one item, four blocks, **10 cassette slots** with a priority setting. Behind the glass every disk is a
   cassette with a colored label (color = capacity) and fill LEDs, reels spin and tape winds while the network is powered, copper
@@ -39,7 +41,7 @@ Everything comes with an illustrated, searchable **guide book** (Russian and Eng
   crafting terminal, pattern encoder; animated screens; windows stretch to the full screen height; JEI R/U and "+" transfer.
 - **Autocrafting** — punch-card patterns (with a **fuzzy mode** like RS and AE2: a crafting recipe takes what each cell accepts, a
   processing input takes any components or a chosen tag), a Cryo Calculator with Cooling Coprocessors around it and Compressed Co-Processors in its
-  upgrade slots (it shows what it is making and its coprocessors pump like flywheels), pattern providers that feed machines (with a waiting mode), crafting tree planning with intermediates and a resource planner in the order window, precraft from
+  upgrade slots (it shows what it is making and its coprocessors pump like flywheels), pattern providers that feed machines (with a waiting mode) and take the results back through their return slots, crafting tree planning with intermediates and a resource planner in the order window, precraft from
   JEI (Ctrl + "+"), "order ready" notifications and the **Recipe Monitor** to watch and abort every job of the network.
 - **Rituals** — flattened plates by dropping an anvil on damaged iron / copper / snow golems, by hand on the **Mana Saturator** anvil,
   or with the assembled Saturator, a 3x3x2 multiblock where a small iron golem forges blocks into plates (roof coolers speed it up). A secret recipe opens after two trials.
@@ -52,6 +54,12 @@ Everything comes with an illustrated, searchable **guide book** (Russian and Eng
 - **Liquid Cryo-Source and fluid autocrafting** — the network's own fluid, made from Source when an Export Bus, a Pattern Provider
   or an Interface pumps it out (no bucket, never stored). Patterns can have fluid ingredients in mB (JEI "+" carries them over), and
   the Pattern Provider pours them into the machine together with the items.
+- **Cryo-Mixer** — a two-block machine with two flasks that freezes water with Liquid Cryo-Source: **snow** fast (for snow golems
+  and the plates for pipes) or **ice** slow (for Packed Ice and Cryo-Substrate). Up to four Compressed Co-Processors and a Redstone
+  Module; fluids go in through either block.
+- **Auto-output** — the Mana Saturator and the Cryo-Mixer hand out what they make by themselves (on by default): into a neighbouring
+  Pattern Provider first, whose return slots send it into the network (no Import Bus, no extra channel), otherwise into any
+  neighbouring inventory.
 - **Extras** — Portable Chronometer (a brass handheld with a green screen where a Wither keeps firing at you; a wireless crafting
   terminal with its own Source charge; **Ctrl+E** opens it from anywhere on you, and with Curios it has its own Chronometer slot),
   Jade tooltips, JEI categories, server settings in `golem_logix-common.toml`.
@@ -72,14 +80,15 @@ Put `golem_logix-<version>.jar` into the `mods` folder (client and server). On a
 ## Quick start
 
 1. Craft the **Guide Book**: a book and a copper ingot, shapeless.
-2. Build the starting tower (bushing, two conduits, core) and put a Creative Source Jar or an Ars Nouveau source jar against it.
+2. Place the Atlas Core with a pipe or a device right under it (8 channels), or build the starting tower under it (bushing, two
+   conduits, core: 16 channels), and put a Source jar against any block of the network.
 3. Attach a Copper Drive Cabinet and a Terminal to the bushing, put a disk in the cabinet.
 
 ## Building from source
 
 ```
-gradlew build              # build/libs/golem_logix-1.21.1-2.0.0.jar (JAVA_HOME must point at JDK 21)
-gradlew runGameTestServer  # 108 game tests on a real server (add -PtestMods for Ars Nouveau, JEI, Jade, Curios; -Pcreate for
+gradlew build              # build/libs/golem_logix-1.21.1-2.0.8.jar (JAVA_HOME must point at JDK 21)
+gradlew runGameTestServer  # 113 game tests on a real server (add -PtestMods for Ars Nouveau, JEI, Jade, Curios; -Pcreate for
                            # Create; -Pvitae for Neo Vitae; -PnoBackport runs them without Copper Age Backport)
 ```
 
@@ -111,6 +120,8 @@ have the same structure.
 ## Credits and license
 
 MIT, see `LICENSE`. The copper golem model and textures come from *Copper Age Backport* (CC0).
+
+How the mod is made, what the author did and where generative AI was used: see [AI_DISCLOSURE.md](AI_DISCLOSURE.md).
 
 The channel system follows the design of [Applied Energistics 2](https://github.com/AppliedEnergistics/Applied-Energistics-2)
 by AlgorithmX2 and TeamAppliedEnergistics (its code is LGPL-3.0): channels are handed out from the controller along the shortest

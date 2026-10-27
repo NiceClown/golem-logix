@@ -1,5 +1,29 @@
 # Changelog
 
+## 2.0.8 (1.21.1) — The mechanics of 2.0.1–2.0.8 come to 1.21.1
+
+The same version number as the 26.1.2 line, with its gameplay: the core in three steps, the Cryo-Mixer, auto-output and the
+Pattern Provider's return slots. The look of the blocks stays as it was on 1.21.1 (the redrawn textures, Atlants, array, mainframe
+and pipes of 26.1.2 are not carried over), and so do the JEI pages.
+
+- **Three steps of the Atlas Core.** The core alone runs a small network of **8 channels** and connects only through its bottom
+  face (a pipe, a bushing or a device right under it). On a **starter tower** (two conduits and a Cable Bushing under it) it gives
+  **16 channels**; the whole Atlas Array keeps its 64 channels a bushing, and the expanders raise them as before. Right-clicking the
+  core and Jade say which step it is on and what to build next. The guide's Atlas chapter goes step by step.
+- **Network pipes dock onto Cryo-Source Jars** (and the Creative Source Jar): the network draws Source from them through the pipe.
+- **New block: the Cryo-Mixer.** Two blocks high, with a water flask and a Liquid Cryo-Source flask on top. It freezes water with
+  Cryo-Source in two modes switched in its window: **snow** (a snow block a second from 250 mB of water and 25 mB of Cryo-Source)
+  or **ice** (a block of ice every 5 seconds from 1000 + 100 mB). Up to four Compressed Co-Processors speed it up, a Redstone
+  Module puts it on a signal. A guide entry in the Rituals chapter.
+- **Auto-output, on by default.** The Mana Saturator and the Cryo-Mixer hand out what they make by themselves, twice a second: into
+  a neighbouring Pattern Provider first, otherwise into any neighbouring inventory. The mixer switches it with a button in its
+  window, the Saturator with a right-click of the Forge Hammer.
+- **Return slots on the Pattern Provider.** A column of three slots on the right of its window: whatever lands there goes straight
+  into the network (to the job waiting for it first), so a machine fed by a provider no longer needs its own Import Bus.
+- A right-click on the search field of a terminal or of the guide clears it.
+- The flask of the Cryo-Source Jar and the glass of the tower's column no longer flicker.
+- 113 game tests.
+
 ## 2.0.0 — The tower window; the last big release for 1.21.1
 
 From 2.0.0 the main line of Golem Logix is Minecraft 26.1.2 (see its own changelog in the main branch). This 1.21.1 build stays
