@@ -12,13 +12,20 @@
   digits over the dark anode mesh, still cyan, amber and red by the load. They hang on horizontal runs only, upright.
 - **New block: the Channel Counter.** Three small nixie tubes on a walnut base that show, like the heat lamps, the channels
   running through the pipe or node it is fixed to, lit on both sides; a right-click switches to that spot's capacity (in nixie
-  orange). It stands on a block or rides a horizontal pipe in a brass saddle, or hangs on the side of a pipe on a bracket or of
-  a block on a wall plate, and takes no channel - for players without Jade, or for the look of a control room. Crafted from
-  glass panes, copper ingots, a Flattened Copper Matrix and planks.
+  orange). It stands on a block or rides a horizontal pipe in a brass saddle, or sits on a little shelf on the side of a block
+  or a pipe (like the golem's on the Cryo-Distillation Tower), and takes no channel - for players without Jade, or for the look
+  of a control room. Crafted from glass panes, copper ingots, a Flattened Copper Matrix and planks; the guidebook has its
+  article under Network.
+- **The Mana Saturator is crafted in the Nether**: blocks of quartz and a lightning rod instead of purpur and an End rod, so its
+  anvil forges plates by hand from the Nether on. The machine around it still stands on an End Rod: automatic forging, two
+  plates a block, stays after the End.
+- **The Cryo-Distillation Tower makes 1.5 Source from 1 mB of blood** (was 1). This is the config default
+  (`distillSourcePerMb`): a config file written by an older version keeps its 1.0 until it is changed or deleted.
 - The log no longer fills with "Failed to retrieve texture ..._glow" warnings when another mod (a map, for example) draws the
   mod's blocks.
-- 116 game tests (new: plates through the Saturator in a row, a second pattern after the first, a recipe tree through the
-  Saturator, a gateway at the wing with a fuzzy pattern beside a second gateway with no machine).
+- 118 game tests (new: plates through the Saturator in a row, a second pattern after the first, a recipe tree through the
+  Saturator, a gateway at the wing with a fuzzy pattern beside a second gateway with no machine, two Channel Counters reading
+  their own nodes).
 
 ## 2.0.9 (26.1.2) — The array assembles; heat lamps on the pipes
 

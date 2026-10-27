@@ -145,6 +145,11 @@ final class Nixie {
      * One tube standing at (x0, y0, z0) - its front to the north - w wide, h high, d deep: the socket, the mesh plate (the digit is
      * drawn just in front of it, at the depth the renderer is told), the glass envelope and its dome.
      */
+    /** Where a side-mounted counter sits (pixels, ChannelCounterBlock.Mount's offsets): back against the wall, the deck's height
+     * on a block, a basic pipe and a dense pipe. */
+    static final double SIDE_DZ = 5.4;
+    static final double[] SIDE_DY = {0, 7.1, 6.0};
+
     static void tube(List<Models.El> l, double x0, double y0, double z0, double w, double h, double d) {
         double zm = z0 + d / 2;
         l.add(Models.e(x0 + 0.2, y0, z0 + 0.2, x0 + w - 0.2, y0 + 0.8, z0 + d - 0.2).only("#socket", "north", "south", "east", "west", "up"));
@@ -153,26 +158,33 @@ final class Nixie {
         l.add(Models.e(x0 + 0.5, y0 + h, z0 + 0.5, x0 + w - 0.5, y0 + h + 0.6, z0 + d - 0.5).only("#glass", "north", "south", "east", "west", "up"));
     }
 
+    /** The counter itself (facing north) moved by dy, dz pixels: a walnut base with a brass edge and three small tubes on it. */
+    static List<Models.El> counterBody(double dy, double dz) {
+        List<Models.El> l = new ArrayList<>();
+        l.add(Models.e(3.5, dy, 6 + dz, 12.5, dy + 1.6, 10 + dz).all("#wood"));
+        l.add(Models.e(3.5, dy + 1.6, 6 + dz, 12.5, dy + 1.9, 10 + dz).only("#brass", "north", "south", "east", "west", "up"));
+        for (double cx : new double[]{5.55, 8.0, 10.45}) {
+            tube(l, cx - 1.1, dy + 1.9, 6.7 + dz, 2.2, 6.6, 2.6);
+        }
+        return l;
+    }
+
     /**
-     * The Channel Counter (facing north; the digits are lit on both sides of the meshes at z 8): three small tubes on a walnut base
-     * with a brass edge, and how it is fixed - a plain foot on a block; astride a horizontal pipe running along x, two brass straps
-     * round the tube's top (clear of the pipe's own clamps) with bolts and stems up to the base; on the side of a pipe behind it
-     * (south) an L-shaped brass bracket whose shoe rests against the tube at its axis; on the side of a block a wall plate.
+     * The Channel Counter (facing north; the digits are lit on both sides of the meshes), one model for each way it is fixed (the
+     * offsets of the counter are ChannelCounterBlock.Mount's): a plain foot on a block; astride a horizontal pipe running along x,
+     * two brass straps round the tube's top (clear of the pipe's own clamps) with bolts and stems up to the base; on the side of a
+     * block or of a pipe behind it (south) a small shelf like the golem's on the Cryo-Distillation Tower - a dark deck with a brass
+     * lip, a wall plate with two bolts against the block or the tube's flat face, two brass struts under the deck.
      */
     static void counterModels() throws Exception {
         String[][] tex = {{"wood", "nixie_wood"}, {"brass", "sat_brass"}, {"socket", "nixie_socket"}, {"mesh", "nixie_mesh"},
-                {"glass", "nixie_glass"}, {"bolt", "pipe_bolt"}};
-        List<Models.El> body = new ArrayList<>();
-        body.add(Models.e(3.5, 0, 6, 12.5, 1.6, 10).all("#wood"));
-        body.add(Models.e(3.5, 1.6, 6, 12.5, 1.9, 10).only("#brass", "north", "south", "east", "west", "up"));
-        for (double cx : new double[]{5.55, 8.0, 10.45}) {
-            tube(body, cx - 1.1, 1.9, 6.7, 2.2, 6.6, 2.6);
-        }
+                {"glass", "nixie_glass"}, {"bolt", "pipe_bolt"}, {"dark", "sat_dark"}};
         String[] mounts = {"floor", "pipe_basic", "pipe_dense", "side_block", "side_basic", "side_dense"};
         for (String m : mounts) {
-            List<Models.El> l = new ArrayList<>(body);
+            List<Models.El> l;
             switch (m) {
                 case "pipe_basic", "pipe_dense" -> {
+                    l = counterBody(0, 0);
                     // the tube below spans 4..12 (basic) or 2..14 (dense) of its cell: the straps hug it a hair off its faces,
                     // between the pipe's clamps (at the joints and at the middle)
                     double lo = m.equals("pipe_dense") ? 2 : 4;
@@ -186,26 +198,28 @@ final class Nixie {
                         l.add(Models.e(x + 0.4, top + 0.6, 7.3, x + 1.0, 0, 8.7).only("#brass", "north", "south", "east", "west"));
                     }
                 }
-                case "side_basic", "side_dense" -> {
-                    // the pipe behind: its tube's near face at z 20 (basic) or 18 (dense), its axis at y 8
-                    double shoe = m.equals("side_dense") ? 17.3 : 19.3;
-                    l.add(Models.e(7.4, 0.4, 10, 8.6, 1.4, 13).only("#brass", "up", "down", "east", "west"));
-                    l.add(Models.e(7.4, 0.4, 13, 8.6, 8.6, 14).all("#brass"));
-                    l.add(Models.e(7.4, 7.4, 14, 8.6, 8.6, shoe).only("#brass", "up", "down", "east", "west"));
-                    l.add(Models.e(5.6, 5.6, shoe, 10.4, 10.4, shoe + 0.6).all("#brass"));
-                    for (double[] b : new double[][]{{6.0, 6.0}, {9.4, 6.0}, {6.0, 9.4}, {9.4, 9.4}}) {
-                        l.add(Models.e(b[0], b[1], shoe - 0.3, b[0] + 0.6, b[1] + 0.6, shoe).all("#bolt"));
+                case "side_block", "side_basic", "side_dense" -> {
+                    // the wall: the block's face at z 16, or the pipe's tube at 20 (basic) or 18 (dense), whose flat face spans
+                    // y 4..12 (basic) or 2..14 (dense), its flat face 5.3..10.7 or 4.2..11.8 - the plate hangs from it down the chamfer
+                    double wall = m.equals("side_block") ? 16 : m.equals("side_basic") ? 20 : 18;
+                    double deck = m.equals("side_block") ? SIDE_DY[0] : m.equals("side_basic") ? SIDE_DY[1] : SIDE_DY[2];
+                    double plate0 = m.equals("side_block") ? -2.4 : m.equals("side_basic") ? 4.3 : 2.3, pz = wall - 0.6;
+                    l = counterBody(deck, SIDE_DZ);
+                    double front = 6 + SIDE_DZ - 0.6;
+                    l.add(Models.e(3.0, deck - 0.6, front, 13.0, deck, pz).only("#dark", "up", "down", "east", "west"));
+                    l.add(Models.e(2.8, deck - 0.8, front - 0.2, 13.2, deck + 0.2, front + 0.5).all("#brass"));
+                    l.add(Models.e(3.2, plate0, pz, 12.8, deck + 0.6, wall).only("#brass", "north", "east", "west", "up", "down"));
+                    for (double x : new double[]{5.0, 10.4}) {
+                        l.add(Models.e(x, plate0 + 0.7, pz - 0.3, x + 0.6, plate0 + 1.3, pz).all("#bolt"));
+                    }
+                    // the struts: from the foot of the plate up to the deck's underside at 22.5 degrees
+                    double foot = plate0 + 0.6, len = (deck - 0.6 - foot) / Math.sin(Math.toRadians(22.5));
+                    for (double x : new double[]{3.4, 12.0}) {
+                        l.add(Models.e(x, foot - 0.3, pz - len, x + 0.6, foot + 0.3, pz).only("#brass", "up", "down", "east", "west", "north")
+                                .rot("x", 22.5, x + 0.3, foot, pz));
                     }
                 }
-                case "side_block" -> {
-                    l.add(Models.e(7.4, 0.4, 10, 8.6, 1.4, 15.4).only("#brass", "up", "down", "east", "west"));
-                    l.add(Models.e(5.6, -1.4, 15.4, 10.4, 4.6, 16).only("#brass", "north", "east", "west", "up", "down"));
-                    for (double[] b : new double[][]{{6.0, -1.0}, {9.4, -1.0}, {6.0, 3.6}, {9.4, 3.6}}) {
-                        l.add(Models.e(b[0], b[1], 15.1, b[0] + 0.6, b[1] + 0.6, 15.4).all("#bolt"));
-                    }
-                }
-                default -> {
-                }
+                default -> l = counterBody(0, 0);
             }
             Models.model("channel_counter_" + m, true, "nixie_wood", tex, l.toArray(new Models.El[0]));
         }

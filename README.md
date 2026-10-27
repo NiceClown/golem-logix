@@ -52,7 +52,7 @@ Everything comes with an illustrated, searchable **guide book** (Russian and Eng
   Enchanting Apparatus), and the assembled Saturator makes **Source Gems** (the Imbuement Chamber's recipes, twice as fast for a
   third more Source) and the Imbuement Chamber charges Blue Ice into cryo-substrates; with Create, a Mixer tears a block's mind in
   Liquid Cryo-Source and a Press makes a plate of it, and an assembly line (Spout, Deployers with an iron sheet and a popped chorus fruit,
-  Press, three passes) finishes Compressed Co-Processors. The Saturator (purpur and End rods: after the End) stays the cheapest way to
+  Press, three passes) finishes Compressed Co-Processors. The Saturator (Nether quartz: its anvil forges by hand from the Nether, the machine on an End Rod after the End) stays the cheapest way to
   make plates; before it they come from golems, the Dispel or Create's mixer.
 - **Liquid Cryo-Source and fluid autocrafting** — the network's own fluid, made from Source when an Export Bus, a Pattern Provider
   or an Interface pumps it out (no bucket, never stored). Patterns can have fluid ingredients in mB (JEI "+" carries them over), and

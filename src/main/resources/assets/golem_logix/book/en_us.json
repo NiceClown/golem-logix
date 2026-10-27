@@ -126,7 +126,7 @@
             {"type": "text", "title": "How it works",
              "text": [
                "Pour &lEssentia Vitae&r into the tower through any of its three blocks: pipes from an Ara Vitae, our buses, buckets. It holds &l8000 mB&r.",
-               "Every second it distils &l20 mB&r into &l20 Source&r and pours it into the &lCryo-Source Jars&r (or Ars jars) standing &lright against it&r - a jar even one block away gets nothing. When the jars are full it waits.",
+               "Every second it distils &l20 mB&r into &l30 Source&r and pours it into the &lCryo-Source Jars&r (or Ars jars) standing &lright against it&r - a jar even one block away gets nothing. When the jars are full it waits.",
                "Put the jars against the plinth, on the same ground: then a pipe runs from the tower's head over to each jar and drops into its vent. Any side will do, and the copper golem on the tower moves aside by itself.", "A jar holds &l10 000 Source&r. Put it against any block of the network, like an Ars jar: a network pipe docks onto it with a brass socket."
              ]},
             {"type": "crafting", "recipe": "golem_logix:cryo_distillation_tower",
@@ -309,7 +309,7 @@
              ]},
             {"type": "text", "title": "Advice",
              "text": [
-               "There are no crafting-table recipes for plates. Until the End they come from the anvil (with Ars Nouveau also the Dispel, with Create the mixer). The Saturator needs purpur and End rods: then one iron block turns into two cores.",
+               "There are no crafting-table recipes for plates. Until the End they come from the anvil (with Ars Nouveau also the Dispel, with Create the mixer). The Saturator is made of Nether quartz: from the Nether its anvil forges by hand, and once the machine around it stands on an End Rod, one iron block turns into two cores.",
                "&oPacked ice for cryo-substrates can be mined with a Silk Touch pickaxe.&r"
              ]}
           ]
@@ -672,6 +672,28 @@
                "• a device: &lDevice Online&r, &lDevice Missing Channel&r with the full block that stopped it, or &lDevice Offline&r (no core or no Source);",
                "• a pipe: “12 of 16 Channels”;",
                "• a bushing: its line and the whole network; an expander: its exit."
+             ]}
+          ]
+        },
+        {
+          "id": "net_counter", "title": "Channel Counter", "icon": "golem_logix:channel_counter", "x": 3, "y": 1, "parents": ["net_diagnose"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:channel_counter",
+             "text": ["Three nixie tubes on a walnut base. They show the same number as the heat lamps on the pipes: the channels running &lthrough the spot it is fixed to&r. For players without Jade, or for the look of a control room."]},
+            {"type": "text", "title": "Where to fix it",
+             "text": [
+               "It reads the block it is fixed to and picks the mount by itself:",
+               "• &lon a block&r (a bushing, a device, the core) - a plain foot;",
+               "• &lon a horizontal pipe&r - a brass saddle round the tube, the tubes turned to your side of it;",
+               "• &lon the side&r of a block or a pipe - a little shelf on a wall plate, like the golem's on the Cryo-Distillation Tower.",
+               "It takes no channel, and pipes do not reach for it."
+             ]},
+            {"type": "text", "title": "Reading it",
+             "text": [
+               "The digits glow on &lboth sides&r of the tubes, so it reads from the front and from behind.",
+               "• &3cyan&r - there is room, &6amber&r - it is filling, &4red&r - (nearly) full;",
+               "• leading zeros stay dark; with no core or no Source every tube goes out.",
+               "&lRight-click&r switches to the &lcapacity&r of that spot (in nixie orange) and back: 16 for a basic pipe or a device, 64 for a dense pipe."
              ]}
           ]
         },

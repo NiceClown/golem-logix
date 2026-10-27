@@ -34,9 +34,19 @@ import java.util.Locale;
  * the node it sits on: on top of it (a saddle round a pipe, or a plain foot) or on its side (a bracket to a pipe, or a wall plate).
  */
 public class ChannelCounterBlock extends Block implements EntityBlock {
-    /** How it is fixed: standing on a block or a pipe, or hanging on the side of one. */
+    /**
+     * How it is fixed: standing on a block or a pipe, or on a little shelf on the side of one. dy, dz: where the counter sits then
+     * (pixels, facing north; on a shelf it is pushed back against the wall, and on a pipe raised to the tube's flat face).
+     */
     public enum Mount implements StringRepresentable {
-        FLOOR, PIPE_BASIC, PIPE_DENSE, SIDE_BLOCK, SIDE_BASIC, SIDE_DENSE;
+        FLOOR(0, 0), PIPE_BASIC(0, 0), PIPE_DENSE(0, 0), SIDE_BLOCK(0, 5.4f), SIDE_BASIC(7.1f, 5.4f), SIDE_DENSE(6.0f, 5.4f);
+
+        public final float dy, dz;
+
+        Mount(float dy, float dz) {
+            this.dy = dy;
+            this.dz = dz;
+        }
 
         public boolean side() {
             return this == SIDE_BLOCK || this == SIDE_BASIC || this == SIDE_DENSE;
@@ -51,7 +61,7 @@ public class ChannelCounterBlock extends Block implements EntityBlock {
     /** The side the tubes face (they are lit on the back too); on a side mount, away from what it hangs on. */
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final EnumProperty<Mount> MOUNT = EnumProperty.create("mount", Mount.class);
-    private static final VoxelShape STAND_Z = Block.box(3.5, 0, 6, 12.5, 9.2, 10), STAND_X = Block.box(6, 0, 3.5, 10, 9.2, 12.5);
+    private static final java.util.Map<BlockState, VoxelShape> SHAPES = new java.util.concurrent.ConcurrentHashMap<>();
 
     public ChannelCounterBlock(Properties properties) {
         super(properties.sound(SoundType.WOOD).strength(1.0f).lightLevel(state -> 4).noOcclusion());
@@ -99,7 +109,22 @@ public class ChannelCounterBlock extends Block implements EntityBlock {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return state.getValue(FACING).getAxis() == Direction.Axis.Z ? STAND_Z : STAND_X;
+        return SHAPES.computeIfAbsent(state, ChannelCounterBlock::shape);
+    }
+
+    /** The counter's box (with its shelf on a side mount), turned as the blockstate turns the model. */
+    private static VoxelShape shape(BlockState state) {
+        Mount m = state.getValue(MOUNT);
+        double x0 = 3.5, x1 = 12.5, y0 = m.dy, y1 = Math.min(16, m.dy + 9.2), z0 = 6 + m.dz, z1 = m.side() ? 16 : 10 + m.dz;
+        if (m.side()) {
+            y0 = Math.max(0, y0 - 0.8);
+        }
+        return switch (state.getValue(FACING)) {
+            case EAST -> Block.box(16 - z1, y0, x0, 16 - z0, y1, x1);
+            case SOUTH -> Block.box(16 - x1, y0, 16 - z1, 16 - x0, y1, 16 - z0);
+            case WEST -> Block.box(z0, y0, 16 - x1, z1, y1, 16 - x0);
+            default -> Block.box(x0, y0, z0, x1, y1, z1);
+        };
     }
 
     /** A right-click switches between the channels running through the node and the most it can carry. */

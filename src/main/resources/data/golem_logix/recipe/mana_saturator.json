@@ -2,8 +2,8 @@
   "key": {
     "C": "golem_logix:flattened_copper_matrix",
     "S": "golem_logix:flattened_cryo_substrate",
-    "I": "minecraft:purpur_block",
-    "A": "minecraft:end_rod"
+    "I": "minecraft:quartz_block",
+    "A": "minecraft:lightning_rod"
   },
   "pattern": [
     " A ",

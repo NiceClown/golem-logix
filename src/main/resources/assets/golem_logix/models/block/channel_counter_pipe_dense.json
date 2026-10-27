@@ -9,7 +9,8 @@
     "socket": "golem_logix:block/nixie_socket",
     "mesh": "golem_logix:block/nixie_mesh",
     "glass": "golem_logix:block/nixie_glass",
-    "bolt": "golem_logix:block/pipe_bolt"
+    "bolt": "golem_logix:block/pipe_bolt",
+    "dark": "golem_logix:block/sat_dark"
   },
   "elements": [
     {
