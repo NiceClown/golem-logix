@@ -21,6 +21,13 @@
   plates a block, stays after the End.
 - **The Cryo-Distillation Tower makes 1.5 Source from 1 mB of blood** (was 1). This is the config default
   (`distillSourcePerMb`): a config file written by an older version keeps its 1.0 until it is changed or deleted.
+- **The guidebook reads better and tells more of the story.** Source now comes first from Neo Vitae blood through the
+  Cryo-Distillation Tower, with Ars Nouveau's jars as the other way. New lore pages: warm blood and cold Source, about this
+  grimoire, why Atlants, a channel from inside, the language of punch cards. JEI, Jade, Curios and Create are no longer named
+  outside the articles that only appear with those mods; the Stamping Gateway is called by its name everywhere; wording is
+  simpler and corrected (the ghost keys in the array article are Y and N; the job tables list "No machine").
+- **A Cryo-Source Jar sets Liquid Cryo-Source in a slot**: click a filter, stock or pattern slot with it (before, only an Ars
+  Nouveau or Creative jar did), so fluid patterns and filters work without JEI or Ars Nouveau.
 - The log no longer fills with "Failed to retrieve texture ..._glow" warnings when another mod (a map, for example) draws the
   mod's blocks.
 - 118 game tests (new: plates through the Saturator in a row, a second pattern after the first, a recipe tree through the

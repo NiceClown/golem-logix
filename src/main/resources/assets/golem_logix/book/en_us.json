@@ -34,21 +34,21 @@
           "pages": [
             {"type": "text", "title": "Powering the network",
              "text": [
-               "There is no RF or FE here. The whole network runs on magical &lSource&r from Ars Nouveau. A source can be:",
-               "• a Source Jar (or any Ars Nouveau machine holding Source),",
-               "• a &lCryo-Source Jar&r filled by a Cryo-Distillation Tower (with Neo Vitae, see Cryo-Distillation),",
+               "There is no RF or FE here: the network runs on magical &lSource&r - the same power that flows in runes, blood and gems. A source can be:",
+               "• a &lCryo-Source Jar&r: a Cryo-Distillation Tower fills it with Source frozen out of blood (Neo Vitae, see “Cryo-Distillation”),",
+               "• a Source Jar from Ars Nouveau (or any of its machines holding Source),",
                "• the &lCreative Source Jar&r - infinite, for testing.",
                "The source must touch &lany block of the network&r (a bushing, bus, pipe, cabinet...).",
-               "&oThe Eternal Frost Resonator does not feed the network: it sends Source through the aether to Portable Chronometers (see “Chronometer and late game”).&r"
+               "&oThe Eternal Frost Source Resonator does not feed the network: it sends Source through the aether to Portable Chronometers (see “Chronometer and late game”).&r"
              ]},
             {"type": "text", "title": "What it costs",
              "text": [
-               "Once a second the &lAtlas Core&r drains Source from the sources:",
-               "&l1 unit&r for the core itself + &l¼ unit&r for every used channel (rounded up).",
+               "Once a second the &lAtlas Core&r takes from its sources:",
+               "&l1 Source&r for the core itself and &l¼ Source&r for every used channel (rounded up).",
                "Example: 40 used channels cost 1 + 10 = 11 Source per second.",
-               "Infinite sources cost nothing. When Source runs out the core goes dark and the whole network falls asleep: terminals refuse to open, buses stop, calculators halt. As soon as the flow returns, everything resumes by itself.",
-               "Every autocrafting step costs Source too - &l2 units&r.",
-               "&oWithout Ars Nouveau and without Neo Vitae there is nowhere to get Source, so the network, the Saturator and the Chronometer work for free.&r"
+               "An infinite source never runs dry. When Source runs out the core goes dark and the whole network falls asleep: terminals do not open, buses stop, calculators halt. When the flow returns, everything starts again by itself.",
+               "Every autocrafting step costs &l2 Source&r too.",
+               "&oIf the world has neither Neo Vitae nor Ars Nouveau, there is nowhere to get Source: then the network, the Saturator, the hammer and the Chronometer work for free.&r"
              ]}
           ]
         },
@@ -57,9 +57,9 @@
           "pages": [
             {"type": "text", "title": "From zero to a terminal",
              "text": [
-               "1. Get plates: drop an anvil on a wounded golem (see Anvil ritual) or make them in the &lMana Saturator&r.",
+               "1. Get plates: drop an anvil on a wounded golem (see Anvil ritual) or forge them on the &lMana Saturator&r.",
                "2. Craft an &lAtlas Core&r and place it. A small tower is enough to start: the core, two &lAtlas Conduits&r beneath it and a &lCable Bushing&r (see Starter tower).",
-               "3. Put a Source supply next to any block of the tower - for example a Creative Source Jar.",
+               "3. Put a Source supply against any block of the tower - a Cryo-Source Jar, or a Creative Source Jar for testing.",
                "4. Attach a &lCopper Drive Bay&r to the bushing and put a &lMagnetic Disk&r inside.",
                "5. Attach an &lAnalog Terminal&r to the bushing as well and right-click it.",
                "Done: everything you put into the terminal lies on the disk."
@@ -68,7 +68,7 @@
              "text": [
                "• Finish the &lAtlas Array&r - 320 channels instead of 8.",
                "• Place &lbuses&r and connect chests, furnaces and machines.",
-               "• Learn &lautocrafting&r: Encoder, Pattern Provider, Cryo-Calculator.",
+               "• Learn &lautocrafting&r: Encoder, Stamping Gateway, Cryo-Calculator.",
                "• Grab a &lPortable Chronometer&r - a crafting terminal in your pocket.",
                "&oThe lines on the map lead from the simple to the complex.&r"
              ]}
@@ -79,16 +79,28 @@
           "pages": [
             {"type": "text", "title": "Cryogenic Aether Fixation",
              "text": [
-               "In classical Ars Nouveau sorcery, primal &lSource&r mana is volatile, warm and fluid. Spell runes and information glyphs drift like heat waves: weaving thousands of data threads at once is impossible without etheric turbulence and entropy tearing them apart.",
-               "Our breakthrough stems from the cryo-energetics of &lsnow golems&r. Their icy core emits a field of absolute stillness, bringing etheric entropy down to zero.",
-               "Under sub-zero cryo-temperatures, mana runes carrying structural imprints of items &lfreeze into super-dense crystalline glyphs&r. A frozen rune loses all volatility, locking vast physical records into a stable crystal. Inside frost pipes, these frozen runes glide in superfluid conduits at lightning speed, granting instant access to entire warehouses without risk of etheric decay."
+               "In classical sorcery &lSource&r is a warm, restless power. Runes in warm aether tremble like a candle flame: weave a hundred of them into one thought and the aether heats up, warps and scatters it.",
+               "Our breakthrough began with &lsnow golems&r. Around them lies a field of perfect stillness: the aether near them cools and falls still.",
+               "In that cold, runes that carry the memory of how things are made &lfreeze into dense glyphs of ice&r. A frozen rune no longer trembles: a grain of ice holds a whole chest. Along the frost pipes the glyphs glide faster than sound - and so the network reaches thousands of items at once without falling apart."
              ]},
             {"type": "text", "title": "Mechanical Will",
              "text": [
-               "The mortal mind cannot manually juggle thousands of frozen runes without shattering their matrices. For this, we enlist &lgolems&r, bound by occult flattened plates and subordinated to our command.",
-               "Golems possess neither doubt nor mortal fatigue: they embody the master's pure algorithmic will.",
-               "With calibrated copper fingers and precision keys, they manipulate, rotate and stack frozen runes into multidimensional arrays. Shifting a frozen matrix instantly yields &lcompound rune combinations&r: guided by punch-card geometry, golems and snowmen assemble finished items in the blink of an eye.",
-               "&oThis harmonizes with Ars Nouveau rather than opposing it: Source fuels the work, cryo-cold preserves the information, and golem will enforces absolute order.&r"
+               "No human hand can hold thousands of frozen runes. That is what &lgolems&r are for: flattened plates bind them together, and the master's will guides them.",
+               "A golem never tires and never doubts: it is the hand of whoever made it, reaching further.",
+               "With copper fingers the golems sort the frozen runes and stack them into lattices. A punch card sets the pattern, and in a split second golems and snowmen &lbuild the finished item out of runes&r.",
+               "&oSource gives the strength, cold keeps the memory, and golems keep the order.&r"
+             ]},
+            {"type": "text", "title": "Warm blood, cold Source",
+             "text": [
+               "Rune jars are not the only keepers of Source. It flows in the blood of the living too - hot, murky, full of fear and heartbeat. The &lAra Vitae&r altar (Neo Vitae) gathers it as &lEssentia Vitae&r.",
+               "The network cannot drink such power: living chaos would melt the frozen runes. So the blood is &lfrozen out&r. In the Cryo-Distillation Tower the snow golems' cold takes its warmth and turmoil away, and pure, still &lCryo-Source&r settles at the bottom of the column.",
+               "&oIce does not ask whose blood it was. It only makes it quiet.&r"
+             ]},
+            {"type": "text", "title": "About this grimoire",
+             "text": [
+               "This book is put together from the workshop's notebooks: drawings, channel sums, notes in the margins. Some pages are touched with frost - they were written beside a running array.",
+               "The workshop left no names. Only its rules remain: do not cripple a golem without need, do not let the cold out of the pipes, and never leave the core without Source.",
+               "&oNew articles pulse white on the map - they were added recently.&r"
              ]}
           ]
         },
@@ -119,20 +131,20 @@
           "pages": [
             {"type": "text", "title": "Source from blood",
              "text": [
-               "Where there is no Ars Nouveau, the network drinks from &lNeo Vitae&r instead.",
-               "The &lCryo-Distillation Tower&r literally freezes all the living warmth and chaos out of blood. Pure crystalline magic settles out of it and condenses into icy &lCryo-Source&r.",
-               "&oBoth ways work side by side: Ars jars and Cryo-Source Jars feed the same network.&r"
+               "Blood gathered by the &lAra Vitae&r altar (Neo Vitae) - &lEssentia Vitae&r - carries Source, only hot and murky.",
+               "The &lCryo-Distillation Tower&r freezes the living warmth and chaos out of it. Pure magic settles and sets as icy &lCryo-Source&r - and that is what the network feeds on.",
+               "&oIf Ars Nouveau is there too, its Source Jars and Cryo-Source Jars feed the same network.&r"
              ]},
             {"type": "text", "title": "How it works",
              "text": [
-               "Pour &lEssentia Vitae&r into the tower through any of its three blocks: pipes from an Ara Vitae, our buses, buckets. It holds &l8000 mB&r.",
-               "Every second it distils &l20 mB&r into &l30 Source&r and pours it into the &lCryo-Source Jars&r (or Ars jars) standing &lright against it&r - a jar even one block away gets nothing. When the jars are full it waits.",
-               "Put the jars against the plinth, on the same ground: then a pipe runs from the tower's head over to each jar and drops into its vent. Any side will do, and the copper golem on the tower moves aside by itself.", "A jar holds &l10 000 Source&r. Put it against any block of the network, like an Ars jar: a network pipe docks onto it with a brass socket."
+               "Pour &lEssentia Vitae&r into any of the tower's three blocks: by pipes from an Ara Vitae, by network buses or by buckets. The tower holds &l8000 mB&r.",
+               "Every second it distils &l20 mB&r of blood into &l30 Source&r and pours it into the &lCryo-Source Jars&r (or Source Jars) standing &lright against it&r: a jar even one block away gets nothing. When the jars are full it waits.",
+               "Put the jars against the plinth, on the same level as it: then a pipe runs from the tower's head over to each jar and drops into its vent. Any side will do - the copper golem on the tower moves to a free one.", "A jar holds &l10 000 Source&r. Put it against any block of the network: a pipe docks onto it with a brass socket."
              ]},
             {"type": "crafting", "recipe": "golem_logix:cryo_distillation_tower",
              "text": ["Three blocks high: a rune plinth, a glass column with the coil, a brass head under snow. A Tabula Rasa from the Ara Vitae seals the plinth."]},
             {"type": "crafting", "recipe": "golem_logix:cryo_source_jar",
-             "text": ["Two blocks high. Click it to see how much Source it holds; a comparator reads its level."]}
+             "text": ["Two blocks high. Right-click it to see how much Source it holds; a comparator reads its level."]}
           ]
         }
       ]
@@ -149,19 +161,19 @@
           "pages": [
             {"type": "text", "title": "A blow to logic",
              "text": [
-               "Golems are born animated: their flesh is imbued with pure concentrated magical Source from the moment of creation. In a healthy golem, this inner matrix remains firm and cohesive. But when a golem is gravely wounded (down to 4 HP or less), its anchoring bond fractures.",
-               "In that brief moment, the crushing impact of a falling anvil collapses the fragile matrix, compressing the golem's concentrated essence directly into a dense runic plate.",
-               "The anvil must fall from at least one block high above the wounded golem.",
-               "&oA healthy golem is too sturdy and holds its matrix intact — the ritual will not trigger until health drops to critical.&r"
+               "A golem lives as long as its body holds the Source put into it. In a healthy golem this inner matrix is firm; in a badly wounded one (4 HP or less) it cracks.",
+               "At that moment a falling anvil collapses the cracked matrix and presses the golem's strength into a dense plate.",
+               "The anvil must fall onto the golem from at least one block above its head.",
+               "&oAn anvil only hurts a healthy golem: while the matrix holds, the ritual does not work.&r"
              ]},
             {"type": "ritual", "title": "Iron Golem", "station": "minecraft:anvil", "inputs": ["minecraft:iron_block"], "outputs": ["golem_logix:flattened_iron_core"],
              "condition": "A golem with 1-4 HP (out of 100).",
-             "text": ["Cores go into processors, the Atlas Core, casings and high-capacity pipes.", "To bring 100 HP down to four, a harming potion, lava or a long fall helps."]},
+             "text": ["Cores go into the Atlas Core, casings, Atlants and calculators.", "To bring 100 HP down to four, a harming potion, lava or a long fall helps."]},
             {"type": "ritual", "title": "Copper Golem", "station": "minecraft:anvil", "inputs": ["minecraft:copper_block"], "outputs": ["golem_logix:flattened_copper_matrix"],
              "condition": "A golem with 1-4 HP (out of 12).",
              "text": ["Matrices are the basis of disks, buses, punch cards and cabinets.", "&oA copper golem: a carved pumpkin on top of a copper block.&r"]},
             {"type": "ritual", "title": "Snow Golem", "station": "minecraft:anvil", "inputs": ["minecraft:snow_block"], "outputs": ["golem_logix:flattened_cryo_substrate"],
-             "condition": "A golem with 1-3 HP - not at full health!",
+             "condition": "A golem with 1-3 HP (out of 4).",
              "text": ["A snow golem has only 4 HP. Hit it once with your hand - 3 are left and the anvil will now work (snowballs do not hurt snow golems).", "Substrates go into pipes, cryo blocks and fluid disks."]}
           ]
         },
@@ -169,7 +181,7 @@
           "id": "saturator", "title": "Mana Saturator", "icon": "golem_logix:mana_saturator", "x": 1, "y": 0, "parents": ["anvil"],
           "pages": [
             {"type": "crafting", "recipe": "golem_logix:mana_saturator",
-             "text": ["The head of a 3x3x2 multiblock: a supreme alchemical forge. Unlike the crude crushing of living golems with an anvil, here inanimate blocks are artificially infused with the needed amount of Source. No golem gets hurt, and plate yield is doubled.", "Build casings, an End Rod and a dense pipe around it."]},
+             "text": ["The head of a 3x3x2 multiblock, an alchemical forge. No living golem has to be crippled here: Source is poured straight into a plain block. No golem gets hurt, and you get twice the plates.", "On its own the Saturator is a hand anvil. To make it forge by itself, build casings, an End Rod and a dense pipe around it."]},
 {"type": "text", "title": "Forging by hand",
  "text": [
    "Until the machine is assembled, the Saturator is a &lmagic anvil&r. Right-click puts an iron block, a copper block or packed ice on its face — &lonly these three&r plates can be forged by hand.",
@@ -190,14 +202,14 @@
             {"type": "text", "title": "How it works",
              "text": [
                "1. Right-click any part of the machine with a block in hand - it joins the queue on the &lleft rear deck&r (up to four blanks of one kind).",
-               "2. Instead of forcibly crushing living constructs, the forge directly saturates raw material with pure Source (&l1000 units&r per ritual). A focusing crystal artificially weaves magic into the metal lattice, while the smith hammers out plates of perfect geometry. Right-click with an empty hand to see the stock.",
-               "3. Over &lfive seconds&r the smith strikes five blows, condensing magic into plates. The two copper carrier golems work &lindependently&r: one takes the finished plates to the &lright deck&r while the other is already bringing the next blank from the queue — the smith hardly ever waits. The result is taken from the right deck (by hand, a bus or a Pattern Provider).",
+               "2. The forge saturates the blank with pure Source (&l1000&r a ritual): the crystal weaves the magic into the metal, the smith hammers out the plates. Right-click with an empty hand to see the Source stock.",
+               "3. Over &lfive seconds&r the smith strikes five blows, condensing magic into plates. The two copper carrier golems work &lindependently&r: one takes the finished plates to the &lright deck&r while the other is already bringing the next blank from the queue — the smith hardly ever waits. The result is taken from the right deck (by hand, a bus or a Stamping Gateway).",
                "# The result is TWO plates",
                "• Iron Block → 2 Flattened Iron Cores,",
                "• Copper Block → 2 Flattened Copper Matrices,",
                "• Packed Ice → 2 Flattened Cryo-Substrates.",
                "And a Cooling Co-Processor gets squeezed into a &lCompressed Co-Processor&r - a speed upgrade for buses and calculators.",
-               "Source comes from the network through any connector (if the network has a core) or from jars next to the machine. Right-clicking with an empty hand takes the finished plates from the right deck (or, if it is empty, the queue from the left one). Buses and the Pattern Provider work with the machine through any of its parts: they put blanks into the left deck's queue and take the finished plates from the right one.",
+               "Source comes from the network through any connector (if the network has a core) or from jars next to the machine. Right-clicking with an empty hand takes the finished plates from the right deck (or, if it is empty, the queue from the left one). Buses and the Stamping Gateway work with the machine through any of its parts: they put blanks into the left deck's queue and take the finished plates from the right one.",
                "&oWith nothing to forge, the golem just stands there offering you a poppy.&r"
              ]},
             {"type": "text", "title": "Roof cooling",
@@ -211,7 +223,7 @@
              "text": [
                "The Saturator has no window, so the &lRedstone Module&r goes straight into the machine: right-click any part with the module.",
                "Right-clicking again with a module switches the mode (with signal, without signal, per pulse, ignore). Any wall of the machine takes the signal.",
-               "Sneak and right-click the machine with an empty hand (not on a radiator) to take the module out. Jade shows the current mode."
+               "Sneak and right-click the machine with an empty hand (not on a radiator) to take the module out."
              ]},
             {"type": "text", "title": "Auto-output",
              "text": [
@@ -230,9 +242,9 @@
             {"type": "text", "title": "Charge and strikes",
              "text": [
                "The hammer runs on &lSource&r from its own charge (up to &l4000&r), like the Portable Chronometer: it takes nothing from jars nearby.",
-               "To charge it, &lright-click a Source jar&r with it. The charge shows as a bar on the item and in its tooltip.",
+               "To charge it, &lright-click a Cryo-Source Jar&r (or any Source jar) with it. The charge shows as a bar on the item and in its tooltip.",
                "&lLeft-click the anvil&r to strike (100 Source). The hammer does not break the anvil.",
-               "&oWithout Ars Nouveau the hammer strikes for free.&r"
+               "&oIf the world has no way to get Source (neither Neo Vitae nor Ars Nouveau), the hammer strikes for free.&r"
              ]}
           ]
         },
@@ -241,7 +253,7 @@
           "requires": "ars_nouveau",
           "pages": [
             {"type": "text", "title": "Faster than the chamber",
-             "text": ["With Ars Nouveau the assembled Saturator also runs the &lImbuement Chamber&r recipes that make Source Gems: from amethyst, an amethyst block or lapis.", "It works &ltwice as fast&r as the chamber but takes &la third more Source&r. Roof coolers speed it up as usual, and buses and Pattern Providers feed it like the plates."]},
+             "text": ["With Ars Nouveau the assembled Saturator also runs the &lImbuement Chamber&r recipes that make Source Gems: from amethyst, an amethyst block or lapis.", "It works &ltwice as fast&r as the chamber but takes &la third more Source&r. Roof coolers speed it up as usual, and buses and Stamping Gateways feed it like the plates."]},
             {"type": "ritual", "title": "Source Gem", "station": "golem_logix:mana_saturator", "inputs": ["minecraft:amethyst_shard"], "outputs": ["ars_nouveau:source_gem"],
              "condition": "665 Source, 2.5 s (the chamber: 500, 5 s).",
              "text": ["Lapis Lazuli works the same way."]},
@@ -255,7 +267,7 @@
           "secret": "mind", "requires": "ars_nouveau",
           "pages": [
             {"type": "text", "title": "Unbinding a mind",
-             "text": ["Your first plate made on an anvil showed what holds a golem together. Now an Ars Nouveau &lDispel&r cast at a &lbattered&r golem unbinds its mind: the golem is gone, and a &lraw mind&r of its kind drops.", "Battered means the same as for the anvil: an iron or copper golem with 4 HP or less, a snow golem below its full 4 HP. A healthier golem's mind holds on."]},
+             "text": ["Your first plate made on an anvil showed what holds a golem together. Now an Ars Nouveau &lDispel&r cast at a &lbattered&r golem unbinds its mind: the golem is gone, and a &lraw mind&r of its kind drops.", "Battered means the same as for the anvil: an iron or copper golem with 4 HP or less, a snow golem below its full 4 HP. A healthy golem's mind holds fast."]},
             {"type": "ritual", "title": "Iron Golem", "station": "ars_nouveau:glyph_dispel", "inputs": ["minecraft:iron_block"], "outputs": ["golem_logix:raw_iron_mind"],
              "condition": "A golem with 1-4 HP (out of 100).",
              "text": ["Bring it down with a harming potion or a long fall first."]},
@@ -263,7 +275,7 @@
              "condition": "A golem with 1-4 HP (out of 12).",
              "text": ["A copper golem: a carved pumpkin on top of a copper block."]},
             {"type": "ritual", "title": "Snow Golem", "station": "ars_nouveau:glyph_dispel", "inputs": ["minecraft:snow_block"], "outputs": ["golem_logix:raw_snow_mind"],
-             "condition": "A golem with 1-3 HP - not at full health!",
+             "condition": "A golem with 1-3 HP (out of 4).",
              "text": ["One hit with your hand is enough."]},
             {"type": "ritual", "title": "Pressing an iron mind", "station": "ars_nouveau:enchanting_apparatus", "inputs": ["golem_logix:raw_iron_mind", "minecraft:iron_ingot*6"], "outputs": ["golem_logix:flattened_iron_core*2"],
              "condition": "Six ingots on the pedestals, 1000 Source.",
@@ -294,7 +306,7 @@
              "condition": "Then the press: one Flattened Cryo-Substrate.",
              "text": ["Mixing happens in a Basin under the Mixer."]},
             {"type": "text", "title": "As an autocraft chain",
-             "text": ["Two processing patterns: a block + 250 mB of cryo-source -> torn mind (a Provider next to the Basin), and torn mind -> plate (a Provider next to a Depot under the Press).", "An Import Bus brings the results back. The network pumps the cryo-source itself, see &lLiquid Cryo-Source&r."]}
+             "text": ["Two processing patterns: a block + 250 mB of cryo-source -> torn mind (a Gateway next to the Basin), and torn mind -> plate (a Gateway next to a Depot under the Press).", "An Import Bus brings the results back. The network pumps the cryo-source itself, see &lLiquid Cryo-Source&r."]}
           ]
         },
         {
@@ -309,7 +321,7 @@
              ]},
             {"type": "text", "title": "Advice",
              "text": [
-               "There are no crafting-table recipes for plates. Until the End they come from the anvil (with Ars Nouveau also the Dispel, with Create the mixer). The Saturator is made of Nether quartz: from the Nether its anvil forges by hand, and once the machine around it stands on an End Rod, one iron block turns into two cores.",
+               "There are no crafting-table recipes for plates. At first they come from the anvil ritual. Nether quartz brings the Saturator: its anvil forges plates by hand. Once the machine around it is built on an End Rod, one iron block gives two cores.",
                "&oPacked ice for cryo-substrates can be mined with a Silk Touch pickaxe.&r"
              ]}
           ]
@@ -324,7 +336,7 @@
              "condition": "Then Deployers with an iron sheet and a popped chorus fruit, then a Press.",
              "text": ["An Export Bus next to the Spout pumps the cryo-source out of the network."]},
             {"type": "text", "title": "Line or Saturator?",
-             "text": ["The Saturator: &l1000 Source&r a co-processor and nothing else.", "The line: 750 mB of cryo-source (&l750 Source&r), three iron sheets and three chorus fruits a try, and one try in ten fails. Like the Saturator it needs the End; it keeps the Saturator free and runs on belts side by side.", "&oPlates stay the Saturator's job: nothing makes them cheaper.&r"]}
+             "text": ["The Saturator: &l1000 Source&r a co-processor and nothing else.", "The line: 750 mB of cryo-source (&l750 Source&r), three iron sheets and three chorus fruits a try, and one try in ten fails. Like the Saturator machine, it needs the End; but it keeps the Saturator free, and lines run side by side.", "&oPlates stay the Saturator's job: nothing makes them cheaper.&r"]}
           ]
         },
         {
@@ -392,14 +404,20 @@
                "&oEvery step is built on top of the previous one: nothing is taken apart.&r"
              ]},
             {"type": "image", "texture": "array_full", "title": "The last step",
-             "text": ["The finished array: the core with its crystal on top, copper electron-golems orbit it, mini-golems carry crates around the ring of casings."]}
+             "text": ["The finished array: the core with its crystal on top, copper electron-golems orbit it, mini-golems carry crates around the ring of casings."]},
+            {"type": "text", "title": "Why Atlants",
+             "text": [
+               "Thought is heavy. A mind that keeps thousands of things in memory presses down on whatever lies beneath it - the old masters felt it in their hands.",
+               "So the core is set on a column, and the column is given to four iron colossi to carry. The &lAtlants&r count nothing and connect nothing: they just hold. While they stand, the core's thought does not sink through the stone.",
+               "&oThey say that at night, beside a finished array, you can hear the Atlants shift their weight from foot to foot.&r"
+             ]}
           ]
         },
         {
           "id": "array_core", "title": "Step 1: the Atlas Core", "icon": "golem_logix:atlas_core", "x": 1, "y": 0, "parents": ["array_overview"], "gold": true,
           "pages": [
             {"type": "crafting", "recipe": "golem_logix:atlas_core",
-             "text": ["The core is the network's mind and its only Source consumer.", "The crystal glows and electrons orbit it: three for a complete array, one for a tower."]},
+             "text": ["The core is the network's mind and its main Source consumer.", "The crystal glows and electrons orbit it: three for a complete array, one for a tower."]},
             {"type": "text", "title": "The core alone",
              "text": [
                "Placed on its own, the core already runs a small network of &l8 channels&r.",
@@ -443,7 +461,7 @@
             {"type": "checklist", "variant": "full", "title": "Materials list",
              "text": [
                "The list is checked against your inventory: a green tick - you have enough.",
-               "The button turns on &lghost blocks&r: turquoise ones show what to place and where, red ones are foreign blocks in the way. The ghosts follow the block you look at; press &lG&r to lock them and &lH&r to remove them. Near a Core the projection snaps onto it.",
+               "The button turns on &lghost blocks&r: turquoise ones show what to place and where, red ones are foreign blocks in the way. The ghosts follow the block you look at; press &lY&r to lock them and &lN&r to remove them. Near a Core the projection snaps onto it.",
                "&oThe lower and upper halves of an Atlant are a single item; casing can be partly replaced by expanders.&r"
              ]},
             {"type": "image", "texture": "array_layers", "title": "Exploded view",
@@ -507,7 +525,7 @@
              "text": [
                "Every bushing gives &lone line&r: &l64 channels&r in an array, &l16&r in a starter tower. All devices connected through this bushing (and through pipes behind it) share its line.",
                "A corner bushing has two or three free faces: each can take its own pipe. The center bushing sits in a shaft, but a power source can be put under it.",
-               "Right-clicking a bushing prints in chat &lhow many channels are used&r on its line and in the whole network; the same is shown in the tooltip above the block (Jade).",
+               "Right-clicking a bushing prints in chat &lhow many channels are used&r on its line and in the whole network; a Channel Counter fixed to it shows the same.",
                "# Tip",
                "Spread heavy sections over &ldifferent bushings&r: four corners give four lines, and the total capacity of the network is the sum of all lines."
              ]},
@@ -579,7 +597,7 @@
           "pages": [
             {"type": "text", "title": "What a channel is",
              "text": [
-               "Every network device (terminal, cabinet, bus, provider...) takes &l1 channel&r. A channel is a path from the core to the device through a bushing and pipes.",
+               "Every network device (terminal, cabinet, bus, gateway...) takes &l1 channel&r. A channel is a path from the core to the device through a bushing and pipes.",
                "A channel has four limits:",
                "• &lTotal network capacity&r - set by the core: alone 8, on a starter tower 16, in the array 320 and more.",
                "• &lBushing line&r - no more channels pass through one bushing than the line capacity.",
@@ -599,11 +617,17 @@
                "# Take 1 channel",
                "• Analog and Crafting terminals, Copper Drive Bay,",
                "• Vacuum, Injector and Periscope buses,",
-               "• Encoder, Pattern Provider, Cryo-Calculator, Recipe Monitor.",
+               "• Encoder, Stamping Gateway, Cryo-Calculator, Recipe Monitor.",
                "# Take no channels",
                "• Pipes, Cable Bushings, Atlas Conduits,",
                "• Cooling Co-Processors, the Core, the Mana Saturator.",
                "&oThe Portable Chronometer is not a device: it talks to the core directly and spends no channels.&r"
+             ]},
+            {"type": "text", "title": "A channel from inside",
+             "text": [
+               "A channel is not a wire. It is a thread of frozen runes stretched from the core to a device: icy glyphs run along it there and back.",
+               "A thread cannot stretch forever: a pipe, a bushing, every node on the way holds only as many threads as its cold can bear. An extra thread simply does not freeze - and the device stays silent.",
+               "&oThe tiny snowman running inside the pipes is the keeper of the threads: it checks that none of them has thawed.&r"
              ]}
           ]
         },
@@ -633,10 +657,10 @@
                "A device needs no pipe if it stands against a bushing, another pipe or another network device: nodes conduct channels through each other.",
                "So terminals and cabinets can be chained, but a device passes on &lat most 16 channels&r (like a basic pipe), its own included: the seventeenth device of a chain stays silent. Run a dense pipe along big rows of devices.",
                "# Source supply",
-               "A jar must touch any node (not necessarily the core). It takes no channel and does not carry the network. The Eternal Frost Resonator is attached the same way - but it powers chronometers, not the network."
+               "A jar must touch any node (not necessarily the core). It takes no channel and does not carry the network. The Eternal Frost Source Resonator is attached the same way - but it powers chronometers, not the network."
              ]},
             {"type": "image", "texture": "array_setup", "title": "A sample base",
-             "text": ["An array with two cabinets, a terminal, a calculator, a provider and a bus; a Resonator below the array."]}
+             "text": ["An array with two cabinets, a terminal, a calculator, a gateway and a bus; a Resonator below the array."]}
           ]
         },
         {
@@ -662,16 +686,16 @@
                ["No Source", "bring a source"],
                ["No channels", "pipes / expanders"],
                ["Waiting for machine", "return output by bus"],
-               ["No provider", "put the pattern in one"],
+               ["No gateway", "put the pattern in one"],
                ["Paused", "see the Redstone Module"]
              ],
              "text": ["At the bottom of the terminal screen you see “Ch 12/64” - used and available channels; the tooltip shows everything else."]},
-            {"type": "text", "title": "Jade tooltips",
+            {"type": "text", "title": "Lamps and counters",
              "text": [
-               "Look at a block with Jade:",
-               "• a device: &lDevice Online&r, &lDevice Missing Channel&r with the full block that stopped it, or &lDevice Offline&r (no core or no Source);",
-               "• a pipe: “12 of 16 Channels”;",
-               "• a bushing: its line and the whole network; an expander: its exit."
+               "• Straight horizontal pipes carry a &lnixie lamp&r every sixth block: its digits show how many channels run through the pipe - cyan, amber and red as it fills.",
+               "• A &lChannel Counter&r shows the same number anywhere: on a bushing, a device or a pipe.",
+               "• Right-clicking a bushing prints its line and the whole network in chat; right-clicking the core tells you what to build next.",
+               "• A device without a channel stays silent: the terminal does not open, the bus stands still."
              ]}
           ]
         },
@@ -679,12 +703,12 @@
           "id": "net_counter", "title": "Channel Counter", "icon": "golem_logix:channel_counter", "x": 3, "y": 1, "parents": ["net_diagnose"],
           "pages": [
             {"type": "crafting", "recipe": "golem_logix:channel_counter",
-             "text": ["Three nixie tubes on a walnut base. They show the same number as the heat lamps on the pipes: the channels running &lthrough the spot it is fixed to&r. For players without Jade, or for the look of a control room."]},
+             "text": ["Three nixie tubes on a walnut base. They show the same number as the lamps on the pipes: how many channels run &lthrough the spot the counter is fixed to&r. Handy for keeping an eye on the network - or just for the look of a control room."]},
             {"type": "text", "title": "Where to fix it",
              "text": [
                "It reads the block it is fixed to and picks the mount by itself:",
                "• &lon a block&r (a bushing, a device, the core) - a plain foot;",
-               "• &lon a horizontal pipe&r - a brass saddle round the tube, the tubes turned to your side of it;",
+               "• &lon a horizontal pipe&r - a brass saddle round the tube, the tubes turned towards you;",
                "• &lon the side&r of a block or a pipe - a little shelf on a wall plate, like the golem's on the Cryo-Distillation Tower.",
                "It takes no channel, and pipes do not reach for it."
              ]},
@@ -706,7 +730,7 @@
              "text": [
                "Pipes join every network block next to them, so two lines side by side &lmerge into one&r: channels take the shortest path and may crowd one line.",
                "&lRight-click a pipe&r with a plug: the side closest to the click closes. A closed side connects to nothing.",
-               "Right-click a closed side to take the plug back. Jade lists the plugged sides."
+               "Right-click a closed side to take the plug back."
              ]},
             {"type": "text", "title": "When to plug",
              "text": [
@@ -765,7 +789,8 @@
                "A disk counts its capacity in &lpieces&r: a 1k disk holds 1,000 items of any kinds together - one type or a thousand different ones. There is no separate limit on the number of types.",
                "# Capacities",
                "• 1k - 1,000 items, 4k - 4,000, 16k - 16,000, 64k - 64,000, &l256k - 256,000&r.",
-               "A disk can be pulled out, carried and put into another cabinet: all of its contents stay on it."
+               "A disk can be pulled out, carried and put into another cabinet: all of its contents stay on it.",
+               "&oThe magnetic tape keeps not the things themselves but their frozen runes: a chest of iron on a disk weighs no more than a feather.&r"
              ]},
             {"type": "crafting", "recipe": "golem_logix:copper_disk_1k", "text": ["The base of the line."]},
             {"type": "crafting", "recipe": "golem_logix:copper_disk_4k", "text": ["Three 1k disks and copper."]},
@@ -821,7 +846,7 @@
           "id": "st_terminal", "title": "Analog Terminal", "icon": "golem_logix:analog_terminal", "x": 2, "y": 0, "parents": ["st_bay"],
           "pages": [
             {"type": "crafting", "recipe": "golem_logix:analog_terminal",
-             "text": ["A green-phosphor CRT screen. Shows everything in the network. Takes 1 channel. When the network starts, a golem on the screen waves at you across the whole screen, and then hauls crates."]},
+             "text": ["A green-phosphor CRT screen. Shows everything in the network. Takes 1 channel. When the network starts, a golem waves at you across the whole screen, and then sets to hauling crates."]},
             {"type": "table", "title": "Controls", "header": ["Action", "Result"], "widths": [66, 82],
              "rows": [
                ["LMB on item", "take a stack"],
@@ -843,10 +868,10 @@
                "At the bottom - the disk fill bar and “Ch used/capacity”; hover for details: items, fluids, channels, busy calculators.",
                "The mouse wheel and the bar on the right scroll the list. &lTab&r or &l/&r jumps straight into search."
              ]},
-            {"type": "text", "title": "Window size and JEI",
+            {"type": "text", "title": "Window size",
              "text": [
                "The &l“Size”&r button on the right stretches the window vertically: normal, tall or &lthe whole screen&r - the list gets as many rows as fit, and you see most of the network at once. The choice is remembered for all terminals and the Chronometer.",
-               "With JEI, hover an item or fluid in the list and press &lR&r to see its recipes or &lU&r to see its uses. JEI bookmarks work the same way."
+               "With a recipe viewer installed, hover an item or fluid in the list and press &lR&r for its recipes or &lU&r for its uses."
              ]}
           ]
         },
@@ -861,11 +886,11 @@
                "• The “v” button on the left returns everything from the grid to the network.",
                "• Shift-clicking the result crafts as many as possible.",
                "• Closing the window also returns the grid to the network (and what does not fit goes to your inventory).",
-               "&oWith JEI the “+” button of a recipe lays it out in the grid from the network and your inventory (Shift - full stacks); JEI marks in red what is nowhere to be found.&r"
+               "&oIn a recipe viewer the “+” button lays the recipe out in the grid from the network and your inventory (Shift - full stacks); what is nowhere to be found is marked red.&r"
              ]},
             {"type": "text", "title": "Precraft",
              "text": [
-               "If something is missing for a recipe but the network &lhas patterns&r for it, JEI's “+” button lights up turquoise.",
+               "If something is missing for a recipe but the network &lhas patterns&r for it, the recipe viewer's “+” button lights up turquoise.",
                "&lCtrl + “+”&r orders the missing items right away - one job for all of them (with Shift - for a full stack). Whatever cannot be crafted is listed in chat.",
                "When the order is ready, an &l“Order ready”&r plate pops up in the corner of the screen with a chime - press “+” again and craft the recipe."
              ]}
@@ -898,7 +923,7 @@
                "• Right-clicking the periscope opens the &lpriority&r window: the higher the number, the earlier this storage receives items (cabinets and periscopes are ordered by the same number) and the later it gives them up.",
                "• With a &lRedstone Module&r the storage is switched on and off by a signal.",
                "• The periscope hauls nothing itself - it only “peers” inside.",
-               "&oGreat for hooking up old warehouses you do not want to dismantle.&r"
+               "&oHandy for hooking up old warehouses you would hate to dismantle.&r"
              ]}
           ]
         }
@@ -992,7 +1017,7 @@
              ]},
             {"type": "ritual", "title": "Compressed Co-Processor", "station": "golem_logix:mana_saturator", "inputs": ["golem_logix:cooling_coprocessor"], "outputs": ["golem_logix:compressed_coprocessor"],
              "condition": "1000 Source per ritual.",
-             "text": ["The Mana Saturator's golem flattens a Cooling Co-Processor into a thin pack of fins - a speed upgrade for buses and Cryo-Calculators.", "&oWith Create an assembly line can make them too (Rituals).&r"]},
+             "text": ["The Mana Saturator's golem flattens a Cooling Co-Processor into a thin pack of fins - a speed upgrade for buses and Cryo-Calculators."]},
             {"type": "table", "title": "Bus speed", "header": ["Upgrades", "Per move", "How often"], "widths": [60, 34, 54],
              "rows": [
                ["none", "16", "0.4 s"],
@@ -1025,7 +1050,7 @@
              "text": [
                "• &lImport and export buses&r - move items by signal; per pulse - one batch.",
                "• &lPeriscope&r - the storage is connected by signal (no pulse mode).",
-               "• &lPattern Provider&r - feeds ingredients by signal; per pulse - one batch.",
+               "• &lStamping Gateway&r - feeds ingredients by signal; per pulse - one batch.",
                "• &lCryo-Calculator&r - works on its job by signal (otherwise “Paused by redstone”); per pulse - one cycle.",
                "• &lMana Saturator&r - starts a ritual by signal; the module goes in with a right-click on the machine, the mode changes with another right-click with a module."
              ]}
@@ -1041,7 +1066,7 @@
                "2. A second export bus (with ore) faces the furnace from the side - it supplies ore.",
                "3. An import bus faces the furnace from below and takes the ingots.",
                "# A factory",
-               "Feed ingredients to a machine with a Pattern Provider and take the product with an import bus - this is the basis of &lmachine autocrafting&r.",
+               "Feed ingredients to a machine with a Stamping Gateway and take the product with an import bus - this is the basis of &lmachine autocrafting&r.",
                "&oEvery bus takes a channel; with a dozen furnaces keep a reserve of channels.&r"
              ]}
           ]
@@ -1086,17 +1111,23 @@
              "text": [
                "Autocrafting is a chain of four links:",
                "1. The &lEncoder&r punches a recipe onto a copper punch card.",
-               "2. The &lPattern Provider&r stores the cards and feeds ingredients into machines.",
+               "2. The &lStamping Gateway&r stores the cards and feeds ingredients into machines.",
                "3. The &lCryo-Calculator&r breaks an order into steps and carries them out.",
                "4. You order the result in a &lterminal&r - it lands in the network."
              ]},
             {"type": "text", "title": "What it can do",
              "text": [
                "• Crafting-table 3×3 recipes are carried out right in the calculator.",
-               "• “Machine” recipes (furnaces, crushers, altars) go through the Provider and an import bus.",
+               "• “Machine” recipes (furnaces, crushers, altars) go through the Gateway and an import bus.",
                "• The recipe tree unfolds by itself: intermediates are taken from storage, the rest is made by other patterns.",
                "• When an order is ready, whoever placed it gets a notification.",
                "• An order always makes &lthe ordered amount&r - even if such an item is already in storage."
+             ]},
+            {"type": "text", "title": "The language of punch cards",
+             "text": [
+               "A golem does not understand words. It understands holes.",
+               "A punch card is an order that cannot be misread: every punched cell is one rune of the recipe. The golem reads the card with its fingers, the way the blind read raised letters, and does exactly what is punched.",
+               "&oThat is why the masters guard their Encoder: one mistake on a card is a mistake in a thousand items.&r"
              ]}
           ]
         },
@@ -1116,7 +1147,7 @@
                "Specify the inputs (with amounts) and up to three outputs. Click +1, RMB -1, Shift clears.",
                "# Buttons",
                "“Punch” writes the card, “Read” loads a card's recipe for editing, “Clear” wipes the grid.",
-               "An encoded card glints and lists its inputs and outputs in the tooltip. With JEI: “+” on a crafting recipe fills the grid, on a furnace or machine recipe it switches to “Machine” mode with the inputs and outputs."
+               "An encoded card glints and lists its inputs and outputs in the tooltip. In a recipe viewer, “+” on a crafting recipe fills the grid; on a furnace or machine recipe it switches to “Machine” mode with the inputs and outputs."
              ]},
             {"type": "text", "title": "Fuzzy mode",
              "text": [
@@ -1140,17 +1171,17 @@
             {"type": "text", "title": "How it feeds",
              "text": [
                "• Right-click and put in encoded cards - the patterns are at once available to the whole network.",
-               "• For machine recipes the Provider looks for an adjacent &lnon-network&r block with an inventory (furnace, crate, machine, or an assembled Mana Saturator) and puts all ingredients of one batch into it.",
+               "• For machine recipes the Gateway looks for an adjacent &lnon-network&r block with an inventory (furnace, crate, machine, or an assembled Mana Saturator) and puts all ingredients of one batch into it.",
                "• With several neighbors it tries them in turn. If a machine cannot take everything at once, the batch is postponed and retried.",
-               "• The button to the left of the window picks the &loutput side&r: all sides (as before) or a single one — then the provider feeds only the machine on that side. Handy when machines stand side by side. The arrow on the block's faces points at the chosen side; a sun with rays means it feeds all sides.",
+               "• The button to the left of the window picks the &loutput side&r: all sides or a single one — then the gateway feeds only the machine on that side. Handy when machines stand side by side. The arrow on the block's faces points at the chosen side; a sun with rays means it feeds all sides.",
                "• The result comes back into the &lreturn slots&r (the column on the right of the window) and goes straight into the network. The mod's machines put it there themselves (auto-output); for a furnace or another mod's machine let it push into the Gateway, or put a &lVacuum Import Bus&r next to it.",
-               "&oCrafting-table recipes do not concern the provider: the calculator carries them out.&r"
+               "&oCrafting-table recipes do not concern the gateway: the calculator carries them out.&r"
              ]},
             {"type": "text", "title": "Waiting for the result",
              "text": [
                "The &lclock&r button to the left of the window turns waiting on: until the result of the previous batch has come back to the job (through the return slots or an import bus), the next batch of ingredients &lis not loaded&r.",
                "This is for machines that get confused by the ingredients of two recipes at once, or that make one item at a time.",
-               "Without waiting (a hopper on the button) the Provider loads batches as soon as the machine accepts them.",
+               "Without waiting (a hopper on the button) the Gateway loads batches as soon as the machine accepts them.",
                "The slot to the right of the window takes a &lRedstone Module&r."
              ]}
           ]
@@ -1184,7 +1215,8 @@
              "rows": [
                ["Computing", "working"],
                ["Waiting for machine", "needs an import bus"],
-               ["No provider", "pattern is in no provider"],
+               ["No gateway", "pattern is in no gateway"],
+               ["No machine", "gateway has no machine"],
                ["Not enough Source", "no energy"],
                ["Invalid pattern", "recipe is gone"],
                ["Delivering", "storage full"],
@@ -1202,7 +1234,7 @@
                "3. Enter the amount or press ±1, ±10, ±100.",
                "4. “Preview” shows in chat what is needed and what is missing. “Start” launches the job.",
                "Finished items land in storage, and an &l“Order ready”&r plate with the item and its count pops up in the corner of your screen; several orders take turns on it.",
-               "&oFrom JEI the missing ingredients of a recipe are ordered with one button: Ctrl + “+” (see “Crafting Terminal”).&r"
+               "&oFrom a recipe viewer the missing ingredients are ordered with one button: Ctrl + “+” (see “Crafting Terminal”).&r"
              ]},
             {"type": "text", "title": "How the plan is built",
              "text": [
@@ -1240,7 +1272,7 @@
                "• Every calculator inside gives &l2 cores&r. A core is an independent CPU: it takes its own order, just like a separate calculator. 12 calculators — 24 parallel orders on one channel.",
                "• Every &lCompressed Co-processor&r (up to six) counts &ltwice&r and speeds up &lall cores at once&r: a core does 1 + 8×N steps per cycle — up to 49 with six.",
                "The Recipe Monitor lists the cabinet's cores as separate rows (#1, #2...).",
-               "&oSuperconducting cryo-frost and crystal resonance enable the mainframe to unleash peak computational throughput.&r"
+               "&oAn icy circuit keeps the thoughts of twelve calculators from overheating and tangling with one another.&r"
              ]},
             {"type": "text", "title": "Behind the glass",
              "text": [
@@ -1254,7 +1286,7 @@
           "id": "ac_catalog", "title": "Punch Card Catalog", "icon": "golem_logix:punch_card_catalog", "x": 2, "y": -1, "parents": ["ac_provider", "ac_cards"], "gold": true,
           "pages": [
             {"type": "crafting", "recipe": "golem_logix:punch_card_catalog",
-             "text": ["A filing cabinet for hundreds of punch cards with &lcrafting-table recipes&r — no more rows of Pattern Providers just to hold them. The whole cabinet takes &lone channel&r."]},
+             "text": ["A filing cabinet for hundreds of punch cards with &lcrafting-table recipes&r — no more rows of Stamping Gateways just to hold them. The whole cabinet takes &lone channel&r."]},
             {"type": "checklist", "variant": "catalog", "title": "Materials",
              "text": [
                "Checked against your inventory. The button shows ghost blocks: the Catalog at the bottom middle, bookshelves around it, copper blocks behind, copper blocks with copper golem statues at the sides.",
@@ -1269,14 +1301,14 @@
                "The cabinet assembles itself (checked every second); right-click an unassembled one to learn what is missing and where. When it assembles the statues come alive: the golems grow into the sides with a shoulder, hold the roof corner with the near arm and a punch card in the far one. They keep the statues' oxidation.",
                "Break any part and the cabinet comes apart; every block comes back as it was (same oxidation and wax). The cards stay inside."
              ]},
-            {"type": "text", "title": "Places and providers",
+            {"type": "text", "title": "Places and gateways",
              "text": [
-               "The middle of the window is a scrolling grid of card places; on the right are a Redstone Module slot and, below it, the &lPattern Provider slot&r.",
-               "• Put ordinary Pattern Providers there (up to a stack): &leach one opens 27 places&r. 64 providers — 1728 cards in one cabinet.",
-               "• Places without providers are locked (bars). Providers whose places hold cards cannot be taken out — take the cards out first.",
-               "• Only cards with &lcrafting-table&r recipes fit: the calculators carry them out themselves, no machine needed. Machine cards stay in providers next to their machines.",
+               "The middle of the window is a scrolling grid of card places; on the right are a Redstone Module slot and, below it, the &lStamping Gateway slot&r.",
+               "• Put ordinary Stamping Gateways there (up to a stack): &leach one opens 27 places&r. 64 gateways — 1728 cards in one cabinet.",
+               "• Places without gateways are locked (bars). Gateways whose places hold cards cannot be taken out — take the cards out first.",
+               "• Only cards with &lcrafting-table&r recipes fit: the calculators carry them out themselves, no machine needed. Machine cards stay in gateways next to their machines.",
                "• The search under the grid looks at the recipe result; the mouse wheel, the scrollbar and PageUp/PageDown scroll.",
-               "&oEach provider adds another rack of archive drawers.&r"
+               "&oEach gateway adds another rack of archive drawers.&r"
              ]},
             {"type": "text", "title": "Redstone and drawers",
              "text": [
@@ -1290,18 +1322,18 @@
           "id": "ac_concentrator", "title": "Cryo Schematic Concentrator", "icon": "golem_logix:schematic_concentrator", "x": 3, "y": -1, "parents": ["ac_catalog"],
           "pages": [
             {"type": "crafting", "recipe": "golem_logix:schematic_concentrator",
-             "text": ["A rusty cube with a big round holographic screen: &levery punch card of the network in one window&r - the cards of all Pattern Providers and Punch Card Catalogs, grouped by machine, with a search. Take, put and swap cards without walking to each provider. Takes 1 channel."]},
+             "text": ["A rusty cube with a big round holographic screen: &levery punch card of the network in one window&r - the cards of all Stamping Gateways and Punch Card Catalogs, grouped by machine, with a search. Take, put and swap cards without walking to each gateway. Takes 1 channel."]},
             {"type": "text", "title": "Categories",
              "text": [
-               "Right-click to open a list of every Pattern Provider of the network (with a channel) and the places of every Catalog, by category:",
-               "• &lCrafting table&r — providers with only crafting cards, empty providers with no machine, and all Catalogs;",
-               "• then by the &lmachine&r a provider feeds: its block's icon and name (all providers at furnaces share one category);",
-               "• last — &lNo machine&r: providers with machine cards but no machine next to them (worth a look!).",
-               "Hover the icon to the left of a row to see where the provider stands and which machine it feeds."
+               "Right-click to open a list of every Stamping Gateway of the network (with a channel) and the places of every Catalog, by category:",
+               "• &lCrafting table&r — gateways with only crafting cards, empty gateways with no machine, and all Catalogs;",
+               "• then by the &lmachine&r a gateway feeds: its block's icon and name (all gateways at furnaces share one category);",
+               "• last — &lNo machine&r: gateways with machine cards but no machine next to them (worth a look!).",
+               "Hover the icon to the left of a row to see where the gateway stands and which machine it feeds."
              ]},
             {"type": "text", "title": "Working with cards",
              "text": [
-               "The window's slots are the providers' real slots: cards can be &ltaken out and put in&r right here.",
+               "The window's slots are the gateways' real slots: cards can be &ltaken out and put in&r right here.",
                "Shift-click a card in your inventory to put it into the first free slot of its kind (crafting or machine).",
                "The search at the bottom keeps only rows with matching results.",
                "&oWhile the window is open, holographic punch cards fan out in front of the screen.&r"
@@ -1321,7 +1353,6 @@
                "• how much is left of every step,",
                "• what is expected from machines,",
                "• the &l“Abort”&r button - everything inside the job returns to the network.",
-               "With JEI you can press R or U on any item of the desk.",
                "&oPunch cards float in a circle inside the porthole - one for every running job.&r"
              ]}
           ]
@@ -1331,12 +1362,12 @@
           "pages": [
             {"type": "text", "title": "To the machine and back",
              "text": [
-               "When a pattern is a machine recipe, the calculator hands a batch to the Provider, which puts the ingredients into the adjacent machine. The calculator remembers: &lwaiting for the output of this batch&r.",
+               "When a pattern is a machine recipe, the calculator hands a batch to the Gateway, which puts the ingredients into the adjacent machine. The calculator remembers: &lwaiting for the output of this batch&r.",
                "The output is returned by a &lVacuum Import Bus&r at the machine. Seeing an awaited item, the bus hands it straight to the job - bypassing storage.",
                "# Example: ingots from ore",
                "1. Pattern: 1 raw iron → 1 ingot (“Machine” mode).",
-               "2. The Provider stands against the furnace; an import bus is attached to the furnace output.",
-               "3. Order “ingots ×64” - the Provider loads ore, the bus returns ingots, the job counts them done."
+               "2. The Gateway stands against the furnace; an import bus is attached to the furnace output.",
+               "3. Order “ingots ×64” - the Gateway loads ore, the bus returns ingots, the job counts them done."
              ]}
           ]
         },
@@ -1346,13 +1377,13 @@
             {"type": "text", "title": "The network's own fluid",
              "text": ["Liquid Cryo-Source is &lnot stored&r anywhere: the network makes it from its Source the moment automation pumps it out, &l1 mB for 1 Source&r.", "Disks do not take it and terminals do not show it. &lNo bucket&r or other container can be filled with it by hand: only automation pumps it out."]},
             {"type": "image", "texture": "cryo_source", "title": "Pumping it out", "size": 128,
-             "text": ["Export Bus -> tank, Provider -> Basin."]},
+             "text": ["Export Bus → tank, Gateway → machine."]},
             {"type": "text", "title": "Who pumps it",
-             "text": ["&lExport Bus&r: with cryo-source in its filter it pours it into the tank or machine in front of it.", "&lPattern Provider&r: a pattern with a cryo-source ingredient pours it into the machine along with the items.", "&lGolem Interface&r: a cryo-source stock slot keeps that much in its tank for pipes and machines."]},
+             "text": ["&lExport Bus&r: with cryo-source in its filter it pours it into the tank or machine in front of it.", "&lStamping Gateway&r: a pattern with a cryo-source ingredient pours it into the machine along with the items.", "&lGolem Interface&r: a cryo-source stock slot keeps that much in its tank for pipes and machines."]},
             {"type": "text", "title": "Setting the fluid",
-             "text": ["Drag &lLiquid Cryo-Source&r from JEI into a filter, stock or pattern slot. Without JEI, click the slot with a &lSource Jar&r.", "A fluid in a slot counts mB: a click adds &l250 mB&r, a right-click takes 250 away, Shift-click clears the slot."]},
+             "text": ["Click a filter, stock or pattern slot with a &lCryo-Source Jar&r (any Source jar works too) - Liquid Cryo-Source appears in it. From a recipe viewer it can also simply be dragged in.", "A fluid in a slot counts mB: a click adds &l250 mB&r, a right-click takes 250 away, Shift-click clears the slot."]},
             {"type": "text", "title": "Fluids in patterns",
-             "text": ["In processing mode JEI \"+\" carries fluid ingredients over with their amounts. Fluids are never outputs or crafting table ingredients.", "The Provider pours fluids into the &lsame side&r of the machine as the items, and only if it takes everything. The order planner shows fluids in mB.", "Unused cryo-source (a cancelled job, an Interface's excess) is not returned: it goes back into the aether."]}
+             "text": ["In “Machine” mode the recipe viewer's “+” carries fluid ingredients over with their amounts too. A fluid is never an output or a crafting-table ingredient.", "The Gateway pours fluids into the &lsame side&r of the machine as the items, and only if it takes everything. The order planner shows fluids in mB.", "Unused cryo-source (a cancelled job, an Interface's excess) is not returned: it goes back into the aether."]}
           ]
         },
         {
@@ -1361,7 +1392,7 @@
             {"type": "text", "title": "What to do if...",
              "text": [
                "• &lA job is stuck on “Waiting for machine”&r - there is no import bus at the output or the output does not match the pattern.",
-               "• &lNo pattern&r - the Provider did not find a card: put it into a Provider that is connected and has a channel.",
+               "• &lNo pattern&r - the Gateway did not find a card: put it into a Gateway that is connected and has a channel.",
                "• &lNo calculator&r - all are busy or have no channel.",
                "• &lNot enough resources&r - “Preview” lists exactly what.",
                "• &lStorage is full&r - the job hangs on “Delivering” and finishes as soon as disk space frees up.",
@@ -1387,7 +1418,7 @@
             {"type": "text", "title": "Binding and use",
              "text": [
                "1. &lShift+right-click on the Atlas Core&r - the watch binds to it (the tooltip shows coordinates and world).",
-               "2. &lRight-click in the air&r - a network terminal opens &lwith a crafting grid&r: everything the Crafting Terminal can do, including JEI “+”, precraft and R/U.",
+               "2. &lRight-click in the air&r - a network terminal opens &lwith a crafting grid&r: everything the Crafting Terminal can do, including the “+” button and precraft.",
                "• The chronometer takes no channels.",
                "• While the window is open the range is checked constantly: leave the zone and the window closes.",
                "• The network must be powered and the core loaded.",
@@ -1395,15 +1426,15 @@
              ]},
             {"type": "text", "title": "Source charge",
              "text": [
-               "With Ars Nouveau the chronometer runs on its own store of &lSource&r (up to 10,000): opening the window costs 20, and while it is open it uses 2 per second. The charge shows as a bar on the item and as a violet gauge next to the crafting grid.",
-               "&lRight-click a Source Jar&r with the chronometer to charge it to the top (as much as the jar holds).",
-               "If an &lEternal Frost Resonator&r is attached to the network, the watch never needs charging again: the resonator sends it Source through the aether wherever you are.",
-               "&oWithout Ars Nouveau no charge is needed at all.&r"
+               "The chronometer runs on its own store of &lSource&r (up to 10,000): opening the window costs 20, and while it is open it uses 2 per second. The charge shows as a bar on the item and as a violet gauge next to the crafting grid.",
+               "&lRight-click a Cryo-Source Jar&r (or any Source jar) with the chronometer to charge it, as far as the jar allows.",
+               "If an &lEternal Frost Source Resonator&r is attached to the network, the watch never needs charging again: the resonator sends it Source through the aether wherever you are.",
+               "&oIf the world has no way to get Source (neither Neo Vitae nor Ars Nouveau), no charge is needed at all.&r"
              ]},
-            {"type": "text", "title": "Hotkey and Curios",
+            {"type": "text", "title": "Hotkey",
              "text": [
-               "&lCtrl+E&r opens the chronometer without taking it in hand: the one in your hand, in the Curios slot or anywhere in your inventory. The key can be changed in the controls (Golem Logix).",
-               "With &lCurios&r installed you get a &lChronometer&r slot: wear the watch there and keep your hotbar free."
+               "&lCtrl+E&r opens the chronometer without taking it in hand: it can lie anywhere in your inventory or in an accessory slot. The key can be changed in the controls (the Golem Logix section).",
+               "&oWhere accessory slots exist, the watch gets a slot of its own - and your hotbar stays free.&r"
              ]}
           ]
         },
@@ -1434,7 +1465,7 @@
                "The resonator draws Source from the ethereal vacuum and &lsends it through the aether to the Portable Chronometers&r bound to its network - they never need charging, even in another dimension.",
                "Put it against any node of the network: snowflakes start falling around it — the link is up.",
                "• It does &lnot feed the network&r: the Core still takes Source from jars.",
-               "• It does &lnot fill Ars Nouveau jars&r.",
+               "• It does &lnot fill Source jars&r.",
                "&oOne resonator is enough for every chronometer of the network.&r"
              ]}
           ]
@@ -1445,7 +1476,7 @@
             {"type": "text", "title": "For testing",
              "text": [
                "A bottle of turquoise Source with a cork. Creative mode only.",
-               "An infinite source for the network and for Ars Nouveau jars next to it (it tops them up with 10,000 every second). A chronometer charges to the top from it.",
+               "An infinite source for the network and for the jars next to it (it tops them up with 10,000 every second). A chronometer or a hammer charges to the top from it.",
                "Handy for trying out a network layout without spending resources on Source."
              ]}
           ]
@@ -1479,7 +1510,7 @@
                {"id": "wither", "text": "Defeat the Wither"},
                {"id": "dimension", "text": "Try to open a Chronometer in another dimension"}
              ],
-             "text": ["The order does not matter. Each trial reveals half of the knowledge, both - the whole recipe: here in the Grimoire and in JEI."]},
+             "text": ["The order does not matter. Each trial reveals half of the knowledge, both - the whole recipe."]},
             {"type": "text", "title": "The secret is revealed", "when": "both",
              "text": [
                "Both halves of the knowledge have come together. Read &l“The Wither's secret”&r and &l“Interdimensional Occult Matrix”&r - they have appeared next to this article on the map."
