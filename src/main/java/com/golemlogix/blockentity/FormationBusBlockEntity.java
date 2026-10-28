@@ -56,6 +56,8 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
     private int pushTicks = 2;
     private int idleSteps;
     private long sleepUntil;
+    /** The network's storage epoch when it fell asleep: anything entering or leaving the network (a craft done) wakes it. */
+    private long sleepEpoch;
     private long lastCraftRequest = -1000;
     private int order = IN_ORDER;
     /** Round robin: the slot to try first next time. */
@@ -151,7 +153,7 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
             return;
         }
         int interval = interval();
-        if (Math.floorMod(now + pos.asLong(), interval) != 0 || now < sleepUntil) {
+        if (Math.floorMod(now + pos.asLong(), interval) != 0 || now < sleepUntil && sleepEpoch == GolemNetwork.storageEpoch()) {
             return;
         }
         GolemNetwork net = GolemNetwork.get(level, pos);
@@ -178,13 +180,14 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
     private void sleep(long now, int interval) {
         idleSteps = Math.min(MAX_IDLE_STEPS, idleSteps + 1);
         sleepUntil = now + Math.max(interval, Math.min(MAX_IDLE_TICKS, interval << idleSteps));
+        sleepEpoch = GolemNetwork.storageEpoch();
     }
 
     /** One block named in the filter that can stand in front, out of the network; with an Autocraft Module, orders a missing one. */
     private ItemStack take(ServerLevel level, GolemNetwork net, BlockPos target, Direction facing) {
         boolean fuzzy = upgrades.has(UpgradeType.FUZZY);
         java.util.Set<ItemKey> netKeys = fuzzy ? net.listItems().keySet() : java.util.Set.of();
-        ItemKey missing = null;
+        orderMissing(level, net);
         int[] slots = new int[FILTER_SLOTS];
         int start = order == ROUND_ROBIN ? next : 0;
         for (int k = 0; k < FILTER_SLOTS; k++) {
@@ -210,7 +213,6 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
                     wants.add(k.toStack(1));
                 }
             }
-            boolean any = false;
             for (ItemStack one : wants) {
                 if (!(one.getItem() instanceof BlockItem) || !fits(level, target, facing, one)) {
                     continue;
@@ -218,26 +220,47 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
                 if (net.extractItem(one, 1, true, target).isEmpty()) {
                     continue;
                 }
-                any = true;
                 ItemStack real = net.extractItem(one, 1, false, target);
                 if (!real.isEmpty()) {
                     next = (i + 1) % FILTER_SLOTS;
                     return real;
                 }
             }
-            if (!any && missing == null && want.getItem() instanceof BlockItem) {
-                missing = ItemKey.of(want);
-            }
-        }
-        long now = level.getGameTime();
-        if (missing != null && upgrades.has(UpgradeType.CRAFTING) && now - lastCraftRequest >= CRAFT_REQUEST_COOLDOWN
-                && net.canCraft(missing) && !net.busCraftPending(worldPosition, missing)) {
-            lastCraftRequest = now;
-            java.util.Map<ItemKey, Long> one = new java.util.LinkedHashMap<>();
-            one.put(missing, 1L);
-            net.startCrafting(one, null, worldPosition);
         }
         return ItemStack.EMPTY;
+    }
+
+    /**
+     * Autocraft Module: every block of the filter the network has none of is ordered (whatever the other slots have - so a missing
+     * block is made while the golem lays the others), a batch of 8 if the ingredients are there, otherwise one.
+     */
+    private void orderMissing(ServerLevel level, GolemNetwork net) {
+        long now = level.getGameTime();
+        if (!upgrades.has(UpgradeType.CRAFTING) || now - lastCraftRequest < CRAFT_REQUEST_COOLDOWN) {
+            return;
+        }
+        java.util.Set<ItemKey> asked = new java.util.HashSet<>();
+        for (int i = 0; i < FILTER_SLOTS; i++) {
+            ItemStack filter = filters.getItem(i);
+            if (filter.isEmpty()) {
+                continue;
+            }
+            ItemStack want = com.golemlogix.system.Fuzzy.plain(filter).copyWithCount(1);
+            ItemKey key = ItemKey.of(want);
+            if (!(want.getItem() instanceof BlockItem) || !asked.add(key) || !net.extractItem(want, 1, true, null).isEmpty()
+                    || !net.canCraft(key) || net.busCraftPending(worldPosition, key)) {
+                continue;
+            }
+            lastCraftRequest = now;
+            for (long amount : new long[]{8, 1}) {
+                java.util.Map<ItemKey, Long> one = new java.util.LinkedHashMap<>();
+                one.put(key, amount);
+                GolemNetwork.StartType r = net.startCrafting(one, null, worldPosition).type();
+                if (r == GolemNetwork.StartType.STARTED || r == GolemNetwork.StartType.NO_CPU) {
+                    break;
+                }
+            }
+        }
     }
 
     private static DirectionalPlaceContext context(Level level, BlockPos target, Direction facing, ItemStack stack) {

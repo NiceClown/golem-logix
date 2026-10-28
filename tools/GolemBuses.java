@@ -118,7 +118,7 @@ final class GolemBuses {
         return p;
     }
 
-    /** The gauge's face: a brass bezel, a cream dial with ticks, a red needle a little past the middle. */
+    /** The gauge's face: a brass bezel, a cream dial with ticks and a red zone near full (the needle is drawn by the renderer). */
     static Paint tankGauge() {
         Paint p = new Paint(16, 16, K);
         p.disc(8, 8, 8, rgb(Paint.BRASS[3]));
@@ -128,8 +128,10 @@ final class GolemBuses {
             double a = Math.toRadians(150 + k * 30);
             p.line(8 + Math.cos(a) * 4.4, 8 + Math.sin(a) * 4.4, 8 + Math.cos(a) * 5.4, 8 + Math.sin(a) * 5.4, 0.6, rgb(0x2a2420));
         }
-        double a = Math.toRadians(290);
-        p.line(8, 8, 8 + Math.cos(a) * 4.8, 8 + Math.sin(a) * 4.8, 1.0, rgb(0xc8281e));
+        for (int k = 7; k <= 8; k++) {
+            double a = Math.toRadians(150 + k * 30);
+            p.line(8 + Math.cos(a) * 4.4, 8 + Math.sin(a) * 4.4, 8 + Math.cos(a) * 5.4, 8 + Math.sin(a) * 5.4, 0.8, rgb(0xc8281e));
+        }
         p.disc(8, 8, 1, rgb(0x2a2420));
         return p;
     }

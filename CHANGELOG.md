@@ -44,6 +44,11 @@
 - Fixed: loot other mods add to a creature's or a block's drops (Mystical Agriculture's essences, say) stayed on the ground
   instead of going into the network; whatever falls in front right after a strike is swept in too.
 - Fixed: a bare-handed right-click on a Copper Tank crashed the game.
+- **The Copper Tank's gauge shows how full it is**: its needle runs from the dial's lower left (empty) round to the red zone
+  (full).
+- Fixed: Mason's Formation Bus with an Autocraft Module ordered a missing block only when it had nothing else to lay, so a
+  filter with stone and clay never got its clay made. Now every block of the filter the network lacks is ordered (8 at a time
+  when the ingredients allow, otherwise one), and the bus wakes as soon as the craft lands in the network.
 - The buses' casings are cleaner: smooth copper and iron plates with bevelled edges instead of speckled noise.
 - **A secret upgrade for the Annihilation Bus**, made of what only the Wither's secret gives: with it the golem's tool never
   wears. Its recipe and its article open with the rest of the secret.
