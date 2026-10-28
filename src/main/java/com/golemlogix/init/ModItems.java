@@ -93,6 +93,11 @@ public class ModItems {
     public static final DeferredItem<UpgradeItem> REDSTONE_MODULE = item("redstone_module",
             () -> new UpgradeItem(com.golemlogix.upgrade.UpgradeType.REDSTONE, "tooltip.golem_logix.redstone_module",
                     props().stacksTo(16)));
+    /** Plasma Temper (secret, from the Wither's plasma): the Annihilation Bus's golem never wears its tool. */
+    public static final DeferredItem<UpgradeItem> PLASMA_TEMPER = item("plasma_temper",
+            () -> new UpgradeItem(com.golemlogix.upgrade.UpgradeType.TEMPER, "tooltip.golem_logix.plasma_temper",
+                    props().stacksTo(16)));
+
     /** Fuzzy Card: the filters of a bus or an interface match fuzzily (any components, or a tag chosen on the filter). */
     public static final DeferredItem<UpgradeItem> FUZZY_CARD = item("fuzzy_card",
             () -> new UpgradeItem(com.golemlogix.upgrade.UpgradeType.FUZZY, "tooltip.golem_logix.fuzzy_card",

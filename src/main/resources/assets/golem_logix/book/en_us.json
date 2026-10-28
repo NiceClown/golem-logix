@@ -1580,7 +1580,7 @@
              "text": ["The order does not matter. Each trial reveals half of the knowledge, both - the whole recipe."]},
             {"type": "text", "title": "The secret is revealed", "when": "both",
              "text": [
-               "Both halves of the knowledge have come together. Read &l“The Wither's secret”&r and &l“Interdimensional Occult Matrix”&r - they have appeared next to this article on the map."
+               "Both halves of the knowledge have come together. Read &l“The Wither's secret”&r, &l“Interdimensional Occult Matrix”&r and &l“Plasma Temper”&r - they have appeared next to this article on the map."
              ]}
           ]
         },
@@ -1597,6 +1597,22 @@
             {"type": "ritual", "title": "Breaking the summoning", "station": "minecraft:anvil", "inputs": ["minecraft:nether_star"], "outputs": ["golem_logix:imploded_wither_plasma"],
              "condition": "The first seconds of the Wither summoning.",
              "text": ["Bring a stack of anvils and a careful build: keep a frame of blocks overhead so the anvil lands exactly."]}
+          ]
+        },
+        {
+          "id": "plasma_temper", "title": "Plasma Temper", "icon": "golem_logix:plasma_temper", "x": 2, "y": 1, "parents": ["wither"], "secret": "full",
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:plasma_temper",
+             "text": [
+               "The Wither's plasma does not let things fade. Sealed in a brass bezel on a tempered steel bar, it passes that on to whatever the golem holds."
+             ]},
+            {"type": "text", "title": "The tool that never wears",
+             "text": [
+               "An upgrade for &lHewer's Annihilation Bus&r: put it into its upgrade slots.",
+               "The tool in the golem's slot then &lnever wears&r - mining or clicking, a pickaxe, an axe or shears keep their durability, enchantments and all.",
+               "Even a tool on its last point of durability goes back to work.",
+               "&oA netherite pickaxe with Fortune, tempered once, digs for ever.&r"
+             ]}
           ]
         },
         {

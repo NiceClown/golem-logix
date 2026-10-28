@@ -116,13 +116,16 @@ public class GolemLogixJeiPlugin implements IModPlugin {
             return;
         }
         var recipes = runtime.getRecipeManager();
-        // the Void-Glass Prism (the telegraph's endless range) is made of the secret matrix: it is a secret too
+        // the Void-Glass Prism (the telegraph's endless range) is made of the secret matrix, the Plasma Temper of the Wither's
+        // plasma: they are secrets too
         List<net.minecraft.world.item.crafting.RecipeHolder<net.minecraft.world.item.crafting.CraftingRecipe>> prism = new java.util.ArrayList<>();
         var level = net.minecraft.client.Minecraft.getInstance().level;
         if (level != null) {
-            com.golemlogix.system.Recipes.byId(level, Identifier.fromNamespaceAndPath(com.golemlogix.GolemLogixMod.MOD_ID, "void_glass_prism"))
-                    .filter(h -> h.value() instanceof net.minecraft.world.item.crafting.CraftingRecipe)
-                    .ifPresent(h -> prism.add(cast(h)));
+            for (String id : new String[]{"void_glass_prism", "plasma_temper"}) {
+                com.golemlogix.system.Recipes.byId(level, Identifier.fromNamespaceAndPath(com.golemlogix.GolemLogixMod.MOD_ID, id))
+                        .filter(h -> h.value() instanceof net.minecraft.world.item.crafting.CraftingRecipe)
+                        .ifPresent(h -> prism.add(cast(h)));
+            }
         }
         if (ClientSecrets.all()) {
             recipes.unhideRecipes(AnvilCrushCategory.TYPE, List.of(witherRitual()));

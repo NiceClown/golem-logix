@@ -71,6 +71,7 @@ public final class GolemGameTestRegistry {
             new Test("formationbusplaces", GolemGameTests::formationBusPlaces, 200, 0),
             new Test("annihilationbusmines", GolemGameTests::annihilationBusMines, 400, 0),
             new Test("annihilationbusclicks", GolemGameTests::annihilationBusClicks, 200, 0),
+            new Test("annihilationbustempered", GolemGameTests::annihilationBusTempered, 120, 0),
             new Test("annihilationbuswindow", GolemGameTests::annihilationBusWindow, 100, 0),
             new Test("formationbuswindow", GolemGameTests::formationBusWindow, 100, 0),
             new Test("notransitthroughthearray", GolemGameTests::noTransitThroughTheArray, 200, 0),

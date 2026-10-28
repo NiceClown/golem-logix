@@ -33,6 +33,7 @@ public class ModCreativeTabs {
                         output.accept(ModItems.TORN_SNOW_MIND.get());
                         output.accept(ModItems.IMPLODED_WITHER_PLASMA.get());
                         output.accept(ModItems.INTERDIMENSIONAL_OCCULT_MATRIX.get());
+                        output.accept(ModItems.PLASMA_TEMPER.get());
 
                         // Multiblock & Core
                         output.accept(ModBlocks.ATLAS_CORE.get());

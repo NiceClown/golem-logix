@@ -325,6 +325,8 @@
   "tooltip.golem_logix.redstone_module": "Redstone control for buses, the Periscope, Stamping Gateway, Cryo-Calculator and Mana Saturator.",
   "item.golem_logix.fuzzy_card": "Fuzzy Card",
   "tooltip.golem_logix.fuzzy_card": "For buses and the Interface: filters match fuzzily, the same item with any components, or any item of a tag chosen on the filter with a middle-click (Ctrl+click)",
+  "item.golem_logix.plasma_temper": "Plasma Temper",
+  "tooltip.golem_logix.plasma_temper": "Hewer's Annihilation Bus upgrade: the Wither's plasma tempers the golem's tool, and it never wears.",
   "tooltip.golem_logix.fuzzy": "Fuzzy: %s",
   "tooltip.golem_logix.fuzzy.any_components": "the same item, any components",
   "tooltip.golem_logix.fuzzy.tag": "%s (%s items)",

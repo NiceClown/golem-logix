@@ -639,6 +639,30 @@ public class GolemGameTests {
         });
     }
 
+    /**
+     * The Plasma Temper in Hewer's Annihilation Bus: a diamond pickaxe on its last point of durability still mines, and comes out
+     * of the work as worn as it went in.
+     */
+    public static void annihilationBusTempered(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos bus = BUS_OUT, front = BUS_OUT.north();
+        helper.setBlock(bus, ModBlocks.ANNIHILATION_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        helper.setBlock(front, Blocks.STONE);
+        var be = helper.getBlockEntity(bus, com.golemlogix.blockentity.AnnihilationBusBlockEntity.class);
+        ItemStack pick = new ItemStack(Items.DIAMOND_PICKAXE);
+        pick.setDamageValue(pick.getMaxDamage() - 1);
+        be.getTool().setItem(0, pick);
+        be.getUpgrades().setItem(0, new ItemStack(ModItems.PLASMA_TEMPER.get()));
+        helper.runAfterDelay(60, () -> {
+            helper.assertBlockNotPresent(Blocks.STONE, front);
+            ItemStack t = be.getTool().getItem(0);
+            helper.assertTrue(t.is(Items.DIAMOND_PICKAXE) && t.getDamageValue() == t.getMaxDamage() - 1,
+                    "the tempered pickaxe mined and did not wear: " + t.getDamageValue() + "/" + t.getMaxDamage());
+            helper.assertTrue(net(helper, bay).itemCountOf(ItemKey.of(new ItemStack(Items.COBBLESTONE))) == 1, "the stone is in the network");
+            helper.succeed();
+        });
+    }
+
     /** Hewer's Annihilation Bus on right click with shears: it carves the pumpkin in front and the seeds go into the network. */
     public static void annihilationBusClicks(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);

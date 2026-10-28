@@ -191,6 +191,9 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
         if (spec.max(UpgradeType.FUZZY) > 0) {
             out.add(new ItemStack(com.golemlogix.init.ModItems.FUZZY_CARD.get()));
         }
+        if (spec.max(UpgradeType.TEMPER) > 0 && ClientSecrets.all()) {
+            out.add(new ItemStack(com.golemlogix.init.ModItems.PLASMA_TEMPER.get()));
+        }
         return out;
     }
 

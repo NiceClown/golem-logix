@@ -53,7 +53,8 @@ import java.util.UUID;
  * meal - and whatever falls out in front goes into the network.</li>
  * </ul>
  * Settings, as on a clicker: the click, sneaking, the filter as an allow or a deny list (by the block's item; empty works on
- * everything), and "grown only" (a crop or anything with an age only when fully grown). Upgrades: speed, redstone, a Fuzzy Card.
+ * everything), and "grown only" (a crop or anything with an age only when fully grown). Upgrades: speed, redstone, a Fuzzy Card,
+ * and the secret Plasma Temper: the tool in the slot never wears.
  */
 @EventBusSubscriber(modid = GolemLogixMod.MOD_ID)
 public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlaneBlock.Waking {
@@ -326,7 +327,22 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         if (state.requiresCorrectToolForDrops() && !with.isCorrectToolForDrops(state)) {
             return false;
         }
-        return !(with.isDamageableItem() && with.getDamageValue() >= with.getMaxDamage() - 1);
+        return tempered() || !(with.isDamageableItem() && with.getDamageValue() >= with.getMaxDamage() - 1);
+    }
+
+    /** The Plasma Temper is in: the tool never wears. */
+    private boolean tempered() {
+        return upgrades.has(UpgradeType.TEMPER);
+    }
+
+    /** With the temper, the tool comes out of its work as worn as it went in. */
+    private ItemStack unworn(ItemStack before, ItemStack after) {
+        if (tempered() && !before.isEmpty() && (after.isEmpty() || after.is(before.getItem())) && before.isDamageableItem()) {
+            ItemStack kept = after.isEmpty() ? before.copy() : after;
+            kept.setDamageValue(before.getDamageValue());
+            return kept;
+        }
+        return after;
     }
 
     private FakePlayer golem(ServerLevel level, BlockPos pos, Direction facing, ItemStack hand) {
@@ -350,6 +366,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
                 return false;
             }
         }
+        ItemStack before = hand.copy();
         level.levelEvent(2001, target, Block.getId(state));
         breaking = this;
         try {
@@ -358,7 +375,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
             breaking = null;
         }
         if (own) {
-            tool.setItem(0, p.getMainHandItem());
+            tool.setItem(0, unworn(before, p.getMainHandItem()));
         }
         p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
         p.setShiftKeyDown(false);
@@ -367,11 +384,12 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
 
     /** Right click: the item in the slot (or the bare hand) used on the block; what falls out goes into the network. */
     private boolean use(ServerLevel level, GolemNetwork net, BlockPos pos, BlockPos target, Direction facing) {
-        FakePlayer p = golem(level, pos, facing, tool.getItem(0).copy());
+        ItemStack before = tool.getItem(0).copy();
+        FakePlayer p = golem(level, pos, facing, before.copy());
         Vec3 hitAt = Vec3.atCenterOf(target).relative(facing.getOpposite(), 0.5);
         BlockHitResult hit = new BlockHitResult(hitAt, facing.getOpposite(), target, false);
         var result = p.gameMode.useItemOn(p, level, p.getMainHandItem(), InteractionHand.MAIN_HAND, hit);
-        tool.setItem(0, p.getMainHandItem().copy());
+        tool.setItem(0, unworn(before, p.getMainHandItem().copy()));
         p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
         // anything the golem picked up (a filled bucket's leftovers, a harvest given to the hand) goes into the network
         for (int i = 0; i < p.getInventory().getContainerSize(); i++) {

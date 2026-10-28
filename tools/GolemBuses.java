@@ -228,6 +228,29 @@ final class GolemBuses {
         return p;
     }
 
+    /**
+     * The Plasma Temper (item): a steel bar in temper colours from straw to blue along its length, and in its middle a bead of the
+     * Wither's plasma - black with a violet glow - set in a brass bezel.
+     */
+    static Paint temper() {
+        Paint p = new Paint(16, 16, K);
+        int[] temper = {0xe2cf8a, 0xc99a52, 0xa0632e, 0x7c4a9a, 0x4a5cc8, 0x6f8fd0, 0xa9bcd8};
+        p.line(2.5, 13.5, 13.5, 2.5, 5, rgb(0x1a1a22));
+        for (int k = 0; k < 22; k++) {
+            double t0 = k / 22.0, t1 = (k + 1) / 22.0;
+            int c = Paint.ramp(temper, t0);
+            p.line(3 + 10 * t0, 13 - 10 * t0, 3 + 10 * t1, 13 - 10 * t1, 3.6, rgb(c));
+        }
+        p.line(3.4, 11.6, 11.6, 3.4, 0.6, Paint.argb(170, 0xffffff));
+        p.disc(8, 8, 3.6, rgb(Paint.BRASS[2]));
+        p.disc(8, 8, 3.0, rgb(Paint.BRASS[5]));
+        p.disc(8, 8, 2.2, rgb(0x120a18));
+        p.disc(7.4, 7.4, 1.2, rgb(Paint.VIOLET[3]));
+        p.disc(7.1, 7.1, 0.5, rgb(Paint.VIOLET[6]));
+        p.px((int) (9 * K), (int) (8.6 * K), rgb(Paint.VIOLET[4]));
+        return p;
+    }
+
     static void cutout(String model) throws Exception {
         Path f = Models.RES.resolve("models/block/" + model + ".json");
         String s = Files.readString(f, StandardCharsets.UTF_8);
@@ -294,6 +317,7 @@ final class GolemBuses {
         formation(true).save(Forge2.tex("formation_front"));
         annihilation().save(Forge2.tex("annihilation_side"));
         niche().save(Forge2.tex("annihilation_niche"));
+        temper().save(Forge2.RES.resolve("textures/item/plasma_temper.png").toFile());
         models();
     }
 }

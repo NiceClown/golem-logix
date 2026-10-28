@@ -26,9 +26,11 @@
   Settings as on a clicker: left click (mines like a player, as fast as the tool allows, the drops into the network) or right
   click (uses the item or the bare hand on the block, what falls out into the network), sneaking, the filter as an allow or a
   deny list, and "grown only" for crops. Upgrades: speed (four co-processors mine eightfold), Redstone Module, Fuzzy Card.
+- **A secret upgrade for the Annihilation Bus**, made of what only the Wither's secret gives: with it the golem's tool never
+  wears. Its recipe and its article open with the rest of the secret.
 - Guidebook articles: the Copper Tank under Storage, both new buses under Buses.
-- 126 game tests (new: a tank keeps its fluid when broken, tanks join, bucket mode pours and scoops, the Formation Bus sets
-  blocks down, the Annihilation Bus mines (and leaves obsidian and unripe wheat alone) and clicks with shears, and both buses'
+- 127 game tests (new: a tank keeps its fluid when broken, tanks join, bucket mode pours and scoops, the Formation Bus sets
+  blocks down, the Annihilation Bus mines (and leaves obsidian and unripe wheat alone) and clicks with shears, a tool that does not wear, and both buses'
   windows: opened by a click, their setting buttons, shift-clicks into the tool slot, the filter and the upgrades, the layout).
 
 ## 2.0.10 (26.1.2) — Autocrafting finds the gateway at the machine
