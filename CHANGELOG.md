@@ -33,12 +33,17 @@
   co-processors mine eightfold), Redstone Module, Fuzzy Card.
 - **The Export Bus has an order button**: in order (as before), round robin (one filter slot an operation, each after the
   last) or at random.
+- **The Export Bus keeps an amount in the container**, like a regulator: click a filled filter slot with an empty hand (or
+  Ctrl+click without a Fuzzy Card) and its settings window opens, as on the Golem Interface - type how much the container in
+  front should hold (16 coal in a furnace), or use the step and preset buttons; the bus tops it up to that and no further.
+  0 exports without a limit, as before. Fluids in mB or buckets ("16B"). The number shows in the slot's corner.
 - The buses' casings are cleaner: smooth copper and iron plates with bevelled edges instead of speckled noise.
 - **A secret upgrade for the Annihilation Bus**, made of what only the Wither's secret gives: with it the golem's tool never
   wears. Its recipe and its article open with the rest of the secret.
 - Guidebook articles: the Copper Tank under Storage, both new buses under Buses.
-- 130 game tests (new: a tank keeps its fluid when broken, tanks join, bucket mode pours and scoops, the Formation Bus sets
-  blocks down, the Annihilation Bus mines (and leaves obsidian and unripe wheat alone) and clicks with shears, a tool that does not wear, round robin on the Formation and Export Buses, a pig
+- 132 game tests (new: a tank keeps its fluid when broken, tanks join, bucket mode pours and scoops, the Formation Bus sets
+  blocks down, the Annihilation Bus mines (and leaves obsidian and unripe wheat alone) and clicks with shears, a tool that does not wear, round robin on the Formation and Export Buses, an Export Bus
+  keeping 10 in a chest and its slot window, a pig
   struck down into the network, and both buses'
   windows: opened by a click, their setting buttons, shift-clicks into the tool slot, the filter and the upgrades, the layout).
 

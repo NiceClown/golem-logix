@@ -1012,7 +1012,11 @@
                "• The bus priority sets the order: a higher number works earlier than the others in the network.",
                "• With an &lAutocraft Module&r the bus orders what the network lacks from the calculators - and delivers it as soon as it is ready.",
                "&oExample: a bus with coal in its filter on a furnace - the furnace always has fuel.&r",
-               "The &lorder&r button on the left: &lin order&r (the first filter slot the network has goes first), &lround robin&r (one slot an operation, each after the last) or &lat random&r."
+               "The &lorder&r button on the left: &lin order&r (the first filter slot the network has goes first), &lround robin&r (one slot an operation, each after the last) or &lat random&r.",
+               "# The slot window",
+               "&lClick a filled filter slot with an empty hand&r (or Ctrl+click without a Fuzzy Card): its settings window opens, as on the Golem Interface.",
+               "There you set how much to &lkeep in the container&r: the bus tops it up to that number and no further - 16 coal in a furnace, a stack of bread in a chest. &l0&r exports without a limit, as before.",
+               "Type the number, or use the step and preset buttons; for a fluid in mB or in buckets (16B). Enter applies, &lClear&r empties the slot. The number shows in the slot's corner."
              ]}
           ]
         },
@@ -1069,6 +1073,7 @@
                "• RMB - -1 or clear.",
                "• Shift-click - clears the slot.",
                "• Shift-click on an inventory item - puts a copy into the first free slot.",
+               "• On the &lExport Bus&r a click with an empty hand on a filled slot opens the slot window instead: how much to keep in the container (see “Injector export bus”).",
                "A &lbucket (or any container holding fluid)&r in a slot is a fluid filter. Because of this a “water bucket” item cannot be passed through a filter as an item: there it means water."
              ]}
           ]

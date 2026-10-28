@@ -46,6 +46,8 @@ import java.util.Optional;
  * A filter slot holding a bucket (any fluid container) selects a fluid.
  * Six upgrade slots: up to four Compressed Co-Processors (faster and more at a time), an Autocraft Module (export orders
  * what is missing from the calculators) and a Redstone Module.
+ * An Export Bus filter slot can name an amount to keep (the slot window, see BusSlotScreen): the bus then tops the container in
+ * front up to it and no further, like a regulator - say, 16 coal in a furnace.
  * The Export Bus goes through its filter in order (the first slot the network has goes first), round robin (each operation
  * starts at the slot after the one that went out last) or at random (FormationBusBlockEntity.IN_ORDER, ROUND_ROBIN, RANDOM).
  */
@@ -400,6 +402,22 @@ public class BusBlockEntity extends BlockEntity {
                     break;
                 }
                 ItemStack want = com.golemlogix.system.Fuzzy.plain(filter).copyWithCount(1);
+                // a keep amount: only what the container still lacks of it
+                int keep = com.golemlogix.menu.BusMenu.keep(filter);
+                int cap = itemBudget;
+                if (keep > 0) {
+                    int have = 0;
+                    for (int s = 0; s < items.getSlots(); s++) {
+                        ItemStack in = items.getStackInSlot(s);
+                        if (com.golemlogix.system.Fuzzy.matches(filter, in, fuzzy)) {
+                            have += in.getCount();
+                        }
+                    }
+                    cap = Math.min(cap, keep - have);
+                    if (cap <= 0) {
+                        continue;
+                    }
+                }
                 // what may go out for this filter: its own item first, with a Fuzzy Card also what the network has that matches it
                 List<ItemStack> wants = new ArrayList<>();
                 wants.add(want);
@@ -413,8 +431,8 @@ public class BusBlockEntity extends BlockEntity {
                 boolean nothingInNetwork = true;
                 for (ItemStack one : wants) {
                     boolean stop = false;
-                    while (itemBudget - moved > 0) {
-                        int ask = Math.min(itemBudget - moved, Math.max(1, one.getMaxStackSize()));
+                    while (cap - moved > 0) {
+                        int ask = Math.min(cap - moved, Math.max(1, one.getMaxStackSize()));
                         // do not move from a container into the same container (a periscope on the same chest)
                         ItemStack sim = net.extractItem(one, ask, true, target);
                         if (sim.isEmpty()) {
@@ -442,7 +460,7 @@ public class BusBlockEntity extends BlockEntity {
                             break;
                         }
                     }
-                    if (stop || itemBudget - moved <= 0) {
+                    if (stop || cap - moved <= 0) {
                         break;
                     }
                 }
@@ -458,18 +476,38 @@ public class BusBlockEntity extends BlockEntity {
                     // order only if the container accepts this item at all
                     if (ItemHandlerHelper.insertItemStacked(items, want, true).isEmpty() && net.canCraft(key)
                             && !net.busCraftPending(worldPosition, key)) {
-                        toCraft.put(key, (long) Math.min(perStack, itemsPerOperation()));
+                        toCraft.put(key, (long) Math.min(perStack, Math.min(itemsPerOperation(), cap)));
                     }
                 }
             }
         }
 
         if (fluids != null) {
-            for (FluidStack filter : fluidFilters()) {
+            for (int slot : slotOrder) {
+                ItemStack ghost = filters.getItem(slot);
+                FluidStack filter = fluidOf(ghost).orElse(FluidStack.EMPTY);
+                if (filter.isEmpty()) {
+                    continue;
+                }
                 if (fluidBudget <= 0) {
                     break;
                 }
-                FluidStack sim = net.extractFluid(filter, fluidBudget, true, target);
+                int cap = fluidBudget;
+                int keep = com.golemlogix.menu.BusMenu.keep(ghost);
+                if (keep > 0) {
+                    int have = 0;
+                    for (int t = 0; t < fluids.getTanks(); t++) {
+                        FluidStack in = fluids.getFluidInTank(t);
+                        if (FluidStack.isSameFluidSameComponents(in, filter)) {
+                            have += in.getAmount();
+                        }
+                    }
+                    cap = Math.min(cap, keep - have);
+                    if (cap <= 0) {
+                        continue;
+                    }
+                }
+                FluidStack sim = net.extractFluid(filter, cap, true, target);
                 if (sim.isEmpty()) {
                     continue;
                 }

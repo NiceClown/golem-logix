@@ -78,6 +78,37 @@ public class BusMenu extends GolemMenu {
         return kind == KIND_FORMATION;
     }
 
+    /** How much the container in front should hold of what a filter ghost names (0: export without a limit). */
+    public static int keep(ItemStack filter) {
+        return filter.getOrDefault(com.golemlogix.init.ModDataComponents.KEEP_AMOUNT.get(), 0);
+    }
+
+    public int keepAt(int slot) {
+        return slot >= 0 && slot < filters.getContainerSize() ? keep(filters.getItem(slot)) : 0;
+    }
+
+    public ItemStack filterAt(int slot) {
+        return slot >= 0 && slot < filters.getContainerSize() ? filters.getItem(slot) : ItemStack.EMPTY;
+    }
+
+    /** The Export Bus slot window: how much to keep in the container (0: no limit), or a negative amount to clear the slot. */
+    public void setKeep(int slot, int amount) {
+        if (!isExport() || slot < 0 || slot >= filters.getContainerSize() || filters.getItem(slot).isEmpty()) {
+            return;
+        }
+        if (amount < 0) {
+            filters.setItem(slot, ItemStack.EMPTY);
+            return;
+        }
+        ItemStack f = filters.getItem(slot).copy();
+        if (amount == 0) {
+            f.remove(com.golemlogix.init.ModDataComponents.KEEP_AMOUNT.get());
+        } else {
+            f.set(com.golemlogix.init.ModDataComponents.KEEP_AMOUNT.get(), amount);
+        }
+        filters.setItem(slot, f);
+    }
+
     /** The Export and Formation Buses go through their filter slots in an order. */
     public boolean hasOrder() {
         return isFormation() || isExport();

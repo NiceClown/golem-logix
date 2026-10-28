@@ -718,6 +718,60 @@ public class GolemGameTests {
         });
     }
 
+    /** The Export Bus keeping 10 cobblestone in a chest: it tops the chest up to 10, and again after some is taken out. */
+    public static void exportBusKeeps(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(BUS_OUT, ModBlocks.INJECTOR_EXPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        BusBlockEntity bus = helper.getBlockEntity(BUS_OUT, BusBlockEntity.class);
+        ItemStack filter = new ItemStack(Items.COBBLESTONE);
+        filter.set(com.golemlogix.init.ModDataComponents.KEEP_AMOUNT.get(), 10);
+        bus.getFilters().setItem(0, filter);
+        BlockPos chest = new BlockPos(6, 1, 2);
+        helper.setBlock(chest, Blocks.CHEST);
+        Container c = ((Container) helper.getBlockEntity(chest, net.minecraft.world.level.block.entity.BlockEntity.class));
+        helper.runAfterDelay(5, () -> net(helper, bay).insertItem(new ItemStack(Items.COBBLESTONE, 64), false));
+        java.util.function.IntSupplier inChest = () -> {
+            int n = 0;
+            for (int i = 0; i < c.getContainerSize(); i++) {
+                n += c.getItem(i).is(Items.COBBLESTONE) ? c.getItem(i).getCount() : 0;
+            }
+            return n;
+        };
+        helper.runAfterDelay(60, () -> {
+            helper.assertTrue(inChest.getAsInt() == 10, "the chest holds exactly 10, got " + inChest.getAsInt());
+            for (int i = 0; i < c.getContainerSize(); i++) {
+                if (c.getItem(i).is(Items.COBBLESTONE)) {
+                    c.getItem(i).shrink(4);
+                    break;
+                }
+            }
+        });
+        helper.runAfterDelay(120, () -> {
+            helper.assertTrue(inChest.getAsInt() == 10, "topped up to 10 again, got " + inChest.getAsInt());
+            helper.assertTrue(net(helper, bay).itemCountOf(ItemKey.of(new ItemStack(Items.COBBLESTONE))) == 64 - 14, "14 went out in all");
+            helper.succeed();
+        });
+    }
+
+    /** The Export Bus slot window's server side: a keep amount is set on the ghost, 0 takes it off, a negative amount clears the slot. */
+    public static void exportBusSlotWindow(GameTestHelper helper) {
+        helper.setBlock(new BlockPos(2, 1, 2), ModBlocks.INJECTOR_EXPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        BusBlockEntity bus = helper.getBlockEntity(new BlockPos(2, 1, 2), BusBlockEntity.class);
+        bus.getFilters().setItem(0, new ItemStack(Items.COAL));
+        ServerPlayer player = testPlayer(helper);
+        var menu = new com.golemlogix.menu.BusMenu(55, player.getInventory(), bus.getFilters(), bus.getUpgrades(),
+                com.golemlogix.menu.BusMenu.KIND_EXPORT, bus.menuData());
+        menu.setKeep(0, 16);
+        helper.assertTrue(menu.keepAt(0) == 16 && bus.getFilters().getItem(0).is(Items.COAL), "16 coal to keep, the filter stays coal");
+        helper.assertTrue(com.golemlogix.system.Fuzzy.matches(bus.getFilters().getItem(0), new ItemStack(Items.COAL), false),
+                "the keep amount does not stop the filter matching coal");
+        menu.setKeep(0, 0);
+        helper.assertTrue(menu.keepAt(0) == 0 && !bus.getFilters().getItem(0).isEmpty(), "0: no limit, the filter stays");
+        menu.setKeep(0, -1);
+        helper.assertTrue(bus.getFilters().getItem(0).isEmpty(), "a negative amount clears the slot");
+        helper.succeed();
+    }
+
     /** Hewer's Annihilation Bus attacking with a diamond sword: the pig in front dies and its pork goes into the network. */
     public static void annihilationBusAttacks(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);

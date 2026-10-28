@@ -62,6 +62,10 @@ public class ModDataComponents {
             COMPONENTS.registerComponentType("telegraph_link", b -> b.persistent(com.golemlogix.items.TelegraphLinkCardItem.Link.CODEC)
                     .networkSynchronized(com.golemlogix.items.TelegraphLinkCardItem.Link.STREAM_CODEC));
 
+    /** On an Export Bus filter ghost: how much of it the container in front should hold (items, or mB for a fluid). */
+    public static final Supplier<DataComponentType<Integer>> KEEP_AMOUNT = COMPONENTS.registerComponentType(
+            "keep_amount", b -> b.persistent(Codec.intRange(1, Integer.MAX_VALUE)).networkSynchronized(ByteBufCodecs.VAR_INT));
+
     /** The fluid in a Copper Tank (as an item; the block keeps it in its block entity). */
     public static final Supplier<DataComponentType<net.neoforged.neoforge.fluids.SimpleFluidContent>> TANK_FLUID = COMPONENTS.registerComponentType(
             "tank_fluid", b -> b.persistent(net.neoforged.neoforge.fluids.SimpleFluidContent.CODEC)
