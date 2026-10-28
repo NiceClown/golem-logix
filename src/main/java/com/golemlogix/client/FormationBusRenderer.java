@@ -32,6 +32,22 @@ public class FormationBusRenderer extends com.golemlogix.client.render.LegacyBer
     public FormationBusRenderer(BlockEntityRendererProvider.Context context) {
     }
 
+    /**
+     * The light the golem in the bus is lit by: the brightest round the bus but behind it (the glass side windows let it in) - the
+     * spot in front alone goes dark as soon as a whole block stands there.
+     */
+    static int light(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos, Direction facing) {
+        int block = 0, sky = 0;
+        for (Direction d : Direction.values()) {
+            if (d != facing.getOpposite()) {
+                int c = LevelRenderer.getLightCoords(level, pos.relative(d));
+                block = Math.max(block, net.minecraft.util.LightCoordsUtil.block(c));
+                sky = Math.max(sky, net.minecraft.util.LightCoordsUtil.sky(c));
+            }
+        }
+        return net.minecraft.util.LightCoordsUtil.pack(block, sky);
+    }
+
     /** Turns the frame from "facing north" to the block's facing (as the blockstate turns the model). */
     static void orient(PoseStack pose, Direction facing) {
         pose.translate(0.5f, 0.5f, 0.5f);
@@ -53,7 +69,7 @@ public class FormationBusRenderer extends com.golemlogix.client.render.LegacyBer
             return;
         }
         Direction facing = be.getBlockState().getValue(DirectionalBlock.FACING);
-        int front = LevelRenderer.getLightCoords(be.getLevel(), be.getBlockPos().relative(facing));
+        int front = light(be.getLevel(), be.getBlockPos(), facing);
         float time = be.getLevel().getGameTime() + partialTick;
         ItemStack carrying = be.carrying();
         float push = be.push(partialTick);

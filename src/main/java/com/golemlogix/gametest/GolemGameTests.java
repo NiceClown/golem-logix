@@ -652,7 +652,8 @@ public class GolemGameTests {
         ItemStack pick = new ItemStack(Items.DIAMOND_PICKAXE);
         pick.setDamageValue(pick.getMaxDamage() - 1);
         be.getTool().setItem(0, pick);
-        be.getUpgrades().setItem(0, new ItemStack(ModItems.PLASMA_TEMPER.get()));
+        be.getUpgrades().setItem(com.golemlogix.upgrade.UpgradeSpec.ANNIHILATION_BUS.slotOf(com.golemlogix.upgrade.UpgradeType.TEMPER),
+                new ItemStack(ModItems.PLASMA_TEMPER.get()));
         helper.runAfterDelay(60, () -> {
             helper.assertBlockNotPresent(Blocks.STONE, front);
             ItemStack t = be.getTool().getItem(0);
@@ -865,6 +866,7 @@ public class GolemGameTests {
             player.getInventory().setItem(0, new ItemStack(Items.DIAMOND_PICKAXE));
             player.getInventory().setItem(1, new ItemStack(Items.STONE, 12));
             player.getInventory().setItem(2, new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get(), 2));
+            player.getInventory().setItem(3, new ItemStack(ModItems.FUZZY_CARD.get()));
             menu.clicked(hotbar0, 0, net.minecraft.world.inventory.ContainerInput.QUICK_MOVE, player);
             helper.assertTrue(be.getTool().getItem(0).is(Items.DIAMOND_PICKAXE) && player.getInventory().getItem(0).isEmpty(),
                     "shift-click moves the pickaxe into the tool slot");
@@ -872,7 +874,11 @@ public class GolemGameTests {
             helper.assertTrue(be.getFilters().getItem(0).is(Items.STONE) && player.getInventory().getItem(1).getCount() == 12,
                     "shift-click copies stone into the filter and keeps the stack");
             menu.clicked(hotbar0 + 2, 0, net.minecraft.world.inventory.ContainerInput.QUICK_MOVE, player);
-            helper.assertTrue(be.getUpgrades().count(com.golemlogix.upgrade.UpgradeType.SPEED) == 2, "co-processors go into the upgrade slots");
+            helper.assertTrue(be.getUpgrades().count(com.golemlogix.upgrade.UpgradeType.SPEED) == 0
+                    && player.getInventory().getItem(2).getCount() == 2, "no co-processors: the golem is as fast as its tool");
+            menu.clicked(hotbar0 + 3, 0, net.minecraft.world.inventory.ContainerInput.QUICK_MOVE, player);
+            int fuzzySlot = com.golemlogix.upgrade.UpgradeSpec.ANNIHILATION_BUS.slotOf(com.golemlogix.upgrade.UpgradeType.FUZZY);
+            helper.assertTrue(be.getUpgrades().getItem(fuzzySlot).is(ModItems.FUZZY_CARD.get()), "the fuzzy card goes into its own slot");
             menu.clicked(com.golemlogix.menu.AnnihilationBusMenu.TOOL_SLOT_INDEX, 0, net.minecraft.world.inventory.ContainerInput.QUICK_MOVE, player);
             helper.assertTrue(be.getTool().getItem(0).isEmpty() && player.getInventory().contains(new ItemStack(Items.DIAMOND_PICKAXE)),
                     "shift-click on the tool slot takes the pickaxe back");
@@ -4024,7 +4030,7 @@ public class GolemGameTests {
         });
     }
 
-    /** Six upgrade slots: up to four speed upgrades, an Autocraft Module only on export, one module of each kind; speed upgrades are saved. */
+    /** Six upgrade slots, each for one kind: four speed upgrades, an Autocraft Module only on export, one module of each kind; speed upgrades are saved. */
     public static void busUpgradeSlots(GameTestHelper helper) {
         BlockPos at = new BlockPos(2, 1, 2);
         helper.setBlock(at, ModBlocks.VACUUM_IMPORT_BUS.get().defaultBlockState());
@@ -4050,9 +4056,10 @@ public class GolemGameTests {
         BlockPos at2 = new BlockPos(4, 1, 2);
         helper.setBlock(at2, ModBlocks.INJECTOR_EXPORT_BUS.get().defaultBlockState());
         var up2 = (helper.getBlockEntity(at2, BusBlockEntity.class)).getUpgrades();
-        helper.assertTrue(up2.canPlaceItem(0, new ItemStack(ModItems.AUTOCRAFT_MODULE.get())), "the export bus takes the autocraft module");
-        up2.setItem(0, new ItemStack(ModItems.AUTOCRAFT_MODULE.get()));
-        helper.assertTrue(!up2.canPlaceItem(1, new ItemStack(ModItems.AUTOCRAFT_MODULE.get())), "only one autocraft module");
+        helper.assertTrue(!up2.canPlaceItem(0, new ItemStack(ModItems.AUTOCRAFT_MODULE.get())), "a speed slot takes no autocraft module");
+        helper.assertTrue(up2.canPlaceItem(4, new ItemStack(ModItems.AUTOCRAFT_MODULE.get())), "the export bus takes the autocraft module");
+        up2.setItem(4, new ItemStack(ModItems.AUTOCRAFT_MODULE.get()));
+        helper.assertTrue(!up2.canPlaceItem(5, new ItemStack(ModItems.AUTOCRAFT_MODULE.get())), "only one autocraft module");
 
         BlockPos at3 = new BlockPos(6, 1, 2);
         helper.setBlock(at3, ModBlocks.PERISCOPE_STORAGE_BUS.get().defaultBlockState());
@@ -4067,6 +4074,16 @@ public class GolemGameTests {
         fresh.loadWithComponents(net.minecraft.world.level.storage.TagValueInput.create(net.minecraft.util.ProblemReporter.DISCARDING, registries, saved));
         helper.assertTrue(fresh.getUpgrades().count(com.golemlogix.upgrade.UpgradeType.SPEED) == 4
                 && fresh.getUpgrades().has(com.golemlogix.upgrade.UpgradeType.REDSTONE), "upgrades are saved with the bus");
+        // an old save with the modules anywhere: on loading every upgrade goes into a slot of its own kind
+        up.clearContent();
+        up.setItem(0, new ItemStack(ModItems.REDSTONE_MODULE.get()));
+        up.setItem(5, speed.copy());
+        CompoundTag old = in.saveWithFullMetadata(registries);
+        BusBlockEntity sorted = new BusBlockEntity(helper.absolutePos(at), helper.getBlockState(at));
+        sorted.loadWithComponents(net.minecraft.world.level.storage.TagValueInput.create(net.minecraft.util.ProblemReporter.DISCARDING, registries, old));
+        var su = sorted.getUpgrades();
+        helper.assertTrue(su.getItem(0).is(ModItems.COMPRESSED_COPROCESSOR.get()) && su.getItem(4).is(ModItems.REDSTONE_MODULE.get())
+                && su.getItem(5).isEmpty(), "old upgrades are sorted into their slots: " + su.getItem(0) + ", " + su.getItem(4) + ", " + su.getItem(5));
         helper.succeed();
     }
 

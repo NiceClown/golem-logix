@@ -157,13 +157,12 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
             }
         }
         if (up != null && menu instanceof GolemMenu gm && gm.upgradeSpec() != null) {
-            // empty upgrade slots: a translucent "projection" of what can go here (one per slot:
-            // speed upgrades up to the machine's limit first, then the autocraft module and the redstone module)
+            // empty upgrade slots: a translucent "projection" of the one kind of upgrade the slot takes
             List<ItemStack> hints = upgradeHints(gm.upgradeSpec());
             for (int i = gm.upgradeStart(); i < gm.upgradeEnd(); i++) {
                 Slot s = menu.slots.get(i);
                 int k = i - gm.upgradeStart();
-                if (!s.hasItem() && k < hints.size()) {
+                if (!s.hasItem() && k < hints.size() && !hints.get(k).isEmpty()) {
                     int x = leftPos + s.x, y = topPos + s.y;
                     g.item(hints.get(k), x, y);
                     g.pose().pushMatrix();
@@ -176,23 +175,18 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
         renderOverlay(g, partialTick, mouseX, mouseY);
     }
 
-    /** Hints for the upgrade slots in order: what the machine accepts and how many of each. */
+    /** The ghost of each upgrade slot: the kind of upgrade it is for (the Plasma Temper's only once its secret is known). */
     private static List<ItemStack> upgradeHints(com.golemlogix.upgrade.UpgradeSpec spec) {
         List<ItemStack> out = new ArrayList<>();
-        for (int i = 0; i < spec.max(UpgradeType.SPEED); i++) {
-            out.add(new ItemStack(com.golemlogix.init.ModItems.COMPRESSED_COPROCESSOR.get()));
-        }
-        if (spec.max(UpgradeType.CRAFTING) > 0) {
-            out.add(new ItemStack(com.golemlogix.init.ModItems.AUTOCRAFT_MODULE.get()));
-        }
-        if (spec.max(UpgradeType.REDSTONE) > 0) {
-            out.add(new ItemStack(com.golemlogix.init.ModItems.REDSTONE_MODULE.get()));
-        }
-        if (spec.max(UpgradeType.FUZZY) > 0) {
-            out.add(new ItemStack(com.golemlogix.init.ModItems.FUZZY_CARD.get()));
-        }
-        if (spec.max(UpgradeType.TEMPER) > 0 && ClientSecrets.all()) {
-            out.add(new ItemStack(com.golemlogix.init.ModItems.PLASMA_TEMPER.get()));
+        for (int i = 0; i < spec.slots(); i++) {
+            UpgradeType t = spec.typeAt(i);
+            out.add(t == null ? ItemStack.EMPTY : new ItemStack(switch (t) {
+                case SPEED -> com.golemlogix.init.ModItems.COMPRESSED_COPROCESSOR.get();
+                case CRAFTING -> com.golemlogix.init.ModItems.AUTOCRAFT_MODULE.get();
+                case REDSTONE -> com.golemlogix.init.ModItems.REDSTONE_MODULE.get();
+                case FUZZY -> com.golemlogix.init.ModItems.FUZZY_CARD.get();
+                case TEMPER -> ClientSecrets.all() ? com.golemlogix.init.ModItems.PLASMA_TEMPER.get() : net.minecraft.world.item.Items.AIR;
+            }));
         }
         return out;
     }

@@ -1061,9 +1061,9 @@
             {"type": "text", "title": "Clicks",
              "text": [
                "Settings in the column left of the window, as on a clicker:",
-               "• &lLeft click&r: mines the block like a player, as fast as the tool allows (co-processors speed it up, four of them eightfold), cracks and all. The drops go into the network; while it cannot take them all, the golem waits.",
+               "• &lLeft click&r: mines the block like a player, as fast as the tool allows - Efficiency counts, co-processors do not fit here: a better tool is the only way to speed it up - cracks and all. The drops go into the network; while it cannot take them all, the golem waits.",
                "• &lRight click&r: once an interval uses its item (or bare hand) on the block - a lever, shears on a pumpkin, a hoe, bone meal. What falls out goes into the network.",
-               "• &lAttack&r: once an interval strikes the creatures in front with the tool (an iron sword when the slot is empty) at full strength and without knockback; the loot goes into the network. Players, pets and named creatures are never touched; spawn eggs in the filter choose the creatures, and &lgrown only&r spares the young.",
+               "• &lAttack&r: at the weapon's own attack speed strikes the creatures in front with the tool (an iron sword when the slot is empty) at full strength and without knockback; the loot goes into the network. Players, pets and named creatures are never touched; spawn eggs in the filter choose the creatures, and &lgrown only&r spares the young.",
                "• &lSneaking&r, the filter as an &lallow or deny list&r (empty - every block), &lgrown only&r (crops only when ripe) and the &lRedstone Module&r."
              ]}
           ]
@@ -1090,7 +1090,7 @@
           "pages": [
             {"type": "text", "title": "Upgrade slots",
              "text": [
-               "To the right of the bus window there is a column of &lupgrade slots&r. Shift-clicking an upgrade in your inventory puts it into a free slot.",
+               "To the right of the bus window there is a column of &lupgrade slots&r, each for one kind of upgrade: its faint ghost shows which. Shift-clicking an upgrade in your inventory puts it into its free slot. The same holds in every machine with upgrades.",
                "• &lCompressed Co-Processor&r - a speed upgrade: up to &l4&r in an import or export bus.",
                "• &lAutocraft Module&r - export bus only: it orders what is missing from the Cryo-Calculators.",
                "• &lRedstone Module&r - signal control (see “Redstone”).",

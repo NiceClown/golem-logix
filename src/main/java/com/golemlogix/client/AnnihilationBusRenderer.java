@@ -60,7 +60,7 @@ public class AnnihilationBusRenderer extends com.golemlogix.client.render.Legacy
             return;
         }
         Direction facing = be.getBlockState().getValue(DirectionalBlock.FACING);
-        int front = LevelRenderer.getLightCoords(be.getLevel(), be.getBlockPos().relative(facing));
+        int front = FormationBusRenderer.light(be.getLevel(), be.getBlockPos(), facing);
         float time = be.getLevel().getGameTime() + partialTick;
 
         ModelPart head = golem.getChild("head"), rightArm = golem.getChild("right_arm"), leftArm = golem.getChild("left_arm");
@@ -68,10 +68,11 @@ public class AnnihilationBusRenderer extends com.golemlogix.client.render.Legacy
         golem.getChild("left_leg").xRot = 0f;
         float since = time - be.lastUse();
         if (be.swinging()) {
-            // mining: a strike every 8 ticks, the tool brought down hard and raised again
+            // mining: a strike every 8 ticks, the tool brought down hard on the block and raised again - no higher than a little
+            // over level, so it stays under the niche's roof
             float ph = (time % 8f) / 8f;
             float strike = ph < 0.35f ? ph / 0.35f : 1f - (ph - 0.35f) / 0.65f;
-            rightArm.xRot = -2.3f + 1.7f * strike * strike;
+            rightArm.xRot = -1.85f + 1.3f * strike * strike;
             leftArm.xRot = -0.5f;
             head.xRot = 0.35f;
             head.yRot = 0f;

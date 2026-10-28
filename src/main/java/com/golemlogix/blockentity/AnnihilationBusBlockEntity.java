@@ -58,15 +58,13 @@ import java.util.UUID;
  * touched; the filter takes spawn eggs (which creatures), and "grown only" spares the young.</li>
  * </ul>
  * Settings, as on a clicker: the click, sneaking, the filter as an allow or a deny list (by the block's item; empty works on
- * everything), and "grown only" (a crop or anything with an age only when fully grown). Upgrades: speed, redstone, a Fuzzy Card,
- * and the secret Plasma Temper: the tool in the slot never wears.
+ * everything), and "grown only" (a crop or anything with an age only when fully grown). Upgrades: redstone, a Fuzzy Card, and
+ * the secret Plasma Temper: the tool in the slot never wears. Its speed is its tool's: it mines as a player would with it
+ * (Efficiency counts), strikes at the weapon's attack speed, and clicks once a bus interval.
  */
 @EventBusSubscriber(modid = GolemLogixMod.MOD_ID)
 public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlaneBlock.Waking {
     public static final int FILTER_SLOTS = 9;
-    private static final double[] INTERVAL_MULT = {1.0, 0.75, 0.5, 0.25, 0.125};
-    /** How much faster it mines with 0..4 Compressed Co-Processors. */
-    private static final float[] MINE_MULT = {1f, 1.5f, 2f, 4f, 8f};
     private static final int MAX_IDLE_TICKS = 20, MAX_IDLE_STEPS = 5;
     private static final GameProfile PROFILE = new GameProfile(UUID.fromString("6f8e2c1a-3b7d-4c55-9a1e-50b1ce6a7d11"), "[Golem Logix]");
     /** The iron tools a bare golem brings to every block. */
@@ -186,9 +184,34 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         };
     }
 
+    /** How often it clicks: once a bus interval; it strikes at the weapon's own pace (20 / attack speed, an iron sword bare). */
     public int interval() {
-        int n = upgrades.count(UpgradeType.SPEED);
-        return Math.max(1, (int) Math.round(GolemConfig.BUS_INTERVAL_TICKS.get() * INTERVAL_MULT[n]));
+        if (mode == ATTACK) {
+            ItemStack weapon = tool.getItem(0).isEmpty() ? new ItemStack(Items.IRON_SWORD) : tool.getItem(0);
+            double speed = 4.0 + mainHandBonus(weapon, net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED);
+            return Math.max(1, (int) Math.ceil(20.0 / Math.max(0.25, speed)));
+        }
+        return Math.max(1, GolemConfig.BUS_INTERVAL_TICKS.get());
+    }
+
+    /** The sum of the plain (add value) modifiers the item and its enchantments give this attribute in the main hand. */
+    private static double mainHandBonus(ItemStack stack, net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> attribute) {
+        double[] sum = {0};
+        stack.forEachModifier(net.minecraft.world.entity.EquipmentSlot.MAINHAND, (a, m) -> {
+            if (a.equals(attribute) && m.operation() == net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE) {
+                sum[0] += m.amount();
+            }
+        });
+        return sum[0];
+    }
+
+    /** The tool's speed on this block as in a player's hand: Efficiency adds its bonus to a tool that suits the block. */
+    static float mineSpeed(ItemStack with, BlockState state) {
+        float speed = with.getDestroySpeed(state);
+        if (speed > 1f) {
+            speed += (float) mainHandBonus(with, net.minecraft.world.entity.ai.attributes.Attributes.MINING_EFFICIENCY);
+        }
+        return speed;
     }
 
     // ------------------------------------------------------------------ tick
@@ -198,6 +221,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
     }
 
     private void tick(ServerLevel level, BlockPos pos, BlockState state) {
+        upgrades.dropStrays(level, pos);
         boolean hasRedstone = upgrades.has(UpgradeType.REDSTONE);
         boolean powered = hasRedstone && level.hasNeighborSignal(pos);
         if (hasRedstone) {
@@ -255,10 +279,10 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
             mining = target;
         }
         if (progress < 1f) {
-            float speed = with.getDestroySpeed(front);
+            float speed = mineSpeed(with, front);
             float hardness = front.getDestroySpeed(level, target);
             boolean right = !front.requiresCorrectToolForDrops() || with.isCorrectToolForDrops(front);
-            progress += hardness <= 0 ? 1f : speed / hardness / (right ? 30f : 100f) * MINE_MULT[upgrades.count(UpgradeType.SPEED)];
+            progress += hardness <= 0 ? 1f : speed / hardness / (right ? 30f : 100f);
             setSwinging(true);
             level.destroyBlockProgress(fakeId(), target, progress >= 1f ? 9 : (int) (progress * 10f));
         }
