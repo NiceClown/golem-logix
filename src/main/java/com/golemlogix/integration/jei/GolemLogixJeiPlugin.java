@@ -331,6 +331,8 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         registration.addRecipeCatalyst(new ItemStack(com.golemlogix.init.ModItems.FORGE_HAMMER.get()), HandForgingCategory.TYPE);
         registration.addRecipeCatalyst(new ItemStack(ModBlocks.MANA_SATURATOR.get()), HandForgingCategory.TYPE);
         registration.addRecipeCatalyst(new ItemStack(ModBlocks.CRYO_MIXER.get()), CryoMixerCategory.TYPE);
+        // the Crafting Terminal crafts from the network (and takes JEI's "+"), so it stands among the crafting tables
+        registration.addRecipeCatalyst(new ItemStack(ModBlocks.CRAFTING_TERMINAL.get()), mezz.jei.api.constants.RecipeTypes.CRAFTING);
     }
 
     @Override

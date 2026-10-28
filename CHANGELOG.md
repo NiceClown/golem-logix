@@ -52,6 +52,7 @@
   there. Upgrades in older saves are sorted into their slots on loading.
 - **Hewer's Annihilation Bus takes no co-processors**: it mines as fast as its tool (Efficiency counts) and strikes at the
   weapon's attack speed. Co-processors already in one drop out in front of it. Its swing stays inside the niche.
+- JEI lists the Crafting Terminal among the crafting tables of the crafting recipes.
 - Fixed: the golems of the Formation and Annihilation Buses went dark with a whole block in front.
 - **The Plasma Temper is worn**: in the Annihilation Bus the iron golem wears it as a belt in temper colours, its plasma
   bead for a buckle.
