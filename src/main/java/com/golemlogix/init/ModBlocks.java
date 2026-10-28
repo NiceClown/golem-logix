@@ -123,6 +123,11 @@ public class ModBlocks {
             "tooltip.golem_logix.recipe_monitor",
             () -> new RecipeMonitorBlock(props()));
 
+    // a copper chest in glass: a fluid tank that keeps its fluid as an item, a bucket mode, joined in a crafting grid
+    public static final DeferredBlock<com.golemlogix.blocks.CopperTankBlock> COPPER_TANK = registerBlock("copper_tank",
+            () -> new com.golemlogix.blocks.CopperTankBlock(props()),
+            (block, props) -> new com.golemlogix.items.CopperTankItem(block, "tooltip.golem_logix.copper_tank", props.stacksTo(1)));
+
     // nixie tubes with the network's channels
     public static final DeferredBlock<com.golemlogix.blocks.ChannelCounterBlock> CHANNEL_COUNTER = registerBlock("channel_counter",
             "tooltip.golem_logix.channel_counter",
@@ -188,8 +193,14 @@ public class ModBlocks {
     }
 
     private static <T extends Block> DeferredBlock<T> registerBlock(String name, String tooltipKey, Supplier<T> blockSupplier) {
+        return registerBlock(name, blockSupplier, (block, props) -> new ModBlockItem(block, tooltipKey, props));
+    }
+
+    /** A block with an item of its own kind (the properties come with the id set). */
+    private static <T extends Block> DeferredBlock<T> registerBlock(String name, Supplier<T> blockSupplier,
+                                                                    java.util.function.BiFunction<T, Item.Properties, ? extends Item> item) {
         DeferredBlock<T> block = registerPart(name, blockSupplier);
-        ModItems.ITEMS.register(name, id -> new ModBlockItem(block.get(), tooltipKey, new Item.Properties()
+        ModItems.ITEMS.register(name, id -> item.apply(block.get(), new Item.Properties()
                 .setId(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.ITEM, id))
                 .useBlockDescriptionPrefix()));
         return block;

@@ -21,6 +21,9 @@ public class ModRecipes {
     public static final Supplier<RecipeSerializer<ChronometerUpgradeRecipe>> CHRONOMETER_UPGRADE =
             SERIALIZERS.register("chronometer_upgrade", () -> ChronometerUpgradeRecipe.SERIALIZER);
 
+    public static final Supplier<RecipeSerializer<com.golemlogix.recipe.CopperTankJoinRecipe>> COPPER_TANK_JOIN =
+            SERIALIZERS.register("copper_tank_join", () -> com.golemlogix.recipe.CopperTankJoinRecipe.SERIALIZER);
+
     // the rituals, from data packs (modpacks can change and add them)
     public static final Supplier<RecipeType<SaturatorRecipe>> SATURATOR_TYPE = TYPES.register("saturator", () -> type("saturator"));
     public static final Supplier<RecipeSerializer<SaturatorRecipe>> SATURATOR = SERIALIZERS.register("saturator", () -> new RecipeSerializer<>(SaturatorRecipe.CODEC, SaturatorRecipe.STREAM_CODEC));

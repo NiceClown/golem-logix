@@ -94,6 +94,7 @@ public class ModCreativeTabs {
                         output.accept(ModBlocks.COOLING_COPROCESSOR.get());
                         output.accept(ModBlocks.RECIPE_MONITOR.get());
                         output.accept(ModBlocks.CHANNEL_COUNTER.get());
+                        output.accept(ModBlocks.COPPER_TANK.get());
 
                         // Buses
                         output.accept(ModBlocks.VACUUM_IMPORT_BUS.get());

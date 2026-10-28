@@ -27,6 +27,7 @@ public class GolemLogixClientEvents {
         event.registerBlockEntityRenderer(ModBlockEntities.COOLING_COPROCESSOR.get(), CoolingCoprocessorRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.RECIPE_MONITOR.get(), RecipeMonitorRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.CHANNEL_COUNTER.get(), ChannelCounterRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.COPPER_TANK.get(), CopperTankRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.INTERFACE.get(), InterfaceRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.ATLANT_HEAD.get(), AtlantHeadRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.CRYO_MAINFRAME.get(), CryoMainframeRenderer::new);

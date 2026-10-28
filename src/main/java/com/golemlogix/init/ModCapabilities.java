@@ -48,5 +48,9 @@ public final class ModCapabilities {
                     return mixer == null ? null : mixer.itemResources();
                 },
                 ModBlocks.CRYO_MIXER.get());
+        // Copper Tank: one tank from every side; as an item, the fluid it carries (buckets, the terminal, other mods' machines)
+        event.registerBlockEntity(Capabilities.Fluid.BLOCK, ModBlockEntities.COPPER_TANK.get(), (be, side) -> be.tank());
+        event.registerItem(Capabilities.Fluid.ITEM, (stack, access) -> new com.golemlogix.items.CopperTankItem.Contents(access),
+                ModBlocks.COPPER_TANK.get().asItem());
     }
 }

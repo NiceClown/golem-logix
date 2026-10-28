@@ -911,6 +911,34 @@
           ]
         },
         {
+          "id": "st_tank", "title": "Copper Tank", "icon": "golem_logix:copper_tank", "x": 2, "y": -1, "parents": ["st_fluid"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:copper_tank",
+             "text": [
+               "A copper chest - what is left of a copper block once a copper golem rises from it - in four panes of glass. It holds &lone fluid&r, &l16 000 mB&r."
+             ]},
+            {"type": "text", "title": "Filling and emptying",
+             "text": [
+               "• A &lbucket&r or any other fluid container pours in or fills up with a right-click.",
+               "• The network's &lbuses&r and other mods' pipes reach it from every side: an Export Bus fills it, an Import Bus empties it.",
+               "• An empty hand shows what is inside; a comparator reads how full it is.",
+               "• &lBroken, it keeps its fluid&r: the item carries the fluid and its capacity, and placed again it is the same tank.",
+               "&oTanks stand on each other in columns, and the fluid shows behind the glass as high as the tank is full.&r"
+             ]},
+            {"type": "text", "title": "Bucket mode",
+             "text": [
+               "&lSneak + right-click&r with the tank in hand switches its &lbucket mode&r.",
+               "In bucket mode the tank is not placed: a right-click &lscoops up&r a bucket's worth of the fluid you look at (a source, a cauldron), or &lpours one out&r where you point if it cannot take more.",
+               "So one tank carries sixteen buckets of lava or water, and a joined one far more.",
+               "&oWithout pipe mods this is the simplest way to move a lake or a lava pool.&r"
+             ]},
+            {"type": "crafting", "title": "Joining tanks", "grid": ["golem_logix:copper_tank", "golem_logix:copper_tank", "", "", "", "", "", "", ""], "result": "golem_logix:copper_tank",
+             "text": [
+               "Put two to nine tanks anywhere in a crafting grid: you get &lone tank that holds as much as all of them&r (up to 1 024 000 mB), with all their fluid. The fluid must be one and the same; empty tanks join any."
+             ]}
+          ]
+        },
+        {
           "id": "st_periscope", "title": "Periscope", "icon": "golem_logix:periscope_storage_bus", "x": 2, "y": 1, "parents": ["st_bay"],
           "pages": [
             {"type": "crafting", "recipe": "golem_logix:periscope_storage_bus",

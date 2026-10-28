@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.0.11 (26.1.2) — The Copper Tank
+
+- **New block: the Copper Tank.** Making a copper golem leaves a vanilla copper chest where the copper block was; four glass blocks
+  round it in a crafting table (any glass, any copper chest) make a tank for **one fluid, 16 000 mB**. Buckets and any
+  other fluid containers fill and empty it with a right-click, the network's buses and other mods' pipes reach it from every
+  side, an empty hand shows what is inside and a comparator reads how full it is. The fluid shows behind the
+  glass as high as the tank is full (lava glows); tanks stack into columns.
+- **It keeps its fluid when broken**: the item carries the fluid and the capacity (with a fill bar), and placed again it is the
+  same tank. As an item it is a fluid container too, so it can be poured into the terminal or into machines.
+- **Bucket mode**, as on Mekanism's tanks: sneak + right-click with the tank in hand switches it. In bucket mode a right-click
+  scoops up a bucket's worth of the fluid looked at (a source, a cauldron) or, if the tank cannot take it, pours a bucket out
+  where it points - a way to move lakes of water or lava without pipe mods.
+- **Joined tanks**, as with EvilCraft's: two to nine tanks anywhere in a crafting grid make one that holds as much as all of them
+  (up to 1 024 000 mB) with all their fluid, as long as it is one fluid (empty tanks join any).
+- A guidebook article under Storage.
+- 121 game tests (new: a tank keeps its fluid when broken, tanks join, bucket mode pours and scoops).
+
 ## 2.0.10 (26.1.2) — Autocrafting finds the gateway at the machine
 
 - **Fixed: an autocraft step could wait forever** when the same recipe sat on two Stamping Gateways with different fuzziness and

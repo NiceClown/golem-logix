@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "bonus_rolls": 0.0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "functions": [
+            {
+              "function": "minecraft:copy_components",
+              "include": [
+                "golem_logix:tank_fluid",
+                "golem_logix:tank_capacity"
+              ],
+              "source": "block_entity"
+            }
+          ],
+          "name": "golem_logix:copper_tank"
+        }
+      ],
+      "rolls": 1.0
+    }
+  ],
+  "random_sequence": "golem_logix:blocks/copper_tank"
+}

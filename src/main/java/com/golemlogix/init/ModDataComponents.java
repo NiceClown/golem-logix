@@ -62,6 +62,19 @@ public class ModDataComponents {
             COMPONENTS.registerComponentType("telegraph_link", b -> b.persistent(com.golemlogix.items.TelegraphLinkCardItem.Link.CODEC)
                     .networkSynchronized(com.golemlogix.items.TelegraphLinkCardItem.Link.STREAM_CODEC));
 
+    /** The fluid in a Copper Tank (as an item; the block keeps it in its block entity). */
+    public static final Supplier<DataComponentType<net.neoforged.neoforge.fluids.SimpleFluidContent>> TANK_FLUID = COMPONENTS.registerComponentType(
+            "tank_fluid", b -> b.persistent(net.neoforged.neoforge.fluids.SimpleFluidContent.CODEC)
+                    .networkSynchronized(net.neoforged.neoforge.fluids.SimpleFluidContent.STREAM_CODEC));
+
+    /** How much a Copper Tank holds (mB) when tanks were joined in a crafting grid; without it, one tank's worth. */
+    public static final Supplier<DataComponentType<Integer>> TANK_CAPACITY = COMPONENTS.registerComponentType(
+            "tank_capacity", b -> b.persistent(Codec.intRange(1, Integer.MAX_VALUE)).networkSynchronized(ByteBufCodecs.VAR_INT));
+
+    /** A Copper Tank in bucket mode: a right-click scoops up or pours out a bucket's worth instead of placing the tank. */
+    public static final Supplier<DataComponentType<Boolean>> BUCKET_MODE = COMPONENTS.registerComponentType(
+            "bucket_mode", b -> b.persistent(Codec.BOOL).networkSynchronized(ByteBufCodecs.BOOL));
+
     /** The Chronometer was last powered by the Eternal Frost Resonator of its network (for the tooltip). */
     public static final Supplier<DataComponentType<Boolean>> RESONATOR_LINK = COMPONENTS.registerComponentType(
             "resonator_link", b -> b.persistent(Codec.BOOL).networkSynchronized(ByteBufCodecs.BOOL));

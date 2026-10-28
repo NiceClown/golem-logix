@@ -60,6 +60,10 @@ Everything comes with an illustrated, searchable **guide book** (Russian and Eng
 - **Cryo-Mixer** — a two-block machine with two flasks that freezes water with Liquid Cryo-Source: **snow** fast (for snow golems
   and the plates for pipes) or **ice** slow (for Packed Ice and Cryo-Substrate). Up to four Compressed Co-Processors and a Redstone
   Module; fluids go in through either block.
+- **Copper Tank** — a vanilla copper chest (what a copper golem leaves behind) in glass: one fluid, 16 000 mB,
+  filled and emptied by buckets, buses and other mods' pipes, the fluid shown behind the glass. Broken, it keeps its fluid; tanks
+  joined in a crafting grid hold as much as all of them (up to 1 024 000 mB); in **bucket mode** (sneak + right-click) the item
+  scoops up and pours out fluids a bucket at a time.
 - **Auto-output** — the Mana Saturator and the Cryo-Mixer hand out what they make by themselves (on by default): into a neighbouring
   Pattern Provider first, whose return slots send it into the network (no Import Bus, no extra channel), otherwise into any
   neighbouring inventory.

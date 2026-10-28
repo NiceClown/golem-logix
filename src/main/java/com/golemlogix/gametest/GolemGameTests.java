@@ -583,6 +583,74 @@ public class GolemGameTests {
         });
     }
 
+    /** A Copper Tank broken with fluid in it drops itself with that fluid and capacity; placed again, the fluid is back. */
+    public static void copperTankKeepsFluid(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(1, 1, 1), again = new BlockPos(3, 1, 1);
+        helper.setBlock(pos, ModBlocks.COPPER_TANK.get());
+        var be = helper.getBlockEntity(pos, com.golemlogix.blockentity.CopperTankBlockEntity.class);
+        try (var tx = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+            int in = be.tank().insert(net.neoforged.neoforge.transfer.fluid.FluidResource.of(net.minecraft.world.level.material.Fluids.WATER), 20_000, tx);
+            helper.assertTrue(in == 16_000, "one tank takes 16 000 mB, took " + in);
+            tx.commit();
+        }
+        try (var tx = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+            be.tank().extract(net.neoforged.neoforge.transfer.fluid.FluidResource.of(net.minecraft.world.level.material.Fluids.WATER), 11_000, tx);
+            tx.commit();
+        }
+        BlockPos abs = helper.absolutePos(pos);
+        List<ItemStack> drops = net.minecraft.world.level.block.Block.getDrops(helper.getBlockState(pos), helper.getLevel(), abs, be);
+        helper.assertTrue(drops.size() == 1 && drops.get(0).is(ModBlocks.COPPER_TANK.get().asItem()), "the tank drops itself: " + drops);
+        ItemStack item = drops.get(0);
+        helper.assertTrue(com.golemlogix.items.CopperTankItem.fluid(item).getAmount() == 5_000
+                && com.golemlogix.items.CopperTankItem.fluid(item).is(net.minecraft.world.level.material.Fluids.WATER), "with its water: " + item.getComponents());
+        helper.setBlock(again, ModBlocks.COPPER_TANK.get());
+        var placed = helper.getBlockEntity(again, com.golemlogix.blockentity.CopperTankBlockEntity.class);
+        placed.applyComponentsFromItemStack(item);
+        helper.assertTrue(placed.fluid().getAmount() == 5_000 && placed.capacity() == 16_000 && placed.signal() == 5,
+                "placed again it holds 5 000 of 16 000 mB: " + placed.fluid().getAmount() + "/" + placed.capacity() + ", signal " + placed.signal());
+        helper.succeed();
+    }
+
+    /** Copper Tanks joined in a crafting grid: the capacities and the fluid add up; two different fluids do not join. */
+    public static void copperTankJoins(GameTestHelper helper) {
+        ItemStack water = new ItemStack(ModBlocks.COPPER_TANK.get());
+        water.set(com.golemlogix.init.ModDataComponents.TANK_FLUID.get(), net.neoforged.neoforge.fluids.SimpleFluidContent.copyOf(
+                new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.WATER, 3_000)));
+        ItemStack big = new ItemStack(ModBlocks.COPPER_TANK.get());
+        big.set(com.golemlogix.init.ModDataComponents.TANK_CAPACITY.get(), 32_000);
+        ItemStack lava = new ItemStack(ModBlocks.COPPER_TANK.get());
+        lava.set(com.golemlogix.init.ModDataComponents.TANK_FLUID.get(), net.neoforged.neoforge.fluids.SimpleFluidContent.copyOf(
+                new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.LAVA, 1_000)));
+        ItemStack joined = com.golemlogix.recipe.CopperTankJoinRecipe.join(CraftingInput.of(3, 1, List.of(water, ItemStack.EMPTY, big)));
+        helper.assertTrue(com.golemlogix.items.CopperTankItem.capacity(joined) == 48_000
+                && com.golemlogix.items.CopperTankItem.fluid(joined).getAmount() == 3_000, "16 000 + 32 000 mB with the water: " + joined.getComponents());
+        helper.assertTrue(com.golemlogix.recipe.CopperTankJoinRecipe.join(CraftingInput.of(2, 1, List.of(water, lava))).isEmpty(),
+                "water and lava do not join");
+        helper.assertTrue(com.golemlogix.recipe.CopperTankJoinRecipe.join(CraftingInput.of(1, 1, List.of(water))).isEmpty(),
+                "one tank is no recipe");
+        helper.succeed();
+    }
+
+    /** Bucket mode: a full tank pours a bucket's worth into the air, then scoops the source back up. */
+    public static void copperTankBucket(GameTestHelper helper) {
+        BlockPos floor = new BlockPos(2, 1, 2), spot = floor.above();
+        helper.setBlock(floor, net.minecraft.world.level.block.Blocks.STONE);
+        ItemStack tank = new ItemStack(ModBlocks.COPPER_TANK.get());
+        tank.set(com.golemlogix.init.ModDataComponents.TANK_FLUID.get(), net.neoforged.neoforge.fluids.SimpleFluidContent.copyOf(
+                new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.WATER, 2_000)));
+        var contents = new com.golemlogix.items.CopperTankItem.Contents(net.neoforged.neoforge.transfer.access.ItemAccess.forStack(tank));
+        helper.assertTrue(com.golemlogix.items.CopperTankItem.bucket(contents, null, helper.getLevel(), helper.absolutePos(floor), Direction.UP),
+                "pours onto the stone");
+        helper.assertTrue(helper.getLevel().getFluidState(helper.absolutePos(spot)).isSourceOfType(net.minecraft.world.level.material.Fluids.WATER),
+                "a water source above the stone");
+        helper.assertTrue(com.golemlogix.items.CopperTankItem.fluid(tank).getAmount() == 1_000, "one bucket left: " + tank.getComponents());
+        helper.assertTrue(com.golemlogix.items.CopperTankItem.bucket(contents, null, helper.getLevel(), helper.absolutePos(spot), Direction.UP),
+                "scoops it back");
+        helper.assertTrue(com.golemlogix.items.CopperTankItem.fluid(tank).getAmount() == 2_000
+                && helper.getLevel().getFluidState(helper.absolutePos(spot)).isEmpty(), "two buckets again, the water gone");
+        helper.succeed();
+    }
+
     /** The Channel Counter reads the node it is fixed to, as a heat lamp does: the entry terminal's 16, not the far one's load. */
     public static void counterShowsItsNode(GameTestHelper helper) {
         buildArray(helper, 0, 0);

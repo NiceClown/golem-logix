@@ -2,6 +2,7 @@
   "replace": false,
   "values": [
     "golem_logix:atlas_casing",
+    "golem_logix:copper_tank",
     "golem_logix:atlas_conduit",
     "golem_logix:atlas_atlant",
     "golem_logix:channel_expander",
