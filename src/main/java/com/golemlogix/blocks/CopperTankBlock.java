@@ -51,7 +51,7 @@ public class CopperTankBlock extends Block implements EntityBlock {
         if (stack.getItem() instanceof CopperTankItem && !CopperTankItem.bucketMode(stack)) {
             return InteractionResult.PASS;
         }
-        if (stack.getCapability(Capabilities.Fluid.ITEM, ItemAccess.forStack(stack)) != null) {
+        if (!stack.isEmpty() && stack.getCapability(Capabilities.Fluid.ITEM, ItemAccess.forStack(stack)) != null) {
             return FluidUtil.interactWithFluidHandler(player, hand, level, pos, hit.getDirection(), null)
                     ? InteractionResult.SUCCESS : InteractionResult.CONSUME;
         }

@@ -46,7 +46,7 @@ import java.util.Optional;
  * A filter slot holding a bucket (any fluid container) selects a fluid.
  * Six upgrade slots: up to four Compressed Co-Processors (faster and more at a time), an Autocraft Module (export orders
  * what is missing from the calculators) and a Redstone Module.
- * An Export Bus filter slot can name an amount to keep (the slot window, see BusSlotScreen): the bus then tops the container in
+ * An Export Bus filter slot can name an amount to keep (the slot window, see FilterSlotScreen): the bus then tops the container in
  * front up to it and no further, like a regulator - say, 16 coal in a furnace.
  * The Export Bus goes through its filter in order (the first slot the network has goes first), round robin (each operation
  * starts at the slot after the one that went out last) or at random (FormationBusBlockEntity.IN_ORDER, ROUND_ROBIN, RANDOM).

@@ -267,6 +267,31 @@ final class GolemBuses {
         return p;
     }
 
+    /**
+     * The Plasma Temper worn as a belt (an entity texture for the Annihilation Bus's iron golem): u 0..24 the strap - temper colours
+     * running along it between dark edges, a rivet every six units; u 24..32 the buckle - a brass ring round the violet plasma bead.
+     */
+    static Paint belt() {
+        Paint p = new Paint(32, 8, K);
+        int[] temper = {0xe2cf8a, 0xc99a52, 0xa0632e, 0x7c4a9a, 0x4a5cc8, 0x6f8fd0, 0xa9bcd8};
+        for (int i = 0; i < 24 * K; i++) {
+            double t = Math.abs(((i + 0.5) / K) / 12.0 - 1);
+            p.rect(i / (double) K, 0, (i + 1) / (double) K, 8, rgb(Paint.ramp(temper, 1 - t)));
+        }
+        p.rect(0, 0, 24, 1, rgb(0x1a1a22));
+        p.rect(0, 7, 24, 8, rgb(0x1a1a22));
+        p.rect(0, 1, 24, 1.5, Paint.argb(150, 0xffffff));
+        for (double x = 2.5; x < 24; x += 6) {
+            p.rect(x, 3.5, x + 1, 4.5, rgb(0x2a2a33));
+        }
+        p.rect(24, 0, 32, 8, rgb(Paint.BRASS[3]));
+        p.rect(24.5, 0.5, 31.5, 7.5, rgb(Paint.BRASS[5]));
+        p.rect(25.5, 1.5, 30.5, 6.5, rgb(0x120a18));
+        p.rect(26.5, 2.5, 29, 5, rgb(Paint.VIOLET[3]));
+        p.rect(27, 3, 28, 4, rgb(Paint.VIOLET[6]));
+        return p;
+    }
+
     static void cutout(String model) throws Exception {
         Path f = Models.RES.resolve("models/block/" + model + ".json");
         String s = Files.readString(f, StandardCharsets.UTF_8);
@@ -340,6 +365,7 @@ final class GolemBuses {
         annihilation().save(Forge2.tex("annihilation_side"));
         niche().save(Forge2.tex("annihilation_niche"));
         temper().save(Forge2.RES.resolve("textures/item/plasma_temper.png").toFile());
+        belt().save(Forge2.RES.resolve("textures/entity/plasma_belt.png").toFile());
         models();
     }
 }

@@ -37,34 +37,14 @@ public class BusScreen extends GolemScreen<BusMenu> {
         }
     }
 
-    /**
-     * On the Export Bus an empty-hand click (or Ctrl+click without a Fuzzy Card) on a filled filter slot opens its settings window,
-     * where the amount to keep in the container is set; the click does not go on to the ghost slot.
-     */
     @Override
-    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
-        int button = event.button();
-        if (fuzzyClick(button)) {
-            return true;
-        }
-        int clicked = filterAt(event.x(), event.y());
-        if (menu.isExport() && clicked >= 0 && menu.getSlot(clicked).hasItem() && menu.getCarried().isEmpty()
-                && !net.minecraft.client.Minecraft.getInstance().hasShiftDown() && (button == 0 || button == 1) && minecraft != null) {
-            minecraft.setScreen(new BusSlotScreen(this, menu, clicked));
-            return true;
-        }
-        return super.mouseClicked(event, doubleClick);
+    protected int filterSlots() {
+        return menu.isPeriscope() ? -1 : com.golemlogix.blockentity.BusBlockEntity.FILTER_SLOTS;
     }
 
-    /** The filter slot under the point (screen coordinates), or -1. */
-    private int filterAt(double x, double y) {
-        for (int i = 0; i < com.golemlogix.blockentity.BusBlockEntity.FILTER_SLOTS && i < menu.slots.size(); i++) {
-            var slot = menu.getSlot(i);
-            if (x >= leftPos + slot.x - 1 && x < leftPos + slot.x + 17 && y >= topPos + slot.y - 1 && y < topPos + slot.y + 17) {
-                return i;
-            }
-        }
-        return -1;
+    @Override
+    protected boolean keepsAmounts() {
+        return menu.isExport();
     }
 
     /** The Export Bus shows each slot's keep amount in its corner, as a stack count over the ghost. */

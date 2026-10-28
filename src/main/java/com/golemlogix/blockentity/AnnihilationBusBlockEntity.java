@@ -98,6 +98,8 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
     private BlockPos mining;
     /** For the renderer: the golem is swinging (mining), and when it last used its item (right click). */
     private boolean swinging;
+    /** For the renderer: the Plasma Temper is in (the golem wears it as a belt). */
+    private boolean belted;
     private long lastUse = -100;
     private int idleSteps;
     private long sleepUntil;
@@ -120,6 +122,10 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
 
     public boolean swinging() {
         return swinging;
+    }
+
+    public boolean belted() {
+        return belted;
     }
 
     public long lastUse() {
@@ -198,6 +204,10 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
             redstone.observe(powered);
         }
         long now = level.getGameTime();
+        if (tempered() != belted) {
+            belted = tempered();
+            sync();
+        }
         Direction facing = state.getValue(DirectionalBlock.FACING);
         BlockPos target = pos.relative(facing);
         GolemNetwork net = GolemNetwork.get(level, pos);
@@ -399,6 +409,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         }
         p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
         p.setShiftKeyDown(false);
+        sweep(level, new AABB(target).inflate(0.25));
         return true;
     }
 
@@ -500,13 +511,30 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         }
         p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
         p.setShiftKeyDown(false);
+        sweep(level, new AABB(target).inflate(1.0));
         lastUse = level.getGameTime();
         sync();
         return true;
     }
 
-    /** What a creature our golem kills drops goes into its network instead of onto the ground. */
-    @SubscribeEvent
+    /** Items that have just fallen in the box (dropped outside the drop events by some mod) go into the network. */
+    private void sweep(ServerLevel level, AABB box) {
+        GolemNetwork net = GolemNetwork.get(level, worldPosition);
+        for (ItemEntity e : level.getEntitiesOfClass(ItemEntity.class, box, e -> e.isAlive() && e.getAge() <= 2)) {
+            ItemStack rest = net.insertItem(e.getItem(), false);
+            if (rest.isEmpty()) {
+                e.discard();
+            } else {
+                e.setItem(rest);
+            }
+        }
+    }
+
+    /**
+     * What a creature our golem kills drops goes into its network instead of onto the ground. Last of all handlers, so the loot
+     * other mods add to the drops (Mystical Agriculture's essences, say) goes in too.
+     */
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
     public static void onLoot(net.neoforged.neoforge.event.entity.living.LivingDropsEvent event) {
         AnnihilationBusBlockEntity bus = breaking;
         if (bus == null || !(event.getSource().getEntity() instanceof FakePlayer fp) || !PROFILE.id().equals(fp.getUUID())
@@ -524,8 +552,8 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         });
     }
 
-    /** The drops of a block our golem breaks go into its network instead of onto the ground. */
-    @SubscribeEvent
+    /** The drops of a block our golem breaks go into its network instead of onto the ground (last of all handlers, as above). */
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
     public static void onDrops(BlockDropsEvent event) {
         AnnihilationBusBlockEntity bus = breaking;
         if (bus == null || !(event.getBreaker() instanceof FakePlayer fp) || !PROFILE.id().equals(fp.getUUID())) {
@@ -574,6 +602,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         }
         tag.putInt("Mode", mode);
         tag.putBoolean("Swinging", swinging);
+        tag.putBoolean("Belted", belted);
         tag.putLong("LastUse", lastUse);
     }
 
@@ -591,6 +620,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         tool.getItems().set(0, t);
         mode = tag.getIntOr("Mode", tag.getBooleanOr("RightClick", false) ? RIGHT : LEFT);
         swinging = tag.getBooleanOr("Swinging", false);
+        belted = tag.getBooleanOr("Belted", false);
         lastUse = tag.getLongOr("LastUse", -100L);
     }
 

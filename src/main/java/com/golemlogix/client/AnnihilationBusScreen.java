@@ -32,6 +32,11 @@ public class AnnihilationBusScreen extends GolemScreen<AnnihilationBusMenu> {
                 AnnihilationBusMenu.BUTTON_GROWN);
     }
 
+    @Override
+    protected int filterSlots() {
+        return AnnihilationBusBlockEntity.FILTER_SLOTS;
+    }
+
     private String mode() {
         return switch (menu.mode()) {
             case AnnihilationBusBlockEntity.RIGHT -> "right";

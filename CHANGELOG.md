@@ -33,10 +33,17 @@
   co-processors mine eightfold), Redstone Module, Fuzzy Card.
 - **The Export Bus has an order button**: in order (as before), round robin (one filter slot an operation, each after the
   last) or at random.
-- **The Export Bus keeps an amount in the container**, like a regulator: click a filled filter slot with an empty hand (or
-  Ctrl+click without a Fuzzy Card) and its settings window opens, as on the Golem Interface - type how much the container in
+- **One filter slot window for every bus**: a middle-click (the mouse wheel) on a filled filter slot opens its settings, as
+  the gear does on the Golem Interface - the slot's tag with a Fuzzy Card (the next tag at a click), clearing the slot, and on
+  the Export Bus the amount to keep. Ctrl+click still picks the next tag at once.
+- **The Export Bus keeps an amount in the container**, like a regulator: in the slot window type how much the container in
   front should hold (16 coal in a furnace), or use the step and preset buttons; the bus tops it up to that and no further.
   0 exports without a limit, as before. Fluids in mB or buckets ("16B"). The number shows in the slot's corner.
+- **The Plasma Temper is worn**: in the Annihilation Bus the iron golem wears it as a belt in temper colours, its plasma
+  bead for a buckle.
+- Fixed: loot other mods add to a creature's or a block's drops (Mystical Agriculture's essences, say) stayed on the ground
+  instead of going into the network; whatever falls in front right after a strike is swept in too.
+- Fixed: a bare-handed right-click on a Copper Tank crashed the game.
 - The buses' casings are cleaner: smooth copper and iron plates with bevelled edges instead of speckled noise.
 - **A secret upgrade for the Annihilation Bus**, made of what only the Wither's secret gives: with it the golem's tool never
   wears. Its recipe and its article open with the rest of the secret.

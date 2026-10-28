@@ -223,6 +223,40 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
         }
     }
 
+    /**
+     * The filter slot window of a bus: the screens of buses say which ghost slots are filters (a middle-click on a filled one opens
+     * FilterSlotScreen); -1 elsewhere.
+     */
+    protected int filterSlots() {
+        return -1;
+    }
+
+    /** Whether the bus window can set a keep amount in its slot windows (the Export Bus). */
+    protected boolean keepsAmounts() {
+        return false;
+    }
+
+    /** The ghost filter slot under the point (screen coordinates), or -1. */
+    protected int filterSlotAt(double x, double y) {
+        for (int i = 0; i < filterSlots() && i < menu.slots.size(); i++) {
+            var slot = menu.getSlot(i);
+            if (x >= leftPos + slot.x - 1 && x < leftPos + slot.x + 17 && y >= topPos + slot.y - 1 && y < topPos + slot.y + 17) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /** A middle-click on a filled bus filter slot opens its settings window. True if it did. */
+    protected boolean slotWindowClick(double x, double y, int button) {
+        int i = button == 2 ? filterSlotAt(x, y) : -1;
+        if (i >= 0 && menu.getSlot(i).hasItem() && minecraft != null && menu instanceof com.golemlogix.menu.GolemMenu gm) {
+            minecraft.setScreen(new FilterSlotScreen(this, gm, i, keepsAmounts()));
+            return true;
+        }
+        return false;
+    }
+
     /** A middle-click (or Ctrl+left-click) on a fuzzy ghost slot asks the server for its next tag. True if it was such a click. */
     protected boolean fuzzyClick(int button) {
         if (menu instanceof com.golemlogix.menu.GolemMenu gm && hoveredSlot != null && hoveredSlot.hasItem()
@@ -238,7 +272,7 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
         double mouseX = event.x(), mouseY = event.y();
         int button = event.button();
-        return fuzzyClick(button) || super.mouseClicked(event, doubleClick);
+        return slotWindowClick(mouseX, mouseY, button) || fuzzyClick(button) || super.mouseClicked(event, doubleClick);
     }
 
     /** The item tooltip of a fuzzy ghost slot says what it takes, and how to change it. */
@@ -251,8 +285,13 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
                 lines = new java.util.ArrayList<>(lines);
                 lines.add(line);
                 if (gm.canCycleFuzzy(hoveredSlot.index)) {
-                    lines.add(Component.translatable("tooltip.golem_logix.fuzzy.hint").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+                    lines.add(Component.translatable(hoveredSlot.index < filterSlots() ? "tooltip.golem_logix.fuzzy.hint_bus"
+                            : "tooltip.golem_logix.fuzzy.hint").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
                 }
+            }
+            if (hoveredSlot.index < filterSlots() && !gm.canCycleFuzzy(hoveredSlot.index)) {
+                lines = new java.util.ArrayList<>(lines);
+                lines.add(Component.translatable("tooltip.golem_logix.slot_window_hint").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
             }
         }
         return lines;

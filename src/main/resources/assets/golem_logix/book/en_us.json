@@ -1014,7 +1014,7 @@
                "&oExample: a bus with coal in its filter on a furnace - the furnace always has fuel.&r",
                "The &lorder&r button on the left: &lin order&r (the first filter slot the network has goes first), &lround robin&r (one slot an operation, each after the last) or &lat random&r.",
                "# The slot window",
-               "&lClick a filled filter slot with an empty hand&r (or Ctrl+click without a Fuzzy Card): its settings window opens, as on the Golem Interface.",
+               "&lMiddle-click (the mouse wheel) a filled filter slot&r: its settings window opens - the same window in every bus, as the gear on the Golem Interface.",
                "There you set how much to &lkeep in the container&r: the bus tops it up to that number and no further - 16 coal in a furnace, a stack of bread in a chest. &l0&r exports without a limit, as before.",
                "Type the number, or use the step and preset buttons; for a fluid in mB or in buckets (16B). Enter applies, &lClear&r empties the slot. The number shows in the slot's corner."
              ]}
@@ -1073,7 +1073,7 @@
                "• RMB - -1 or clear.",
                "• Shift-click - clears the slot.",
                "• Shift-click on an inventory item - puts a copy into the first free slot.",
-               "• On the &lExport Bus&r a click with an empty hand on a filled slot opens the slot window instead: how much to keep in the container (see “Injector export bus”).",
+               "• &lMiddle-click&r (the mouse wheel) on a filled slot opens the &lslot window&r, the same in every bus: the slot's tag with a Fuzzy Card (the next one at a click), clearing it, and on the Export Bus how much to keep in the container (see “Injector export bus”).",
                "A &lbucket (or any container holding fluid)&r in a slot is a fluid filter. Because of this a “water bucket” item cannot be passed through a filter as an item: there it means water."
              ]}
           ]
@@ -1107,7 +1107,7 @@
             {"type": "crafting", "recipe": "golem_logix:redstone_module",
              "text": ["The Redstone Module: once installed, a mode button appears to the left of the window."]},
             {"type": "crafting", "recipe": "golem_logix:fuzzy_card",
-             "text": ["In a bus or the Interface the filters match fuzzily: the same item with any components (≈). A middle-click (Ctrl+click) on a filter chooses a tag (#): any glass for glass."]}
+             "text": ["In a bus or the Interface the filters match fuzzily: the same item with any components (≈). Ctrl+click on a filter chooses its next tag (#): any glass for glass; in a bus the slot window (middle-click) shows and changes the tag too."]}
           ]
         },
         {
