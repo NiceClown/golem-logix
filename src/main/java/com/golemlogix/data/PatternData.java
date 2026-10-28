@@ -193,6 +193,11 @@ public record PatternData(boolean crafting, List<ItemStack> inputs, List<ItemSta
         return new ArrayList<>(map.values());
     }
 
+    /** The same recipe whatever the inputs' fuzziness: the same kind, the same inputs and outputs as encoded. */
+    public boolean sameRecipe(PatternData p) {
+        return crafting == p.crafting && ItemStack.listMatches(inputs, p.inputs) && ItemStack.listMatches(outputs, p.outputs);
+    }
+
     @Override
     public boolean equals(Object o) {
         return o instanceof PatternData p && crafting == p.crafting && fuzzy.equals(p.fuzzy)

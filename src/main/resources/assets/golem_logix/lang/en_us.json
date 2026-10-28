@@ -85,7 +85,7 @@
   "message.golem_logix.alpha_backport": "Golem Logix for Minecraft 1.21.1 is an alpha backport of the 26.1.2 version: problems may occur. Please report them on %s.",
   "message.golem_logix.chronometer.accessing": "Synchronizing analog chronometer beam...",
   "message.golem_logix.cryo_jar": "Cryo-Source: %s / %s Source",
-  "jei.golem_logix.info.distillation_tower": "Pour Essentia Vitae (Neo Vitae) into any of the tower's three blocks: pipes from an Ara Vitae, buses, buckets. It freezes the blood into Source, 1 mB to 1 Source, 20 mB a second, and pours it into the Cryo-Source Jars (or Ars Nouveau jars) touching it.",
+  "jei.golem_logix.info.distillation_tower": "Pour Essentia Vitae (Neo Vitae) into any of the tower's three blocks: pipes from an Ara Vitae, buses, buckets. It freezes the blood into Source, 2 mB to 3 Source, 20 mB a second, and pours it into the Cryo-Source Jars (or Ars Nouveau jars) touching it.",
   "jei.golem_logix.info.cryo_jar": "Holds 10 000 Source from a Cryo-Distillation Tower beside it. Put it against any block of the network, like an Ars Nouveau jar; the Saturator, the Forge Hammer and the Chronometer drink from it too.",
   "message.golem_logix.distillation_tower": "Blood: %s, %s / %s mB",
   "message.golem_logix.wither_imploded": "Nascent Wither collapsed under the anvil into Imploded Plasma!",
@@ -173,6 +173,7 @@
   "gui.golem_logix.calc.status.running": "Computing...",
   "gui.golem_logix.calc.status.waiting_machine": "Waiting for a machine",
   "gui.golem_logix.calc.status.no_provider": "No Stamping Gateway holds this pattern",
+  "gui.golem_logix.calc.status.no_machine": "No machine beside the Stamping Gateway",
   "gui.golem_logix.calc.status.no_source": "Not enough Source",
   "gui.golem_logix.calc.status.invalid_pattern": "Invalid pattern",
   "gui.golem_logix.calc.status.delivering": "Delivering results...",
@@ -532,8 +533,8 @@
   "gui.golem_logix.auto_output.title": "Auto-output",
   "gui.golem_logix.auto_output.on": "on",
   "gui.golem_logix.auto_output.off": "off",
-  "gui.golem_logix.auto_output.hint": "What the machine makes leaves by itself: into a neighbouring Pattern Provider first, otherwise into any neighbouring inventory.",
+  "gui.golem_logix.auto_output.hint": "What the machine makes leaves by itself: into a neighbouring Stamping Gateway first, otherwise into any neighbouring inventory.",
   "message.golem_logix.saturator.auto_output": "Auto-output: %s",
   "gui.golem_logix.provider.returns": "Return slots",
-  "gui.golem_logix.provider.returns_hint": "Machines hand their results back here (their auto-output looks for a Pattern Provider first). Everything put here goes into the network: no Import Bus needed."
+  "gui.golem_logix.provider.returns_hint": "Machines hand their results back here (their auto-output looks for a Stamping Gateway first). Everything put here goes into the network: no Import Bus needed."
 }

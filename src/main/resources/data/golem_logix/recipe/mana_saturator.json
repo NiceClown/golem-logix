@@ -7,10 +7,10 @@
                           "item":  "golem_logix:flattened_cryo_substrate"
                       },
                 "I":  {
-                          "item":  "minecraft:purpur_block"
+                          "item":  "minecraft:quartz_block"
                       },
                 "A":  {
-                          "item":  "minecraft:end_rod"
+                          "item":  "minecraft:lightning_rod"
                       }
             },
     "pattern":  [

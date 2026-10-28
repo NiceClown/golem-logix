@@ -1441,6 +1441,26 @@ public final class GolemNetwork {
     }
 
     @Nullable
+    /**
+     * Every gateway that can run this step: those holding the very pattern first, then those holding the same recipe with other
+     * fuzziness (a player may have the same plate on two gateways, only one of them at the machine).
+     */
+    public List<PatternProviderBlockEntity> providersFor(PatternData pattern) {
+        List<PatternProviderBlockEntity> exact = new ArrayList<>(), same = new ArrayList<>();
+        for (PatternProviderBlockEntity provider : providers) {
+            if (provider.isRemoved()) {
+                continue;
+            }
+            if (provider.hasPattern(pattern)) {
+                exact.add(provider);
+            } else if (provider.getPatterns().stream().anyMatch(p -> p.sameRecipe(pattern))) {
+                same.add(provider);
+            }
+        }
+        exact.addAll(same);
+        return exact;
+    }
+
     public PatternProviderBlockEntity providerFor(PatternData pattern) {
         for (PatternProviderBlockEntity provider : providers) {
             if (!provider.isRemoved() && provider.hasPattern(pattern)) {

@@ -106,7 +106,7 @@ public final class GolemConfig {
                 .defineInRange("distillCoprocessorBonus", 20, 0, 100000);
         DISTILL_SOURCE_PER_MB = b.comment("Source the tower makes from 1 mB of blood (Essentia Vitae, or any fluid in the tag",
                         "golem_logix:cryo_distillable).")
-                .defineInRange("distillSourcePerMb", 1.0D, 0.001D, 1000.0D);
+                .defineInRange("distillSourcePerMb", 1.5D, 0.001D, 1000.0D);
         b.pop();
 
         b.push("mixer");

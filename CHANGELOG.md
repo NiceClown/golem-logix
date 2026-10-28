@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.0.10 (1.21.1) — Autocrafting finds the gateway at the machine
+
+The autocrafting fix and the gameplay changes of 2.0.9–2.0.10 of the 26.1.2 line. As with 2.0.8, the look of the blocks stays
+as it was on 1.21.1 (the nixie lamps on the pipes and the assembled array of 26.1.2 are not carried over).
+
+- **Fixed: an autocraft step could wait forever** when the same recipe sat on two Stamping Gateways with different fuzziness and
+  the order picked the gateway with no machine beside it (the plates then went to storage without the job seeing them). A step
+  now tries every gateway holding the same recipe, its own pattern first, and hands the portion to the one whose machine takes it.
+  Jobs already waiting like that go on by themselves.
+- **A new job status: "No machine beside the Stamping Gateway"**, instead of a silent "Waiting for a machine", when no gateway
+  with the pattern has a machine on the side it feeds (the Recipe Monitor shows it as a fault).
+- **The Mana Saturator is crafted in the Nether**: blocks of quartz and a lightning rod instead of purpur and an End rod, so its
+  anvil forges plates by hand from the Nether on. The machine around it still stands on an End Rod: automatic forging, two
+  plates a block, stays after the End.
+- **The Cryo-Distillation Tower makes 1.5 Source from 1 mB of blood** (was 1). This is the config default
+  (`distillSourcePerMb`): a config file written by an older version keeps its 1.0 until it is changed or deleted.
+- **A Cryo-Source Jar sets Liquid Cryo-Source in a slot**: click a filter, stock or pattern slot with it (before, only an Ars
+  Nouveau or Creative jar did).
+- 116 game tests (new: plates through the Saturator in a row, a second pattern after the first, a recipe tree through the
+  Saturator, a gateway at the wing with a fuzzy pattern beside a second gateway with no machine).
+
 ## 2.0.8 (1.21.1) — The mechanics of 2.0.1–2.0.8 come to 1.21.1
 
 The same version number as the 26.1.2 line, with its gameplay: the core in three steps, the Cryo-Mixer, auto-output and the

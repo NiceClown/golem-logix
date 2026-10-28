@@ -272,8 +272,8 @@ public abstract class GolemMenu extends AbstractContainerMenu {
     public static final int FLUID_GHOST_STEP = 250;
 
     /**
-     * What a click with this item puts into a ghost slot: a Source Jar (Ars Nouveau or the Creative one) stands for Liquid
-     * Cryo-Source, which has no bucket or other container of its own; anything else is itself.
+     * What a click with this item puts into a ghost slot: a Source jar (a Cryo-Source Jar, an Ars Nouveau one or the Creative one)
+     * stands for Liquid Cryo-Source, which has no bucket or other container of its own; anything else is itself.
      */
     public static ItemStack ghostFor(ItemStack carried) {
         if (carried.isEmpty()) {
@@ -281,7 +281,8 @@ public abstract class GolemMenu extends AbstractContainerMenu {
         }
         net.minecraft.resources.ResourceLocation id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(carried.getItem());
         boolean jar = id.equals(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("ars_nouveau", "source_jar"))
-                || carried.is(com.golemlogix.init.ModBlocks.CREATIVE_SOURCE_JAR.get().asItem());
+                || carried.is(com.golemlogix.init.ModBlocks.CREATIVE_SOURCE_JAR.get().asItem())
+                || carried.is(com.golemlogix.init.ModBlocks.CRYO_SOURCE_JAR.get().asItem());
         return jar ? com.golemlogix.items.FluidGhostItem.of(com.golemlogix.system.CryoSource.stack(FLUID_GHOST_STEP)) : carried;
     }
 

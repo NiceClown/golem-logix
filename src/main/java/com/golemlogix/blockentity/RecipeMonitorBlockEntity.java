@@ -48,6 +48,7 @@ public class RecipeMonitorBlockEntity extends BlockEntity {
                     if (job != null) {
                         var st = job.status();
                         fault |= st == com.golemlogix.crafting.CraftingJob.Status.NO_PROVIDER
+                                || st == com.golemlogix.crafting.CraftingJob.Status.NO_MACHINE
                                 || st == com.golemlogix.crafting.CraftingJob.Status.NO_SOURCE
                                 || st == com.golemlogix.crafting.CraftingJob.Status.INVALID_PATTERN;
                     }

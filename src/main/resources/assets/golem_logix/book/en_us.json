@@ -126,7 +126,7 @@
             {"type": "text", "title": "How it works",
              "text": [
                "Pour &lEssentia Vitae&r into the tower through any of its three blocks: pipes from an Ara Vitae, our buses, buckets. It holds &l8000 mB&r.",
-               "Every second it distils &l20 mB&r into &l20 Source&r and pours it into the &lCryo-Source Jars&r (or Ars jars) standing &lright against it&r - a jar even one block away gets nothing. When the jars are full it waits.",
+               "Every second it distils &l20 mB&r into &l30 Source&r and pours it into the &lCryo-Source Jars&r (or Ars jars) standing &lright against it&r - a jar even one block away gets nothing. When the jars are full it waits.",
                "Put the jars against the plinth, on the same ground: then a pipe runs from the tower's head over to each jar and drops into its vent. Any side will do, and the copper golem on the tower moves aside by itself.", "A jar holds &l10 000 Source&r. Put it against any block of the network, like an Ars jar: a network pipe docks onto it with a brass socket."
              ]},
             {"type": "crafting", "recipe": "golem_logix:cryo_distillation_tower",
@@ -309,7 +309,7 @@
              ]},
             {"type": "text", "title": "Advice",
              "text": [
-               "There are no crafting-table recipes for plates. Until the End they come from the anvil (with Ars Nouveau also the Dispel, with Create the mixer). The Saturator needs purpur and End rods: then one iron block turns into two cores.",
+               "There are no crafting-table recipes for plates. Until the End they come from the anvil (with Ars Nouveau also the Dispel, with Create the mixer). The Saturator is made of Nether quartz: its anvil forges plates by hand from the Nether on, and once the machine around it is built on an End Rod, one iron block gives two cores.",
                "&oPacked ice for cryo-substrates can be mined with a Silk Touch pickaxe.&r"
              ]}
           ]
