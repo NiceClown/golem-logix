@@ -1,12 +1,14 @@
 {
   "parent": "minecraft:block/block",
   "ambientocclusion": false,
+  "render_type": "minecraft:translucent",
   "textures": {
     "particle": "golem_logix:block/formation_side",
     "side": "golem_logix:block/formation_side",
     "front": "golem_logix:block/formation_front",
     "brass": "golem_logix:block/sat_brass",
-    "alcove": "golem_logix:block/formation_alcove"
+    "alcove": "golem_logix:block/formation_alcove",
+    "glass": "golem_logix:block/bus_glass"
   },
   "elements": [
     {
@@ -23,24 +25,60 @@
     },
     {
       "from": [0, 8.5, 0],
+      "to": [3.5, 15, 5],
+      "faces": {
+        "west": {"texture": "#glass"},
+        "east": {"texture": "#glass"},
+        "north": {"texture": "#front"}
+      }
+    },
+    {
+      "from": [0, 15, 0],
+      "to": [3.5, 16, 5],
+      "faces": {
+        "west": {"texture": "#side"},
+        "up": {"texture": "#side"},
+        "down": {"texture": "#side"},
+        "north": {"texture": "#front"}
+      }
+    },
+    {
+      "from": [0, 8.5, 5],
       "to": [3.5, 16, 16],
       "faces": {
         "south": {"texture": "#side"},
         "west": {"texture": "#side"},
         "up": {"texture": "#side"},
-        "north": {"texture": "#front"},
-        "east": {"texture": "#alcove"}
+        "north": {"texture": "#alcove"}
       }
     },
     {
       "from": [12.5, 8.5, 0],
+      "to": [16, 15, 5],
+      "faces": {
+        "east": {"texture": "#glass"},
+        "west": {"texture": "#glass"},
+        "north": {"texture": "#front"}
+      }
+    },
+    {
+      "from": [12.5, 15, 0],
+      "to": [16, 16, 5],
+      "faces": {
+        "east": {"texture": "#side"},
+        "up": {"texture": "#side"},
+        "down": {"texture": "#side"},
+        "north": {"texture": "#front"}
+      }
+    },
+    {
+      "from": [12.5, 8.5, 5],
       "to": [16, 16, 16],
       "faces": {
         "south": {"texture": "#side"},
         "east": {"texture": "#side"},
         "up": {"texture": "#side"},
-        "north": {"texture": "#front"},
-        "west": {"texture": "#alcove"}
+        "north": {"texture": "#alcove"}
       }
     },
     {
@@ -54,7 +92,7 @@
       }
     },
     {
-      "from": [3.5, 8.5, 3],
+      "from": [3.5, 8.5, 5],
       "to": [12.5, 15, 16],
       "faces": {
         "south": {"texture": "#side"},
@@ -63,12 +101,12 @@
     },
     {
       "from": [3.5, 8.5, -0.75],
-      "to": [12.5, 9.25, 3],
+      "to": [12.5, 9.25, 5],
       "faces": {
         "north": {"texture": "#brass"},
-        "up": {"uv": [3.5, 0, 12.5, 3.75], "texture": "#brass"},
-        "east": {"uv": [12.25, 6.75, 16, 7.5], "texture": "#brass"},
-        "west": {"uv": [0, 6.75, 3.75, 7.5], "texture": "#brass"}
+        "up": {"uv": [3.5, 0, 12.5, 5.75], "texture": "#brass"},
+        "east": {"uv": [10.25, 6.75, 16, 7.5], "texture": "#brass"},
+        "west": {"uv": [0, 6.75, 5.75, 7.5], "texture": "#brass"}
       }
     },
     {

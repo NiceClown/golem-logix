@@ -1,35 +1,93 @@
 {
   "parent": "minecraft:block/block",
   "ambientocclusion": false,
+  "render_type": "minecraft:translucent",
   "textures": {
     "particle": "golem_logix:block/annihilation_side",
     "side": "golem_logix:block/annihilation_side",
     "brass": "golem_logix:block/sat_brass",
-    "niche": "golem_logix:block/annihilation_niche"
+    "niche": "golem_logix:block/annihilation_niche",
+    "glass": "golem_logix:block/bus_glass"
   },
   "elements": [
     {
+      "from": [0, 2, 0],
+      "to": [2, 14, 5],
+      "faces": {
+        "west": {"texture": "#glass"},
+        "east": {"texture": "#glass"},
+        "north": {"texture": "#brass"}
+      }
+    },
+    {
       "from": [0, 0, 0],
+      "to": [2, 2, 5],
+      "faces": {
+        "west": {"texture": "#side"},
+        "up": {"texture": "#side"},
+        "down": {"texture": "#side"},
+        "north": {"texture": "#brass"}
+      }
+    },
+    {
+      "from": [0, 14, 0],
+      "to": [2, 16, 5],
+      "faces": {
+        "west": {"texture": "#side"},
+        "up": {"texture": "#side"},
+        "down": {"texture": "#side"},
+        "north": {"texture": "#brass"}
+      }
+    },
+    {
+      "from": [0, 0, 5],
       "to": [2, 16, 16],
       "faces": {
         "south": {"texture": "#side"},
         "west": {"texture": "#side"},
         "up": {"texture": "#side"},
         "down": {"texture": "#side"},
-        "north": {"texture": "#brass"},
-        "east": {"texture": "#niche"}
+        "north": {"texture": "#niche"}
+      }
+    },
+    {
+      "from": [14, 2, 0],
+      "to": [16, 14, 5],
+      "faces": {
+        "east": {"texture": "#glass"},
+        "west": {"texture": "#glass"},
+        "north": {"texture": "#brass"}
       }
     },
     {
       "from": [14, 0, 0],
+      "to": [16, 2, 5],
+      "faces": {
+        "east": {"texture": "#side"},
+        "up": {"texture": "#side"},
+        "down": {"texture": "#side"},
+        "north": {"texture": "#brass"}
+      }
+    },
+    {
+      "from": [14, 14, 0],
+      "to": [16, 16, 5],
+      "faces": {
+        "east": {"texture": "#side"},
+        "up": {"texture": "#side"},
+        "down": {"texture": "#side"},
+        "north": {"texture": "#brass"}
+      }
+    },
+    {
+      "from": [14, 0, 5],
       "to": [16, 16, 16],
       "faces": {
         "south": {"texture": "#side"},
         "east": {"texture": "#side"},
         "up": {"texture": "#side"},
         "down": {"texture": "#side"},
-        "north": {"texture": "#brass"},
-        "west": {"texture": "#niche"}
+        "north": {"texture": "#niche"}
       }
     },
     {

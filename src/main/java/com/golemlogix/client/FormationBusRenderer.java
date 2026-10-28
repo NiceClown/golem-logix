@@ -21,11 +21,11 @@ import org.joml.Vector3f;
  */
 public class FormationBusRenderer extends com.golemlogix.client.render.LegacyBer<FormationBusBlockEntity> {
     /**
-     * The golem (pixels, facing north) in the alcove above the mouth (y 8.5..15, back wall at z 3): about 6.5 pixels tall, its legs
-     * hidden under the brass sill (top at 9.25) so it rises from it at the waist, its back sunk into the wall - fused into the bus;
-     * its antenna stays under the alcove's roof.
+     * The golem (pixels, facing north) in the alcove above the mouth (y 8.5..15, back wall at z 5): 24 model pixels with the antenna,
+     * at 0.34 about 8.2 pixels, its legs hidden under the brass sill (top at 9.25) so it rises from it at the waist, its back sunk
+     * into the wall - fused into the bus; the antenna's ball ends at 14.8, under the alcove's roof.
      */
-    private static final float GOLEM_SCALE = 0.4f, GOLEM_Y = 7.2f, GOLEM_Z = 2.4f;
+    private static final float GOLEM_SCALE = 0.34f, GOLEM_Y = 6.6f, GOLEM_Z = 4.2f;
     /** The block's path: from inside the mouth (centre 8, 4.5, 3) to the centre of the spot in front (8, 8, -8). */
     private static final float MOUTH_Y = 4.5f, MOUTH_Z = 3f;
 

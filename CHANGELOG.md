@@ -46,6 +46,8 @@
 - **Fuzzy tags are picked from a list**: the slot window (middle-click) lists what may stand for the item - the item itself
   with any components, or each of its tags with a name and how many items it holds; one click picks. The Golem Interface's
   slot window (the gear) has the same list. Ctrl+click still goes to the next tag at once.
+- **Glass side windows** on the Formation and Annihilation Buses: the golem is seen at work even with a whole block right
+  in front. The Formation Bus alcove is deeper, and the copper golem's antenna no longer pokes through its roof.
 - **The Plasma Temper is worn**: in the Annihilation Bus the iron golem wears it as a belt in temper colours, its plasma
   bead for a buckle.
 - Fixed: loot other mods add to a creature's or a block's drops (Mystical Agriculture's essences, say) stayed on the ground

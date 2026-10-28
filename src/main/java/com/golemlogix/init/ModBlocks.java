@@ -126,10 +126,10 @@ public class ModBlocks {
     // golems working the block in front: a copper golem sets blocks down, an iron golem breaks or clicks them
     public static final DeferredBlock<com.golemlogix.blocks.FormationBusBlock> FORMATION_BUS = registerBlock("formation_bus",
             "tooltip.golem_logix.formation_bus",
-            () -> new com.golemlogix.blocks.FormationBusBlock(props()));
+            () -> new com.golemlogix.blocks.FormationBusBlock(props().noOcclusion()));
     public static final DeferredBlock<com.golemlogix.blocks.AnnihilationBusBlock> ANNIHILATION_BUS = registerBlock("annihilation_bus",
             "tooltip.golem_logix.annihilation_bus",
-            () -> new com.golemlogix.blocks.AnnihilationBusBlock(props()));
+            () -> new com.golemlogix.blocks.AnnihilationBusBlock(props().noOcclusion()));
 
     // a copper chest in glass: a fluid tank that keeps its fluid as an item, a bucket mode, joined in a crafting grid
     public static final DeferredBlock<com.golemlogix.blocks.CopperTankBlock> COPPER_TANK = registerBlock("copper_tank",

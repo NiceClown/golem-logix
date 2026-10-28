@@ -9,7 +9,8 @@ import java.util.List;
  * riveted copper). The tank: a copper chest's base and lid with teal patina in the seams, riveted copper posts with brass caps,
  * clear glass with a few highlights, a brass pressure gauge. The Formation Bus: riveted copper panels in a brass frame with rune
  * inlays, a brass mouth low on the front (the golem is the renderer's). The Annihilation Bus: dark iron plates with a brass band,
- * a brass-framed niche in the front with a plank back wall (the iron golem is the renderer's).
+ * a brass-framed niche in the front with a plank back wall (the iron golem is the renderer's). Both buses have glass windows in
+ * their side walls beside the golem, so it is seen at work even with a block right in front (translucent).
  */
 final class GolemBuses {
     static final int K = Forge2.K;
@@ -113,6 +114,29 @@ final class GolemBuses {
                 if (Atlant.hash(i, j, 841) > 0.45) {
                     p.px(p.w - 1 - i, j, rgb(Paint.FROST[4 + (int) (Atlant.hash(i, j, 842) * 3)]));
                 }
+            }
+        }
+        return p;
+    }
+
+    /** The buses' side windows: pale smoky glass, a faint rim and two highlight streaks (translucent). */
+    static Paint busGlass() {
+        Paint p = new Paint(16, 16, K);
+        for (int j = 0; j < p.h; j++) {
+            for (int i = 0; i < p.w; i++) {
+                p.px(i, j, (0x46 << 24) | 0xbcd6dc);
+            }
+        }
+        for (int i = 0; i < p.w; i++) {
+            for (int j : new int[]{0, p.h - 1}) {
+                p.px(i, j, (0x90 << 24) | 0xd8e8ec);
+                p.px(j, i, (0x90 << 24) | 0xd8e8ec);
+            }
+        }
+        for (int k = 0; k < 7; k++) {
+            p.px(3 + k, 12 - k, (0xa0 << 24) | 0xffffff);
+            if (k < 4) {
+                p.px(3 + k, 14 - k, (0x80 << 24) | 0xffffff);
             }
         }
         return p;
@@ -295,9 +319,13 @@ final class GolemBuses {
     }
 
     static void cutout(String model) throws Exception {
+        renderType(model, "cutout");
+    }
+
+    static void renderType(String model, String type) throws Exception {
         Path f = Models.RES.resolve("models/block/" + model + ".json");
         String s = Files.readString(f, StandardCharsets.UTF_8);
-        Files.writeString(f, s.replace("  \"ambientocclusion\": false,\n", "  \"ambientocclusion\": false,\n  \"render_type\": \"minecraft:cutout\",\n"),
+        Files.writeString(f, s.replace("  \"ambientocclusion\": false,\n", "  \"ambientocclusion\": false,\n  \"render_type\": \"minecraft:" + type + "\",\n"),
                 StandardCharsets.UTF_8);
     }
 
@@ -325,32 +353,48 @@ final class GolemBuses {
         Models.model("copper_tank", false, "tank_copper", tt, t.toArray(new Models.El[0]));
         cutout("copper_tank");
 
-        // ---- the Formation Bus: the casing round the golem's alcove, the brass sill it rises from, the brass lip of the mouth
-        String[][] ft = {{"side", "formation_side"}, {"front", "formation_front"}, {"brass", "sat_brass"}, {"alcove", "formation_alcove"}};
+        // ---- the Formation Bus: the casing round the golem's alcove, the brass sill it rises from, the brass lip of the mouth; the
+        // alcove is 5 deep and the side walls beside it (y 8.5..15, z 0..5) are glass windows
+        String[][] ft = {{"side", "formation_side"}, {"front", "formation_front"}, {"brass", "sat_brass"}, {"alcove", "formation_alcove"},
+                {"glass", "bus_glass"}};
         List<Models.El> f = new ArrayList<>();
         f.add(Models.e(0, 0, 0, 16, 8.5, 16).only("#side", "south", "east", "west", "down").face("north", "#front").face("up", "#side"));
-        f.add(Models.e(0, 8.5, 0, 3.5, 16, 16).only("#side", "south", "west", "up").face("north", "#front").face("east", "#alcove"));
-        f.add(Models.e(12.5, 8.5, 0, 16, 16, 16).only("#side", "south", "east", "up").face("north", "#front").face("west", "#alcove"));
+        for (boolean left : new boolean[]{true, false}) {
+            double x0 = left ? 0 : 12.5, x1 = left ? 3.5 : 16;
+            String out = left ? "west" : "east", in = left ? "east" : "west";
+            f.add(Models.e(x0, 8.5, 0, x1, 15, 5).only("#glass", out, in).face("north", "#front"));
+            f.add(Models.e(x0, 15, 0, x1, 16, 5).only("#side", out, "up", "down").face("north", "#front"));
+            f.add(Models.e(x0, 8.5, 5, x1, 16, 16).only("#side", "south", out, "up").face("north", "#alcove"));
+        }
         f.add(Models.e(3.5, 15, 0, 12.5, 16, 16).only("#side", "south", "up").face("north", "#front").face("down", "#alcove"));
-        f.add(Models.e(3.5, 8.5, 3, 12.5, 15, 16).only("#side", "south").face("north", "#alcove"));
-        f.add(Models.e(3.5, 8.5, -0.75, 12.5, 9.25, 3).only("#brass", "north", "up", "east", "west"));
+        f.add(Models.e(3.5, 8.5, 5, 12.5, 15, 16).only("#side", "south").face("north", "#alcove"));
+        f.add(Models.e(3.5, 8.5, -0.75, 12.5, 9.25, 5).only("#brass", "north", "up", "east", "west"));
         f.add(Models.e(3, 1, -1.5, 13, 2, 0).all("#brass"));
         f.add(Models.e(3, 7, -1.5, 13, 8, 0).all("#brass"));
         f.add(Models.e(3, 2, -1.5, 4, 7, 0).only("#brass", "north", "east", "west"));
         f.add(Models.e(12, 2, -1.5, 13, 7, 0).only("#brass", "north", "east", "west"));
         Models.model("formation_bus", false, "formation_side", ft, f.toArray(new Models.El[0]));
+        renderType("formation_bus", "translucent");
         Models.facing6("formation_bus", "formation_bus");
         Models.item("formation_bus", "formation_bus");
 
         // ---- the Annihilation Bus: the casing round a brass-framed niche (x 2..14, y 2..14, z 0..5)
-        String[][] at = {{"side", "annihilation_side"}, {"brass", "sat_brass"}, {"niche", "annihilation_niche"}};
+        // its side walls beside the niche (y 2..14, z 0..5) are glass windows
+        String[][] at = {{"side", "annihilation_side"}, {"brass", "sat_brass"}, {"niche", "annihilation_niche"}, {"glass", "bus_glass"}};
         List<Models.El> a = new ArrayList<>();
-        a.add(Models.e(0, 0, 0, 2, 16, 16).only("#side", "south", "west", "up", "down").face("north", "#brass").face("east", "#niche"));
-        a.add(Models.e(14, 0, 0, 16, 16, 16).only("#side", "south", "east", "up", "down").face("north", "#brass").face("west", "#niche"));
+        for (boolean left : new boolean[]{true, false}) {
+            double x0 = left ? 0 : 14, x1 = left ? 2 : 16;
+            String out = left ? "west" : "east", in = left ? "east" : "west";
+            a.add(Models.e(x0, 2, 0, x1, 14, 5).only("#glass", out, in).face("north", "#brass"));
+            a.add(Models.e(x0, 0, 0, x1, 2, 5).only("#side", out, "up", "down").face("north", "#brass"));
+            a.add(Models.e(x0, 14, 0, x1, 16, 5).only("#side", out, "up", "down").face("north", "#brass"));
+            a.add(Models.e(x0, 0, 5, x1, 16, 16).only("#side", "south", out, "up", "down").face("north", "#niche"));
+        }
         a.add(Models.e(2, 0, 0, 14, 2, 16).only("#side", "south", "down").face("north", "#brass").face("up", "#niche"));
         a.add(Models.e(2, 14, 0, 14, 16, 16).only("#side", "south", "up").face("north", "#brass").face("down", "#niche"));
         a.add(Models.e(2, 2, 5, 14, 14, 16).only("#side", "south").face("north", "#niche"));
         Models.model("annihilation_bus", false, "annihilation_side", at, a.toArray(new Models.El[0]));
+        renderType("annihilation_bus", "translucent");
         Models.facing6("annihilation_bus", "annihilation_bus");
         Models.item("annihilation_bus", "annihilation_bus");
     }
@@ -366,6 +410,7 @@ final class GolemBuses {
         alcove().save(Forge2.tex("formation_alcove"));
         annihilation().save(Forge2.tex("annihilation_side"));
         niche().save(Forge2.tex("annihilation_niche"));
+        busGlass().save(Forge2.tex("bus_glass"));
         temper().save(Forge2.RES.resolve("textures/item/plasma_temper.png").toFile());
         belt().save(Forge2.RES.resolve("textures/entity/plasma_belt.png").toFile());
         models();
