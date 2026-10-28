@@ -16,8 +16,8 @@ import net.neoforged.neoforge.fluids.FluidStack;
  * fluid lighter than air (a gas) hangs from the lid instead; a glowing one (lava) is drawn at full brightness.
  */
 public class CopperTankRenderer extends com.golemlogix.client.render.LegacyBer<CopperTankBlockEntity> {
-    /** The inside of the tank (pixels): within the posts and the glass, between the base and the lid. */
-    private static final float IN0 = 2.05f, IN1 = 13.95f, BOTTOM = 2.05f, TOP = 13.95f;
+    /** The inside of the tank (pixels): within the glass, between the base (top at 4) and the lid (underside at 13). */
+    private static final float IN0 = 1.6f, IN1 = 14.4f, BOTTOM = 4.05f, TOP = 12.95f;
 
     public CopperTankRenderer(BlockEntityRendererProvider.Context context) {
     }

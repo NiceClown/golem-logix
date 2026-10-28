@@ -1,0 +1,66 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "golem_logix:block/formation_side",
+    "side": "golem_logix:block/formation_side",
+    "front": "golem_logix:block/formation_front",
+    "brass": "golem_logix:block/sat_brass"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0],
+      "to": [16, 16, 16],
+      "faces": {
+        "south": {"texture": "#side"},
+        "east": {"texture": "#side"},
+        "west": {"texture": "#side"},
+        "up": {"texture": "#side"},
+        "down": {"texture": "#side"},
+        "north": {"texture": "#front"}
+      }
+    },
+    {
+      "from": [3, 1, -1.5],
+      "to": [13, 2, 0],
+      "faces": {
+        "north": {"texture": "#brass"},
+        "south": {"texture": "#brass"},
+        "east": {"uv": [0, 14, 1.5, 15], "texture": "#brass"},
+        "west": {"uv": [14.5, 14, 16, 15], "texture": "#brass"},
+        "up": {"uv": [3, 14.5, 13, 16], "texture": "#brass"},
+        "down": {"uv": [3, 0, 13, 1.5], "texture": "#brass"}
+      }
+    },
+    {
+      "from": [3, 8, -1.5],
+      "to": [13, 9, 0],
+      "faces": {
+        "north": {"texture": "#brass"},
+        "south": {"texture": "#brass"},
+        "east": {"uv": [0, 7, 1.5, 8], "texture": "#brass"},
+        "west": {"uv": [14.5, 7, 16, 8], "texture": "#brass"},
+        "up": {"uv": [3, 14.5, 13, 16], "texture": "#brass"},
+        "down": {"uv": [3, 0, 13, 1.5], "texture": "#brass"}
+      }
+    },
+    {
+      "from": [3, 2, -1.5],
+      "to": [4, 8, 0],
+      "faces": {
+        "north": {"texture": "#brass"},
+        "east": {"uv": [0, 8, 1.5, 14], "texture": "#brass"},
+        "west": {"uv": [14.5, 8, 16, 14], "texture": "#brass"}
+      }
+    },
+    {
+      "from": [12, 2, -1.5],
+      "to": [13, 8, 0],
+      "faces": {
+        "north": {"texture": "#brass"},
+        "east": {"uv": [0, 8, 1.5, 14], "texture": "#brass"},
+        "west": {"uv": [14.5, 8, 16, 14], "texture": "#brass"}
+      }
+    }
+  ]
+}

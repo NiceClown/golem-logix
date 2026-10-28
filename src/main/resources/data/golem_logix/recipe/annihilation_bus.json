@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "key": {
+    "K": "minecraft:carved_pumpkin",
+    "I": "minecraft:iron_block",
+    "M": "golem_logix:flattened_iron_core",
+    "V": "golem_logix:vacuum_import_bus",
+    "P": "minecraft:iron_pickaxe"
+  },
+  "pattern": [
+    "IKI",
+    "MVM",
+    "IPI"
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:annihilation_bus"
+  }
+}

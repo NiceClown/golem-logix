@@ -38,6 +38,9 @@ Everything comes with an illustrated, searchable **guide book** (Russian and Eng
   The faces are alive: the vacuum turbine turns, the injector's dot blinks, the periscope's ender eye looks around.
   Upgrade slots: up to four speed upgrades, an Autocraft Module (the export bus orders what is missing), a Redstone Module and a
   Fuzzy Card (filters take the same item with any components, or any item of a tag chosen on the filter with a middle-click).
+- **Golem buses** — Mason's Formation Bus (a copper golem fused into a copper block sets blocks from the network down in front)
+  and Hewer's Annihilation Bus (an iron golem in a brass niche mines the block in front into the network, or right-clicks it,
+  with the tool you give it or the strength of every iron tool; clicker-like settings and allow / deny filters).
 - **Redstone control** for buses, periscopes, pattern providers, calculators and the Mana Saturator: ignore / with signal / without
   signal / one action per pulse, as in AE2 and Refined Storage.
 - **Terminals** — analog CRT terminal (search, sorting, items and fluids in one list with fluids counted in buckets, bucket support),

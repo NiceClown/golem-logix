@@ -8,6 +8,8 @@ public record UpgradeSpec(int slots, int maxSpeed, boolean crafting, boolean red
     public static final UpgradeSpec IMPORT_BUS = new UpgradeSpec(6, 4, false, true, true);
     /** Export bus: up to 4 speed upgrades, autocraft, redstone and a Fuzzy Card. */
     public static final UpgradeSpec EXPORT_BUS = new UpgradeSpec(7, 4, true, true, true);
+    /** Annihilation Bus: up to 4 speed upgrades (it mines and clicks faster), redstone and a Fuzzy Card. */
+    public static final UpgradeSpec ANNIHILATION_BUS = new UpgradeSpec(6, 4, false, true, true);
     /** Interface: like the export bus, speed upgrades, stock autocraft, redstone and a Fuzzy Card. */
     public static final UpgradeSpec INTERFACE = new UpgradeSpec(7, 4, true, true, true);
     /** Cryo-Calculator: up to 4 Compressed Co-Processors (speed-up) and redstone. */

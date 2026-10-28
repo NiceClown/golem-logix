@@ -29,6 +29,8 @@ public class BusMenu extends GolemMenu {
     public static final int KIND_IMPORT = 0;
     public static final int KIND_EXPORT = 1;
     public static final int KIND_PERISCOPE = 2;
+    /** The Formation Bus: an export-bus filter and upgrades, no priority. */
+    public static final int KIND_FORMATION = 3;
 
     private final Container filters;
     private final int kind;
@@ -36,7 +38,7 @@ public class BusMenu extends GolemMenu {
 
     public static UpgradeSpec specOf(int kind) {
         return switch (kind) {
-            case KIND_EXPORT -> UpgradeSpec.EXPORT_BUS;
+            case KIND_EXPORT, KIND_FORMATION -> UpgradeSpec.EXPORT_BUS;
             case KIND_IMPORT -> UpgradeSpec.IMPORT_BUS;
             default -> UpgradeSpec.REDSTONE_ONLY;
         };
@@ -68,6 +70,10 @@ public class BusMenu extends GolemMenu {
 
     public boolean isPeriscope() {
         return kind == KIND_PERISCOPE;
+    }
+
+    public boolean isFormation() {
+        return kind == KIND_FORMATION;
     }
 
     public int getPriority() {

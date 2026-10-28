@@ -28,6 +28,8 @@ public class GolemLogixClientEvents {
         event.registerBlockEntityRenderer(ModBlockEntities.RECIPE_MONITOR.get(), RecipeMonitorRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.CHANNEL_COUNTER.get(), ChannelCounterRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.COPPER_TANK.get(), CopperTankRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.FORMATION_BUS.get(), FormationBusRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.ANNIHILATION_BUS.get(), AnnihilationBusRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.INTERFACE.get(), InterfaceRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.ATLANT_HEAD.get(), AtlantHeadRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.CRYO_MAINFRAME.get(), CryoMainframeRenderer::new);
@@ -56,6 +58,7 @@ public class GolemLogixClientEvents {
         event.register(ModMenus.TERMINAL.get(), TerminalScreen::new);
         event.register(ModMenus.DRIVE_BAY.get(), DriveBayScreen::new);
         event.register(ModMenus.BUS.get(), BusScreen::new);
+        event.register(ModMenus.ANNIHILATION_BUS.get(), AnnihilationBusScreen::new);
         event.register(ModMenus.PATTERN_ENCODER.get(), PatternEncoderScreen::new);
         event.register(ModMenus.PATTERN_PROVIDER.get(), PatternProviderScreen::new);
         event.register(ModMenus.CALCULATOR.get(), CalculatorScreen::new);

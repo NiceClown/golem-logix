@@ -1016,6 +1016,45 @@
           ]
         },
         {
+          "id": "bus_formation", "title": "Mason's Formation Bus", "icon": "golem_logix:formation_bus", "x": 2, "y": -1, "parents": ["bus_export"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:formation_bus",
+             "text": [
+               "A whole copper block with a &lcopper golem fused into its front&r. It takes the blocks named in its filter out of the network and &lsets them down in front&r, one at a time, while the spot is free. Takes 1 channel."
+             ]},
+            {"type": "text", "title": "How it works",
+             "text": [
+               "• Place it looking where the blocks should go: its front faces away from you. Pipes join it on every side but the front.",
+               "• The golem pushes the block out of the brass mouth; the push lasts the bus's interval, so with &lfour Compressed Co-Processors&r it sets a block down every couple of ticks.",
+               "• If the spot is taken while it pushes, it holds the block and waits. A block that cannot stand there goes back into the network.",
+               "• Upgrades as on the Export Bus: an &lAutocraft Module&r orders a block the network lacks, a &lRedstone Module&r, a &lFuzzy Card&r.",
+               "&oFused into its casing, the golem can never leave its post - which is why it lays blocks truer than any mason.&r"
+             ]}
+          ]
+        },
+        {
+          "id": "bus_annihilation", "title": "Hewer's Annihilation Bus", "icon": "golem_logix:annihilation_bus", "x": 2, "y": -2, "parents": ["bus_import"],
+          "pages": [
+            {"type": "crafting", "recipe": "golem_logix:annihilation_bus",
+             "text": [
+               "A small &liron golem&r in a brass niche works the block in front of it: it &lbreaks&r it into the network, or &lclicks&r it with the item it holds. Takes 1 channel."
+             ]},
+            {"type": "text", "title": "The tool",
+             "text": [
+               "The window has a &ltool slot&r. Empty, the golem brings the &lstrength of every iron tool&r: the best of the iron pickaxe, axe, shovel, hoe and sword for that block, never worn out.",
+               "Put a tool in and the golem uses it, enchantments and all (Fortune, Silk Touch, Efficiency) - and wears it. A tool about to break is put down instead.",
+               "&oA block the tool cannot harvest (obsidian for iron) is left alone.&r"
+             ]},
+            {"type": "text", "title": "Clicks",
+             "text": [
+               "Settings in the column left of the window, as on a clicker:",
+               "• &lLeft click&r: mines the block like a player, as fast as the tool allows (co-processors speed it up, four of them eightfold), cracks and all. The drops go into the network; while it cannot take them all, the golem waits.",
+               "• &lRight click&r: once an interval uses its item (or bare hand) on the block - a lever, shears on a pumpkin, a hoe, bone meal. What falls out goes into the network.",
+               "• &lSneaking&r, the filter as an &lallow or deny list&r (empty - every block), &lgrown only&r (crops only when ripe) and the &lRedstone Module&r."
+             ]}
+          ]
+        },
+        {
           "id": "bus_filters", "title": "Filters", "icon": "minecraft:hopper", "x": 2, "y": 0, "parents": ["bus_import", "bus_export"],
           "pages": [
             {"type": "text", "title": "Setting up a filter",

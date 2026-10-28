@@ -21,6 +21,9 @@ public class ModMenus {
     public static final Supplier<MenuType<BusMenu>> BUS =
             MENUS.register("bus", () -> IMenuTypeExtension.create(BusMenu::fromNetwork));
 
+    public static final Supplier<MenuType<AnnihilationBusMenu>> ANNIHILATION_BUS =
+            MENUS.register("annihilation_bus", () -> IMenuTypeExtension.create((id, inv, buf) -> AnnihilationBusMenu.client(id, inv)));
+
     public static final Supplier<MenuType<PatternEncoderMenu>> PATTERN_ENCODER =
             MENUS.register("pattern_encoder", () -> IMenuTypeExtension.create(PatternEncoderMenu::fromNetwork));
 

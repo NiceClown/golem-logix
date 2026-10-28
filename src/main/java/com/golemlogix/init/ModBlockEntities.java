@@ -88,6 +88,14 @@ public class ModBlockEntities {
             BLOCK_ENTITY_TYPES.register("copper_tank", () ->
                     new BlockEntityType<>(com.golemlogix.blockentity.CopperTankBlockEntity::new, ModBlocks.COPPER_TANK.get()));
 
+    public static final Supplier<BlockEntityType<com.golemlogix.blockentity.FormationBusBlockEntity>> FORMATION_BUS =
+            BLOCK_ENTITY_TYPES.register("formation_bus", () ->
+                    new BlockEntityType<>(com.golemlogix.blockentity.FormationBusBlockEntity::new, ModBlocks.FORMATION_BUS.get()));
+
+    public static final Supplier<BlockEntityType<com.golemlogix.blockentity.AnnihilationBusBlockEntity>> ANNIHILATION_BUS =
+            BLOCK_ENTITY_TYPES.register("annihilation_bus", () ->
+                    new BlockEntityType<>(com.golemlogix.blockentity.AnnihilationBusBlockEntity::new, ModBlocks.ANNIHILATION_BUS.get()));
+
     public static final Supplier<BlockEntityType<PipeBlockEntity>> SNOW_PIPE =
             BLOCK_ENTITY_TYPES.register("snow_pipe", () ->
                     new BlockEntityType<>(PipeBlockEntity::new,

@@ -1,0 +1,64 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "golem_logix:block/annihilation_side",
+    "side": "golem_logix:block/annihilation_side",
+    "brass": "golem_logix:block/sat_brass",
+    "niche": "golem_logix:block/annihilation_niche"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0],
+      "to": [2, 16, 16],
+      "faces": {
+        "south": {"texture": "#side"},
+        "west": {"texture": "#side"},
+        "up": {"texture": "#side"},
+        "down": {"texture": "#side"},
+        "north": {"texture": "#brass"},
+        "east": {"texture": "#niche"}
+      }
+    },
+    {
+      "from": [14, 0, 0],
+      "to": [16, 16, 16],
+      "faces": {
+        "south": {"texture": "#side"},
+        "east": {"texture": "#side"},
+        "up": {"texture": "#side"},
+        "down": {"texture": "#side"},
+        "north": {"texture": "#brass"},
+        "west": {"texture": "#niche"}
+      }
+    },
+    {
+      "from": [2, 0, 0],
+      "to": [14, 2, 16],
+      "faces": {
+        "south": {"texture": "#side"},
+        "down": {"texture": "#side"},
+        "north": {"texture": "#brass"},
+        "up": {"texture": "#niche"}
+      }
+    },
+    {
+      "from": [2, 14, 0],
+      "to": [14, 16, 16],
+      "faces": {
+        "south": {"texture": "#side"},
+        "up": {"texture": "#side"},
+        "north": {"texture": "#brass"},
+        "down": {"texture": "#niche"}
+      }
+    },
+    {
+      "from": [2, 2, 5],
+      "to": [14, 14, 16],
+      "faces": {
+        "south": {"texture": "#side"},
+        "north": {"texture": "#niche"}
+      }
+    }
+  ]
+}

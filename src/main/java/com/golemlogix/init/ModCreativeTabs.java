@@ -98,6 +98,8 @@ public class ModCreativeTabs {
 
                         // Buses
                         output.accept(ModBlocks.VACUUM_IMPORT_BUS.get());
+                        output.accept(ModBlocks.FORMATION_BUS.get());
+                        output.accept(ModBlocks.ANNIHILATION_BUS.get());
                         output.accept(ModBlocks.INJECTOR_EXPORT_BUS.get());
                         output.accept(ModBlocks.PERISCOPE_STORAGE_BUS.get());
                         output.accept(ModBlocks.GOLEM_INTERFACE.get());

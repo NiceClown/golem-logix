@@ -583,6 +583,172 @@ public class GolemGameTests {
         });
     }
 
+    /**
+     * Mason's Formation Bus: the copper golem takes stone named in the filter out of the network and sets it down in front; when the
+     * block is taken away it sets down the next one.
+     */
+    public static void formationBusPlaces(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos bus = BUS_OUT, front = BUS_OUT.north();
+        helper.setBlock(bus, ModBlocks.FORMATION_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        helper.setBlock(front, Blocks.AIR);
+        var be = helper.getBlockEntity(bus, com.golemlogix.blockentity.FormationBusBlockEntity.class);
+        be.getFilters().setItem(0, new ItemStack(Items.STONE));
+        helper.runAfterDelay(5, () -> net(helper, bay).insertItem(new ItemStack(Items.STONE, 3), false));
+        helper.runAfterDelay(60, () -> {
+            helper.assertBlockPresent(Blocks.STONE, front);
+            helper.assertTrue(net(helper, bay).itemCountOf(ItemKey.of(new ItemStack(Items.STONE))) == 2, "one stone left the network");
+            helper.setBlock(front, Blocks.AIR);
+        });
+        helper.runAfterDelay(120, () -> {
+            helper.assertBlockPresent(Blocks.STONE, front);
+            helper.assertTrue(net(helper, bay).itemCountOf(ItemKey.of(new ItemStack(Items.STONE))) == 1, "the next stone went down");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * Hewer's Annihilation Bus with no tool: the iron golem mines stone into the network as cobblestone (an iron pickaxe's work),
+     * leaves obsidian alone (iron cannot harvest it), and with "grown only" leaves young wheat but takes ripe wheat.
+     */
+    public static void annihilationBusMines(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos bus = BUS_OUT, front = BUS_OUT.north();
+        helper.setBlock(bus, ModBlocks.ANNIHILATION_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        helper.setBlock(front, Blocks.STONE);
+        var be = helper.getBlockEntity(bus, com.golemlogix.blockentity.AnnihilationBusBlockEntity.class);
+        helper.runAfterDelay(80, () -> {
+            helper.assertBlockNotPresent(Blocks.STONE, front);
+            helper.assertTrue(net(helper, bay).itemCountOf(ItemKey.of(new ItemStack(Items.COBBLESTONE))) == 1, "the stone is cobblestone in the network");
+            helper.setBlock(front, Blocks.OBSIDIAN);
+        });
+        helper.runAfterDelay(160, () -> {
+            helper.assertBlockPresent(Blocks.OBSIDIAN, front);
+            be.menuData().set(4, 1);
+            helper.setBlock(front.below(), Blocks.FARMLAND);
+            helper.setBlock(front, Blocks.WHEAT.defaultBlockState());
+        });
+        helper.runAfterDelay(220, () -> {
+            helper.assertBlockPresent(Blocks.WHEAT, front);
+            helper.setBlock(front, ((net.minecraft.world.level.block.CropBlock) Blocks.WHEAT).getStateForAge(7));
+        });
+        helper.runAfterDelay(300, () -> {
+            helper.assertBlockNotPresent(Blocks.WHEAT, front);
+            helper.assertTrue(net(helper, bay).itemCountOf(ItemKey.of(new ItemStack(Items.WHEAT))) >= 1, "ripe wheat harvested into the network");
+            helper.succeed();
+        });
+    }
+
+    /** Hewer's Annihilation Bus on right click with shears: it carves the pumpkin in front and the seeds go into the network. */
+    public static void annihilationBusClicks(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos bus = BUS_OUT, front = BUS_OUT.north();
+        helper.setBlock(bus, ModBlocks.ANNIHILATION_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        helper.setBlock(front, Blocks.PUMPKIN);
+        var be = helper.getBlockEntity(bus, com.golemlogix.blockentity.AnnihilationBusBlockEntity.class);
+        be.menuData().set(1, 1);
+        be.getTool().setItem(0, new ItemStack(Items.SHEARS));
+        helper.runAfterDelay(60, () -> {
+            helper.assertBlockPresent(Blocks.CARVED_PUMPKIN, front);
+            helper.assertTrue(net(helper, bay).itemCountOf(ItemKey.of(new ItemStack(Items.PUMPKIN_SEEDS))) >= 1, "the seeds went into the network");
+            helper.assertTrue(be.getTool().getItem(0).is(Items.SHEARS) && be.getTool().getItem(0).getDamageValue() == 1, "the shears wore a little");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * The window a bare-handed click on a golem bus opens, built the way the server builds it (a FakePlayer cannot open windows, and
+     * a mock player's connection refuses the mod's packets), handed to the test player as its open window.
+     */
+    private static ServerPlayer clickOpen(GameTestHelper helper, BlockPos rel) {
+        ServerPlayer player = testPlayer(helper);
+        BlockPos abs = helper.absolutePos(rel);
+        player.snapTo(abs.getX() + 0.5, abs.getY() + 1, abs.getZ() + 2.5, 180f, 30f);
+        var block = (com.golemlogix.blocks.GolemPlaneBlock) helper.getBlockState(rel).getBlock();
+        var provider = block.menu(helper.getLevel().getBlockEntity(abs));
+        helper.assertTrue(provider != null, "the bus has a window");
+        player.containerMenu = provider.createMenu(77, player.getInventory(), player);
+        return player;
+    }
+
+    /** No two slots of a window overlap, and the window's own slots stay inside it (the upgrades in their column to the right). */
+    private static void assertSlotsLaidOut(GameTestHelper helper, net.minecraft.world.inventory.AbstractContainerMenu menu, int width, int height) {
+        for (int i = 0; i < menu.slots.size(); i++) {
+            var a = menu.slots.get(i);
+            helper.assertTrue(a.x >= 0 && a.y >= 0 && a.y + 16 <= height && a.x + 16 <= width + 30, "slot " + i + " is inside the window");
+            for (int j = i + 1; j < menu.slots.size(); j++) {
+                var b = menu.slots.get(j);
+                helper.assertTrue(Math.abs(a.x - b.x) >= 18 || Math.abs(a.y - b.y) >= 18, "slots " + i + " and " + j + " overlap");
+            }
+        }
+    }
+
+    /**
+     * The Annihilation Bus window: a bare-handed click opens it; the setting buttons switch the bus; shift-click puts a tool into the
+     * tool slot, copies a block into the filter, an upgrade into its slot, and takes the tool back; the slots are laid out cleanly.
+     */
+    public static void annihilationBusWindow(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(2, 1, 2);
+        helper.setBlock(rel, ModBlocks.ANNIHILATION_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        var be = helper.getBlockEntity(rel, com.golemlogix.blockentity.AnnihilationBusBlockEntity.class);
+        ServerPlayer player = clickOpen(helper, rel);
+        try {
+            helper.assertTrue(player.containerMenu instanceof com.golemlogix.menu.AnnihilationBusMenu,
+                    "a bare-handed click opens the window, got " + player.containerMenu);
+            var menu = (com.golemlogix.menu.AnnihilationBusMenu) player.containerMenu;
+            assertSlotsLaidOut(helper, menu, com.golemlogix.menu.AnnihilationBusMenu.IMAGE_WIDTH, com.golemlogix.menu.AnnihilationBusMenu.IMAGE_HEIGHT);
+            var data = be.menuData();
+            for (int[] b : new int[][]{{com.golemlogix.menu.AnnihilationBusMenu.BUTTON_CLICK, 1}, {com.golemlogix.menu.AnnihilationBusMenu.BUTTON_SNEAK, 2},
+                    {com.golemlogix.menu.AnnihilationBusMenu.BUTTON_LIST, 3}, {com.golemlogix.menu.AnnihilationBusMenu.BUTTON_GROWN, 4}}) {
+                helper.assertTrue(data.get(b[1]) == 0 && menu.clickMenuButton(player, b[0]) && data.get(b[1]) == 1, "button " + b[0] + " turns its setting on");
+                menu.clickMenuButton(player, b[0]);
+                helper.assertTrue(data.get(b[1]) == 0, "and off again");
+            }
+            int hotbar0 = menu.slots.size() - 9;
+            player.getInventory().setItem(0, new ItemStack(Items.DIAMOND_PICKAXE));
+            player.getInventory().setItem(1, new ItemStack(Items.STONE, 12));
+            player.getInventory().setItem(2, new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get(), 2));
+            menu.clicked(hotbar0, 0, net.minecraft.world.inventory.ContainerInput.QUICK_MOVE, player);
+            helper.assertTrue(be.getTool().getItem(0).is(Items.DIAMOND_PICKAXE) && player.getInventory().getItem(0).isEmpty(),
+                    "shift-click moves the pickaxe into the tool slot");
+            menu.clicked(hotbar0 + 1, 0, net.minecraft.world.inventory.ContainerInput.QUICK_MOVE, player);
+            helper.assertTrue(be.getFilters().getItem(0).is(Items.STONE) && player.getInventory().getItem(1).getCount() == 12,
+                    "shift-click copies stone into the filter and keeps the stack");
+            menu.clicked(hotbar0 + 2, 0, net.minecraft.world.inventory.ContainerInput.QUICK_MOVE, player);
+            helper.assertTrue(be.getUpgrades().count(com.golemlogix.upgrade.UpgradeType.SPEED) == 2, "co-processors go into the upgrade slots");
+            menu.clicked(com.golemlogix.menu.AnnihilationBusMenu.TOOL_SLOT_INDEX, 0, net.minecraft.world.inventory.ContainerInput.QUICK_MOVE, player);
+            helper.assertTrue(be.getTool().getItem(0).isEmpty() && player.getInventory().contains(new ItemStack(Items.DIAMOND_PICKAXE)),
+                    "shift-click on the tool slot takes the pickaxe back");
+            helper.assertTrue(!menu.getSlot(com.golemlogix.menu.AnnihilationBusMenu.TOOL_SLOT_INDEX)
+                    .mayPlace(new ItemStack(ModItems.REDSTONE_MODULE.get())), "an upgrade is no tool");
+        } finally {
+            player.containerMenu = player.inventoryMenu;
+        }
+        helper.succeed();
+    }
+
+    /** The Formation Bus window: a bare-handed click opens the bus window without priority; shift-click copies a block into the filter. */
+    public static void formationBusWindow(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(2, 1, 2);
+        helper.setBlock(rel, ModBlocks.FORMATION_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        var be = helper.getBlockEntity(rel, com.golemlogix.blockentity.FormationBusBlockEntity.class);
+        ServerPlayer player = clickOpen(helper, rel);
+        try {
+            helper.assertTrue(player.containerMenu instanceof com.golemlogix.menu.BusMenu bus && bus.isFormation(),
+                    "a bare-handed click opens the Formation Bus window, got " + player.containerMenu);
+            var menu = (com.golemlogix.menu.BusMenu) player.containerMenu;
+            assertSlotsLaidOut(helper, menu, com.golemlogix.menu.BusMenu.IMAGE_WIDTH, com.golemlogix.menu.BusMenu.IMAGE_HEIGHT);
+            helper.assertTrue(menu.upgradeSpec() == com.golemlogix.upgrade.UpgradeSpec.EXPORT_BUS, "upgrades as on the Export Bus");
+            player.getInventory().setItem(0, new ItemStack(Items.OAK_LOG, 5));
+            menu.clicked(menu.slots.size() - 9, 0, net.minecraft.world.inventory.ContainerInput.QUICK_MOVE, player);
+            helper.assertTrue(be.getFilters().getItem(0).is(Items.OAK_LOG) && player.getInventory().getItem(0).getCount() == 5,
+                    "shift-click copies the log into the filter");
+        } finally {
+            player.containerMenu = player.inventoryMenu;
+        }
+        helper.succeed();
+    }
+
     /** A Copper Tank broken with fluid in it drops itself with that fluid and capacity; placed again, the fluid is back. */
     public static void copperTankKeepsFluid(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 1, 1), again = new BlockPos(3, 1, 1);

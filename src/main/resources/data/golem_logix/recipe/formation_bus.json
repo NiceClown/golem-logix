@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "key": {
+    "K": "minecraft:carved_pumpkin",
+    "C": "minecraft:copper_block",
+    "M": "golem_logix:flattened_copper_matrix",
+    "E": "golem_logix:injector_export_bus",
+    "P": "minecraft:piston"
+  },
+  "pattern": [
+    "CKC",
+    "MEM",
+    "CPC"
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:formation_bus"
+  }
+}

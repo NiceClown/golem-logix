@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.11 (26.1.2) — The Copper Tank
+## 2.0.11 (26.1.2) — The Copper Tank and the golem buses
 
 - **New block: the Copper Tank.** Making a copper golem leaves a vanilla copper chest where the copper block was; four glass blocks
   round it in a crafting table (any glass, any copper chest) make a tank for **one fluid, 16 000 mB**. Buckets and any
@@ -14,8 +14,22 @@
   where it points - a way to move lakes of water or lava without pipe mods.
 - **Joined tanks**, as with EvilCraft's: two to nine tanks anywhere in a crafting grid make one that holds as much as all of them
   (up to 1 024 000 mB) with all their fluid, as long as it is one fluid (empty tanks join any).
-- A guidebook article under Storage.
-- 121 game tests (new: a tank keeps its fluid when broken, tanks join, bucket mode pours and scoops).
+- **The Copper Tank looks the part**: a copper chest's base and lid with teal patina in the seams, riveted copper posts with brass
+  caps, clear glass with a few highlights and a brass pressure gauge.
+- **New block: Mason's Formation Bus.** A whole copper block with a copper golem fused into its front: it takes the blocks named
+  in its filter out of the network and pushes them out of its brass mouth onto the free spot in front, one at a time. The push
+  lasts the bus's interval, so the golem keeps pace with four Compressed Co-Processors; if the spot is taken meanwhile it holds
+  the block and waits. Upgrades as on the Export Bus (speed, Autocraft Module, Redstone Module, Fuzzy Card).
+- **New block: Hewer's Annihilation Bus.** A small iron golem in a brass niche works the block in front of it with the tool in
+  its slot - or, with the slot empty, with the strength of every iron tool (the best iron pickaxe, axe, shovel, hoe or sword
+  for that block, never worn out). A given tool is used with its enchantments and worn, and put down before it would break.
+  Settings as on a clicker: left click (mines like a player, as fast as the tool allows, the drops into the network) or right
+  click (uses the item or the bare hand on the block, what falls out into the network), sneaking, the filter as an allow or a
+  deny list, and "grown only" for crops. Upgrades: speed (four co-processors mine eightfold), Redstone Module, Fuzzy Card.
+- Guidebook articles: the Copper Tank under Storage, both new buses under Buses.
+- 126 game tests (new: a tank keeps its fluid when broken, tanks join, bucket mode pours and scoops, the Formation Bus sets
+  blocks down, the Annihilation Bus mines (and leaves obsidian and unripe wheat alone) and clicks with shears, and both buses'
+  windows: opened by a click, their setting buttons, shift-clicks into the tool slot, the filter and the upgrades, the layout).
 
 ## 2.0.10 (26.1.2) — Autocrafting finds the gateway at the machine
 
