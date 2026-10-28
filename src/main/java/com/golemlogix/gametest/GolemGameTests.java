@@ -3689,6 +3689,69 @@ public class GolemGameTests {
         });
     }
 
+    /**
+     * The periscope as a storage bus: an allow list takes only what it names (and shows only that), a deny list everything else;
+     * insert only fills the chest without showing it, extract only never puts anything new in.
+     */
+    public static void periscopeFilterAndAccess(GameTestHelper helper) {
+        buildArray(helper, 0, 0);
+        powered(helper);
+        BlockPos chestA = new BlockPos(8, 1, 6), chestB = new BlockPos(4, 1, 8);
+        helper.setBlock(chestA, Blocks.CHEST);
+        helper.setBlock(chestB, Blocks.CHEST);
+        periscope(helper, new BlockPos(7, 1, 6), Direction.EAST);
+        periscope(helper, new BlockPos(4, 1, 7), Direction.SOUTH);
+        var pa = helper.getBlockEntity(new BlockPos(7, 1, 6), com.golemlogix.blockentity.PeriscopeBlockEntity.class);
+        pa.setPriority(5);
+        var a = helper.getBlockEntity(chestA, net.minecraft.world.level.block.entity.ChestBlockEntity.class);
+        var b = helper.getBlockEntity(chestB, net.minecraft.world.level.block.entity.ChestBlockEntity.class);
+        a.setItem(0, new ItemStack(Items.DIRT, 5));
+        pa.getFilters().setItem(0, new ItemStack(Items.COBBLESTONE));
+        var data = pa.menuData();
+        helper.runAfterDelay(20, () -> {
+            GolemNetwork n = net(helper, ORIGIN);
+            ItemKey dirt = ItemKey.of(new ItemStack(Items.DIRT)), stone = ItemKey.of(new ItemStack(Items.STONE));
+            // allow list: cobblestone only
+            helper.assertTrue(n.insertItem(new ItemStack(Items.STONE, 10), false).isEmpty() && count(b, Items.STONE) == 10, "stone skips chest A");
+            helper.assertTrue(n.insertItem(new ItemStack(Items.COBBLESTONE, 10), false).isEmpty() && count(a, Items.COBBLESTONE) == 10, "cobble goes to A");
+            helper.assertTrue(n.itemCountOf(dirt) == 0, "the dirt in A is outside the filter: unseen");
+            // deny list
+            data.set(3, 1);
+            helper.assertTrue(n.insertItem(new ItemStack(Items.COBBLESTONE, 4), false).isEmpty() && count(b, Items.COBBLESTONE) == 4, "denied cobble goes to B");
+            helper.assertTrue(n.itemCountOf(dirt) == 5, "the dirt shows now");
+            // insert only, no filter
+            data.set(3, 0);
+            pa.getFilters().setItem(0, ItemStack.EMPTY);
+            data.set(2, com.golemlogix.blockentity.PeriscopeBlockEntity.INSERT_ONLY);
+            helper.assertTrue(n.insertItem(new ItemStack(Items.STONE, 6), false).isEmpty() && count(a, Items.STONE) == 6, "A still takes stone");
+            helper.assertTrue(n.itemCountOf(stone) == 10 && n.itemCountOf(dirt) == 0, "but shows nothing of its own");
+            helper.assertTrue(n.extractItem(new ItemStack(Items.STONE), 64, false).getCount() == 10 && count(a, Items.STONE) == 6, "only B gives stone");
+            // extract only
+            data.set(2, com.golemlogix.blockentity.PeriscopeBlockEntity.EXTRACT_ONLY);
+            helper.assertTrue(n.insertItem(new ItemStack(Items.GOLD_INGOT, 3), false).isEmpty() && count(b, Items.GOLD_INGOT) == 3, "nothing new into A");
+            helper.assertTrue(n.extractItem(new ItemStack(Items.DIRT), 64, false).getCount() == 5 && count(a, Items.DIRT) == 0, "A gives its dirt");
+            helper.succeed();
+        });
+    }
+
+    /** An Import Bus with a deny list takes everything but what its filter names. */
+    public static void importDenyList(GameTestHelper helper) {
+        baseNetwork(helper);
+        helper.setBlock(BUS_IN, ModBlocks.VACUUM_IMPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.WEST));
+        BlockPos chest = new BlockPos(2, 1, 4);
+        helper.setBlock(chest, Blocks.CHEST);
+        Container c = ((Container) helper.getBlockEntity(chest, net.minecraft.world.level.block.entity.BlockEntity.class));
+        c.setItem(0, new ItemStack(Items.COBBLESTONE, 20));
+        c.setItem(1, new ItemStack(Items.DIRT, 7));
+        BusBlockEntity bus = helper.getBlockEntity(BUS_IN, BusBlockEntity.class);
+        bus.getFilters().setItem(0, new ItemStack(Items.COBBLESTONE));
+        bus.menuData().set(2, 1);
+        helper.runAfterDelay(80, () -> {
+            helper.assertTrue(c.getItem(0).getCount() == 20 && c.getItem(1).isEmpty(), "the dirt comes in, the denied cobblestone stays");
+            helper.succeed();
+        });
+    }
+
     private static int count(net.minecraft.world.Container c, net.minecraft.world.item.Item item) {
         int n = 0;
         for (int i = 0; i < c.getContainerSize(); i++) {
@@ -3982,8 +4045,9 @@ public class GolemGameTests {
         BlockPos at3 = new BlockPos(6, 1, 2);
         helper.setBlock(at3, ModBlocks.PERISCOPE_STORAGE_BUS.get().defaultBlockState());
         var up3 = (helper.getBlockEntity(at3, com.golemlogix.blockentity.PeriscopeBlockEntity.class)).getUpgrades();
-        helper.assertTrue(up3.getContainerSize() == 1 && !up3.canPlaceItem(0, speed)
-                && up3.canPlaceItem(0, new ItemStack(ModItems.REDSTONE_MODULE.get())), "the periscope takes only the redstone module");
+        helper.assertTrue(up3.getContainerSize() == 2 && !up3.canPlaceItem(0, speed)
+                && up3.canPlaceItem(0, new ItemStack(ModItems.REDSTONE_MODULE.get()))
+                && up3.canPlaceItem(1, new ItemStack(ModItems.FUZZY_CARD.get())), "the periscope takes the redstone module and a fuzzy card");
 
         var registries = helper.getLevel().registryAccess();
         CompoundTag saved = in.saveWithFullMetadata(registries);

@@ -16,8 +16,9 @@ import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Bus menu: 3x3 ghost filter slots (the periscope has no filter), priority, upgrade slots to the right of the window
- * and the redstone mode (a button on the left when a Redstone Module is installed).
+ * Bus menu: 3x3 ghost filter slots, priority, upgrade slots to the right of the window and buttons on the left: the redstone
+ * mode (with a Redstone Module), the order (Export and Formation Buses), allow / deny list (Import Bus and Periscope) and the
+ * periscope's access (both ways, insert only, extract only), as the storage bus of AE2 or RS.
  */
 public class BusMenu extends GolemMenu {
     public static final int IMAGE_HEIGHT = 212;
@@ -33,6 +34,10 @@ public class BusMenu extends GolemMenu {
     public static final int KIND_FORMATION = 3;
     /** The order button of the Export and Formation Buses (in order / round robin / at random). */
     public static final int BUTTON_ORDER = 30;
+    /** Allow / deny list (Import Bus, Periscope). */
+    public static final int BUTTON_LIST = 31;
+    /** The periscope's access: both ways, insert only, extract only. */
+    public static final int BUTTON_ACCESS = 32;
 
     private final Container filters;
     private final int kind;
@@ -42,14 +47,14 @@ public class BusMenu extends GolemMenu {
         return switch (kind) {
             case KIND_EXPORT, KIND_FORMATION -> UpgradeSpec.EXPORT_BUS;
             case KIND_IMPORT -> UpgradeSpec.IMPORT_BUS;
-            default -> UpgradeSpec.REDSTONE_ONLY;
+            default -> UpgradeSpec.PERISCOPE;
         };
     }
 
     public static BusMenu fromNetwork(int id, Inventory inv, RegistryFriendlyByteBuf buf) {
         int kind = buf.readVarInt();
-        return new BusMenu(id, inv, new SimpleContainer(kind == KIND_PERISCOPE ? 0 : BusBlockEntity.FILTER_SLOTS),
-                new SimpleContainer(specOf(kind).slots()), kind, new SimpleContainerData(kind == KIND_FORMATION || kind == KIND_EXPORT ? 3 : 2));
+        return new BusMenu(id, inv, new SimpleContainer(BusBlockEntity.FILTER_SLOTS),
+                new SimpleContainer(specOf(kind).slots()), kind, new SimpleContainerData(kind == KIND_PERISCOPE ? 4 : 3));
     }
 
     public BusMenu(int id, Inventory inv, Container filters, Container upgrades, int kind, ContainerData data) {
@@ -119,6 +124,20 @@ public class BusMenu extends GolemMenu {
         return hasOrder() ? data.get(2) : 0;
     }
 
+    /** The Import Bus and the Periscope filter as an allow or a deny list. */
+    public boolean hasList() {
+        return isPeriscope() || kind == KIND_IMPORT;
+    }
+
+    public boolean denyList() {
+        return hasList() && data.get(isPeriscope() ? 3 : 2) != 0;
+    }
+
+    /** The periscope's access (PeriscopeBlockEntity.BOTH, INSERT_ONLY, EXTRACT_ONLY). */
+    public int access() {
+        return isPeriscope() ? data.get(2) : 0;
+    }
+
     public int getPriority() {
         return data.get(0);
     }
@@ -135,6 +154,14 @@ public class BusMenu extends GolemMenu {
         }
         if (id == BUTTON_ORDER && hasOrder()) {
             data.set(2, (order() + 1) % 3);
+            return true;
+        }
+        if (id == BUTTON_LIST && hasList()) {
+            data.set(isPeriscope() ? 3 : 2, denyList() ? 0 : 1);
+            return true;
+        }
+        if (id == BUTTON_ACCESS && isPeriscope()) {
+            data.set(2, (access() + 1) % 3);
             return true;
         }
         return Priority.handle(new ContainerData() {

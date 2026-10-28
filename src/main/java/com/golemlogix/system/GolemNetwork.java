@@ -919,6 +919,23 @@ public final class GolemNetwork {
      * and the other faces: many tanks and chests give access only from some sides.
      */
     @Nullable
+    /** What the periscope's access mode and filter let the network do with this storage (no periscope entity: everything). */
+    private static boolean mayInsert(External ex, ItemStack s) {
+        return ex.owner() == null || ex.owner().mayInsert(s);
+    }
+
+    private static boolean mayExtract(External ex, ItemStack s) {
+        return ex.owner() == null || ex.owner().mayExtract(s);
+    }
+
+    private static boolean mayInsert(External ex, FluidStack f) {
+        return ex.owner() == null || ex.owner().mayInsert(f);
+    }
+
+    private static boolean mayExtract(External ex, FluidStack f) {
+        return ex.owner() == null || ex.owner().mayExtract(f);
+    }
+
     private static IItemHandler itemHandler(External ex) {
         Level lvl = ex.level;
         if (!lvl.isLoaded(ex.target)) {
@@ -1008,7 +1025,7 @@ public final class GolemNetwork {
             }
             for (int i = 0; i < h.getSlots(); i++) {
                 ItemStack s = h.getStackInSlot(i);
-                if (!s.isEmpty()) {
+                if (!s.isEmpty() && mayExtract(ex, s)) {
                     all.merge(ItemKey.of(s), (long) s.getCount(), Long::sum);
                 }
             }
@@ -1028,7 +1045,7 @@ public final class GolemNetwork {
             }
             for (int i = 0; i < h.getSlots(); i++) {
                 ItemStack s = h.getStackInSlot(i);
-                if (!s.isEmpty() && key.matches(s)) {
+                if (!s.isEmpty() && key.matches(s) && mayExtract(ex, s)) {
                     n += s.getCount();
                 }
             }
@@ -1143,7 +1160,7 @@ public final class GolemNetwork {
                 continue;
             }
             IItemHandler h = itemHandler(ex);
-            if (h == null) {
+            if (h == null || !mayInsert(ex, remaining)) {
                 continue;
             }
             for (int i = 0; i < h.getSlots() && !remaining.isEmpty(); i++) {
@@ -1196,7 +1213,7 @@ public final class GolemNetwork {
                 }
                 for (int i = 0; i < h.getSlots() && left > 0; i++) {
                     ItemStack s = h.getStackInSlot(i);
-                    if (!s.isEmpty() && ItemStack.isSameItemSameComponents(s, template)) {
+                    if (!s.isEmpty() && ItemStack.isSameItemSameComponents(s, template) && mayExtract(ex, s)) {
                         ItemStack got = h.extractItem(i, Math.min(left, s.getCount()), simulate);
                         left -= got.getCount();
                     }
@@ -1228,7 +1245,7 @@ public final class GolemNetwork {
             for (int i = 0; i < h.getTanks(); i++) {
                 FluidStack f = h.getFluidInTank(i);
                 // Liquid Cryo-Source in a tank behind a periscope is not network stock: the network makes its own from Source
-                if (!f.isEmpty() && !CryoSource.is(f)) {
+                if (!f.isEmpty() && !CryoSource.is(f) && mayExtract(ex, f)) {
                     mergeFluid(all, f);
                 }
             }
@@ -1296,7 +1313,7 @@ public final class GolemNetwork {
                     continue;
                 }
                 IFluidHandler h = fluidHandler(ex);
-                if (h == null) {
+                if (h == null || !mayInsert(ex, input)) {
                     continue;
                 }
                 int n = h.fill(input.copyWithAmount(left), simulate ? IFluidHandler.FluidAction.SIMULATE : IFluidHandler.FluidAction.EXECUTE);
@@ -1346,7 +1363,7 @@ public final class GolemNetwork {
                     continue;
                 }
                 IFluidHandler h = fluidHandler(ex);
-                if (h == null) {
+                if (h == null || !mayExtract(ex, template)) {
                     continue;
                 }
                 FluidStack got = h.drain(template.copyWithAmount(left), simulate ? IFluidHandler.FluidAction.SIMULATE : IFluidHandler.FluidAction.EXECUTE);

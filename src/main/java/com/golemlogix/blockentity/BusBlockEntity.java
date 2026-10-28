@@ -50,6 +50,7 @@ import java.util.Optional;
  * front up to it and no further, like a regulator - say, 16 coal in a furnace.
  * The Export Bus goes through its filter in order (the first slot the network has goes first), round robin (each operation
  * starts at the slot after the one that went out last) or at random (FormationBusBlockEntity.IN_ORDER, ROUND_ROBIN, RANDOM).
+ * The Import Bus filter is an allow list (only what it names comes in) or a deny list (everything but that).
  */
 public class BusBlockEntity extends BlockEntity {
     public static final int FILTER_SLOTS = 9;
@@ -69,6 +70,8 @@ public class BusBlockEntity extends BlockEntity {
     /** Export: the order of the filter slots, and the slot round robin starts at next time. */
     private int order = FormationBusBlockEntity.IN_ORDER;
     private int next;
+    /** Import: the filter is a deny list. */
+    private boolean denyList;
     /** Bus priority: buses with a bigger number in one network work earlier (they get access to items first). */
     private int priority = 0;
     private long lastSound = -1000;
@@ -130,12 +133,12 @@ public class BusBlockEntity extends BlockEntity {
         return redstone;
     }
 
-    /** Window data: 0 = priority, 1 = redstone mode, and on the Export Bus 2 = order. */
+    /** Window data: 0 = priority, 1 = redstone mode, 2 = the order (Export Bus) or the deny list (Import Bus). */
     public ContainerData menuData() {
         return new ContainerData() {
             @Override
             public int get(int index) {
-                return index == 0 ? priority : index == 1 ? redstone.mode().ordinal() : order;
+                return index == 0 ? priority : index == 1 ? redstone.mode().ordinal() : isExport() ? order : denyList ? 1 : 0;
             }
 
             @Override
@@ -145,16 +148,19 @@ public class BusBlockEntity extends BlockEntity {
                 } else if (index == 1) {
                     redstone.setMode(RedstoneMode.byId(value));
                     setChanged();
-                } else {
+                } else if (isExport()) {
                     order = Math.floorMod(value, 3);
                     next = 0;
+                    setChanged();
+                } else {
+                    denyList = value != 0;
                     setChanged();
                 }
             }
 
             @Override
             public int getCount() {
-                return isExport() ? 3 : 2;
+                return 3;
             }
         };
     }
@@ -297,11 +303,11 @@ public class BusBlockEntity extends BlockEntity {
         List<FluidStack> fluidFilters = fluidFilters();
         boolean noFilters = itemFilters.isEmpty() && fluidFilters.isEmpty();
 
-        if (items != null && (noFilters || !itemFilters.isEmpty())) {
+        if (items != null && (denyList || noFilters || !itemFilters.isEmpty())) {
             int budget = itemsPerOperation();
             for (int i = 0; i < items.getSlots() && budget > 0; i++) {
                 ItemStack inSlot = items.getStackInSlot(i);
-                if (inSlot.isEmpty() || !passes(inSlot, itemFilters, noFilters, fuzzy())) {
+                if (inSlot.isEmpty() || !passes(inSlot, itemFilters, noFilters, fuzzy(), denyList)) {
                     continue;
                 }
                 ItemStack sim = items.extractItem(i, Math.min(budget, inSlot.getCount()), true);
@@ -333,14 +339,14 @@ public class BusBlockEntity extends BlockEntity {
             }
         }
 
-        if (fluids != null && (noFilters || !fluidFilters.isEmpty())) {
+        if (fluids != null && (denyList || noFilters || !fluidFilters.isEmpty())) {
             int budget = fluidPerOperation();
             for (int i = 0; i < fluids.getTanks() && budget > 0; i++) {
                 FluidStack f = fluids.getFluidInTank(i);
                 if (f.isEmpty()) {
                     continue;
                 }
-                if (!noFilters && fluidFilters.stream().noneMatch(ff -> FluidStack.isSameFluidSameComponents(ff, f))) {
+                if (!noFilters && fluidFilters.stream().anyMatch(ff -> FluidStack.isSameFluidSameComponents(ff, f)) == denyList) {
                     continue;
                 }
                 FluidStack sim = fluids.drain(f.copyWithAmount(Math.min(budget, f.getAmount())), IFluidHandler.FluidAction.SIMULATE);
@@ -365,16 +371,17 @@ public class BusBlockEntity extends BlockEntity {
         }
     }
 
-    private static boolean passes(ItemStack stack, List<ItemStack> itemFilters, boolean noFilters, boolean fuzzy) {
+    /** An allow list takes what it names (an empty filter: everything), a deny list everything it does not name. */
+    private static boolean passes(ItemStack stack, List<ItemStack> itemFilters, boolean noFilters, boolean fuzzy, boolean deny) {
         if (noFilters) {
             return true;
         }
         for (ItemStack f : itemFilters) {
             if (com.golemlogix.system.Fuzzy.matches(f, stack, fuzzy)) {
-                return true;
+                return !deny;
             }
         }
-        return false;
+        return deny;
     }
 
     /** A Fuzzy Card is installed: filters match any components, or any item of the tag chosen on them. */
@@ -551,6 +558,7 @@ public class BusBlockEntity extends BlockEntity {
         tag.putInt("Priority", priority);
         tag.putInt("Order", order);
         tag.putInt("Next", next);
+        tag.putBoolean("DenyList", denyList);
         redstone.save(tag);
     }
 
@@ -560,6 +568,7 @@ public class BusBlockEntity extends BlockEntity {
         priority = tag.getIntOr("Priority", 0);
         order = tag.getIntOr("Order", FormationBusBlockEntity.IN_ORDER);
         next = tag.getIntOr("Next", 0);
+        denyList = tag.getBooleanOr("DenyList", false);
         redstone.load(tag);
     }
 

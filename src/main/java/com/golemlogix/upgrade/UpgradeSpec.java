@@ -24,6 +24,8 @@ public record UpgradeSpec(int slots, int maxSpeed, boolean crafting, boolean red
     public static final UpgradeSpec DISTILLATION = new UpgradeSpec(4, 4, false, false, false);
     /** Cryo-Mixer: up to 4 Compressed Co-Processors (each one adds the base speed) and redstone. */
     public static final UpgradeSpec MIXER = new UpgradeSpec(5, 4, false, true, false);
+    /** Periscope: redstone and a Fuzzy Card (for its filter). */
+    public static final UpgradeSpec PERISCOPE = new UpgradeSpec(2, 0, false, true, true);
     /** Periscope and Pattern Provider: redstone only. */
     public static final UpgradeSpec REDSTONE_ONLY = new UpgradeSpec(1, 0, false, true, false);
 

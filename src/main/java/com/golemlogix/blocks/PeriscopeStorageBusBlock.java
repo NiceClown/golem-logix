@@ -77,12 +77,8 @@ public class PeriscopeStorageBusBlock extends DirectionalBlock implements com.go
             return InteractionResult.SUCCESS;
         }
         if (player instanceof ServerPlayer sp && level.getBlockEntity(pos) instanceof PeriscopeBlockEntity be) {
-            sp.openMenu(new SimpleMenuProvider((id, inv, p) -> new BusMenu(id, inv, new SimpleContainer(0) {
-                @Override
-                public boolean stillValid(Player pl) {
-                    return Container.stillValidBlockEntity(be, pl);
-                }
-            }, be.getUpgrades(), BusMenu.KIND_PERISCOPE, be.menuData()), net.minecraft.network.chat.Component.translatable("gui.golem_logix.title.periscope")), buf -> buf.writeVarInt(BusMenu.KIND_PERISCOPE));
+            sp.openMenu(new SimpleMenuProvider((id, inv, p) -> new BusMenu(id, inv, be.getFilters(), be.getUpgrades(),
+                    BusMenu.KIND_PERISCOPE, be.menuData()), net.minecraft.network.chat.Component.translatable("gui.golem_logix.title.periscope")), buf -> buf.writeVarInt(BusMenu.KIND_PERISCOPE));
         }
         return InteractionResult.CONSUME;
     }

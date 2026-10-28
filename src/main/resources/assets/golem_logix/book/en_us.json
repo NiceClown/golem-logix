@@ -952,6 +952,13 @@
                "• With a &lRedstone Module&r the storage is switched on and off by a signal.",
                "• The periscope hauls nothing itself - it only “peers” inside.",
                "&oHandy for hooking up old warehouses you would hate to dismantle.&r"
+             ]},
+            {"type": "text", "title": "Like a storage bus", "text": [
+               "The periscope's window has a &lfilter&r of 9 slots, as a bus has: what may go into the container and out of it (a bucket stands for its fluid; empty - everything).",
+               "• The button with the frame / barrier on the left: an &lallow list&r (only what the filter names) or a &ldeny list&r (everything but that).",
+               "• The &laccess&r button: both ways (chest), &linsert only&r (hopper: the network fills it, the terminal does not show it - a dump) or &lextract only&r (dropper: the network empties it and puts nothing new in).",
+               "• With a &lFuzzy Card&r the filter matches fuzzily, as in buses.",
+               "&oA chest for cobblestone only, a high priority and an allow list - and the whole quarry ends up in it.&r"
              ]}
           ]
         }
@@ -990,7 +997,7 @@
              "text": [
                "• The bus scans the container's slots and pulls items into the network (if the disks have room).",
                "• The same for fluids: it pumps them out of tanks.",
-               "• An &lempty filter&r means take everything. A filled one - only what is listed.",
+               "• An &lempty filter&r means take everything. A filled one - only what is listed; with the &ldeny list&r button (a barrier on the left) - everything but that.",
                "• With only an item filter it does not take fluids, and vice versa.",
                "• The bus gives priority to autocrafting jobs: expected results go straight to the cryo calculator - even if the storage is completely full.",
                "• The bus window has a &lpriority&r: with several buses in a network the one with the higher number works first.",
@@ -1073,7 +1080,7 @@
                "• RMB - -1 or clear.",
                "• Shift-click - clears the slot.",
                "• Shift-click on an inventory item - puts a copy into the first free slot.",
-               "• &lMiddle-click&r (the mouse wheel) on a filled slot opens the &lslot window&r, the same in every bus: the slot's tag with a Fuzzy Card (the next one at a click), clearing it, and on the Export Bus how much to keep in the container (see “Injector export bus”).",
+               "• &lMiddle-click&r (the mouse wheel) on a filled slot opens the &lslot window&r, the same in every bus: with a Fuzzy Card a list of what may stand for the item - the item itself with any components, or one of its tags with how many items it holds; one click picks. Also clearing the slot, and on the Export Bus how much to keep in the container (see “Injector export bus”).",
                "A &lbucket (or any container holding fluid)&r in a slot is a fluid filter. Because of this a “water bucket” item cannot be passed through a filter as an item: there it means water."
              ]}
           ]
@@ -1088,7 +1095,7 @@
                "• &lAutocraft Module&r - export bus only: it orders what is missing from the Cryo-Calculators.",
                "• &lRedstone Module&r - signal control (see “Redstone”).",
                "• &lFuzzy Card&r - fuzzy filters (see below).",
-               "The Periscope has one slot - for the Redstone Module."
+               "The Periscope has two slots: the Redstone Module and the Fuzzy Card."
              ]},
             {"type": "ritual", "title": "Compressed Co-Processor", "station": "golem_logix:mana_saturator", "inputs": ["golem_logix:cooling_coprocessor"], "outputs": ["golem_logix:compressed_coprocessor"],
              "condition": "1000 Source per ritual.",
@@ -1107,7 +1114,7 @@
             {"type": "crafting", "recipe": "golem_logix:redstone_module",
              "text": ["The Redstone Module: once installed, a mode button appears to the left of the window."]},
             {"type": "crafting", "recipe": "golem_logix:fuzzy_card",
-             "text": ["In a bus or the Interface the filters match fuzzily: the same item with any components (≈). Ctrl+click on a filter chooses its next tag (#): any glass for glass; in a bus the slot window (middle-click) shows and changes the tag too."]}
+             "text": ["In a bus, the Periscope or the Interface the filters match fuzzily: the same item with any components (≈), or any item of a tag (#): any glass for glass. The tag is picked from a list in the slot window (middle-click on the filter); Ctrl+click goes to the next tag at once."]}
           ]
         },
         {

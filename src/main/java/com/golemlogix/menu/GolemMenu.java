@@ -106,6 +106,28 @@ public abstract class GolemMenu extends AbstractContainerMenu {
         }
     }
 
+    /** The slot window's tag list: the ghost takes the tag of its item with this id ("": none, the same item with any components). */
+    public void setFuzzyTag(int slotId, String tagId) {
+        if (!isGhost(slotId) || !canCycleFuzzy(slotId)) {
+            return;
+        }
+        Slot slot = this.slots.get(slotId);
+        ItemStack s = slot.getItem();
+        if (s.isEmpty() || com.golemlogix.items.FluidGhostItem.is(s)) {
+            return;
+        }
+        if (tagId.isEmpty()) {
+            slot.set(com.golemlogix.system.Fuzzy.withTag(s, null));
+            return;
+        }
+        for (var t : com.golemlogix.system.Fuzzy.tagsOf(s)) {
+            if (t.location().toString().equals(tagId)) {
+                slot.set(com.golemlogix.system.Fuzzy.withTag(s, t));
+                return;
+            }
+        }
+    }
+
     /** A non-empty item ghost in slot slotId (fuzziness applies to items only). */
     protected boolean itemGhost(int slotId) {
         if (!isGhost(slotId)) {

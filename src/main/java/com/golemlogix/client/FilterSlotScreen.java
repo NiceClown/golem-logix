@@ -14,7 +14,8 @@ import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 /**
  * Settings window for one bus filter slot - the same in every bus, opened by a middle-click (the mouse wheel) on the slot, as the
- * Interface's gear opens its own: the item, its tag with a Fuzzy Card (the next tag at a click), clearing the slot; on the Export
+ * Interface's gear opens its own: the item; with a Fuzzy Card a list of what may stand for it (this item with any components, or
+ * any item of one of its tags, with how many items each tag holds) - one click picks; clearing the slot; on the Export
  * Bus also how much the container in front should hold (the bus tops it up to that and no further; 0: no limit), typed or with
  * step and preset buttons, for a fluid in mB or in buckets ("16B"). Enter applies, Esc goes back.
  */
@@ -28,6 +29,10 @@ public class FilterSlotScreen extends Screen {
     private EditBox amount;
     private int left, top, h;
     private boolean fluid;
+    /** The fuzzy choices: null (this item, any components), then the item's tags; the first row shown. */
+    private java.util.List<net.minecraft.tags.TagKey<net.minecraft.world.item.Item>> tags = java.util.List.of();
+    private int scroll;
+    private static final int ROW = 12, VISIBLE = 6;
 
     public FilterSlotScreen(Screen parent, GolemMenu menu, int slot, boolean keep) {
         super(Component.translatable("gui.golem_logix.bus.slot_title", slot + 1));
@@ -45,14 +50,32 @@ public class FilterSlotScreen extends Screen {
         return menu.canCycleFuzzy(slot) && !FluidGhostItem.is(filter());
     }
 
-    /** The rows: the item (top 20), the keep amount (46..102, the Export Bus), the tag (a row of its own with a Fuzzy Card). */
+    /** The rows: the item (top 20), the keep amount (46..102, the Export Bus), the tag list (with a Fuzzy Card). */
     private int tagY() {
         return keep ? 116 : 46;
     }
 
+    private int rows() {
+        return Math.min(VISIBLE, tags.size() + 1);
+    }
+
+    private int listY() {
+        return top + tagY() + 12;
+    }
+
+    /** The choice under the mouse: -1 for none, 0 for "any components", k for the tag k - 1. */
+    private int choiceAt(double mx, double my) {
+        if (!fuzzy() || mx < left + 8 || mx >= left + W - 8 || my < listY() || my >= listY() + rows() * ROW) {
+            return -1;
+        }
+        return scroll + (int) ((my - listY()) / ROW);
+    }
+
     @Override
     protected void init() {
-        h = tagY() + (fuzzy() ? 28 : 4) + 24;
+        tags = fuzzy() ? com.golemlogix.system.Fuzzy.tagsOf(filter()) : java.util.List.of();
+        scroll = Math.max(0, Math.min(scroll, tags.size() + 1 - rows()));
+        h = tagY() + (fuzzy() ? 14 + rows() * ROW + 4 : 4) + 24;
         left = (width - W) / 2;
         top = (height - h) / 2;
         ItemStack f = filter();
@@ -80,10 +103,6 @@ public class FilterSlotScreen extends Screen {
                         : Component.literal(fluid ? InterfaceSlotScreen.bucketText(p) : Integer.toString(p));
                 addRenderableWidget(new GolemButton(left + 8 + k * (pw + 2), top + 88, pw, 14, label, b -> set(p)));
             }
-        }
-        if (fuzzy()) {
-            addRenderableWidget(new GolemButton(left + 108, top + tagY() - 3, 60, 14, Component.translatable("gui.golem_logix.bus.next_tag"),
-                    b -> ClientPacketDistributor.sendToServer(new com.golemlogix.network.FuzzyCyclePayload(menu.containerId, slot))));
         }
         addRenderableWidget(new GolemButton(left + 80, top + h - 22, 42, 16, Component.translatable("gui.golem_logix.interface.clear"), b -> {
             ClientPacketDistributor.sendToServer(new FilterSlotPayload(menu.containerId, slot, -1));
@@ -149,6 +168,70 @@ public class FilterSlotScreen extends Screen {
         if (keep) {
             GolemGui.inset(g, left + 58, top + 46, 66, 16);
         }
+        if (fuzzy()) {
+            GolemGui.inset(g, left + 7, listY() - 1, W - 14, rows() * ROW + 2);
+        }
+    }
+
+    /** A tag's name: its translation where a mod gives one (c:glass_blocks: "Glass Blocks"), otherwise its id. */
+    private static Component tagName(net.minecraft.tags.TagKey<net.minecraft.world.item.Item> t) {
+        var id = t.location();
+        return Component.translatableWithFallback("tag.item." + id.getNamespace() + "." + id.getPath().replace('/', '.'), "#" + id);
+    }
+
+    private void extractTagList(GuiGraphicsExtractor g, ItemStack cfg, int mouseX, int mouseY) {
+        g.text(font, Component.translatable("gui.golem_logix.bus.tag"), left + 8, top + tagY(), GolemGui.PARCHMENT, false);
+        var cur = Fuzzy.tag(cfg);
+        int hover = choiceAt(mouseX, mouseY);
+        for (int r = 0; r < rows(); r++) {
+            int k = scroll + r, y = listY() + r * ROW;
+            var t = k == 0 ? null : tags.get(k - 1);
+            boolean chosen = java.util.Objects.equals(t, cur);
+            if (chosen) {
+                g.fill(left + 8, y, left + W - 8, y + ROW, 0x6038B0A8);
+            } else if (k == hover) {
+                g.fill(left + 8, y, left + W - 8, y + ROW, 0x30FFFFFF);
+            }
+            Component name = t == null ? Component.translatable("gui.golem_logix.bus.tag_any") : tagName(t);
+            String n = t == null ? "" : Integer.toString(Fuzzy.tagSize(t));
+            int nw = font.width(n);
+            g.text(font, net.minecraft.locale.Language.getInstance().getVisualOrder(font.substrByWidth(name, W - 26 - nw)), left + 11, y + 2,
+                    chosen ? GolemGui.CYAN : GolemGui.PARCHMENT, false);
+            g.text(font, n, left + W - 11 - nw, y + 2, 0xFF8A7A66, false);
+        }
+        if (tags.size() + 1 > VISIBLE) {
+            // a thin scrollbar on the list's right edge
+            int total = tags.size() + 1, barH = Math.max(6, rows() * ROW * VISIBLE / total);
+            int barY = listY() + (rows() * ROW - barH) * scroll / (total - VISIBLE);
+            g.fill(left + W - 9, barY, left + W - 8, barY + barH, 0xFFA89880);
+        }
+        if (hover >= 1) {
+            var t = tags.get(hover - 1);
+            g.setComponentTooltipForNextFrame(font, java.util.List.of(tagName(t), Component.literal("#" + t.location()).withStyle(net.minecraft.ChatFormatting.DARK_GRAY),
+                    Component.translatable("gui.golem_logix.bus.tag_items", Fuzzy.tagSize(t)).withStyle(net.minecraft.ChatFormatting.GRAY)), mouseX, mouseY);
+        } else if (hover == 0) {
+            g.setTooltipForNextFrame(font, Component.translatable("gui.golem_logix.bus.tag_any.hint"), mouseX, mouseY);
+        }
+    }
+
+    @Override
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
+        int k = event.button() == 0 ? choiceAt(event.x(), event.y()) : -1;
+        if (k >= 0) {
+            String id = k == 0 ? "" : tags.get(k - 1).location().toString();
+            ClientPacketDistributor.sendToServer(new com.golemlogix.network.FuzzyTagPayload(menu.containerId, slot, id));
+            return true;
+        }
+        return super.mouseClicked(event, doubleClick);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mx, double my, double sx, double sy) {
+        if (fuzzy() && tags.size() + 1 > VISIBLE && sy != 0) {
+            scroll = Math.max(0, Math.min(tags.size() + 1 - VISIBLE, scroll - (int) Math.signum(sy)));
+            return true;
+        }
+        return super.mouseScrolled(mx, my, sx, sy);
     }
 
     @Override
@@ -172,12 +255,7 @@ public class FilterSlotScreen extends Screen {
             g.text(font, info, left + 8, top + 106, 0xFF8A7A66, false);
         }
         if (fuzzy()) {
-            var t = Fuzzy.tag(cfg);
-            g.text(font, Component.translatable("gui.golem_logix.bus.tag"), left + 8, top + tagY(), GolemGui.PARCHMENT, false);
-            Component what = t == null ? Component.translatable("tooltip.golem_logix.fuzzy.any_components")
-                    : Component.literal("#" + t.location());
-            g.text(font, net.minecraft.locale.Language.getInstance().getVisualOrder(font.substrByWidth(what, W - 16)), left + 8,
-                    top + tagY() + 14, GolemGui.CYAN, false);
+            extractTagList(g, cfg, mouseX, mouseY);
         }
         if (mouseX >= left + 8 && mouseX < left + 26 && mouseY >= top + 20 && mouseY < top + 38) {
             g.setTooltipForNextFrame(font, cfg, mouseX, mouseY);

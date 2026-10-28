@@ -39,6 +39,13 @@
 - **The Export Bus keeps an amount in the container**, like a regulator: in the slot window type how much the container in
   front should hold (16 coal in a furnace), or use the step and preset buttons; the bus tops it up to that and no further.
   0 exports without a limit, as before. Fluids in mB or buckets ("16B"). The number shows in the slot's corner.
+- **The Periscope is a full storage bus**, as in AE2 or RS: a filter of 9 slots (what may go in and out; a bucket for a
+  fluid), an allow or a deny list, an access mode - both ways, insert only (a dump the terminal does not show) or extract only
+  (the network empties it) - and a slot for a Fuzzy Card.
+- **The Import Bus can use a deny list**: everything but what the filter names comes in.
+- **Fuzzy tags are picked from a list**: the slot window (middle-click) lists what may stand for the item - the item itself
+  with any components, or each of its tags with a name and how many items it holds; one click picks. Ctrl+click still goes
+  to the next tag at once.
 - **The Plasma Temper is worn**: in the Annihilation Bus the iron golem wears it as a belt in temper colours, its plasma
   bead for a buckle.
 - Fixed: loot other mods add to a creature's or a block's drops (Mystical Agriculture's essences, say) stayed on the ground

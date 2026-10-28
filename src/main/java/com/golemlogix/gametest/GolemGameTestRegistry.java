@@ -154,6 +154,8 @@ public final class GolemGameTestRegistry {
             new Test("dispelunbindsgolemmind", GolemGameTests::dispelUnbindsGolemMind, 60, 0),
             new Test("arsdispelevent", GolemGameTests::arsDispelEvent, 40, 0),
             new Test("periscopeseestanks", GolemGameTests::periscopeSeesTanks, 200, 0),
+            new Test("periscopefilterandaccess", GolemGameTests::periscopeFilterAndAccess, 200, 0),
+            new Test("importdenylist", GolemGameTests::importDenyList, 200, 0),
             new Test("storagepriority", GolemGameTests::storagePriority, 300, 0),
             new Test("buspriorityrank", GolemGameTests::busPriorityRank, 200, 0),
             new Test("autocraftthroughsaturator", GolemGameTests::autocraftThroughSaturator, 700, 0),

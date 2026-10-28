@@ -13,11 +13,38 @@ public class BusScreen extends GolemScreen<BusMenu> {
     @Override
     protected void init() {
         super.init();
-        // on buses to the right of the filter grid, on the periscope (no filter) in the middle; the Formation Bus has none
+        // to the right of the filter grid; the Formation Bus has none
         if (!menu.isFormation()) {
-            addPriorityPanel(menu.isPeriscope() ? 61 : BusMenu.FILTER_X + 56 + 8, 18, menu::getPriority);
+            addPriorityPanel(BusMenu.FILTER_X + 56 + 8, 18, menu::getPriority);
         }
         addRedstoneButton(menu::redstoneMode);
+        if (menu.hasList()) {
+            addSideButton(() -> new net.minecraft.world.item.ItemStack(menu.denyList() ? net.minecraft.world.item.Items.BARRIER
+                            : net.minecraft.world.item.Items.ITEM_FRAME),
+                    () -> {
+                        String key = "gui.golem_logix.bus.list." + (menu.denyList() ? "deny" : "allow");
+                        return Component.translatable("gui.golem_logix.bus.list").append("\n").append(Component.translatable(key))
+                                .append("\n").append(Component.translatable(key + ".hint").withStyle(net.minecraft.ChatFormatting.GRAY));
+                    },
+                    () -> true, menu::denyList, BusMenu.BUTTON_LIST);
+        }
+        if (menu.isPeriscope()) {
+            addSideButton(() -> new net.minecraft.world.item.ItemStack(switch (menu.access()) {
+                        case com.golemlogix.blockentity.PeriscopeBlockEntity.INSERT_ONLY -> net.minecraft.world.item.Items.HOPPER;
+                        case com.golemlogix.blockentity.PeriscopeBlockEntity.EXTRACT_ONLY -> net.minecraft.world.item.Items.DROPPER;
+                        default -> net.minecraft.world.item.Items.CHEST;
+                    }),
+                    () -> {
+                        String key = "gui.golem_logix.bus.access." + switch (menu.access()) {
+                            case com.golemlogix.blockentity.PeriscopeBlockEntity.INSERT_ONLY -> "insert";
+                            case com.golemlogix.blockentity.PeriscopeBlockEntity.EXTRACT_ONLY -> "extract";
+                            default -> "both";
+                        };
+                        return Component.translatable("gui.golem_logix.bus.access").append("\n").append(Component.translatable(key))
+                                .append("\n").append(Component.translatable(key + ".hint").withStyle(net.minecraft.ChatFormatting.GRAY));
+                    },
+                    () -> true, () -> menu.access() != com.golemlogix.blockentity.PeriscopeBlockEntity.BOTH, BusMenu.BUTTON_ACCESS);
+        }
         if (menu.hasOrder()) {
             addSideButton(() -> new net.minecraft.world.item.ItemStack(switch (menu.order()) {
                         case com.golemlogix.blockentity.FormationBusBlockEntity.ROUND_ROBIN -> net.minecraft.world.item.Items.CLOCK;
@@ -39,7 +66,7 @@ public class BusScreen extends GolemScreen<BusMenu> {
 
     @Override
     protected int filterSlots() {
-        return menu.isPeriscope() ? -1 : com.golemlogix.blockentity.BusBlockEntity.FILTER_SLOTS;
+        return com.golemlogix.blockentity.BusBlockEntity.FILTER_SLOTS;
     }
 
     @Override
@@ -62,9 +89,7 @@ public class BusScreen extends GolemScreen<BusMenu> {
 
     @Override
     protected void renderExtraBg(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
-        if (!menu.isPeriscope()) {
-            GolemGui.inset(g, leftPos + BusMenu.FILTER_X, topPos + 18, 56, 56);
-        }
+        GolemGui.inset(g, leftPos + BusMenu.FILTER_X, topPos + 18, 56, 56);
         Component hint = Component.translatable(menu.isFormation() ? "gui.golem_logix.bus.formation_hint" : menu.isPeriscope() ? "gui.golem_logix.bus.periscope_hint"
                 : menu.isExport() ? "gui.golem_logix.bus.export_hint" : "gui.golem_logix.bus.import_hint");
         g.textWithWordWrap(font, hint, leftPos + 8, topPos + 90, imageWidth - 16, GolemGui.CYAN_DARK);
