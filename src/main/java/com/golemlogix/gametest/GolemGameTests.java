@@ -1422,6 +1422,18 @@ public class GolemGameTests {
         helper.assertTrue(menu.getCarried().isEmpty() && player.getInventory().isEmpty(), "nothing can be pulled out of a ghost slot");
         helper.assertTrue(be.getConfig().getItem(0).is(Items.IRON_INGOT) && be.amount(0) == 64, "stray clicks leave the slot alone");
         menu.setAmount(0, 6);
+        // the slot window's tag list: only a tag of the item itself, with a Fuzzy Card; the amount stays
+        var iron = com.golemlogix.system.Fuzzy.tagsOf(be.getConfig().getItem(0)).getFirst();
+        menu.setFuzzyTag(0, iron.location().toString());
+        helper.assertTrue(com.golemlogix.system.Fuzzy.tag(be.getConfig().getItem(0)) == null, "no tag without a Fuzzy Card");
+        be.getUpgrades().setItem(0, new ItemStack(ModItems.FUZZY_CARD.get()));
+        menu.setFuzzyTag(0, "minecraft:logs");
+        helper.assertTrue(com.golemlogix.system.Fuzzy.tag(be.getConfig().getItem(0)) == null, "a tag the item lacks is refused");
+        menu.setFuzzyTag(0, iron.location().toString());
+        helper.assertTrue(iron.equals(com.golemlogix.system.Fuzzy.tag(be.getConfig().getItem(0))) && be.amount(0) == 6, "the tag is picked, the amount kept");
+        menu.setFuzzyTag(0, "");
+        helper.assertTrue(com.golemlogix.system.Fuzzy.tag(be.getConfig().getItem(0)) == null, "\"any components\" clears the tag");
+        be.getUpgrades().setItem(0, ItemStack.EMPTY);
         // fluid from JEI: a bucket ghost, a bucket (1000 mB) by default, then in mB
         menu.setGhost(player, 1, new ItemStack(Items.WATER_BUCKET));
         helper.assertTrue(menu.isFluidSlot(1) && be.amount(1) == 1000, "fluid ghost keeps 1000 mB, got " + be.amount(1));

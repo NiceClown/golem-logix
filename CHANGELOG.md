@@ -44,8 +44,8 @@
   (the network empties it) - and a slot for a Fuzzy Card.
 - **The Import Bus can use a deny list**: everything but what the filter names comes in.
 - **Fuzzy tags are picked from a list**: the slot window (middle-click) lists what may stand for the item - the item itself
-  with any components, or each of its tags with a name and how many items it holds; one click picks. Ctrl+click still goes
-  to the next tag at once.
+  with any components, or each of its tags with a name and how many items it holds; one click picks. The Golem Interface's
+  slot window (the gear) has the same list. Ctrl+click still goes to the next tag at once.
 - **The Plasma Temper is worn**: in the Annihilation Bus the iron golem wears it as a belt in temper colours, its plasma
   bead for a buckle.
 - Fixed: loot other mods add to a creature's or a block's drops (Mystical Agriculture's essences, say) stayed on the ground

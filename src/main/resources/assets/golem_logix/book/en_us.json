@@ -1114,7 +1114,7 @@
             {"type": "crafting", "recipe": "golem_logix:redstone_module",
              "text": ["The Redstone Module: once installed, a mode button appears to the left of the window."]},
             {"type": "crafting", "recipe": "golem_logix:fuzzy_card",
-             "text": ["In a bus, the Periscope or the Interface the filters match fuzzily: the same item with any components (≈), or any item of a tag (#): any glass for glass. The tag is picked from a list in the slot window (middle-click on the filter); Ctrl+click goes to the next tag at once."]}
+             "text": ["In a bus, the Periscope or the Interface the filters match fuzzily: the same item with any components (≈), or any item of a tag (#): any glass for glass. The tag is picked from a list in the slot window (a middle-click on a bus filter, the gear on the Interface); Ctrl+click goes to the next tag at once."]}
           ]
         },
         {

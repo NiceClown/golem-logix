@@ -18,16 +18,20 @@ import java.util.Locale;
 /**
  * Settings window for one Interface slot (the gear under the slot or a click on it with an empty hand): what to keep, how much
  * (items or mB), quick step buttons and preset values, fluid/item mode, clearing. The number can also be typed:
- * for fluids in mB or in buckets with the letter B ("16B"). Enter applies, Esc goes back without changes.
+ * for fluids in mB or in buckets with the letter B ("16B"). With a Fuzzy Card an item slot also lists what may stand for it (the
+ * item with any components, or one of its tags) - one click picks. Enter applies, Esc goes back without changes.
  */
 public class InterfaceSlotScreen extends Screen {
-    private static final int W = 176, H = 150;
+    private static final int W = 176, BASE_H = 150;
+    /** Where the fuzzy tag list starts (below the typing hint). */
+    private static final int TAG_Y = 128;
 
     private final InterfaceScreen parent;
     private final InterfaceMenu menu;
     private final int slot;
     private EditBox amount;
-    private int left, top;
+    private int left, top, h;
+    private TagPicker picker;
     /** The mode the window was opened in: if it changed, the server recomputed the number, and it is picked up a couple of ticks later. */
     private boolean fluid;
     private int reloadIn = -1;
@@ -43,8 +47,13 @@ public class InterfaceSlotScreen extends Screen {
 
     @Override
     protected void init() {
+        picker = !menu.canCycleFuzzy(slot) ? null : picker != null ? picker : new TagPicker(menu, slot, menu.configItem(slot));
+        h = BASE_H + (picker != null ? picker.height() + 4 : 0);
         left = (width - W) / 2;
-        top = (height - H) / 2;
+        top = (height - h) / 2;
+        if (picker != null) {
+            picker.place(left + 8, top + TAG_Y, W - 16);
+        }
         fluid = menu.isFluidSlot(slot);
         synced = menu.amount(slot);
 
@@ -71,16 +80,16 @@ public class InterfaceSlotScreen extends Screen {
 
         boolean container = !com.golemlogix.items.FluidGhostItem.is(menu.configItem(slot))
                 && !InterfaceBlockEntity.containedFluid(menu.configItem(slot)).isEmpty();
-        GolemButton mode = addRenderableWidget(new GolemButton(left + 8, top + 126, 70, 16,
+        GolemButton mode = addRenderableWidget(new GolemButton(left + 8, top + h - 24, 70, 16,
                 () -> Component.translatable(menu.itemMode(slot) ? "gui.golem_logix.interface.mode_item" : "gui.golem_logix.interface.mode_fluid"),
                 () -> Component.translatable("gui.golem_logix.interface.toggle_mode"), () -> false, b -> toggleMode()));
         // only containers with fluid have a mode
         mode.visible = container;
-        addRenderableWidget(new GolemButton(left + 80, top + 126, 42, 16, Component.translatable("gui.golem_logix.interface.clear"), b -> {
+        addRenderableWidget(new GolemButton(left + 80, top + h - 24, 42, 16, Component.translatable("gui.golem_logix.interface.clear"), b -> {
             net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new InterfaceAmountPayload(menu.containerId, slot, -1));
             onClose();
         }));
-        addRenderableWidget(new GolemButton(left + 124, top + 126, 44, 16, Component.translatable("gui.golem_logix.interface.done"), b -> {
+        addRenderableWidget(new GolemButton(left + 124, top + h - 24, 44, 16, Component.translatable("gui.golem_logix.interface.done"), b -> {
             apply();
             onClose();
         }));
@@ -189,9 +198,22 @@ public class InterfaceSlotScreen extends Screen {
     @Override
     public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         super.extractBackground(g, mouseX, mouseY, partialTick);
-        GolemGui.panel(g, left, top, W, H);
+        GolemGui.panel(g, left, top, W, h);
         GolemGui.slot(g, left + 8, top + 20);
         GolemGui.inset(g, left + 58, top + 46, 66, 16);
+        if (picker != null) {
+            picker.background(g);
+        }
+    }
+
+    @Override
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
+        return picker != null && picker.clicked(event.x(), event.y(), event.button()) || super.mouseClicked(event, doubleClick);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mx, double my, double sx, double sy) {
+        return picker != null && picker.scrolled(sy) || super.mouseScrolled(mx, my, sx, sy);
     }
 
     @Override
@@ -222,6 +244,9 @@ public class InterfaceSlotScreen extends Screen {
         g.text(font, Component.translatable("gui.golem_logix.interface.type_hint").withStyle(ChatFormatting.ITALIC),
                 left + 8, top + 115, 0xFF6A5A48, false);
 
+        if (picker != null) {
+            picker.extract(g, font, cfg, mouseX, mouseY);
+        }
         if (mouseX >= left + 8 && mouseX < left + 26 && mouseY >= top + 20 && mouseY < top + 38) {
             g.setTooltipForNextFrame(font, cfg, mouseX, mouseY);
         }
