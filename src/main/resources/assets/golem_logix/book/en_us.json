@@ -1011,7 +1011,8 @@
                "• Before delivering it checks whether the item fits: the excess stays in the network.",
                "• The bus priority sets the order: a higher number works earlier than the others in the network.",
                "• With an &lAutocraft Module&r the bus orders what the network lacks from the calculators - and delivers it as soon as it is ready.",
-               "&oExample: a bus with coal in its filter on a furnace - the furnace always has fuel.&r"
+               "&oExample: a bus with coal in its filter on a furnace - the furnace always has fuel.&r",
+               "The &lorder&r button on the left: &lin order&r (the first filter slot the network has goes first), &lround robin&r (one slot an operation, each after the last) or &lat random&r."
              ]}
           ]
         },
@@ -1028,6 +1029,7 @@
                "• The golem pushes the block out of the brass mouth; the push lasts the bus's interval, so with &lfour Compressed Co-Processors&r it sets a block down every couple of ticks.",
                "• If the spot is taken while it pushes, it holds the block and waits. A block that cannot stand there goes back into the network.",
                "• Upgrades as on the Export Bus: an &lAutocraft Module&r orders a block the network lacks, a &lRedstone Module&r, a &lFuzzy Card&r.",
+               "• The &lorder&r button on the left: &lin order&r (the first filter slot the network has), &lround robin&r (slot after slot) or &lat random&r.",
                "&oFused into its casing, the golem can never leave its post - which is why it lays blocks truer than any mason.&r"
              ]}
           ]
@@ -1050,6 +1052,7 @@
                "Settings in the column left of the window, as on a clicker:",
                "• &lLeft click&r: mines the block like a player, as fast as the tool allows (co-processors speed it up, four of them eightfold), cracks and all. The drops go into the network; while it cannot take them all, the golem waits.",
                "• &lRight click&r: once an interval uses its item (or bare hand) on the block - a lever, shears on a pumpkin, a hoe, bone meal. What falls out goes into the network.",
+               "• &lAttack&r: once an interval strikes the creatures in front with the tool (an iron sword when the slot is empty) at full strength and without knockback; the loot goes into the network. Players, pets and named creatures are never touched; spawn eggs in the filter choose the creatures, and &lgrown only&r spares the young.",
                "• &lSneaking&r, the filter as an &lallow or deny list&r (empty - every block), &lgrown only&r (crops only when ripe) and the &lRedstone Module&r."
              ]}
           ]

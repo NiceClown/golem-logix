@@ -31,6 +31,8 @@ public class BusMenu extends GolemMenu {
     public static final int KIND_PERISCOPE = 2;
     /** The Formation Bus: an export-bus filter and upgrades, no priority. */
     public static final int KIND_FORMATION = 3;
+    /** The order button of the Export and Formation Buses (in order / round robin / at random). */
+    public static final int BUTTON_ORDER = 30;
 
     private final Container filters;
     private final int kind;
@@ -47,7 +49,7 @@ public class BusMenu extends GolemMenu {
     public static BusMenu fromNetwork(int id, Inventory inv, RegistryFriendlyByteBuf buf) {
         int kind = buf.readVarInt();
         return new BusMenu(id, inv, new SimpleContainer(kind == KIND_PERISCOPE ? 0 : BusBlockEntity.FILTER_SLOTS),
-                new SimpleContainer(specOf(kind).slots()), kind, new SimpleContainerData(2));
+                new SimpleContainer(specOf(kind).slots()), kind, new SimpleContainerData(kind == KIND_FORMATION || kind == KIND_EXPORT ? 3 : 2));
     }
 
     public BusMenu(int id, Inventory inv, Container filters, Container upgrades, int kind, ContainerData data) {
@@ -76,6 +78,16 @@ public class BusMenu extends GolemMenu {
         return kind == KIND_FORMATION;
     }
 
+    /** The Export and Formation Buses go through their filter slots in an order. */
+    public boolean hasOrder() {
+        return isFormation() || isExport();
+    }
+
+    /** The order of the filter slots (FormationBusBlockEntity.IN_ORDER, ROUND_ROBIN, RANDOM). */
+    public int order() {
+        return hasOrder() ? data.get(2) : 0;
+    }
+
     public int getPriority() {
         return data.get(0);
     }
@@ -88,6 +100,10 @@ public class BusMenu extends GolemMenu {
     public boolean clickMenuButton(Player player, int id) {
         if (id == BUTTON_REDSTONE) {
             data.set(1, redstoneMode().next(!isPeriscope()).ordinal());
+            return true;
+        }
+        if (id == BUTTON_ORDER && hasOrder()) {
+            data.set(2, (order() + 1) % 3);
             return true;
         }
         return Priority.handle(new ContainerData() {

@@ -22,11 +22,15 @@ final class GolemBuses {
     }
 
     static int copper(int i, int j, int seed) {
-        double t = Atlant.hash(i / 2, j / 2, seed) * 0.5 + Atlant.noise(i, j, 8, seed + 1) * 0.5;
-        return rgb(Atlant.COPPER[(int) Math.max(1, Math.min(7, 2 + t * 5))]);
+        double t = Atlant.noise(i, j, 14, seed + 1);
+        int tone = 4 + (int) Math.round(t * 2 - 0.4);
+        if (Atlant.hash(i / 5, j, seed) > 0.94) {
+            tone++;
+        }
+        return rgb(Atlant.COPPER[Math.max(3, Math.min(7, tone))]);
     }
 
-    /** Copper planks laid along, joints darker and teal patina creeping out of the seams. */
+    /** Copper planks laid along, clean joints with a thin line of teal patina in the upright seams. */
     static Paint tankCopper() {
         Paint p = new Paint(16, 16, K);
         for (int j = 0; j < p.h; j++) {
@@ -41,16 +45,6 @@ final class GolemBuses {
         for (double x : new double[]{4, 12}) {
             p.rect(x, 0, x + 0.5, 16, rgb(Atlant.PATINA[2]));
             p.rect(x + 0.5, 0, x + 1, 16, rgb(Atlant.PATINA[4]));
-        }
-        // patina bleeding along the joints
-        for (int j = 0; j < p.h; j++) {
-            for (int i = 0; i < p.w; i++) {
-                double v = (j + 0.5) / K, u = (i + 0.5) / K;
-                double d = Math.min(Math.min(Math.abs(v - 8.5), Math.abs(v - 0.5)), Math.min(Math.abs(u - 4.5), Math.abs(u - 12.5)));
-                if (d < 1.6 && Atlant.hash(i, j, 812) > 0.55 + d * 0.25) {
-                    p.px(i, j, rgb(Atlant.PATINA[1 + (int) (Atlant.hash(i, j, 813) * 4)]));
-                }
-            }
         }
         return p;
     }
@@ -94,8 +88,8 @@ final class GolemBuses {
         Paint p = new Paint(16, 16, K);
         for (int j = 0; j < p.h; j++) {
             for (int i = 0; i < p.w; i++) {
-                double t = Atlant.hash(i / 2, j / 6, 831) * 0.6 + Atlant.noise(i, j, 6, 832) * 0.4;
-                p.px(i, j, rgb(Atlant.COPPER[(int) Math.max(2, Math.min(7, 3 + t * 4))]));
+                double t = Atlant.noise(i, j, 10, 832);
+                p.px(i, j, rgb(Atlant.COPPER[4 + (int) Math.round(t * 2 - 0.4)]));
             }
         }
         for (double x = 0; x < 16; x += 4) {
@@ -148,18 +142,17 @@ final class GolemBuses {
                 p.px(i, j, copper(i, j, front ? 851 : 852));
             }
         }
-        // four plates with seams and patina
-        p.rect(7.75, 2, 8.25, 14, rgb(Atlant.COPPER[0]));
-        p.rect(2, 7.75, 14, 8.25, rgb(Atlant.COPPER[0]));
-        for (int j = 0; j < p.h; j++) {
-            for (int i = 0; i < p.w; i++) {
-                double u = (i + 0.5) / K, v = (j + 0.5) / K;
-                double d = Math.min(Math.abs(u - 8), Math.abs(v - 8));
-                if (u > 2 && u < 14 && v > 2 && v < 14 && d < 1.8 && Atlant.hash(i, j, 853) > 0.6 + d * 0.2) {
-                    p.px(i, j, rgb(Atlant.PATINA[1 + (int) (Atlant.hash(i, j, 854) * 4)]));
-                }
-            }
+        // four bevelled plates: light on the top and left edges, dark on the bottom and right, seams between them
+        for (double[] q : new double[][]{{2, 2, 8, 8}, {8, 2, 14, 8}, {2, 8, 8, 14}, {8, 8, 14, 14}}) {
+            p.rect(q[0], q[1], q[2], q[1] + 0.5, rgb(Atlant.COPPER[7]));
+            p.rect(q[0], q[1], q[0] + 0.5, q[3], rgb(Atlant.COPPER[7]));
+            p.rect(q[0], q[3] - 0.5, q[2], q[3], rgb(Atlant.COPPER[2]));
+            p.rect(q[2] - 0.5, q[1], q[2], q[3], rgb(Atlant.COPPER[2]));
         }
+        // a small patina diamond where the seams cross
+        p.rect(7.5, 7, 8.5, 9, rgb(Atlant.PATINA[3]));
+        p.rect(7, 7.5, 9, 8.5, rgb(Atlant.PATINA[3]));
+        p.rect(7.5, 7.5, 8.5, 8.5, rgb(Atlant.PATINA[5]));
         // the brass frame with dark bolts at the corners and rune inlays along it
         p.frame(0, 0, 16, 16, 2, rgb(Paint.BRASS[4]));
         p.frame(0, 0, 16, 16, 0.5, rgb(Paint.BRASS[2]));
@@ -176,36 +169,59 @@ final class GolemBuses {
             p.rect(0.75, y, 1.25, y + 1, rgb(Paint.CYAN[3]));
             p.rect(14.75, y + 0.5, 15.25, y + 1.5, rgb(Paint.CYAN[3]));
         }
-        for (double[] r : new double[][]{{3.5, 3.5}, {11.5, 3.5}, {3.5, 11.5}, {11.5, 11.5}}) {
+        for (double[] r : new double[][]{{3, 3}, {12, 3}, {3, 12}, {12, 12}}) {
             rivet(p, r[0], r[1]);
         }
         if (front) {
-            // the mouth (model y 1.5..8.5 -> v 7.5..14.5): dark inside, the brass lip is a model of its own
-            p.rect(4, 7.5, 12, 14.5, rgb(0x120c0a));
-            p.rect(4, 7.5, 12, 8.5, rgb(0x2a1a14));
+            // the mouth (model y 2..7 -> v 9..14): dark inside, the brass lip is a model of its own
+            p.rect(4, 9, 12, 14, rgb(0x120c0a));
+            p.rect(4, 9, 12, 9.5, rgb(0x2a1a14));
         }
         return p;
     }
 
-    /** Dark iron plates with a brass band across and patina-studded corners (the Annihilation Bus). */
+    /** The alcove the Formation Bus's golem grows out of: darkened copper, upright seams, a rivet in each corner. */
+    static Paint alcove() {
+        Paint p = new Paint(16, 16, K);
+        for (int j = 0; j < p.h; j++) {
+            for (int i = 0; i < p.w; i++) {
+                double t = Atlant.noise(i, j, 12, 881);
+                p.px(i, j, rgb(Atlant.COPPER[1 + (int) Math.round(t)]));
+            }
+        }
+        for (double x : new double[]{4, 12}) {
+            p.rect(x, 0, x + 0.5, 16, rgb(Atlant.COPPER[0]));
+        }
+        for (double[] r : new double[][]{{1.5, 1.5}, {13.5, 1.5}, {1.5, 13.5}, {13.5, 13.5}}) {
+            p.rect(r[0], r[1], r[0] + 1, r[1] + 1, rgb(Atlant.COPPER[5]));
+        }
+        return p;
+    }
+
+    /** Dark iron plates with a brass band across and bolted corners (the Annihilation Bus). */
     static Paint annihilation() {
         Paint p = new Paint(16, 16, K);
         for (int j = 0; j < p.h; j++) {
             for (int i = 0; i < p.w; i++) {
-                double t = Atlant.hash(i / 2, j / 2, 861) * 0.5 + Atlant.noise(i, j, 8, 862) * 0.5;
-                p.px(i, j, rgb(Paint.IRON[(int) Math.max(2, Math.min(5, 2 + t * 4))]));
+                double t = Atlant.noise(i, j, 12, 862);
+                p.px(i, j, rgb(Paint.IRON[3 + (int) Math.round(t * 1.4 - 0.2)]));
             }
         }
         p.frame(0, 0, 16, 16, 0.5, rgb(Paint.IRON[1]));
+        // two plates above and below the band, each with a light top edge
+        p.rect(0.5, 0.5, 15.5, 1, rgb(Paint.IRON[5]));
+        p.rect(0.5, 9, 15.5, 9.5, rgb(Paint.IRON[5]));
+        p.rect(0.5, 6.5, 15.5, 7, rgb(Paint.IRON[2]));
+        p.rect(0.5, 15, 15.5, 15.5, rgb(Paint.IRON[2]));
         p.rect(0, 7, 16, 9, rgb(Paint.BRASS[4]));
         p.rect(0, 7, 16, 7.5, rgb(Paint.BRASS[6]));
         p.rect(0, 8.5, 16, 9, rgb(Paint.BRASS[2]));
         for (double x = 1.5; x < 16; x += 4.5) {
             p.rect(x, 7.5, x + 1, 8.5, rgb(0x23252b));
         }
-        for (double[] c : new double[][]{{1, 1}, {13.5, 1}, {1, 13.5}, {13.5, 13.5}}) {
-            p.rect(c[0], c[1], c[0] + 1.5, c[1] + 1.5, rgb(Atlant.PATINA[3]));
-            p.rect(c[0] + 0.5, c[1] + 0.5, c[0] + 1, c[1] + 1, rgb(0x23252b));
+        for (double[] c : new double[][]{{1.5, 2}, {13.5, 2}, {1.5, 12.5}, {13.5, 12.5}}) {
+            p.rect(c[0], c[1], c[0] + 1, c[1] + 1, rgb(Paint.IRON[1]));
+            p.rect(c[0], c[1], c[0] + 0.5, c[1] + 0.5, rgb(Atlant.PATINA[4]));
         }
         return p;
     }
@@ -282,14 +298,19 @@ final class GolemBuses {
         Models.model("copper_tank", false, "tank_copper", tt, t.toArray(new Models.El[0]));
         cutout("copper_tank");
 
-        // ---- the Formation Bus: the casing and the brass lip of its mouth
-        String[][] ft = {{"side", "formation_side"}, {"front", "formation_front"}, {"brass", "sat_brass"}};
+        // ---- the Formation Bus: the casing round the golem's alcove, the brass sill it rises from, the brass lip of the mouth
+        String[][] ft = {{"side", "formation_side"}, {"front", "formation_front"}, {"brass", "sat_brass"}, {"alcove", "formation_alcove"}};
         List<Models.El> f = new ArrayList<>();
-        f.add(Models.e(0, 0, 0, 16, 16, 16).only("#side", "south", "east", "west", "up", "down").face("north", "#front"));
+        f.add(Models.e(0, 0, 0, 16, 8.5, 16).only("#side", "south", "east", "west", "down").face("north", "#front").face("up", "#side"));
+        f.add(Models.e(0, 8.5, 0, 3.5, 16, 16).only("#side", "south", "west", "up").face("north", "#front").face("east", "#alcove"));
+        f.add(Models.e(12.5, 8.5, 0, 16, 16, 16).only("#side", "south", "east", "up").face("north", "#front").face("west", "#alcove"));
+        f.add(Models.e(3.5, 15, 0, 12.5, 16, 16).only("#side", "south", "up").face("north", "#front").face("down", "#alcove"));
+        f.add(Models.e(3.5, 8.5, 3, 12.5, 15, 16).only("#side", "south").face("north", "#alcove"));
+        f.add(Models.e(3.5, 8.5, -0.75, 12.5, 9.25, 3).only("#brass", "north", "up", "east", "west"));
         f.add(Models.e(3, 1, -1.5, 13, 2, 0).all("#brass"));
-        f.add(Models.e(3, 8, -1.5, 13, 9, 0).all("#brass"));
-        f.add(Models.e(3, 2, -1.5, 4, 8, 0).only("#brass", "north", "east", "west"));
-        f.add(Models.e(12, 2, -1.5, 13, 8, 0).only("#brass", "north", "east", "west"));
+        f.add(Models.e(3, 7, -1.5, 13, 8, 0).all("#brass"));
+        f.add(Models.e(3, 2, -1.5, 4, 7, 0).only("#brass", "north", "east", "west"));
+        f.add(Models.e(12, 2, -1.5, 13, 7, 0).only("#brass", "north", "east", "west"));
         Models.model("formation_bus", false, "formation_side", ft, f.toArray(new Models.El[0]));
         Models.facing6("formation_bus", "formation_bus");
         Models.item("formation_bus", "formation_bus");
@@ -315,6 +336,7 @@ final class GolemBuses {
         tankGauge().save(Forge2.tex("tank_gauge"));
         formation(false).save(Forge2.tex("formation_side"));
         formation(true).save(Forge2.tex("formation_front"));
+        alcove().save(Forge2.tex("formation_alcove"));
         annihilation().save(Forge2.tex("annihilation_side"));
         niche().save(Forge2.tex("annihilation_niche"));
         temper().save(Forge2.RES.resolve("textures/item/plasma_temper.png").toFile());

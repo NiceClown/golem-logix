@@ -34,14 +34,17 @@ import java.util.List;
  * Formation Bus: the copper golem fused into it takes a block named in the filter out of the network and pushes it out of the
  * mouth onto the free spot in front. The push takes as long as the bus's interval (at least two ticks), so the golem's hands keep
  * pace with four Compressed Co-Processors too; the block is set down when the push ends, and if the spot is taken meanwhile the
- * golem holds it until it is free again. Upgrades as on the Export Bus: speed, an Autocraft Module (it orders the block when the
- * network has none), a Redstone Module, a Fuzzy Card.
+ * golem holds it until it is free again. Which filter slot goes next: in order (the first the network has), round robin (slot
+ * after slot, skipping what the network lacks) or at random. Upgrades as on the Export Bus: speed, an Autocraft Module (it
+ * orders the block when the network has none), a Redstone Module, a Fuzzy Card.
  */
 public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBlock.Waking {
     public static final int FILTER_SLOTS = 9;
     private static final double[] INTERVAL_MULT = {1.0, 0.75, 0.5, 0.25, 0.125};
     private static final int CRAFT_REQUEST_COOLDOWN = 40;
     private static final int MAX_IDLE_TICKS = 20, MAX_IDLE_STEPS = 5;
+    /** The order of the filter slots: the first one the network has, round robin, at random. */
+    public static final int IN_ORDER = 0, ROUND_ROBIN = 1, RANDOM = 2;
 
     private final OwnedContainer filters = new OwnedContainer(FILTER_SLOTS, this, s -> true);
     private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.EXPORT_BUS, this);
@@ -54,6 +57,9 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
     private int idleSteps;
     private long sleepUntil;
     private long lastCraftRequest = -1000;
+    private int order = IN_ORDER;
+    /** Round robin: the slot to try first next time. */
+    private int next;
 
     public FormationBusBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.FORMATION_BUS.get(), pos, state);
@@ -91,12 +97,12 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
         wake();
     }
 
-    /** Window data: 0 = priority (unused), 1 = redstone mode. */
+    /** Window data: 0 = priority (unused), 1 = redstone mode, 2 = order (IN_ORDER, ROUND_ROBIN, RANDOM). */
     public ContainerData menuData() {
         return new ContainerData() {
             @Override
             public int get(int index) {
-                return index == 0 ? 0 : redstone.mode().ordinal();
+                return index == 0 ? 0 : index == 1 ? redstone.mode().ordinal() : order;
             }
 
             @Override
@@ -104,12 +110,16 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
                 if (index == 1) {
                     redstone.setMode(RedstoneMode.byId(value));
                     setChanged();
+                } else if (index == 2) {
+                    order = Math.floorMod(value, 3);
+                    next = 0;
+                    setChanged();
                 }
             }
 
             @Override
             public int getCount() {
-                return 2;
+                return 3;
             }
         };
     }
@@ -175,7 +185,19 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
         boolean fuzzy = upgrades.has(UpgradeType.FUZZY);
         java.util.Set<ItemKey> netKeys = fuzzy ? net.listItems().keySet() : java.util.Set.of();
         ItemKey missing = null;
-        for (int i = 0; i < FILTER_SLOTS; i++) {
+        int[] slots = new int[FILTER_SLOTS];
+        int start = order == ROUND_ROBIN ? next : 0;
+        for (int k = 0; k < FILTER_SLOTS; k++) {
+            slots[k] = (start + k) % FILTER_SLOTS;
+        }
+        if (order == RANDOM) {
+            for (int k = FILTER_SLOTS - 1; k > 0; k--) {
+                int r = level.getRandom().nextInt(k + 1), t = slots[k];
+                slots[k] = slots[r];
+                slots[r] = t;
+            }
+        }
+        for (int i : slots) {
             ItemStack filter = filters.getItem(i);
             if (filter.isEmpty()) {
                 continue;
@@ -199,6 +221,7 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
                 any = true;
                 ItemStack real = net.extractItem(one, 1, false, target);
                 if (!real.isEmpty()) {
+                    next = (i + 1) % FILTER_SLOTS;
                     return real;
                 }
             }
@@ -278,6 +301,8 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
             tag.put("Filters", filters.createTag(registries));
             tag.put("Upgrades", upgrades.createTag(registries));
             redstone.save(tag);
+            tag.putInt("Order", order);
+            tag.putInt("Next", next);
         }
         if (!carrying.isEmpty()) {
             tag.put("Carrying", NbtBridge.saveItem(carrying, registries));
@@ -291,6 +316,8 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
             filters.fromTag(tag.getListOrEmpty("Filters"), registries);
             upgrades.fromTag(tag.getListOrEmpty("Upgrades"), registries);
             redstone.load(tag);
+            order = tag.getIntOr("Order", IN_ORDER);
+            next = tag.getIntOr("Next", 0);
         }
         carrying = tag.contains("Carrying") ? NbtBridge.loadItem(registries, tag.getCompoundOrEmpty("Carrying")).orElse(ItemStack.EMPTY)
                 : ItemStack.EMPTY;

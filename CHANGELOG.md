@@ -19,18 +19,27 @@
 - **New block: Mason's Formation Bus.** A whole copper block with a copper golem fused into its front: it takes the blocks named
   in its filter out of the network and pushes them out of its brass mouth onto the free spot in front, one at a time. The push
   lasts the bus's interval, so the golem keeps pace with four Compressed Co-Processors; if the spot is taken meanwhile it holds
-  the block and waits. Upgrades as on the Export Bus (speed, Autocraft Module, Redstone Module, Fuzzy Card).
+  the block and waits. Its golem rises from a brass sill in an alcove over the mouth, its back sunk into the wall. An order
+  button: in order, round robin or at random. Upgrades as on the Export Bus (speed, Autocraft Module, Redstone Module, Fuzzy
+  Card).
 - **New block: Hewer's Annihilation Bus.** A small iron golem in a brass niche works the block in front of it with the tool in
   its slot - or, with the slot empty, with the strength of every iron tool (the best iron pickaxe, axe, shovel, hoe or sword
   for that block, never worn out). A given tool is used with its enchantments and worn, and put down before it would break.
   Settings as on a clicker: left click (mines like a player, as fast as the tool allows, the drops into the network) or right
   click (uses the item or the bare hand on the block, what falls out into the network), sneaking, the filter as an allow or a
-  deny list, and "grown only" for crops. Upgrades: speed (four co-processors mine eightfold), Redstone Module, Fuzzy Card.
+  deny list, and "grown only" for crops. A third mode attacks: the creatures in front are struck with the tool (an iron sword
+  by default) at full strength and without knockback, their loot goes into the network; players, pets and named creatures are
+  never touched, spawn eggs in the filter choose the creatures and "grown only" spares the young. Upgrades: speed (four
+  co-processors mine eightfold), Redstone Module, Fuzzy Card.
+- **The Export Bus has an order button**: in order (as before), round robin (one filter slot an operation, each after the
+  last) or at random.
+- The buses' casings are cleaner: smooth copper and iron plates with bevelled edges instead of speckled noise.
 - **A secret upgrade for the Annihilation Bus**, made of what only the Wither's secret gives: with it the golem's tool never
   wears. Its recipe and its article open with the rest of the secret.
 - Guidebook articles: the Copper Tank under Storage, both new buses under Buses.
-- 127 game tests (new: a tank keeps its fluid when broken, tanks join, bucket mode pours and scoops, the Formation Bus sets
-  blocks down, the Annihilation Bus mines (and leaves obsidian and unripe wheat alone) and clicks with shears, a tool that does not wear, and both buses'
+- 130 game tests (new: a tank keeps its fluid when broken, tanks join, bucket mode pours and scoops, the Formation Bus sets
+  blocks down, the Annihilation Bus mines (and leaves obsidian and unripe wheat alone) and clicks with shears, a tool that does not wear, round robin on the Formation and Export Buses, a pig
+  struck down into the network, and both buses'
   windows: opened by a click, their setting buttons, shift-clicks into the tool slot, the filter and the upgrades, the layout).
 
 ## 2.0.10 (26.1.2) — Autocrafting finds the gateway at the machine

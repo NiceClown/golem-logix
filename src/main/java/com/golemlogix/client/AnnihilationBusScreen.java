@@ -1,5 +1,6 @@
 package com.golemlogix.client;
 
+import com.golemlogix.blockentity.AnnihilationBusBlockEntity;
 import com.golemlogix.menu.AnnihilationBusMenu;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -18,14 +19,25 @@ public class AnnihilationBusScreen extends GolemScreen<AnnihilationBusMenu> {
     protected void init() {
         super.init();
         addRedstoneButton(menu::redstoneMode);
-        setting(() -> new ItemStack(menu.rightClick() ? Items.LEVER : Items.IRON_PICKAXE), "click",
-                () -> menu.rightClick() ? "right" : "left", () -> true, AnnihilationBusMenu.BUTTON_CLICK);
+        setting(() -> new ItemStack(switch (menu.mode()) {
+                    case AnnihilationBusBlockEntity.RIGHT -> Items.LEVER;
+                    case AnnihilationBusBlockEntity.ATTACK -> Items.IRON_SWORD;
+                    default -> Items.IRON_PICKAXE;
+                }), "click", () -> mode(), () -> true, AnnihilationBusMenu.BUTTON_CLICK);
         setting(() -> new ItemStack(Items.LEATHER_BOOTS), "sneak", () -> menu.sneak() ? "on" : "off", menu::sneak,
                 AnnihilationBusMenu.BUTTON_SNEAK);
         setting(() -> new ItemStack(menu.denyList() ? Items.BARRIER : Items.PAPER), "list", () -> menu.denyList() ? "deny" : "allow",
                 menu::denyList, AnnihilationBusMenu.BUTTON_LIST);
         setting(() -> new ItemStack(Items.WHEAT), "grown", () -> menu.grownOnly() ? "on" : "off", menu::grownOnly,
                 AnnihilationBusMenu.BUTTON_GROWN);
+    }
+
+    private String mode() {
+        return switch (menu.mode()) {
+            case AnnihilationBusBlockEntity.RIGHT -> "right";
+            case AnnihilationBusBlockEntity.ATTACK -> "attack";
+            default -> "left";
+        };
     }
 
     /** A setting in the side column: its title, its current value and a hint (gui.golem_logix.annihilation.<key>[.<value>]). */
@@ -44,8 +56,7 @@ public class AnnihilationBusScreen extends GolemScreen<AnnihilationBusMenu> {
         Component label = Component.translatable("gui.golem_logix.annihilation.tool");
         g.text(font, label, leftPos + AnnihilationBusMenu.TOOL_X + 8 - font.width(label) / 2, topPos + AnnihilationBusMenu.TOOL_Y - 11,
                 GolemGui.CYAN_DARK, false);
-        Component hint = Component.translatable(menu.rightClick() ? "gui.golem_logix.bus.annihilation_hint.right"
-                : "gui.golem_logix.bus.annihilation_hint.left");
+        Component hint = Component.translatable("gui.golem_logix.bus.annihilation_hint." + mode());
         g.textWithWordWrap(font, hint, leftPos + 8, topPos + 90, imageWidth - 16, GolemGui.CYAN_DARK);
     }
 
@@ -54,7 +65,7 @@ public class AnnihilationBusScreen extends GolemScreen<AnnihilationBusMenu> {
     protected void renderOverlay(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
         if (!menu.getSlot(AnnihilationBusMenu.TOOL_SLOT_INDEX).hasItem()) {
             int x = leftPos + AnnihilationBusMenu.TOOL_X, y = topPos + AnnihilationBusMenu.TOOL_Y;
-            g.item(new ItemStack(Items.IRON_PICKAXE), x, y);
+            g.item(new ItemStack(menu.mode() == AnnihilationBusBlockEntity.ATTACK ? Items.IRON_SWORD : Items.IRON_PICKAXE), x, y);
             g.fill(x, y, x + 16, y + 16, 0xA8241A12);
         }
     }

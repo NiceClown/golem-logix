@@ -18,7 +18,7 @@ import net.minecraft.world.item.ItemStack;
 
 /**
  * Annihilation Bus window: the 3x3 filter (blocks to work on, or not to), the golem's tool slot, the upgrades on the right and
- * the click settings on the left (redstone, left / right click, sneaking, allow / deny list, grown only).
+ * the click settings on the left (redstone, left / right click / attack, sneaking, allow / deny list, grown only).
  */
 public class AnnihilationBusMenu extends GolemMenu {
     public static final int IMAGE_WIDTH = 176, IMAGE_HEIGHT = 212;
@@ -60,8 +60,9 @@ public class AnnihilationBusMenu extends GolemMenu {
         return RedstoneMode.byId(data.get(0));
     }
 
-    public boolean rightClick() {
-        return data.get(1) != 0;
+    /** AnnihilationBusBlockEntity.LEFT, RIGHT or ATTACK. */
+    public int mode() {
+        return data.get(1);
     }
 
     public boolean sneak() {
@@ -80,7 +81,7 @@ public class AnnihilationBusMenu extends GolemMenu {
     public boolean clickMenuButton(Player player, int id) {
         switch (id) {
             case BUTTON_REDSTONE -> data.set(0, redstoneMode().next(true).ordinal());
-            case BUTTON_CLICK -> data.set(1, rightClick() ? 0 : 1);
+            case BUTTON_CLICK -> data.set(1, (mode() + 1) % 3);
             case BUTTON_SNEAK -> data.set(2, sneak() ? 0 : 1);
             case BUTTON_LIST -> data.set(3, denyList() ? 0 : 1);
             case BUTTON_GROWN -> data.set(4, grownOnly() ? 0 : 1);

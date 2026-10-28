@@ -40,6 +40,7 @@ import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.event.level.BlockDropsEvent;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -51,6 +52,10 @@ import java.util.UUID;
  * tool cannot harvest is left alone, and a tool about to break is put down.</li>
  * <li>Right click: once an interval it uses the item in its slot (or its empty hand) on the block - a lever, shears, a hoe, bone
  * meal - and whatever falls out in front goes into the network.</li>
+ * <li>Attack: once an interval it strikes the creatures in front with the tool (an iron sword when the slot is empty), at full
+ * strength, enchantments and all, without knocking them back; what they drop goes into the network. Players, named, owned and
+ * invulnerable creatures are never
+ * touched; the filter takes spawn eggs (which creatures), and "grown only" spares the young.</li>
  * </ul>
  * Settings, as on a clicker: the click, sneaking, the filter as an allow or a deny list (by the block's item; empty works on
  * everything), and "grown only" (a crop or anything with an age only when fully grown). Upgrades: speed, redstone, a Fuzzy Card,
@@ -67,7 +72,9 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
     /** The iron tools a bare golem brings to every block. */
     private static final net.minecraft.world.item.Item[] IRON_TOOLS = {Items.IRON_PICKAXE, Items.IRON_AXE, Items.IRON_SHOVEL, Items.IRON_HOE,
             Items.IRON_SWORD};
-    /** The bus whose golem is breaking a block right now: its drops go into that bus's network (see onDrops). */
+    /** Click modes: break, use, attack. */
+    public static final int LEFT = 0, RIGHT = 1, ATTACK = 2;
+    /** The bus whose golem is breaking a block or striking a creature right now: the drops go into its network (onDrops, onLoot). */
     @Nullable
     private static AnnihilationBusBlockEntity breaking;
 
@@ -83,7 +90,8 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
     private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.ANNIHILATION_BUS, this);
     private final RedstoneControl redstone = new RedstoneControl();
 
-    private boolean rightClick, sneak, denyList, grownOnly;
+    private int mode = LEFT;
+    private boolean sneak, denyList, grownOnly;
     /** Mining progress on the block in front (0..1), and the block it is for. */
     private float progress;
     @Nullable
@@ -118,8 +126,9 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         return lastUse;
     }
 
-    public boolean rightClick() {
-        return rightClick;
+    /** LEFT, RIGHT or ATTACK. */
+    public int mode() {
+        return mode;
     }
 
     @Override
@@ -134,14 +143,14 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         wake();
     }
 
-    /** Window data: 0 redstone mode, 1 right click, 2 sneak, 3 deny list, 4 grown only. */
+    /** Window data: 0 redstone mode, 1 click mode (LEFT, RIGHT, ATTACK), 2 sneak, 3 deny list, 4 grown only. */
     public ContainerData menuData() {
         return new ContainerData() {
             @Override
             public int get(int index) {
                 return switch (index) {
                     case 0 -> redstone.mode().ordinal();
-                    case 1 -> rightClick ? 1 : 0;
+                    case 1 -> mode;
                     case 2 -> sneak ? 1 : 0;
                     case 3 -> denyList ? 1 : 0;
                     default -> grownOnly ? 1 : 0;
@@ -153,7 +162,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
                 switch (index) {
                     case 0 -> redstone.setMode(RedstoneMode.byId(value));
                     case 1 -> {
-                        rightClick = value != 0;
+                        mode = Math.floorMod(value, 3);
                         stopMining();
                     }
                     case 2 -> sneak = value != 0;
@@ -198,13 +207,24 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
             stopMining();
             return;
         }
+        if (mode == ATTACK) {
+            stopMining();
+            if (Math.floorMod(now + pos.asLong(), interval()) == 0) {
+                if (attack(level, pos, target, facing)) {
+                    redstone.allows(hasRedstone, powered, true);
+                } else {
+                    sleep(now);
+                }
+            }
+            return;
+        }
         BlockState front = level.getBlockState(target);
         if (front.isAir() || !wanted(front)) {
             stopMining();
             sleep(now);
             return;
         }
-        if (rightClick) {
+        if (mode == RIGHT) {
             if (Math.floorMod(now + pos.asLong(), interval()) == 0) {
                 if (use(level, net, pos, target, facing)) {
                     redstone.allows(hasRedstone, powered, true);
@@ -419,6 +439,91 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         return did;
     }
 
+    /** The creature can be struck: alive and mortal, no player, nobody's pet, not named; the filter (spawn eggs) and the young. */
+    private boolean prey(net.minecraft.world.entity.LivingEntity e) {
+        if (!e.isAlive() || e.isInvulnerable() || e instanceof net.minecraft.world.entity.player.Player
+                || e instanceof net.minecraft.world.entity.decoration.ArmorStand || e.hasCustomName()
+                || e instanceof net.minecraft.world.entity.OwnableEntity own && own.getOwnerReference() != null) {
+            return false;
+        }
+        if (grownOnly && e.isBaby()) {
+            return false;
+        }
+        boolean any = false, listed = false;
+        for (int i = 0; i < FILTER_SLOTS; i++) {
+            ItemStack f = filters.getItem(i);
+            if (f.isEmpty()) {
+                continue;
+            }
+            any = true;
+            if (net.minecraft.world.item.SpawnEggItem.getType(f) == e.getType()) {
+                listed = true;
+                break;
+            }
+        }
+        return !any || listed != denyList;
+    }
+
+    /** Attack: one strike at every creature in front, with the tool (or an iron sword), at full strength. False if none was there. */
+    private boolean attack(ServerLevel level, BlockPos pos, BlockPos target, Direction facing) {
+        var victims = level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, new AABB(target), this::prey);
+        if (victims.isEmpty()) {
+            return false;
+        }
+        boolean own = !tool.getItem(0).isEmpty();
+        ItemStack before = own ? tool.getItem(0).copy() : new ItemStack(Items.IRON_SWORD);
+        FakePlayer p = golem(level, pos, facing, before.copy());
+        // a FakePlayer never ticks: neither does the weapon's damage reach its attributes nor does its swing wind up by itself
+        List<Runnable> undo = new java.util.ArrayList<>();
+        p.getMainHandItem().forEachModifier(net.minecraft.world.entity.EquipmentSlot.MAINHAND, (attribute, modifier) -> {
+            var instance = p.getAttribute(attribute);
+            if (instance != null) {
+                instance.addOrUpdateTransientModifier(modifier);
+                undo.add(() -> instance.removeModifier(modifier.id()));
+            }
+        });
+        breaking = this;
+        try {
+            for (var e : victims) {
+                p.attackStrengthTicker = 1000;
+                p.attack(e);
+                // no knockback: what stands in front stays in front for the next strike (a mob farm keeps working)
+                e.setDeltaMovement(0, Math.min(0, e.getDeltaMovement().y), 0);
+                e.hurtMarked = true;
+            }
+        } finally {
+            breaking = null;
+            undo.forEach(Runnable::run);
+        }
+        if (own) {
+            tool.setItem(0, unworn(before, p.getMainHandItem().copy()));
+        }
+        p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        p.setShiftKeyDown(false);
+        lastUse = level.getGameTime();
+        sync();
+        return true;
+    }
+
+    /** What a creature our golem kills drops goes into its network instead of onto the ground. */
+    @SubscribeEvent
+    public static void onLoot(net.neoforged.neoforge.event.entity.living.LivingDropsEvent event) {
+        AnnihilationBusBlockEntity bus = breaking;
+        if (bus == null || !(event.getSource().getEntity() instanceof FakePlayer fp) || !PROFILE.id().equals(fp.getUUID())
+                || bus.level == null) {
+            return;
+        }
+        GolemNetwork net = GolemNetwork.get(bus.level, bus.worldPosition);
+        event.getDrops().removeIf(e -> {
+            ItemStack rest = net.insertItem(e.getItem(), false);
+            if (rest.isEmpty()) {
+                return true;
+            }
+            e.setItem(rest);
+            return false;
+        });
+    }
+
     /** The drops of a block our golem breaks go into its network instead of onto the ground. */
     @SubscribeEvent
     public static void onDrops(BlockDropsEvent event) {
@@ -467,7 +572,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         if (!tool.getItem(0).isEmpty()) {
             tag.put("Tool", NbtBridge.saveItem(tool.getItem(0), registries));
         }
-        tag.putBoolean("RightClick", rightClick);
+        tag.putInt("Mode", mode);
         tag.putBoolean("Swinging", swinging);
         tag.putLong("LastUse", lastUse);
     }
@@ -484,7 +589,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         ItemStack t = tag.contains("Tool") ? NbtBridge.loadItem(registries, tag.getCompoundOrEmpty("Tool")).orElse(ItemStack.EMPTY)
                 : ItemStack.EMPTY;
         tool.getItems().set(0, t);
-        rightClick = tag.getBooleanOr("RightClick", false);
+        mode = tag.getIntOr("Mode", tag.getBooleanOr("RightClick", false) ? RIGHT : LEFT);
         swinging = tag.getBooleanOr("Swinging", false);
         lastUse = tag.getLongOr("LastUse", -100L);
     }

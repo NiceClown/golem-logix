@@ -18,6 +18,23 @@ public class BusScreen extends GolemScreen<BusMenu> {
             addPriorityPanel(menu.isPeriscope() ? 61 : BusMenu.FILTER_X + 56 + 8, 18, menu::getPriority);
         }
         addRedstoneButton(menu::redstoneMode);
+        if (menu.hasOrder()) {
+            addSideButton(() -> new net.minecraft.world.item.ItemStack(switch (menu.order()) {
+                        case com.golemlogix.blockentity.FormationBusBlockEntity.ROUND_ROBIN -> net.minecraft.world.item.Items.CLOCK;
+                        case com.golemlogix.blockentity.FormationBusBlockEntity.RANDOM -> net.minecraft.world.item.Items.ENDER_PEARL;
+                        default -> net.minecraft.world.item.Items.PAPER;
+                    }),
+                    () -> {
+                        String key = "gui.golem_logix.bus.order." + switch (menu.order()) {
+                            case com.golemlogix.blockentity.FormationBusBlockEntity.ROUND_ROBIN -> "round";
+                            case com.golemlogix.blockentity.FormationBusBlockEntity.RANDOM -> "random";
+                            default -> "first";
+                        };
+                        return Component.translatable("gui.golem_logix.bus.order").append("\n").append(Component.translatable(key))
+                                .append("\n").append(Component.translatable(key + ".hint").withStyle(net.minecraft.ChatFormatting.GRAY));
+                    },
+                    () -> true, () -> menu.order() != com.golemlogix.blockentity.FormationBusBlockEntity.IN_ORDER, BusMenu.BUTTON_ORDER);
+        }
     }
 
     @Override

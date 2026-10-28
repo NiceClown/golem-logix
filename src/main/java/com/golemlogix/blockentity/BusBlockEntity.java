@@ -46,6 +46,8 @@ import java.util.Optional;
  * A filter slot holding a bucket (any fluid container) selects a fluid.
  * Six upgrade slots: up to four Compressed Co-Processors (faster and more at a time), an Autocraft Module (export orders
  * what is missing from the calculators) and a Redstone Module.
+ * The Export Bus goes through its filter in order (the first slot the network has goes first), round robin (each operation
+ * starts at the slot after the one that went out last) or at random (FormationBusBlockEntity.IN_ORDER, ROUND_ROBIN, RANDOM).
  */
 public class BusBlockEntity extends BlockEntity {
     public static final int FILTER_SLOTS = 9;
@@ -62,6 +64,9 @@ public class BusBlockEntity extends BlockEntity {
     private final RedstoneControl redstone = new RedstoneControl();
 
     private int moved = 0;
+    /** Export: the order of the filter slots, and the slot round robin starts at next time. */
+    private int order = FormationBusBlockEntity.IN_ORDER;
+    private int next;
     /** Bus priority: buses with a bigger number in one network work earlier (they get access to items first). */
     private int priority = 0;
     private long lastSound = -1000;
@@ -123,27 +128,31 @@ public class BusBlockEntity extends BlockEntity {
         return redstone;
     }
 
-    /** Window data: 0 = priority, 1 = redstone mode. */
+    /** Window data: 0 = priority, 1 = redstone mode, and on the Export Bus 2 = order. */
     public ContainerData menuData() {
         return new ContainerData() {
             @Override
             public int get(int index) {
-                return index == 0 ? priority : redstone.mode().ordinal();
+                return index == 0 ? priority : index == 1 ? redstone.mode().ordinal() : order;
             }
 
             @Override
             public void set(int index, int value) {
                 if (index == 0) {
                     setPriority(value);
-                } else {
+                } else if (index == 1) {
                     redstone.setMode(RedstoneMode.byId(value));
+                    setChanged();
+                } else {
+                    order = Math.floorMod(value, 3);
+                    next = 0;
                     setChanged();
                 }
             }
 
             @Override
             public int getCount() {
-                return 2;
+                return isExport() ? 3 : 2;
             }
         };
     }
@@ -254,6 +263,23 @@ public class BusBlockEntity extends BlockEntity {
         return list;
     }
 
+    /** The filter slots in the export order: from the first, from the slot after the last one exported, or shuffled. */
+    private int[] exportOrder(Level level) {
+        int[] slots = new int[FILTER_SLOTS];
+        int start = order == FormationBusBlockEntity.ROUND_ROBIN ? next : 0;
+        for (int k = 0; k < FILTER_SLOTS; k++) {
+            slots[k] = (start + k) % FILTER_SLOTS;
+        }
+        if (order == FormationBusBlockEntity.RANDOM) {
+            for (int k = FILTER_SLOTS - 1; k > 0; k--) {
+                int r = level.getRandom().nextInt(k + 1), t = slots[k];
+                slots[k] = slots[r];
+                slots[r] = t;
+            }
+        }
+        return slots;
+    }
+
     private List<FluidStack> fluidFilters() {
         List<FluidStack> list = new ArrayList<>();
         for (int i = 0; i < FILTER_SLOTS; i++) {
@@ -361,10 +387,15 @@ public class BusBlockEntity extends BlockEntity {
         int fluidBudget = fluidPerOperation();
         Map<ItemKey, Long> toCraft = new LinkedHashMap<>();
 
+        int[] slotOrder = exportOrder(level);
         if (items != null) {
             boolean fuzzy = fuzzy();
             java.util.Set<ItemKey> netKeys = fuzzy ? net.listItems().keySet() : java.util.Set.of();
-            for (ItemStack filter : itemFilters()) {
+            for (int slot : slotOrder) {
+                ItemStack filter = filters.getItem(slot);
+                if (filter.isEmpty() || fluidOf(filter).isPresent()) {
+                    continue;
+                }
                 if (itemBudget <= 0) {
                     break;
                 }
@@ -417,6 +448,11 @@ public class BusBlockEntity extends BlockEntity {
                 }
                 itemBudget -= moved;
                 this.moved += moved;
+                if (moved > 0 && order == FormationBusBlockEntity.ROUND_ROBIN) {
+                    // round robin: one slot an operation, the next operation starts after it
+                    next = (slot + 1) % FILTER_SLOTS;
+                    break;
+                }
                 if (nothingInNetwork && upgrades.has(UpgradeType.CRAFTING)) {
                     ItemKey key = ItemKey.of(want);
                     // order only if the container accepts this item at all
@@ -475,6 +511,8 @@ public class BusBlockEntity extends BlockEntity {
         tag.put("Filters", filters.createTag(registries));
         tag.put("Upgrades", upgrades.createTag(registries));
         tag.putInt("Priority", priority);
+        tag.putInt("Order", order);
+        tag.putInt("Next", next);
         redstone.save(tag);
     }
 
@@ -482,6 +520,8 @@ public class BusBlockEntity extends BlockEntity {
         filters.fromTag(tag.getListOrEmpty("Filters"), registries);
         upgrades.fromTag(tag.getListOrEmpty("Upgrades"), registries);
         priority = tag.getIntOr("Priority", 0);
+        order = tag.getIntOr("Order", FormationBusBlockEntity.IN_ORDER);
+        next = tag.getIntOr("Next", 0);
         redstone.load(tag);
     }
 

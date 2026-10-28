@@ -55,8 +55,8 @@ public class AnnihilationBusRenderer extends com.golemlogix.client.render.Legacy
             leftArm.xRot = -0.5f;
             head.xRot = 0.35f;
             head.yRot = 0f;
-        } else if (be.rightClick() && since < 8f) {
-            // a click: a quick reach forward
+        } else if (be.mode() != AnnihilationBusBlockEntity.LEFT && since < 8f) {
+            // a click or a strike: a quick reach forward
             float k = since / 8f;
             rightArm.xRot = -0.4f - 1.1f * Mth.sin(k * Mth.PI);
             leftArm.xRot = 0f;
@@ -81,7 +81,7 @@ public class AnnihilationBusRenderer extends com.golemlogix.client.render.Legacy
 
         ItemStack tool = be.getTool().getItem(0);
         if (tool.isEmpty()) {
-            tool = new ItemStack(Items.IRON_PICKAXE);
+            tool = new ItemStack(be.mode() == AnnihilationBusBlockEntity.ATTACK ? Items.IRON_SWORD : Items.IRON_PICKAXE);
         }
         pose.pushPose();
         rightArm.translateAndRotate(pose);

@@ -663,6 +663,81 @@ public class GolemGameTests {
         });
     }
 
+    /** Mason's Formation Bus round robin: stone, then a log, then stone again, as the spot in front is cleared. */
+    public static void formationBusRoundRobin(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos bus = BUS_OUT, front = BUS_OUT.north();
+        helper.setBlock(bus, ModBlocks.FORMATION_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        helper.setBlock(front, Blocks.AIR);
+        var be = helper.getBlockEntity(bus, com.golemlogix.blockentity.FormationBusBlockEntity.class);
+        be.getFilters().setItem(0, new ItemStack(Items.STONE));
+        be.getFilters().setItem(1, new ItemStack(Items.OAK_LOG));
+        be.menuData().set(2, com.golemlogix.blockentity.FormationBusBlockEntity.ROUND_ROBIN);
+        helper.runAfterDelay(5, () -> {
+            net(helper, bay).insertItem(new ItemStack(Items.STONE, 5), false);
+            net(helper, bay).insertItem(new ItemStack(Items.OAK_LOG, 5), false);
+        });
+        helper.runAfterDelay(60, () -> {
+            helper.assertBlockPresent(Blocks.STONE, front);
+            helper.setBlock(front, Blocks.AIR);
+        });
+        helper.runAfterDelay(120, () -> {
+            helper.assertBlockPresent(Blocks.OAK_LOG, front);
+            helper.setBlock(front, Blocks.AIR);
+        });
+        helper.runAfterDelay(180, () -> {
+            helper.assertBlockPresent(Blocks.STONE, front);
+            helper.succeed();
+        });
+    }
+
+    /** The Export Bus round robin: with plenty of both, cobblestone and dirt both go out (in order only the first would). */
+    public static void exportBusRoundRobin(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(BUS_OUT, ModBlocks.INJECTOR_EXPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        BusBlockEntity bus = helper.getBlockEntity(BUS_OUT, BusBlockEntity.class);
+        bus.getFilters().setItem(0, new ItemStack(Items.COBBLESTONE));
+        bus.getFilters().setItem(1, new ItemStack(Items.DIRT));
+        bus.menuData().set(2, com.golemlogix.blockentity.FormationBusBlockEntity.ROUND_ROBIN);
+        BlockPos chest = new BlockPos(6, 1, 2);
+        helper.setBlock(chest, Blocks.CHEST);
+        Container c = ((Container) helper.getBlockEntity(chest, net.minecraft.world.level.block.entity.BlockEntity.class));
+        helper.runAfterDelay(5, () -> {
+            net(helper, bay).insertItem(new ItemStack(Items.COBBLESTONE, 64), false);
+            net(helper, bay).insertItem(new ItemStack(Items.DIRT, 64), false);
+        });
+        helper.runAfterDelay(60, () -> {
+            int cobble = 0, dirt = 0;
+            for (int i = 0; i < c.getContainerSize(); i++) {
+                ItemStack st = c.getItem(i);
+                cobble += st.is(Items.COBBLESTONE) ? st.getCount() : 0;
+                dirt += st.is(Items.DIRT) ? st.getCount() : 0;
+            }
+            helper.assertTrue(cobble > 0 && dirt > 0, "round robin sends both: cobblestone " + cobble + ", dirt " + dirt);
+            helper.succeed();
+        });
+    }
+
+    /** Hewer's Annihilation Bus attacking with a diamond sword: the pig in front dies and its pork goes into the network. */
+    public static void annihilationBusAttacks(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos bus = BUS_OUT, front = BUS_OUT.north();
+        helper.setBlock(bus, ModBlocks.ANNIHILATION_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        helper.setBlock(front, Blocks.AIR);
+        var be = helper.getBlockEntity(bus, com.golemlogix.blockentity.AnnihilationBusBlockEntity.class);
+        be.menuData().set(1, com.golemlogix.blockentity.AnnihilationBusBlockEntity.ATTACK);
+        be.getTool().setItem(0, new ItemStack(Items.DIAMOND_SWORD));
+        helper.setBlock(front.below(), Blocks.STONE);
+        var pig = helper.spawnWithNoFreeWill(net.minecraft.world.entity.EntityType.PIG, front);
+        helper.runAfterDelay(80, () -> {
+            helper.assertTrue(!pig.isAlive(), "the pig is dead: health " + pig.getHealth() + ", last strike " + be.lastUse() + " at "
+                    + helper.getLevel().getGameTime() + ", pig at " + pig.blockPosition() + " front " + helper.absolutePos(front));
+            helper.assertTrue(net(helper, bay).itemCountOf(ItemKey.of(new ItemStack(Items.PORKCHOP))) >= 1, "its pork is in the network");
+            helper.assertTrue(be.getTool().getItem(0).getDamageValue() > 0, "the sword wore");
+            helper.succeed();
+        });
+    }
+
     /** Hewer's Annihilation Bus on right click with shears: it carves the pumpkin in front and the seeds go into the network. */
     public static void annihilationBusClicks(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
@@ -670,7 +745,7 @@ public class GolemGameTests {
         helper.setBlock(bus, ModBlocks.ANNIHILATION_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
         helper.setBlock(front, Blocks.PUMPKIN);
         var be = helper.getBlockEntity(bus, com.golemlogix.blockentity.AnnihilationBusBlockEntity.class);
-        be.menuData().set(1, 1);
+        be.menuData().set(1, com.golemlogix.blockentity.AnnihilationBusBlockEntity.RIGHT);
         be.getTool().setItem(0, new ItemStack(Items.SHEARS));
         helper.runAfterDelay(60, () -> {
             helper.assertBlockPresent(Blocks.CARVED_PUMPKIN, front);
@@ -722,7 +797,11 @@ public class GolemGameTests {
             var menu = (com.golemlogix.menu.AnnihilationBusMenu) player.containerMenu;
             assertSlotsLaidOut(helper, menu, com.golemlogix.menu.AnnihilationBusMenu.IMAGE_WIDTH, com.golemlogix.menu.AnnihilationBusMenu.IMAGE_HEIGHT);
             var data = be.menuData();
-            for (int[] b : new int[][]{{com.golemlogix.menu.AnnihilationBusMenu.BUTTON_CLICK, 1}, {com.golemlogix.menu.AnnihilationBusMenu.BUTTON_SNEAK, 2},
+            for (int expect : new int[]{1, 2, 0}) {
+                menu.clickMenuButton(player, com.golemlogix.menu.AnnihilationBusMenu.BUTTON_CLICK);
+                helper.assertTrue(data.get(1) == expect, "the click button goes break -> use -> attack -> break, got " + data.get(1));
+            }
+            for (int[] b : new int[][]{{com.golemlogix.menu.AnnihilationBusMenu.BUTTON_SNEAK, 2},
                     {com.golemlogix.menu.AnnihilationBusMenu.BUTTON_LIST, 3}, {com.golemlogix.menu.AnnihilationBusMenu.BUTTON_GROWN, 4}}) {
                 helper.assertTrue(data.get(b[1]) == 0 && menu.clickMenuButton(player, b[0]) && data.get(b[1]) == 1, "button " + b[0] + " turns its setting on");
                 menu.clickMenuButton(player, b[0]);

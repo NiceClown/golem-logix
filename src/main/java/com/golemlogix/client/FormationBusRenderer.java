@@ -20,10 +20,14 @@ import org.joml.Vector3f;
  * the golem's arms following it and its body leaning in; the push lasts the bus's interval, so it keeps pace at full speed.
  */
 public class FormationBusRenderer extends com.golemlogix.client.render.LegacyBer<FormationBusBlockEntity> {
-    /** The golem (pixels, facing north): about 8 pixels tall with its antenna under the top, feet inside the casing, chest at the face. */
-    private static final float GOLEM_SCALE = 0.47f, GOLEM_Y = 5.4f, GOLEM_Z = 0.9f;
-    /** The block's path: from inside the mouth (centre 8, 5, 3) to the centre of the spot in front (8, 8, -8). */
-    private static final float MOUTH_Y = 5f, MOUTH_Z = 3f;
+    /**
+     * The golem (pixels, facing north) in the alcove above the mouth (y 8.5..15, back wall at z 3): about 6.5 pixels tall, its legs
+     * hidden under the brass sill (top at 9.25) so it rises from it at the waist, its back sunk into the wall - fused into the bus;
+     * its antenna stays under the alcove's roof.
+     */
+    private static final float GOLEM_SCALE = 0.4f, GOLEM_Y = 7.2f, GOLEM_Z = 2.4f;
+    /** The block's path: from inside the mouth (centre 8, 4.5, 3) to the centre of the spot in front (8, 8, -8). */
+    private static final float MOUTH_Y = 4.5f, MOUTH_Z = 3f;
 
     public FormationBusRenderer(BlockEntityRendererProvider.Context context) {
     }
