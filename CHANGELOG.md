@@ -8,6 +8,10 @@
   is ordered from the Cryo-Calculators - bone meal from bones. Taken out by hand, the slot stays empty.
 - **An empty allow list stops the Annihilation Bus**, so it stands still while being set up. A new bus starts with an empty deny
   list and works on everything, as before; buses saved with an empty allow list keep working as they did.
+- **JEI lists the Crafting Terminal** among the crafting tables of the crafting recipes.
+- **The guide book reads more cleanly**: emphasis is set in copper ink instead of Minecraft's bold, which ran dense letters
+  (dense Cyrillic letters, the ¼ sign) together; fractions are written as digits. The Quick start is written anew: the first plates, power, the
+  first network, what next.
 
 ## 2.0.11 (26.1.2) — The Copper Tank and the golem buses
 
@@ -61,7 +65,6 @@
   there. Upgrades in older saves are sorted into their slots on loading.
 - **Hewer's Annihilation Bus takes no co-processors**: it mines as fast as its tool (Efficiency counts) and strikes at the
   weapon's attack speed. Co-processors already in one drop out in front of it. Its swing stays inside the niche.
-- JEI lists the Crafting Terminal among the crafting tables of the crafting recipes.
 - Fixed: the golems of the Formation and Annihilation Buses went dark with a whole block in front.
 - **The Plasma Temper is worn**: in the Annihilation Bus the iron golem wears it as a belt in temper colours, its plasma
   bead for a buckle.
