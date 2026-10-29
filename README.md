@@ -11,7 +11,7 @@ crafts things automatically from punch-card patterns. The whole network runs on 
 from Neo Vitae blood by the **Cryo-Distillation Tower** into **Cryo-Source Jars** (without either mod
 it simply runs for free); the late-game **Eternal Frost Resonator** keeps your Portable Chronometers charged through the aether.
 
-Everything comes with an illustrated, searchable **guide book** (Russian and English) that remembers the page you left it on.
+Everything comes with an illustrated, searchable **guide book** (Russian and English) that remembers the page you left it on. Its whole text can be read here too, without the game: [docs/guidebook](docs/guidebook/en_us.md).
 
 ## Features
 
@@ -124,8 +124,9 @@ The defaults live in `data/golem_logix/recipe/saturator` and `data/golem_logix/r
 ## Translations
 
 English and Russian: every block, item and message, and the whole guide book. When you change player-facing text, update both
-`en_us` and `ru_ru` (the lang files and `assets/golem_logix/book/*.json`); the `bookDataIsValid` game test checks that both books
-have the same structure.
+`en_us` and `ru_ru`: the lang files and the guide book, which is written in Markdown in `docs/guidebook/<lang>.md` (the build
+turns it into the JSON the game reads; the format is in `docs/guidebook/README.md`). The `bookDataIsValid` game test checks
+that both books have the same structure. A new language is a new lang file and, for the book, a new `docs/guidebook/<lang>.md`.
 
 ## Credits and license
 

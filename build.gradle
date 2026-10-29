@@ -144,3 +144,6 @@ tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.compilerArgs += ['-Xmaxerrs', '10000']
 }
+
+// the guide book: Markdown sources in docs/guidebook, JSON built from them
+apply from: "gradle/guidebook.gradle"
