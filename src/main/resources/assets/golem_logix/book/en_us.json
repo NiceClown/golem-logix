@@ -75,9 +75,9 @@
              ]},
             {"type": "text", "title": "The first network",
              "text": [
-               "1. Place the &lAtlas Core&r (4 cores, a matrix, iron and copper). On its own it already runs &l8 channels&r, but it connects &lonly through its bottom face&r.",
+               "1. Place the &lAtlas Core&r. On its own it already runs &l8 channels&r, but it connects &lonly through its bottom face&r.",
                "2. Put a &lCable Bushing&r under the core. Two &lAtlas Conduits&r between them make the starter tower: 16 channels.",
-               "3. Attach a &lCopper Drive Bay&r to the bushing (it is 2×2 and goes up like a door) and put a &l1k Magnetic Disk&r in.",
+               "3. Attach a &lCopper Drive Bay&r to the bushing and put a &l1k Magnetic Disk&r in.",
                "4. Attach an &lAnalog CRT Terminal&r to the bay or the bushing and right-click it.",
                "Done: what you put into the terminal lies on the disk. Devices pass channels on to each other, so no pipes are needed at first.",
                "&oRight-click the core to see the channels in use and what to build next.&r"
@@ -217,7 +217,7 @@
                "The &lEnd Rod&r is the base of the anvil and the &ldense pipe&r is the central crate of the front.",
                "On assembly the blocks turn into one machine: Source columns, the forge chamber with its anvil, the crystal. Break any part and everything goes back to ordinary blocks.",
                "# Network connectors",
-               "A network pipe can come from &lany side except the roof&r: one connector on the front (the central crate's port), one on the back, one on each side (near the back edge) and one underneath. They are easy to spot - brass rings with a turquoise rim."
+               "A network pipe can come from &lany side except the roof&r: one connector on the front, one on the back, one on each side and one underneath. They are easy to spot - brass rings with a turquoise rim."
              ]},
             {"type": "text", "title": "How it works",
              "text": [
@@ -326,7 +326,7 @@
              "condition": "Then the press: one Flattened Cryo-Substrate.",
              "text": ["Mixing happens in a Basin under the Mixer."]},
             {"type": "text", "title": "As an autocraft chain",
-             "text": ["Two processing patterns: a block + 250 mB of cryo-source -> torn mind (a Gateway next to the Basin), and torn mind -> plate (a Gateway next to a Depot under the Press).", "An Import Bus brings the results back. The network pumps the cryo-source itself, see &lLiquid Cryo-Source&r."]}
+             "text": ["Two processing patterns: a block + 250 mB of cryo-source -> torn mind, and torn mind -> plate.", "An Import Bus brings the results back. The network pumps the cryo-source itself, see &lLiquid Cryo-Source&r."]}
           ]
         },
         {
@@ -378,8 +378,8 @@
             {"type": "text", "title": "Snow and ice from the network",
              "text": [
                "The mixer freezes water with &lLiquid Cryo-Source&r. Two modes, switched in its window:",
-               "• &lsnow&r - fast: a snow block every second (250 mB of water and 25 mB of Cryo-Source). Two snow blocks and a carved pumpkin make a snow golem, and snow golems make the plates for pipes;",
-               "• &lice&r - slow: a block of ice every 5 seconds (1000 mB and 100 mB). Nine blocks of ice make Packed Ice, by hand or by autocraft - the blank for Cryo-Substrate in the Saturator.",
+               "• &lsnow&r - fast: a snow block every second. Two snow blocks and a carved pumpkin make a snow golem, and snow golems make the plates for pipes;",
+               "• &lice&r - slow: a block of ice every 5 seconds. Nine blocks of ice make Packed Ice, by hand or by autocraft - the blank for Cryo-Substrate in the Saturator.",
                "&oThe snow or ice lands in the tray in front and leaves it by itself (see “Auto-output”).&r"
              ]},
             {"type": "text", "title": "Filling the flasks",
@@ -468,7 +468,7 @@
                "Until you have iron for the whole array, put a &lsmall tower&r under the core - a column of four blocks:",
                "• the core on top,",
                "• two Atlas Conduits under it,",
-               "• a Cable Bushing at the bottom (attach pipes and devices to it),",
+               "• a Cable Bushing at the bottom,",
                "• a Source supply touching any block of the network.",
                "Such a network gives &l16 channels&r - for terminals, a couple of cabinets and buses. Its one line goes through the bushing.",
                "&oThe tower is the central column of the future array: build the monument around it, nothing is taken apart.&r"
@@ -491,7 +491,7 @@
             {"type": "blueprint", "layer": 1, "title": "Layer 2 - the Atlants' legs",
              "text": ["Corners: &lAtlants&r (lower half).", "Center: a &lconduit&r. Sides: &lcasing&r or a &lChannel Expander&r (cycling in the diagram)."]},
             {"type": "blueprint", "layer": 2, "title": "Layer 3 - the shoulders",
-             "text": ["Corners: Atlants (the upper half - the item places it itself).", "Center: a conduit. Sides: casing or expanders."]},
+             "text": ["Corners: Atlants (the upper half).", "Center: a conduit. Sides: casing or expanders."]},
             {"type": "blueprint", "layer": 3, "title": "Layer 4 - the crown",
              "text": ["Corners and sides: &lcasing&r, center: the &lAtlas Core&r.", "The core crystal rises above the ring of casings."]},
             {"type": "text", "title": "Building hints",
@@ -581,7 +581,7 @@
              "text": ["An iron golem colossus two blocks tall. Four Atlants hold the array up by its corners."]},
             {"type": "text", "title": "About the statue",
              "text": [
-               "• Placed with &lone item into two blocks&r (like a door), so free space above is required.",
+               "• Placed with &lone item into two blocks&r, so free space above is required.",
                "• Both halves break together; the item drops once.",
                "• The lower half stands on layer 2 of the array, the upper half on layer 3. Mix the halves up and the array will not count.",
                "• When the array forms the Atlants turn themselves: northern ones face north, southern ones face south.",
@@ -997,7 +997,7 @@
             {"type": "text", "title": "How buses work",
              "text": [
                "Buses connect the network to the outside world - chests, furnaces, machine inventories. Each takes 1 channel.",
-               "A bus faces &lthe container with its front&r (place it aiming at the block). Without upgrades it moves up to 16 items or 1000 mB of fluid at a time, two and a half times a second.",
+               "A bus faces &lthe container with its front&r. Without upgrades it moves up to 16 items or 1000 mB of fluid at a time, two and a half times a second.",
                "A bus is compact: it takes the half of the block next to the container. Its other sides have &lpipe sockets&r that grow into mini tubes to the block edge next to a network node.",
                "Buses and pipes are &lsteps&r: you walk onto them without jumping.",
                "Three buses:",
@@ -1356,7 +1356,7 @@
                "A 3 x 2 x 2 cabinet with two atlants at the sides — they are what holds it:",
                "• front: the Cryo-Mainframe at the bottom middle with &l5 glass blocks&r around it;",
                "• back row: &l6 Atlas Casings&r;",
-               "• at both sides of the front row — an &lAtlant&r (the two-block statue, facing any way).",
+               "• at both sides of the front row — an &lAtlant&r.",
                "The cabinet assembles itself (checked every second); right-click an unassembled one to learn what is missing and where. When it assembles the atlants are &lbuilt into&r the cabinet: their torsos come straight out of its sides, the outer arm wraps around the front corner and grips the post, the inner one rests on the roof crest, and their heads still follow you.",
                "Break any part and the cabinet comes apart, the other blocks come back (a broken atlant drops whole). A network pipe can go to any part."
              ]},

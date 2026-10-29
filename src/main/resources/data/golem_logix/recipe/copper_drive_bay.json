@@ -5,7 +5,7 @@
     "C": "minecraft:copper_ingot",
     "G": "minecraft:glass",
     "M": "golem_logix:flattened_copper_matrix",
-    "B": "minecraft:copper_block"
+    "B": "#golem_logix:copper_block_or_chest"
   },
   "pattern": [
     "CGC",

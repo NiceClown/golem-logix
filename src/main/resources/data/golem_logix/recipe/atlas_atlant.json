@@ -4,12 +4,13 @@
   "key": {
     "B": "minecraft:iron_block",
     "I": "minecraft:iron_ingot",
-    "P": "golem_logix:flattened_iron_core"
+    "P": "golem_logix:flattened_iron_core",
+    "C": "#golem_logix:copper_block_or_chest"
   },
   "pattern": [
     " P ",
     "IBI",
-    "I I"
+    "ICI"
   ],
   "result": {
     "count": 1,

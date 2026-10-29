@@ -9,9 +9,13 @@
 - **An empty allow list stops the Annihilation Bus**, so it stands still while being set up. A new bus starts with an empty deny
   list and works on everything, as before; buses saved with an empty allow list keep working as they did.
 - **JEI lists the Crafting Terminal** among the crafting tables of the crafting recipes.
+- **A copper chest counts as a copper block** in every recipe of the mod but the plate recipes: the chest a copper golem
+  leaves behind is not wasted (any oxidation, waxed too). The **Atlant** takes a copper block or chest between its legs - it
+  has copper in its make.
 - **The guide book reads more cleanly**: emphasis is set in copper ink instead of Minecraft's bold, which ran dense letters
   (dense Cyrillic letters, the ¼ sign) together; fractions are written as digits. The Quick start is written anew: the first plates, power, the
-  first network, what next.
+  first network, what next. Brackets no longer spell out recipes or how a block is placed: recipes are in JEI and on the
+  recipe pages, placing is the player's to find out.
 
 ## 2.0.11 (26.1.2) — The Copper Tank and the golem buses
 

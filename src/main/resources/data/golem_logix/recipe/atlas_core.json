@@ -3,7 +3,7 @@
   "category": "misc",
   "key": {
     "B": "minecraft:iron_block",
-    "C": "minecraft:copper_block",
+    "C": "#golem_logix:copper_block_or_chest",
     "I": "golem_logix:flattened_iron_core",
     "M": "golem_logix:flattened_copper_matrix"
   },

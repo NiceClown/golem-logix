@@ -3,7 +3,7 @@
   "category": "redstone",
   "key": {
     "K": "minecraft:carved_pumpkin",
-    "C": "minecraft:copper_block",
+    "C": "#golem_logix:copper_block_or_chest",
     "M": "golem_logix:flattened_copper_matrix",
     "E": "golem_logix:injector_export_bus",
     "P": "minecraft:piston"
