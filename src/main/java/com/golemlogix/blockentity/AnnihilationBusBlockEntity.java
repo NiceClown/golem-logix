@@ -5,6 +5,7 @@ import com.golemlogix.blocks.GolemPlaneBlock;
 import com.golemlogix.config.GolemConfig;
 import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.system.GolemNetwork;
+import com.golemlogix.system.ItemKey;
 import com.golemlogix.system.NbtBridge;
 import com.golemlogix.upgrade.RedstoneControl;
 import com.golemlogix.upgrade.RedstoneMode;
@@ -57,10 +58,13 @@ import java.util.UUID;
  * invulnerable creatures are never
  * touched; the filter takes spawn eggs (which creatures), and "grown only" spares the young.</li>
  * </ul>
- * Settings, as on a clicker: the click, sneaking, the filter as an allow or a deny list (by the block's item; empty works on
- * everything), and "grown only" (a crop or anything with an age only when fully grown). Upgrades: redstone, a Fuzzy Card, and
+ * Settings, as on a clicker: the click, sneaking, the filter as an allow or a deny list (by the block's item; an empty allow
+ * list works on nothing - the bus stands still while it is set up - an empty deny list on everything), and "grown only" (a crop or anything with an age only when fully grown). Upgrades: redstone, a Fuzzy Card, and
  * the secret Plasma Temper: the tool in the slot never wears. Its speed is its tool's: it mines as a player would with it
  * (Efficiency counts), strikes at the weapon's attack speed, and clicks once a bus interval.
+ * With an Autocraft Module it keeps its tool slot filled from the network with what the player last put there: bone meal
+ * topped up when half used, a worn tool (one point of durability left) swapped for a fresh one, the worn one into the network;
+ * what the network lacks is ordered from the calculators (a batch, or one).
  */
 @EventBusSubscriber(modid = GolemLogixMod.MOD_ID)
 public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlaneBlock.Waking {
@@ -77,19 +81,47 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
     private static AnnihilationBusBlockEntity breaking;
 
     private final OwnedContainer filters = new OwnedContainer(FILTER_SLOTS, this, s -> true);
-    private final SimpleContainer tool = new SimpleContainer(1) {
+    private final ToolContainer tool = new ToolContainer();
+    /** What the tool slot is refilled with (one, the tool unworn): what the player last put there; empty once they take it out. */
+    private ItemStack refill = ItemStack.EMPTY;
+    private long lastCraftRequest = -1000;
+    private static final int CRAFT_REQUEST_COOLDOWN = 40, REFILL_EVERY = 10;
+
+    /** The tool slot; the window tells it when the player takes the item out (then it is not refilled any more). */
+    public class ToolContainer extends SimpleContainer {
+        ToolContainer() {
+            super(1);
+        }
+
         @Override
         public void setChanged() {
             super.setChanged();
+            ItemStack held = getItem(0);
+            if (!held.isEmpty()) {
+                refill = held.copyWithCount(1);
+                if (refill.isDamageableItem()) {
+                    refill.setDamageValue(0);
+                }
+            }
             AnnihilationBusBlockEntity.this.setChanged();
             sync();
         }
-    };
+
+        /** The player emptied the slot: nothing to refill. */
+        public void forget() {
+            if (getItem(0).isEmpty()) {
+                refill = ItemStack.EMPTY;
+                AnnihilationBusBlockEntity.this.setChanged();
+            }
+        }
+    }
     private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.ANNIHILATION_BUS, this);
     private final RedstoneControl redstone = new RedstoneControl();
 
     private int mode = LEFT;
-    private boolean sneak, denyList, grownOnly;
+    private boolean sneak, grownOnly;
+    /** A new bus works on everything (an empty deny list); an empty allow list stops it. */
+    private boolean denyList = true;
     /** Mining progress on the block in front (0..1), and the block it is for. */
     private float progress;
     @Nullable
@@ -110,7 +142,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         return filters;
     }
 
-    public SimpleContainer getTool() {
+    public ToolContainer getTool() {
         return tool;
     }
 
@@ -235,6 +267,10 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         Direction facing = state.getValue(DirectionalBlock.FACING);
         BlockPos target = pos.relative(facing);
         GolemNetwork net = GolemNetwork.get(level, pos);
+        if (Math.floorMod(now + pos.asLong(), REFILL_EVERY) == 0 && net.isOnline() && net.isDeviceActive(pos) && refill(level, net)) {
+            sleepUntil = 0;
+            idleSteps = 0;
+        }
         boolean ready = now >= sleepUntil && level.isLoaded(target) && net.isOnline() && net.isDeviceActive(pos)
                 && redstone.allows(hasRedstone, powered, false);
         if (!ready) {
@@ -292,6 +328,90 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         }
     }
 
+    /** The two items are the same thing for the tool slot: the same tool however worn, or exactly the same item. */
+    private static boolean sameKind(ItemStack a, ItemStack b) {
+        return a.isDamageableItem() ? a.is(b.getItem()) : ItemStack.isSameItemSameComponents(a, b);
+    }
+
+    /** A tool on its last point of durability: the golem will not use it up (unless the Plasma Temper keeps it whole). */
+    private boolean wornOut(ItemStack s) {
+        return s.isDamageableItem() && s.getDamageValue() >= s.getMaxDamage() - 1 && !tempered();
+    }
+
+    /**
+     * Autocraft Module: the tool slot refilled from the network. True if something changed.
+     * A tool worn out is swapped for the least worn of the same kind the network has (the worn one goes into the network); bone meal
+     * and the like are topped up to a full stack once half is gone; an empty slot is filled again. What the network lacks is ordered.
+     */
+    private boolean refill(ServerLevel level, GolemNetwork net) {
+        if (refill.isEmpty() || !upgrades.has(UpgradeType.CRAFTING)) {
+            return false;
+        }
+        ItemStack held = tool.getItem(0);
+        if (!held.isEmpty() && !sameKind(held, refill)) {
+            return false;
+        }
+        if (refill.isDamageableItem()) {
+            if (!held.isEmpty() && !wornOut(held)) {
+                return false;
+            }
+            ItemKey best = null;
+            for (ItemKey k : net.listItems().keySet()) {
+                ItemStack s = k.stack();
+                if (s.is(refill.getItem()) && !wornOut(s) && (best == null || s.getDamageValue() < best.stack().getDamageValue())) {
+                    best = k;
+                }
+            }
+            if (best == null || !held.isEmpty() && !net.insertItem(held, true).isEmpty()) {
+                order(level, net, ItemKey.of(refill), 1);
+                return false;
+            }
+            ItemStack fresh = net.extractItem(best.stack(), 1, false);
+            if (fresh.isEmpty()) {
+                return false;
+            }
+            if (!held.isEmpty()) {
+                net.insertItem(held, false);
+            }
+            tool.setItem(0, fresh);
+            return true;
+        }
+        int max = refill.getMaxStackSize();
+        if (!held.isEmpty() && held.getCount() > max / 2) {
+            return false;
+        }
+        int want = max - held.getCount();
+        ItemStack got = net.extractItem(refill, want, false);
+        if (got.getCount() < want) {
+            order(level, net, ItemKey.of(refill), max);
+        }
+        if (got.isEmpty()) {
+            return false;
+        }
+        tool.setItem(0, held.isEmpty() ? got : held.copyWithCount(held.getCount() + got.getCount()));
+        return true;
+    }
+
+    /** Orders what the slot lacks from the calculators: amount at once if the ingredients are there, else 8, else one. */
+    private void order(ServerLevel level, GolemNetwork net, ItemKey key, int amount) {
+        long now = level.getGameTime();
+        if (now - lastCraftRequest < CRAFT_REQUEST_COOLDOWN || !net.canCraft(key) || net.busCraftPending(worldPosition, key)) {
+            return;
+        }
+        lastCraftRequest = now;
+        for (long n : new long[]{amount, 8, 1}) {
+            if (n > amount) {
+                continue;
+            }
+            java.util.Map<ItemKey, Long> one = new java.util.LinkedHashMap<>();
+            one.put(key, n);
+            GolemNetwork.StartType r = net.startCrafting(one, null, worldPosition).type();
+            if (r == GolemNetwork.StartType.STARTED || r == GolemNetwork.StartType.NO_CPU) {
+                return;
+            }
+        }
+    }
+
     private void sleep(long now) {
         int interval = interval();
         idleSteps = Math.min(MAX_IDLE_STEPS, idleSteps + 1);
@@ -337,7 +457,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
                 break;
             }
         }
-        return !any || listed != denyList;
+        return any ? listed != denyList : denyList;
     }
 
     /** A crop at its last age; a block without an age is always grown. */
@@ -496,7 +616,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
                 break;
             }
         }
-        return !any || listed != denyList;
+        return any ? listed != denyList : denyList;
     }
 
     /** Attack: one strike at every creature in front, with the tool (or an iron sword), at full strength. False if none was there. */
@@ -619,7 +739,11 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
             redstone.save(tag);
             tag.putBoolean("Sneak", sneak);
             tag.putBoolean("DenyList", denyList);
+            tag.putBoolean("EmptyAllowStops", true);
             tag.putBoolean("GrownOnly", grownOnly);
+            if (!refill.isEmpty()) {
+                tag.put("Refill", NbtBridge.saveItem(refill, registries));
+            }
         }
         if (!tool.getItem(0).isEmpty()) {
             tag.put("Tool", NbtBridge.saveItem(tool.getItem(0), registries));
@@ -636,8 +760,21 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
             upgrades.fromTag(tag.getListOrEmpty("Upgrades"), registries);
             redstone.load(tag);
             sneak = tag.getBooleanOr("Sneak", false);
-            denyList = tag.getBooleanOr("DenyList", false);
+            denyList = tag.getBooleanOr("DenyList", true);
+            if (!tag.getBooleanOr("EmptyAllowStops", false) && !denyList && filters.isEmpty()) {
+                // saved when an empty allow list still meant "everything": it stays working as it did
+                denyList = true;
+            }
             grownOnly = tag.getBooleanOr("GrownOnly", false);
+            refill = tag.contains("Refill") ? NbtBridge.loadItem(registries, tag.getCompoundOrEmpty("Refill")).orElse(ItemStack.EMPTY)
+                    : ItemStack.EMPTY;
+            if (refill.isEmpty() && tag.contains("Tool")) {
+                // saved before the refill: what is in the slot is what it refills
+                refill = NbtBridge.loadItem(registries, tag.getCompoundOrEmpty("Tool")).orElse(ItemStack.EMPTY).copyWithCount(1);
+                if (refill.isDamageableItem()) {
+                    refill.setDamageValue(0);
+                }
+            }
         }
         ItemStack t = tag.contains("Tool") ? NbtBridge.loadItem(registries, tag.getCompoundOrEmpty("Tool")).orElse(ItemStack.EMPTY)
                 : ItemStack.EMPTY;

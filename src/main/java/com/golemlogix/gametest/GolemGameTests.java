@@ -773,6 +773,53 @@ public class GolemGameTests {
         helper.succeed();
     }
 
+    /**
+     * The Annihilation Bus with an Autocraft Module refills its tool slot: bone meal topped up from the network, a worn pickaxe
+     * swapped for a fresh one (the worn one into the network); taken out by the player, the slot stays empty. An empty allow list
+     * stops it.
+     */
+    public static void annihilationBusRefills(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos bus = BUS_OUT, front = BUS_OUT.north();
+        helper.setBlock(bus, ModBlocks.ANNIHILATION_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        helper.setBlock(front, Blocks.AIR);
+        var be = helper.getBlockEntity(bus, com.golemlogix.blockentity.AnnihilationBusBlockEntity.class);
+        be.getUpgrades().setItem(com.golemlogix.upgrade.UpgradeSpec.ANNIHILATION_BUS.slotOf(com.golemlogix.upgrade.UpgradeType.CRAFTING),
+                new ItemStack(ModItems.AUTOCRAFT_MODULE.get()));
+        be.menuData().set(1, com.golemlogix.blockentity.AnnihilationBusBlockEntity.RIGHT);
+        be.getTool().setItem(0, new ItemStack(Items.BONE_MEAL, 10));
+        ItemKey meal = ItemKey.of(new ItemStack(Items.BONE_MEAL));
+        helper.runAfterDelay(2, () -> net(helper, bay).insertItem(new ItemStack(Items.BONE_MEAL, 64), false));
+        helper.runAfterDelay(30, () -> {
+            helper.assertTrue(be.getTool().getItem(0).getCount() == 64 && net(helper, bay).itemCountOf(meal) == 10,
+                    "bone meal topped up to a stack: " + be.getTool().getItem(0));
+            be.getTool().setItem(0, ItemStack.EMPTY);
+            be.getTool().forget();
+        });
+        helper.runAfterDelay(60, () -> {
+            helper.assertTrue(be.getTool().getItem(0).isEmpty(), "taken out by the player, the slot stays empty");
+            ItemStack worn = new ItemStack(Items.IRON_PICKAXE);
+            worn.setDamageValue(worn.getMaxDamage() - 1);
+            net(helper, bay).insertItem(new ItemStack(Items.IRON_PICKAXE), false);
+            be.getTool().setItem(0, worn);
+            be.menuData().set(1, com.golemlogix.blockentity.AnnihilationBusBlockEntity.LEFT);
+        });
+        helper.runAfterDelay(90, () -> {
+            ItemStack t = be.getTool().getItem(0);
+            helper.assertTrue(t.is(Items.IRON_PICKAXE) && t.getDamageValue() == 0, "a fresh pickaxe in the slot: " + t);
+            boolean wornBack = net(helper, bay).listItems().keySet().stream().anyMatch(k -> k.stack().is(Items.IRON_PICKAXE)
+                    && k.stack().getDamageValue() > 0);
+            helper.assertTrue(wornBack, "the worn one went into the network");
+            // an empty allow list: the golem stands still
+            be.menuData().set(3, 0);
+            helper.setBlock(front, Blocks.STONE);
+        });
+        helper.runAfterDelay(150, () -> {
+            helper.assertBlockPresent(Blocks.STONE, front);
+            helper.succeed();
+        });
+    }
+
     /** Hewer's Annihilation Bus attacking with a diamond sword: the pig in front dies and its pork goes into the network. */
     public static void annihilationBusAttacks(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
@@ -858,9 +905,12 @@ public class GolemGameTests {
             }
             for (int[] b : new int[][]{{com.golemlogix.menu.AnnihilationBusMenu.BUTTON_SNEAK, 2},
                     {com.golemlogix.menu.AnnihilationBusMenu.BUTTON_LIST, 3}, {com.golemlogix.menu.AnnihilationBusMenu.BUTTON_GROWN, 4}}) {
-                helper.assertTrue(data.get(b[1]) == 0 && menu.clickMenuButton(player, b[0]) && data.get(b[1]) == 1, "button " + b[0] + " turns its setting on");
+                // a new bus: sneak off, a deny list (an empty one works on everything), grown only off
+                int was = b[0] == com.golemlogix.menu.AnnihilationBusMenu.BUTTON_LIST ? 1 : 0;
+                helper.assertTrue(data.get(b[1]) == was && menu.clickMenuButton(player, b[0]) && data.get(b[1]) == 1 - was,
+                        "button " + b[0] + " switches its setting");
                 menu.clickMenuButton(player, b[0]);
-                helper.assertTrue(data.get(b[1]) == 0, "and off again");
+                helper.assertTrue(data.get(b[1]) == was, "and back again");
             }
             int hotbar0 = menu.slots.size() - 9;
             player.getInventory().setItem(0, new ItemStack(Items.DIAMOND_PICKAXE));

@@ -76,6 +76,7 @@ public final class GolemGameTestRegistry {
             new Test("exportbuskeeps", GolemGameTests::exportBusKeeps, 160, 0),
             new Test("exportbusslotwindow", GolemGameTests::exportBusSlotWindow, 60, 0),
             new Test("annihilationbusattacks", GolemGameTests::annihilationBusAttacks, 140, 0),
+            new Test("annihilationbusrefills", GolemGameTests::annihilationBusRefills, 300, 0),
             new Test("annihilationbustempered", GolemGameTests::annihilationBusTempered, 120, 0),
             new Test("annihilationbuswindow", GolemGameTests::annihilationBusWindow, 100, 0),
             new Test("formationbuswindow", GolemGameTests::formationBusWindow, 100, 0),

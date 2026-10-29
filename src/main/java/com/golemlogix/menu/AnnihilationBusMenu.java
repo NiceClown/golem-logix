@@ -49,11 +49,30 @@ public class AnnihilationBusMenu extends GolemMenu {
             public boolean mayPlace(ItemStack stack) {
                 return !(stack.getItem() instanceof UpgradeItem);
             }
+
+            // taken out by the player: the Autocraft Module stops refilling it
+            @Override
+            public void onTake(Player player, ItemStack stack) {
+                super.onTake(player, stack);
+                forget(container);
+            }
+
+            @Override
+            public void setByPlayer(ItemStack newStack, ItemStack oldStack) {
+                super.setByPlayer(newStack, oldStack);
+                forget(container);
+            }
         });
         this.containerSlotCount = toolSlot + 1;
         addUpgradeSlots(upgrades, UpgradeSpec.ANNIHILATION_BUS, IMAGE_WIDTH + 5, 8);
         addPlayerSlots(inv, 8, IMAGE_HEIGHT - 82);
         addDataSlots(data);
+    }
+
+    private static void forget(Container tool) {
+        if (tool instanceof AnnihilationBusBlockEntity.ToolContainer t) {
+            t.forget();
+        }
     }
 
     public RedstoneMode redstoneMode() {

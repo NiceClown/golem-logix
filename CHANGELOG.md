@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.12 (26.1.2) — The Hewer refills its tool
+
+- **Hewer's Annihilation Bus takes an Autocraft Module**, which refills its tool slot from the network with what the player last
+  put there: bone meal (or anything that stacks) is topped up to a full stack once half is gone; a tool on its last point of
+  durability is swapped for the least worn one of the same kind, the worn one going into the network. What the network lacks
+  is ordered from the Cryo-Calculators - bone meal from bones. Taken out by hand, the slot stays empty.
+- **An empty allow list stops the Annihilation Bus**, so it stands still while being set up. A new bus starts with an empty deny
+  list and works on everything, as before; buses saved with an empty allow list keep working as they did.
+
 ## 2.0.11 (26.1.2) — The Copper Tank and the golem buses
 
 - **New block: the Copper Tank.** Making a copper golem leaves a vanilla copper chest where the copper block was; four glass blocks

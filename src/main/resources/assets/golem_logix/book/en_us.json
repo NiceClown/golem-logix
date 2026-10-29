@@ -1056,6 +1056,7 @@
              "text": [
                "The window has a &ltool slot&r. Empty, the golem brings the &lstrength of every iron tool&r: the best of the iron pickaxe, axe, shovel, hoe and sword for that block, never worn out.",
                "Put a tool in and the golem uses it, enchantments and all (Fortune, Silk Touch, Efficiency) - and wears it. A tool about to break is put down instead.",
+               "• With an &lAutocraft Module&r the slot is &lrefilled&r from the network with what you last put there: bone meal topped up once half is gone, a worn-out tool swapped for a fresh one (the worn one goes into the network). What the network lacks is ordered from the calculators - bone meal from bones, say. Take the item out by hand and the slot is left empty.",
                "&oA block the tool cannot harvest (obsidian for iron) is left alone.&r"
              ]},
             {"type": "text", "title": "Clicks",
@@ -1064,7 +1065,7 @@
                "• &lLeft click&r: mines the block like a player, as fast as the tool allows - Efficiency counts, co-processors do not fit here: a better tool is the only way to speed it up - cracks and all. The drops go into the network; while it cannot take them all, the golem waits.",
                "• &lRight click&r: once an interval uses its item (or bare hand) on the block - a lever, shears on a pumpkin, a hoe, bone meal. What falls out goes into the network.",
                "• &lAttack&r: at the weapon's own attack speed strikes the creatures in front with the tool (an iron sword when the slot is empty) at full strength and without knockback; the loot goes into the network. Players, pets and named creatures are never touched; spawn eggs in the filter choose the creatures, and &lgrown only&r spares the young.",
-               "• &lSneaking&r, the filter as an &lallow or deny list&r (empty - every block), &lgrown only&r (crops only when ripe) and the &lRedstone Module&r."
+               "• &lSneaking&r, the filter as an &lallow or deny list&r (a new bus has an empty deny list and works on every block; an &lempty allow list&r stops it - handy while you set it up), &lgrown only&r (crops only when ripe) and the &lRedstone Module&r."
              ]}
           ]
         },

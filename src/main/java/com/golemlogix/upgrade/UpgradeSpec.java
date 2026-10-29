@@ -13,8 +13,11 @@ public record UpgradeSpec(int slots, int maxSpeed, boolean crafting, boolean red
     public static final UpgradeSpec IMPORT_BUS = new UpgradeSpec(6, 4, false, true, true);
     /** Export bus: up to 4 speed upgrades, autocraft, redstone and a Fuzzy Card. */
     public static final UpgradeSpec EXPORT_BUS = new UpgradeSpec(7, 4, true, true, true);
-    /** Annihilation Bus: redstone, a Fuzzy Card and the Plasma Temper - its speed is its tool's (and the tool's enchantments). */
-    public static final UpgradeSpec ANNIHILATION_BUS = new UpgradeSpec(3, 0, false, true, true, true);
+    /**
+     * Annihilation Bus: an Autocraft Module (it refills its tool slot from the network, and orders what the network lacks),
+     * redstone, a Fuzzy Card and the Plasma Temper - its speed is its tool's (and the tool's enchantments).
+     */
+    public static final UpgradeSpec ANNIHILATION_BUS = new UpgradeSpec(4, 0, true, true, true, true);
     /** Interface: like the export bus, speed upgrades, stock autocraft, redstone and a Fuzzy Card. */
     public static final UpgradeSpec INTERFACE = new UpgradeSpec(7, 4, true, true, true);
     /** Cryo-Calculator: up to 4 Compressed Co-Processors (speed-up) and redstone. */
