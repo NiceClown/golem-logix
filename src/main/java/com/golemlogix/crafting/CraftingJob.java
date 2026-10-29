@@ -207,6 +207,26 @@ public class CraftingJob {
         return stack.copyWithCount(stack.getCount() - take);
     }
 
+    /** Takes from an incoming fluid what the job is waiting for (a fluid output of a processing pattern). Returns the mB taken. */
+    public int absorbFluid(net.neoforged.neoforge.fluids.FluidStack fluid) {
+        if (awaiting.isEmpty() || fluid.isEmpty()) {
+            return 0;
+        }
+        ItemKey key = com.golemlogix.system.Ingredients.fluidKey(fluid);
+        long want = awaiting.getOrDefault(key, 0L);
+        if (want <= 0) {
+            return 0;
+        }
+        int take = (int) Math.min(want, fluid.getAmount());
+        awaiting.merge(key, (long) -take, Long::sum);
+        if (awaiting.get(key) <= 0) {
+            awaiting.remove(key);
+        }
+        inventory.merge(key, (long) take, Long::sum);
+        settleInFlight(key, take);
+        return take;
+    }
+
     /** A received result closes portions in order (first unloaded, first received). */
     private void settleInFlight(ItemKey key, long amount) {
         Iterator<InFlight> it = inFlight.iterator();

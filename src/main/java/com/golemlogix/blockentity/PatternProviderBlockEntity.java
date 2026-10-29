@@ -38,6 +38,8 @@ import java.util.List;
 public class PatternProviderBlockEntity extends BlockEntity {
     public static final int SLOTS = 9;
     public static final int RETURN_SLOTS = 3;
+    /** Return tanks for fluids (a machine's fluid result), each this many mB. */
+    public static final int RETURN_TANKS = 3, RETURN_TANK_MB = 16_000;
     /** How often the return slots are emptied into the network (ticks). */
     private static final int RETURN_INTERVAL = 5;
 
@@ -51,6 +53,67 @@ public class PatternProviderBlockEntity extends BlockEntity {
         }
     };
     private final OwnedContainer returns = new OwnedContainer(RETURN_SLOTS, this, s -> true);
+    private final net.neoforged.neoforge.fluids.FluidStack[] returnFluids = {net.neoforged.neoforge.fluids.FluidStack.EMPTY, net.neoforged.neoforge.fluids.FluidStack.EMPTY, net.neoforged.neoforge.fluids.FluidStack.EMPTY};
+    /** The return tanks from any side: anything goes in (but Liquid Cryo-Source, which is never stored), nothing comes out. */
+    private final net.neoforged.neoforge.fluids.capability.IFluidHandler fluidReturns = new net.neoforged.neoforge.fluids.capability.IFluidHandler() {
+        @Override
+        public int getTanks() {
+            return RETURN_TANKS;
+        }
+
+        @Override
+        public net.neoforged.neoforge.fluids.FluidStack getFluidInTank(int tank) {
+            return returnFluids[tank];
+        }
+
+        @Override
+        public int getTankCapacity(int tank) {
+            return RETURN_TANK_MB;
+        }
+
+        @Override
+        public boolean isFluidValid(int tank, net.neoforged.neoforge.fluids.FluidStack stack) {
+            return !com.golemlogix.system.CryoSource.is(stack);
+        }
+
+        @Override
+        public int fill(net.neoforged.neoforge.fluids.FluidStack resource, FluidAction action) {
+            if (resource.isEmpty() || com.golemlogix.system.CryoSource.is(resource)) {
+                return 0;
+            }
+            int to = -1;
+            for (int i = 0; i < RETURN_TANKS && to < 0; i++) {
+                if (net.neoforged.neoforge.fluids.FluidStack.isSameFluidSameComponents(returnFluids[i], resource)) {
+                    to = i;
+                }
+            }
+            for (int i = 0; i < RETURN_TANKS && to < 0; i++) {
+                if (returnFluids[i].isEmpty()) {
+                    to = i;
+                }
+            }
+            if (to < 0) {
+                return 0;
+            }
+            int n = Math.min(resource.getAmount(), RETURN_TANK_MB - returnFluids[to].getAmount());
+            if (n > 0 && action.execute()) {
+                returnFluids[to] = resource.copyWithAmount(returnFluids[to].getAmount() + n);
+                setChanged();
+            }
+            return n;
+        }
+
+        @Override
+        public net.neoforged.neoforge.fluids.FluidStack drain(net.neoforged.neoforge.fluids.FluidStack resource, FluidAction action) {
+            return net.neoforged.neoforge.fluids.FluidStack.EMPTY;
+        }
+
+        @Override
+        public net.neoforged.neoforge.fluids.FluidStack drain(int maxDrain, FluidAction action) {
+            return net.neoforged.neoforge.fluids.FluidStack.EMPTY;
+        }
+    };
+    private net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource> fluidResources;
     private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.REDSTONE_ONLY, this);
     private final RedstoneControl redstone = new RedstoneControl();
 
@@ -143,6 +206,28 @@ public class PatternProviderBlockEntity extends BlockEntity {
                 }
             });
 
+    /** The return tanks for pipes and machines that push out fluids. */
+    public net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource> fluidResources() {
+        if (fluidResources == null) {
+            fluidResources = com.golemlogix.system.LegacyResources.offerFluids(fluidReturns, () -> {
+                net.neoforged.neoforge.fluids.FluidStack[] copy = new net.neoforged.neoforge.fluids.FluidStack[RETURN_TANKS];
+                for (int i = 0; i < RETURN_TANKS; i++) {
+                    copy[i] = returnFluids[i].copy();
+                }
+                return copy;
+            }, copy -> {
+                System.arraycopy(copy, 0, returnFluids, 0, RETURN_TANKS);
+                setChanged();
+            });
+        }
+        return fluidResources;
+    }
+
+    /** What the return tanks hold now (the window shows it). */
+    public net.neoforged.neoforge.fluids.FluidStack returnFluid(int i) {
+        return returnFluids[i];
+    }
+
     /** The return slots for pipes, hoppers and the machines' auto-output. */
     public net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource> itemResources() {
         return itemResources;
@@ -220,11 +305,14 @@ public class PatternProviderBlockEntity extends BlockEntity {
         }
     }
 
-    /** Return slots -> network: first to the jobs waiting for these items, the rest into storage; what does not fit stays. */
+    /** Return slots and tanks -> network: first to the jobs waiting for these, the rest into storage; what does not fit stays. */
     private void flushReturns(Level level, BlockPos pos) {
         boolean any = false;
         for (int i = 0; i < RETURN_SLOTS && !any; i++) {
             any = !returns.getItem(i).isEmpty();
+        }
+        for (int i = 0; i < RETURN_TANKS && !any; i++) {
+            any = !returnFluids[i].isEmpty();
         }
         if (!any) {
             return;
@@ -241,6 +329,16 @@ public class PatternProviderBlockEntity extends BlockEntity {
             ItemStack leftover = net.insertFromMachine(in.copy());
             if (leftover.getCount() != in.getCount()) {
                 returns.setItem(i, leftover);
+            }
+        }
+        for (int i = 0; i < RETURN_TANKS; i++) {
+            net.neoforged.neoforge.fluids.FluidStack f = returnFluids[i];
+            if (!f.isEmpty()) {
+                int n = net.insertFluidFromMachine(f.copy(), null);
+                if (n > 0) {
+                    returnFluids[i] = f.copyWithAmount(Math.max(0, f.getAmount() - n));
+                    setChanged();
+                }
             }
         }
     }
@@ -390,6 +488,15 @@ public class PatternProviderBlockEntity extends BlockEntity {
     protected void saveTag(CompoundTag tag, HolderLookup.Provider registries) {
         tag.put("Patterns", container.createTag(registries));
         tag.put("Returns", returns.createTag(registries));
+        net.minecraft.nbt.ListTag fl = new net.minecraft.nbt.ListTag();
+        for (int i = 0; i < RETURN_TANKS; i++) {
+            if (!returnFluids[i].isEmpty()) {
+                CompoundTag e = (CompoundTag) com.golemlogix.system.NbtBridge.saveFluid(returnFluids[i], registries);
+                e.putByte("Slot", (byte) i);
+                fl.add(e);
+            }
+        }
+        tag.put("ReturnFluids", fl);
         tag.put("Upgrades", upgrades.createTag(registries));
         tag.putBoolean("Blocking", blocking);
         redstone.save(tag);
@@ -398,6 +505,15 @@ public class PatternProviderBlockEntity extends BlockEntity {
     protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
         container.fromTag(tag.getListOrEmpty("Patterns"), registries);
         returns.fromTag(tag.getListOrEmpty("Returns"), registries);
+        java.util.Arrays.fill(returnFluids, net.neoforged.neoforge.fluids.FluidStack.EMPTY);
+        net.minecraft.nbt.ListTag fl = tag.getListOrEmpty("ReturnFluids");
+        for (int k = 0; k < fl.size(); k++) {
+            CompoundTag e = fl.getCompoundOrEmpty(k);
+            int i = e.getByteOr("Slot", (byte) 0);
+            if (i >= 0 && i < RETURN_TANKS) {
+                returnFluids[i] = com.golemlogix.system.NbtBridge.loadFluid(registries, e).orElse(net.neoforged.neoforge.fluids.FluidStack.EMPTY);
+            }
+        }
         upgrades.fromTag(tag.getListOrEmpty("Upgrades"), registries);
         blocking = tag.getBooleanOr("Blocking", false);
         redstone.load(tag);

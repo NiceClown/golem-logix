@@ -100,12 +100,12 @@ public record PatternData(boolean crafting, List<ItemStack> inputs, List<ItemSta
         return false;
     }
 
-    /** How many of the given item the recipe gives per execution. */
+    /** How many of the given item the recipe gives per execution (a fluid in mB). */
     public int outputCount(ItemKey key) {
         int n = 0;
         for (ItemStack s : outputs) {
-            if (!s.isEmpty() && key.matches(s)) {
-                n += s.getCount();
+            if (!s.isEmpty() && com.golemlogix.system.Ingredients.key(s).equals(key)) {
+                n += com.golemlogix.system.Ingredients.amount(s);
             }
         }
         return n;

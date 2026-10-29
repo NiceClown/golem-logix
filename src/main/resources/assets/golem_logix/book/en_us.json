@@ -1278,6 +1278,7 @@
                "• With several neighbors it tries them in turn. If a machine cannot take everything at once, the batch is postponed and retried.",
                "• The button to the left of the window picks the &loutput side&r: all sides or a single one — then the gateway feeds only the machine on that side. Handy when machines stand side by side. The arrow on the block's faces points at the chosen side; a sun with rays means it feeds all sides.",
                "• The result comes back into the &lreturn slots&r (the column on the right of the window) and goes straight into the network. The mod's machines put it there themselves (auto-output); for a furnace or another mod's machine let it push into the Gateway, or put a &lVacuum Import Bus&r next to it.",
+                 "• A &lfluid result&r goes into the Gateway's three &lreturn tanks&r of 16 buckets: a machine or a pipe pours it in from any side, and it goes straight on to the job or the network.",
                "&oCrafting-table recipes do not concern the gateway: the calculator carries them out.&r"
              ]},
             {"type": "text", "title": "Waiting for the result",
@@ -1477,7 +1478,8 @@
             {"type": "text", "title": "Setting the fluid",
              "text": ["Click a filter, stock or pattern slot with a &lCryo-Source Jar&r (any Source jar works too) - Liquid Cryo-Source appears in it. From a recipe viewer it can also simply be dragged in.", "A fluid in a slot counts mB: a click adds &l250 mB&r, a right-click takes 250 away, Shift-click clears the slot."]},
             {"type": "text", "title": "Fluids in patterns",
-             "text": ["In “Machine” mode the recipe viewer's “+” carries fluid ingredients over with their amounts too. A fluid is never an output or a crafting-table ingredient.", "The Gateway pours fluids into the &lsame side&r of the machine as the items, and only if it takes everything. The order planner shows fluids in mB.", "Unused cryo-source (a cancelled job, an Interface's excess) is not returned: it goes back into the aether."]}
+             "text": ["In “Machine” mode the recipe viewer's “+” carries fluid ingredients and &lfluid results&r over with their amounts; by hand a fluid goes into an output cell as into an input. A fluid is never an ingredient or a result of the crafting table.",
+               "A fluid a pattern makes is ordered from the terminal like an item: it is marked “C”, the amount in mB. The machine gives it back into the Gateway's tanks (or an import bus pumps it out).", "The Gateway pours fluids into the &lsame side&r of the machine as the items, and only if it takes everything. The order planner shows fluids in mB.", "Unused cryo-source (a cancelled job, an Interface's excess) is not returned: it goes back into the aether."]}
           ]
         },
         {

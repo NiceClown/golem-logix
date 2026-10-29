@@ -2079,6 +2079,56 @@ public class GolemGameTests {
         });
     }
 
+    /**
+     * A processing pattern that gives a fluid: the order is in mB, the machine gets its ingredients, and the fluid it pours into
+     * the gateway's return tanks goes to the job, then into storage.
+     */
+    public static void autocraftFluidOutput(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        BlockPos machine = PROV.east();
+        helper.setBlock(machine, Blocks.CHEST);
+        Container machineInv = ((Container) helper.getBlockEntity(machine, net.minecraft.world.level.block.entity.BlockEntity.class));
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+        ItemStack water = com.golemlogix.items.FluidGhostItem.of(new FluidStack(Fluids.WATER, 1000));
+        provider.getContainer().setItem(0, card(new PatternData(false, List.of(new ItemStack(Items.ICE)), List.of(water))));
+        ItemKey waterKey = com.golemlogix.system.Ingredients.fluidKey(new FluidStack(Fluids.WATER, 1));
+        helper.getBlockEntity(BAY, CopperDriveBayBlockEntity.class).getContainer().setItem(1, new ItemStack(ModItems.FLUID_DISK_4K.get()));
+
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.ICE, 2), false);
+            GolemNetwork.StartResult r = n.startCrafting(waterKey, 2000);
+            helper.assertTrue(r.type() == GolemNetwork.StartType.STARTED, "start result " + r.type());
+        });
+        helper.runAfterDelay(60, () -> {
+            int ice = 0;
+            for (int i = 0; i < machineInv.getContainerSize(); i++) {
+                ice += machineInv.getItem(i).getCount();
+            }
+            helper.assertTrue(ice == 2, "2000 mB take two runs: two ice into the machine, got " + ice);
+            var tanks = provider.fluidResources();
+            try (var tx = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+                int in = tanks.insert(net.neoforged.neoforge.transfer.fluid.FluidResource.of(Fluids.WATER), 2000, tx);
+                tx.commit();
+                helper.assertTrue(in == 2000, "the return tanks take the water, got " + in);
+            }
+        });
+        helper.runAfterDelay(130, () -> {
+            GolemNetwork n = net(helper, bay);
+            long stored = 0;
+            for (FluidStack f : n.listFluids()) {
+                if (f.getFluid() == Fluids.WATER) {
+                    stored += f.getAmount();
+                }
+            }
+            helper.assertTrue(stored == 2000, "the water went through the job into storage, got " + stored);
+            helper.assertTrue(helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class).isIdle(), "the job is done");
+            helper.succeed();
+        });
+    }
+
     public static void networkNeedsSource(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         putBay(helper, BAY);

@@ -271,11 +271,19 @@ final class RecipeTransfers {
             }
             List<ItemStack> outputs = new ArrayList<>();
             for (IRecipeSlotView view : slots.getSlotViews(RecipeIngredientRole.OUTPUT)) {
-                view.getDisplayedItemStack().ifPresent(s -> {
-                    if (outputs.size() < RecipeFillPayload.MAX_OUTPUTS) {
-                        outputs.add(s.copy());
-                    }
-                });
+                if (outputs.size() >= RecipeFillPayload.MAX_OUTPUTS) {
+                    break;
+                }
+                var item = view.getDisplayedItemStack();
+                if (item.isPresent()) {
+                    outputs.add(item.get().copy());
+                    continue;
+                }
+                // a fluid result (a melter, a squeezer...): a fluid ghost with its amount
+                var fluid = view.getDisplayedIngredient(mezz.jei.api.neoforge.NeoForgeTypes.FLUID_STACK);
+                if (fluid.isPresent() && !fluid.get().isEmpty()) {
+                    outputs.add(com.golemlogix.items.FluidGhostItem.of(fluid.get().copy()));
+                }
             }
             if (inputs.isEmpty() || outputs.isEmpty()) {
                 return helper.createUserErrorWithTooltip(Component.translatable("jei.golem_logix.transfer.no_items"));

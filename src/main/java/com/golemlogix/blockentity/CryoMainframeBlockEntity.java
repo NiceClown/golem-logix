@@ -228,6 +228,15 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         }
 
         @Override
+        public int absorbFluid(net.neoforged.neoforge.fluids.FluidStack fluid) {
+            int n = job == null ? 0 : job.absorbFluid(fluid);
+            if (n > 0) {
+                setChanged();
+            }
+            return n;
+        }
+
+        @Override
         public boolean isRemoved() {
             return CryoMainframeBlockEntity.this.isRemoved() || !cores.contains(this);
         }

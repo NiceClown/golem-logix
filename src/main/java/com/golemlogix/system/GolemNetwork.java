@@ -1678,6 +1678,31 @@ public final class GolemNetwork {
         return insertFromMachine(stack, null);
     }
 
+    /** How many mB of this fluid the running jobs wait for from machines. */
+    public int machineWantsFluid(FluidStack fluid) {
+        return fluid.isEmpty() ? 0 : machineWants(Ingredients.fluidKey(fluid).stack());
+    }
+
+    /**
+     * A fluid from a machine (a gateway's return tanks, an import bus): first to the jobs waiting for it, the rest into storage.
+     * Returns the mB taken.
+     */
+    public int insertFluidFromMachine(FluidStack fluid, @Nullable BlockPos skipTarget) {
+        if (fluid.isEmpty()) {
+            return 0;
+        }
+        int taken = 0;
+        for (com.golemlogix.crafting.CraftingCpu cpu : cpus) {
+            if (taken >= fluid.getAmount()) {
+                break;
+            }
+            if (!cpu.isRemoved()) {
+                taken += cpu.absorbFluid(fluid.copyWithAmount(fluid.getAmount() - taken));
+            }
+        }
+        return taken >= fluid.getAmount() ? taken : taken + insertFluid(fluid.copyWithAmount(fluid.getAmount() - taken), false, skipTarget);
+    }
+
     /** skipTarget = the container the items were just taken from (they are not put back into it). */
     public ItemStack insertFromMachine(ItemStack stack, @Nullable BlockPos skipTarget) {
         ItemStack rest = stack;

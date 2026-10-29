@@ -29,6 +29,12 @@ public interface CraftingCpu {
     /** Accept a machine's result: returns what the job does not need. */
     ItemStack absorb(ItemStack stack);
 
+    /** Accept a fluid a machine gives back: returns the mB the job took. */
+    default int absorbFluid(net.neoforged.neoforge.fluids.FluidStack fluid) {
+        CraftingJob job = getJob();
+        return job == null ? 0 : job.absorbFluid(fluid);
+    }
+
     /** The processor block was removed from the world (or the core disappeared together with its calculator in the mainframe). */
     boolean isRemoved();
 

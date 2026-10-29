@@ -57,13 +57,16 @@ public class ModBlocks {
             () -> new CableBushingBlock(props()));
 
     // Snow Cryo Pipes (16 & 64 Channels)
+    /** A working pipe's soft glow (block light): the frost inside shines a little, as the lit model's faces do. */
+    private static final int PIPE_GLOW = 6;
+
     public static final DeferredBlock<SnowPipeBlock> BASIC_SNOW_PIPE = registerBlock("basic_snow_pipe",
             "tooltip.golem_logix.basic_snow_pipe",
-            () -> new SnowPipeBlock(16, false, props()));
+            () -> new SnowPipeBlock(16, false, props().lightLevel(s -> s.getValue(com.golemlogix.blocks.GolemProperties.ACTIVE) ? PIPE_GLOW : 0)));
 
     public static final DeferredBlock<SnowPipeBlock> DENSE_FROST_PIPE = registerBlock("dense_frost_pipe",
             "tooltip.golem_logix.dense_frost_pipe",
-            () -> new SnowPipeBlock(64, true, props()));
+            () -> new SnowPipeBlock(64, true, props().lightLevel(s -> s.getValue(com.golemlogix.blocks.GolemProperties.ACTIVE) ? PIPE_GLOW : 0)));
 
     // Storage Cabinets
     public static final DeferredBlock<CopperDriveBayBlock> COPPER_DRIVE_BAY = registerBlock("copper_drive_bay",

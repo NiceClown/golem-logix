@@ -353,7 +353,8 @@ public class BusBlockEntity extends BlockEntity {
                 if (sim.isEmpty()) {
                     continue;
                 }
-                int accepted = net.insertFluid(sim, true, target);
+                int wanted = Math.min(sim.getAmount(), net.machineWantsFluid(sim));
+                int accepted = wanted + net.insertFluid(sim.copyWithAmount(sim.getAmount() - wanted), true, target);
                 if (accepted <= 0) {
                     continue;
                 }
@@ -361,7 +362,7 @@ public class BusBlockEntity extends BlockEntity {
                 if (real.isEmpty()) {
                     continue;
                 }
-                int stored = net.insertFluid(real, false, target);
+                int stored = net.insertFluidFromMachine(real, target);
                 if (stored < real.getAmount()) {
                     fluids.fill(real.copyWithAmount(real.getAmount() - stored), IFluidHandler.FluidAction.EXECUTE);
                 }

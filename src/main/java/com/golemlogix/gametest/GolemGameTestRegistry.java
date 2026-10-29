@@ -107,6 +107,7 @@ public final class GolemGameTestRegistry {
             new Test("fuzzycardonbuses", GolemGameTests::fuzzyCardOnBuses, 300, 0),
             new Test("fuzzycardoninterface", GolemGameTests::fuzzyCardOnInterface, 300, 0),
             new Test("autocraftprocessing", GolemGameTests::autocraftProcessing, 400, 0),
+            new Test("autocraftfluidoutput", GolemGameTests::autocraftFluidOutput, 200, 0),
             new Test("networkneedssource", GolemGameTests::networkNeedsSource, 100, 0),
             new Test("formationorientsatlants", GolemGameTests::formationOrientsAtlants, 100, 0),
             new Test("fluiddisks", GolemGameTests::fluidDisks, 200, 0),

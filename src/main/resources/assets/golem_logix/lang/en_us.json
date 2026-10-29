@@ -615,5 +615,5 @@
   "gui.golem_logix.auto_output.hint": "What the machine makes leaves by itself: into a neighbouring Stamping Gateway first, otherwise into any neighbouring inventory.",
   "message.golem_logix.saturator.auto_output": "Auto-output: %s",
   "gui.golem_logix.provider.returns": "Return slots",
-  "gui.golem_logix.provider.returns_hint": "Machines hand their results back here (their auto-output looks for a Stamping Gateway first). Everything put here goes into the network: no Import Bus needed."
+  "gui.golem_logix.provider.returns_hint": "Machines hand their results back here (their auto-output looks for a Stamping Gateway first), fluids too: a pipe from any side fills the Gateway's return tanks. Everything goes into the network: no Import Bus needed."
 }

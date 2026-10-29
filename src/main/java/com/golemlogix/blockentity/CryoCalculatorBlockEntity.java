@@ -171,6 +171,15 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         return rest;
     }
 
+    @Override
+    public int absorbFluid(net.neoforged.neoforge.fluids.FluidStack fluid) {
+        int n = job == null ? 0 : job.absorbFluid(fluid);
+        if (n > 0) {
+            setChanged();
+        }
+        return n;
+    }
+
     /** Cancel: everything in the job goes back to the network (the excess is dropped). */
     @Override
     public void cancelJob() {

@@ -12,6 +12,12 @@
 - **A copper chest counts as a copper block** in every recipe of the mod but the plate recipes: the chest a copper golem
   leaves behind is not wasted (any oxidation, waxed too). The **Atlant** takes a copper block or chest between its legs - it
   has copper in its make.
+- **Autocrafting makes fluids**: a processing pattern may give a fluid (set by hand in an output cell, or carried over by
+  JEI's "+" in Machine mode). The Stamping Gateway takes the machine's fluid result into three return tanks of 16 buckets,
+  filled by a machine or a pipe from any side, and passes it on to the job and the network; an import bus pumping fluid out
+  of a machine feeds waiting jobs too. A fluid a pattern makes is ordered from the terminal like an item, in mB.
+- **Pipes glow again in shader and Sodium setups**: a working pipe gives off a soft block light of its own, as the lit
+  model's frost does.
 - **The guide book reads more cleanly**: emphasis is set in copper ink instead of Minecraft's bold, which ran dense letters
   (dense Cyrillic letters, the ¼ sign) together; fractions are written as digits. The Quick start is written anew: the first plates, power, the
   first network, what next. Brackets no longer spell out recipes or how a block is placed: recipes are in JEI and on the

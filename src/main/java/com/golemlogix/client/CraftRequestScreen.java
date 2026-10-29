@@ -53,7 +53,8 @@ public class CraftRequestScreen extends Screen {
         left = (width - W) / 2;
         top = (height - H) / 2;
 
-        String old = amount != null ? amount.getValue() : "1";
+        boolean fluid = com.golemlogix.items.FluidGhostItem.is(key);
+        String old = amount != null ? amount.getValue() : fluid ? "1000" : "1";
         amount = new EditBox(font, left + 33, top + 34, 56, 12, Component.empty());
         amount.setBordered(false);
         amount.setMaxLength(7);
@@ -64,11 +65,12 @@ public class CraftRequestScreen extends Screen {
         addRenderableWidget(amount);
         setInitialFocus(amount);
 
-        int[] deltas = {-100, -10, -1, 1, 10, 100};
+        // a fluid in mB, its steps a tenth of a bucket to ten buckets
+        int[] deltas = fluid ? new int[]{-10_000, -1000, -100, 100, 1000, 10_000} : new int[]{-100, -10, -1, 1, 10, 100};
         for (int i = 0; i < deltas.length; i++) {
             int d = deltas[i];
-            addRenderableWidget(new GolemButton(left + 8 + i * 36, top + 52, 34, 14,
-                    Component.literal((d > 0 ? "+" : "") + d), b -> change(d)));
+            String label = fluid && Math.abs(d) >= 1000 ? (d > 0 ? "+" : "-") + Math.abs(d) / 1000 + "B" : (d > 0 ? "+" : "") + d;
+            addRenderableWidget(new GolemButton(left + 8 + i * 36, top + 52, 34, 14, Component.literal(label), b -> change(d)));
         }
         startButton = new GolemButton(left + 8, top + 188, 104, 18, () -> Component.translatable("gui.golem_logix.craft_start"),
                 () -> Component.translatable(canStart() ? "gui.golem_logix.plan.start_hint" : "gui.golem_logix.plan.start_blocked"),
@@ -186,8 +188,13 @@ public class CraftRequestScreen extends Screen {
         startButton.active = canStart();
         super.extractRenderState(g, mouseX, mouseY, partialTick);
         g.text(font, title, left + 8, top + 7, GolemGui.PARCHMENT, false);
-        g.item(key, left + 9, top + 29);
+        if (!FluidIcons.drawGhost(g, font, key, left + 9, top + 29, false)) {
+            g.item(key, left + 9, top + 29);
+        }
         g.text(font, font.plainSubstrByWidth(key.getHoverName().getString(), W - 104), left + 98, top + 34, GolemGui.CYAN, false);
+        if (com.golemlogix.items.FluidGhostItem.is(key)) {
+            g.text(font, "mB", left + 76, top + 34, 0xFF8A7A60, false);
+        }
 
         CraftPlanPayload p = plan();
         int hy = top + 72;

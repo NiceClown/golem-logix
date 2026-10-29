@@ -239,9 +239,16 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
 
         String query = search.getValue().trim().toLowerCase(Locale.ROOT);
 
+        // craftable fluids come as fluid ghost keys among the items: they go with the fluids
+        List<ItemStack> craftFluids = new ArrayList<>();
+        for (TerminalListPayload.Entry e : menu.clientEntries) {
+            if (e.craftable() && com.golemlogix.items.FluidGhostItem.is(e.key())) {
+                craftFluids.add(e.key());
+            }
+        }
         if (viewMode != ViewMode.FLUIDS) {
             for (TerminalListPayload.Entry e : menu.clientEntries) {
-                if (craftableOnly && !e.craftable()) {
+                if (craftableOnly && !e.craftable() || com.golemlogix.items.FluidGhostItem.is(e.key())) {
                     continue;
                 }
                 if (matches(e.key(), query)) {
@@ -251,12 +258,28 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
             }
         }
         TerminalInfoPayload info = menu.clientInfo;
-        if (viewMode != ViewMode.ITEMS && !craftableOnly && info != null) {
+        if (viewMode != ViewMode.ITEMS && info != null) {
+            List<ItemStack> unseen = new ArrayList<>(craftFluids);
             for (FluidStack f : info.fluids()) {
+                ItemStack ghost = unseen.stream().filter(k -> FluidStack.isSameFluidSameComponents(
+                        com.golemlogix.items.FluidGhostItem.fluid(k), f)).findFirst().orElse(ItemStack.EMPTY);
+                unseen.remove(ghost);
+                if (craftableOnly && ghost.isEmpty()) {
+                    continue;
+                }
                 String name = f.getHoverName().getString().toLowerCase(Locale.ROOT);
                 String ns = BuiltInRegistries.FLUID.getKey(f.getFluid()).getNamespace();
                 if (matchesFluid(name, ns, query)) {
-                    rows.add(new Row(ItemStack.EMPTY, f.getAmount(), false, f, name, ns));
+                    rows.add(new Row(ghost, f.getAmount(), !ghost.isEmpty(), f, name, ns));
+                }
+            }
+            // none of it in the network, but a pattern makes it: a row to order it from
+            for (ItemStack ghost : unseen) {
+                FluidStack f = com.golemlogix.items.FluidGhostItem.fluid(ghost);
+                String name = f.getHoverName().getString().toLowerCase(Locale.ROOT);
+                String ns = BuiltInRegistries.FLUID.getKey(f.getFluid()).getNamespace();
+                if (matchesFluid(name, ns, query)) {
+                    rows.add(new Row(ghost, 0, true, f.copyWithAmount(1), name, ns));
                 }
             }
         }
@@ -508,9 +531,16 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
                 if (row.isFluid()) {
                     drawFluid(g, row.fluid(), x, y);
                     drawDrop(g, x, y);
-                    String text = viewMode == ViewMode.FLUIDS ? GolemGui.formatCount(row.fluid().getAmount())
-                            : GolemGui.formatBuckets(row.fluid().getAmount());
-                    drawCount(g, text, x, y, 0xFFFFFFFF);
+                    if (row.count() <= 0) {
+                        drawCount(g, Component.translatable("gui.golem_logix.craft_short").getString(), x, y, GolemGui.CYAN);
+                    } else {
+                        String text = viewMode == ViewMode.FLUIDS ? GolemGui.formatCount(row.fluid().getAmount())
+                                : GolemGui.formatBuckets(row.fluid().getAmount());
+                        drawCount(g, text, x, y, 0xFFFFFFFF);
+                        if (row.craftable()) {
+                            g.fill(x - 1, y - 1, x + 3, y + 3, GolemGui.CYAN);
+                        }
+                    }
                 } else {
                     g.item(row.stack(), x, y);
                     if (row.count() > 0) {
@@ -615,9 +645,15 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
             if (row.isFluid()) {
                 FluidStack f = row.fluid();
                 lines.add(f.getHoverName());
+                int stored = row.count() <= 0 ? 0 : f.getAmount();
                 lines.add(Component.translatable("gui.golem_logix.stored", Component.translatable("gui.golem_logix.stored_fluid",
-                        GolemGui.formatBuckets(f.getAmount()), String.format(Locale.US, "%,d", f.getAmount()))).withStyle(ChatFormatting.GRAY));
-                lines.add(Component.translatable("gui.golem_logix.fluid_hint").withStyle(ChatFormatting.DARK_AQUA));
+                        GolemGui.formatBuckets(stored), String.format(Locale.US, "%,d", stored))).withStyle(ChatFormatting.GRAY));
+                if (stored > 0) {
+                    lines.add(Component.translatable("gui.golem_logix.fluid_hint").withStyle(ChatFormatting.DARK_AQUA));
+                }
+                if (row.craftable()) {
+                    lines.add(Component.translatable("gui.golem_logix.craftable_hint").withStyle(ChatFormatting.AQUA));
+                }
             } else {
                 lines.addAll(getTooltipFromItem(minecraft, row.stack()));
                 lines.add(Component.translatable("gui.golem_logix.stored", String.format(Locale.US, "%,d", row.count()))
@@ -733,13 +769,15 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         if (row == null) {
             return true;
         }
+        boolean ctrl = net.minecraft.client.Minecraft.getInstance().hasControlDown();
         if (row.isFluid()) {
-            if (minecraft.player != null) {
+            if (row.craftable() && (ctrl || row.count() <= 0) && button == 0) {
+                minecraft.setScreen(new CraftRequestScreen(this, menu, row.stack()));
+            } else if (minecraft.player != null) {
                 minecraft.player.sendOverlayMessage(Component.translatable("gui.golem_logix.fluid_need_container"));
             }
             return true;
         }
-        boolean ctrl = net.minecraft.client.Minecraft.getInstance().hasControlDown();
         if (row.craftable() && (ctrl || row.count() <= 0) && button == 0) {
             minecraft.setScreen(new CraftRequestScreen(this, menu, row.stack()));
             return true;
