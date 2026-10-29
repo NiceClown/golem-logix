@@ -548,7 +548,20 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         Vec3 hitAt = Vec3.atCenterOf(target).relative(facing.getOpposite(), 0.5);
         BlockHitResult hit = new BlockHitResult(hitAt, facing.getOpposite(), target, false);
         var result = p.gameMode.useItemOn(p, level, p.getMainHandItem(), InteractionHand.MAIN_HAND, hit);
-        tool.setItem(0, unworn(before, p.getMainHandItem().copy()));
+        if (!result.consumesAction() && !p.getMainHandItem().isEmpty() && !level.getFluidState(target).isEmpty()) {
+            // a bucket or a bottle takes a fluid by the item's own use (a look at the fluid), not by a click on the block; the
+            // golem looks from the bus's front face, or its own block would be the first thing the look hits
+            Vec3 eye = Vec3.atCenterOf(pos).relative(facing, 0.55);
+            p.snapTo(eye.x, eye.y - p.getEyeHeight(), eye.z, p.getYRot(), p.getXRot());
+            result = p.gameMode.useItem(p, level, p.getMainHandItem(), InteractionHand.MAIN_HAND);
+        }
+        ItemStack after = p.getMainHandItem().copy();
+        if (!before.isEmpty() && !after.isEmpty() && !after.is(before.getItem()) && !before.isDamageableItem()) {
+            // the item became another (an empty bucket a water bucket): that one is the harvest, into the network; the slot
+            // is left empty for the Autocraft Module to refill with the empty one
+            after = net.insertItem(after, false);
+        }
+        tool.setItem(0, unworn(before, after));
         p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
         // anything the golem picked up (a filled bucket's leftovers, a harvest given to the hand) goes into the network
         for (int i = 0; i < p.getInventory().getContainerSize(); i++) {

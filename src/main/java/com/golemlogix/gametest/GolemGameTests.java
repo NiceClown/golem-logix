@@ -62,24 +62,24 @@ import java.util.List;
 public class GolemGameTests {
     private static final String T = "empty";
 
-    private static final BlockPos ORIGIN = new BlockPos(5, 1, 5);
-    private static final BlockPos CORE = ORIGIN.offset(0, 3, 0);
-    private static final BlockPos JAR = ORIGIN.below();
-    private static final BlockPos BAY = new BlockPos(7, 1, 4);
-    private static final BlockPos CPU = new BlockPos(4, 1, 3);
-    private static final BlockPos PROV = new BlockPos(7, 1, 6);
-    private static final BlockPos TERM = new BlockPos(3, 1, 6);
-    private static final BlockPos BUS_IN = new BlockPos(3, 1, 4);
-    private static final BlockPos BUS_OUT = new BlockPos(6, 1, 3);
+    static final BlockPos ORIGIN = new BlockPos(5, 1, 5);
+    static final BlockPos CORE = ORIGIN.offset(0, 3, 0);
+    static final BlockPos JAR = ORIGIN.below();
+    static final BlockPos BAY = new BlockPos(7, 1, 4);
+    static final BlockPos CPU = new BlockPos(4, 1, 3);
+    static final BlockPos PROV = new BlockPos(7, 1, 6);
+    static final BlockPos TERM = new BlockPos(3, 1, 6);
+    static final BlockPos BUS_IN = new BlockPos(3, 1, 4);
+    static final BlockPos BUS_OUT = new BlockPos(6, 1, 3);
 
     // ------------------------------------------------------------ helpers
 
-    private static void put(GameTestHelper helper, BlockPos rel, Block block) {
+    static void put(GameTestHelper helper, BlockPos rel, Block block) {
         helper.setBlock(rel, block);
     }
 
     /** Builds the whole array; expanders/quantum = how many side cells to fill with expanders (up to 8). */
-    private static void buildArray(GameTestHelper helper, int expanders, int quantum) {
+    static void buildArray(GameTestHelper helper, int expanders, int quantum) {
         int slot = 0;
         for (int dy = 0; dy <= 3; dy++) {
             for (int dx = -1; dx <= 1; dx++) {
@@ -114,17 +114,17 @@ public class GolemGameTests {
         }
     }
 
-    private static void powered(GameTestHelper helper) {
+    static void powered(GameTestHelper helper) {
         put(helper, JAR, ModBlocks.CREATIVE_SOURCE_JAR.get());
     }
 
     /** A 2x2 cabinet: the main part at rel, facing south, the other parts to the right (east) and above. */
-    private static void putBay(GameTestHelper helper, BlockPos rel) {
+    static void putBay(GameTestHelper helper, BlockPos rel) {
         CopperDriveBayBlock.place(helper.getLevel(), helper.absolutePos(rel), Direction.SOUTH);
     }
 
     /** A full network: array + jar + cabinet with a 1k disk. */
-    private static BlockPos baseNetwork(GameTestHelper helper) {
+    static BlockPos baseNetwork(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
         putBay(helper, BAY);
@@ -137,7 +137,7 @@ public class GolemGameTests {
      * A player for window and click checks: a NeoForge FakePlayer at the start of the test area. The GameTest "mock" player joins the player list, and mods
      * like Curios send it packets its connection does not accept; a FakePlayer silently swallows packets.
      */
-    private static ServerPlayer testPlayer(GameTestHelper helper) {
+    static ServerPlayer testPlayer(GameTestHelper helper) {
         var profile = new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "golem-logix-test");
         ServerPlayer player = net.neoforged.neoforge.common.util.FakePlayerFactory.get(helper.getLevel(), profile);
         BlockPos origin = helper.absolutePos(BlockPos.ZERO);
@@ -145,7 +145,7 @@ public class GolemGameTests {
         return player;
     }
 
-    private static GolemNetwork net(GameTestHelper helper, BlockPos rel) {
+    static GolemNetwork net(GameTestHelper helper, BlockPos rel) {
         return GolemNetwork.scan(helper.getLevel(), helper.absolutePos(rel));
     }
 
@@ -863,7 +863,7 @@ public class GolemGameTests {
      * The window a bare-handed click on a golem bus opens, built the way the server builds it (a FakePlayer cannot open windows, and
      * a mock player's connection refuses the mod's packets), handed to the test player as its open window.
      */
-    private static ServerPlayer clickOpen(GameTestHelper helper, BlockPos rel) {
+    static ServerPlayer clickOpen(GameTestHelper helper, BlockPos rel) {
         ServerPlayer player = testPlayer(helper);
         BlockPos abs = helper.absolutePos(rel);
         player.snapTo(abs.getX() + 0.5, abs.getY() + 1, abs.getZ() + 2.5, 180f, 30f);
@@ -875,7 +875,7 @@ public class GolemGameTests {
     }
 
     /** No two slots of a window overlap, and the window's own slots stay inside it (the upgrades in their column to the right). */
-    private static void assertSlotsLaidOut(GameTestHelper helper, net.minecraft.world.inventory.AbstractContainerMenu menu, int width, int height) {
+    static void assertSlotsLaidOut(GameTestHelper helper, net.minecraft.world.inventory.AbstractContainerMenu menu, int width, int height) {
         for (int i = 0; i < menu.slots.size(); i++) {
             var a = menu.slots.get(i);
             helper.assertTrue(a.x >= 0 && a.y >= 0 && a.y + 16 <= height && a.x + 16 <= width + 30, "slot " + i + " is inside the window");
@@ -1837,11 +1837,11 @@ public class GolemGameTests {
         });
     }
 
-    private static ItemStack card(PatternData data) {
+    static ItemStack card(PatternData data) {
         return com.golemlogix.items.CopperPunchCardItem.written(ModItems.COPPER_PUNCH_CARD.get(), data);
     }
 
-    private static PatternData craftingPattern(ItemStack output, ItemStack... slots) {
+    static PatternData craftingPattern(ItemStack output, ItemStack... slots) {
         List<ItemStack> grid = new ArrayList<>();
         for (int i = 0; i < 9; i++) {
             grid.add(i < slots.length ? slots[i] : ItemStack.EMPTY);
@@ -3751,7 +3751,7 @@ public class GolemGameTests {
         helper.succeed();
     }
 
-    private static void periscope(GameTestHelper helper, BlockPos at, Direction facing) {
+    static void periscope(GameTestHelper helper, BlockPos at, Direction facing) {
         helper.setBlock(at, ModBlocks.PERISCOPE_STORAGE_BUS.get().defaultBlockState()
                 .setValue(com.golemlogix.blocks.PeriscopeStorageBusBlock.FACING, facing));
     }
@@ -3872,7 +3872,7 @@ public class GolemGameTests {
         });
     }
 
-    private static int count(net.minecraft.world.Container c, net.minecraft.world.item.Item item) {
+    static int count(net.minecraft.world.Container c, net.minecraft.world.item.Item item) {
         int n = 0;
         for (int i = 0; i < c.getContainerSize(); i++) {
             if (c.getItem(i).is(item)) {
@@ -3901,9 +3901,9 @@ public class GolemGameTests {
     }
     // ------------------------------------------------- autocrafting: chains and edge cases
 
-    private static final BlockPos MACHINE_OUT = new BlockPos(2, 1, 4);
+    static final BlockPos MACHINE_OUT = new BlockPos(2, 1, 4);
 
-    private static void autocraftRig(GameTestHelper helper) {
+    static void autocraftRig(GameTestHelper helper) {
         helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
         helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
         helper.setBlock(PROV.east(), Blocks.CHEST);              // "machine input"
@@ -4085,7 +4085,7 @@ public class GolemGameTests {
 
     // ------------------------------------------------- upgrades, redstone, waiting, precraft
 
-    private static int count(Container c) {
+    static int count(Container c) {
         int n = 0;
         for (int i = 0; i < c.getContainerSize(); i++) {
             n += c.getItem(i).getCount();

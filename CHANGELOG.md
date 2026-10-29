@@ -18,6 +18,11 @@
   of a machine feeds waiting jobs too. A fluid a pattern makes is ordered from the terminal like an item, in mB.
 - **Pipes glow again in shader and Sodium setups**: a working pipe gives off a soft block light of its own, as the lit
   model's frost does.
+- Fixed: Hewer's Annihilation Bus could not take a fluid with a bucket or a bottle on right click; now it scoops it, and an
+  item that turned into another (an empty bucket into a water bucket) goes into the network, the slot left for the refill.
+- 35 more game tests (171 in all), most of them on the Annihilation Bus: unbreakable blocks, chests with contents, Silk Touch,
+  Fortune, Efficiency, tools at their last point, filters in every mode, pets and named mobs, redstone, two buses on one
+  block, nested and competing autocraft jobs, a fluid output feeding the next step.
 - **The guide book reads more cleanly**: emphasis is set in copper ink instead of Minecraft's bold, which ran dense letters
   (dense Cyrillic letters, the ¼ sign) together; fractions are written as digits. The Quick start is written anew: the first plates, power, the
   first network, what next. Brackets no longer spell out recipes or how a block is placed: recipes are in JEI and on the
