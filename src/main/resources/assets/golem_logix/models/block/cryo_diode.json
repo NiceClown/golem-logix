@@ -1,0 +1,26 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "golem_logix:block/cryo_diode_side",
+    "front": "golem_logix:block/cryo_diode_outlet",
+    "back": "golem_logix:block/cryo_diode_inlet",
+    "side": "golem_logix:block/cryo_diode_side",
+    "top": "golem_logix:block/stock_manometer_side",
+    "bottom": "golem_logix:block/stock_manometer_side"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0],
+      "to": [16, 16, 16],
+      "faces": {
+        "north": {"texture": "#front"},
+        "south": {"texture": "#back"},
+        "east": {"texture": "#side"},
+        "west": {"texture": "#side"},
+        "up": {"texture": "#top"},
+        "down": {"texture": "#bottom"}
+      }
+    }
+  ]
+}

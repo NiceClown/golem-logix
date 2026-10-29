@@ -216,7 +216,12 @@ public final class GolemGameTestRegistry {
             new Test("autocraftcompetingjobs", GolemGameTestsExtra::autocraftCompetingJobs, 400, 0),
             new Test("autocraftjobcancelledmidwayrefunds", GolemGameTestsExtra::autocraftJobCancelledMidwayRefunds, 300, 0),
             new Test("autocraftfluidinputfromfluidoutput", GolemGameTestsExtra::autocraftFluidInputFromFluidOutput, 400, 0),
-            new Test("autocraftcalculatorremovedmidjob", GolemGameTestsExtra::autocraftCalculatorRemovedMidJob, 300, 0)
+            new Test("autocraftcalculatorremovedmidjob", GolemGameTestsExtra::autocraftCalculatorRemovedMidJob, 300, 0),
+            new Test("stockmanometerredstone", GolemGameTestsExtra::stockManometerRedstone, 100, 0),
+            new Test("stockrequesterautocraft", GolemGameTestsExtra::stockRequesterAutocraft, 100, 0),
+            new Test("cryodiodeseparationandsource", GolemGameTestsExtra::cryoDiodeSeparationAndSource, 100, 0),
+            new Test("securityterminalpermissions", GolemGameTestsExtra::securityTerminalPermissions, 100, 0),
+            new Test("mechanicalasmrtoggles", GolemGameTestsExtra::mechanicalAsmrToggles, 100, 0)
     );
 
     private GolemGameTestRegistry() {

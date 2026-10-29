@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "key": {
+    "B": "minecraft:iron_ingot",
+    "G": "minecraft:glass_pane",
+    "R": "minecraft:redstone",
+    "C": "minecraft:comparator",
+    "M": "golem_logix:flattened_copper_matrix"
+  },
+  "pattern": [
+    "BGB",
+    "RCR",
+    "BMB"
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:stock_manometer"
+  }
+}

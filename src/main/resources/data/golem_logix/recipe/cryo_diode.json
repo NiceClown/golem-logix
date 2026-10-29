@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "P": "golem_logix:basic_snow_pipe",
+    "C": "golem_logix:flattened_cryo_substrate",
+    "S": "minecraft:ice"
+  },
+  "pattern": [
+    "ISI",
+    "PCP",
+    "ISI"
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:cryo_diode"
+  }
+}

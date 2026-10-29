@@ -37,6 +37,10 @@
     "golem_logix:cryo_source_telegraph",
     "golem_logix:cryo_source_jar",
     "golem_logix:cryo_distillation_tower",
-    "golem_logix:cryo_mixer"
+    "golem_logix:cryo_mixer",
+    "golem_logix:stock_manometer",
+    "golem_logix:stock_requester",
+    "golem_logix:cryo_diode",
+    "golem_logix:security_terminal"
   ]
 }

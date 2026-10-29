@@ -52,5 +52,9 @@ public class ModNetwork {
                 com.golemlogix.network.FuzzyCyclePayload::handle);
         registrar.playToServer(com.golemlogix.network.MenuScrollPayload.TYPE, com.golemlogix.network.MenuScrollPayload.STREAM_CODEC,
                 com.golemlogix.network.MenuScrollPayload::handle);
+        registrar.playToServer(com.golemlogix.network.ManometerConfigPayload.TYPE, com.golemlogix.network.ManometerConfigPayload.STREAM_CODEC,
+                com.golemlogix.network.ManometerConfigPayload::handle);
+        registrar.playToServer(com.golemlogix.network.SecurityTogglePayload.TYPE, com.golemlogix.network.SecurityTogglePayload.STREAM_CODEC,
+                com.golemlogix.network.SecurityTogglePayload::handle);
     }
 }

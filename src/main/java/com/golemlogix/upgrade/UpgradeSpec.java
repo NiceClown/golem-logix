@@ -32,6 +32,8 @@ public record UpgradeSpec(int slots, int maxSpeed, boolean crafting, boolean red
     public static final UpgradeSpec PERISCOPE = new UpgradeSpec(2, 0, false, true, true);
     /** Periscope and Pattern Provider: redstone only. */
     public static final UpgradeSpec REDSTONE_ONLY = new UpgradeSpec(1, 0, false, true, false);
+    /** Stock Manometer: Autocraft Module (emit while craft running) and Fuzzy Card. */
+    public static final UpgradeSpec MANOMETER = new UpgradeSpec(2, 0, true, false, true);
 
     /** The kind of upgrade slot slot is for. */
     public UpgradeType typeAt(int slot) {

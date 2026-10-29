@@ -41,6 +41,7 @@ public class GolemLogixClientEvents {
         event.registerBlockEntityRenderer(ModBlockEntities.DISTILLATION_TOWER.get(), DistillationTowerRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.CRYO_MIXER.get(), CryoMixerRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.PERISCOPE.get(), PeriscopeEyeRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.STOCK_MANOMETER.get(), StockManometerRenderer::new);
     }
 
     @SubscribeEvent
@@ -70,6 +71,9 @@ public class GolemLogixClientEvents {
         event.register(ModMenus.CARD_CATALOG.get(), CardCatalogScreen::new);
         event.register(ModMenus.CONCENTRATOR.get(), ConcentratorScreen::new);
         event.register(ModMenus.TELEGRAPH.get(), TelegraphScreen::new);
+        event.register(ModMenus.STOCK_MANOMETER.get(), StockManometerScreen::new);
+        event.register(ModMenus.STOCK_REQUESTER.get(), StockRequesterScreen::new);
+        event.register(ModMenus.SECURITY_TERMINAL.get(), SecurityTerminalScreen::new);
     }
 
     /** The runes of the mod's blocks glow (see GlowModels). */

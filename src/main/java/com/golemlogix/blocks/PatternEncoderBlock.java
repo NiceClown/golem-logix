@@ -54,6 +54,13 @@ public class PatternEncoderBlock extends HorizontalDirectionalBlock implements c
         if (level.isClientSide()) {
             return InteractionResult.SUCCESS;
         }
+        com.golemlogix.system.GolemNetwork net = com.golemlogix.system.GolemNetwork.scan(level, pos);
+        if (!net.hasPermission(player, com.golemlogix.security.SecurityPermission.BUILD)) {
+            if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
+                sp.sendOverlayMessage(Component.translatable("message.golem_logix.security_denied"));
+            }
+            return InteractionResult.CONSUME;
+        }
         if (level.getBlockEntity(pos) instanceof com.golemlogix.blockentity.PatternEncoderBlockEntity be) {
             player.openMenu(new SimpleMenuProvider(
                     (id, inv, p) -> new PatternEncoderMenu(id, inv, be.getItems(), be.data(), ContainerLevelAccess.create(level, pos)),

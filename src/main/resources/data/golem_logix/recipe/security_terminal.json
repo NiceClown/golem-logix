@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "D": "minecraft:iron_door",
+    "C": "#golem_logix:copper_block_or_chest",
+    "T": "golem_logix:analog_terminal",
+    "M": "golem_logix:flattened_iron_core"
+  },
+  "pattern": [
+    "IDI",
+    "MTM",
+    "ICI"
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:security_terminal"
+  }
+}

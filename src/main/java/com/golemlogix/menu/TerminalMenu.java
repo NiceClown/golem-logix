@@ -275,6 +275,20 @@ public class TerminalMenu extends GolemMenu {
             return;
         }
         ItemStack keyStack = p.key();
+        switch (p.action()) {
+            case TAKE_STACK, TAKE_HALF, TAKE_ONE, TO_INVENTORY, FLUID_FILL_CARRIED -> {
+                if (!net.hasPermission(sp, com.golemlogix.security.SecurityPermission.EXTRACT)) {
+                    sp.sendOverlayMessage(Component.translatable("message.golem_logix.security_denied"));
+                    return;
+                }
+            }
+            case INSERT_ALL, INSERT_ONE, FLUID_DRAIN_CARRIED, CLEAR_GRID -> {
+                if (!net.hasPermission(sp, com.golemlogix.security.SecurityPermission.INSERT)) {
+                    sp.sendOverlayMessage(Component.translatable("message.golem_logix.security_denied"));
+                    return;
+                }
+            }
+        }
         sp.level().playSound(null, sp.blockPosition(), ModSounds.RELAY_CLICK.get(), SoundSource.BLOCKS, 0.25f, 1.4f);
         switch (p.action()) {
             case TAKE_STACK -> take(net, keyStack, Amount.STACK);
@@ -456,7 +470,8 @@ public class TerminalMenu extends GolemMenu {
             return;
         }
         GolemNetwork net = network();
-        boolean netOk = accessError(net) == null;
+        // with a Security Terminal, taking the ingredients out of the network needs the EXTRACT right
+        boolean netOk = accessError(net) == null && net.hasPermission(sp, com.golemlogix.security.SecurityPermission.EXTRACT);
         for (int i = 0; i < 9; i++) {
             ItemStack s = craftSlots.removeItemNoUpdate(i);
             if (s.isEmpty()) {
@@ -515,7 +530,7 @@ public class TerminalMenu extends GolemMenu {
             return;
         }
         GolemNetwork net = network();
-        if (accessError(net) != null) {
+        if (accessError(net) != null || !net.hasPermission(player, com.golemlogix.security.SecurityPermission.EXTRACT)) {
             return;
         }
         for (int i = 0; i < 9; i++) {
@@ -585,8 +600,11 @@ public class TerminalMenu extends GolemMenu {
             return;
         }
         GolemNetwork net = network();
-        if (!checkAccess(sp, net)) {
+        if (!checkAccess(sp, net) || !net.hasPermission(sp, com.golemlogix.security.SecurityPermission.CRAFT)) {
             sendPlan(sp, p.request(), CraftPlanPayload.Status.OFFLINE, null);
+            if (!net.hasPermission(sp, com.golemlogix.security.SecurityPermission.CRAFT)) {
+                sp.sendOverlayMessage(Component.translatable("message.golem_logix.security_denied"));
+            }
             return;
         }
         ItemKey key = ItemKey.of(p.key());
@@ -670,6 +688,10 @@ public class TerminalMenu extends GolemMenu {
         }
         GolemNetwork net = network();
         if (!checkAccess(sp, net)) {
+            return;
+        }
+        if (!net.hasPermission(sp, com.golemlogix.security.SecurityPermission.CRAFT)) {
+            sp.sendOverlayMessage(Component.translatable("message.golem_logix.security_denied"));
             return;
         }
         Map<ItemKey, Long> targets = new LinkedHashMap<>();
@@ -983,6 +1005,14 @@ public class TerminalMenu extends GolemMenu {
                 return false;
             }
             return PortableChronometerItem.inRange(wirelessTier, player.level(), player.position(), netLevel, anchor);
+        }
+        if (netLevel != null) {
+            GolemNetwork net = network();
+            if (net.hasSecurityTerminal() && !net.hasPermission(player, com.golemlogix.security.SecurityPermission.INSERT)
+                    && !net.hasPermission(player, com.golemlogix.security.SecurityPermission.EXTRACT)
+                    && !net.hasPermission(player, com.golemlogix.security.SecurityPermission.CRAFT)) {
+                return false;
+            }
         }
         if (devicePos == null || expectedBlock == null || !netLevel.getBlockState(devicePos).is(expectedBlock)) {
             return false;

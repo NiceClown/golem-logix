@@ -126,4 +126,20 @@ public class ModBlockEntities {
             BLOCK_ENTITY_TYPES.register("bus", () ->
                     new BlockEntityType<>(BusBlockEntity::new,
                             ModBlocks.VACUUM_IMPORT_BUS.get(), ModBlocks.INJECTOR_EXPORT_BUS.get()));
+
+    public static final Supplier<BlockEntityType<com.golemlogix.blockentity.StockManometerBlockEntity>> STOCK_MANOMETER =
+            BLOCK_ENTITY_TYPES.register("stock_manometer", () ->
+                    new BlockEntityType<>(com.golemlogix.blockentity.StockManometerBlockEntity::new, ModBlocks.STOCK_MANOMETER.get()));
+
+    public static final Supplier<BlockEntityType<com.golemlogix.blockentity.StockRequesterBlockEntity>> STOCK_REQUESTER =
+            BLOCK_ENTITY_TYPES.register("stock_requester", () ->
+                    new BlockEntityType<>(com.golemlogix.blockentity.StockRequesterBlockEntity::new, ModBlocks.STOCK_REQUESTER.get()));
+
+    public static final Supplier<BlockEntityType<com.golemlogix.blockentity.CryoDiodeBlockEntity>> CRYO_DIODE =
+            BLOCK_ENTITY_TYPES.register("cryo_diode", () ->
+                    new BlockEntityType<>(com.golemlogix.blockentity.CryoDiodeBlockEntity::new, ModBlocks.CRYO_DIODE.get()));
+
+    public static final Supplier<BlockEntityType<com.golemlogix.blockentity.SecurityTerminalBlockEntity>> SECURITY_TERMINAL =
+            BLOCK_ENTITY_TYPES.register("security_terminal", () ->
+                    new BlockEntityType<>(com.golemlogix.blockentity.SecurityTerminalBlockEntity::new, ModBlocks.SECURITY_TERMINAL.get()));
 }

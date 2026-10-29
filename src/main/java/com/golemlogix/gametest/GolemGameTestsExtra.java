@@ -944,4 +944,131 @@ public final class GolemGameTestsExtra {
             });
         });
     }
+
+    // =========================================================================
+    // NEW FEATURES: MANOMETER, REQUESTER, CRYO-DIODE, SECURITY, ASMR
+    // =========================================================================
+
+    public static void stockManometerRedstone(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos manoPos = BUS_OUT;
+        helper.setBlock(manoPos, ModBlocks.STOCK_MANOMETER.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        com.golemlogix.blockentity.StockManometerBlockEntity mano = helper.getBlockEntity(manoPos, com.golemlogix.blockentity.StockManometerBlockEntity.class);
+        mano.getFilter().setItem(0, new ItemStack(Items.DIAMOND));
+        mano.setMode(com.golemlogix.blockentity.StockManometerBlockEntity.MODE_ABOVE);
+        mano.setThreshold(5);
+
+        helper.runAfterDelay(10, () -> {
+            helper.assertTrue(mano.getSignal() == 0, "signal should be 0 when stock <= threshold in ABOVE mode");
+
+            net(helper, bay).insertItem(new ItemStack(Items.DIAMOND, 10), false);
+            helper.runAfterDelay(15, () -> {
+                helper.assertTrue(mano.getSignal() == 15, "signal should be 15 when stock > threshold");
+
+                mano.setMode(com.golemlogix.blockentity.StockManometerBlockEntity.MODE_BELOW);
+                helper.runAfterDelay(15, () -> {
+                    helper.assertTrue(mano.getSignal() == 0, "signal should be 0 in BELOW mode when stock > threshold");
+
+                    mano.setMode(com.golemlogix.blockentity.StockManometerBlockEntity.MODE_ANALOG);
+                    mano.setThreshold(20);
+                    helper.runAfterDelay(15, () -> {
+                        int sig = mano.getSignal();
+                        helper.assertTrue(sig >= 7 && sig <= 8, "analog signal should be ~7-8 (got " + sig + ")");
+                        helper.succeed();
+                    });
+                });
+            });
+        });
+    }
+
+    public static void stockRequesterAutocraft(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+        provider.getContainer().setItem(0, card(craftingPattern(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.OAK_LOG))));
+
+        BlockPos reqPos = BUS_OUT;
+        helper.setBlock(reqPos, ModBlocks.STOCK_REQUESTER.get().defaultBlockState());
+        com.golemlogix.blockentity.StockRequesterBlockEntity req = helper.getBlockEntity(reqPos, com.golemlogix.blockentity.StockRequesterBlockEntity.class);
+
+        ItemStack filterStack = new ItemStack(Items.OAK_PLANKS);
+        filterStack.set(com.golemlogix.init.ModDataComponents.KEEP_AMOUNT.get(), 20);
+        req.getFilters().setItem(0, filterStack);
+
+        helper.runAfterDelay(2, () -> net(helper, bay).insertItem(new ItemStack(Items.OAK_LOG, 10), false));
+
+        helper.runAfterDelay(25, () -> {
+            GolemNetwork n = net(helper, bay);
+            long planks = n.itemCountOf(ItemKey.of(new ItemStack(Items.OAK_PLANKS)));
+            int st = req.getSlotStatus(0);
+            helper.assertTrue(planks > 0 || st == com.golemlogix.blockentity.StockRequesterBlockEntity.STATUS_CRAFTING,
+                    "stock requester must order crafting (planks=" + planks + ", status=" + st + ")");
+            helper.succeed();
+        });
+    }
+
+    public static void cryoDiodeSeparationAndSource(GameTestHelper helper) {
+        buildArray(helper, 0, 0);
+        powered(helper);
+        BlockPos bay1 = BAY;
+        putBay(helper, bay1);
+
+        BlockPos diodePos = BUS_OUT;
+        helper.setBlock(diodePos, ModBlocks.CRYO_DIODE.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+
+        BlockPos b2 = diodePos.north();
+        put(helper, b2, ModBlocks.CABLE_BUSHING.get());
+        put(helper, b2.offset(0, 1, 0), ModBlocks.ATLAS_CONDUIT.get());
+        put(helper, b2.offset(0, 2, 0), ModBlocks.ATLAS_CONDUIT.get());
+        put(helper, b2.offset(0, 3, 0), ModBlocks.ATLAS_CORE.get());
+        BlockPos bay2 = b2.west();
+        helper.setBlock(bay2, ModBlocks.COPPER_DRIVE_BAY.get().defaultBlockState());
+
+        helper.runAfterDelay(20, () -> {
+            GolemNetwork net1 = net(helper, bay1);
+            GolemNetwork net2 = net(helper, b2);
+
+            helper.assertTrue(net1 != net2, "two networks separated by cryo diode must be different instances");
+            long avail2 = net2.cryoSourceAvailable();
+            helper.assertTrue(avail2 > 0, "outlet side must draw Liquid Cryo-Source from inlet side (got " + avail2 + ")");
+            helper.succeed();
+        });
+    }
+
+    public static void securityTerminalPermissions(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos secPos = BUS_OUT;
+        helper.setBlock(secPos, ModBlocks.SECURITY_TERMINAL.get().defaultBlockState().setValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING, Direction.NORTH));
+        com.golemlogix.blockentity.SecurityTerminalBlockEntity sec = helper.getBlockEntity(secPos, com.golemlogix.blockentity.SecurityTerminalBlockEntity.class);
+
+        ServerPlayer owner = testPlayer(helper);
+        sec.setOwner(owner);
+
+        var guestProfile = new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "guest-player");
+        ServerPlayer guest = net.neoforged.neoforge.common.util.FakePlayerFactory.get(helper.getLevel(), guestProfile);
+
+        helper.runAfterDelay(10, () -> {
+            GolemNetwork n = net(helper, bay);
+            helper.assertTrue(n.hasSecurityTerminal(), "security terminal recognized by network");
+            helper.assertTrue(n.hasPermission(owner, com.golemlogix.security.SecurityPermission.BUILD), "owner has full permissions");
+            helper.assertTrue(!n.hasPermission(guest, com.golemlogix.security.SecurityPermission.BUILD), "guest without card denied BUILD");
+            helper.assertTrue(!n.hasPermission(guest, com.golemlogix.security.SecurityPermission.INSERT), "guest without card denied INSERT");
+
+            ItemStack card = com.golemlogix.items.IdentityPunchCardItem.of(guest.getUUID(), guest.getScoreboardName(), com.golemlogix.security.SecurityPermission.INSERT.mask);
+            sec.getCards().setItem(0, card);
+
+            helper.assertTrue(n.hasPermission(guest, com.golemlogix.security.SecurityPermission.INSERT), "guest with card granted INSERT");
+            helper.assertTrue(!n.hasPermission(guest, com.golemlogix.security.SecurityPermission.EXTRACT), "guest with INSERT card denied EXTRACT");
+            helper.succeed();
+        });
+    }
+
+    public static void mechanicalAsmrToggles(GameTestHelper helper) {
+        boolean origDing = com.golemlogix.config.GolemConfig.TYPEWRITER_DING.get();
+        boolean origTick = com.golemlogix.config.GolemConfig.MONITOR_BLOCKED_TICK.get();
+        helper.assertTrue(origDing, "typewriter ding default is true");
+        helper.assertTrue(origTick, "monitor blocked tick default is true");
+        helper.succeed();
+    }
 }

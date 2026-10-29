@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "facing=north": {"model": "golem_logix:block/cryo_diode"},
+    "facing=east": {"model": "golem_logix:block/cryo_diode", "y": 90},
+    "facing=south": {"model": "golem_logix:block/cryo_diode", "y": 180},
+    "facing=west": {"model": "golem_logix:block/cryo_diode", "y": 270},
+    "facing=up": {"model": "golem_logix:block/cryo_diode", "x": 270},
+    "facing=down": {"model": "golem_logix:block/cryo_diode", "x": 90}
+  }
+}

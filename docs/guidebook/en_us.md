@@ -1056,6 +1056,25 @@ Right-click a closed side to take the plug back.
 
 *A plug takes no channel and does not stop Source jars.*
 
+### Frost Valve (Cryo-Diode)
+<!-- {"id": "net_diode", "icon": "golem_logix:cryo_diode", "x": 2, "y": 1, "parents": ["net_pipes"]} -->
+
+<!-- {"type": "crafting", "recipe": "golem_logix:cryo_diode"} -->
+
+A directional frost diode between two networks.
+
+#### Subnet isolation
+
+The Frost Valve points from an **inlet face** (wide brass flange) to an **outlet face** (narrow copper nozzle).
+
+It **strictly isolates** the two networks: channels, devices, cores, and storages do not cross between them. Each network runs independently under its own Atlas Core.
+
+#### Passing Liquid Cryo-Source
+
+While channels and data remain separated, the outlet side network automatically draws **Liquid Cryo-Source** from the inlet side network.
+
+This allows a large main base network with deep Source reservoirs to supply small specialized subnets (such as isolated farming or autocrafting loops) without bridging their channel topologies.
+
 ### Cryo-Source Telegraph
 <!-- {"id": "net_telegraph", "icon": "golem_logix:cryo_source_telegraph", "x": 3, "y": 0, "parents": ["net_devices"], "gold": true} -->
 
@@ -1266,6 +1285,34 @@ If something is missing for a recipe but the network **has patterns** for it, th
 **Ctrl + “+”** orders the missing items right away - one job for all of them (with Shift - for a full stack). Whatever cannot be crafted is listed in chat.
 
 When the order is ready, an **“Order ready”** plate pops up in the corner of the screen with a chime - press “+” again and craft the recipe.
+
+### Security Terminal
+<!-- {"id": "st_security", "icon": "golem_logix:security_terminal", "x": 3, "y": 1, "parents": ["st_terminal"]} -->
+
+<!-- {"type": "crafting", "recipe": "golem_logix:security_terminal"} -->
+
+A heavy brass and steel security console with 16 card bays.
+
+#### Multiplayer protection
+
+When placed on a network, the player who placed the terminal becomes its **Owner**.
+
+As long as an active Security Terminal is linked to the network, all other players are locked out of network interactions unless they hold a configured card in the terminal.
+
+#### Identity Punch Cards
+
+<!-- {"type": "crafting", "recipe": "golem_logix:identity_punch_card"} -->
+
+Right-click a blank **Identity Punch Card** to bind it permanently to your name and UUID.
+
+Insert a bound card into the Security Terminal. The Owner can click to toggle permissions for each card:
+
+- **Insert** (`↓ Ins`): Deposit items or fluids into network storage.
+- **Extract** (`↑ Ext`): Withdraw items or fluids from network storage.
+- **Craft** (`⚙ Crf`): Place autocrafting orders or use the Crafting Terminal grid.
+- **Build** (`⚒ Bld`): Break or place network blocks, and configure bus settings or patterns.
+
+*Creative operators bypass all security restrictions.*
 
 ### Fluids in the terminal
 <!-- {"id": "st_fluids_ui", "icon": "minecraft:bucket", "x": 3, "y": -1, "parents": ["st_terminal", "st_fluid"]} -->
@@ -1585,6 +1632,30 @@ The module decides when the machine may work. While it sits in an upgrade slot a
 
 - **Mana Saturator** - starts a ritual by signal; the module goes in with a right-click on the machine, the mode changes with another right-click with a module.
 
+### Brass Stock Manometer
+<!-- {"id": "bus_manometer", "icon": "golem_logix:stock_manometer", "x": 4, "y": 1, "parents": ["bus_redstone"]} -->
+
+<!-- {"type": "crafting", "recipe": "golem_logix:stock_manometer"} -->
+
+A directional brass dial with an animated analog gauge needle. Takes 1 channel.
+
+#### Level emitter
+
+The manometer monitors the network stock of a configured item or fluid (set in its ghost filter slot).
+
+It emits redstone power (from all 6 sides or straight through connected conduits) according to its mode:
+
+- **Above**: Emits signal (15) when the stock is strictly greater than the threshold.
+- **Below**: Emits signal (15) when the stock is strictly less than the threshold.
+- **Analog**: Emits a proportional signal from 0 to 15 based on `stock / threshold`.
+
+#### Hysteresis and upgrades
+
+Configure a **hysteresis window** (`threshold .. threshold + hyst`) to prevent rapid flickering on boundary values:
+in Above mode, the signal turns on when above high threshold and off when falling below low threshold.
+
+With an **Autocraft Module** installed, the manometer detects when an autocrafting order for the monitored item or fluid is active in the network, emitting redstone while crafting runs.
+
 ### Layouts
 <!-- {"id": "bus_examples", "icon": "minecraft:furnace", "x": 3, "y": 0, "parents": ["bus_filters"]} -->
 
@@ -1809,6 +1880,8 @@ When co-processors **actually** speed the work up (more than one step done in a 
 | Delivering | storage full |
 | Paused | Redstone Module |
 
+*When an order finishes (or a job of 16 or more crafts completes), the calculator rings a bright typewriter bell.*
+
 ### Ordering in the terminal
 <!-- {"id": "ac_order", "icon": "golem_logix:crafting_terminal", "x": 2, "y": 0, "parents": ["ac_cards", "ac_provider", "ac_cpu"], "gold": true} -->
 
@@ -1989,6 +2062,31 @@ Right-click opens the desk: on the left - **every Cryo-Calculator of the network
 - the **“Abort”** button - everything inside the job returns to the network.
 
 *Punch cards float in a circle inside the porthole - one for every running job.*
+
+*When a craft is blocked (missing materials or waiting for an output), its indicator blinks red and ticks softly once a second.*
+
+### Copper Order Ledger
+<!-- {"id": "ac_stock_requester", "icon": "golem_logix:stock_requester", "x": 3, "y": 1, "parents": ["ac_monitor"]} -->
+
+<!-- {"type": "crafting", "recipe": "golem_logix:stock_requester"} -->
+
+A desk with a 3×3 copper order ledger. Takes 1 channel.
+
+#### Maintaining network stock
+
+The ledger keeps a specified reserve of up to 9 items or fluids in the network by automatically submitting autocrafting orders.
+
+Set items and desired keep amounts in its 9 ghost filter slots.
+
+#### Smart dispatch
+
+- Dispatches small batches (up to 64 items or 1000 mB) so the network is not overwhelmed.
+- Maintains at most 1 active job per configured item at a time, avoiding duplicate requests while prior batches are in flight.
+- Slot status indicators in the corner of each cell:
+  - **Green**: Stock satisfied or waiting.
+  - **Cyan**: Autocrafting order currently running.
+  - **Amber**: No pattern registered for this recipe.
+  - **Red**: Missing ingredients in storage.
 
 ### Machine steps
 <!-- {"id": "ac_machines", "icon": "minecraft:blast_furnace", "x": 3, "y": 0, "parents": ["ac_order"]} -->

@@ -102,6 +102,11 @@ public abstract class AbstractBusBlock extends DirectionalBlock implements com.g
             return InteractionResult.SUCCESS;
         }
         if (player instanceof ServerPlayer sp && level.getBlockEntity(pos) instanceof BusBlockEntity bus) {
+            com.golemlogix.system.GolemNetwork net = com.golemlogix.system.GolemNetwork.scan(level, pos);
+            if (!net.hasPermission(player, com.golemlogix.security.SecurityPermission.BUILD)) {
+                sp.sendOverlayMessage(Component.translatable("message.golem_logix.security_denied"));
+                return InteractionResult.CONSUME;
+            }
             int kind = isExportBus() ? BusMenu.KIND_EXPORT : BusMenu.KIND_IMPORT;
             sp.openMenu(new SimpleMenuProvider(
                             (id, inv, p) -> new BusMenu(id, inv, bus.getFilters(), bus.getUpgrades(), kind, bus.menuData()),

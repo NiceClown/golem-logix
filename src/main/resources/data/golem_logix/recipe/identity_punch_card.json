@@ -1,0 +1,12 @@
+{
+  "ingredients": [
+    "golem_logix:copper_punch_card",
+    "minecraft:gold_nugget",
+    "minecraft:redstone"
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:identity_punch_card"
+  },
+  "type": "minecraft:crafting_shapeless"
+}

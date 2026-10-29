@@ -1,6 +1,22 @@
 # Changelog
 
+## 2.0.13 (26.1.2) — The Warden, the Storekeeper and the Gatekeeper
+
+- **Brass Stock Manometer (Warden)**, a level emitter: a ghost of an item or a fluid, a threshold typed in and an optional
+  second one (on below 500, off above 2 000), a signal above or below the threshold or proportional to it; a needle dial on
+  its face. With an Autocraft Module it signals while a craft of the item runs.
+- **Copper Order Ledger (Storekeeper)** keeps up to nine items or fluids at a set amount in the network by ordering crafts,
+  one job per item at a time; each slot shows whether it is stocked, crafting, or lacks a pattern or ingredients.
+- **Cryo-Diode (Frost Valve)** joins two networks without merging them: channels, storage and crafting stay apart, while the
+  network on its outlet side draws Source through it from the supplies of the inlet side - a subnet on the main base's power.
+- **Iron Security Terminal (Gatekeeper)** and the **Identity Punch Card**: a card binds to the player who uses it; with the
+  terminal in a network only its owner and the players whose cards are in it may use the network, each card with its own
+  rights - put in, take out, order crafts, build (open and break the network's blocks). Creative operators pass.
+- **Mechanical ASMR**: a typewriter-carriage ding when a calculator finishes a big job or one a player ordered, and a
+  blinking, softly ticking lamp on the Recipe Monitor while a job is blocked; both can be turned off in the config.
+
 ## 2.0.12 (26.1.2) — The Hewer refills its tool
+
 
 - **Hewer's Annihilation Bus takes an Autocraft Module**, which refills its tool slot from the network with what the player last
   put there: bone meal (or anything that stacks) is topped up with whatever the network has, even a few; a tool is used till

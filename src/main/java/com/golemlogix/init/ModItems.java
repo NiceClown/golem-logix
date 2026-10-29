@@ -57,6 +57,9 @@ public class ModItems {
     public static final DeferredItem<CopperPunchCardItem> COPPER_PUNCH_CARD = item("copper_punch_card",
             () -> new CopperPunchCardItem(props()));
 
+    public static final DeferredItem<com.golemlogix.items.IdentityPunchCardItem> IDENTITY_PUNCH_CARD = item("identity_punch_card",
+            () -> new com.golemlogix.items.IdentityPunchCardItem(props()));
+
     /** Pipe Plug: closes a side of a pipe so neighbouring lines do not merge. */
     public static final DeferredItem<PipePlugItem> PIPE_PLUG = item("pipe_plug",
             () -> new PipePlugItem(props().stacksTo(64)));

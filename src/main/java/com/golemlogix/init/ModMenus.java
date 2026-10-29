@@ -56,4 +56,13 @@ public class ModMenus {
 
     public static final Supplier<MenuType<RecipeMonitorMenu>> RECIPE_MONITOR =
             MENUS.register("recipe_monitor", () -> IMenuTypeExtension.create(RecipeMonitorMenu::fromNetwork));
+
+    public static final Supplier<MenuType<StockManometerMenu>> STOCK_MANOMETER =
+            MENUS.register("stock_manometer", () -> IMenuTypeExtension.create(StockManometerMenu::fromNetwork));
+
+    public static final Supplier<MenuType<StockRequesterMenu>> STOCK_REQUESTER =
+            MENUS.register("stock_requester", () -> IMenuTypeExtension.create(StockRequesterMenu::fromNetwork));
+
+    public static final Supplier<MenuType<SecurityTerminalMenu>> SECURITY_TERMINAL =
+            MENUS.register("security_terminal", () -> IMenuTypeExtension.create(SecurityTerminalMenu::fromNetwork));
 }

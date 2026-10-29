@@ -38,6 +38,10 @@ public record FilterSlotPayload(int containerId, int slot, int amount) implement
                     menu.setGhost(player, p.slot, net.minecraft.world.item.ItemStack.EMPTY);
                 } else if (menu instanceof BusMenu bus) {
                     bus.setKeep(p.slot, p.amount);
+                } else if (menu instanceof com.golemlogix.menu.StockRequesterMenu req) {
+                    req.setKeep(p.slot, p.amount);
+                } else if (menu instanceof com.golemlogix.menu.StockManometerMenu mano) {
+                    mano.setKeep(p.slot, p.amount);
                 }
                 menu.broadcastChanges();
             }

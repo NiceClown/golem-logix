@@ -37,6 +37,8 @@ public final class GolemConfig {
     public static final ModConfigSpec.IntValue MIXER_ICE_WATER;
     public static final ModConfigSpec.IntValue MIXER_ICE_CRYO;
     public static final ModConfigSpec.IntValue MIXER_ICE_TICKS;
+    public static final ModConfigSpec.BooleanValue TYPEWRITER_DING;
+    public static final ModConfigSpec.BooleanValue MONITOR_BLOCKED_TICK;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -123,6 +125,13 @@ public final class GolemConfig {
                 .defineInRange("iceCryo", 100, 0, 64000);
         MIXER_ICE_TICKS = b.comment("Cryo-Mixer, ice mode: ticks for one block of ice without Compressed Co-Processors.")
                 .defineInRange("iceTicks", 100, 1, 72000);
+        b.pop();
+
+        b.push("sound");
+        TYPEWRITER_DING = b.comment("Play a typewriter-carriage bell ding when a Cryo Calculator completes a job of >= 16 executions or an order placed by a player.")
+                .define("typewriterDing", true);
+        MONITOR_BLOCKED_TICK = b.comment("Recipe Monitor plays a soft tick while a crafting job is blocked.")
+                .define("monitorBlockedTick", true);
         b.pop();
 
         SPEC = b.build();

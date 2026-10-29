@@ -183,6 +183,22 @@ public class ModBlocks {
             "tooltip.golem_logix.cryo_mixer",
             () -> new com.golemlogix.blocks.CryoMixerBlock(props()));
 
+    public static final DeferredBlock<com.golemlogix.blocks.StockManometerBlock> STOCK_MANOMETER = registerBlock("stock_manometer",
+            "tooltip.golem_logix.stock_manometer",
+            () -> new com.golemlogix.blocks.StockManometerBlock(props()));
+
+    public static final DeferredBlock<com.golemlogix.blocks.StockRequesterBlock> STOCK_REQUESTER = registerBlock("stock_requester",
+            "tooltip.golem_logix.stock_requester",
+            () -> new com.golemlogix.blocks.StockRequesterBlock(props()));
+
+    public static final DeferredBlock<com.golemlogix.blocks.CryoDiodeBlock> CRYO_DIODE = registerBlock("cryo_diode",
+            "tooltip.golem_logix.cryo_diode",
+            () -> new com.golemlogix.blocks.CryoDiodeBlock(props()));
+
+    public static final DeferredBlock<com.golemlogix.blocks.SecurityTerminalBlock> SECURITY_TERMINAL = registerBlock("security_terminal",
+            "tooltip.golem_logix.security_terminal",
+            () -> new com.golemlogix.blocks.SecurityTerminalBlock(props()));
+
     /** The block being built right now: since 1.21.2 its properties must carry its id. */
     private static net.minecraft.resources.Identifier building;
 

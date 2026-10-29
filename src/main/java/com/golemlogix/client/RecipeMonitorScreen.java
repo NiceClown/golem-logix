@@ -142,6 +142,14 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
         if (!idle) {
             double frac = c.total() <= 0 ? 0 : (double) c.done() / c.total();
             GolemGui.bar(g, x + 24, y + 13, LIST_W - 32, 6, frac, GolemGui.CYAN_DARK);
+            CraftingJob.Status st = c.state() >= 0 ? CalculatorScreen.status(c.state()) : null;
+            boolean blocked = st != null && (st == CraftingJob.Status.WAITING_MACHINE || st == CraftingJob.Status.NO_MACHINE
+                    || st == CraftingJob.Status.NO_PROVIDER || st == CraftingJob.Status.NO_SOURCE
+                    || st == CraftingJob.Status.INVALID_PATTERN || st == CraftingJob.Status.PAUSED);
+            if (blocked) {
+                boolean lit = (System.currentTimeMillis() / 400) % 2 == 0;
+                g.fill(x + LIST_W - 14, y + 3, x + LIST_W - 8, y + 9, lit ? 0xFFFF2020 : 0xFF600000);
+            }
         } else {
             g.text(font, font.plainSubstrByWidth(where(c), LIST_W - 30), x + 24, y + 12, 0xFF5C6B70, false);
         }

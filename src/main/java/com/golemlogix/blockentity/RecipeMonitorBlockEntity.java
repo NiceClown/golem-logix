@@ -96,6 +96,11 @@ public class RecipeMonitorBlockEntity extends BlockEntity {
         float target = Math.min(6, be.jobs);
         be.shownCards += (target - be.shownCards) * 0.08f;
         be.walk(level);
+        if (be.fault() && com.golemlogix.config.GolemConfig.MONITOR_BLOCKED_TICK.get() && level.getGameTime() % 20 == 0) {
+            level.playLocalSound(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+                    net.minecraft.sounds.SoundEvents.LEVER_CLICK,
+                    net.minecraft.sounds.SoundSource.BLOCKS, 0.25f, 2.0f, false);
+        }
     }
 
     @Override

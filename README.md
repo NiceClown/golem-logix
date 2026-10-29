@@ -70,6 +70,11 @@ Everything comes with an illustrated, searchable **guide book** (Russian and Eng
 - **Auto-output** — the Mana Saturator and the Cryo-Mixer hand out what they make by themselves (on by default): into a neighbouring
   Pattern Provider first, whose return slots send it into the network (no Import Bus, no extra channel), otherwise into any
   neighbouring inventory.
+- **Stock Manometer** — a level emitter with an animated needle dial: monitors an item or fluid on the network and outputs redstone (Above, Below, Analog 0..15). Supports hysteresis bands and autocraft module triggers.
+- **Stock Requester** — automated stock keeper: a 3x3 ledger keeping target item and fluid quantities through network autocrafting in batches of up to 64, avoiding duplicate pending orders.
+- **Cryo-Diode** — a directional subnet isolator: passes Liquid Cryo-Source across networks without merging their channel topologies.
+- **Security Terminal & Identity Punch Card** — network protection for multiplayer: configure permissions (Insert, Extract, Craft, Build) per player card with Creative operator bypass.
+- **Mechanical ASMR** — typewriter bell sounds upon completing craft orders and soft warning ticks for blocked jobs in the Recipe Monitor.
 - **Extras** — Portable Chronometer (a brass handheld with a green screen where a Wither keeps firing at you; a wireless crafting
   terminal with its own Source charge; **Ctrl+E** opens it from anywhere on you, and with Curios it has its own Chronometer slot),
   Jade tooltips, JEI categories, server settings in `golem_logix-common.toml`.

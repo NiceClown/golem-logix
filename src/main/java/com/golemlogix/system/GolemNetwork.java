@@ -103,6 +103,8 @@ public final class GolemNetwork {
     private final List<com.golemlogix.crafting.CraftingCpu> cpus = new ArrayList<>();
     private final List<SourceHelper.Supplier> sources = new ArrayList<>();
     private int resonators = 0;
+    @Nullable
+    private com.golemlogix.blockentity.SecurityTerminalBlockEntity security;
     /** Blocks next to the nodes that the network uses (Source jars, resonators, containers behind periscopes), with their block. */
     private final Map<Node, Block> peripherals = new HashMap<>();
     /** Telegraph links inside this network (each pair counted once): every one of them costs Source. */
@@ -390,6 +392,8 @@ public final class GolemNetwork {
             } else if (be instanceof com.golemlogix.blockentity.CryoMainframeBlockEntity mainframe) {
                 // mainframe cores are separate processors, but they share one channel (the owner block's)
                 cpus.addAll(mainframe.cores());
+            } else if (be instanceof com.golemlogix.blockentity.SecurityTerminalBlockEntity sec && security == null) {
+                security = sec;
             }
             if (state.getBlock() instanceof PeriscopeStorageBusBlock) {
                 Direction facing = state.getValue(PeriscopeStorageBusBlock.FACING);
@@ -462,7 +466,12 @@ public final class GolemNetwork {
                         peripherals.put(new Node(lvl, p), be.getBlockState().getBlock());
                         continue;
                     }
-                    SourceHelper.Supplier s = SourceHelper.asSupplier(be);
+                    SourceHelper.Supplier s;
+                    if (be instanceof com.golemlogix.blockentity.CryoDiodeBlockEntity diode) {
+                        s = diode.asSupplier(dir.getOpposite());
+                    } else {
+                        s = SourceHelper.asSupplier(be);
+                    }
                     if (s != null) {
                         sources.add(s);
                         peripherals.put(new Node(lvl, p), be.getBlockState().getBlock());
@@ -826,6 +835,37 @@ public final class GolemNetwork {
         }
         if (devicePos != null && !isDeviceActive(devicePos)) {
             return "message.golem_logix.no_channels";
+        }
+        return null;
+    }
+
+    @Nullable
+    public com.golemlogix.blockentity.SecurityTerminalBlockEntity security() {
+        return security;
+    }
+
+    public boolean hasSecurityTerminal() {
+        return security != null && !security.isRemoved();
+    }
+
+    public boolean hasPermission(@Nullable net.minecraft.world.entity.player.Player player, com.golemlogix.security.SecurityPermission perm) {
+        if (!hasSecurityTerminal() || player == null) {
+            return true;
+        }
+        if (player.isCreative() && player.canUseGameMasterBlocks()) {
+            return true;
+        }
+        return security.hasPermission(player, perm);
+    }
+
+    @Nullable
+    public String accessError(@Nullable BlockPos devicePos, @Nullable net.minecraft.world.entity.player.Player player) {
+        String err = accessError(devicePos);
+        if (err != null) {
+            return err;
+        }
+        if (player != null && !hasPermission(player, com.golemlogix.security.SecurityPermission.BUILD)) {
+            return "message.golem_logix.security_denied";
         }
         return null;
     }
@@ -1420,6 +1460,10 @@ public final class GolemNetwork {
             }
         }
         return n;
+    }
+
+    public long fluidCountOf(net.minecraft.world.level.material.Fluid fluid) {
+        return fluidCountOf(new FluidStack(fluid, 1));
     }
 
     /** Stock of an ingredient: items by count, fluid keys in mB. */

@@ -1,0 +1,25 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "golem_logix:block/stock_requester_top",
+    "top": "golem_logix:block/stock_requester_top",
+    "front": "golem_logix:block/stock_requester_front",
+    "side": "golem_logix:block/stock_requester_side",
+    "bottom": "golem_logix:block/stock_requester_side"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0],
+      "to": [16, 16, 16],
+      "faces": {
+        "up": {"texture": "#top"},
+        "north": {"texture": "#front"},
+        "south": {"texture": "#side"},
+        "east": {"texture": "#side"},
+        "west": {"texture": "#side"},
+        "down": {"texture": "#bottom"}
+      }
+    }
+  ]
+}

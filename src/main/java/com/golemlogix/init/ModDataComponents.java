@@ -82,4 +82,16 @@ public class ModDataComponents {
     /** The Chronometer was last powered by the Eternal Frost Resonator of its network (for the tooltip). */
     public static final Supplier<DataComponentType<Boolean>> RESONATOR_LINK = COMPONENTS.registerComponentType(
             "resonator_link", b -> b.persistent(Codec.BOOL).networkSynchronized(ByteBufCodecs.BOOL));
+
+    /** The bound player UUID of an Identity Punch Card. */
+    public static final Supplier<DataComponentType<UUID>> IDENTITY_OWNER_ID = COMPONENTS.registerComponentType(
+            "identity_owner_id", b -> b.persistent(UUIDUtil.CODEC).networkSynchronized(UUIDUtil.STREAM_CODEC));
+
+    /** The bound player name of an Identity Punch Card. */
+    public static final Supplier<DataComponentType<String>> IDENTITY_OWNER_NAME = COMPONENTS.registerComponentType(
+            "identity_owner_name", b -> b.persistent(Codec.STRING).networkSynchronized(ByteBufCodecs.STRING_UTF8));
+
+    /** Permissions bitmask of an Identity Punch Card (1: insert, 2: extract, 4: craft, 8: build). */
+    public static final Supplier<DataComponentType<Integer>> IDENTITY_PERMISSIONS = COMPONENTS.registerComponentType(
+            "identity_permissions", b -> b.persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT));
 }

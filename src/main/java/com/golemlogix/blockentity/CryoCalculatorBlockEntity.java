@@ -21,6 +21,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Containers;
 import net.minecraft.world.inventory.ContainerData;
@@ -277,6 +278,12 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
                 }
                 boolean justShown = be.hold.show(be.job.current().stack(), time);
                 if (be.job.isDone()) {
+                    if (com.golemlogix.config.GolemConfig.TYPEWRITER_DING.get()) {
+                        if (be.job.doneExecutions() >= 16 || be.job.requester() != null) {
+                            level.playSound(null, pos, SoundEvents.NOTE_BLOCK_BELL.value(),
+                                    SoundSource.BLOCKS, 0.7f, 1.8f);
+                        }
+                    }
                     notifyFinished(level, be.job);
                     be.job = null;
                     be.active = false;

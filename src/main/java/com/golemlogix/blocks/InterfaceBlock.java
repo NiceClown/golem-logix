@@ -78,6 +78,13 @@ public class InterfaceBlock extends Block implements com.golemlogix.blocks.Remov
         if (level.isClientSide()) {
             return InteractionResult.SUCCESS;
         }
+        com.golemlogix.system.GolemNetwork net = com.golemlogix.system.GolemNetwork.scan(level, pos);
+        if (!net.hasPermission(player, com.golemlogix.security.SecurityPermission.BUILD)) {
+            if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
+                sp.sendOverlayMessage(Component.translatable("message.golem_logix.security_denied"));
+            }
+            return InteractionResult.CONSUME;
+        }
         if (level.getBlockEntity(pos) instanceof InterfaceBlockEntity be) {
             player.openMenu(new SimpleMenuProvider(
                     (id, inv, p) -> new InterfaceMenu(id, inv, be.getConfig(), be.getStock(), be.getInbox(), be.getUpgrades(), be.menuData(), be),
