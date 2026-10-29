@@ -360,13 +360,11 @@ The head sits on an iron core or an iron sheet.
 
 #### Charge and strikes
 
-The hammer runs on **Source** from its own charge (up to **4000**), like the Portable Chronometer: it takes nothing from jars nearby.
+The hammer runs on **Source** from its own charge (up to **4000**), like the Portable Chronometer; it draws nothing from nearby jars. **Right-click a Cryo-Source Jar** (or any Source jar) to charge it (visible in its bar and tooltip).
 
-To charge it, **right-click a Cryo-Source Jar** (or any Source jar) with it. The charge shows as a bar on the item and in its tooltip.
+**Left-click the anvil** to strike (100 Source; does not break the anvil).
 
-**Left-click the anvil** to strike (100 Source). The hammer does not break the anvil.
-
-*If the world has no way to get Source (neither Neo Vitae nor Ars Nouveau), the hammer strikes for free.*
+*Without Neo Vitae or Ars Nouveau in the world, the hammer strikes for free.*
 
 ### Source Gems in the Saturator
 <!-- {"id": "saturator_gems", "icon": "ars_nouveau:source_gem", "x": 2, "y": 1, "parents": ["saturator"], "requires": "ars_nouveau"} -->
@@ -914,11 +912,11 @@ A device gets a channel only if **every block** on its path still has room; othe
 
 #### A channel from inside
 
-A channel is not a wire. It is a thread of frozen runes stretched from the core to a device: icy glyphs run along it there and back.
+A channel is not a wire, but a thread of frozen runes stretched from the core to a device, with icy glyphs running back and forth.
 
-A thread cannot stretch forever: a pipe, a bushing, every node on the way holds only as many threads as its cold can bear. An extra thread simply does not freeze - and the device stays silent.
+Each pipe, bushing, and node holds only as many threads as its cold can bear. An extra thread simply fails to freeze, leaving the device silent.
 
-*The tiny snowman running inside the pipes is the keeper of the threads: it checks that none of them has thawed.*
+*The tiny snowman in the pipes keeps the threads, making sure none have thawed.*
 
 ### Cryogenic pipes
 <!-- {"id": "net_pipes", "icon": "golem_logix:basic_snow_pipe", "x": 1, "y": 0, "parents": ["net_channels"]} -->
@@ -1016,15 +1014,12 @@ Three nixie tubes on a walnut base. They show the same number as the lamps on th
 
 #### Where to fix it
 
-It reads the block it is fixed to and picks the mount by itself:
+It reads the block it is fixed to and picks its own mount:
+- **on a block** (bushing, device, core) — a plain foot;
+- **on a horizontal pipe** — a brass saddle facing you;
+- **on the side** of a block or pipe — a small bracket shelf.
 
-- **on a block** (a bushing, a device, the core) - a plain foot;
-
-- **on a horizontal pipe** - a brass saddle round the tube, the tubes turned towards you;
-
-- **on the side** of a block or a pipe - a little shelf on a wall plate, like the golem's on the Cryo-Distillation Tower.
-
-It takes no channel, and pipes do not reach for it.
+It takes no channels, and pipes do not connect to it.
 
 #### Reading it
 
@@ -1194,19 +1189,13 @@ Behind the glass **every inserted disk is a cassette with a colored label** in i
 
 #### Archivists
 
-While the network is powered, **copper archivist golems** run in front of the cassettes carrying crates along the shelves; every cassette has **two reels** and the tape winds from one to the other as the disk fills: this is how the cabinet “reads” data. Violet runes pulse above the front and on the plinth. While the cabinet's window is open, the **glass doors** of the showcase and the gauge panel stand open.
-
-No Source - the cabinet freezes and the golems stand still.
+While powered, **copper archivist golems** carry crates along shelves, cassette reels wind as disks fill, and violet runes pulse. Opening the window swings open its **glass doors** and gauge panel. Without Source, the cabinet freezes still.
 
 ##### Controls
 
-- Right-clicking any part opens the window: 2×5 disk slots and the cabinet **priority**. Only disks are accepted.
+- Right-click to open 2×5 disk slots and set **priority** (higher priority stores items first, lower priority draws first).
 
-- Items go to cabinets with a higher priority first and are taken from cabinets with a lower priority first.
-
-- Shift-click moves a disk between the cabinet and your inventory.
-
-- A broken cabinet drops all disks - with their contents.
+- Shift-click quickly moves disks; breaking the cabinet drops all disks with their contents intact.
 
 ### Analog Terminal
 <!-- {"id": "st_terminal", "icon": "golem_logix:analog_terminal", "x": 2, "y": 0, "parents": ["st_bay"]} -->
@@ -1567,7 +1556,7 @@ The Redstone Module: once installed, a mode button appears to the left of the wi
 
 <!-- {"type": "crafting", "recipe": "golem_logix:fuzzy_card"} -->
 
-In a bus, the Periscope or the Interface the filters match fuzzily: the same item with any components (≈), or any item of a tag (#): any glass for glass. The tag is picked from a list in the slot window (a middle-click on a bus filter, the gear on the Interface); Ctrl+click goes to the next tag at once.
+Allows fuzzy filter matching in buses, the Periscope, or Interfaces: match items with any components (≈) or by tag (#). Pick tags in the slot window (middle-click or gear); Ctrl+click cycles tags.
 
 ### Redstone
 <!-- {"id": "bus_redstone", "icon": "golem_logix:redstone_module", "x": 3, "y": 1, "parents": ["bus_upgrades"]} -->
@@ -1954,7 +1943,7 @@ The turquoise screen in the middle searches the list for a card; the gauge under
 
 <!-- {"type": "crafting", "recipe": "golem_logix:schematic_concentrator"} -->
 
-A rusty cube with a big round holographic screen: **every punch card of the network in one window** - the cards of all Stamping Gateways and Punch Card Catalogs, grouped by machine, with a search. Take, put and swap cards without walking to each gateway. Takes 1 channel.
+A rusty cube with a holographic screen showing **every punch card in the network** from all gateways and catalogs, grouped by machine with search. Swap cards remotely. Takes 1 channel.
 
 #### Categories
 

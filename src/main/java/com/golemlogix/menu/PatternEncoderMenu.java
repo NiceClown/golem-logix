@@ -169,7 +169,7 @@ public class PatternEncoderMenu extends GolemMenu {
     }
 
     private void refreshCraftingResult() {
-        if (!isCraftingMode()) {
+        if (!isCraftingMode() || level.isClientSide()) {
             return;
         }
         updating = true;
