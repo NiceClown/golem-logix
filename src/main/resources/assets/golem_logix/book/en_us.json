@@ -1076,7 +1076,7 @@
              "text": [
                "The window has a &ltool slot&r. Empty, the golem brings the &lstrength of every iron tool&r: the best of the iron pickaxe, axe, shovel, hoe and sword for that block, never worn out.",
                "Put a tool in and the golem uses it, enchantments and all (Fortune, Silk Touch, Efficiency) - and wears it. A tool about to break is put down instead.",
-               "• With an &lAutocraft Module&r the slot is &lrefilled&r from the network with what you last put there: bone meal topped up once half is gone, a worn-out tool swapped for a fresh one (the worn one goes into the network). What the network lacks is ordered from the calculators - bone meal from bones, say. Take the item out by hand and the slot is left empty.",
+               "• With an &lAutocraft Module&r the slot is &lrefilled&r from the network with what you last put there: bone meal is topped up with whatever the network has, even a few; a tool is used till it breaks, and the least worn one of its kind takes its place. What the network lacks is ordered from the calculators &lone at a time&r - bone meal from bones, say - so the slot fills as fast as it is made. Take the item out by hand and the slot is left empty.",
                "&oA block the tool cannot harvest (obsidian for iron) is left alone.&r"
              ]},
             {"type": "text", "title": "Clicks",

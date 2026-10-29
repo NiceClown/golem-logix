@@ -3,9 +3,9 @@
 ## 2.0.12 (26.1.2) — The Hewer refills its tool
 
 - **Hewer's Annihilation Bus takes an Autocraft Module**, which refills its tool slot from the network with what the player last
-  put there: bone meal (or anything that stacks) is topped up to a full stack once half is gone; a tool on its last point of
-  durability is swapped for the least worn one of the same kind, the worn one going into the network. What the network lacks
-  is ordered from the Cryo-Calculators - bone meal from bones. Taken out by hand, the slot stays empty.
+  put there: bone meal (or anything that stacks) is topped up with whatever the network has, even a few; a tool is used till
+  it breaks and the least worn one of its kind takes its place. What the network lacks is ordered from the Cryo-Calculators
+  one at a time - bone meal from bones - so the slot fills as fast as it is made. Taken out by hand, the slot stays empty.
 - **An empty allow list stops the Annihilation Bus**, so it stands still while being set up. A new bus starts with an empty deny
   list and works on everything, as before; buses saved with an empty allow list keep working as they did.
 - **JEI lists the Crafting Terminal** among the crafting tables of the crafting recipes.

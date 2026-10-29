@@ -63,8 +63,8 @@ import java.util.UUID;
  * the secret Plasma Temper: the tool in the slot never wears. Its speed is its tool's: it mines as a player would with it
  * (Efficiency counts), strikes at the weapon's attack speed, and clicks once a bus interval.
  * With an Autocraft Module it keeps its tool slot filled from the network with what the player last put there: bone meal
- * topped up when half used, a worn tool (one point of durability left) swapped for a fresh one, the worn one into the network;
- * what the network lacks is ordered from the calculators (a batch, or one).
+ * topped up with whatever the network has, a tool used till it breaks and then replaced by the least worn one; what the
+ * network lacks is ordered from the calculators one at a time.
  */
 @EventBusSubscriber(modid = GolemLogixMod.MOD_ID)
 public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlaneBlock.Waking {
@@ -333,18 +333,18 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         return a.isDamageableItem() ? a.is(b.getItem()) : ItemStack.isSameItemSameComponents(a, b);
     }
 
-    /** A tool on its last point of durability: the golem will not use it up (unless the Plasma Temper keeps it whole). */
-    private boolean wornOut(ItemStack s) {
-        return s.isDamageableItem() && s.getDamageValue() >= s.getMaxDamage() - 1 && !tempered();
+    /** The Autocraft Module refills the slot: a tool in it may then be used till it breaks, a new one takes its place. */
+    private boolean refilling() {
+        return !refill.isEmpty() && upgrades.has(UpgradeType.CRAFTING);
     }
 
     /**
-     * Autocraft Module: the tool slot refilled from the network. True if something changed.
-     * A tool worn out is swapped for the least worn of the same kind the network has (the worn one goes into the network); bone meal
-     * and the like are topped up to a full stack once half is gone; an empty slot is filled again. What the network lacks is ordered.
+     * Autocraft Module: the tool slot refilled from the network, as far as the network has it. True if something changed.
+     * An empty slot gets the least worn tool of the same kind (a tool is used till it breaks, never put back); bone meal and the
+     * like are topped up towards a full stack with whatever the network holds. What it lacks is ordered, one at a time.
      */
     private boolean refill(ServerLevel level, GolemNetwork net) {
-        if (refill.isEmpty() || !upgrades.has(UpgradeType.CRAFTING)) {
+        if (!refilling()) {
             return false;
         }
         ItemStack held = tool.getItem(0);
@@ -352,64 +352,47 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
             return false;
         }
         if (refill.isDamageableItem()) {
-            if (!held.isEmpty() && !wornOut(held)) {
+            if (!held.isEmpty()) {
                 return false;
             }
             ItemKey best = null;
             for (ItemKey k : net.listItems().keySet()) {
                 ItemStack s = k.stack();
-                if (s.is(refill.getItem()) && !wornOut(s) && (best == null || s.getDamageValue() < best.stack().getDamageValue())) {
+                if (s.is(refill.getItem()) && (best == null || s.getDamageValue() < best.stack().getDamageValue())) {
                     best = k;
                 }
             }
-            if (best == null || !held.isEmpty() && !net.insertItem(held, true).isEmpty()) {
-                order(level, net, ItemKey.of(refill), 1);
-                return false;
-            }
-            ItemStack fresh = net.extractItem(best.stack(), 1, false);
+            ItemStack fresh = best == null ? ItemStack.EMPTY : net.extractItem(best.stack(), 1, false);
             if (fresh.isEmpty()) {
+                order(level, net, ItemKey.of(refill));
                 return false;
-            }
-            if (!held.isEmpty()) {
-                net.insertItem(held, false);
             }
             tool.setItem(0, fresh);
             return true;
         }
-        int max = refill.getMaxStackSize();
-        if (!held.isEmpty() && held.getCount() > max / 2) {
+        int want = refill.getMaxStackSize() - held.getCount();
+        if (want <= 0) {
             return false;
         }
-        int want = max - held.getCount();
         ItemStack got = net.extractItem(refill, want, false);
-        if (got.getCount() < want) {
-            order(level, net, ItemKey.of(refill), max);
-        }
         if (got.isEmpty()) {
+            order(level, net, ItemKey.of(refill));
             return false;
         }
         tool.setItem(0, held.isEmpty() ? got : held.copyWithCount(held.getCount() + got.getCount()));
         return true;
     }
 
-    /** Orders what the slot lacks from the calculators: amount at once if the ingredients are there, else 8, else one. */
-    private void order(ServerLevel level, GolemNetwork net, ItemKey key, int amount) {
+    /** Orders one of what the slot lacks from the calculators (once one is on its way, the next waits for it). */
+    private void order(ServerLevel level, GolemNetwork net, ItemKey key) {
         long now = level.getGameTime();
         if (now - lastCraftRequest < CRAFT_REQUEST_COOLDOWN || !net.canCraft(key) || net.busCraftPending(worldPosition, key)) {
             return;
         }
         lastCraftRequest = now;
-        for (long n : new long[]{amount, 8, 1}) {
-            if (n > amount) {
-                continue;
-            }
-            java.util.Map<ItemKey, Long> one = new java.util.LinkedHashMap<>();
-            one.put(key, n);
-            GolemNetwork.StartType r = net.startCrafting(one, null, worldPosition).type();
-            if (r == GolemNetwork.StartType.STARTED || r == GolemNetwork.StartType.NO_CPU) {
-                return;
-            }
-        }
+        java.util.Map<ItemKey, Long> one = new java.util.LinkedHashMap<>();
+        one.put(key, 1L);
+        net.startCrafting(one, null, worldPosition);
     }
 
     private void sleep(long now) {
@@ -501,7 +484,8 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         if (state.requiresCorrectToolForDrops() && !with.isCorrectToolForDrops(state)) {
             return false;
         }
-        return tempered() || !(with.isDamageableItem() && with.getDamageValue() >= with.getMaxDamage() - 1);
+        // the last point of durability is kept for the player - unless the slot is refilled: then the tool is used till it breaks
+        return tempered() || refilling() || !(with.isDamageableItem() && with.getDamageValue() >= with.getMaxDamage() - 1);
     }
 
     /** The Plasma Temper is in: the tool never wears. */

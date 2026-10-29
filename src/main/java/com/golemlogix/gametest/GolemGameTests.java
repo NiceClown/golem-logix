@@ -774,9 +774,9 @@ public class GolemGameTests {
     }
 
     /**
-     * The Annihilation Bus with an Autocraft Module refills its tool slot: bone meal topped up from the network, a worn pickaxe
-     * swapped for a fresh one (the worn one into the network); taken out by the player, the slot stays empty. An empty allow list
-     * stops it.
+     * The Annihilation Bus with an Autocraft Module refills its tool slot: bone meal topped up from what the network has (even a
+     * few), a pickaxe on its last point used till it breaks and replaced by a fresh one; taken out by the player, the slot stays
+     * empty. An empty allow list stops it.
      */
     public static void annihilationBusRefills(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
@@ -787,12 +787,12 @@ public class GolemGameTests {
         be.getUpgrades().setItem(com.golemlogix.upgrade.UpgradeSpec.ANNIHILATION_BUS.slotOf(com.golemlogix.upgrade.UpgradeType.CRAFTING),
                 new ItemStack(ModItems.AUTOCRAFT_MODULE.get()));
         be.menuData().set(1, com.golemlogix.blockentity.AnnihilationBusBlockEntity.RIGHT);
-        be.getTool().setItem(0, new ItemStack(Items.BONE_MEAL, 10));
+        be.getTool().setItem(0, new ItemStack(Items.BONE_MEAL, 60));
         ItemKey meal = ItemKey.of(new ItemStack(Items.BONE_MEAL));
-        helper.runAfterDelay(2, () -> net(helper, bay).insertItem(new ItemStack(Items.BONE_MEAL, 64), false));
+        helper.runAfterDelay(2, () -> net(helper, bay).insertItem(new ItemStack(Items.BONE_MEAL, 3), false));
         helper.runAfterDelay(30, () -> {
-            helper.assertTrue(be.getTool().getItem(0).getCount() == 64 && net(helper, bay).itemCountOf(meal) == 10,
-                    "bone meal topped up to a stack: " + be.getTool().getItem(0));
+            helper.assertTrue(be.getTool().getItem(0).getCount() == 63 && net(helper, bay).itemCountOf(meal) == 0,
+                    "the three in the network topped the slot up at once: " + be.getTool().getItem(0));
             be.getTool().setItem(0, ItemStack.EMPTY);
             be.getTool().forget();
         });
@@ -803,13 +803,15 @@ public class GolemGameTests {
             net(helper, bay).insertItem(new ItemStack(Items.IRON_PICKAXE), false);
             be.getTool().setItem(0, worn);
             be.menuData().set(1, com.golemlogix.blockentity.AnnihilationBusBlockEntity.LEFT);
+            helper.setBlock(front, Blocks.STONE);
         });
-        helper.runAfterDelay(90, () -> {
+        helper.runAfterDelay(100, () -> {
+            helper.assertBlockNotPresent(Blocks.STONE, front);
             ItemStack t = be.getTool().getItem(0);
-            helper.assertTrue(t.is(Items.IRON_PICKAXE) && t.getDamageValue() == 0, "a fresh pickaxe in the slot: " + t);
-            boolean wornBack = net(helper, bay).listItems().keySet().stream().anyMatch(k -> k.stack().is(Items.IRON_PICKAXE)
-                    && k.stack().getDamageValue() > 0);
-            helper.assertTrue(wornBack, "the worn one went into the network");
+            helper.assertTrue(t.is(Items.IRON_PICKAXE) && t.getDamageValue() == 0,
+                    "the worn pickaxe broke on the stone, a fresh one took its place: " + t);
+            boolean wornBack = net(helper, bay).listItems().keySet().stream().anyMatch(k -> k.stack().is(Items.IRON_PICKAXE));
+            helper.assertTrue(!wornBack, "nothing worn went back into the network");
             // an empty allow list: the golem stands still
             be.menuData().set(3, 0);
             helper.setBlock(front, Blocks.STONE);
