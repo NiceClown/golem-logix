@@ -1,9 +1,9 @@
 # Changelog
 
-## 2.0.13 (26.1.2) — The Warden, the Storekeeper and the Gatekeeper
+## 2.1.0 (26.1.2) — The Warden, the Storekeeper and the Gatekeeper
 
-This is a **beta**: joining a world, every player is told so in the chat (with a link to the issues page) - the look of the
-newest devices will still be reworked.
+A new minor version: five new devices and security for shared networks. It is a **beta**: joining a world, every player
+is told so in the chat (with a link to the issues page) - the look of the newest devices will still be reworked.
 
 - **Brass Stock Manometer (Warden)**, a level emitter: a ghost of an item or a fluid (from JEI too), "switch on at" and an
   optional "off again at" (on below 500, off above 2 000 - no flicker on one mark), a signal above or below the threshold or
