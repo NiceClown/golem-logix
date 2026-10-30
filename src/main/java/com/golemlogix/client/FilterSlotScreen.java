@@ -31,6 +31,8 @@ public class FilterSlotScreen extends Screen {
     private boolean fluid;
     /** The fuzzy tag list (with a Fuzzy Card), kept over a resize so its scroll stays. */
     private TagPicker picker;
+    /** After the item/fluid switch the window is rebuilt (the steps differ) once the server has answered. */
+    private int reopenIn = -1;
 
     public FilterSlotScreen(Screen parent, GolemMenu menu, int slot, boolean keep) {
         super(Component.translatable("gui.golem_logix.bus.slot_title", slot + 1));
@@ -88,6 +90,15 @@ public class FilterSlotScreen extends Screen {
                 addRenderableWidget(new GolemButton(left + 8 + k * (pw + 2), top + 88, pw, 14, label, b -> set(p)));
             }
         }
+        if (keep && menu instanceof com.golemlogix.menu.StockRequesterMenu && com.golemlogix.menu.StockRequesterMenu.fluidSwitchable(f)) {
+            // keep the filled containers themselves or the fluid in them (in mB), as the Interface's mode button does
+            addRenderableWidget(new GolemButton(left + 8, top + h - 22, 70, 16,
+                    () -> Component.translatable(FluidGhostItem.is(filter()) ? "gui.golem_logix.interface.mode_fluid" : "gui.golem_logix.interface.mode_item"),
+                    () -> Component.translatable("gui.golem_logix.interface.toggle_mode"), () -> false, b -> {
+                ClientPacketDistributor.sendToServer(new FilterSlotPayload(menu.containerId, slot, com.golemlogix.menu.StockRequesterMenu.TOGGLE_FLUID));
+                reopenIn = 3;
+            }));
+        }
         addRenderableWidget(new GolemButton(left + 80, top + h - 22, 42, 16, Component.translatable("gui.golem_logix.interface.clear"), b -> {
             ClientPacketDistributor.sendToServer(new FilterSlotPayload(menu.containerId, slot, -1));
             onClose();
@@ -134,6 +145,11 @@ public class FilterSlotScreen extends Screen {
         super.tick();
         if (filter().isEmpty()) {
             onClose();
+            return;
+        }
+        if (reopenIn > 0 && --reopenIn == 0) {
+            reopenIn = -1;
+            rebuildWidgets();
         }
     }
 

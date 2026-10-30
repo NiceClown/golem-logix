@@ -1056,24 +1056,23 @@ Right-click a closed side to take the plug back.
 
 *A plug takes no channel and does not stop Source jars.*
 
-### Frost Valve (Cryo-Diode)
-<!-- {"id": "net_diode", "icon": "golem_logix:cryo_diode", "x": 2, "y": 1, "parents": ["net_pipes"]} -->
+### Cryo-Diode (Frost Valve)
+<!-- {"id": "net_diode", "icon": "golem_logix:cryo_diode", "x": 2, "y": 2, "parents": ["net_plan"]} -->
 
+#### Two networks, one cold
 <!-- {"type": "crafting", "recipe": "golem_logix:cryo_diode"} -->
 
-A directional frost diode between two networks.
+A valve on a pipe whose gate froze shut: the channels' runes do not pass the ice, but the cold of Source seeps through.
 
-#### Subnet isolation
+#### A subnet on borrowed power
 
-The Frost Valve points from an **inlet face** (wide brass flange) to an **outlet face** (narrow copper nozzle).
+Put the valve between two networks, each with its own **Atlas Core**. They **do not merge**: each keeps its channels, its disks, its autocrafting, and neither sees the other's things.
 
-It **strictly isolates** the two networks: channels, devices, cores, and storages do not cross between them. Each network runs independently under its own Atlas Core.
+But the network on the **outlet** side draws **Source** from the supplies of the network on the **inlet** side. So a big base powers a far farm or a workshop of its own without lending it a single channel.
 
-#### Passing Liquid Cryo-Source
+The arrow on the valve shows the way: Source flows only along it.
 
-While channels and data remain separated, the outlet side network automatically draws **Liquid Cryo-Source** from the inlet side network.
-
-This allows a large main base network with deep Source reservoirs to supply small specialized subnets (such as isolated farming or autocrafting loops) without bridging their channel topologies.
+*Handy when a neighbour on the server wants a small network of their own and has no Source jars.*
 
 ### Cryo-Source Telegraph
 <!-- {"id": "net_telegraph", "icon": "golem_logix:cryo_source_telegraph", "x": 3, "y": 0, "parents": ["net_devices"], "gold": true} -->
@@ -1286,33 +1285,33 @@ If something is missing for a recipe but the network **has patterns** for it, th
 
 When the order is ready, an **“Order ready”** plate pops up in the corner of the screen with a chime - press “+” again and craft the recipe.
 
-### Security Terminal
+### Iron Security Terminal (Gatekeeper)
 <!-- {"id": "st_security", "icon": "golem_logix:security_terminal", "x": 3, "y": 1, "parents": ["st_terminal"]} -->
 
+#### Who is let in
 <!-- {"type": "crafting", "recipe": "golem_logix:security_terminal"} -->
 
-A heavy brass and steel security console with 16 card bays.
+On a server you share, the network can be locked. In a heavy iron cabinet sits the **Gatekeeper**: it remembers whom to let in and what they may do.
 
-#### Multiplayer protection
+Whoever placed the terminal is its **owner** and may do everything. Everyone else only with their **identity punch card** in the terminal. Without one they cannot open a terminal, look into a drive bay or break a block of the network.
 
-When placed on a network, the player who placed the terminal becomes its **Owner**.
+While there is no Gatekeeper in the network, everything stays as it was: open to all.
 
-As long as an active Security Terminal is linked to the network, all other players are locked out of network interactions unless they hold a configured card in the terminal.
-
-#### Identity Punch Cards
-
+#### The identity punch card
 <!-- {"type": "crafting", "recipe": "golem_logix:identity_punch_card"} -->
 
-Right-click a blank **Identity Punch Card** to bind it permanently to your name and UUID.
+Take a blank card and **right-click**: your name is punched into it. Give it to the terminal's owner, who puts it in and marks its rights.
 
-Insert a bound card into the Security Terminal. The Owner can click to toggle permissions for each card:
+#### Rights
 
-- **Insert** (`↓ Ins`): Deposit items or fluids into network storage.
-- **Extract** (`↑ Ext`): Withdraw items or fluids from network storage.
-- **Craft** (`⚙ Crf`): Place autocrafting orders or use the Crafting Terminal grid.
-- **Build** (`⚒ Bld`): Break or place network blocks, and configure bus settings or patterns.
+Pick a card in the terminal's window and switch the icons under it:
 
-*Creative operators bypass all security restrictions.*
+- **hopper** - put into the network;
+- **dropper** - take out of it (and fill the crafting grid from it);
+- **crafting table** - order autocrafting;
+- **pickaxe** - build: open and break the network's blocks - drive bays, buses, gateways, calculators.
+
+*Server operators in creative mode walk past the Gatekeeper.*
 
 ### Fluids in the terminal
 <!-- {"id": "st_fluids_ui", "icon": "minecraft:bucket", "x": 3, "y": -1, "parents": ["st_terminal", "st_fluid"]} -->
@@ -1632,29 +1631,31 @@ The module decides when the machine may work. While it sits in an upgrade slot a
 
 - **Mana Saturator** - starts a ritual by signal; the module goes in with a right-click on the machine, the mode changes with another right-click with a module.
 
-### Brass Stock Manometer
+### Brass Stock Manometer (Warden)
 <!-- {"id": "bus_manometer", "icon": "golem_logix:stock_manometer", "x": 4, "y": 1, "parents": ["bus_redstone"]} -->
 
+#### A needle on the stock
 <!-- {"type": "crafting", "recipe": "golem_logix:stock_manometer"} -->
 
-A directional brass dial with an animated analog gauge needle. Takes 1 channel.
+As a boiler's gauge shows the steam pressure, this one shows **how much of one thing the network holds** - and gives a redstone signal when the needle crosses a mark. Takes 1 channel.
 
-#### Level emitter
+Put an item or a fluid into its cell (a bucket, or drag it from JEI) - the Warden watches it.
 
-The manometer monitors the network stock of a configured item or fluid (set in its ghost filter slot).
+#### When to switch on
 
-It emits redstone power (from all 6 sides or straight through connected conduits) according to its mode:
+The mode is the button on the left:
 
-- **Above**: Emits signal (15) when the stock is strictly greater than the threshold.
-- **Below**: Emits signal (15) when the stock is strictly less than the threshold.
-- **Analog**: Emits a proportional signal from 0 to 15 based on `stock / threshold`.
+- **torch - above the threshold**: a signal while there is that much or more;
+- **lever - below the threshold**: a signal while there is that much or less - switch a farm on when the stock runs short;
+- **comparator - proportional**: strength 0 to 15, from empty to the threshold.
 
-#### Hysteresis and upgrades
+**Switch on at** - where the signal lights up. **Off again at** - where it goes out; empty - at the same point.
 
-Configure a **hysteresis window** (`threshold .. threshold + hyst`) to prevent rapid flickering on boundary values:
-in Above mode, the signal turns on when above high threshold and off when falling below low threshold.
+##### For example
 
-With an **Autocraft Module** installed, the manometer detects when an autocrafting order for the monitored item or fluid is active in the network, emitting redstone while crafting runs.
+Logs never under 500, never over 2 000: mode "below", switch on at **500**, off again at **2 000**. The farm starts when there are 500 logs and runs until there are 2 000 - no flicker on a single mark.
+
+*With an Autocraft Module the Warden lights up while the network crafts the thing - to run a machine only for an order.*
 
 ### Layouts
 <!-- {"id": "bus_examples", "icon": "minecraft:furnace", "x": 3, "y": 0, "parents": ["bus_filters"]} -->
@@ -2065,28 +2066,28 @@ Right-click opens the desk: on the left - **every Cryo-Calculator of the network
 
 *When a craft is blocked (missing materials or waiting for an output), its indicator blinks red and ticks softly once a second.*
 
-### Copper Order Ledger
-<!-- {"id": "ac_stock_requester", "icon": "golem_logix:stock_requester", "x": 3, "y": 1, "parents": ["ac_monitor"]} -->
+### Copper Order Ledger (Storekeeper)
+<!-- {"id": "ac_stock_requester", "icon": "golem_logix:stock_requester", "x": 3, "y": 2, "parents": ["ac_monitor"]} -->
 
+#### So that there always is some
 <!-- {"type": "crafting", "recipe": "golem_logix:stock_requester"} -->
 
-A desk with a 3×3 copper order ledger. Takes 1 channel.
+A desk where the Storekeeper keeps a ledger: what the stores must hold and how much. When a stock dips, it writes an order to a calculator itself. Takes 1 channel.
 
-#### Maintaining network stock
+#### Keeping the ledger
 
-The ledger keeps a specified reserve of up to 9 items or fluids in the network by automatically submitting autocrafting orders.
+- Put an item into a cell or drag it from JEI.
+- **Middle-click** (the mouse wheel) a cell: how many to keep. An empty cell or 0 orders nothing.
+- A bucket in a cell keeps **buckets**; a button in the same window switches it to **the fluid itself** - then it counts in mB.
 
-Set items and desired keep amounts in its 9 ghost filter slots.
+The Storekeeper orders a little at a time - up to a stack of items or 16 buckets of fluid - and never two orders for one thing at once.
 
-#### Smart dispatch
+#### Marks in a cell's corner
 
-- Dispatches small batches (up to 64 items or 1000 mB) so the network is not overwhelmed.
-- Maintains at most 1 active job per configured item at a time, avoiding duplicate requests while prior batches are in flight.
-- Slot status indicators in the corner of each cell:
-  - **Green**: Stock satisfied or waiting.
-  - **Cyan**: Autocrafting order currently running.
-  - **Amber**: No pattern registered for this recipe.
-  - **Red**: Missing ingredients in storage.
+- **green** - enough in stock;
+- **cyan** - an order is running;
+- **yellow** - no pattern for it;
+- **red** - not enough ingredients.
 
 ### Machine steps
 <!-- {"id": "ac_machines", "icon": "minecraft:blast_furnace", "x": 3, "y": 0, "parents": ["ac_order"]} -->

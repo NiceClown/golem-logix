@@ -91,6 +91,7 @@ public class StockManometerScreen extends GolemScreen<StockManometerMenu> {
         if (!high.isFocused() && parse(high, -1) != menu.getHysteresis()) {
             high.setValue(Integer.toString(menu.getHysteresis()));
         }
+        high.visible = menu.getMode() != StockManometerBlockEntity.MODE_ANALOG;
     }
 
     @Override
@@ -106,7 +107,9 @@ public class StockManometerScreen extends GolemScreen<StockManometerMenu> {
     @Override
     protected void renderExtraBg(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
         GolemGui.inset(g, leftPos + 100, topPos + 18, 58, 16);
-        GolemGui.inset(g, leftPos + 100, topPos + 36, 58, 16);
+        if (menu.getMode() != StockManometerBlockEntity.MODE_ANALOG) {
+            GolemGui.inset(g, leftPos + 100, topPos + 36, 58, 16);
+        }
     }
 
     private String amount(long n) {
@@ -114,19 +117,37 @@ public class StockManometerScreen extends GolemScreen<StockManometerMenu> {
         return fluid ? GolemGui.formatCount(n) + " mB" : String.format(java.util.Locale.ROOT, "%,d", n).replace(',', ' ');
     }
 
+    /** The "off again at" field explains itself on hover. */
+    @Override
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
+        int x = mouseX - leftPos, y = mouseY - topPos;
+        if (menu.getMode() != StockManometerBlockEntity.MODE_ANALOG && x >= 48 && x < 158 && y >= 36 && y < 52) {
+            java.util.List<Component> lines = new java.util.ArrayList<>();
+            for (var line : font.getSplitter().splitLines(Component.translatable("gui.golem_logix.manometer.off.hint"), 200,
+                    net.minecraft.network.chat.Style.EMPTY)) {
+                lines.add(Component.literal(line.getString()));
+            }
+            g.setComponentTooltipForNextFrame(font, lines, mouseX, mouseY);
+        }
+    }
+
     @Override
     protected void extractLabels(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         g.text(font, title, 8, 6, GolemGui.PARCHMENT, false);
-        g.text(font, Component.translatable("gui.golem_logix.manometer.low"), 48, 22, GolemGui.PARCHMENT, false);
-        g.text(font, Component.translatable("gui.golem_logix.manometer.high"), 48, 40, GolemGui.PARCHMENT, false);
+        boolean analog = menu.getMode() == StockManometerBlockEntity.MODE_ANALOG;
+        g.text(font, Component.translatable(analog ? "gui.golem_logix.manometer.full" : "gui.golem_logix.manometer.on"), 48, 22,
+                GolemGui.PARCHMENT, false);
+        if (!analog) {
+            g.text(font, Component.translatable("gui.golem_logix.manometer.off"), 48, 40, GolemGui.PARCHMENT, false);
+        }
         int t = menu.getThreshold(), h = menu.getHysteresis();
-        boolean band = h > t;
         Component rule = switch (menu.getMode()) {
-            case StockManometerBlockEntity.MODE_BELOW -> band
+            case StockManometerBlockEntity.MODE_BELOW -> h > t
                     ? Component.translatable("gui.golem_logix.manometer.rule.below_band", amount(t), amount(h))
                     : Component.translatable("gui.golem_logix.manometer.rule.below", amount(t));
             case StockManometerBlockEntity.MODE_ANALOG -> Component.translatable("gui.golem_logix.manometer.rule.analog", amount(t));
-            default -> band
+            default -> h > 0 && h < t
                     ? Component.translatable("gui.golem_logix.manometer.rule.above_band", amount(t), amount(h))
                     : Component.translatable("gui.golem_logix.manometer.rule.above", amount(t));
         };

@@ -12,6 +12,12 @@
 - **Iron Security Terminal (Gatekeeper)** and the **Identity Punch Card**: a card binds to the player who uses it; with the
   terminal in a network only its owner and the players whose cards are in it may use the network, each card with its own
   rights - put in, take out, order crafts, build (open and break the network's blocks). Creative operators pass.
+- The Manometer's two numbers are "switch on at" and "off again at" (they were saved nowhere and reset to 0); big numbers
+  no longer wrap in its window. The Order Ledger and the Manometer take JEI drags; a bucket in a Ledger slot keeps buckets
+  or, switched in the slot window, the fluid itself in mB.
+- Glowing parts (the pipes' nixie heat lamps, the Concentrator's hologram, the Resonator's vortex) are drawn the game's own
+  emissive way when Iris is installed: under shader packs they had vanished or shone through walls.
+- The new guide book articles stand on free places of their maps (two of them hid older articles) and are written anew.
 - 26 more game tests for these devices (197 in all); they caught the Order Ledger ordering for a slot left at 0 and not
   recognising a fluid's pattern, both fixed.
 - **Mechanical ASMR**: a typewriter-carriage ding when a calculator finishes a big job or one a player ordered, and a

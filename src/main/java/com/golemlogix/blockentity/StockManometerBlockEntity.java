@@ -27,6 +27,8 @@ public class StockManometerBlockEntity extends BlockEntity {
     public static final int MODE_ABOVE = 0;
     public static final int MODE_BELOW = 1;
     public static final int MODE_ANALOG = 2;
+    /** menuData().set indices that take whole numbers (not window slots). */
+    public static final int SET_THRESHOLD = 10, SET_SECOND = 11;
 
     private final OwnedContainer filter = new OwnedContainer(1, this, s -> true);
     private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.MANOMETER, this);
@@ -138,24 +140,27 @@ public class StockManometerBlockEntity extends BlockEntity {
         be.updateSignal(level, pos, state, newSignal, stock, false);
     }
 
+    /**
+     * threshold = where the signal switches ON, hysteresis = where it switches OFF again (0: at the same point). Above: on from
+     * the threshold, off at the second point or less (it lies below); Below: on at the threshold or less, off from the second
+     * point (it lies above); in between the signal holds - a farm runs from 500 up to 2 000, not on and off at 500.
+     */
     private int computeSignal(long stock) {
-        int low = threshold;
-        int high = hysteresis > threshold ? hysteresis : threshold;
-
+        int on = threshold, off = hysteresis;
         if (mode == MODE_ABOVE) {
-            if (hysteresis > threshold) {
-                if (stock >= high) return 15;
-                if (stock <= low) return 0;
-                return signal; // Latch
+            if (off > 0 && off < on) {
+                if (stock >= on) return 15;
+                if (stock <= off) return 0;
+                return signal;
             }
-            return stock >= threshold ? 15 : 0;
+            return stock >= on ? 15 : 0;
         } else if (mode == MODE_BELOW) {
-            if (hysteresis > threshold) {
-                if (stock <= low) return 15;
-                if (stock >= high) return 0;
-                return signal; // Latch
+            if (off > on) {
+                if (stock <= on) return 15;
+                if (stock >= off) return 0;
+                return signal;
             }
-            return stock <= threshold ? 15 : 0;
+            return stock <= on ? 15 : 0;
         } else {
             // Analog mode: 0..15 proportional to stock / threshold
             double max = Math.max(1, (double) threshold);
@@ -186,32 +191,37 @@ public class StockManometerBlockEntity extends BlockEntity {
         return new ContainerData() {
             @Override
             public int get(int index) {
+                // window data slots carry 16 bits: the numbers go in two halves each
                 return switch (index) {
                     case 0 -> mode;
-                    case 1 -> threshold;
-                    case 2 -> hysteresis;
-                    case 3 -> signal;
-                    case 4 -> (int) (stockCount & 0xFFFF);
-                    case 5 -> (int) ((stockCount >> 16) & 0xFFFF);
+                    case 1 -> threshold & 0xFFFF;
+                    case 2 -> threshold >>> 16;
+                    case 3 -> hysteresis & 0xFFFF;
+                    case 4 -> hysteresis >>> 16;
+                    case 5 -> signal;
+                    case 6 -> (int) (stockCount & 0xFFFF);
+                    case 7 -> (int) ((stockCount >> 16) & 0xFFFF);
                     default -> 0;
                 };
             }
 
+            /** From the window (server side): 0 the mode, SET_THRESHOLD / SET_SECOND whole numbers. */
             @Override
             public void set(int index, int value) {
                 switch (index) {
-                    case 0 -> mode = value;
-                    case 1 -> threshold = value;
-                    case 2 -> hysteresis = value;
-                    case 3 -> signal = value;
-                    case 4 -> stockCount = (stockCount & 0xFFFF_0000L) | (value & 0xFFFF);
-                    case 5 -> stockCount = (stockCount & 0xFFFFL) | (((long) value) << 16);
+                    case 0 -> mode = Math.floorMod(value, 3);
+                    case SET_THRESHOLD -> threshold = Math.max(1, value);
+                    case SET_SECOND -> hysteresis = Math.max(0, value);
+                    default -> {
+                        return;
+                    }
                 }
+                setChanged();
             }
 
             @Override
             public int getCount() {
-                return 6;
+                return 8;
             }
         };
     }

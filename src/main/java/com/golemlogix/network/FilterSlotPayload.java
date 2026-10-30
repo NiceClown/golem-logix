@@ -34,7 +34,10 @@ public record FilterSlotPayload(int containerId, int slot, int amount) implement
         ctx.enqueueWork(() -> {
             if (ctx.player() instanceof ServerPlayer player && player.containerMenu instanceof GolemMenu menu
                     && menu.containerId == p.containerId && menu.isGhost(p.slot)) {
-                if (p.amount < 0) {
+                if (p.amount == com.golemlogix.menu.StockRequesterMenu.TOGGLE_FLUID
+                        && menu instanceof com.golemlogix.menu.StockRequesterMenu req) {
+                    req.setKeep(p.slot, p.amount);
+                } else if (p.amount < 0) {
                     menu.setGhost(player, p.slot, net.minecraft.world.item.ItemStack.EMPTY);
                 } else if (menu instanceof BusMenu bus) {
                     bus.setKeep(p.slot, p.amount);

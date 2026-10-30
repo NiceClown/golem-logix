@@ -1065,8 +1065,8 @@ public final class GolemGameTestsExtra {
         StockManometerBlockEntity mano = helper.getBlockEntity(manoPos, StockManometerBlockEntity.class);
         mano.getFilter().setItem(0, new ItemStack(Items.DIAMOND));
         mano.setMode(StockManometerBlockEntity.MODE_ABOVE);
-        mano.setThreshold(10);
-        mano.setHysteresis(30); // High = 30, Low = 10
+        mano.setThreshold(30); // on from 30
+        mano.setHysteresis(10); // off again at 10 or less
 
         helper.runAfterDelay(10, () -> {
             helper.assertTrue(mano.getSignal() == 0, "initially 0");

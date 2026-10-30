@@ -296,6 +296,8 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         registration.addGhostIngredientHandler(com.golemlogix.client.BusScreen.class, new GhostTargets<>());
         registration.addGhostIngredientHandler(com.golemlogix.client.InterfaceScreen.class, new GhostTargets<>());
         registration.addGhostIngredientHandler(com.golemlogix.client.PatternEncoderScreen.class, new GhostTargets<>());
+        registration.addGhostIngredientHandler(com.golemlogix.client.StockRequesterScreen.class, new GhostTargets<>());
+        registration.addGhostIngredientHandler(com.golemlogix.client.StockManometerScreen.class, new GhostTargets<>());
         // the upgrade column on the right and the settings buttons on the left of machine windows
         registration.addGenericGuiContainerHandler(GolemScreen.class, new IGuiContainerHandler<GolemScreen<?>>() {
             @Override

@@ -28,7 +28,7 @@ public class StockManometerMenu extends GolemMenu {
     public static StockManometerMenu fromNetwork(int id, Inventory inv, RegistryFriendlyByteBuf buf) {
         BlockPos pos = buf.readBlockPos();
         return new StockManometerMenu(id, inv, new SimpleContainer(1),
-                new SimpleContainer(UpgradeSpec.MANOMETER.slots()), new SimpleContainerData(6), pos);
+                new SimpleContainer(UpgradeSpec.MANOMETER.slots()), new SimpleContainerData(8), pos);
     }
 
     public StockManometerMenu(int id, Inventory inv, Container filter, Container upgrades, ContainerData data, BlockPos devicePos) {
@@ -68,33 +68,34 @@ public class StockManometerMenu extends GolemMenu {
     }
 
     public int getThreshold() {
-        return data.get(1);
+        return (data.get(1) & 0xFFFF) | (data.get(2) & 0xFFFF) << 16;
     }
 
     public int getHysteresis() {
-        return data.get(2);
+        return (data.get(3) & 0xFFFF) | (data.get(4) & 0xFFFF) << 16;
     }
 
     public int getSignal() {
-        return data.get(3);
+        return data.get(5);
     }
 
     public long getStock() {
-        long low = data.get(4) & 0xFFFFL;
-        long high = data.get(5) & 0xFFFFL;
+        long low = data.get(6) & 0xFFFFL;
+        long high = data.get(7) & 0xFFFFL;
         return (high << 16) | low;
     }
 
+    /** Server side: the mode, where the signal switches on and where off again (0: at the same point). */
     public void setConfig(int mode, int threshold, int hysteresis) {
         data.set(0, mode);
-        data.set(1, Math.max(1, threshold));
-        data.set(2, Math.max(0, hysteresis));
+        data.set(com.golemlogix.blockentity.StockManometerBlockEntity.SET_THRESHOLD, threshold);
+        data.set(com.golemlogix.blockentity.StockManometerBlockEntity.SET_SECOND, hysteresis);
         broadcastChanges();
     }
 
     public void setKeep(int slot, int amount) {
         if (slot == 0) {
-            data.set(1, Math.max(1, amount));
+            data.set(com.golemlogix.blockentity.StockManometerBlockEntity.SET_THRESHOLD, amount);
             broadcastChanges();
         }
     }

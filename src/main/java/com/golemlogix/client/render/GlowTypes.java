@@ -40,8 +40,18 @@ public final class GlowTypes {
     private GlowTypes() {
     }
 
+    /**
+     * Shader packs (Iris) do not run this mod's own pipeline: the glow vanished or showed through walls. With Iris the same
+     * geometry goes through the game's emissive translucent type, on a copy of the texture whose brightness is its alpha
+     * ("<name>_alpha.png").
+     */
+    private static final boolean IRIS = net.neoforged.fml.ModList.get().isLoaded("iris");
+    private static final Function<Identifier, RenderType> SHADER_SAFE = Util.memoize(texture ->
+            net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucentEmissive(Identifier.fromNamespaceAndPath(
+                    texture.getNamespace(), texture.getPath().replace(".png", "_alpha.png"))));
+
     /** Glowing geometry with this texture: black is see-through, everything else lights up what is behind it. */
     public static RenderType glow(Identifier texture) {
-        return GLOW.apply(texture);
+        return IRIS ? SHADER_SAFE.apply(texture) : GLOW.apply(texture);
     }
 }
