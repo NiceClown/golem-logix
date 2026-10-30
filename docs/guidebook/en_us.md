@@ -1649,11 +1649,11 @@ The mode is the button on the left:
 - **lever - below the threshold**: a signal while there is that much or less - switch a farm on when the stock runs short;
 - **comparator - proportional**: strength 0 to 15, from empty to the threshold.
 
-**Switch on at** - where the signal lights up. **Off again at** - where it goes out; empty - at the same point.
+**Switch on** - where the signal lights up. **Switch off** - where it goes out; empty or 0 - at the same point.
 
 ##### For example
 
-Logs never under 500, never over 2 000: mode "below", switch on at **500**, off again at **2 000**. The farm starts when there are 500 logs and runs until there are 2 000 - no flicker on a single mark.
+Logs never under 500, never over 2 000: mode "below", switch on **500**, switch off **2 000**. The farm starts when there are 500 logs and runs until there are 2 000 - no flicker on a single mark.
 
 *With an Autocraft Module the Warden lights up while the network crafts the thing - to run a machine only for an order.*
 

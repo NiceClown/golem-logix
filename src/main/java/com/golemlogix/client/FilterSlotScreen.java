@@ -202,8 +202,9 @@ public class FilterSlotScreen extends Screen {
             g.item(Fuzzy.plain(cfg).copyWithCount(1), left + 9, top + 21);
         }
         g.text(font, Fuzzy.plain(cfg).getHoverName(), left + 30, top + 20, GolemGui.CYAN, false);
-        g.text(font, Component.translatable(count ? "gui.golem_logix.encoder.count_what" : keep ? "gui.golem_logix.bus.keep_what"
-                : "gui.golem_logix.bus.slot_what"), left + 30, top + 30, 0xFFA89880, false);
+        g.text(font, net.minecraft.locale.Language.getInstance().getVisualOrder(font.substrByWidth(Component.translatable(count
+                ? "gui.golem_logix.encoder.count_what" : keep ? "gui.golem_logix.bus.keep_what" : "gui.golem_logix.bus.slot_what"), W - 38)),
+                left + 30, top + 30, 0xFFA89880, false);
         if (keep) {
             g.text(font, Component.translatable(count ? "gui.golem_logix.encoder.count" : "gui.golem_logix.bus.keep"), left + 8, top + 52,
                     GolemGui.PARCHMENT, false);
@@ -213,7 +214,8 @@ public class FilterSlotScreen extends Screen {
             Component info = count ? Component.translatable("gui.golem_logix.encoder.count_info")
                     : v == 0 ? Component.translatable("gui.golem_logix.bus.keep_info_none")
                     : Component.translatable("gui.golem_logix.bus.keep_info", fluid ? InterfaceSlotScreen.bucketText(v) : Integer.toString(v));
-            g.text(font, info, left + 8, top + 106, 0xFF8A7A66, false);
+            g.text(font, net.minecraft.locale.Language.getInstance().getVisualOrder(font.substrByWidth(info, W - 16)), left + 8, top + 106,
+                    0xFF8A7A66, false);
         }
         if (picker != null) {
             picker.extract(g, font, cfg, mouseX, mouseY);

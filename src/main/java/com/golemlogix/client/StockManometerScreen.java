@@ -20,6 +20,8 @@ import net.neoforged.neoforge.client.network.ClientPacketDistributor;
  */
 public class StockManometerScreen extends GolemScreen<StockManometerMenu> {
     private EditBox low, high;
+    /** What this window last sent: a field is overwritten from the server only when someone else changed the value. */
+    private int sentLow, sentHigh;
 
     public StockManometerScreen(StockManometerMenu menu, Inventory inv, Component title) {
         super(menu, inv, title, StockManometerMenu.IMAGE_WIDTH, StockManometerMenu.IMAGE_HEIGHT);
@@ -39,8 +41,10 @@ public class StockManometerScreen extends GolemScreen<StockManometerMenu> {
                             .append("\n").append(Component.translatable(key + ".hint").withStyle(ChatFormatting.GRAY));
                 },
                 () -> true, () -> menu.getMode() != StockManometerBlockEntity.MODE_ABOVE, StockManometerMenu.BUTTON_MODE);
-        low = number(leftPos + 104, topPos + 22, menu.getThreshold());
-        high = number(leftPos + 104, topPos + 40, menu.getHysteresis());
+        sentLow = menu.getThreshold();
+        sentHigh = menu.getHysteresis();
+        low = number(leftPos + 122, topPos + 22, sentLow);
+        high = number(leftPos + 122, topPos + 40, sentHigh);
     }
 
     private String modeName() {
@@ -52,10 +56,10 @@ public class StockManometerScreen extends GolemScreen<StockManometerMenu> {
     }
 
     private EditBox number(int x, int y, int value) {
-        EditBox box = new EditBox(font, x, y, 50, 12, Component.empty());
+        EditBox box = new EditBox(font, x, y, 44, 12, Component.empty());
         box.setBordered(false);
-        box.setMaxLength(9);
-        box.setFilter(s -> s.matches("\\d{0,9}"));
+        box.setMaxLength(7);
+        box.setFilter(s -> s.matches("\\d{0,7}"));
         box.setTextColor(GolemGui.PARCHMENT);
         box.setValue(Integer.toString(value));
         box.setResponder(s -> send());
@@ -75,21 +79,33 @@ public class StockManometerScreen extends GolemScreen<StockManometerMenu> {
         if (low == null || high == null) {
             return;
         }
-        int t = Math.max(1, parse(low, menu.getThreshold())), h = parse(high, 0);
-        if (t != menu.getThreshold() || h != menu.getHysteresis()) {
+        int t = Math.max(1, parse(low, sentLow)), h = parse(high, 0);
+        if (t != sentLow || h != sentHigh) {
+            sentLow = t;
+            sentHigh = h;
             ClientPacketDistributor.sendToServer(new ManometerConfigPayload(menu.containerId, menu.getMode(), t, h));
         }
+    }
+
+    /** Whatever is typed when the window closes is kept. */
+    @Override
+    public void removed() {
+        send();
+        super.removed();
     }
 
     /** The fields follow the server while the player is not typing in them. */
     @Override
     protected void containerTick() {
         super.containerTick();
-        if (!low.isFocused() && parse(low, -1) != menu.getThreshold()) {
-            low.setValue(Integer.toString(menu.getThreshold()));
+        // a change from elsewhere (the slot window's amount, another player): the field follows it
+        if (menu.getThreshold() != sentLow && !low.isFocused()) {
+            sentLow = menu.getThreshold();
+            low.setValue(Integer.toString(sentLow));
         }
-        if (!high.isFocused() && parse(high, -1) != menu.getHysteresis()) {
-            high.setValue(Integer.toString(menu.getHysteresis()));
+        if (menu.getHysteresis() != sentHigh && !high.isFocused()) {
+            sentHigh = menu.getHysteresis();
+            high.setValue(Integer.toString(sentHigh));
         }
         high.visible = menu.getMode() != StockManometerBlockEntity.MODE_ANALOG;
     }
@@ -106,9 +122,9 @@ public class StockManometerScreen extends GolemScreen<StockManometerMenu> {
 
     @Override
     protected void renderExtraBg(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
-        GolemGui.inset(g, leftPos + 100, topPos + 18, 58, 16);
+        GolemGui.inset(g, leftPos + 118, topPos + 18, 50, 16);
         if (menu.getMode() != StockManometerBlockEntity.MODE_ANALOG) {
-            GolemGui.inset(g, leftPos + 100, topPos + 36, 58, 16);
+            GolemGui.inset(g, leftPos + 118, topPos + 36, 50, 16);
         }
     }
 
@@ -122,7 +138,7 @@ public class StockManometerScreen extends GolemScreen<StockManometerMenu> {
     public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(g, mouseX, mouseY, partialTick);
         int x = mouseX - leftPos, y = mouseY - topPos;
-        if (menu.getMode() != StockManometerBlockEntity.MODE_ANALOG && x >= 48 && x < 158 && y >= 36 && y < 52) {
+        if (menu.getMode() != StockManometerBlockEntity.MODE_ANALOG && x >= 48 && x < 168 && y >= 36 && y < 52) {
             java.util.List<Component> lines = new java.util.ArrayList<>();
             for (var line : font.getSplitter().splitLines(Component.translatable("gui.golem_logix.manometer.off.hint"), 200,
                     net.minecraft.network.chat.Style.EMPTY)) {
