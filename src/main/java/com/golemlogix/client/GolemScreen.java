@@ -242,10 +242,15 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
     }
 
     /** A middle-click on a filled bus filter slot opens its settings window. True if it did. */
+    /** The window a middle-click on a filled ghost slot opens. */
+    protected FilterSlotScreen slotWindow(com.golemlogix.menu.GolemMenu gm, int slot) {
+        return new FilterSlotScreen(this, gm, slot, keepsAmounts());
+    }
+
     protected boolean slotWindowClick(double x, double y, int button) {
         int i = button == 2 ? filterSlotAt(x, y) : -1;
         if (i >= 0 && menu.getSlot(i).hasItem() && minecraft != null && menu instanceof com.golemlogix.menu.GolemMenu gm) {
-            minecraft.setScreen(new FilterSlotScreen(this, gm, i, keepsAmounts()));
+            minecraft.setScreen(slotWindow(gm, i));
             return true;
         }
         return false;

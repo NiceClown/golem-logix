@@ -26,6 +26,8 @@ public class FilterSlotScreen extends Screen {
     private final GolemMenu menu;
     private final int slot;
     private final boolean keep;
+    /** The Pattern Encoder's cells: the amount is the ghost's own count (a fluid's mB), not a keep amount. */
+    private boolean count;
     private EditBox amount;
     private int left, top, h;
     private boolean fluid;
@@ -40,6 +42,13 @@ public class FilterSlotScreen extends Screen {
         this.menu = menu;
         this.slot = slot;
         this.keep = keep;
+    }
+
+    /** The encoder's slot window: the number of items (or mB) of a pattern cell. */
+    public static FilterSlotScreen count(Screen parent, GolemMenu menu, int slot) {
+        FilterSlotScreen s = new FilterSlotScreen(parent, menu, slot, true);
+        s.count = true;
+        return s;
     }
 
     private ItemStack filter() {
@@ -72,7 +81,7 @@ public class FilterSlotScreen extends Screen {
             amount.setMaxLength(8);
             amount.setFilter(s -> s.isEmpty() || s.matches("\\d{1,7}[bBвВ]?"));
             amount.setTextColor(GolemGui.PARCHMENT);
-            amount.setValue(Integer.toString(BusMenu.keep(f)));
+            amount.setValue(Integer.toString(count ? (FluidGhostItem.is(f) ? FluidGhostItem.amount(f) : f.getCount()) : BusMenu.keep(f)));
             addRenderableWidget(amount);
             setInitialFocus(amount);
             int[] deltas = fluid ? new int[]{-10_000, -1000, -100, 100, 1000, 10_000} : new int[]{-64, -10, -1, 1, 10, 64};
@@ -81,7 +90,8 @@ public class FilterSlotScreen extends Screen {
                 addRenderableWidget(new GolemButton(left + 8 + k * 27, top + 70, 25, 14, Component.literal(deltaLabel(d)), b -> set(value() + d)));
             }
             int stack = Math.max(1, f.getMaxStackSize());
-            int[] presets = fluid ? new int[]{0, 1000, 4000, 16_000, 64_000} : new int[]{0, Math.max(1, stack / 4), stack, stack * 4, stack * 16};
+            int[] presets = count ? (fluid ? new int[]{100, 250, 1000, 4000, 16_000} : new int[]{1, 2, 4, 8, 16, 64})
+                    : fluid ? new int[]{0, 1000, 4000, 16_000, 64_000} : new int[]{0, Math.max(1, stack / 4), stack, stack * 4, stack * 16};
             int pw = (160 - (presets.length - 1) * 2) / presets.length;
             for (int k = 0; k < presets.length; k++) {
                 int p = presets[k];
@@ -131,7 +141,7 @@ public class FilterSlotScreen extends Screen {
     }
 
     private void set(int v) {
-        amount.setValue(Integer.toString(Math.max(0, v)));
+        amount.setValue(Integer.toString(Math.max(count ? 1 : 0, count && !fluid ? Math.min(99, v) : v)));
     }
 
     private void apply() {
@@ -192,14 +202,16 @@ public class FilterSlotScreen extends Screen {
             g.item(Fuzzy.plain(cfg).copyWithCount(1), left + 9, top + 21);
         }
         g.text(font, Fuzzy.plain(cfg).getHoverName(), left + 30, top + 20, GolemGui.CYAN, false);
-        g.text(font, Component.translatable(keep ? "gui.golem_logix.bus.keep_what" : "gui.golem_logix.bus.slot_what"), left + 30, top + 30,
-                0xFFA89880, false);
+        g.text(font, Component.translatable(count ? "gui.golem_logix.encoder.count_what" : keep ? "gui.golem_logix.bus.keep_what"
+                : "gui.golem_logix.bus.slot_what"), left + 30, top + 30, 0xFFA89880, false);
         if (keep) {
-            g.text(font, Component.translatable("gui.golem_logix.bus.keep"), left + 8, top + 52, GolemGui.PARCHMENT, false);
+            g.text(font, Component.translatable(count ? "gui.golem_logix.encoder.count" : "gui.golem_logix.bus.keep"), left + 8, top + 52,
+                    GolemGui.PARCHMENT, false);
             g.text(font, Component.translatable(fluid ? "gui.golem_logix.interface.unit_mb" : "gui.golem_logix.interface.unit_items"),
                     left + 128, top + 50, 0xFFA89880, false);
             int v = value();
-            Component info = v == 0 ? Component.translatable("gui.golem_logix.bus.keep_info_none")
+            Component info = count ? Component.translatable("gui.golem_logix.encoder.count_info")
+                    : v == 0 ? Component.translatable("gui.golem_logix.bus.keep_info_none")
                     : Component.translatable("gui.golem_logix.bus.keep_info", fluid ? InterfaceSlotScreen.bucketText(v) : Integer.toString(v));
             g.text(font, info, left + 8, top + 106, 0xFF8A7A66, false);
         }

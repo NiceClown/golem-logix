@@ -129,6 +129,20 @@ public class PatternEncoderMenu extends GolemMenu {
         return super.fuzzyLine(slotId);
     }
 
+    /** The slot window: how many of a processing cell's item (1..99) or mB of its fluid; a crafting grid takes one each. */
+    public void setCount(int slot, int amount) {
+        if (slot < 0 || slot >= OUT_START + 3 || isCraftingMode()) {
+            return;
+        }
+        ItemStack s = container.getItem(slot);
+        if (s.isEmpty()) {
+            return;
+        }
+        container.setItem(slot, com.golemlogix.items.FluidGhostItem.is(s)
+                ? com.golemlogix.items.FluidGhostItem.withAmount(s, Math.max(1, amount)) : s.copyWithCount(Math.max(1, Math.min(99, amount))));
+        broadcastChanges();
+    }
+
     @Override
     public void setGhost(Player player, int slotId, ItemStack stack) {
         // a fluid is an output of a processing pattern only, never of a crafting table recipe

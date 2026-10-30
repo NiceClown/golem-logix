@@ -2,32 +2,31 @@
 
 ## 2.0.13 (26.1.2) — The Warden, the Storekeeper and the Gatekeeper
 
-- **Brass Stock Manometer (Warden)**, a level emitter: a ghost of an item or a fluid, a threshold typed in and an optional
-  second one (on below 500, off above 2 000), a signal above or below the threshold or proportional to it; a needle dial on
-  its face. With an Autocraft Module it signals while a craft of the item runs.
+This is a **beta**: joining a world, every player is told so in the chat (with a link to the issues page) - the look of the
+newest devices will still be reworked.
+
+- **Brass Stock Manometer (Warden)**, a level emitter: a ghost of an item or a fluid (from JEI too), "switch on at" and an
+  optional "off again at" (on below 500, off above 2 000 - no flicker on one mark), a signal above or below the threshold or
+  proportional to it; a brass console with a needle dial. With an Autocraft Module it signals while a craft of the item runs.
 - **Copper Order Ledger (Storekeeper)** keeps up to nine items or fluids at a set amount in the network by ordering crafts,
-  one job per item at a time; each slot shows whether it is stocked, crafting, or lacks a pattern or ingredients.
+  a little at a time and one job per item; each slot shows whether it is stocked, crafting, or lacks a pattern or
+  ingredients. A bucket in a slot keeps buckets or, switched in the slot window, the fluid itself in mB. A copper clerk's
+  lectern with an open ledger.
 - **Cryo-Diode (Frost Valve)** joins two networks without merging them: channels, storage and crafting stay apart, while the
   network on its outlet side draws Source through it from the supplies of the inlet side - a subnet on the main base's power.
 - **Iron Security Terminal (Gatekeeper)** and the **Identity Punch Card**: a card binds to the player who uses it; with the
   terminal in a network only its owner and the players whose cards are in it may use the network, each card with its own
   rights - put in, take out, order crafts, build (open and break the network's blocks). Creative operators pass.
-- The Manometer's two numbers are "switch on at" and "off again at" (they were saved nowhere and reset to 0); big numbers
-  no longer wrap in its window. The Order Ledger and the Manometer take JEI drags; a bucket in a Ledger slot keeps buckets
-  or, switched in the slot window, the fluid itself in mB.
-- Glowing parts (the pipes' nixie heat lamps, the Concentrator's hologram, the Resonator's vortex) are drawn the game's own
-  emissive way when Iris is installed: under shader packs they had vanished or shone through walls.
-- The four new devices are redrawn as shaped models in the mod's manner: the Manometer a brass-crowned console with a dial
-  and frosted gauge tubes, the Order Ledger a copper clerk's lectern with an open ledger and drawers, the Cryo-Diode a pipe
-  fitting with a brass valve, a handwheel and an arrow, the Security Terminal an iron vault with a green CRT and a dial lock.
-- The new guide book articles stand on free places of their maps (two of them hid older articles) and are written anew.
-- 26 more game tests for these devices (197 in all); they caught the Order Ledger ordering for a slot left at 0 and not
-  recognising a fluid's pattern, both fixed.
 - **Mechanical ASMR**: a typewriter-carriage ding when a calculator finishes a big job or one a player ordered, and a
   blinking, softly ticking lamp on the Recipe Monitor while a job is blocked; both can be turned off in the config.
+- **The Pattern Encoder's cells have the slot window too**: a middle-click (the mouse wheel) on an input or an output sets
+  how many items (up to 99) or how many mB of a fluid the pattern takes or gives, with step and preset buttons, and its
+  fuzzy tag - the same window as the buses'.
+- Glowing parts (the pipes' nixie heat lamps, the Concentrator's hologram, the Resonator's vortex) are drawn the game's own
+  emissive way when Iris is installed: under shader packs they had vanished or shone through walls.
+- The guide book has an article for each new device; 26 more game tests (197 in all).
 
 ## 2.0.12 (26.1.2) — The Hewer refills its tool
-
 
 - **Hewer's Annihilation Bus takes an Autocraft Module**, which refills its tool slot from the network with what the player last
   put there: bone meal (or anything that stacks) is topped up with whatever the network has, even a few; a tool is used till

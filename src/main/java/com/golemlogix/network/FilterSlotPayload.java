@@ -43,6 +43,8 @@ public record FilterSlotPayload(int containerId, int slot, int amount) implement
                     bus.setKeep(p.slot, p.amount);
                 } else if (menu instanceof com.golemlogix.menu.StockRequesterMenu req) {
                     req.setKeep(p.slot, p.amount);
+                } else if (menu instanceof com.golemlogix.menu.PatternEncoderMenu enc) {
+                    enc.setCount(p.slot, p.amount);
                 } else if (menu instanceof com.golemlogix.menu.StockManometerMenu mano) {
                     mano.setKeep(p.slot, p.amount);
                 }
