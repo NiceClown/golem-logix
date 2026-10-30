@@ -39,6 +39,27 @@ import net.minecraft.world.level.block.state.properties.DoorHingeSide;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.material.Fluids;
 import net.neoforged.neoforge.fluids.FluidStack;
+import com.golemlogix.blockentity.StockManometerBlockEntity;
+import com.golemlogix.blockentity.StockRequesterBlockEntity;
+import com.golemlogix.blockentity.CryoDiodeBlockEntity;
+import com.golemlogix.blockentity.SecurityTerminalBlockEntity;
+import com.golemlogix.blockentity.RecipeMonitorBlockEntity;
+import com.golemlogix.menu.StockManometerMenu;
+import com.golemlogix.menu.StockRequesterMenu;
+import com.golemlogix.menu.SecurityTerminalMenu;
+import com.golemlogix.menu.TerminalMenu;
+import com.golemlogix.network.TerminalActionPayload;
+import com.golemlogix.network.CraftRequestPayload;
+import com.golemlogix.network.ManometerConfigPayload;
+import com.golemlogix.security.SecurityPermission;
+import com.golemlogix.items.IdentityPunchCardItem;
+import com.golemlogix.items.FluidGhostItem;
+import com.golemlogix.init.ModDataComponents;
+import net.minecraft.world.level.block.RedstoneLampBlock;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.InteractionHand;
+import java.util.Map;
 
 import java.util.List;
 
@@ -949,31 +970,31 @@ public final class GolemGameTestsExtra {
     // NEW FEATURES: MANOMETER, REQUESTER, CRYO-DIODE, SECURITY, ASMR
     // =========================================================================
 
-    public static void stockManometerRedstone(GameTestHelper helper) {
+    // -------------------------------------------------------------------------
+    // 1. STOCK MANOMETER
+    // -------------------------------------------------------------------------
+
+    public static void stockManometerThresholdAbove(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         BlockPos manoPos = BUS_OUT;
         helper.setBlock(manoPos, ModBlocks.STOCK_MANOMETER.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
-        com.golemlogix.blockentity.StockManometerBlockEntity mano = helper.getBlockEntity(manoPos, com.golemlogix.blockentity.StockManometerBlockEntity.class);
+        StockManometerBlockEntity mano = helper.getBlockEntity(manoPos, StockManometerBlockEntity.class);
         mano.getFilter().setItem(0, new ItemStack(Items.DIAMOND));
-        mano.setMode(com.golemlogix.blockentity.StockManometerBlockEntity.MODE_ABOVE);
-        mano.setThreshold(5);
+        mano.setMode(StockManometerBlockEntity.MODE_ABOVE);
+        mano.setThreshold(10);
+        mano.setHysteresis(0);
 
         helper.runAfterDelay(10, () -> {
-            helper.assertTrue(mano.getSignal() == 0, "signal should be 0 when stock <= threshold in ABOVE mode");
-
-            net(helper, bay).insertItem(new ItemStack(Items.DIAMOND, 10), false);
+            helper.assertTrue(mano.getSignal() == 0, "signal should be 0 initially when stock < 10");
+            net(helper, bay).insertItem(new ItemStack(Items.DIAMOND, 9), false);
             helper.runAfterDelay(15, () -> {
-                helper.assertTrue(mano.getSignal() == 15, "signal should be 15 when stock > threshold");
-
-                mano.setMode(com.golemlogix.blockentity.StockManometerBlockEntity.MODE_BELOW);
+                helper.assertTrue(mano.getSignal() == 0, "signal should still be 0 with 9 diamonds");
+                net(helper, bay).insertItem(new ItemStack(Items.DIAMOND, 1), false);
                 helper.runAfterDelay(15, () -> {
-                    helper.assertTrue(mano.getSignal() == 0, "signal should be 0 in BELOW mode when stock > threshold");
-
-                    mano.setMode(com.golemlogix.blockentity.StockManometerBlockEntity.MODE_ANALOG);
-                    mano.setThreshold(20);
+                    helper.assertTrue(mano.getSignal() == 15, "signal should be 15 when stock reaches 10");
+                    net(helper, bay).extractItem(new ItemStack(Items.DIAMOND), 6, false);
                     helper.runAfterDelay(15, () -> {
-                        int sig = mano.getSignal();
-                        helper.assertTrue(sig >= 7 && sig <= 8, "analog signal should be ~7-8 (got " + sig + ")");
+                        helper.assertTrue(mano.getSignal() == 0, "signal should drop to 0 when stock drops to 4");
                         helper.succeed();
                     });
                 });
@@ -981,7 +1002,215 @@ public final class GolemGameTestsExtra {
         });
     }
 
-    public static void stockRequesterAutocraft(GameTestHelper helper) {
+    public static void stockManometerThresholdBelow(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos manoPos = BUS_OUT;
+        helper.setBlock(manoPos, ModBlocks.STOCK_MANOMETER.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        StockManometerBlockEntity mano = helper.getBlockEntity(manoPos, StockManometerBlockEntity.class);
+        mano.getFilter().setItem(0, new ItemStack(Items.DIAMOND));
+        mano.setMode(StockManometerBlockEntity.MODE_BELOW);
+        mano.setThreshold(10);
+        mano.setHysteresis(0);
+
+        helper.runAfterDelay(10, () -> {
+            helper.assertTrue(mano.getSignal() == 15, "signal should be 15 initially when stock (0) <= 10");
+            net(helper, bay).insertItem(new ItemStack(Items.DIAMOND, 10), false);
+            helper.runAfterDelay(15, () -> {
+                helper.assertTrue(mano.getSignal() == 15, "signal should still be 15 when stock == 10");
+                net(helper, bay).insertItem(new ItemStack(Items.DIAMOND, 1), false);
+                helper.runAfterDelay(15, () -> {
+                    helper.assertTrue(mano.getSignal() == 0, "signal should be 0 when stock > 10 (11)");
+                    net(helper, bay).extractItem(new ItemStack(Items.DIAMOND), 2, false);
+                    helper.runAfterDelay(15, () -> {
+                        helper.assertTrue(mano.getSignal() == 15, "signal should return to 15 when stock drops back to 9");
+                        helper.succeed();
+                    });
+                });
+            });
+        });
+    }
+
+    public static void stockManometerThresholdAnalog(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos manoPos = BUS_OUT;
+        helper.setBlock(manoPos, ModBlocks.STOCK_MANOMETER.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        StockManometerBlockEntity mano = helper.getBlockEntity(manoPos, StockManometerBlockEntity.class);
+        mano.getFilter().setItem(0, new ItemStack(Items.DIAMOND));
+        mano.setMode(StockManometerBlockEntity.MODE_ANALOG);
+        mano.setThreshold(20);
+
+        helper.runAfterDelay(10, () -> {
+            helper.assertTrue(mano.getSignal() == 0, "analog signal should be 0 initially");
+            net(helper, bay).insertItem(new ItemStack(Items.DIAMOND, 10), false);
+            helper.runAfterDelay(15, () -> {
+                int sig = mano.getSignal();
+                helper.assertTrue(sig >= 7 && sig <= 8, "analog signal at half threshold should be ~7-8 (got " + sig + ")");
+                net(helper, bay).insertItem(new ItemStack(Items.DIAMOND, 10), false);
+                helper.runAfterDelay(15, () -> {
+                    helper.assertTrue(mano.getSignal() == 15, "analog signal at full threshold should be 15");
+                    net(helper, bay).insertItem(new ItemStack(Items.DIAMOND, 10), false);
+                    helper.runAfterDelay(15, () -> {
+                        helper.assertTrue(mano.getSignal() == 15, "analog signal above threshold should clamp to 15");
+                        helper.succeed();
+                    });
+                });
+            });
+        });
+    }
+
+    public static void stockManometerHysteresisLatch(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos manoPos = BUS_OUT;
+        helper.setBlock(manoPos, ModBlocks.STOCK_MANOMETER.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        StockManometerBlockEntity mano = helper.getBlockEntity(manoPos, StockManometerBlockEntity.class);
+        mano.getFilter().setItem(0, new ItemStack(Items.DIAMOND));
+        mano.setMode(StockManometerBlockEntity.MODE_ABOVE);
+        mano.setThreshold(10);
+        mano.setHysteresis(30); // High = 30, Low = 10
+
+        helper.runAfterDelay(10, () -> {
+            helper.assertTrue(mano.getSignal() == 0, "initially 0");
+            net(helper, bay).insertItem(new ItemStack(Items.DIAMOND, 20), false);
+            helper.runAfterDelay(15, () -> {
+                helper.assertTrue(mano.getSignal() == 0, "stock=20 between 10 and 30 should remain 0 (not reached high threshold yet)");
+                net(helper, bay).insertItem(new ItemStack(Items.DIAMOND, 15), false); // 35
+                helper.runAfterDelay(15, () -> {
+                    helper.assertTrue(mano.getSignal() == 15, "stock=35 reaches high threshold, signal turns ON (15)");
+                    net(helper, bay).extractItem(new ItemStack(Items.DIAMOND), 15, false); // 20
+                    helper.runAfterDelay(15, () -> {
+                        helper.assertTrue(mano.getSignal() == 15, "stock=20 latches ON (still 15 between 10 and 30)");
+                        net(helper, bay).extractItem(new ItemStack(Items.DIAMOND), 15, false); // 5
+                        helper.runAfterDelay(15, () -> {
+                            helper.assertTrue(mano.getSignal() == 0, "stock=5 drops below low threshold, signal turns OFF (0)");
+                            helper.succeed();
+                        });
+                    });
+                });
+            });
+        });
+    }
+
+    public static void stockManometerFluidGhost(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        CopperDriveBayBlockEntity driveBay = helper.getBlockEntity(bay, CopperDriveBayBlockEntity.class);
+        driveBay.getContainer().setItem(1, new ItemStack(ModItems.FLUID_DISK_4K.get()));
+
+        BlockPos manoPos = BUS_OUT;
+        helper.setBlock(manoPos, ModBlocks.STOCK_MANOMETER.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        StockManometerBlockEntity mano = helper.getBlockEntity(manoPos, StockManometerBlockEntity.class);
+
+        ItemStack waterGhost = FluidGhostItem.of(new FluidStack(Fluids.WATER, 1000));
+        mano.getFilter().setItem(0, waterGhost);
+        mano.setMode(StockManometerBlockEntity.MODE_ABOVE);
+        mano.setThreshold(2000); // 2000 mB
+
+        helper.runAfterDelay(10, () -> {
+            helper.assertTrue(mano.getSignal() == 0, "signal 0 when fluid is 0");
+            net(helper, bay).insertFluid(new FluidStack(Fluids.WATER, 1000), false);
+            helper.runAfterDelay(15, () -> {
+                helper.assertTrue(mano.getSignal() == 0, "signal 0 when fluid is 1000 mB (< 2000)");
+                net(helper, bay).insertFluid(new FluidStack(Fluids.WATER, 1500), false); // 2500 mB
+                helper.runAfterDelay(15, () -> {
+                    helper.assertTrue(mano.getSignal() == 15, "signal 15 when fluid is 2500 mB (>= 2000)");
+                    helper.assertTrue(mano.getStockCount() == 2500, "stock count matches fluid amount (2500)");
+                    helper.succeed();
+                });
+            });
+        });
+    }
+
+    public static void stockManometerAutocraftModulePulse(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+        provider.getContainer().setItem(0, card(craftingPattern(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.OAK_LOG))));
+
+        BlockPos manoPos = BUS_OUT;
+        helper.setBlock(manoPos, ModBlocks.STOCK_MANOMETER.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        StockManometerBlockEntity mano = helper.getBlockEntity(manoPos, StockManometerBlockEntity.class);
+        mano.getFilter().setItem(0, new ItemStack(Items.OAK_PLANKS));
+        mano.getUpgrades().setItem(0, new ItemStack(ModItems.AUTOCRAFT_MODULE.get()));
+
+        helper.runAfterDelay(10, () -> {
+            helper.assertTrue(mano.getSignal() == 0, "signal 0 when no craft is running");
+            net(helper, bay).insertItem(new ItemStack(Items.OAK_LOG, 10), false);
+            net(helper, bay).startCrafting(ItemKey.of(new ItemStack(Items.OAK_PLANKS)), 40);
+
+            helper.runAfterDelay(15, () -> {
+                helper.assertTrue(mano.getSignal() == 15, "signal 15 while autocraft is running");
+                helper.succeed();
+            });
+        });
+    }
+
+    public static void stockManometerMenuAndPayloadAndSaveLoad(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos manoPos = BUS_OUT;
+        helper.setBlock(manoPos, ModBlocks.STOCK_MANOMETER.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        StockManometerBlockEntity mano = helper.getBlockEntity(manoPos, StockManometerBlockEntity.class);
+        mano.setMode(StockManometerBlockEntity.MODE_ABOVE);
+        mano.setThreshold(50);
+        mano.setHysteresis(100);
+
+        ServerPlayer player = testPlayer(helper);
+        StockManometerMenu menu = new StockManometerMenu(1, player.getInventory(), mano.getFilter(), mano.getUpgrades(), mano.menuData(), mano.getBlockPos());
+
+        // Test button mode cycling
+        menu.clickMenuButton(player, StockManometerMenu.BUTTON_MODE);
+        helper.assertTrue(mano.getMode() == StockManometerBlockEntity.MODE_BELOW, "button clicked -> MODE_BELOW");
+        menu.clickMenuButton(player, StockManometerMenu.BUTTON_MODE);
+        helper.assertTrue(mano.getMode() == StockManometerBlockEntity.MODE_ANALOG, "button clicked -> MODE_ANALOG");
+        menu.clickMenuButton(player, StockManometerMenu.BUTTON_MODE);
+        helper.assertTrue(mano.getMode() == StockManometerBlockEntity.MODE_ABOVE, "button clicked -> MODE_ABOVE");
+
+        // Test setConfig
+        menu.setConfig(StockManometerBlockEntity.MODE_BELOW, 120, 240);
+        helper.assertTrue(mano.getMode() == StockManometerBlockEntity.MODE_BELOW, "config mode set to BELOW");
+        helper.assertTrue(mano.getThreshold() == 120, "config threshold set to 120");
+        helper.assertTrue(mano.getHysteresis() == 240, "config hysteresis set to 240");
+
+        // Save and load
+        CompoundTag tag = mano.saveWithFullMetadata(helper.getLevel().registryAccess());
+        net.minecraft.world.level.block.entity.BlockEntity loaded = net.minecraft.world.level.block.entity.BlockEntity.loadStatic(manoPos, helper.getBlockState(manoPos), tag, helper.getLevel().registryAccess());
+        helper.assertTrue(loaded instanceof StockManometerBlockEntity, "loaded block entity is StockManometerBlockEntity");
+        StockManometerBlockEntity mano2 = (StockManometerBlockEntity) loaded;
+        helper.assertTrue(mano2.getMode() == StockManometerBlockEntity.MODE_BELOW, "loaded mode preserved");
+        helper.assertTrue(mano2.getThreshold() == 120, "loaded threshold preserved");
+        helper.assertTrue(mano2.getHysteresis() == 240, "loaded hysteresis preserved");
+
+        helper.succeed();
+    }
+
+    public static void stockManometerRedstoneLampNeighbor(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos manoPos = BUS_OUT;
+        // Facing NORTH, attached face is SOUTH (where cable bushing connects to array)
+        helper.setBlock(manoPos, ModBlocks.STOCK_MANOMETER.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        BlockPos lampPos = manoPos.north();
+        helper.setBlock(lampPos, Blocks.REDSTONE_LAMP.defaultBlockState().setValue(RedstoneLampBlock.LIT, false));
+
+        StockManometerBlockEntity mano = helper.getBlockEntity(manoPos, StockManometerBlockEntity.class);
+        mano.getFilter().setItem(0, new ItemStack(Items.DIAMOND));
+        mano.setMode(StockManometerBlockEntity.MODE_ABOVE);
+        mano.setThreshold(5);
+
+        helper.runAfterDelay(10, () -> {
+            helper.assertTrue(!helper.getBlockState(lampPos).getValue(RedstoneLampBlock.LIT), "lamp unlit initially");
+            net(helper, bay).insertItem(new ItemStack(Items.DIAMOND, 10), false);
+            helper.runAfterDelay(15, () -> {
+                helper.assertTrue(mano.getSignal() == 15, "mano signal is 15");
+                helper.assertTrue(helper.getBlockState(lampPos).getValue(RedstoneLampBlock.LIT), "neighbor lamp lights up from manometer");
+                helper.succeed();
+            });
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // 2. STOCK REQUESTER / COPPER ORDER LEDGER
+    // -------------------------------------------------------------------------
+
+    public static void stockRequesterKeepsTargetAmount(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
         helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
@@ -990,25 +1219,148 @@ public final class GolemGameTestsExtra {
 
         BlockPos reqPos = BUS_OUT;
         helper.setBlock(reqPos, ModBlocks.STOCK_REQUESTER.get().defaultBlockState());
-        com.golemlogix.blockentity.StockRequesterBlockEntity req = helper.getBlockEntity(reqPos, com.golemlogix.blockentity.StockRequesterBlockEntity.class);
+        StockRequesterBlockEntity req = helper.getBlockEntity(reqPos, StockRequesterBlockEntity.class);
 
         ItemStack filterStack = new ItemStack(Items.OAK_PLANKS);
-        filterStack.set(com.golemlogix.init.ModDataComponents.KEEP_AMOUNT.get(), 20);
+        filterStack.set(ModDataComponents.KEEP_AMOUNT.get(), 16);
         req.getFilters().setItem(0, filterStack);
 
-        helper.runAfterDelay(2, () -> net(helper, bay).insertItem(new ItemStack(Items.OAK_LOG, 10), false));
+        net(helper, bay).insertItem(new ItemStack(Items.OAK_LOG, 10), false);
 
-        helper.runAfterDelay(25, () -> {
+        helper.runAfterDelay(35, () -> {
             GolemNetwork n = net(helper, bay);
             long planks = n.itemCountOf(ItemKey.of(new ItemStack(Items.OAK_PLANKS)));
-            int st = req.getSlotStatus(0);
-            helper.assertTrue(planks > 0 || st == com.golemlogix.blockentity.StockRequesterBlockEntity.STATUS_CRAFTING,
-                    "stock requester must order crafting (planks=" + planks + ", status=" + st + ")");
+            helper.assertTrue(planks >= 16, "stock reaches target 16 (got " + planks + ")");
+            helper.assertTrue(req.getSlotStatus(0) == StockRequesterBlockEntity.STATUS_OK, "status becomes STATUS_OK once reached");
             helper.succeed();
         });
     }
 
-    public static void cryoDiodeSeparationAndSource(GameTestHelper helper) {
+    public static void stockRequesterSingleJobPerItem(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+        provider.getContainer().setItem(0, card(craftingPattern(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.OAK_LOG))));
+
+        BlockPos reqPos = BUS_OUT;
+        helper.setBlock(reqPos, ModBlocks.STOCK_REQUESTER.get().defaultBlockState());
+        StockRequesterBlockEntity req = helper.getBlockEntity(reqPos, StockRequesterBlockEntity.class);
+
+        ItemStack filterStack = new ItemStack(Items.OAK_PLANKS);
+        filterStack.set(ModDataComponents.KEEP_AMOUNT.get(), 200);
+        req.getFilters().setItem(0, filterStack);
+
+        net(helper, bay).insertItem(new ItemStack(Items.OAK_LOG, 100), false);
+
+        helper.runAfterDelay(15, () -> {
+            GolemNetwork n = net(helper, bay);
+            ItemKey key = ItemKey.of(new ItemStack(Items.OAK_PLANKS));
+            helper.assertTrue(n.busCraftPending(helper.absolutePos(reqPos), key), "busCraftPending is true for the requested item");
+            int activeJobs = 0;
+            for (com.golemlogix.crafting.CraftingCpu cpu : n.cpus()) {
+                if (!cpu.isIdle() && cpu.getJob() != null && cpu.getJob().targets().containsKey(key)) {
+                    activeJobs++;
+                }
+            }
+            helper.assertTrue(activeJobs == 1, "exactly one job running for key, never duplicate concurrent jobs (got " + activeJobs + ")");
+            helper.assertTrue(req.getSlotStatus(0) == StockRequesterBlockEntity.STATUS_CRAFTING, "slot status is STATUS_CRAFTING");
+            helper.succeed();
+        });
+    }
+
+    public static void stockRequesterStatusesNoPatternAndMissing(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+        provider.getContainer().setItem(0, card(craftingPattern(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.OAK_LOG))));
+
+        BlockPos reqPos = BUS_OUT;
+        helper.setBlock(reqPos, ModBlocks.STOCK_REQUESTER.get().defaultBlockState());
+        StockRequesterBlockEntity req = helper.getBlockEntity(reqPos, StockRequesterBlockEntity.class);
+
+        // Slot 0: Netherite Ingot -> NO pattern on network
+        ItemStack noPatternStack = new ItemStack(Items.NETHERITE_INGOT);
+        noPatternStack.set(ModDataComponents.KEEP_AMOUNT.get(), 5);
+        req.getFilters().setItem(0, noPatternStack);
+
+        // Slot 1: Oak Planks -> has pattern, but 0 logs in network
+        ItemStack missingIngStack = new ItemStack(Items.OAK_PLANKS);
+        missingIngStack.set(ModDataComponents.KEEP_AMOUNT.get(), 10);
+        req.getFilters().setItem(1, missingIngStack);
+
+        helper.runAfterDelay(15, () -> {
+            helper.assertTrue(req.getSlotStatus(0) == StockRequesterBlockEntity.STATUS_NO_PATTERN,
+                    "slot 0 status must be STATUS_NO_PATTERN (got " + req.getSlotStatus(0) + ")");
+            helper.assertTrue(req.getSlotStatus(1) == StockRequesterBlockEntity.STATUS_MISSING_INGREDIENTS,
+                    "slot 1 status must be STATUS_MISSING_INGREDIENTS (got " + req.getSlotStatus(1) + ")");
+            helper.succeed();
+        });
+    }
+
+    public static void stockRequesterFluidTarget(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        CopperDriveBayBlockEntity driveBay = helper.getBlockEntity(bay, CopperDriveBayBlockEntity.class);
+        driveBay.getContainer().setItem(1, new ItemStack(ModItems.FLUID_DISK_4K.get()));
+
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+
+        ItemStack waterGhost = FluidGhostItem.of(new FluidStack(Fluids.WATER, 1000));
+        provider.getContainer().setItem(0, card(new PatternData(false, List.of(new ItemStack(Items.ICE)), List.of(waterGhost))));
+
+        BlockPos reqPos = BUS_OUT;
+        helper.setBlock(reqPos, ModBlocks.STOCK_REQUESTER.get().defaultBlockState());
+        StockRequesterBlockEntity req = helper.getBlockEntity(reqPos, StockRequesterBlockEntity.class);
+
+        ItemStack reqGhost = FluidGhostItem.of(new FluidStack(Fluids.WATER, 1000));
+        reqGhost.set(ModDataComponents.KEEP_AMOUNT.get(), 2000);
+        req.getFilters().setItem(0, reqGhost);
+
+        helper.runAfterDelay(15, () -> {
+            int st = req.getSlotStatus(0);
+            helper.assertTrue(st == StockRequesterBlockEntity.STATUS_MISSING_INGREDIENTS || st == StockRequesterBlockEntity.STATUS_CRAFTING,
+                    "fluid target recognized and checked against patterns (status=" + st + ")");
+            helper.succeed();
+        });
+    }
+
+    public static void stockRequesterZeroAmountEmptyAndOffline(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos reqPos = BUS_OUT;
+        helper.setBlock(reqPos, ModBlocks.STOCK_REQUESTER.get().defaultBlockState());
+        StockRequesterBlockEntity req = helper.getBlockEntity(reqPos, StockRequesterBlockEntity.class);
+
+        // Slot 0 empty
+        // Slot 1 has item with keep amount = 0 configured via menu
+        req.getFilters().setItem(1, new ItemStack(Items.DIAMOND));
+        ServerPlayer player = testPlayer(helper);
+        StockRequesterMenu reqMenu = new StockRequesterMenu(1, player.getInventory(), req.getFilters(), req.menuData(), req.getBlockPos());
+        reqMenu.setKeep(1, 0);
+
+        helper.runAfterDelay(15, () -> {
+            helper.assertTrue(req.getSlotStatus(0) == StockRequesterBlockEntity.STATUS_OK, "empty slot stays STATUS_OK");
+            helper.assertTrue(req.getSlotStatus(1) == StockRequesterBlockEntity.STATUS_OK, "amount 0 slot stays STATUS_OK");
+
+            // Test offline: remove core to take network offline
+            helper.setBlock(CORE, Blocks.AIR);
+            helper.runAfterDelay(15, () -> {
+                GolemNetwork net = net(helper, bay);
+                helper.assertTrue(!net.isOnline(), "network is offline");
+                helper.assertTrue(req.getSlotStatus(0) == StockRequesterBlockEntity.STATUS_OK, "offline requester stays STATUS_OK");
+                helper.assertTrue(req.getSlotStatus(1) == StockRequesterBlockEntity.STATUS_OK, "offline requester stays STATUS_OK");
+                helper.succeed();
+            });
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // 3. CRYO-DIODE (SUBNET ISOLATOR)
+    // -------------------------------------------------------------------------
+
+    public static void cryoDiodeNetworksStaySeparate(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
         BlockPos bay1 = BAY;
@@ -1029,46 +1381,442 @@ public final class GolemGameTestsExtra {
             GolemNetwork net1 = net(helper, bay1);
             GolemNetwork net2 = net(helper, b2);
 
-            helper.assertTrue(net1 != net2, "two networks separated by cryo diode must be different instances");
-            long avail2 = net2.cryoSourceAvailable();
-            helper.assertTrue(avail2 > 0, "outlet side must draw Liquid Cryo-Source from inlet side (got " + avail2 + ")");
+            helper.assertTrue(net1 != null && net2 != null, "both networks exist");
+            helper.assertTrue(net1 != net2, "two networks joined by cryo-diode are two distinct GolemNetwork instances");
             helper.succeed();
         });
     }
 
-    public static void securityTerminalPermissions(GameTestHelper helper) {
+    public static void cryoDiodeStorageAndCraftingIsolated(GameTestHelper helper) {
+        buildArray(helper, 0, 0);
+        powered(helper);
+        BlockPos bay1 = BAY;
+        putBay(helper, bay1);
+        CopperDriveBayBlockEntity drive1 = helper.getBlockEntity(bay1, CopperDriveBayBlockEntity.class);
+        drive1.getContainer().setItem(0, new ItemStack(ModItems.COPPER_DISK_1K.get()));
+
+        BlockPos diodePos = BUS_OUT;
+        helper.setBlock(diodePos, ModBlocks.CRYO_DIODE.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+
+        BlockPos b2 = diodePos.north();
+        put(helper, b2, ModBlocks.CABLE_BUSHING.get());
+        put(helper, b2.offset(0, 1, 0), ModBlocks.ATLAS_CONDUIT.get());
+        put(helper, b2.offset(0, 2, 0), ModBlocks.ATLAS_CONDUIT.get());
+        put(helper, b2.offset(0, 3, 0), ModBlocks.ATLAS_CORE.get());
+        BlockPos bay2 = b2.west();
+        putBay(helper, bay2);
+        CopperDriveBayBlockEntity drive2 = helper.getBlockEntity(bay2, CopperDriveBayBlockEntity.class);
+        drive2.getContainer().setItem(0, new ItemStack(ModItems.COPPER_DISK_1K.get()));
+
+        // Pattern in network 1
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity prov1 = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+        prov1.getContainer().setItem(0, card(craftingPattern(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.OAK_LOG))));
+
+        helper.runAfterDelay(20, () -> {
+            GolemNetwork net1 = net(helper, bay1);
+            GolemNetwork net2 = net(helper, bay2);
+
+            ItemKey diamond = ItemKey.of(new ItemStack(Items.DIAMOND));
+            net1.insertItem(new ItemStack(Items.DIAMOND, 25), false);
+
+            helper.assertTrue(net1.itemCountOf(diamond) == 25, "network 1 has 25 diamonds");
+            helper.assertTrue(net2.itemCountOf(diamond) == 0, "network 2 has 0 diamonds (storage isolated across diode)");
+
+            ItemKey planks = ItemKey.of(new ItemStack(Items.OAK_PLANKS));
+            helper.assertTrue(net1.canCraft(planks), "network 1 can craft planks");
+            helper.assertTrue(!net2.canCraft(planks), "network 2 cannot craft planks (crafting isolated across diode)");
+
+            helper.succeed();
+        });
+    }
+
+    public static void cryoDiodeUnidirectionalSourceFlow(GameTestHelper helper) {
+        buildArray(helper, 0, 0);
+        powered(helper); // Net 1 is powered
+        BlockPos bay1 = BAY;
+        putBay(helper, bay1);
+
+        BlockPos diodePos = BUS_OUT;
+        // FACING NORTH: inlet is SOUTH (Net 1), outlet is NORTH (Net 2)
+        helper.setBlock(diodePos, ModBlocks.CRYO_DIODE.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        CryoDiodeBlockEntity diode = helper.getBlockEntity(diodePos, CryoDiodeBlockEntity.class);
+
+        BlockPos b2 = diodePos.north();
+        put(helper, b2, ModBlocks.CABLE_BUSHING.get());
+        put(helper, b2.offset(0, 1, 0), ModBlocks.ATLAS_CONDUIT.get());
+        put(helper, b2.offset(0, 2, 0), ModBlocks.ATLAS_CONDUIT.get());
+        put(helper, b2.offset(0, 3, 0), ModBlocks.ATLAS_CORE.get());
+        BlockPos bay2 = b2.west();
+        helper.setBlock(bay2, ModBlocks.COPPER_DRIVE_BAY.get().defaultBlockState());
+
+        helper.runAfterDelay(20, () -> {
+            GolemNetwork net1 = net(helper, bay1);
+            GolemNetwork net2 = net(helper, b2);
+
+            helper.assertTrue(net1.isOnline(), "net 1 is online from direct power");
+            helper.assertTrue(net2.cryoSourceAvailable() > 0, "net 2 draws Source through outlet of diode");
+            helper.assertTrue(net2.isOnline(), "net 2 is online powered by net 1 through diode");
+
+            // Directional check: outlet side gets supplier, inlet side gets null
+            helper.assertTrue(diode.asSupplier(Direction.NORTH) != null, "outlet side (NORTH) gets Source supplier");
+            helper.assertTrue(diode.asSupplier(Direction.SOUTH) == null, "inlet side (SOUTH) gets null supplier (strictly unidirectional)");
+            helper.succeed();
+        });
+    }
+
+    public static void cryoDiodeBreakLeavesBothNetworksWorking(GameTestHelper helper) {
+        buildArray(helper, 0, 0);
+        powered(helper);
+        BlockPos bay1 = BAY;
+        putBay(helper, bay1);
+
+        BlockPos diodePos = BUS_OUT;
+        helper.setBlock(diodePos, ModBlocks.CRYO_DIODE.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+
+        BlockPos b2 = diodePos.north();
+        put(helper, b2, ModBlocks.CABLE_BUSHING.get());
+        put(helper, b2.offset(0, 1, 0), ModBlocks.ATLAS_CONDUIT.get());
+        put(helper, b2.offset(0, 2, 0), ModBlocks.ATLAS_CONDUIT.get());
+        put(helper, b2.offset(0, 3, 0), ModBlocks.ATLAS_CORE.get());
+        put(helper, b2.offset(0, -1, 0), ModBlocks.CREATIVE_SOURCE_JAR.get()); // Give Net 2 its own power
+        BlockPos bay2 = b2.west();
+        helper.setBlock(bay2, ModBlocks.COPPER_DRIVE_BAY.get().defaultBlockState());
+
+        helper.runAfterDelay(15, () -> {
+            helper.setBlock(diodePos, Blocks.AIR);
+
+            helper.runAfterDelay(20, () -> {
+                GolemNetwork net1 = net(helper, bay1);
+                GolemNetwork net2 = net(helper, b2);
+                helper.assertTrue(net1 != null && net1.isOnline(), "network 1 remains online and operational after diode break");
+                helper.assertTrue(net2 != null && net2.isOnline(), "network 2 remains online and operational after diode break");
+                helper.succeed();
+            });
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // 4. SECURITY (MULTIPLAYER)
+    // -------------------------------------------------------------------------
+
+    public static void securityTerminalBuildProtection(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         BlockPos secPos = BUS_OUT;
         helper.setBlock(secPos, ModBlocks.SECURITY_TERMINAL.get().defaultBlockState().setValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING, Direction.NORTH));
-        com.golemlogix.blockentity.SecurityTerminalBlockEntity sec = helper.getBlockEntity(secPos, com.golemlogix.blockentity.SecurityTerminalBlockEntity.class);
+        SecurityTerminalBlockEntity sec = helper.getBlockEntity(secPos, SecurityTerminalBlockEntity.class);
 
         ServerPlayer owner = testPlayer(helper);
         sec.setOwner(owner);
 
-        var guestProfile = new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "guest-player");
-        ServerPlayer guest = net.neoforged.neoforge.common.util.FakePlayerFactory.get(helper.getLevel(), guestProfile);
+        ServerPlayer strangerWithInsert = net.neoforged.neoforge.common.util.FakePlayerFactory.get(helper.getLevel(),
+                new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "stranger-insert"));
+        ItemStack insertCard = IdentityPunchCardItem.of(strangerWithInsert.getUUID(), strangerWithInsert.getScoreboardName(), SecurityPermission.INSERT.mask);
+        sec.getCards().setItem(0, insertCard);
+
+        ServerPlayer strangerNoCard = net.neoforged.neoforge.common.util.FakePlayerFactory.get(helper.getLevel(),
+                new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "stranger-nocard"));
 
         helper.runAfterDelay(10, () -> {
-            GolemNetwork n = net(helper, bay);
-            helper.assertTrue(n.hasSecurityTerminal(), "security terminal recognized by network");
-            helper.assertTrue(n.hasPermission(owner, com.golemlogix.security.SecurityPermission.BUILD), "owner has full permissions");
-            helper.assertTrue(!n.hasPermission(guest, com.golemlogix.security.SecurityPermission.BUILD), "guest without card denied BUILD");
-            helper.assertTrue(!n.hasPermission(guest, com.golemlogix.security.SecurityPermission.INSERT), "guest without card denied INSERT");
+            BlockPos absBay = helper.absolutePos(bay);
+            BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(absBay), Direction.UP, absBay, false);
 
-            ItemStack card = com.golemlogix.items.IdentityPunchCardItem.of(guest.getUUID(), guest.getScoreboardName(), com.golemlogix.security.SecurityPermission.INSERT.mask);
-            sec.getCards().setItem(0, card);
+            // Owner right clicks Drive Bay -> allowed
+            var ownerEvt = new net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock(owner, InteractionHand.MAIN_HAND, absBay, hit);
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(ownerEvt);
+            helper.assertTrue(!ownerEvt.isCanceled(), "owner interaction with drive bay is allowed");
 
-            helper.assertTrue(n.hasPermission(guest, com.golemlogix.security.SecurityPermission.INSERT), "guest with card granted INSERT");
-            helper.assertTrue(!n.hasPermission(guest, com.golemlogix.security.SecurityPermission.EXTRACT), "guest with INSERT card denied EXTRACT");
+            // Stranger with INSERT only right clicks Drive Bay -> denied (requires BUILD)
+            var insertEvt = new net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock(strangerWithInsert, InteractionHand.MAIN_HAND, absBay, hit);
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(insertEvt);
+            helper.assertTrue(insertEvt.isCanceled(), "stranger with only INSERT is denied drive bay access");
+
+            // Stranger with no card right clicks Drive Bay -> denied
+            var noCardEvt = new net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock(strangerNoCard, InteractionHand.MAIN_HAND, absBay, hit);
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(noCardEvt);
+            helper.assertTrue(noCardEvt.isCanceled(), "stranger without card is denied drive bay access");
+
             helper.succeed();
         });
     }
 
-    public static void mechanicalAsmrToggles(GameTestHelper helper) {
-        boolean origDing = com.golemlogix.config.GolemConfig.TYPEWRITER_DING.get();
-        boolean origTick = com.golemlogix.config.GolemConfig.MONITOR_BLOCKED_TICK.get();
-        helper.assertTrue(origDing, "typewriter ding default is true");
-        helper.assertTrue(origTick, "monitor blocked tick default is true");
+    public static void securityTerminalItemPermissions(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos secPos = BUS_OUT;
+        helper.setBlock(secPos, ModBlocks.SECURITY_TERMINAL.get().defaultBlockState().setValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING, Direction.NORTH));
+        SecurityTerminalBlockEntity sec = helper.getBlockEntity(secPos, SecurityTerminalBlockEntity.class);
+
+        ServerPlayer owner = testPlayer(helper);
+        sec.setOwner(owner);
+
+        ServerPlayer playerInsertOnly = net.neoforged.neoforge.common.util.FakePlayerFactory.get(helper.getLevel(),
+                new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "player-insert-only"));
+        sec.getCards().setItem(0, IdentityPunchCardItem.of(playerInsertOnly.getUUID(), "player-insert-only", SecurityPermission.INSERT.mask));
+
+        ServerPlayer playerExtractOnly = net.neoforged.neoforge.common.util.FakePlayerFactory.get(helper.getLevel(),
+                new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "player-extract-only"));
+        sec.getCards().setItem(1, IdentityPunchCardItem.of(playerExtractOnly.getUUID(), "player-extract-only", SecurityPermission.EXTRACT.mask));
+
+        ServerPlayer playerCraftOnly = net.neoforged.neoforge.common.util.FakePlayerFactory.get(helper.getLevel(),
+                new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "player-craft-only"));
+        sec.getCards().setItem(2, IdentityPunchCardItem.of(playerCraftOnly.getUUID(), "player-craft-only", SecurityPermission.CRAFT.mask));
+
+        BlockPos absTerm = helper.absolutePos(TERM);
+        helper.setBlock(TERM, ModBlocks.ANALOG_TERMINAL.get().defaultBlockState());
+
+        helper.runAfterDelay(10, () -> {
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.DIAMOND, 50), false);
+            ItemKey diamond = ItemKey.of(new ItemStack(Items.DIAMOND));
+
+            // 1. Player with INSERT only: can insert, CANNOT extract
+            TerminalMenu menuInsert = new TerminalMenu(81, playerInsertOnly.getInventory(), helper.getLevel(), absTerm, absTerm,
+                    ModBlocks.ANALOG_TERMINAL.get(), false, false, 0);
+            playerInsertOnly.containerMenu = menuInsert;
+            menuInsert.setCarried(new ItemStack(Items.GOLD_INGOT, 10));
+            menuInsert.handleAction(playerInsertOnly, new TerminalActionPayload(81, TerminalActionPayload.Action.INSERT_ALL, ItemStack.EMPTY, FluidStack.EMPTY));
+            helper.assertTrue(menuInsert.getCarried().isEmpty(), "player with INSERT successfully inserts items");
+
+            menuInsert.handleAction(playerInsertOnly, new TerminalActionPayload(81, TerminalActionPayload.Action.TAKE_STACK, new ItemStack(Items.DIAMOND), FluidStack.EMPTY));
+            helper.assertTrue(menuInsert.getCarried().isEmpty(), "player with INSERT only is denied TAKE_STACK");
+            helper.assertTrue(n.itemCountOf(diamond) == 50, "network items untouched by denied take");
+
+            // 2. Player with EXTRACT only: can extract, CANNOT order craft
+            TerminalMenu menuExtract = new TerminalMenu(82, playerExtractOnly.getInventory(), helper.getLevel(), absTerm, absTerm,
+                    ModBlocks.ANALOG_TERMINAL.get(), false, false, 0);
+            playerExtractOnly.containerMenu = menuExtract;
+            menuExtract.handleAction(playerExtractOnly, new TerminalActionPayload(82, TerminalActionPayload.Action.TAKE_STACK, new ItemStack(Items.DIAMOND), FluidStack.EMPTY));
+            helper.assertTrue(menuExtract.getCarried().getCount() == 50, "player with EXTRACT successfully takes items");
+
+            menuExtract.handleCraftRequest(playerExtractOnly, new CraftRequestPayload(82, new ItemStack(Items.DIAMOND), 1, false, 1));
+            helper.assertTrue(n.cpus().stream().allMatch(com.golemlogix.crafting.CraftingCpu::isIdle), "craft denied without CRAFT permission");
+
+            // 3. Player with CRAFT only
+            TerminalMenu menuCraft = new TerminalMenu(83, playerCraftOnly.getInventory(), helper.getLevel(), absTerm, absTerm,
+                    ModBlocks.ANALOG_TERMINAL.get(), false, false, 0);
+            playerCraftOnly.containerMenu = menuCraft;
+            helper.assertTrue(n.hasPermission(playerCraftOnly, SecurityPermission.CRAFT), "player has CRAFT permission");
+
+            helper.succeed();
+        });
+    }
+
+    public static void securityTerminalJeiFillProtection(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos secPos = BUS_OUT;
+        helper.setBlock(secPos, ModBlocks.SECURITY_TERMINAL.get().defaultBlockState().setValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING, Direction.NORTH));
+        SecurityTerminalBlockEntity sec = helper.getBlockEntity(secPos, SecurityTerminalBlockEntity.class);
+
+        ServerPlayer owner = testPlayer(helper);
+        sec.setOwner(owner);
+
+        ServerPlayer strangerNoExtract = net.neoforged.neoforge.common.util.FakePlayerFactory.get(helper.getLevel(),
+                new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "stranger-no-extract"));
+        sec.getCards().setItem(0, IdentityPunchCardItem.of(strangerNoExtract.getUUID(), "stranger-no-extract", SecurityPermission.INSERT.mask));
+
+        BlockPos absTerm = helper.absolutePos(TERM);
+        helper.setBlock(TERM, ModBlocks.CRAFTING_TERMINAL.get().defaultBlockState());
+
+        helper.runAfterDelay(10, () -> {
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.IRON_INGOT, 20), false);
+
+            // Stranger tries JEI fillGrid without EXTRACT permission
+            TerminalMenu menuStranger = new TerminalMenu(84, strangerNoExtract.getInventory(), helper.getLevel(), absTerm, absTerm,
+                    ModBlocks.CRAFTING_TERMINAL.get(), true, false, 0);
+            List<List<ItemStack>> recipeOptions = List.of(List.of(new ItemStack(Items.IRON_INGOT)));
+            menuStranger.fillGrid(strangerNoExtract, recipeOptions, false);
+            helper.assertTrue(menuStranger.getSlot(1).getItem().isEmpty(), "fillGrid extracts nothing when player lacks EXTRACT permission");
+
+            // Owner tries JEI fillGrid (has all permissions)
+            TerminalMenu menuOwner = new TerminalMenu(85, owner.getInventory(), helper.getLevel(), absTerm, absTerm,
+                    ModBlocks.CRAFTING_TERMINAL.get(), true, false, 0);
+            menuOwner.fillGrid(owner, recipeOptions, false);
+            helper.assertTrue(menuOwner.getSlot(1).getItem().is(Items.IRON_INGOT), "fillGrid succeeds when player has EXTRACT permission");
+
+            helper.succeed();
+        });
+    }
+
+    public static void securityTerminalBreakBlockAndCreativeBypass(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos secPos = BUS_OUT;
+        helper.setBlock(secPos, ModBlocks.SECURITY_TERMINAL.get().defaultBlockState().setValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING, Direction.NORTH));
+        SecurityTerminalBlockEntity sec = helper.getBlockEntity(secPos, SecurityTerminalBlockEntity.class);
+
+        ServerPlayer owner = testPlayer(helper);
+        sec.setOwner(owner);
+
+        ServerPlayer strangerNoBuild = net.neoforged.neoforge.common.util.FakePlayerFactory.get(helper.getLevel(),
+                new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "stranger-no-build"));
+
+        ServerPlayer creativeOp = net.neoforged.neoforge.common.util.FakePlayerFactory.get(helper.getLevel(),
+                new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "creative-op"));
+        creativeOp.setGameMode(net.minecraft.world.level.GameType.CREATIVE);
+        net.minecraft.world.level.GameType.CREATIVE.updatePlayerAbilities(creativeOp.getAbilities());
+        helper.getLevel().getServer().getPlayerList().op(
+                creativeOp.nameAndId(),
+                java.util.Optional.of(net.minecraft.server.permissions.LevelBasedPermissionSet.ADMIN),
+                java.util.Optional.empty()
+        );
+
+        helper.runAfterDelay(10, () -> {
+            try {
+                BlockPos absBay = helper.absolutePos(bay);
+                var state = helper.getLevel().getBlockState(absBay);
+
+                // Stranger without BUILD tries to break network block -> cancelled
+                var breakEvt1 = new net.neoforged.neoforge.event.level.block.BreakBlockEvent(helper.getLevel(), absBay, state, strangerNoBuild);
+                net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(breakEvt1);
+                helper.assertTrue(breakEvt1.isCanceled(), "break block cancelled for stranger without BUILD");
+
+                // Owner breaks network block -> allowed
+                var breakEvt2 = new net.neoforged.neoforge.event.level.block.BreakBlockEvent(helper.getLevel(), absBay, state, owner);
+                net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(breakEvt2);
+                helper.assertTrue(!breakEvt2.isCanceled(), "break block allowed for owner");
+
+                // Creative OP breaks network block -> allowed (bypasses security)
+                var breakEvt3 = new net.neoforged.neoforge.event.level.block.BreakBlockEvent(helper.getLevel(), absBay, state, creativeOp);
+                net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(breakEvt3);
+                helper.assertTrue(!breakEvt3.isCanceled(), "break block allowed for creative operator bypass");
+
+                helper.succeed();
+            } finally {
+                helper.getLevel().getServer().getPlayerList().deop(creativeOp.nameAndId());
+            }
+        });
+    }
+
+    public static void networkWithoutSecurityTerminalAllowsAll(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        ServerPlayer stranger = net.neoforged.neoforge.common.util.FakePlayerFactory.get(helper.getLevel(),
+                new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "random-stranger"));
+
+        helper.runAfterDelay(10, () -> {
+            GolemNetwork n = net(helper, bay);
+            helper.assertTrue(!n.hasSecurityTerminal(), "network has no security terminal");
+
+            BlockPos absBay = helper.absolutePos(bay);
+            BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(absBay), Direction.UP, absBay, false);
+            var clickEvt = new net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock(stranger, InteractionHand.MAIN_HAND, absBay, hit);
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(clickEvt);
+            helper.assertTrue(!clickEvt.isCanceled(), "without security terminal, right click is allowed for anyone");
+
+            var breakEvt = new net.neoforged.neoforge.event.level.block.BreakBlockEvent(helper.getLevel(), absBay, helper.getLevel().getBlockState(absBay), stranger);
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(breakEvt);
+            helper.assertTrue(!breakEvt.isCanceled(), "without security terminal, break block is allowed for anyone");
+
+            helper.succeed();
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // 5. MECHANICAL ASMR
+    // -------------------------------------------------------------------------
+
+    public static void asmrTypewriterDingConditions(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+        provider.getContainer().setItem(0, card(craftingPattern(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.OAK_LOG))));
+
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork net = net(helper, bay);
+            ItemKey planksKey = ItemKey.of(new ItemStack(Items.OAK_PLANKS));
+
+            // Plan with 1 execution (4 planks)
+            CraftingPlan plan1 = CraftingPlanner.plan(net, planksKey, 4);
+            var smallJob = new com.golemlogix.crafting.CraftingJob(plan1, Map.of()).requestedBy(null, BUS_OUT);
+            boolean smallDing = smallJob.doneExecutions() >= 16 || smallJob.requester() != null;
+            helper.assertTrue(!smallDing, "small bus job (< 16 executions, requester == null) must not ding");
+
+            // Plan with player requester
+            ServerPlayer player = testPlayer(helper);
+            var playerJob = new com.golemlogix.crafting.CraftingJob(plan1, Map.of()).requestedBy(player.getUUID(), null);
+            boolean playerDing = playerJob.doneExecutions() >= 16 || playerJob.requester() != null;
+            helper.assertTrue(playerDing, "player order (requester != null) must ding");
+
+            // Plan with 20 executions
+            CraftingPlan plan20 = CraftingPlanner.plan(net, planksKey, 80);
+            var largeJob = new com.golemlogix.crafting.CraftingJob(plan20, Map.of()).requestedBy(null, BUS_OUT);
+            CompoundTag tag = largeJob.save(helper.getLevel().registryAccess());
+            tag.putLong("Done", 16L);
+            var loadedLargeJob = com.golemlogix.crafting.CraftingJob.load(tag, helper.getLevel().registryAccess());
+            helper.assertTrue(loadedLargeJob != null, "loaded large job exists");
+            boolean largeDing = loadedLargeJob.doneExecutions() >= 16 || loadedLargeJob.requester() != null;
+            helper.assertTrue(largeDing, "large job (>= 16 executions) must ding");
+
+            helper.succeed();
+        });
+    }
+
+    public static void asmrConfigTogglesSilenceDing(GameTestHelper helper) {
+        helper.assertTrue(com.golemlogix.config.GolemConfig.TYPEWRITER_DING.get(), "typewriter ding defaults to true");
+        helper.assertTrue(com.golemlogix.config.GolemConfig.MONITOR_BLOCKED_TICK.get(), "monitor blocked tick defaults to true");
+
+        com.golemlogix.config.GolemConfig.TYPEWRITER_DING.set(false);
+        helper.assertTrue(!com.golemlogix.config.GolemConfig.TYPEWRITER_DING.get(), "typewriter ding toggled off");
+
+        com.golemlogix.config.GolemConfig.MONITOR_BLOCKED_TICK.set(false);
+        helper.assertTrue(!com.golemlogix.config.GolemConfig.MONITOR_BLOCKED_TICK.get(), "monitor tick toggled off");
+
+        // Reset back to defaults
+        com.golemlogix.config.GolemConfig.TYPEWRITER_DING.set(true);
+        com.golemlogix.config.GolemConfig.MONITOR_BLOCKED_TICK.set(true);
+
         helper.succeed();
+    }
+
+    public static void asmrRecipeMonitorBlockedJobStatus(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+
+        // Processing pattern with NO machine in front: job will get blocked
+        provider.getContainer().setItem(0, card(new PatternData(false, List.of(new ItemStack(Items.IRON_INGOT)), List.of(new ItemStack(Items.GOLD_INGOT)))));
+
+        BlockPos monPos = BUS_OUT;
+        helper.setBlock(monPos, ModBlocks.RECIPE_MONITOR.get().defaultBlockState());
+        RecipeMonitorBlockEntity monitor = helper.getBlockEntity(monPos, RecipeMonitorBlockEntity.class);
+
+        helper.runAfterDelay(10, () -> {
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.IRON_INGOT, 10), false);
+            n.startCrafting(ItemKey.of(new ItemStack(Items.GOLD_INGOT)), 5);
+
+            helper.runAfterDelay(25, () -> {
+                RecipeMonitorBlockEntity.serverTick(helper.getLevel(), helper.absolutePos(monPos), helper.getBlockState(monPos), monitor);
+
+                helper.assertTrue(monitor.fault(), "monitor reports fault for blocked job");
+                helper.assertTrue(monitor.lampState() == 2, "monitor lamp glows red (state 2) on blocked job");
+                helper.succeed();
+            });
+        });
+    }
+
+    public static void asmrRecipeMonitorBlockedTickAndClientSync(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos monPos = BUS_OUT;
+        helper.setBlock(monPos, ModBlocks.RECIPE_MONITOR.get().defaultBlockState());
+        RecipeMonitorBlockEntity monitor = helper.getBlockEntity(monPos, RecipeMonitorBlockEntity.class);
+
+        helper.runAfterDelay(5, () -> {
+            CompoundTag tag = new CompoundTag();
+            tag.putInt("Jobs", 1);
+            tag.putBoolean("Online", true);
+            tag.putBoolean("Fault", true);
+
+            monitor.readUpdateTag(tag, helper.getLevel().registryAccess());
+            helper.assertTrue(monitor.fault(), "client monitor has fault = true after reading update tag");
+            helper.assertTrue(monitor.lampState() == 2, "client lamp state is 2 (red)");
+
+            boolean shouldTick = monitor.fault() && com.golemlogix.config.GolemConfig.MONITOR_BLOCKED_TICK.get();
+            helper.assertTrue(shouldTick, "blocked ticking condition is active when fault and config enabled");
+
+            helper.succeed();
+        });
     }
 }

@@ -217,11 +217,37 @@ public final class GolemGameTestRegistry {
             new Test("autocraftjobcancelledmidwayrefunds", GolemGameTestsExtra::autocraftJobCancelledMidwayRefunds, 300, 0),
             new Test("autocraftfluidinputfromfluidoutput", GolemGameTestsExtra::autocraftFluidInputFromFluidOutput, 400, 0),
             new Test("autocraftcalculatorremovedmidjob", GolemGameTestsExtra::autocraftCalculatorRemovedMidJob, 300, 0),
-            new Test("stockmanometerredstone", GolemGameTestsExtra::stockManometerRedstone, 100, 0),
-            new Test("stockrequesterautocraft", GolemGameTestsExtra::stockRequesterAutocraft, 100, 0),
-            new Test("cryodiodeseparationandsource", GolemGameTestsExtra::cryoDiodeSeparationAndSource, 100, 0),
-            new Test("securityterminalpermissions", GolemGameTestsExtra::securityTerminalPermissions, 100, 0),
-            new Test("mechanicalasmrtoggles", GolemGameTestsExtra::mechanicalAsmrToggles, 100, 0)
+            // Stock Manometer
+            new Test("stockmanometerthresholdabove", GolemGameTestsExtra::stockManometerThresholdAbove, 100, 0),
+            new Test("stockmanometerthresholdbelow", GolemGameTestsExtra::stockManometerThresholdBelow, 100, 0),
+            new Test("stockmanometerthresholdanalog", GolemGameTestsExtra::stockManometerThresholdAnalog, 100, 0),
+            new Test("stockmanometerhysteresislatch", GolemGameTestsExtra::stockManometerHysteresisLatch, 120, 0),
+            new Test("stockmanometerfluidghost", GolemGameTestsExtra::stockManometerFluidGhost, 100, 0),
+            new Test("stockmanometerautocraftmodulepulse", GolemGameTestsExtra::stockManometerAutocraftModulePulse, 100, 0),
+            new Test("stockmanometermenuandpayloadandsaveload", GolemGameTestsExtra::stockManometerMenuAndPayloadAndSaveLoad, 100, 0),
+            new Test("stockmanometerredstonelampneighbor", GolemGameTestsExtra::stockManometerRedstoneLampNeighbor, 100, 0),
+            // Stock Requester / Copper Order Ledger
+            new Test("stockrequesterkeepstargetamount", GolemGameTestsExtra::stockRequesterKeepsTargetAmount, 100, 0),
+            new Test("stockrequestersinglejobperitem", GolemGameTestsExtra::stockRequesterSingleJobPerItem, 100, 0),
+            new Test("stockrequesterstatusesnopatternandmissing", GolemGameTestsExtra::stockRequesterStatusesNoPatternAndMissing, 100, 0),
+            new Test("stockrequesterfluidtarget", GolemGameTestsExtra::stockRequesterFluidTarget, 100, 0),
+            new Test("stockrequesterzeroamountemptyandoffline", GolemGameTestsExtra::stockRequesterZeroAmountEmptyAndOffline, 100, 0),
+            // Cryo-Diode
+            new Test("cryodiodenetworksstayseparate", GolemGameTestsExtra::cryoDiodeNetworksStaySeparate, 100, 0),
+            new Test("cryodiodestorageandcraftingisolated", GolemGameTestsExtra::cryoDiodeStorageAndCraftingIsolated, 100, 0),
+            new Test("cryodiodeunidirectionalsourceflow", GolemGameTestsExtra::cryoDiodeUnidirectionalSourceFlow, 100, 0),
+            new Test("cryodiodebreakleavesbothnetworksworking", GolemGameTestsExtra::cryoDiodeBreakLeavesBothNetworksWorking, 100, 0),
+            // Security
+            new Test("securityterminalbuildprotection", GolemGameTestsExtra::securityTerminalBuildProtection, 100, 0),
+            new Test("securityterminalitempermissions", GolemGameTestsExtra::securityTerminalItemPermissions, 100, 0),
+            new Test("securityterminaljeifillprotection", GolemGameTestsExtra::securityTerminalJeiFillProtection, 100, 0),
+            new Test("securityterminalbreakblockandcreativebypass", GolemGameTestsExtra::securityTerminalBreakBlockAndCreativeBypass, 100, 0),
+            new Test("networkwithoutsecurityterminalallowsall", GolemGameTestsExtra::networkWithoutSecurityTerminalAllowsAll, 100, 0),
+            // ASMR
+            new Test("asmrtypewriterdingconditions", GolemGameTestsExtra::asmrTypewriterDingConditions, 100, 0),
+            new Test("asmrconfigtogglassilenceding", GolemGameTestsExtra::asmrConfigTogglesSilenceDing, 100, 0),
+            new Test("asmrrecipemonitorblockedjobstatus", GolemGameTestsExtra::asmrRecipeMonitorBlockedJobStatus, 100, 0),
+            new Test("asmrrecipemonitorblockedtickandclientsync", GolemGameTestsExtra::asmrRecipeMonitorBlockedTickAndClientSync, 100, 0)
     );
 
     private GolemGameTestRegistry() {

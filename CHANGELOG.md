@@ -12,6 +12,8 @@
 - **Iron Security Terminal (Gatekeeper)** and the **Identity Punch Card**: a card binds to the player who uses it; with the
   terminal in a network only its owner and the players whose cards are in it may use the network, each card with its own
   rights - put in, take out, order crafts, build (open and break the network's blocks). Creative operators pass.
+- 26 more game tests for these devices (197 in all); they caught the Order Ledger ordering for a slot left at 0 and not
+  recognising a fluid's pattern, both fixed.
 - **Mechanical ASMR**: a typewriter-carriage ding when a calculator finishes a big job or one a player ordered, and a
   blinking, softly ticking lamp on the Recipe Monitor while a job is blocked; both can be turned off in the config.
 

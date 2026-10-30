@@ -69,9 +69,18 @@ public class StockRequesterBlockEntity extends BlockEntity {
                 continue;
             }
 
-            int target = ghost.getOrDefault(ModDataComponents.KEEP_AMOUNT.get(), 1);
+            // no amount set (or 0): the slot only names the item and orders nothing
+            int target = ghost.getOrDefault(ModDataComponents.KEEP_AMOUNT.get(), 0);
+            if (target <= 0) {
+                if (be.status[i] != STATUS_OK) {
+                    be.status[i] = STATUS_OK;
+                    changed = true;
+                }
+                continue;
+            }
             ItemStack plainGhost = Fuzzy.plain(ghost);
-            ItemKey key = ItemKey.of(plainGhost);
+            // a fluid's key is the fluid with 1 mB, as the patterns index it (Ingredients.key)
+            ItemKey key = Ingredients.key(plainGhost);
 
             long stock;
             if (FluidGhostItem.is(plainGhost) || Ingredients.isFluid(key)) {
@@ -91,7 +100,8 @@ public class StockRequesterBlockEntity extends BlockEntity {
                     be.status[i] = STATUS_NO_PATTERN;
                 } else {
                     long need = target - stock;
-                    long batch = Math.min(need, 64);
+                    // a batch: up to a stack of items, up to 16 buckets of a fluid (in mB)
+                    long batch = Math.min(need, Ingredients.isFluid(key) ? 16_000 : 64);
                     Map<ItemKey, Long> order = new LinkedHashMap<>();
                     order.put(key, batch);
                     var result = net.startCrafting(order, null, pos);
