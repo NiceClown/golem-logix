@@ -17,6 +17,9 @@
   or, switched in the slot window, the fluid itself in mB.
 - Glowing parts (the pipes' nixie heat lamps, the Concentrator's hologram, the Resonator's vortex) are drawn the game's own
   emissive way when Iris is installed: under shader packs they had vanished or shone through walls.
+- The four new devices are redrawn as shaped models in the mod's manner: the Manometer a brass-crowned console with a dial
+  and frosted gauge tubes, the Order Ledger a copper clerk's lectern with an open ledger and drawers, the Cryo-Diode a pipe
+  fitting with a brass valve, a handwheel and an arrow, the Security Terminal an iron vault with a green CRT and a dial lock.
 - The new guide book articles stand on free places of their maps (two of them hid older articles) and are written anew.
 - 26 more game tests for these devices (197 in all); they caught the Order Ledger ordering for a slot left at 0 and not
   recognising a fluid's pattern, both fixed.

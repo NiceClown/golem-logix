@@ -34,7 +34,7 @@ public class StockRequesterBlock extends HorizontalDirectionalBlock implements G
     public static final MapCodec<StockRequesterBlock> CODEC = simpleCodec(StockRequesterBlock::new);
 
     public StockRequesterBlock(Properties properties) {
-        super(properties.sound(SoundType.COPPER).strength(2.5f).requiresCorrectToolForDrops());
+        super(properties.sound(SoundType.COPPER).strength(2.5f).requiresCorrectToolForDrops().noOcclusion());
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 

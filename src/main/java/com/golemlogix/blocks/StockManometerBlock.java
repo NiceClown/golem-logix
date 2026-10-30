@@ -40,7 +40,7 @@ public class StockManometerBlock extends DirectionalBlock implements GolemNode, 
     public static final BooleanProperty POWERED = BlockStateProperties.POWERED;
 
     public StockManometerBlock(Properties properties) {
-        super(properties.sound(SoundType.METAL).strength(3.0f).requiresCorrectToolForDrops());
+        super(properties.sound(SoundType.METAL).strength(3.0f).requiresCorrectToolForDrops().noOcclusion());
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(POWERED, false));
     }
 

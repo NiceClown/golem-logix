@@ -50,7 +50,7 @@ public class StockManometerRenderer extends com.golemlogix.client.render.LegacyB
         pose.mulPose(Axis.ZP.rotationDegrees(-targetAngle));
 
         VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(NEEDLE));
-        float r = 7f / 16f;
+        float r = 3.6f / 16f;
         PoseStack.Pose p = pose.last();
         // Quad centred at pivot (0, 0)
         vertex(vc, p, r, -r, 0f, 0f, 1f, light);

@@ -35,7 +35,7 @@ public class SecurityTerminalBlock extends HorizontalDirectionalBlock implements
     public static final MapCodec<SecurityTerminalBlock> CODEC = simpleCodec(SecurityTerminalBlock::new);
 
     public SecurityTerminalBlock(Properties properties) {
-        super(properties.sound(SoundType.METAL).strength(3.5f).requiresCorrectToolForDrops());
+        super(properties.sound(SoundType.METAL).strength(3.5f).requiresCorrectToolForDrops().noOcclusion());
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 
