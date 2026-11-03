@@ -17,6 +17,47 @@ public class CryoDiodeBlockEntity extends BlockEntity {
         super(ModBlockEntities.CRYO_DIODE.get(), pos, state);
     }
 
+    /** When Source last flowed through (game time; synced to clients at most once a second): the handwheel turns while it flows. */
+    private long lastFlow = -1000;
+    private long lastSync = -1000;
+    /** Client: the wheel's angle (degrees) and the game time it was last advanced. */
+    public float wheelAngle;
+    public long wheelTick;
+
+    public boolean flowing(long now) {
+        return now - lastFlow < 50;
+    }
+
+    private void flowed() {
+        if (level == null) {
+            return;
+        }
+        long now = level.getGameTime();
+        lastFlow = now;
+        if (!level.isClientSide() && now - lastSync >= 20) {
+            lastSync = now;
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 2);
+        }
+    }
+
+    @Override
+    public net.minecraft.nbt.CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
+        net.minecraft.nbt.CompoundTag tag = super.getUpdateTag(registries);
+        tag.putLong("LastFlow", lastFlow);
+        return tag;
+    }
+
+    @Override
+    public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+        return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+        super.loadAdditional(input);
+        lastFlow = input.getLongOr("LastFlow", lastFlow);
+    }
+
     public Direction getFacing() {
         return getBlockState().getValue(CryoDiodeBlock.FACING);
     }
@@ -80,16 +121,24 @@ public class CryoDiodeBlockEntity extends BlockEntity {
                     if (!level.isLoaded(inletPos)) return 0;
                     BlockEntity inletBe = level.getBlockEntity(inletPos);
                     SourceHelper.Supplier direct = inletBe != null ? SourceHelper.asSupplier(inletBe) : null;
-                    if (direct != null) return direct.drain(amount);
+                    if (direct != null) {
+                        int got = direct.drain(amount);
+                        if (got > 0) flowed();
+                        return got;
+                    }
                     GolemNetwork inletNet = GolemNetwork.get(level, inletPos);
                     if (inletNet == null) return 0;
-                    if (inletNet.hasInfiniteSource()) return amount;
+                    if (inletNet.hasInfiniteSource()) {
+                        flowed();
+                        return amount;
+                    }
                     int taken = 0;
                     for (SourceHelper.Supplier s : inletNet.sources()) {
                         int d = s.drain(amount - taken);
                         taken += d;
                         if (taken >= amount) break;
                     }
+                    if (taken > 0) flowed();
                     return taken;
                 } finally {
                     DRAIN_LOCK.set(false);

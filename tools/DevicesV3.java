@@ -358,6 +358,25 @@ final class DevicesV3 {
         return p;
     }
 
+    /** The five-handled wheel (an entity texture for the renderer): a brass rim, five spokes with knobs, a teal-capped hub. */
+    static Paint wheel5() {
+        Paint p = new Paint(16, 16, K);
+        p.ring(8, 8, 5.2, 6.4, rgb(Paint.BRASS[4]));
+        p.ring(8, 8, 5.9, 6.4, rgb(Paint.BRASS[6]));
+        p.ring(8, 8, 5.2, 5.5, rgb(Paint.BRASS[2]));
+        for (int k = 0; k < 5; k++) {
+            double a = Math.PI * 2 * k / 5 - Math.PI / 2;
+            p.line(8, 8, 8 + Math.cos(a) * 5.6, 8 + Math.sin(a) * 5.6, 1.1, rgb(Paint.BRASS[3]));
+            p.line(8, 8, 8 + Math.cos(a) * 5.6, 8 + Math.sin(a) * 5.6, 0.4, rgb(Paint.BRASS[5]));
+            p.disc(8 + Math.cos(a) * 7.0, 8 + Math.sin(a) * 7.0, 0.95, rgb(Paint.BRASS[5]));
+            p.disc(8 + Math.cos(a) * 7.0, 8 + Math.sin(a) * 7.0, 0.45, rgb(Paint.BRASS[6]));
+        }
+        p.disc(8, 8, 1.9, rgb(Paint.BRASS[2]));
+        p.disc(8, 8, 1.2, rgb(Paint.CYAN[4]));
+        p.disc(7.6, 7.6, 0.4, rgb(Paint.CYAN[6]));
+        return p;
+    }
+
     /** The handwheel: a brass rim, four spokes and a hub on transparency (cutout). */
     static Paint wheel() {
         Paint p = new Paint(16, 16, K);
@@ -503,19 +522,30 @@ final class DevicesV3 {
         l.add(e(13, 12.5, 14.25, 13.5, 18, 14.75).all("#quill").rot("z", 22.5, 13.25, 13, 14.5));
         Models.model("stock_requester", false, "dev_copper_rune", lt, l.toArray(new Models.El[0]));
 
-        // ---- Cryo-Diode (facing6 = the outlet; the model faces north: outlet north, inlet south)
-        String[][] dt = {{"glass", "dev_glass"}, {"frost", "dev_diode_frost"}, {"brass", "dev_brass_filigree"}, {"trim", "dev_brass_trim"},
-                {"valve_r", "dev_diode_valve_r"}, {"valve_l", "dev_diode_valve_l"}, {"valve_u", "dev_diode_valve_u"},
-                {"wheel", "dev_diode_wheel"}, {"inlet", "dev_diode_inlet"}, {"outlet", "dev_diode_outlet"}, {"copper", "dev_copper_rune"}};
+        // ---- Cryo-Diode (facing6 = the outlet; drawn north): the pipe's own straight glass section (the blockstate applies it) with
+        // a brass valve on it - copper bands at both ends, the body with arrows to the outlet, a bonnet and a stem; the five-handled
+        // wheel on the stem is the renderer's (it turns while Source flows)
+        String[][] dt = {{"brass", "dev_brass_filigree"}, {"trim", "dev_brass_trim"}, {"copper", "dev_copper_rune"},
+                {"valve_r", "dev_diode_valve_r"}, {"valve_l", "dev_diode_valve_l"}, {"valve_u", "dev_diode_valve_u"}};
         List<Models.El> d = new ArrayList<>();
-        d.add(e(4, 4, 0.25, 12, 12, 15.75).all("#glass"));
-        d.add(e(5, 5, 0.25, 11, 11, 15.75).only("#frost", "east", "west", "up", "down"));
-        d.add(e(3, 3, 5, 13, 13, 11).all("#trim").face("east", "#valve_r").face("west", "#valve_l").face("up", "#valve_u"));
-        d.add(e(7, 13, 7, 9, 15, 9).all("#trim"));
-        d.add(e(3.5, 15, 3.5, 12.5, 15.5, 12.5).all("#trim").face("up", "#wheel").face("down", "#wheel"));
-        d.add(e(2.5, 2.5, 14.5, 13.5, 13.5, 16).all("#copper").face("north", "#inlet").face("south", "#inlet"));
-        d.add(e(3.5, 3.5, 0, 12.5, 12.5, 1.25).all("#copper").face("north", "#outlet").face("south", "#outlet"));
+        d.add(e(3.5, 3.5, 5, 12.5, 12.5, 11).all("#trim").face("east", "#valve_r").face("west", "#valve_l").face("up", "#valve_u")
+                .face("down", "#brass"));
+        d.add(e(3, 3, 4.25, 13, 13, 5).all("#copper"));
+        d.add(e(3, 3, 11, 13, 13, 11.75).all("#copper"));
+        d.add(e(5.5, 12.5, 5.5, 10.5, 13.5, 10.5).all("#trim"));
+        d.add(e(7.25, 13.5, 7.25, 8.75, 15, 8.75).all("#trim"));
         Models.model("cryo_diode", true, "dev_brass_filigree", dt, d.toArray(new Models.El[0]));
+        // the blockstate: the pipe's straight section along the facing, the valve turned the same way
+        String[] fac = {"north", "east", "south", "west", "up", "down"};
+        String[] rot = {"", ", \"y\": 90", ", \"y\": 180", ", \"y\": 270", ", \"x\": 270", ", \"x\": 90"};
+        StringBuilder bs = new StringBuilder("{\n  \"multipart\": [\n");
+        for (int k = 0; k < 6; k++) {
+            bs.append("    {\"when\": {\"facing\": \"").append(fac[k]).append("\"}, \"apply\": {\"model\": \"golem_logix:block/basic_snow_pipe_straight\"")
+                    .append(rot[k]).append("}},\n");
+            bs.append("    {\"when\": {\"facing\": \"").append(fac[k]).append("\"}, \"apply\": {\"model\": \"golem_logix:block/cryo_diode\"")
+                    .append(rot[k]).append("}}").append(k < 5 ? ",\n" : "\n");
+        }
+        java.nio.file.Files.writeString(Forge2.RES.resolve("blockstates/cryo_diode.json"), bs.append("  ]\n}\n").toString());
 
         // ---- Iron Security Terminal (horizontal, front north)
         String[][] st = {{"band", "dev_iron_band"}, {"door", "dev_security_door"}, {"trim", "dev_brass_trim"}, {"brass", "dev_brass_filigree"},
@@ -557,6 +587,7 @@ final class DevicesV3 {
         valve(1).save(tex("dev_diode_valve_l"));
         valve(2).save(tex("dev_diode_valve_u"));
         wheel().save(tex("dev_diode_wheel"));
+        wheel5().save(entityTex("dev_diode_wheel5"));
         flange(5.8).save(tex("dev_diode_inlet"));
         flange(7.1).save(tex("dev_diode_outlet"));
         door().save(tex("dev_security_door"));

@@ -43,6 +43,7 @@ public class GolemLogixClientEvents {
         event.registerBlockEntityRenderer(ModBlockEntities.PERISCOPE.get(), PeriscopeEyeRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.STOCK_MANOMETER.get(), StockManometerRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.STOCK_REQUESTER.get(), StockRequesterRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.CRYO_DIODE.get(), CryoDiodeRenderer::new);
     }
 
     @SubscribeEvent

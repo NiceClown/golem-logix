@@ -31,6 +31,20 @@ import org.jetbrains.annotations.Nullable;
  * Keeps N of up to 9 items or fluids in the network by automatically placing small crafting orders.
  */
 public class StockRequesterBlock extends HorizontalDirectionalBlock implements GolemNode, EntityBlock {
+
+    /** Not a full cube, and light passes: the inner parts of the model (set back from the block's faces) are lit, not black. */
+    private static final net.minecraft.world.phys.shapes.VoxelShape SHAPE = net.minecraft.world.level.block.Block.box(0, 0, 0, 16, 13, 16);
+
+    @Override
+    protected net.minecraft.world.phys.shapes.VoxelShape getShape(BlockState state, net.minecraft.world.level.BlockGetter level,
+            net.minecraft.core.BlockPos pos, net.minecraft.world.phys.shapes.CollisionContext context) {
+        return SHAPE;
+    }
+
+    @Override
+    protected boolean propagatesSkylightDown(BlockState state) {
+        return true;
+    }
     public static final MapCodec<StockRequesterBlock> CODEC = simpleCodec(StockRequesterBlock::new);
 
     public StockRequesterBlock(Properties properties) {

@@ -36,6 +36,20 @@ import org.jetbrains.annotations.Nullable;
  * with optional hysteresis thresholds or Autocraft Module running detection.
  */
 public class StockManometerBlock extends DirectionalBlock implements GolemNode, EntityBlock, RemovalAware {
+
+    /** Not a full cube, and light passes: the inner parts of the model (set back from the block's faces) are lit, not black. */
+    private static final net.minecraft.world.phys.shapes.VoxelShape SHAPE = net.minecraft.world.level.block.Block.box(0.25, 0.25, 0.25, 15.75, 15.75, 15.75);
+
+    @Override
+    protected net.minecraft.world.phys.shapes.VoxelShape getShape(BlockState state, net.minecraft.world.level.BlockGetter level,
+            net.minecraft.core.BlockPos pos, net.minecraft.world.phys.shapes.CollisionContext context) {
+        return SHAPE;
+    }
+
+    @Override
+    protected boolean propagatesSkylightDown(BlockState state) {
+        return true;
+    }
     public static final MapCodec<StockManometerBlock> CODEC = simpleCodec(StockManometerBlock::new);
     public static final BooleanProperty POWERED = BlockStateProperties.POWERED;
 
