@@ -8,8 +8,8 @@ import java.util.List;
  * with thin teal inlays, brass filigree corners, sigil medallions, riveted bands. The shared panels (dev_copper_rune,
  * dev_brass_filigree, dev_iron_sigil, dev_iron_band, dev_walnut_inlay) are meant for the plain sides of other blocks too.
  * <ul>
- * <li>Brass Stock Manometer: a copper console on a brass plinth and crown, a dial in a brass bezel (the needle is the renderer's),
- * two glass gauge tubes at the front corners (their teal liquid is the renderer's, as high as the stock), a cyan crystal on top;</li>
+ * <li>Brass Stock Manometer: a copper console on a brass plinth and crown, built like the buses (an octagonal wall flange, a copper body in
+ * brass bands) with a big octagonal clock for a head: the dial in a raised bezel (the needle is the renderer's), a crown with a crystal;</li>
  * <li>Copper Order Ledger: a walnut-topped copper cabinet of drawers with brass corner posts, a slanted lectern with an open
  * ledger, an inkwell and a quill (the clerk golem behind it is the renderer's);</li>
  * <li>Cryo-Diode: a glass pipe section with swirling frost (animated), a filigreed brass valve body with arrows towards the
@@ -215,6 +215,7 @@ final class DevicesV3 {
     /** The dial: brass bezel, a cream face with a ring of runes for numbers, ticks and a red zone (the needle is the renderer's). */
     static Paint dial() {
         Paint p = new Paint(16, 16, K);
+        fill(p, Paint.BRASS, 2, 4, 2161);
         p.disc(8, 8, 8, rgb(Paint.BRASS[2]));
         p.disc(8, 8, 7.4, rgb(Paint.BRASS[5]));
         p.ring(8, 8, 6.9, 7.4, rgb(Paint.BRASS[6]));
@@ -247,7 +248,6 @@ final class DevicesV3 {
         return p;
     }
 
-    /** The gauge tubes' liquid (an entity texture for the renderer): translucent teal with a bright meniscus. */
     static Paint liquid() {
         Paint p = new Paint(16, 16, K);
         for (int j = 0; j < p.h; j++) {
@@ -487,22 +487,19 @@ final class DevicesV3 {
     }
 
     static void models() throws Exception {
-        // ---- Brass Stock Manometer (facing6, front north): the needle's pivot is at (8, 8) on the plane z = 0
+        // ---- Brass Stock Manometer (facing6, front north, the back on the block it hangs on): built like our buses - an octagonal
+        // flange on the wall, a copper body in brass bands - but its head is a big octagonal clock: the dial in a raised bezel, a
+        // pocket-watch crown with a crystal on top. The dial face is the plane z = 5.48 (the needle is the renderer's).
         String[][] mt = {{"copper", "dev_copper_rune"}, {"brass", "dev_brass_filigree"}, {"trim", "dev_brass_trim"},
-                {"dial", "dev_manometer_dial"}, {"glass", "dev_glass"}, {"crystal", "dev_crystal"}};
+                {"dial", "dev_manometer_dial"}, {"crystal", "dev_crystal"}};
         List<Models.El> m = new ArrayList<>();
-        m.add(e(0, 0, 0, 16, 2, 16).all("#trim"));
-        m.add(e(1, 2, 3, 15, 14, 15).all("#copper"));
-        m.add(e(3, 2, 1, 13, 14, 3).all("#copper"));
-        m.add(e(3, 3, 0, 13, 13, 1).all("#trim").face("north", "#dial"));
-        m.add(e(0, 14, 0, 16, 16, 16).all("#brass"));
-        for (double x : new double[]{0.5, 13.5}) {
-            m.add(e(x, 2, 0.5, x + 2, 3, 2.5).all("#trim"));
-            m.add(e(x, 13, 0.5, x + 2, 14, 2.5).all("#trim"));
-            m.add(e(x + 0.25, 3, 0.75, x + 1.75, 13, 2.25).all("#glass"));
-        }
-        m.add(e(5.5, 16, 5.5, 10.5, 17, 10.5).all("#trim"));
-        m.add(e(6.75, 17, 6.75, 9.25, 20, 9.25).all("#crystal").glow(12));
+        Buses.oct(m, 2, 2, 14.5, 14, 14, 16, 2.6, "trim", "trim", "trim", "brass", "trim");
+        Buses.oct(m, 4.5, 4.5, 8.5, 11.5, 11.5, 14.5, 1.6, "copper", "copper", "trim", null, null);
+        Pipes.ring(m, 4.1, 11.9, 11.2, 12, 1.75, "trim", 0.6);
+        Buses.oct(m, 1.5, 1.5, 5.5, 14.5, 14.5, 8.5, 3.8, "trim", "brass", "trim", "dial", "brass");
+        Pipes.ring(m, 1.1, 14.9, 4.7, 5.5, 3.95, "trim", 0.9);
+        m.add(e(7.25, 14.5, 6.25, 8.75, 15.25, 7.75).all("#trim"));
+        m.add(e(6.5, 15.25, 5.5, 9.5, 16, 8.5).all("#trim").face("up", "#crystal").glow(10));
         Models.model("stock_manometer", true, "dev_brass_filigree", mt, m.toArray(new Models.El[0]));
 
         // ---- Copper Order Ledger (horizontal, front north): cabinet, lectern sloping down to the front, inkwell, quill
@@ -578,7 +575,6 @@ final class DevicesV3 {
         glass().save(tex("dev_glass"));
         dial().save(tex("dev_manometer_dial"));
         crystal().save(tex("dev_crystal"));
-        liquid().save(entityTex("dev_teal_liquid"));
         drawers().save(tex("dev_ledger_drawers"));
         book().save(tex("dev_ledger_book"));
         quill().save(tex("dev_ledger_quill"));
