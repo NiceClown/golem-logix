@@ -233,6 +233,93 @@ final class Big3 {
         out.add(sb.append("}").toString());
     }
 
+    /**
+     * Closes see-through holes: a side left without a face (on the thought that a neighbour covers it) gets one when some of it
+     * is in fact open - the world showed through the gaps behind the middle walls. The new face takes the texture of another,
+     * whole-machine (shared) face of the same part; rotated parts neither get faces nor count as covering.
+     */
+    int closeHoles(String name) {
+        int closed = 0;
+        for (Box b : boxes) {
+            if (b.rotAxis != null) {
+                continue;
+            }
+            Face donor = null;
+            for (Face f : new Face[]{b.front, b.back, b.left, b.right, b.top, b.bottom}) {
+                if (f != null && f.mode == Mode.SHARED && donor == null) {
+                    donor = new Face(f.tex, null, f.light, Mode.SHARED);
+                }
+            }
+            if (donor == null) {
+                donor = Face.of("sat_bronze");
+            }
+            for (int side = 0; side < 6; side++) {
+                if (faceOf(b, side) == null && exposed(b, side)) {
+                    setFace(b, side, donor);
+                    closed++;
+                }
+            }
+        }
+        if (closed > 0) {
+            System.out.println("CLOSED " + closed + " open sides in " + name);
+        }
+        return closed;
+    }
+
+    private static Face faceOf(Box b, int side) {
+        return switch (side) {
+            case 0 -> b.front;
+            case 1 -> b.back;
+            case 2 -> b.left;
+            case 3 -> b.right;
+            case 4 -> b.top;
+            default -> b.bottom;
+        };
+    }
+
+    private static void setFace(Box b, int side, Face f) {
+        switch (side) {
+            case 0 -> b.front = f;
+            case 1 -> b.back = f;
+            case 2 -> b.left = f;
+            case 3 -> b.right = f;
+            case 4 -> b.top = f;
+            default -> b.bottom = f;
+        }
+    }
+
+    /** Some of the side (sampled) has nothing of the machine right outside it. Sides: front z0, back z1, left x0, right x1, top y1, bottom y0. */
+    private boolean exposed(Box b, int side) {
+        int axis = side < 2 ? 2 : side < 4 ? 0 : 1;
+        boolean high = side == 1 || side == 3 || side == 4;
+        double[] lo = {b.x0, b.y0, b.z0}, hi = {b.x1, b.y1, b.z1};
+        if (hi[axis] - lo[axis] <= EPS) {
+            return false;
+        }
+        int a1 = axis == 0 ? 1 : 0, a2 = axis == 2 ? 1 : 2;
+        double probe = high ? hi[axis] + 0.01 : lo[axis] - 0.01;
+        for (int u = 0; u < 6; u++) {
+            for (int v = 0; v < 6; v++) {
+                double[] p = new double[3];
+                p[axis] = probe;
+                p[a1] = lo[a1] + (hi[a1] - lo[a1]) * (u + 0.5) / 6;
+                p[a2] = lo[a2] + (hi[a2] - lo[a2]) * (v + 0.5) / 6;
+                boolean in = false;
+                for (Box o : boxes) {
+                    if (o != b && o.rotAxis == null && p[0] >= o.x0 - EPS && p[0] <= o.x1 + EPS && p[1] >= o.y0 - EPS && p[1] <= o.y1 + EPS
+                            && p[2] >= o.z0 - EPS && p[2] <= o.z1 + EPS) {
+                        in = true;
+                        break;
+                    }
+                }
+                if (!in) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     /** Finds faces of one direction that lie in one plane and overlap in area (z-fighting). */
     void lint(String name) {
         for (int i = 0; i < boxes.size(); i++) {

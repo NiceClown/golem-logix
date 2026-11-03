@@ -961,6 +961,7 @@ final class Saturator {
 
     static void models() throws Exception {
         Big3 m = geometry();
+        m.closeHoles("mana_saturator");
         m.lint("mana_saturator");
         // multipart: the cell by (facing, cell) and, on the roof grilles, a cooler when cooler=true
         List<String> parts = new ArrayList<>();

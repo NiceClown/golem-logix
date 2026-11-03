@@ -13,7 +13,9 @@
       "to": [16, 16, 16],
       "faces": {
         "north": {"texture": "#sat_chamber", "uv": [0, 5.3333, 16, 16]},
-        "south": {"texture": "#sat_b_11"}
+        "south": {"texture": "#sat_b_11"},
+        "east": {"texture": "#sat_chamber"},
+        "west": {"texture": "#sat_chamber"}
       }
     }
   ]
