@@ -17,7 +17,7 @@ final class Carve {
 
     /** One rune in an s x 1.6s cell: three of six strokes chosen by the seed, cut in: a bright lip below-right, the groove on top. */
     static void rune(Paint p, double x, double y, double s, int seed, int c) {
-        runeStrokes(p, x + Math.max(0.25, s / 3) * 0.7, y + Math.max(0.25, s / 3) * 0.7, s, seed, lighten(c, 0.55));
+        runeStrokes(p, x + Math.max(0.25, s / 3) * 0.7, y + Math.max(0.25, s / 3) * 0.7, s, seed, lighten(c, 0.3));
         runeStrokes(p, x, y, s, seed, c);
     }
 

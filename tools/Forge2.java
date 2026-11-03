@@ -177,6 +177,9 @@ public final class Forge2 {
                 p.rect(3.3 + i * 2.4, 19.7, 4.7 + i * 2.4, 21.3, i < 3 ? at(CYAN, 4 - i * 0.5) : at(IRON, 3));
             }
         }
+        // engraved rune rows on the bronze bands at the top and the bottom, a few lit teal
+        Carve.runeRow(p, 1.4, 14.6, 1.1, 1.2, (int) seed + 7, at(BRONZE, 0.3), at(CYAN, 4.6));
+        Carve.runeRow(p, 1.4, 14.6, 29.0, 1.2, (int) seed + 8, at(BRONZE, 0.3), at(CYAN, 4.6));
         p.frostLine(0, 16, 0, 0.5, seed + 3);
         return p;
     }
