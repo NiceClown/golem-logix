@@ -130,6 +130,17 @@ public final class CopperGolemPuppet {
     public static void render(PoseStack pose, MultiBufferSource buffers, int light, Vector3f pos, Vector3f forward, Vector3f up,
                               float scale, Anim anim, int variant, @org.jetbrains.annotations.Nullable java.util.function.Consumer<PoseStack> held,
                               @org.jetbrains.annotations.Nullable Arms arms) {
+        render(pose, buffers, light, pos, forward, up, scale, anim, variant, held, arms, null);
+    }
+
+    /**
+     * The same with a thing worn on the head: onHead draws in the head's model frame (model pixels / 16, Y down, the face to -Z;
+     * the top of the head is y = -5/16), so it turns and nods with the head.
+     */
+    public static void render(PoseStack pose, MultiBufferSource buffers, int light, Vector3f pos, Vector3f forward, Vector3f up,
+                              float scale, Anim anim, int variant, @org.jetbrains.annotations.Nullable java.util.function.Consumer<PoseStack> held,
+                              @org.jetbrains.annotations.Nullable Arms arms,
+                              @org.jetbrains.annotations.Nullable java.util.function.Consumer<PoseStack> onHead) {
         Vector3f f = new Vector3f(forward).normalize();
         Vector3f u = new Vector3f(up);
         u.sub(new Vector3f(f).mul(u.dot(f))).normalize();
@@ -200,6 +211,13 @@ public final class CopperGolemPuppet {
         VertexConsumer eyes = buffers.getBuffer(RenderTypes.eyes(EYES[v]));
         m.render(pose, eyes, 0xF000F0, OverlayTexture.NO_OVERLAY);
 
+        if (onHead != null) {
+            pose.pushPose();
+            body.translateAndRotate(pose);
+            head.translateAndRotate(pose);
+            onHead.accept(pose);
+            pose.popPose();
+        }
         if (arms != null) {
             if (arms.heldRight() != null) {
                 pose.pushPose();

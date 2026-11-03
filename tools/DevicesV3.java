@@ -210,6 +210,48 @@ final class DevicesV3 {
         return p;
     }
 
+    // ------------------------------------------------------------------ ledger: the clerk's poppy and the turning page
+
+    /** The poppy's stem with two leaves (an entity texture, drawn as crossed quads on the clerk's head). */
+    static Paint flowerStem() {
+        Paint p = new Paint(16, 16, K);
+        p.line(8, 16, 8, 5.5, 1.0, rgb(0x2c5220));
+        p.line(8.2, 15, 8.2, 6, 0.35, rgb(0x6aa646));
+        p.line(8, 13.2, 4.4, 10.6, 1.5, rgb(0x4a8232));
+        p.line(7.6, 12.8, 5, 11, 0.4, rgb(0x78b452));
+        p.line(8, 11.2, 11.6, 8.8, 1.5, rgb(0x4a8232));
+        p.line(8.4, 10.8, 11, 9.2, 0.4, rgb(0x78b452));
+        return p;
+    }
+
+    /** The poppy's blossom in greys: the renderer tints it red, yellow or green by the ledger's status; a dark heart. */
+    static Paint flowerPetals() {
+        Paint p = new Paint(16, 16, K);
+        p.disc(8, 4.6, 3.8, rgb(0xb4b4b4));
+        p.disc(5.4, 5.4, 2.2, rgb(0xe6e6e6));
+        p.disc(10.6, 5.4, 2.2, rgb(0xe6e6e6));
+        p.disc(8, 2.8, 2.3, rgb(0xf6f6f6));
+        p.disc(8, 6.4, 2.0, rgb(0xd4d4d4));
+        p.line(8, 1.2, 8, 3.6, 0.3, rgb(0xc8c8c8));
+        p.disc(8, 4.8, 1.2, rgb(0x1c1c1c));
+        p.disc(7.6, 4.4, 0.35, rgb(0x5a5a3a));
+        return p;
+    }
+
+    /** A ledger page: cream paper with ruled lines and a column of figures. */
+    static Paint page() {
+        Paint p = new Paint(16, 16, K);
+        fill(p, Paint.CREAM, 4, 5, 2171);
+        p.frame(0, 0, 16, 16, 0.5, rgb(Paint.CREAM[2]));
+        for (double y = 2.5; y < 15; y += 1.5) {
+            p.line(1.5, y, 14.5, y, 0.25, rgb(Paint.CREAM[1]));
+            p.line(11, y - 0.9, 13.5, y - 0.9, 0.35, rgb(0x3a3028));
+            p.line(2, y - 0.9, 2 + 3 + Atlant.hash((int) (y * 2), 0, 2172) * 5, y - 0.9, 0.3, rgb(0x5a4a3c));
+        }
+        p.line(10.3, 1, 10.3, 15, 0.25, rgb(0xb02818));
+        return p;
+    }
+
     // ------------------------------------------------------------------ manometer
 
     /** The dial: brass bezel, a cream face with a ring of runes for numbers, ticks and a red zone (the needle is the renderer's). */
@@ -578,6 +620,9 @@ final class DevicesV3 {
         drawers().save(tex("dev_ledger_drawers"));
         book().save(tex("dev_ledger_book"));
         quill().save(tex("dev_ledger_quill"));
+        flowerStem().save(entityTex("dev_ledger_flower_stem"));
+        flowerPetals().save(entityTex("dev_ledger_flower_petals"));
+        page().save(entityTex("dev_ledger_page"));
         frost().save(tex("dev_diode_frost"));
         valve(0).save(tex("dev_diode_valve_r"));
         valve(1).save(tex("dev_diode_valve_l"));
