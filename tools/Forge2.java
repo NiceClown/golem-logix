@@ -721,6 +721,8 @@ public final class Forge2 {
         for (int i = 0; i < 6; i++) {
             p.rect(5.0, 5.2 + i * 0.95, 11.0, 5.7 + i * 0.95, at(IRON, 0.2));
         }
+        // a ring of engraved runes round the grate, every fourth inlaid teal
+        Carve.runeRing(p, 8, 8, 5.8, 1.05, 10, 512, at(BRONZE, 0.3), at(CYAN, 4.6));
         for (double[] c : new double[][]{{2.2, 2.2}, {13.8, 2.2}, {2.2, 13.8}, {13.8, 13.8}}) {
             p.screw(c[0], c[1], 0.6, BRASS, c[0]);
         }

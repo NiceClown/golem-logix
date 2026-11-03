@@ -127,6 +127,9 @@ final class Terminals {
         // a bracket handle at the front edge
         p.slab(13.3, 4.0, 14.3, 12.0, BRASS, 3.0, 1);
         p.rect(13.5, 5.0, 14.1, 11.0, at(BRASS, 1.0));
+        // carving: brass filigree in the corners and a rune row under the vent, a few runes lit green like the screen
+        Carve.filigree(p, 0.9, 0.9, 15.1, 15.1, 2.2, at(BRASS, 3.6), at(BRASS, 6.0));
+        Carve.runeRow(p, 3.0, 12.4, 12.9, 1.2, 613, at(BRONZE, 0.3), at(GREEN, 4.6));
         tag(p, 1.6, 1.8, 3.6, 1.4, 12, GREEN);
         return p;
     }
@@ -160,6 +163,8 @@ final class Terminals {
         for (double[] c : new double[][]{{3.0, 3.0}, {13.0, 3.0}, {3.0, 13.0}, {13.0, 13.0}}) {
             p.screw(c[0], c[1], 0.7, BRASS, c[0]);
         }
+        Carve.runeRow(p, 4.4, 11.6, 1.5, 1.2, 633, at(BRONZE, 0.3), at(GREEN, 4.6));
+        Carve.runeRow(p, 4.4, 11.6, 12.3, 1.2, 634, at(BRONZE, 0.3), at(GREEN, 4.6));
         p.frostLine(1.0, 15.0, 0, 0.5, 632);
         return p;
     }

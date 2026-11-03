@@ -128,6 +128,8 @@ final class Buses {
         p.disc(3, 3, 2.0, at(IRON, 0.3));
         // indicators in the corners
         int[] led = variant == 0 ? CYAN : variant == 1 ? VIOLET : FROST;
+        // an engraved sigil in the nest, faintly lit in the bus's colour (the socket covers it when a pipe comes in)
+        Carve.sigil(p, 3, 3, 1.5, at(led, 2.2), at(led, 5.0));
         p.disc(1.05, 1.05, 0.22, at(led, 4.8));
         p.disc(4.95, 4.95, 0.22, at(led, 3.4));
         for (double[] c : new double[][]{{0.3, 0.3}, {5.7, 0.3}, {0.3, 5.7}, {5.7, 5.7}}) {
