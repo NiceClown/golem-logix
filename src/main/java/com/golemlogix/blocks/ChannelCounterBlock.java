@@ -39,7 +39,9 @@ public class ChannelCounterBlock extends Block implements EntityBlock {
      * (pixels, facing north; on a shelf it is pushed back against the wall, and on a pipe raised to the tube's flat face).
      */
     public enum Mount implements StringRepresentable {
-        FLOOR(0, 0), PIPE_BASIC(0, 0), PIPE_DENSE(0, 0), SIDE_BLOCK(0, 5.4f), SIDE_BASIC(7.1f, 5.4f), SIDE_DENSE(6.0f, 5.4f);
+        FLOOR(0, 0), PIPE_BASIC(0, 0), PIPE_DENSE(0, 0), SIDE_BLOCK(0, 5.4f), SIDE_BASIC(7.1f, 5.4f), SIDE_DENSE(6.0f, 5.4f),
+        /** On top of a pipe's junction box (the cube a pipe turns into next to a network block): sunk to the box's top. */
+        HUB_BASIC(-4f, 0), HUB_DENSE(-2f, 0);
 
         public final float dy, dz;
 
@@ -84,27 +86,69 @@ public class ChannelCounterBlock extends Block implements EntityBlock {
         Direction face = context.getClickedFace();
         Direction toPlayer = context.getHorizontalDirection().getOpposite();
         if (face.getAxis().isHorizontal()) {
-            // on the side of something: the tubes look away from it; the bracket reaches for a pipe running across, anything else
-            // (a block, a pipe's end or joint) takes the wall plate
+            // on the side of something: the tubes look away from it
             BlockState wall = level.getBlockState(context.getClickedPos().relative(face.getOpposite()));
-            Direction.Axis axis = wall.getBlock() instanceof SnowPipeBlock ? SnowPipeBlock.straightAxis(wall) : null;
-            Mount m = axis != null && axis != face.getAxis()
-                    ? (((SnowPipeBlock) wall.getBlock()).isDense() ? Mount.SIDE_DENSE : Mount.SIDE_BASIC) : Mount.SIDE_BLOCK;
-            return defaultBlockState().setValue(FACING, face).setValue(MOUNT, m);
+            return defaultBlockState().setValue(FACING, face).setValue(MOUNT, sideMount(wall, face));
         }
         BlockState below = level.getBlockState(context.getClickedPos().below());
+        Mount m = topMount(below);
+        Direction facing = toPlayer;
+        if (m == Mount.PIPE_BASIC || m == Mount.PIPE_DENSE) {
+            // astride a horizontal pipe: the row of tubes runs along it, the face turned to the player's side of it
+            var at = context.getPlayer() != null ? context.getPlayer().position() : context.getClickLocation();
+            BlockPos pos = context.getClickedPos();
+            facing = SnowPipeBlock.straightAxis(below) == Direction.Axis.X ? (at.z > pos.getZ() + 0.5 ? Direction.SOUTH : Direction.NORTH)
+                    : (at.x > pos.getX() + 0.5 ? Direction.EAST : Direction.WEST);
+        }
+        return defaultBlockState().setValue(FACING, facing).setValue(MOUNT, m);
+    }
+
+    /**
+     * How it stands on what is below: astride a horizontal straight pipe, sunk onto a junction box, or on its foot. A vertical
+     * pipe's end reaches the cell's top, so the foot stands on it.
+     */
+    static Mount topMount(BlockState below) {
         if (below.getBlock() instanceof SnowPipeBlock p) {
             Direction.Axis axis = SnowPipeBlock.straightAxis(below);
-            if (axis != null && axis.isHorizontal()) {
-                // astride a horizontal pipe: the row of tubes runs along it, the face turned to the player's side of it
-                var at = context.getPlayer() != null ? context.getPlayer().position() : context.getClickLocation();
-                BlockPos pos = context.getClickedPos();
-                Direction facing = axis == Direction.Axis.X ? (at.z > pos.getZ() + 0.5 ? Direction.SOUTH : Direction.NORTH)
-                        : (at.x > pos.getX() + 0.5 ? Direction.EAST : Direction.WEST);
-                return defaultBlockState().setValue(FACING, facing).setValue(MOUNT, p.isDense() ? Mount.PIPE_DENSE : Mount.PIPE_BASIC);
+            if (axis == null) {
+                return p.isDense() ? Mount.HUB_DENSE : Mount.HUB_BASIC;
+            }
+            if (axis.isHorizontal()) {
+                return p.isDense() ? Mount.PIPE_DENSE : Mount.PIPE_BASIC;
             }
         }
-        return defaultBlockState().setValue(FACING, toPlayer).setValue(MOUNT, Mount.FLOOR);
+        return Mount.FLOOR;
+    }
+
+    /**
+     * How it hangs on the side of a wall: the bracket reaches for a pipe running across or for a junction box (both are lo..hi of
+     * their cell, so the shelf is the same); a pipe whose end comes at it, or a block, takes the plate on the cell's face.
+     */
+    static Mount sideMount(BlockState wall, Direction face) {
+        if (wall.getBlock() instanceof SnowPipeBlock p && SnowPipeBlock.straightAxis(wall) != face.getAxis()) {
+            return p.isDense() ? Mount.SIDE_DENSE : Mount.SIDE_BASIC;
+        }
+        return Mount.SIDE_BLOCK;
+    }
+
+    /** A pipe below or behind changes its shape (a network block was put next to it, a branch added): the mount follows it. */
+    @Override
+    protected BlockState updateShape(BlockState state, net.minecraft.world.level.LevelReader level, net.minecraft.world.level.ScheduledTickAccess ticks,
+                                     BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighbor, net.minecraft.util.RandomSource random) {
+        Mount m = state.getValue(MOUNT);
+        Direction facing = state.getValue(FACING);
+        if (m.side() && direction == facing.getOpposite()) {
+            return state.setValue(MOUNT, sideMount(neighbor, facing));
+        }
+        if (!m.side() && direction == Direction.DOWN) {
+            Mount now = topMount(neighbor);
+            if ((now == Mount.PIPE_BASIC || now == Mount.PIPE_DENSE) && facing.getAxis() == SnowPipeBlock.straightAxis(neighbor)) {
+                // the row of tubes must run along the pipe
+                facing = facing.getClockWise();
+            }
+            return state.setValue(MOUNT, now).setValue(FACING, facing);
+        }
+        return state;
     }
 
     @Override
@@ -115,7 +159,7 @@ public class ChannelCounterBlock extends Block implements EntityBlock {
     /** The counter's box (with its shelf on a side mount), turned as the blockstate turns the model. */
     private static VoxelShape shape(BlockState state) {
         Mount m = state.getValue(MOUNT);
-        double x0 = 3.5, x1 = 12.5, y0 = m.dy, y1 = Math.min(16, m.dy + 9.2), z0 = 6 + m.dz, z1 = m.side() ? 16 : 10 + m.dz;
+        double x0 = 3.5, x1 = 12.5, y0 = Math.max(0, m.dy), y1 = Math.min(16, m.dy + 9.2), z0 = 6 + m.dz, z1 = m.side() ? 16 : 10 + m.dz;
         if (m.side()) {
             y0 = Math.max(0, y0 - 0.8);
         }

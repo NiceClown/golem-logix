@@ -23,6 +23,14 @@
     "facing=north,mount=side_dense": {"model": "golem_logix:block/channel_counter_side_dense"},
     "facing=east,mount=side_dense": {"model": "golem_logix:block/channel_counter_side_dense", "y": 90},
     "facing=south,mount=side_dense": {"model": "golem_logix:block/channel_counter_side_dense", "y": 180},
-    "facing=west,mount=side_dense": {"model": "golem_logix:block/channel_counter_side_dense", "y": 270}
+    "facing=west,mount=side_dense": {"model": "golem_logix:block/channel_counter_side_dense", "y": 270},
+    "facing=north,mount=hub_basic": {"model": "golem_logix:block/channel_counter_hub_basic"},
+    "facing=east,mount=hub_basic": {"model": "golem_logix:block/channel_counter_hub_basic", "y": 90},
+    "facing=south,mount=hub_basic": {"model": "golem_logix:block/channel_counter_hub_basic", "y": 180},
+    "facing=west,mount=hub_basic": {"model": "golem_logix:block/channel_counter_hub_basic", "y": 270},
+    "facing=north,mount=hub_dense": {"model": "golem_logix:block/channel_counter_hub_dense"},
+    "facing=east,mount=hub_dense": {"model": "golem_logix:block/channel_counter_hub_dense", "y": 90},
+    "facing=south,mount=hub_dense": {"model": "golem_logix:block/channel_counter_hub_dense", "y": 180},
+    "facing=west,mount=hub_dense": {"model": "golem_logix:block/channel_counter_hub_dense", "y": 270}
   }
 }

@@ -179,7 +179,7 @@ final class Nixie {
     static void counterModels() throws Exception {
         String[][] tex = {{"wood", "nixie_wood"}, {"brass", "sat_brass"}, {"socket", "nixie_socket"}, {"mesh", "nixie_mesh"},
                 {"glass", "nixie_glass"}, {"bolt", "pipe_bolt"}, {"dark", "sat_dark"}};
-        String[] mounts = {"floor", "pipe_basic", "pipe_dense", "side_block", "side_basic", "side_dense"};
+        String[] mounts = {"floor", "pipe_basic", "pipe_dense", "side_block", "side_basic", "side_dense", "hub_basic", "hub_dense"};
         for (String m : mounts) {
             List<Models.El> l;
             switch (m) {
@@ -196,6 +196,19 @@ final class Nixie {
                         l.add(Models.e(x + 0.4, -6.2, z0 - 0.3, x + 1.0, -5.6, z0).all("#bolt"));
                         l.add(Models.e(x + 0.4, -6.2, z1, x + 1.0, -5.6, z1 + 0.3).all("#bolt"));
                         l.add(Models.e(x + 0.4, top + 0.6, 7.3, x + 1.0, 0, 8.7).only("#brass", "north", "south", "east", "west"));
+                    }
+                }
+                case "hub_basic", "hub_dense" -> {
+                    // on a pipe's junction box (a pipe next to a network block is a cube lo..hi of its cell): the counter sits down on
+                    // the box's top, on two brass saddles across it that hook over its front and back edges (the top itself is glass)
+                    double lo = m.equals("hub_dense") ? 2 : 4, hi = 16 - lo, dy = hi - 16;
+                    l = counterBody(dy, 0);
+                    for (double x : new double[]{4.6, 10.2}) {
+                        l.add(Models.e(x, dy - 0.4, lo - 0.5, x + 1.2, dy, hi + 0.5).all("#brass"));
+                        l.add(Models.e(x, dy - 1.6, lo - 0.5, x + 1.2, dy - 0.4, lo).only("#brass", "north", "south", "east", "west", "down"));
+                        l.add(Models.e(x, dy - 1.6, hi, x + 1.2, dy - 0.4, hi + 0.5).only("#brass", "north", "south", "east", "west", "down"));
+                        l.add(Models.e(x + 0.3, dy - 1.2, lo - 0.8, x + 0.9, dy - 0.6, lo - 0.5).all("#bolt"));
+                        l.add(Models.e(x + 0.3, dy - 1.2, hi + 0.5, x + 0.9, dy - 0.6, hi + 0.8).all("#bolt"));
                     }
                 }
                 case "side_block", "side_basic", "side_dense" -> {
