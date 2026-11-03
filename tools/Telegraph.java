@@ -18,6 +18,35 @@ final class Telegraph {
         linkage().save(Items.itemTex("aetherial_linkage"));
         resonanceCore().save(Items.itemTex("aether_resonance_core"));
         voidPrism().save(Items.itemTex("void_glass_prism"));
+        panel(731).save(Forge2.tex("telegraph_panel"));
+        runeBand(733).save(Forge2.tex("telegraph_band"));
+    }
+
+    /**
+     * A carved panel for the plain walls of the telegraph's base: rusty copper in a brass frame, filigree in the corners, a ring of
+     * runes round a teal sigil (the block design code: no plain side is left empty).
+     */
+    static Paint panel(int seed) {
+        Paint p = new Paint(16, 16, Forge2.K);
+        p.fill(0, 0, 16, 16, (u, v) -> rust(u, v, 0.4 - 0.1 * v / 16));
+        p.streaks(0.8, 0.8, 15.2, 15.2, 0.05, seed, true);
+        p.frame(0, 0, 16, 16, 0.8, Items.at(BRASS, 3.2));
+        p.frame(0.8, 0.8, 15.2, 15.2, 0.3, Items.at(BRASS, 5.4));
+        p.frame(1.4, 1.4, 14.6, 14.6, 0.3, Items.at(COPPER, 0.8));
+        Carve.filigree(p, 2.4, 2.4, 13.6, 13.6, 2.6, Items.at(BRASS, 3.6), Items.at(BRASS, 5.6));
+        Carve.runeRing(p, 8, 8, 4.6, 0.85, 8, seed, Items.at(COPPER, 0.6), Items.at(CYAN, 4.6));
+        Carve.sigil(p, 8, 8, 2.5, Items.at(COPPER, 0.5), Items.at(CYAN, 5.0));
+        return p;
+    }
+
+    /** A band of runes above the brass belt (16 x 3, laid along the walls in 8-pixel pieces). */
+    static Paint runeBand(int seed) {
+        Paint p = new Paint(16, 3, Forge2.K);
+        p.fill(0, 0, 16, 3, (u, v) -> rust(u + seed, v, 0.3));
+        p.rect(0, 0, 16, 0.3, Items.at(BRASS, 4.4));
+        p.rect(0, 2.7, 16, 3, Items.at(BRASS, 2.6));
+        Carve.runeRow(p, 0.7, 15.6, 0.65, 1.0, seed, Items.at(COPPER, 0.5), Items.at(CYAN, 4.6));
+        return p;
     }
 
     /** Rusty copper with patches of verdigris. */

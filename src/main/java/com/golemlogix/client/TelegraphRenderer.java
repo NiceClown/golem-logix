@@ -42,7 +42,8 @@ public class TelegraphRenderer extends com.golemlogix.client.render.LegacyBer<Te
     private static final Identifier RUST = mc("exposed_copper"), VERDIGRIS = mc("weathered_copper"),
             CUT = mc("exposed_cut_copper"), COPPER = mc("copper_block"), BRASS = tex("sat_brass"), DARK = tex("sat_dark"),
             ICE = tex("sat_ice"), GAUGE = tex("monitor_gauge"), DIAL = tex("resonator_dial"), RUNES = tex("cryo_panel_matrix"),
-            GLASS = tex("sat_glass"), CRYSTAL = tex("core_crystal"), GEM = tex("sat_crystal"), WHITE = mc("white_concrete");
+            GLASS = tex("sat_glass"), CRYSTAL = tex("core_crystal"), GEM = tex("sat_crystal"), WHITE = mc("white_concrete"),
+            PANEL = tex("telegraph_panel"), BAND = tex("telegraph_band");
     /** Rusty tint over the vanilla exposed copper (on its own it reads pink). */
     private static final int RUST_TINT = 0xFFB07A62;
     /** Ticks a pulse needs to run from the base to the dish. */
@@ -163,6 +164,29 @@ public class TelegraphRenderer extends com.golemlogix.client.render.LegacyBer<Te
         pose.mulPose(Axis.YP.rotationDegrees(-90f));
         fitWall(vc, pose.last(), 6f, 3f, 14f, 11f, -16.06f, DIAL, white, light);
         pose.popPose();
+        // the walls are never left plain: carved rune panels between the dials, a band of runes above the belt all round
+        // (each wall in its own frame: +90 = the right side, -90 = the left one, 180 = the back; the wall plane is z = -16 or -32)
+        float[][][] panels = {
+                {{90f, -16.06f}, {-21.4f, -14.6f}},
+                {{-90f, -16.06f}, {16.6f, 22.8f}, {23.6f, 29.8f}},
+                {{180f, -32.06f}, {-14.4f, -8.2f}, {-6.6f, -0.4f}, {0.4f, 6.6f}, {8.2f, 14.4f}}};
+        for (float[][] wall : panels) {
+            pose.pushPose();
+            pose.mulPose(Axis.YP.rotationDegrees(wall[0][0]));
+            for (int i = 1; i < wall.length; i++) {
+                fitWall(vc, pose.last(), wall[i][0], 2.6f, wall[i][1], 8.9f, wall[0][1], PANEL, white, light);
+            }
+            pose.popPose();
+        }
+        float[][] walls = {{0f, -0.06f, -16f, 16f}, {90f, -16.06f, -32f, 0f}, {-90f, -16.06f, 0f, 32f}, {180f, -32.06f, -16f, 16f}};
+        for (float[] w : walls) {
+            pose.pushPose();
+            pose.mulPose(Axis.YP.rotationDegrees(w[0]));
+            for (float x = w[2]; x < w[3] - 0.5f; x += 8f) {
+                fitWall(vc, pose.last(), x, 10.9f, Math.min(x + 8f, w[3]), 12.4f, w[1], BAND, white, light);
+            }
+            pose.popPose();
+        }
         // a copper cable from the key along the deck to the foot of the mast
         box(vc, p, KEY_X + 1f, 15f, 8.4f, KEY_X + 1.8f, 15.7f, 19.8f, COPPER, white, light);
         box(vc, p, MAST_X, 15f, 18.8f, KEY_X + 1f, 15.7f, 19.8f, COPPER, white, light);
