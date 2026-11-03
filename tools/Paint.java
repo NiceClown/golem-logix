@@ -715,12 +715,25 @@ public final class Paint {
     }
 
     /** A snow cap/frost along a horizontal edge: an uneven white layer on top. */
+    /**
+     * Hoarfrost along an edge: in clumps with bare metal between them and pale blue rather than white - an unbroken white row
+     * on a block's edge reads as a see-through seam.
+     */
     void frostLine(double x0, double x1, double y, double depth, long seed) {
         Random r = new Random(seed);
+        int run = 0;
+        boolean on = r.nextBoolean();
         for (int i = (int) Math.round(x0 * k); i < (int) Math.round(x1 * k); i++) {
-            int d = (int) Math.round(depth * k * (0.4 + r.nextDouble()));
+            if (run-- <= 0) {
+                on = !on;
+                run = on ? 2 + r.nextInt(4) : 1 + r.nextInt(3);
+            }
+            if (!on) {
+                continue;
+            }
+            int d = Math.max(1, (int) Math.round(depth * k * (0.4 + r.nextDouble())));
             for (int j = 0; j < d; j++) {
-                px(i, (int) Math.round(y * k) + j, ramp(FROST, 0.85 + 0.15 * r.nextDouble() - j * 0.12));
+                px(i, (int) Math.round(y * k) + j, ramp(FROST, 0.62 + 0.18 * r.nextDouble() - j * 0.12));
             }
         }
     }
