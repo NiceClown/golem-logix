@@ -257,6 +257,9 @@ final class GolemBuses {
         for (double x = 1.5; x < 16; x += 4.5) {
             p.rect(x, 7.5, x + 1, 8.5, rgb(0x23252b));
         }
+        // carving: a rune row on the upper plate, a sigil on the lower one
+        Carve.runeRow(p, 3.4, 12.6, 2.6, 0.9, 863, rgb(Paint.IRON[1]), rgb(Paint.CYAN[4]));
+        Carve.sigil(p, 8, 12.2, 2.1, rgb(Paint.IRON[1]), rgb(Paint.CYAN[5]));
         for (double[] c : new double[][]{{1.5, 2}, {13.5, 2}, {1.5, 12.5}, {13.5, 12.5}}) {
             p.rect(c[0], c[1], c[0] + 1, c[1] + 1, rgb(Paint.IRON[1]));
             p.rect(c[0], c[1], c[0] + 0.5, c[1] + 0.5, rgb(Atlant.PATINA[4]));

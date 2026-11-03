@@ -704,6 +704,7 @@ public class ArtForge {
         Telegraph.all();
         Distillery.all();
         Interface.all();
+        Top6.all();
         Logo.make();
         System.out.println("ArtForge: done");
     }

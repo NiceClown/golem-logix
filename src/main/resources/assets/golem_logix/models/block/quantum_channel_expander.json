@@ -1,6 +1,24 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
   "textures": {
-    "all": "golem_logix:block/quantum_channel_expander"
-  }
+    "particle": "golem_logix:block/quantum_channel_expander",
+    "front": "golem_logix:block/quantum_channel_expander",
+    "side": "golem_logix:block/quantum_channel_expander_side",
+    "top": "golem_logix:block/quantum_channel_expander_top"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0],
+      "to": [16, 16, 16],
+      "faces": {
+        "north": {"texture": "#front"},
+        "south": {"texture": "#front"},
+        "east": {"texture": "#side"},
+        "west": {"texture": "#side"},
+        "up": {"texture": "#top"},
+        "down": {"texture": "#top"}
+      }
+    }
+  ]
 }

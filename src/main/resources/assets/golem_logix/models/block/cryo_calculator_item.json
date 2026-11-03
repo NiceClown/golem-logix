@@ -2,8 +2,10 @@
   "parent": "minecraft:block/block",
   "ambientocclusion": false,
   "textures": {
-    "particle": "golem_logix:block/cryo_panel",
+    "particle": "golem_logix:block/calc_side",
     "panel": "golem_logix:block/cryo_panel",
+    "side": "golem_logix:block/calc_side",
+    "top": "golem_logix:block/calc_top",
     "snow": "minecraft:block/snow"
   },
   "elements": [
@@ -13,10 +15,10 @@
       "faces": {
         "north": {"texture": "#panel"},
         "south": {"texture": "#panel"},
-        "east": {"texture": "#panel"},
-        "west": {"texture": "#panel"},
-        "up": {"texture": "#panel"},
-        "down": {"texture": "#panel"}
+        "east": {"texture": "#side"},
+        "west": {"texture": "#side"},
+        "up": {"texture": "#top"},
+        "down": {"texture": "#top"}
       }
     },
     {

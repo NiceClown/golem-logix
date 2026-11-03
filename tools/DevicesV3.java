@@ -572,7 +572,9 @@ final class DevicesV3 {
         d.add(e(3, 3, 4.25, 13, 13, 5).all("#copper"));
         d.add(e(3, 3, 11, 13, 13, 11.75).all("#copper"));
         d.add(e(5.5, 12.5, 5.5, 10.5, 13.5, 10.5).all("#trim"));
-        d.add(e(7.25, 13.5, 7.25, 8.75, 15, 8.75).all("#trim"));
+        // the stem runs up through the wheel's hub to a cap, so the wheel sits on its axle
+        d.add(e(7.25, 13.5, 7.25, 8.75, 15.9, 8.75).all("#trim"));
+        d.add(e(6.75, 15.9, 6.75, 9.25, 16, 9.25).all("#copper"));
         Models.model("cryo_diode", true, "dev_brass_filigree", dt, d.toArray(new Models.El[0]));
         // the blockstate: the pipe's straight section along the facing, the valve turned the same way
         String[] fac = {"north", "east", "south", "west", "up", "down"};

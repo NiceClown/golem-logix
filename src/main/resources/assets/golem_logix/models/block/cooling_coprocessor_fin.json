@@ -3,8 +3,10 @@
   "ambientocclusion": false,
   "textures": {
     "particle": "golem_logix:block/cryo_fin",
-    "panel": "golem_logix:block/cryo_panel",
-    "fin": "golem_logix:block/cryo_fin"
+    "bands": "golem_logix:block/cop_bands",
+    "lid": "golem_logix:block/cop_lid",
+    "fin": "golem_logix:block/cryo_fin",
+    "post": "golem_logix:block/dev_brass_trim"
   },
   "elements": [
     {

@@ -31,6 +31,14 @@ is told so in the chat (with a link to the issues page) - the look of the newest
   wears a poppy that blinks red (ingredients missing), yellow (no pattern) or breathes green; the Cryo-Diode is a brass valve
   on a real pipe section, a half block like the pipes, its five-handled wheel turning while Source flows; the Security
   Terminal's CRT sweeps. The Telegraph's plain walls got carved rune panels and a band of runes.
+- The design code reached the plainest older blocks: the Channel Expanders keep their lattice window on the front and back but
+  get carved copper side panels and a ring of runes round a crystal eye on top (teal; violet on the quantum one); the
+  Cryo-Calculator shows its screen only front and back, with carved slate-and-brass sides and a rune-ring roof for its
+  snowmen; the Cooling Co-Processor has brass rune bands and a carved lid with a teal core; the Creative Source Jar stands in
+  a brass cage with a copper rune band and a crystal cap; the Annihilation Bus's iron sides are engraved; the Cryo-Diode's
+  wheel sits on its stem.
+- The Channel Counter sits on a pipe's junction box on two brass saddles instead of floating above it, and its mount follows
+  the pipe when the pipe changes shape.
 - The Mana Saturator's carriers wait on their deck corners and hop onto the anvil only for the hand-off, so they no longer
   crowd round the smith on a long order.
 - Fixed: under Sodium/Iris the pipes' heat lamps showed no digits - the lamp glass hid them; it is left out there.
