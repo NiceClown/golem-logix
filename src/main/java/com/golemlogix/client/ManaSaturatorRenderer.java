@@ -299,7 +299,7 @@ public class ManaSaturatorRenderer extends com.golemlogix.client.render.LegacyBe
      */
     private void carrier(ManaSaturatorBlockEntity entity, ManaSaturatorBlockEntity.Carrier c, float[][] path, float[] deck, PoseStack pose,
                          MultiBufferSource buffers, int light, int overlay, float time, float pt, int variant, float lookPhase) {
-        float len = pathLength(path), walkT = ManaSaturatorBlockEntity.WALK;
+        float len = pathLength(path), walkT = ManaSaturatorBlockEntity.WALK, w = ManaSaturatorBlockEntity.WAIT_AT;
         float left = Math.max(0f, c.timer - pt);
         float[] pos, face;
         boolean walking = false;
@@ -317,6 +317,37 @@ public class ManaSaturatorRenderer extends com.golemlogix.client.render.LegacyBe
                     // has just picked it up from the deck
                     bow = Mth.sin((1f - since / BOW_TICKS) * Mth.HALF_PI) * 0.8f;
                 }
+            }
+            case ManaSaturatorBlockEntity.TO_WAIT, ManaSaturatorBlockEntity.HOP -> {
+                // the waiting zone is the deck's front corner (w of the path); the hop takes it from there onto the anvil
+                boolean hop = c.phase == ManaSaturatorBlockEntity.HOP;
+                float span = hop ? ManaSaturatorBlockEntity.HOP_TICKS : ManaSaturatorBlockEntity.TO_WAIT_TICKS;
+                float k = 1f - left / span, f = hop ? w + (1f - w) * k : w * k;
+                float[] at = along(path, f);
+                pos = at;
+                face = new float[]{at[3], at[4]};
+                walking = left > 0f;
+                dist = f * len;
+                float since = span - left;
+                if (!hop && since < BOW_TICKS) {
+                    // has just picked it up from the deck
+                    bow = Mth.sin((1f - since / BOW_TICKS) * Mth.HALF_PI) * 0.8f;
+                }
+            }
+            case ManaSaturatorBlockEntity.AT_WAIT -> {
+                // waits on its corner, now watching the smith, now glancing back along the deck
+                pos = along(path, w);
+                float look = Mth.sin(time * 0.03f + lookPhase) * 0.5f + 0.5f;
+                float[] a = toward(pos, SPOT_ANVIL), b = toward(pos, deck);
+                face = new float[]{Mth.lerp(look * 0.4f, a[0], b[0]), Mth.lerp(look * 0.4f, a[1], b[1])};
+            }
+            case ManaSaturatorBlockEntity.BACK -> {
+                float f = w * left / ManaSaturatorBlockEntity.TO_WAIT_TICKS;
+                float[] at = along(path, f);
+                pos = at;
+                face = left > 0f ? new float[]{-at[3], -at[4]} : toward(at, deck);
+                walking = left > 0f;
+                dist = (w - f) * len;
             }
             case ManaSaturatorBlockEntity.AT_ANVIL -> {
                 pos = path[path.length - 1];

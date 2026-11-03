@@ -25,9 +25,11 @@ import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * Mana Saturator, a conveyor of three places: the left back deck (queue of blanks), the anvil (the iron golem forges) and
- * the right back deck (finished plates). Two copper golems carry independently: the bringer takes the next blank in advance
- * and waits at the anvil, the taker walks to the anvil while the ritual runs and picks up the result right after the last
- * strike, so the smith is almost never idle.
+ * the right back deck (finished plates). Two copper golems carry independently, each through three zones: it waits at the
+ * front corner of its own deck (the waiting zone), hops onto the anvil only for a hand-off (the forging zone: the taker in for the
+ * result as the last strike falls, the bringer from the other side as it takes it) and walks back along the deck (the exit). The bringer takes the next blank in advance and waits
+ * with it; the taker waits on its corner while the ritual runs and hops in for the result right after the last strike - so the
+ * smith is almost never idle and the golems no longer crowd round the anvil on a long order.
  */
 public class ManaSaturatorBlockEntity extends BlockEntity {
     /** Anvil: the blank under the hammer or the freshly forged result (the taker will pick it up). */
@@ -64,8 +66,14 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
     // ---------------------------------------------------------------------------------- carriers
     /** How many ticks a copper golem walks from its deck to the anvil (and back). */
     public static final int WALK = 18;
-    /** Carrier phases: home, walking to the anvil, waiting at the anvil, walking to the deck. */
-    public static final int HOME = 0, TO_ANVIL = 1, AT_ANVIL = 2, TO_DECK = 3;
+    /** Ticks from the deck to the waiting corner (WAIT_AT of the path) and the hop from there onto the anvil. */
+    public static final float WAIT_AT = 0.71f;
+    public static final int TO_WAIT_TICKS = Math.round(WALK * WAIT_AT), HOP_TICKS = WALK - TO_WAIT_TICKS;
+    /**
+     * Carrier phases: home, walking the whole path to the anvil (old saves only), at the anvil, walking the whole path back to
+     * the deck; walking to the waiting corner, waiting there, hopping from it onto the anvil, going home from it empty-handed.
+     */
+    public static final int HOME = 0, TO_ANVIL = 1, AT_ANVIL = 2, TO_DECK = 3, TO_WAIT = 4, AT_WAIT = 5, HOP = 6, BACK = 7;
 
     /** Copper carrier golem: what it holds, its phase and how many ticks of walking are left. */
     public static final class Carrier {
@@ -74,7 +82,22 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
 
         void go(int newPhase) {
             phase = newPhase;
-            timer = newPhase == TO_ANVIL || newPhase == TO_DECK ? WALK : 0;
+            timer = switch (newPhase) {
+                case TO_ANVIL, TO_DECK -> WALK;
+                case TO_WAIT, BACK -> TO_WAIT_TICKS;
+                case HOP -> HOP_TICKS;
+                default -> 0;
+            };
+        }
+
+        /** Walking (the timer counts the steps down on both sides). */
+        public boolean walking() {
+            return phase == TO_ANVIL || phase == TO_DECK || phase == TO_WAIT || phase == HOP || phase == BACK;
+        }
+
+        /** On the anvil or on the way onto it. */
+        boolean onAnvil() {
+            return phase == TO_ANVIL || phase == HOP || phase == AT_ANVIL;
         }
 
         CompoundTag save(HolderLookup.Provider registries) {
@@ -484,9 +507,10 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
     }
 
     /**
-     * Carrier step (server). Bringer: at home with a queue, it takes a blank and walks to the anvil, waits until the anvil
-     * is free, puts the blank down and goes back. Taker: walks to the anvil as soon as a ritual or a finished result is there, takes
-     * the result and carries it to the right deck (if foreign plates are there or there is no room, it waits with its load).
+     * Carrier step (server). Bringer: at home with a queue, it takes a blank and walks to its waiting corner; when the anvil is
+     * empty and the taker is off it, it hops on, puts the blank down and goes back. Taker: walks to its corner as soon as a ritual
+     * or a finished result is there, hops on for the result when the bringer is off the anvil and carries it to the right deck (if
+     * foreign plates are there or there is no room, it waits with its load); with nothing to take it goes home from the corner.
      */
     private boolean stepCarriers() {
         boolean changed = false;
@@ -498,11 +522,24 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
                     if (inDeck.isEmpty()) {
                         inDeck = ItemStack.EMPTY;
                     }
-                    bringer.go(TO_ANVIL);
+                    bringer.go(TO_WAIT);
                     changed = true;
                 }
             }
-            case TO_ANVIL -> {
+            case TO_WAIT -> {
+                if (--bringer.timer <= 0) {
+                    bringer.go(AT_WAIT);
+                    changed = true;
+                }
+            }
+            case AT_WAIT -> {
+                // the anvil is free, or the taker is on its way in for what lies there: a hand-off from both sides
+                if (heldItem.isEmpty() || taker.onAnvil()) {
+                    bringer.go(HOP);
+                    changed = true;
+                }
+            }
+            case TO_ANVIL, HOP -> {
                 if (--bringer.timer <= 0) {
                     bringer.go(AT_ANVIL);
                     changed = true;
@@ -530,11 +567,35 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         switch (taker.phase) {
             case HOME -> {
                 if (isCrafting || result) {
-                    taker.go(TO_ANVIL);
+                    taker.go(TO_WAIT);
                     changed = true;
                 }
             }
-            case TO_ANVIL -> {
+            case TO_WAIT -> {
+                if (--taker.timer <= 0) {
+                    taker.go(AT_WAIT);
+                    changed = true;
+                }
+            }
+            case AT_WAIT -> {
+                // hops in so as to land as the last strike falls
+                boolean nearlyDone = isCrafting && (currentWork() - ritualProgress) <= HOP_TICKS * speed();
+                if ((result || nearlyDone) && !(bringer.onAnvil() && heldItem.isEmpty())) {
+                    taker.go(HOP);
+                    changed = true;
+                } else if (!isCrafting && !result) {
+                    // nothing coming (the anvil was emptied by hand): home from the corner
+                    taker.go(BACK);
+                    changed = true;
+                }
+            }
+            case BACK -> {
+                if (--taker.timer <= 0) {
+                    taker.go(HOME);
+                    changed = true;
+                }
+            }
+            case TO_ANVIL, HOP -> {
                 if (--taker.timer <= 0) {
                     taker.go(AT_ANVIL);
                     changed = true;
@@ -686,7 +747,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
     /** Client: ritual progress between packets, sparks at the anvil, carrier steps (phase changes come from the server). */
     private void clientTick(Level level, BlockPos pos) {
         for (Carrier c : new Carrier[]{bringer, taker}) {
-            if ((c.phase == TO_ANVIL || c.phase == TO_DECK) && c.timer > 0) {
+            if (c.walking() && c.timer > 0) {
                 c.timer--;
             }
         }
