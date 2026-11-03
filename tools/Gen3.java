@@ -613,8 +613,11 @@ final class Gen3 {
         Terminals.vent(p, 3.0, 9.5, 13.0, 13.5, 4);
         p.frostLine(0, 16, 0, 0.8, 6402);
         p.frostLine(0, 16, 15.2, 0.6, 6403);
+        Carve.runeRow(p, 3.2, 12.8, 5.8, 0.9, 6404, at(BRONZE, 0.4), at(CYAN, 4.6));
+        Carve.filigree(p, 2.8, 2.8, 13.2, 8.8, 2.2, at(BRASS, 3.4), at(BRASS, 5.2));
         return p;
     }
+
 
     /**
      * The deck on the monitor roof the copper golem with a lamp walks on: ribbed dark steel (diamond notches, as on

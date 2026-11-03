@@ -398,8 +398,11 @@ final class Saturator {
         for (double[] c : new double[][]{{2.2, 2.2}, {13.8, 2.2}, {2.2, 13.8}, {13.8, 13.8}}) {
             p.rivet(c[0], c[1], 0.4, BRASS);
         }
+        Carve.filigree(p, 3.2, 3.2, 12.8, 12.8, 2.2, at(BRASS, 3.3), at(BRASS, 5.2));
+        Carve.sigil(p, 8, 8, 2.6, at(BRONZE, 0.4), at(CYAN, 4.6));
         return p;
     }
+
 
     static Paint darkTile() {
         Paint p = new Paint(16, 16, K);

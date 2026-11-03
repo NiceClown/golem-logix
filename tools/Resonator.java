@@ -43,8 +43,14 @@ final class Resonator {
             p.glowRect(6.2, 13.0, 9.8, 14.0, 0.4, at(CYAN, 3.4), 60);
         }
         p.frostLine(0, 16, 0, 0.7, seed + 2);
+        if (!gauges) {
+            Carve.runeRow(p, 3.2, 12.8, 6.8, 0.9, (int) (seed + 3), at(COPPER, 0.4), at(CYAN, 4.6));
+            Carve.sigil(p, 8, 10.2, 1.7, at(COPPER, 0.5), at(CYAN, 4.6));
+        }
+        Carve.filigree(p, 3.0, 3.0, 13.0, 13.0, 2.3, at(BRASS, 3.4), at(BRASS, 5.2));
         return p;
     }
+
 
     /** Top: a copper plate in a brass edging, frost, a rune notch. */
     static Paint top() {

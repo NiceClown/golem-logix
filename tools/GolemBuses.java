@@ -47,8 +47,11 @@ final class GolemBuses {
             p.rect(x, 0, x + 0.5, 16, rgb(Atlant.PATINA[2]));
             p.rect(x + 0.5, 0, x + 1, 16, rgb(Atlant.PATINA[4]));
         }
+        Carve.runeRow(p, 0.8, 15.2, 2.5, 1.15, 811, rgb(Atlant.COPPER[0]), rgb(Paint.CYAN[4]));
+        Carve.rune(p, 7.3, 10.6, 1.25, 812, rgb(Atlant.COPPER[0]));
         return p;
     }
+
 
     /** The lid's top: one copper plate, a ring of rivets, frost at the rim. */
     static Paint tankLid() {
@@ -71,8 +74,11 @@ final class GolemBuses {
                 p.px(i, 0, rgb(Paint.FROST[5]));
             }
         }
+        Carve.runeRing(p, 8, 8, 5.0, 0.8, 8, 821, rgb(Atlant.COPPER[0]), rgb(Paint.CYAN[4]));
+        Carve.sigil(p, 8, 8, 3.0, rgb(Atlant.COPPER[0]), rgb(Paint.CYAN[5]));
         return p;
     }
+
 
     static void rivet(Paint p, double x, double y) {
         p.rect(x, y, x + 1, y + 1, rgb(Atlant.COPPER[0]));
@@ -99,8 +105,14 @@ final class GolemBuses {
                 brassRivet(p, x + 1.75, y);
             }
         }
+        for (double x = 0; x < 16; x += 4) {
+            for (double y = 3.0; y < 15.5; y += 3.0) {
+                Carve.rune(p, x + 0.95, y - 0.4, 0.6, 832, rgb(Atlant.COPPER[0]));
+            }
+        }
         return p;
     }
+
 
     /** Clear glass: transparent but for a light rim, two highlight streaks and a speck of frost in a corner (cutout). */
     static Paint tankGlass() {
