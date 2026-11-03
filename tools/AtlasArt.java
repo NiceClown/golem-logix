@@ -95,11 +95,21 @@ final class AtlasArt {
         }
     }
 
-    /** The side of a casing: a copper rune plate sunk in a brass frame, frost in the corners. */
+    /** The side of a casing: a copper rune plate sunk in a brass frame, a rune row and a ring of runes, filigree, frost in a corner. */
     static Paint casing() {
         Paint p = new Paint(16, 16, K);
         brassFrame(p, 0, 0, 16, 16, 1.5);
         copper(p, 1.5, 1.5, 14.5, 14.5, 11, 0);
+
+        int groove = rgb(Atlant.COPPER[0]);
+        int inlay = rgb(Paint.CYAN[4]);
+        int brassDark = rgb(Paint.BRASS[3]);
+        int brassHi = rgb(Paint.BRASS[6]);
+
+        Carve.filigree(p, 2.0, 2.0, 14.0, 14.0, 1.5, brassDark, brassHi);
+        Carve.runeRow(p, 3.4, 12.6, 2.15, 0.72, 0x51A7, groove, inlay);
+        Carve.runeRing(p, 8.0, 8.0, 5.05, 0.72, 6, 0x2C9E, groove, inlay);
+
         rune(p, 8, 8, 4.5);
         cold(p, 12, 2.4);
         rivets(p, 0.5, 1);
