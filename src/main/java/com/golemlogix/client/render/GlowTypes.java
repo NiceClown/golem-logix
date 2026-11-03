@@ -50,6 +50,11 @@ public final class GlowTypes {
             net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucentEmissive(Identifier.fromNamespaceAndPath(
                     texture.getNamespace(), texture.getPath().replace(".png", "_alpha.png"))));
 
+    /** Whether the shader-safe path is taken (Iris is loaded): translucent geometry drawn by a renderer can then hide the glow behind it. */
+    public static boolean shaderSafe() {
+        return IRIS;
+    }
+
     /** Glowing geometry with this texture: black is see-through, everything else lights up what is behind it. */
     public static RenderType glow(Identifier texture) {
         return IRIS ? SHADER_SAFE.apply(texture) : GLOW.apply(texture);

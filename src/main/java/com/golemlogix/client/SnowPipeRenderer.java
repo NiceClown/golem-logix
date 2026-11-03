@@ -369,9 +369,12 @@ public class SnowPipeRenderer extends com.golemlogix.client.render.LegacyBer<Pip
         }
         com.golemlogix.client.render.NixieDigits.digit(pose.last(), buffers, load % 10, new org.joml.Vector3f(x, 8f, 6.65f), 2.2f, 4.4f,
                 right, up, color);
-        com.golemlogix.client.render.StandaloneModels.render(pose.last(), buffers.getBuffer(net.minecraft.client.renderer.Sheets.translucentBlockSheet()),
-                dense ? com.golemlogix.client.render.StandaloneModels.LAMP_GLASS_DENSE : com.golemlogix.client.render.StandaloneModels.LAMP_GLASS_BASIC,
-                1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
+        // under Iris/Sodium the glass is drawn before the digits and hides them (and cuts through the pipe's own glass): no glass then
+        if (!com.golemlogix.client.render.GlowTypes.shaderSafe()) {
+            com.golemlogix.client.render.StandaloneModels.render(pose.last(), buffers.getBuffer(net.minecraft.client.renderer.Sheets.translucentBlockSheet()),
+                    dense ? com.golemlogix.client.render.StandaloneModels.LAMP_GLASS_DENSE : com.golemlogix.client.render.StandaloneModels.LAMP_GLASS_BASIC,
+                    1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
+        }
         pose.popPose();
     }
 
