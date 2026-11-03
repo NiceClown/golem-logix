@@ -42,6 +42,16 @@ public class StockManometerRenderer extends com.golemlogix.client.render.LegacyB
         }
         pose.translate(-0.5f, -0.5f, -0.5f);
 
+        // the two glass gauge tubes at the front corners fill with glowing teal as high as the needle reads
+        double fill = be.getThreshold() <= 0 ? 0.0 : Math.clamp((double) be.getStockCount() / Math.max(1.0, 2.0 * be.getThreshold()), 0.0, 1.0);
+        if (fill > 0.01) {
+            VertexConsumer lv = buffers.getBuffer(RenderTypes.entityTranslucent(LIQUID));
+            float top = 3.1f + (float) fill * 9.8f;
+            for (float x : new float[]{0.85f, 13.85f}) {
+                box(lv, pose.last(), x, 3.05f, 0.85f, x + 1.3f, top, 2.15f, net.minecraft.util.LightCoordsUtil.FULL_BRIGHT);
+            }
+        }
+
         // Center of dial needle pivot (model pixels 8, 8, slightly proud of face z = -0.02)
         pose.translate(8f / 16f, 8f / 16f, -0.02f / 16f);
 
@@ -59,6 +69,26 @@ public class StockManometerRenderer extends com.golemlogix.client.render.LegacyB
         vertex(vc, p, r, r, 0f, 0f, 0f, light);
 
         pose.popPose();
+    }
+
+    private static final Identifier LIQUID = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/dev_teal_liquid.png");
+
+    /** A box in model pixels, all six faces with the whole texture. */
+    private static void box(VertexConsumer vc, PoseStack.Pose p, float x0, float y0, float z0, float x1, float y1, float z1, int light) {
+        float[][][] faces = {
+                {{x0, y0, z0}, {x0, y1, z0}, {x1, y1, z0}, {x1, y0, z0}, {0, 0, -1}},
+                {{x1, y0, z1}, {x1, y1, z1}, {x0, y1, z1}, {x0, y0, z1}, {0, 0, 1}},
+                {{x0, y0, z1}, {x0, y1, z1}, {x0, y1, z0}, {x0, y0, z0}, {-1, 0, 0}},
+                {{x1, y0, z0}, {x1, y1, z0}, {x1, y1, z1}, {x1, y0, z1}, {1, 0, 0}},
+                {{x0, y1, z0}, {x0, y1, z1}, {x1, y1, z1}, {x1, y1, z0}, {0, 1, 0}},
+                {{x0, y0, z1}, {x0, y0, z0}, {x1, y0, z0}, {x1, y0, z1}, {0, -1, 0}}};
+        float[][] uv = {{0, 1}, {0, 0}, {1, 0}, {1, 1}};
+        for (float[][] f : faces) {
+            for (int i = 0; i < 4; i++) {
+                vc.addVertex(p, f[i][0] / 16f, f[i][1] / 16f, f[i][2] / 16f).setColor(0xFFFFFFFF).setUv(uv[i][0], uv[i][1])
+                        .setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(p, f[4][0], f[4][1], f[4][2]);
+            }
+        }
     }
 
     private static void vertex(VertexConsumer vc, PoseStack.Pose p, float x, float y, float z, float u, float v, int light) {

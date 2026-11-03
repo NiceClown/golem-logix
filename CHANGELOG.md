@@ -24,6 +24,10 @@ is told so in the chat (with a link to the issues page) - the look of the newest
   fuzzy tag - the same window as the buses'.
 - Glowing parts (the pipes' nixie heat lamps, the Concentrator's hologram, the Resonator's vortex) are drawn the game's own
   emissive way when Iris is installed: under shader packs they had vanished or shone through walls.
+- The new devices wear the mod's techno-magic dress in the manner of Ars Nouveau's carving - engraved rune bands with teal
+  inlays, brass filigree, sigil medallions - as closed models with nothing to see the world through. The Manometer's glass
+  tubes fill with glowing teal as high as its needle reads; a little copper golem clerk stands behind the Order Ledger and
+  scribbles in it while an order is crafted; frost swirls in the Cryo-Diode; the Security Terminal's CRT sweeps.
 - The guide book has an article for each new device; 26 more game tests (197 in all).
 
 ## 2.0.12 (26.1.2) — The Hewer refills its tool

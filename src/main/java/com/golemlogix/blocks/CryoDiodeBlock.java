@@ -26,9 +26,9 @@ import org.jetbrains.annotations.Nullable;
 public class CryoDiodeBlock extends DirectionalBlock implements GolemNode, EntityBlock {
     public static final MapCodec<CryoDiodeBlock> CODEC = simpleCodec(CryoDiodeBlock::new);
 
-    private static final VoxelShape SHAPE_Z = Block.box(3.0, 3.0, 0.0, 13.0, 15.5, 16.0);
-    private static final VoxelShape SHAPE_X = Block.box(0.0, 3.0, 3.0, 16.0, 15.5, 13.0);
-    private static final VoxelShape SHAPE_Y = Block.box(3.0, 0.0, 3.0, 13.0, 16.0, 15.5);
+    private static final VoxelShape SHAPE_Z = Block.box(2.5, 2.5, 0.0, 13.5, 15.5, 16.0);
+    private static final VoxelShape SHAPE_X = Block.box(0.0, 2.5, 2.5, 16.0, 15.5, 13.5);
+    private static final VoxelShape SHAPE_Y = Block.box(2.5, 0.0, 0.5, 13.5, 16.0, 15.5);
 
     public CryoDiodeBlock(Properties properties) {
         super(properties.sound(SoundType.METAL).strength(2.5f).requiresCorrectToolForDrops().noOcclusion());

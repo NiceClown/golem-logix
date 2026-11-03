@@ -822,6 +822,7 @@ public final class Forge2 {
         Nixie.all();
         GolemBuses.all();
         GolemDevices.all();
+        DevicesV3.all();
         Terminals.all();
         Saturator.all();
     }
