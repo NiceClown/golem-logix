@@ -25,9 +25,15 @@ is told so in the chat (with a link to the issues page) - the look of the newest
 - Glowing parts (the pipes' nixie heat lamps, the Concentrator's hologram, the Resonator's vortex) are drawn the game's own
   emissive way when Iris is installed: under shader packs they had vanished or shone through walls.
 - The new devices wear the mod's techno-magic dress in the manner of Ars Nouveau's carving - engraved rune bands with teal
-  inlays, brass filigree, sigil medallions - as closed models with nothing to see the world through. The Manometer's glass
-  tubes fill with glowing teal as high as its needle reads; a little copper golem clerk stands behind the Order Ledger and
-  scribbles in it while an order is crafted; frost swirls in the Cryo-Diode; the Security Terminal's CRT sweeps.
+  inlays, brass filigree, sigil medallions - as closed models with nothing to see the world through. The Manometer is built
+  like the buses - an octagonal wall flange and a copper body in brass bands - with a big clock face for a head; a little
+  copper golem clerk stands behind the Order Ledger, scribbles in it while an order is crafted, turns a page now and then and
+  wears a poppy that blinks red (ingredients missing), yellow (no pattern) or breathes green; the Cryo-Diode is a brass valve
+  on a real pipe section, a half block like the pipes, its five-handled wheel turning while Source flows; the Security
+  Terminal's CRT sweeps. The Telegraph's plain walls got carved rune panels and a band of runes.
+- The Mana Saturator's carriers wait on their deck corners and hop onto the anvil only for the hand-off, so they no longer
+  crowd round the smith on a long order.
+- Fixed: under Sodium/Iris the pipes' heat lamps showed no digits - the lamp glass hid them; it is left out there.
 - Fixed: the world showed through the assembled Mana Saturator behind its middle walls - sides that relied on a neighbour
   part to cover them were in fact open; the model builder now closes every open side it can see through.
 - The guide book has an article for each new device; 26 more game tests (197 in all).
