@@ -162,13 +162,11 @@ public class StockRequesterRenderer extends com.golemlogix.client.render.LegacyB
         float cx = 0f, cz = 0f, h = 2.83f / 16f, y0 = -12.6f / 16f, y1 = -20.6f / 16f;
         float[][] planes = {{h, h}, {h, -h}};
         for (float[] d : planes) {
-            for (int side = 0; side < 2; side++) {
-                float sx = side == 0 ? 1 : -1;
-                vert(vc, p, cx - d[0] * sx, y1, cz - d[1] * sx, 0, 0, argb, light);
-                vert(vc, p, cx - d[0] * sx, y0, cz - d[1] * sx, 0, 1, argb, light);
-                vert(vc, p, cx + d[0] * sx, y0, cz + d[1] * sx, 1, 1, argb, light);
-                vert(vc, p, cx + d[0] * sx, y1, cz + d[1] * sx, 1, 0, argb, light);
-            }
+            // one quad a plane: this render type draws both sides, a second quad on top of the first would flicker
+            vert(vc, p, cx - d[0], y1, cz - d[1], 0, 0, argb, light);
+            vert(vc, p, cx - d[0], y0, cz - d[1], 0, 1, argb, light);
+            vert(vc, p, cx + d[0], y0, cz + d[1], 1, 1, argb, light);
+            vert(vc, p, cx + d[0], y1, cz + d[1], 1, 0, argb, light);
         }
     }
 
@@ -184,14 +182,12 @@ public class StockRequesterRenderer extends com.golemlogix.client.render.LegacyB
         pose.mulPose(Axis.ZP.rotationDegrees(180f * turn));
         PoseStack.Pose p = pose.last();
         float w = 5.2f / 16f, z0 = -4.2f / 16f, z1 = 4.2f / 16f;
-        vert(vc, p, 0, 0, z0, 0, 0, 0xFFFFFFFF, light);
-        vert(vc, p, 0, 0, z1, 0, 1, 0xFFFFFFFF, light);
-        vert(vc, p, w, 0, z1, 1, 1, 0xFFFFFFFF, light);
-        vert(vc, p, w, 0, z0, 1, 0, 0xFFFFFFFF, light);
-        vert(vc, p, w, 0, z0, 1, 0, 0xFFFFFFFF, light);
-        vert(vc, p, w, 0, z1, 1, 1, 0xFFFFFFFF, light);
-        vert(vc, p, 0, 0, z1, 0, 1, 0xFFFFFFFF, light);
-        vert(vc, p, 0, 0, z0, 0, 0, 0xFFFFFFFF, light);
+        // lit as if it lay flat all the way over: paper does not go dark while it turns
+        float a = Mth.PI * turn, nx = Mth.sin(a), ny = Mth.cos(a);
+        float[][] corners = {{0, z0, 0, 0}, {0, z1, 0, 1}, {w, z1, 1, 1}, {w, z0, 1, 0}};
+        for (float[] c : corners) {
+            vc.addVertex(p, c[0], 0, c[1]).setColor(0xFFFFFFFF).setUv(c[2], c[3]).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(p, nx, ny, 0f);
+        }
         pose.popPose();
     }
 

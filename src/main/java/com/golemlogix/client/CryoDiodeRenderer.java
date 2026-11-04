@@ -47,8 +47,8 @@ public class CryoDiodeRenderer extends com.golemlogix.client.render.LegacyBer<Cr
         PoseStack.Pose p = pose.last();
         float r = R / 16f;
         for (float y : new float[]{Y0 / 16f, Y1 / 16f}) {
+            // one quad a layer: this render type draws both sides, a second quad on top of the first would flicker
             quad(vc, p, y, r, light, 1);
-            quad(vc, p, y, r, light, -1);
         }
         pose.popPose();
     }
