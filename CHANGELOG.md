@@ -1,5 +1,46 @@
 # Changelog
 
+## 2.1.1 (26.1.2) — The Warden's bridges
+
+Still a **beta**: the promised rework of the new devices' look, and the design code carried over to the older blocks.
+
+- **The Stock Manometer shows what it is wired to.** A thin copper bridge runs from the clock to each neighbour that takes its
+  signal and is gone when that neighbour is. While the signal is on, a very small copper golem carries redstone dust over
+  each bridge and comes back for more, the faster the stronger the signal; with no signal it waits at the clock.
+- The game cannot tell what reacts to redstone, so the bridges go by two signs: the block tag `golem_logix:redstone_receivers`
+  (dust, repeaters, comparators, lamps, pistons, doors, and machines of the mods in All the Mods 11 and FTB Evolution 2, found
+  by scanning which of their classes read a signal) and whether the block agrees to connect to dust, as modded machines may.
+  For anything else, each side with a block has a button in the Manometer's window: auto, always or never.
+- **The new devices got their closed, carved look**, in the manner of Ars Nouveau: engraved rune bands with teal inlays, brass
+  filigree, sigil medallions, with nothing to see the world through.
+  - The Manometer is built like the buses, an octagonal wall flange and a copper body in brass bands, with a big clock face for a head.
+  - A little copper golem clerk stands behind the Order Ledger, scribbles in it while an order is crafted and turns a page now
+    and then. The poppy on its antenna blinks red (ingredients missing) or yellow (no pattern), or breathes green.
+  - The Cryo-Diode is a brass valve on a real pipe section, a half block like the pipes, with flowing teal arrows on dark bronze
+    and a five-handled wheel that turns while Source flows.
+  - The Security Terminal's CRT sweeps.
+- **The design code reached the older blocks.** Carved sides on the buses, the analog terminal, the gateway's top, the Atlas
+  casing, the Copper Tank, the bronze machine walls, the Resonator's body, the monitor's top, the drive bay's sides and the
+  Telegraph's walls.
+  - The Channel Expanders keep their lattice window on the front and back, with carved copper side panels and a ring of runes
+    round a crystal eye on top (teal; violet on the quantum one).
+  - The Cryo-Calculator shows its screen only front and back, with carved slate-and-brass sides and a rune-ring roof for its snowmen.
+  - The Cooling Co-Processor has brass rune bands and a carved lid with a teal core.
+  - The Creative Source Jar stands in a brass cage with a copper rune band and a crystal cap.
+  - The Annihilation Bus's iron sides are engraved.
+- The pipes lost their black parts: brass bolts, warm bronze lamp sockets and meshes. Hoarfrost on block edges lies in pale blue
+  clumps: an unbroken white row read as a see-through seam.
+- The Mana Saturator's carriers wait on their deck corners and hop onto the anvil only for the hand-off, so they no longer
+  crowd round the smith on a long order.
+- The Channel Counter sits on a pipe's junction box on two brass saddles instead of floating above it, and its mount follows
+  the pipe when the pipe changes shape.
+- Fixed: Manometers, Order Ledgers and Security Terminals placed in an earlier version rendered black: their chunks kept the
+  zero light of the old full-cube blocks; the light is rechecked when they load.
+- Fixed: under Sodium/Iris the pipes' heat lamps showed no digits: the lamp glass hid them; it is left out there.
+- Fixed: the world showed through the assembled Mana Saturator behind its middle walls: sides that relied on a neighbour part
+  to cover them were in fact open; the model builder now closes every open side it can see through.
+- One more game test (198 in all).
+
 ## 2.1.0 (26.1.2) — The Warden, the Storekeeper and the Gatekeeper
 
 A new minor version: five new devices and security for shared networks. It is a **beta**: joining a world, every player
@@ -24,38 +65,6 @@ is told so in the chat (with a link to the issues page) - the look of the newest
   fuzzy tag - the same window as the buses'.
 - Glowing parts (the pipes' nixie heat lamps, the Concentrator's hologram, the Resonator's vortex) are drawn the game's own
   emissive way when Iris is installed: under shader packs they had vanished or shone through walls.
-- The new devices wear the mod's techno-magic dress in the manner of Ars Nouveau's carving - engraved rune bands with teal
-  inlays, brass filigree, sigil medallions - as closed models with nothing to see the world through. The Manometer is built
-  like the buses - an octagonal wall flange and a copper body in brass bands - with a big clock face for a head; a little
-  copper golem clerk stands behind the Order Ledger, scribbles in it while an order is crafted, turns a page now and then and
-  wears a poppy that blinks red (ingredients missing), yellow (no pattern) or breathes green; the Cryo-Diode is a brass valve
-  on a real pipe section, a half block like the pipes, its five-handled wheel turning while Source flows; the Security
-  Terminal's CRT sweeps. The Telegraph's plain walls got carved rune panels and a band of runes.
-- The design code reached the plainest older blocks: the Channel Expanders keep their lattice window on the front and back but
-  get carved copper side panels and a ring of runes round a crystal eye on top (teal; violet on the quantum one); the
-  Cryo-Calculator shows its screen only front and back, with carved slate-and-brass sides and a rune-ring roof for its
-  snowmen; the Cooling Co-Processor has brass rune bands and a carved lid with a teal core; the Creative Source Jar stands in
-  a brass cage with a copper rune band and a crystal cap; the Annihilation Bus's iron sides are engraved; the Cryo-Diode's
-  wheel sits on its stem.
-- The Stock Manometer shows what it is wired to: a thin copper bridge runs from the clock to each neighbour that takes its
-  signal and is gone when that neighbour is. The game cannot tell what reacts to redstone, so it goes by two signs: the block
-  tag `golem_logix:redstone_receivers` (dust, repeaters, comparators, lamps, pistons, doors, and machines of the mods in All the
-  Mods 11 and FTB Evolution 2, found by scanning which of their classes read a signal) and whether the block
-  agrees to connect to dust, as modded machines may. For anything else, each side with a block has a button in the window:
-  auto, always or never. While the signal is on, a very small copper golem carries redstone dust over each
-  bridge and comes back for more, the faster the stronger the signal; with no signal it waits at the clock.
-  The Order Ledger clerk's poppy sits on its antenna, as on a copper golem given a flower. The Cryo-Diode's arrows are
-  redrawn as flowing inlaid teal on dark bronze. The pipes lost their black parts: brass bolts, warm bronze lamp sockets and
-  meshes.
-- Fixed: Manometers, Order Ledgers and Security Terminals placed in an earlier version rendered black - their chunks kept the
-  zero light of the old full-cube blocks; the light is rechecked when they load.
-- The Channel Counter sits on a pipe's junction box on two brass saddles instead of floating above it, and its mount follows
-  the pipe when the pipe changes shape.
-- The Mana Saturator's carriers wait on their deck corners and hop onto the anvil only for the hand-off, so they no longer
-  crowd round the smith on a long order.
-- Fixed: under Sodium/Iris the pipes' heat lamps showed no digits - the lamp glass hid them; it is left out there.
-- Fixed: the world showed through the assembled Mana Saturator behind its middle walls - sides that relied on a neighbour
-  part to cover them were in fact open; the model builder now closes every open side it can see through.
 - The guide book has an article for each new device; 26 more game tests (197 in all).
 
 ## 2.0.12 (26.1.2) — The Hewer refills its tool
