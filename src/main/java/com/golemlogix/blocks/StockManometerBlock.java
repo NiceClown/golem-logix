@@ -37,6 +37,28 @@ import org.jetbrains.annotations.Nullable;
  */
 public class StockManometerBlock extends DirectionalBlock implements GolemNode, EntityBlock, RemovalAware {
 
+    /** What takes a redstone signal from a neighbour; a pack can add its own blocks. */
+    public static final net.minecraft.tags.TagKey<Block> RECEIVERS = net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.BLOCK,
+            net.minecraft.resources.Identifier.fromNamespaceAndPath(com.golemlogix.GolemLogixMod.MOD_ID, "redstone_receivers"));
+
+    /**
+     * Whether the block on that side takes this one's signal (a bridge runs to it). A repeater only takes it at its back, a
+     * comparator at its back or sides - not at the output.
+     */
+    public static boolean isReceiver(BlockGetter level, BlockPos pos, Direction side) {
+        BlockState there = level.getBlockState(pos.relative(side));
+        if (!there.is(RECEIVERS)) {
+            return false;
+        }
+        if (there.getBlock() instanceof net.minecraft.world.level.block.RepeaterBlock) {
+            return there.getValue(net.minecraft.world.level.block.DiodeBlock.FACING) == side.getOpposite();
+        }
+        if (there.getBlock() instanceof net.minecraft.world.level.block.ComparatorBlock) {
+            return there.getValue(net.minecraft.world.level.block.DiodeBlock.FACING) != side;
+        }
+        return true;
+    }
+
     /** The clock head out front, the flange on the block behind; not a full cube, so the set-back parts of the model are lit. */
     private static final java.util.Map<Direction, net.minecraft.world.phys.shapes.VoxelShape> SHAPES = java.util.Map.of(
             Direction.NORTH, Block.box(1, 1, 4.5, 15, 16, 16), Direction.SOUTH, Block.box(1, 1, 0, 15, 16, 11.5),

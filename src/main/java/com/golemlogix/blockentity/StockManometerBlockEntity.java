@@ -24,6 +24,13 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 public class StockManometerBlockEntity extends BlockEntity {
+    /**
+     * Client: where the golem on the bridge of each side (Direction order) is - 0..1 on the way to the receiver with redstone dust,
+     * 1..2 back empty-handed, 0 waiting at the clock - and the game time they were last advanced.
+     */
+    public final float[] bridgePhase = new float[6];
+    public long bridgeTick;
+
     @Override
     public void onLoad() {
         super.onLoad();

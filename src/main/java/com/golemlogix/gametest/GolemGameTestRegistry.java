@@ -219,6 +219,7 @@ public final class GolemGameTestRegistry {
             new Test("autocraftcalculatorremovedmidjob", GolemGameTestsExtra::autocraftCalculatorRemovedMidJob, 300, 0),
             // Stock Manometer
             new Test("stockmanometerthresholdabove", GolemGameTestsExtra::stockManometerThresholdAbove, 100, 0),
+            new Test("stockmanometerreceivers", GolemGameTestsExtra::stockManometerReceivers, 20, 0),
             new Test("stockmanometerthresholdbelow", GolemGameTestsExtra::stockManometerThresholdBelow, 100, 0),
             new Test("stockmanometerthresholdanalog", GolemGameTestsExtra::stockManometerThresholdAnalog, 100, 0),
             new Test("stockmanometerhysteresislatch", GolemGameTestsExtra::stockManometerHysteresisLatch, 120, 0),

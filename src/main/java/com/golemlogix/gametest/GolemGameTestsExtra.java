@@ -974,6 +974,34 @@ public final class GolemGameTestsExtra {
     // 1. STOCK MANOMETER
     // -------------------------------------------------------------------------
 
+    /** The bridges go to what takes the signal: dust, a lamp, a repeater's back - not a repeater's output, a lever or plain stone. */
+    public static void stockManometerReceivers(GameTestHelper helper) {
+        BlockPos at = new BlockPos(3, 2, 3);
+        // a floor: repeaters and dust break without one
+        for (Direction d : new Direction[]{Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST}) {
+            helper.setBlock(at.below().relative(d), Blocks.STONE);
+        }
+        helper.setBlock(at, ModBlocks.STOCK_MANOMETER.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.UP));
+        BlockPos abs = helper.absolutePos(at);
+        var level = helper.getLevel();
+        java.util.function.Function<Direction, Boolean> takes = d -> com.golemlogix.blocks.StockManometerBlock.isReceiver(level, abs, d);
+        helper.setBlock(at.north(), Blocks.REDSTONE_LAMP);
+        helper.setBlock(at.south(), Blocks.STONE);
+        helper.setBlock(at.east(), Blocks.REPEATER.defaultBlockState().setValue(net.minecraft.world.level.block.DiodeBlock.FACING, Direction.WEST));
+        helper.setBlock(at.west(), Blocks.REPEATER.defaultBlockState().setValue(net.minecraft.world.level.block.DiodeBlock.FACING, Direction.WEST));
+        helper.setBlock(at.above(), Blocks.LEVER);
+        helper.assertTrue(takes.apply(Direction.NORTH), "a lamp takes the signal");
+        helper.assertTrue(!takes.apply(Direction.SOUTH), "plain stone gets no bridge");
+        helper.assertTrue(takes.apply(Direction.EAST), "a repeater takes it at its back");
+        helper.assertTrue(!takes.apply(Direction.WEST), "a repeater's output gets no bridge");
+        helper.assertTrue(!takes.apply(Direction.UP), "a lever gets no bridge");
+        helper.setBlock(at.north(), Blocks.REDSTONE_WIRE);
+        helper.assertTrue(takes.apply(Direction.NORTH), "dust takes the signal");
+        helper.setBlock(at.north(), Blocks.AIR);
+        helper.assertTrue(!takes.apply(Direction.NORTH), "the bridge goes with the receiver");
+        helper.succeed();
+    }
+
     public static void stockManometerThresholdAbove(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         BlockPos manoPos = BUS_OUT;

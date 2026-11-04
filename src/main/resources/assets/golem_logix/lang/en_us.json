@@ -621,7 +621,7 @@
   "block.golem_logix.cryo_diode": "Cryo-Diode (Frost Valve)",
   "block.golem_logix.security_terminal": "Iron Security Terminal (Gatekeeper)",
   "item.golem_logix.identity_punch_card": "Identity Punch Card",
-  "tooltip.golem_logix.stock_manometer": "Monitors network stock and emits redstone signals based on configured thresholds or analog ratio.",
+  "tooltip.golem_logix.stock_manometer": "Monitors network stock and emits redstone signals based on configured thresholds or analog ratio. Copper bridges run from the clock to whatever takes its signal.",
   "tooltip.golem_logix.stock_requester": "Keeps a maintained stock of configured items or fluids via automatic crafting orders.",
   "tooltip.golem_logix.cryo_diode": "Directional subnet valve. Keeps two networks separate while supplying Liquid Cryo-Source across them.",
   "tooltip.golem_logix.security_terminal": "Restricts network access. Holds Identity Punch Cards with configured permissions for players.",

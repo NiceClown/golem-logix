@@ -37,7 +37,10 @@ is told so in the chat (with a link to the issues page) - the look of the newest
   snowmen; the Cooling Co-Processor has brass rune bands and a carved lid with a teal core; the Creative Source Jar stands in
   a brass cage with a copper rune band and a crystal cap; the Annihilation Bus's iron sides are engraved; the Cryo-Diode's
   wheel sits on its stem.
-- The Stock Manometer's clock has thin copper bridges back to its flange, with very small copper golems strolling over them.
+- The Stock Manometer shows what it is wired to: a thin copper bridge runs from the clock to each neighbour that takes its
+  signal (dust, repeaters, comparators, lamps, pistons, doors and so on; the block tag `golem_logix:redstone_receivers` lists
+  them) and is gone when that neighbour is. While the signal is on, a very small copper golem carries redstone dust over each
+  bridge and comes back for more, the faster the stronger the signal; with no signal it waits at the clock.
   The Order Ledger clerk's poppy sits on its antenna, as on a copper golem given a flower. The Cryo-Diode's arrows are
   redrawn as flowing inlaid teal on dark bronze. The pipes lost their black parts: brass bolts, warm bronze lamp sockets and
   meshes.

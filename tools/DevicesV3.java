@@ -277,7 +277,7 @@ final class DevicesV3 {
         return p;
     }
 
-    /** Plain copper for thin parts, where carving would only read as noise. */
+    /** Plain copper for the Manometer's bridges (an entity texture for the renderer), where carving would only read as noise. */
     static Paint copperPlain() {
         Paint p = new Paint(16, 16, K);
         fill(p, Atlant.COPPER, 4, 6, 2191);
@@ -569,7 +569,7 @@ final class DevicesV3 {
         // flange on the wall, a copper body in brass bands - but its head is a big octagonal clock: the dial in a raised bezel, a
         // pocket-watch crown with a crystal on top. The dial face is the plane z = 5.48 (the needle is the renderer's).
         String[][] mt = {{"copper", "dev_copper_rune"}, {"brass", "dev_brass_filigree"}, {"trim", "dev_brass_trim"},
-                {"dial", "dev_manometer_dial"}, {"crystal", "dev_crystal"}, {"plain", "dev_copper_plain"}};
+                {"dial", "dev_manometer_dial"}, {"crystal", "dev_crystal"}};
         List<Models.El> m = new ArrayList<>();
         Buses.oct(m, 2, 2, 14.5, 14, 14, 16, 2.6, "trim", "trim", "trim", "brass", "trim");
         Buses.oct(m, 4.5, 4.5, 8.5, 11.5, 11.5, 14.5, 1.6, "copper", "copper", "trim", null, null);
@@ -584,16 +584,6 @@ final class DevicesV3 {
         }
         m.add(e(7.25, 14.5, 6.25, 8.75, 15.25, 7.75).all("#trim"));
         m.add(e(6.5, 15.25, 5.5, 9.5, 16, 8.5).all("#trim").face("up", "#crystal").glow(10));
-        // thin copper bridges from the clock back to the flange, over the body and along its sides, for the tiny golems the
-        // renderer walks on them: a deck, posts and a handrail on the open side (see StockManometerRenderer.BRIDGES)
-        for (double[] b : new double[][]{{6.9, 13.0, 9.1, 9.1}, {2.2, 7.0, 4.0, 2.2}, {12.0, 7.0, 13.8, 13.8}}) {
-            double x0 = b[0], y = b[1], x1 = b[2], rail = b[3];
-            m.add(e(x0, y, 8.5, x1, y + 0.2, 14.5).all("#plain"));
-            for (double z : new double[]{9.0, 11.4, 13.8}) {
-                m.add(e(rail - 0.06, y + 0.2, z, rail + 0.06, y + 1.1, z + 0.12).all("#plain"));
-            }
-            m.add(e(rail - 0.09, y + 1.1, 8.5, rail + 0.09, y + 1.22, 14.5).all("#plain"));
-        }
         Models.model("stock_manometer", true, "dev_brass_filigree", mt, m.toArray(new Models.El[0]));
 
         // ---- Copper Order Ledger (horizontal, front north): cabinet, lectern sloping down to the front, inkwell, quill
@@ -671,7 +661,7 @@ final class DevicesV3 {
         glass().save(tex("dev_glass"));
         dial().save(tex("dev_manometer_dial"));
         crystal().save(tex("dev_crystal"));
-        copperPlain().save(tex("dev_copper_plain"));
+        copperPlain().save(entityTex("dev_copper_plain"));
         drawers().save(tex("dev_ledger_drawers"));
         book().save(tex("dev_ledger_book"));
         quill().save(tex("dev_ledger_quill"));

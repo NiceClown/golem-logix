@@ -1,0 +1,30 @@
+{
+  "values": [
+    "minecraft:redstone_wire",
+    "minecraft:repeater",
+    "minecraft:comparator",
+    "minecraft:redstone_lamp",
+    "minecraft:piston",
+    "minecraft:sticky_piston",
+    "minecraft:dispenser",
+    "minecraft:dropper",
+    "minecraft:note_block",
+    "minecraft:tnt",
+    "minecraft:hopper",
+    "minecraft:powered_rail",
+    "minecraft:activator_rail",
+    "minecraft:bell",
+    "minecraft:crafter",
+    "#minecraft:doors",
+    "#minecraft:trapdoors",
+    "#minecraft:fence_gates",
+    "minecraft:copper_bulb",
+    "minecraft:exposed_copper_bulb",
+    "minecraft:weathered_copper_bulb",
+    "minecraft:oxidized_copper_bulb",
+    "minecraft:waxed_copper_bulb",
+    "minecraft:waxed_exposed_copper_bulb",
+    "minecraft:waxed_weathered_copper_bulb",
+    "minecraft:waxed_oxidized_copper_bulb"
+  ]
+}
