@@ -39,7 +39,8 @@ is told so in the chat (with a link to the issues page) - the look of the newest
   wheel sits on its stem.
 - The Stock Manometer shows what it is wired to: a thin copper bridge runs from the clock to each neighbour that takes its
   signal and is gone when that neighbour is. The game cannot tell what reacts to redstone, so it goes by two signs: the block
-  tag `golem_logix:redstone_receivers` (dust, repeaters, comparators, lamps, pistons, doors and so on) and whether the block
+  tag `golem_logix:redstone_receivers` (dust, repeaters, comparators, lamps, pistons, doors, and machines of the mods in All the
+  Mods 11, found by scanning which of their classes read a signal) and whether the block
   agrees to connect to dust, as modded machines may. For anything else, each side with a block has a button in the window:
   auto, always or never. While the signal is on, a very small copper golem carries redstone dust over each
   bridge and comes back for more, the faster the stronger the signal; with no signal it waits at the clock.
