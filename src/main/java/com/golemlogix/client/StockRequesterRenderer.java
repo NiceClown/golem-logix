@@ -32,6 +32,8 @@ public class StockRequesterRenderer extends com.golemlogix.client.render.LegacyB
     private static final Identifier PAGE = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/dev_ledger_page.png");
     /** A page is turned every PAGE_EVERY ticks (more often while writing), the turn takes PAGE_TICKS. */
     private static final int PAGE_EVERY = 240, PAGE_TICKS = 24;
+    /** Beyond this (blocks) the pictures on the pages are too small to make out and are not drawn. */
+    private static final double PAGE_SIGHT = 24.0;
 
     @Override
     public void render(StockRequesterBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
@@ -78,7 +80,7 @@ public class StockRequesterRenderer extends com.golemlogix.client.render.LegacyB
             glow = 0.75f + 0.25f * Mth.sin(time * 0.08f);
         }
         int tint = shade(color, glow);
-        int flowerLight = glow > 0.9f ? net.minecraft.util.LightCoordsUtil.FULL_BRIGHT : -1;
+        int flowerLight = glow > 0.9f || !(missing || noPattern) ? net.minecraft.util.LightCoordsUtil.FULL_BRIGHT : -1;
         pose.pushPose();
         FormationBusRenderer.orient(pose, facing);
         int lit = FormationBusRenderer.light(be.getLevel(), be.getBlockPos(), facing);
@@ -90,6 +92,67 @@ public class StockRequesterRenderer extends com.golemlogix.client.render.LegacyB
                 });
         if (turn >= 0f) {
             page(pose, buffers.getBuffer(RenderTypes.entityCutout(PAGE)), turn, lit);
+        }
+        if (pagesInSight(be, facing)) {
+            pageItems(be, pose, buffers, lit);
+        }
+        pose.popPose();
+    }
+
+    /**
+     * Whether the open pages can be seen from the camera: near enough to make out the pictures, and on the side the pages face (the
+     * lectern's tilt turns them towards the back of the block).
+     */
+    private static boolean pagesInSight(StockRequesterBlockEntity be, Direction facing) {
+        net.minecraft.core.BlockPos pos = be.getBlockPos();
+        double dx = camera.x - (pos.getX() + 0.5), dy = camera.y - (pos.getY() + 12.6 / 16.0), dz = camera.z - (pos.getZ() + 0.5);
+        double dist2 = dx * dx + dy * dy + dz * dz;
+        if (dist2 > PAGE_SIGHT * PAGE_SIGHT) {
+            return false;
+        }
+        Direction back = facing.getOpposite();
+        double sin = Math.sin(Math.toRadians(22.5)), cos = Math.cos(Math.toRadians(22.5));
+        return dy * cos + (dx * back.getStepX() + dz * back.getStepZ()) * sin > 0.0;
+    }
+
+    /**
+     * What the ledger keeps, drawn flat on the open pages like the picture on a storage drawer: half on each page, as large as the
+     * count allows. The frame is the lectern's part of the model, tilted 22.5 degrees about X round (8, 11, 8), its top y = 12.5.
+     */
+    private static void pageItems(StockRequesterBlockEntity be, PoseStack pose, MultiBufferSource buffers, int light) {
+        java.util.List<net.minecraft.world.item.ItemStack> kept = new java.util.ArrayList<>();
+        for (int i = 0; i < StockRequesterBlockEntity.FILTER_SLOTS; i++) {
+            net.minecraft.world.item.ItemStack stack = be.getFilters().getItem(i);
+            if (!stack.isEmpty()) {
+                kept.add(stack);
+            }
+        }
+        int n = kept.size();
+        if (n == 0) {
+            return;
+        }
+        int rows = n <= 2 ? 1 : n <= 4 ? 2 : 3, cols = n <= 6 ? 1 : 2;
+        float size = n <= 2 ? 4.4f : n <= 4 ? 3.6f : n <= 6 ? 2.6f : 2.2f;
+        int perPage = rows * cols, onLeft = (n + 1) / 2;
+        pose.pushPose();
+        pose.translate(8f / 16f, 11f / 16f, 8f / 16f);
+        pose.mulPose(Axis.XP.rotationDegrees(22.5f));
+        pose.translate(0f, 1.53f / 16f, 0f);
+        for (int i = 0; i < n; i++) {
+            boolean left = i < onLeft;
+            int at = left ? i : i - onLeft;
+            int row = Math.min(at / cols, rows - 1), col = at % cols;
+            float pageX = left ? -2.9f : 2.5f;
+            float x = cols == 1 ? pageX : pageX + (col == 0 ? -1.2f : 1.2f);
+            float z = rows == 1 ? 0f : (row - (rows - 1) / 2f) * (rows == 2 ? 3.9f : 2.75f);
+            pose.pushPose();
+            pose.translate(x / 16f, 0f, z / 16f);
+            // the picture lies on the page, its top towards the far edge for a reader at the back of the block
+            pose.mulPose(Axis.XP.rotationDegrees(-90f));
+            float s = size / 16f;
+            pose.scale(s, s, 0.004f);
+            com.golemlogix.client.render.BerBuffers.item(buffers, kept.get(i), net.minecraft.world.item.ItemDisplayContext.GUI, light, pose, be.getLevel(), 0);
+            pose.popPose();
         }
         pose.popPose();
     }
@@ -117,7 +180,7 @@ public class StockRequesterRenderer extends com.golemlogix.client.render.LegacyB
         pose.pushPose();
         pose.translate(8f / 16f, 11f / 16f, 8f / 16f);
         pose.mulPose(Axis.XP.rotationDegrees(22.5f));
-        pose.translate(0f, 1.56f / 16f, 0f);
+        pose.translate(0f, 1.6f / 16f, 0f);
         pose.mulPose(Axis.ZP.rotationDegrees(180f * turn));
         PoseStack.Pose p = pose.last();
         float w = 5.2f / 16f, z0 = -4.2f / 16f, z1 = 4.2f / 16f;

@@ -215,8 +215,9 @@ final class DevicesV3 {
     /** The poppy's stem with two leaves (an entity texture, drawn as crossed quads on the clerk's head). */
     static Paint flowerStem() {
         Paint p = new Paint(16, 16, K);
-        p.line(8, 16, 8, 5.5, 1.0, rgb(0x2c5220));
-        p.line(8.2, 15, 8.2, 6, 0.35, rgb(0x6aa646));
+        // it ends where the blossom begins: two layers in one plane would flicker against each other
+        p.line(8, 16, 8, 8.8, 1.0, rgb(0x2c5220));
+        p.line(8.2, 15, 8.2, 9, 0.35, rgb(0x6aa646));
         p.line(8, 13.2, 4.4, 10.6, 1.5, rgb(0x4a8232));
         p.line(7.6, 12.8, 5, 11, 0.4, rgb(0x78b452));
         p.line(8, 11.2, 11.6, 8.8, 1.5, rgb(0x4a8232));
@@ -238,17 +239,14 @@ final class DevicesV3 {
         return p;
     }
 
-    /** A ledger page: cream paper with ruled lines and a column of figures. */
+    /**
+     * The turning page: plain paper with a soft edge. An entity texture has no mipmaps, so anything fine on it shimmers while the
+     * page turns.
+     */
     static Paint page() {
         Paint p = new Paint(16, 16, K);
-        fill(p, Paint.CREAM, 4, 5, 2171);
-        p.frame(0, 0, 16, 16, 0.5, rgb(Paint.CREAM[2]));
-        for (double y = 2.5; y < 15; y += 1.5) {
-            p.line(1.5, y, 14.5, y, 0.25, rgb(Paint.CREAM[1]));
-            p.line(11, y - 0.9, 13.5, y - 0.9, 0.35, rgb(0x3a3028));
-            p.line(2, y - 0.9, 2 + 3 + Atlant.hash((int) (y * 2), 0, 2172) * 5, y - 0.9, 0.3, rgb(0x5a4a3c));
-        }
-        p.line(10.3, 1, 10.3, 15, 0.25, rgb(0xb02818));
+        p.rect(0, 0, 16, 16, rgb(Paint.CREAM[5]));
+        p.frame(0, 0, 16, 16, 1, rgb(Paint.CREAM[4]));
         return p;
     }
 
@@ -335,19 +333,12 @@ final class DevicesV3 {
         p.rect(0.75, 0.75, 7.75, 15.25, rgb(Paint.CREAM[5]));
         p.rect(8.25, 0.75, 15.25, 15.25, rgb(Paint.CREAM[5]));
         p.rect(7.75, 0.5, 8.25, 15.5, rgb(0x2a1008));
-        for (double y = 2.5; y < 15; y += 1.5) {
-            p.line(1.5, y, 7, y, 0.3, rgb(Paint.CREAM[2]));
-            p.line(9, y, 14.5, y, 0.3, rgb(Paint.CREAM[2]));
-            double len = 2 + Atlant.hash((int) (y * 2), 1, 733) * 3.5;
-            p.line(1.75, y - 0.45, 1.75 + len, y - 0.45, 0.35, rgb(0x3a2a20));
-            if (y < 9) {
-                double len2 = 2 + Atlant.hash((int) (y * 2), 2, 733) * 3.5;
-                p.line(9.25, y - 0.45, 9.25 + len2, y - 0.45, 0.35, rgb(0x3a2a20));
-            }
+        // faint ruling only: the renderer draws what the ledger keeps on these pages
+        for (double y = 2.5; y < 15; y += 2) {
+            p.line(2.75, y, 7.25, y, 0.3, rgb(Paint.CREAM[4]));
+            p.line(8.75, y, 12.75, y, 0.3, rgb(Paint.CREAM[4]));
         }
-        p.rect(10.5, 9.5, 14, 13, rgb(Paint.CREAM[3]));
-        rune(p, 11.5, 9.9, 91, rgb(Paint.CYAN[3]));
-        p.rect(12, 0, 12.75, 16, rgb(0xa01818));
+        p.rect(13, 0, 13.4, 16, rgb(0xa01818));
         return p;
     }
 

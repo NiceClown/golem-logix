@@ -23,6 +23,9 @@ public abstract class LegacyBer<T extends BlockEntity> implements BlockEntityRen
         public float partialTick;
     }
 
+    /** Where the camera is this frame (world), for renderers that skip what cannot be seen from there. */
+    protected static Vec3 camera = Vec3.ZERO;
+
     @Override
     public State<T> createRenderState() {
         return new State<>();
@@ -34,6 +37,7 @@ public abstract class LegacyBer<T extends BlockEntity> implements BlockEntityRen
         BlockEntityRenderState.extractBase(blockEntity, state, breakProgress);
         state.blockEntity = blockEntity;
         state.partialTick = partialTick;
+        camera = cameraPosition;
     }
 
     @Override

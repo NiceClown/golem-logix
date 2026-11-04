@@ -15,7 +15,7 @@ Still a **beta**: the promised rework of the new devices' look, and the design c
   filigree, sigil medallions, with nothing to see the world through.
   - The Manometer is built like the buses, an octagonal wall flange and a copper body in brass bands, with a big clock face for a head.
   - A little copper golem clerk stands behind the Order Ledger, scribbles in it while an order is crafted and turns a page now
-    and then. The poppy on its antenna blinks red (ingredients missing) or yellow (no pattern), or breathes green.
+    and then. The open pages show what the ledger keeps, flat like the picture on a storage drawer. The poppy on its antenna blinks red (ingredients missing) or yellow (no pattern), or breathes green.
   - The Cryo-Diode is a brass valve on a real pipe section, a half block like the pipes, with flowing teal arrows on dark bronze
     and a five-handled wheel that turns while Source flows.
   - The Security Terminal's CRT sweeps.

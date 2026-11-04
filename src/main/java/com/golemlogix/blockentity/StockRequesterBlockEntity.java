@@ -39,7 +39,16 @@ public class StockRequesterBlockEntity extends BlockEntity {
     public static final int STATUS_NO_PATTERN = 2;
     public static final int STATUS_MISSING_INGREDIENTS = 3;
 
-    private final OwnedContainer filters = new OwnedContainer(FILTER_SLOTS, this, s -> true);
+    /** The clients see the list too: the ledger's pages show it. */
+    private final OwnedContainer filters = new OwnedContainer(FILTER_SLOTS, this, s -> true) {
+        @Override
+        public void setChanged() {
+            super.setChanged();
+            if (level != null && !level.isClientSide()) {
+                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            }
+        }
+    };
 
     private final int[] status = new int[FILTER_SLOTS];
 
@@ -186,6 +195,7 @@ public class StockRequesterBlockEntity extends BlockEntity {
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = super.getUpdateTag(registries);
+        tag.put("Filters", filters.createTag(registries));
         tag.putIntArray("Status", status);
         return tag;
     }
