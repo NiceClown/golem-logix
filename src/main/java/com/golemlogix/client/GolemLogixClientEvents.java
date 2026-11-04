@@ -15,6 +15,14 @@ import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 @SuppressWarnings("removal")
 @EventBusSubscriber(modid = GolemLogixMod.MOD_ID, value = Dist.CLIENT)
 public class GolemLogixClientEvents {
+    @SubscribeEvent
+    public static void onClientTick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event) {
+        net.minecraft.client.multiplayer.ClientLevel level = net.minecraft.client.Minecraft.getInstance().level;
+        if (level != null) {
+            com.golemlogix.system.StaleLight.clientTick(level);
+        }
+    }
+
 
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {

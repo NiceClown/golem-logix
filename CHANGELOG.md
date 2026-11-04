@@ -35,7 +35,8 @@ Still a **beta**: the promised rework of the new devices' look, and the design c
 - The Channel Counter sits on a pipe's junction box on two brass saddles instead of floating above it, and its mount follows
   the pipe when the pipe changes shape.
 - Fixed: Manometers, Order Ledgers and Security Terminals placed in an earlier version rendered black: their chunks kept the
-  zero light of the old full-cube blocks; the light is rechecked when they load.
+  zero light of the old full-cube blocks, and placing them again did not help. The light is rechecked when they load, on the
+  server and on the client.
 - Fixed: under Sodium/Iris the pipes' heat lamps showed no digits: the lamp glass hid them; it is left out there.
 - Fixed: the world showed through the assembled Mana Saturator behind its middle walls: sides that relied on a neighbour part
   to cover them were in fact open; the model builder now closes every open side it can see through.
