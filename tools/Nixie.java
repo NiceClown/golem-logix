@@ -96,10 +96,10 @@ final class Nixie {
         Paint p = new Paint(16, 16, K);
         p.fill(0, 0, 16, 16, (u, v) -> {
             boolean grid = ((int) (u * K)) % 2 == 0 || ((int) (v * K)) % 2 == 0;
-            return grid ? rgb(0x3a2418) : rgb(0x140c08);
+            return grid ? rgb(0x8a5f3c) : rgb(0x4a3222);
         });
         for (int d = 0; d < 10; d += 3) {
-            digit(p, d, 3, 0.5, rgb(0x5a3a26));
+            digit(p, d, 3, 0.5, rgb(0xa87e58));
         }
         return p;
     }
@@ -135,7 +135,7 @@ final class Nixie {
     /** The socket: dark bakelite with a copper ring. */
     static Paint socket() {
         Paint p = new Paint(16, 16, K);
-        p.fill(0, 0, 16, 16, (u, v) -> rgb(((int) u + (int) v) % 5 == 0 ? 0x2a2220 : 0x1c1614));
+        p.fill(0, 0, 16, 16, (u, v) -> rgb(((int) u + (int) v) % 5 == 0 ? 0x7a5634 : 0x634426));
         p.rect(0, 0, 16, 1.5, rgb(Atlant.COPPER[6]));
         p.rect(0, 14.5, 16, 16, rgb(Atlant.COPPER[2]));
         return p;

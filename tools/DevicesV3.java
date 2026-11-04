@@ -277,6 +277,13 @@ final class DevicesV3 {
         return p;
     }
 
+    /** Plain copper for thin parts, where carving would only read as noise. */
+    static Paint copperPlain() {
+        Paint p = new Paint(16, 16, K);
+        fill(p, Atlant.COPPER, 4, 6, 2191);
+        return p;
+    }
+
     static Paint crystal() {
         Paint p = new Paint(16, 16, K);
         for (int j = 0; j < p.h; j++) {
@@ -378,26 +385,55 @@ final class DevicesV3 {
     }
 
     /** The valve body: filigreed brass with a teal arrow towards the outlet; dir 0 = right, 1 = left, 2 = up (in the texture). */
+    /**
+     * The valve's side: a dark bronze plate in a brass bevel with an arrow in the manner of Ars Nouveau, cut in and inlaid in teal -
+     * a stem swaying like a whiplash from a curl at its tail, two barbs sweeping back from the point into curls of their own, a
+     * bead behind the point. dir: 0 points right, 1 left, 2 up.
+     */
     static Paint valve(int dir) {
         Paint p = brassFiligree(5520);
-        p.rect(3, 3, 13, 13, rgb(Paint.BRASS[4]));
-        p.frame(3, 3, 13, 13, 0.5, rgb(Paint.BRASS[1]));
-        double[][] arrow = {{4.5, 8, 11.5, 8}, {11.5, 8, 9, 5.5}, {11.5, 8, 9, 10.5}};
-        for (double[] a : arrow) {
-            double x0 = a[0], y0 = a[1], x1 = a[2], y1 = a[3];
-            if (dir == 1) {
-                x0 = 16 - x0;
-                x1 = 16 - x1;
-            } else if (dir == 2) {
-                double t0 = x0, t1 = x1;
-                x0 = y0;
-                y0 = 16 - t0;
-                x1 = y1;
-                y1 = 16 - t1;
+        p.rect(2.4, 2.4, 13.6, 13.6, rgb(Paint.BRONZE[1]));
+        p.rect(3.4, 3.4, 12.6, 12.6, rgb(Paint.BRONZE[2]));
+        p.frame(2.4, 2.4, 13.6, 13.6, 0.5, rgb(Paint.BRASS[3]));
+        p.rect(2.4, 2.4, 13.6, 2.7, rgb(Paint.BRASS[5]));
+        p.rect(2.4, 2.4, 2.7, 13.6, rgb(Paint.BRASS[5]));
+        List<double[]> stem = new ArrayList<>(), barbA = new ArrayList<>(), barbB = new ArrayList<>();
+        for (double t = 0; t <= 1.001; t += 0.05) {
+            stem.add(new double[]{4.5 + 7.6 * t, 8 + 1.5 * Math.sin(t * Math.PI * 2) * (1 - t)});
+            // quadratic curves from the point back, ending in a turn inward
+            double u = 1 - t;
+            double x = u * u * 12.6 + 2 * u * t * 11.2 + t * t * 8.6;
+            double y = u * u * 8 + 2 * u * t * 6.6 + t * t * 4.6;
+            barbA.add(new double[]{x, y});
+            barbB.add(new double[]{x, 16 - y});
+        }
+        for (int pass = 0; pass < 3; pass++) {
+            int c = rgb(pass == 0 ? Paint.BRONZE[0] : pass == 1 ? Paint.CYAN[3] : Paint.CYAN[5]);
+            double extra = pass == 0 ? 0.5 : pass == 1 ? 0 : -0.45;
+            curve(p, stem, 0.85 + extra, c, dir);
+            curve(p, barbA, 0.75 + extra, c, dir);
+            curve(p, barbB, 0.75 + extra, c, dir);
+            for (double[] k : new double[][]{{4.6, 8, 1.0, 1}, {8.6, 4.6, 0.75, 1}, {8.6, 11.4, 0.75, 1}, {10.5, 8, 0.8, 0}}) {
+                double[] m = turned(k[0], k[1], dir);
+                if (k[3] > 0) {
+                    p.ring(m[0], m[1], Math.max(0.1, k[2] - 0.45 - extra / 2), k[2] + extra / 2, c);
+                } else {
+                    p.disc(m[0], m[1], k[2] + extra / 2, c);
+                }
             }
-            p.line(x0, y0, x1, y1, 1, rgb(Paint.CYAN[4]));
         }
         return p;
+    }
+
+    private static double[] turned(double x, double y, int dir) {
+        return dir == 1 ? new double[]{16 - x, y} : dir == 2 ? new double[]{y, 16 - x} : new double[]{x, y};
+    }
+
+    private static void curve(Paint p, List<double[]> pts, double w, int c, int dir) {
+        for (int i = 0; i + 1 < pts.size(); i++) {
+            double[] a = turned(pts.get(i)[0], pts.get(i)[1], dir), b = turned(pts.get(i + 1)[0], pts.get(i + 1)[1], dir);
+            p.line(a[0], a[1], b[0], b[1], w, c);
+        }
     }
 
     /** The five-handled wheel (an entity texture for the renderer): a brass rim, five spokes with knobs, a teal-capped hub. */
@@ -533,15 +569,31 @@ final class DevicesV3 {
         // flange on the wall, a copper body in brass bands - but its head is a big octagonal clock: the dial in a raised bezel, a
         // pocket-watch crown with a crystal on top. The dial face is the plane z = 5.48 (the needle is the renderer's).
         String[][] mt = {{"copper", "dev_copper_rune"}, {"brass", "dev_brass_filigree"}, {"trim", "dev_brass_trim"},
-                {"dial", "dev_manometer_dial"}, {"crystal", "dev_crystal"}};
+                {"dial", "dev_manometer_dial"}, {"crystal", "dev_crystal"}, {"plain", "dev_copper_plain"}};
         List<Models.El> m = new ArrayList<>();
         Buses.oct(m, 2, 2, 14.5, 14, 14, 16, 2.6, "trim", "trim", "trim", "brass", "trim");
         Buses.oct(m, 4.5, 4.5, 8.5, 11.5, 11.5, 14.5, 1.6, "copper", "copper", "trim", null, null);
         Pipes.ring(m, 4.1, 11.9, 11.2, 12, 1.75, "trim", 0.6);
         Buses.oct(m, 1.5, 1.5, 5.5, 14.5, 14.5, 8.5, 3.8, "trim", "brass", "trim", "dial", "brass");
+        int bezel = m.size();
         Pipes.ring(m, 1.1, 14.9, 4.7, 5.5, 3.95, "trim", 0.9);
+        // the ring's four straight pieces get their inner sides too: from an angle the world showed through the bezel
+        String[] inner = {"down", "up", "east", "west"};
+        for (int k = 0; k < 4; k++) {
+            m.get(bezel + k).face(inner[k], "#trim");
+        }
         m.add(e(7.25, 14.5, 6.25, 8.75, 15.25, 7.75).all("#trim"));
         m.add(e(6.5, 15.25, 5.5, 9.5, 16, 8.5).all("#trim").face("up", "#crystal").glow(10));
+        // thin copper bridges from the clock back to the flange, over the body and along its sides, for the tiny golems the
+        // renderer walks on them: a deck, posts and a handrail on the open side (see StockManometerRenderer.BRIDGES)
+        for (double[] b : new double[][]{{6.9, 13.0, 9.1, 9.1}, {2.2, 7.0, 4.0, 2.2}, {12.0, 7.0, 13.8, 13.8}}) {
+            double x0 = b[0], y = b[1], x1 = b[2], rail = b[3];
+            m.add(e(x0, y, 8.5, x1, y + 0.2, 14.5).all("#plain"));
+            for (double z : new double[]{9.0, 11.4, 13.8}) {
+                m.add(e(rail - 0.06, y + 0.2, z, rail + 0.06, y + 1.1, z + 0.12).all("#plain"));
+            }
+            m.add(e(rail - 0.09, y + 1.1, 8.5, rail + 0.09, y + 1.22, 14.5).all("#plain"));
+        }
         Models.model("stock_manometer", true, "dev_brass_filigree", mt, m.toArray(new Models.El[0]));
 
         // ---- Copper Order Ledger (horizontal, front north): cabinet, lectern sloping down to the front, inkwell, quill
@@ -619,6 +671,7 @@ final class DevicesV3 {
         glass().save(tex("dev_glass"));
         dial().save(tex("dev_manometer_dial"));
         crystal().save(tex("dev_crystal"));
+        copperPlain().save(tex("dev_copper_plain"));
         drawers().save(tex("dev_ledger_drawers"));
         book().save(tex("dev_ledger_book"));
         quill().save(tex("dev_ledger_quill"));

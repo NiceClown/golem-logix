@@ -20,6 +20,14 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 public class SecurityTerminalBlockEntity extends BlockEntity {
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        if (level != null) {
+            com.golemlogix.system.StaleLight.recheck(level, worldPosition);
+        }
+    }
+
     public static final int SLOTS = 16;
 
     private UUID ownerId;

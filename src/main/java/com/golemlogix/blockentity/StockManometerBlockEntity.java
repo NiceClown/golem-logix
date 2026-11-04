@@ -24,6 +24,14 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 public class StockManometerBlockEntity extends BlockEntity {
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        if (level != null) {
+            com.golemlogix.system.StaleLight.recheck(level, worldPosition);
+        }
+    }
+
     public static final int MODE_ABOVE = 0;
     public static final int MODE_BELOW = 1;
     public static final int MODE_ANALOG = 2;

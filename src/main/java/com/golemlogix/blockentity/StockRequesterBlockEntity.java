@@ -24,6 +24,14 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class StockRequesterBlockEntity extends BlockEntity {
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        if (level != null) {
+            com.golemlogix.system.StaleLight.recheck(level, worldPosition);
+        }
+    }
+
     public static final int FILTER_SLOTS = 9;
 
     public static final int STATUS_OK = 0;

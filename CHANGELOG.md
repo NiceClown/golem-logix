@@ -37,6 +37,12 @@ is told so in the chat (with a link to the issues page) - the look of the newest
   snowmen; the Cooling Co-Processor has brass rune bands and a carved lid with a teal core; the Creative Source Jar stands in
   a brass cage with a copper rune band and a crystal cap; the Annihilation Bus's iron sides are engraved; the Cryo-Diode's
   wheel sits on its stem.
+- The Stock Manometer's clock has thin copper bridges back to its flange, with very small copper golems strolling over them.
+  The Order Ledger clerk's poppy sits on its antenna, as on a copper golem given a flower. The Cryo-Diode's arrows are
+  redrawn as flowing inlaid teal on dark bronze. The pipes lost their black parts: brass bolts, warm bronze lamp sockets and
+  meshes.
+- Fixed: Manometers, Order Ledgers and Security Terminals placed in an earlier version rendered black - their chunks kept the
+  zero light of the old full-cube blocks; the light is rechecked when they load.
 - The Channel Counter sits on a pipe's junction box on two brass saddles instead of floating above it, and its mount follows
   the pipe when the pipe changes shape.
 - The Mana Saturator's carriers wait on their deck corners and hop onto the anvil only for the hand-off, so they no longer

@@ -78,7 +78,7 @@ public class StockRequesterRenderer extends com.golemlogix.client.render.LegacyB
             glow = 0.75f + 0.25f * Mth.sin(time * 0.08f);
         }
         int tint = shade(color, glow);
-        int flowerLight = glow > 0.9f ? net.minecraft.util.LightCoordsUtil.FULL_BRIGHT : light;
+        int flowerLight = glow > 0.9f ? net.minecraft.util.LightCoordsUtil.FULL_BRIGHT : -1;
         pose.pushPose();
         FormationBusRenderer.orient(pose, facing);
         int lit = FormationBusRenderer.light(be.getLevel(), be.getBlockPos(), facing);
@@ -86,7 +86,7 @@ public class StockRequesterRenderer extends com.golemlogix.client.render.LegacyB
                 new Vector3f(0f, 1f, 0f), SCALE, anim, 0, null, arms, head -> {
                     PoseStack.Pose p = head.last();
                     cross(buffers.getBuffer(RenderTypes.entityCutout(STEM)), p, 0xFFFFFFFF, lit);
-                    cross(buffers.getBuffer(RenderTypes.entityCutout(PETALS)), p, tint, flowerLight);
+                    cross(buffers.getBuffer(RenderTypes.entityCutout(PETALS)), p, tint, flowerLight < 0 ? lit : flowerLight);
                 });
         if (turn >= 0f) {
             page(pose, buffers.getBuffer(RenderTypes.entityCutout(PAGE)), turn, lit);
@@ -94,10 +94,10 @@ public class StockRequesterRenderer extends com.golemlogix.client.render.LegacyB
         pose.popPose();
     }
 
-    /** The poppy on the head (model pixels, Y down): two crossed quads 8.4 wide from the top of the head up 9, beside the antenna. */
+    /** The poppy on top of the antenna's ball (model pixels, Y down; the ball's top is y = -13): two quads crossed at 45 degrees, 8 by 8. */
     private static void cross(VertexConsumer vc, PoseStack.Pose p, int argb, int light) {
-        float cx = 2.6f / 16f, cz = 1.2f / 16f, h = 4.2f / 16f, y0 = -5f / 16f, y1 = -14f / 16f;
-        float[][] planes = {{h, 0f}, {0f, h}};
+        float cx = 0f, cz = 0f, h = 2.83f / 16f, y0 = -12.6f / 16f, y1 = -20.6f / 16f;
+        float[][] planes = {{h, h}, {h, -h}};
         for (float[] d : planes) {
             for (int side = 0; side < 2; side++) {
                 float sx = side == 0 ? 1 : -1;

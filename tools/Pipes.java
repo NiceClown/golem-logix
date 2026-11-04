@@ -153,9 +153,9 @@ final class Pipes {
     /** The bolt: a dark iron hex head with a light corner. */
     static Paint bolt() {
         Paint p = new Paint(16, 16, K);
-        p.fill(0, 0, 16, 16, (u, v) -> at(IRON, 3.2 + ((int) (u / 2) + (int) (v / 2)) % 2 * 0.4));
+        p.fill(0, 0, 16, 16, (u, v) -> at(BRASS, 3.4 + ((int) (u / 2) + (int) (v / 2)) % 2 * 0.5));
         for (int k = 0; k < 16; k += 4) {
-            p.rect(k, k, k + 1, k + 1, at(IRON, 5.6));
+            p.rect(k, k, k + 1, k + 1, at(BRASS, 5.6));
         }
         return p;
     }
