@@ -41,10 +41,39 @@ public class StockManometerScreen extends GolemScreen<StockManometerMenu> {
                             .append("\n").append(Component.translatable(key + ".hint").withStyle(ChatFormatting.GRAY));
                 },
                 () -> true, () -> menu.getMode() != StockManometerBlockEntity.MODE_ABOVE, StockManometerMenu.BUTTON_MODE);
+        for (net.minecraft.core.Direction side : net.minecraft.core.Direction.values()) {
+            addSideButton(() -> menu.getBridgeMode(side) == StockManometerBlockEntity.BRIDGE_OFF ? new ItemStack(Items.BARRIER) : new ItemStack(neighbour(side).getBlock()),
+                    () -> bridgeTip(side), () -> !neighbour(side).isAir(), () -> bridged(side), StockManometerMenu.BUTTON_BRIDGE + side.ordinal());
+        }
         sentLow = menu.getThreshold();
         sentHigh = menu.getHysteresis();
         low = number(leftPos + 122, topPos + 22, sentLow);
         high = number(leftPos + 122, topPos + 40, sentHigh);
+    }
+
+    private net.minecraft.world.level.block.state.BlockState neighbour(net.minecraft.core.Direction side) {
+        return minecraft.level.getBlockState(menu.getDevicePos().relative(side));
+    }
+
+    /** Whether the bridge is there (the window's mode, not the block entity's: it answers at once for the player clicking). */
+    private boolean bridged(net.minecraft.core.Direction side) {
+        return switch (menu.getBridgeMode(side)) {
+            case StockManometerBlockEntity.BRIDGE_ON -> true;
+            case StockManometerBlockEntity.BRIDGE_OFF -> false;
+            default -> com.golemlogix.blocks.StockManometerBlock.isReceiver(minecraft.level, menu.getDevicePos(), side);
+        };
+    }
+
+    private Component bridgeTip(net.minecraft.core.Direction side) {
+        String state = switch (menu.getBridgeMode(side)) {
+            case StockManometerBlockEntity.BRIDGE_ON -> "on";
+            case StockManometerBlockEntity.BRIDGE_OFF -> "off";
+            default -> bridged(side) ? "auto_yes" : "auto_no";
+        };
+        return Component.translatable("gui.golem_logix.manometer.bridge." + side.getName()).append("\n")
+                .append(neighbour(side).getBlock().getName()).append("\n")
+                .append(Component.translatable("gui.golem_logix.manometer.bridge." + state)).append("\n")
+                .append(Component.translatable("gui.golem_logix.manometer.bridge.hint").withStyle(ChatFormatting.GRAY));
     }
 
     private String modeName() {

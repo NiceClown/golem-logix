@@ -42,13 +42,15 @@ public class StockManometerBlock extends DirectionalBlock implements GolemNode, 
             net.minecraft.resources.Identifier.fromNamespaceAndPath(com.golemlogix.GolemLogixMod.MOD_ID, "redstone_receivers"));
 
     /**
-     * Whether the block on that side takes this one's signal (a bridge runs to it). A repeater only takes it at its back, a
-     * comparator at its back or sides - not at the output.
+     * Whether the block on that side takes this one's signal (a bridge runs to it). The game has no way to ask a block that, so
+     * this goes by two signs: the tag, where a repeater only counts at its back and a comparator anywhere but its output; or the
+     * question redstone dust asks a neighbour - a block that says yes without being a signal source itself has chosen to
+     * connect, which modded machines do. What neither finds, the player can switch on in the window.
      */
     public static boolean isReceiver(BlockGetter level, BlockPos pos, Direction side) {
         BlockState there = level.getBlockState(pos.relative(side));
         if (!there.is(RECEIVERS)) {
-            return false;
+            return !there.isSignalSource() && there.canRedstoneConnectTo(level, pos.relative(side), side);
         }
         if (there.getBlock() instanceof net.minecraft.world.level.block.RepeaterBlock) {
             return there.getValue(net.minecraft.world.level.block.DiodeBlock.FACING) == side.getOpposite();

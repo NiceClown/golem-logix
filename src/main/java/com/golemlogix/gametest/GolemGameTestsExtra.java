@@ -999,6 +999,18 @@ public final class GolemGameTestsExtra {
         helper.assertTrue(takes.apply(Direction.NORTH), "dust takes the signal");
         helper.setBlock(at.north(), Blocks.AIR);
         helper.assertTrue(!takes.apply(Direction.NORTH), "the bridge goes with the receiver");
+        // the window's setting beats what the block looks like
+        StockManometerBlockEntity mano = helper.getBlockEntity(at, StockManometerBlockEntity.class);
+        helper.assertTrue(!mano.hasBridge(Direction.SOUTH), "auto: no bridge to stone");
+        mano.setBridgeMode(Direction.SOUTH, StockManometerBlockEntity.BRIDGE_ON);
+        helper.assertTrue(mano.hasBridge(Direction.SOUTH), "always: a bridge to stone");
+        helper.assertTrue(mano.getBridgeMode(Direction.EAST) == StockManometerBlockEntity.BRIDGE_AUTO, "the other sides keep their mode");
+        helper.assertTrue(mano.hasBridge(Direction.EAST), "auto: a bridge to the repeater");
+        mano.setBridgeMode(Direction.EAST, StockManometerBlockEntity.BRIDGE_OFF);
+        helper.assertTrue(!mano.hasBridge(Direction.EAST), "never: no bridge to the repeater");
+        helper.assertTrue(mano.getBridgeMode(Direction.SOUTH) == StockManometerBlockEntity.BRIDGE_ON, "a mode survives its neighbour's change");
+        mano.setBridgeMode(Direction.NORTH, StockManometerBlockEntity.BRIDGE_ON);
+        helper.assertTrue(!mano.hasBridge(Direction.NORTH), "always: still nothing to bridge to in the air");
         helper.succeed();
     }
 

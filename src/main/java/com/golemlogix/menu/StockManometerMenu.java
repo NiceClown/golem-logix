@@ -28,7 +28,7 @@ public class StockManometerMenu extends GolemMenu {
     public static StockManometerMenu fromNetwork(int id, Inventory inv, RegistryFriendlyByteBuf buf) {
         BlockPos pos = buf.readBlockPos();
         return new StockManometerMenu(id, inv, new SimpleContainer(1),
-                new SimpleContainer(UpgradeSpec.MANOMETER.slots()), new SimpleContainerData(8), pos);
+                new SimpleContainer(UpgradeSpec.MANOMETER.slots()), new SimpleContainerData(9), pos);
     }
 
     public StockManometerMenu(int id, Inventory inv, Container filter, Container upgrades, ContainerData data, BlockPos devicePos) {
@@ -48,11 +48,18 @@ public class StockManometerMenu extends GolemMenu {
 
     /** The mode side button: above the threshold -> below it -> proportional -> above. */
     public static final int BUTTON_MODE = 40;
+    /** The bridge buttons, one per side in Direction order: auto -> always -> never -> auto. */
+    public static final int BUTTON_BRIDGE = 41;
 
     @Override
     public boolean clickMenuButton(Player player, int id) {
         if (id == BUTTON_MODE) {
             data.set(0, (getMode() + 1) % 3);
+            broadcastChanges();
+            return true;
+        }
+        if (id >= BUTTON_BRIDGE && id < BUTTON_BRIDGE + 6) {
+            data.set(StockManometerBlockEntity.SET_BRIDGE_NEXT, id - BUTTON_BRIDGE);
             broadcastChanges();
             return true;
         }
@@ -77,6 +84,10 @@ public class StockManometerMenu extends GolemMenu {
 
     public int getSignal() {
         return data.get(5);
+    }
+
+    public int getBridgeMode(net.minecraft.core.Direction side) {
+        return StockManometerBlockEntity.bridgeMode(data.get(8), side);
     }
 
     public long getStock() {

@@ -30,6 +30,10 @@ public class StockManometerBlockEntity extends BlockEntity {
      */
     public final float[] bridgePhase = new float[6];
     public long bridgeTick;
+    /** A side's bridge: by what the block there looks like, always (while something stands there), never. */
+    public static final int BRIDGE_AUTO = 0, BRIDGE_ON = 1, BRIDGE_OFF = 2;
+    /** The modes of the six sides (Direction order), three to a digit: it fits one window data slot. */
+    private int bridgeModes = 0;
 
     @Override
     public void onLoad() {
@@ -43,7 +47,7 @@ public class StockManometerBlockEntity extends BlockEntity {
     public static final int MODE_BELOW = 1;
     public static final int MODE_ANALOG = 2;
     /** menuData().set indices that take whole numbers (not window slots). */
-    public static final int SET_THRESHOLD = 10, SET_SECOND = 11;
+    public static final int SET_THRESHOLD = 10, SET_SECOND = 11, SET_BRIDGE_NEXT = 12;
 
     private final OwnedContainer filter = new OwnedContainer(1, this, s -> true);
     private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.MANOMETER, this);
@@ -100,6 +104,36 @@ public class StockManometerBlockEntity extends BlockEntity {
 
     public long getStockCount() {
         return stockCount;
+    }
+
+    private static final int[] POW3 = {1, 3, 9, 27, 81, 243};
+
+    public static int bridgeMode(int packed, Direction side) {
+        return packed / POW3[side.ordinal()] % 3;
+    }
+
+    public int getBridgeMode(Direction side) {
+        return bridgeMode(bridgeModes, side);
+    }
+
+    public void setBridgeMode(Direction side, int mode) {
+        bridgeModes += (Math.floorMod(mode, 3) - getBridgeMode(side)) * POW3[side.ordinal()];
+        setChanged();
+        if (level != null && !level.isClientSide()) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
+    }
+
+    /** Whether a bridge runs to that side now. */
+    public boolean hasBridge(Direction side) {
+        if (level == null) {
+            return false;
+        }
+        return switch (getBridgeMode(side)) {
+            case BRIDGE_ON -> !level.getBlockState(worldPosition.relative(side)).isAir();
+            case BRIDGE_OFF -> false;
+            default -> StockManometerBlock.isReceiver(level, worldPosition, side);
+        };
     }
 
     public Direction getFacing() {
@@ -216,6 +250,7 @@ public class StockManometerBlockEntity extends BlockEntity {
                     case 5 -> signal;
                     case 6 -> (int) (stockCount & 0xFFFF);
                     case 7 -> (int) ((stockCount >> 16) & 0xFFFF);
+                    case 8 -> bridgeModes;
                     default -> 0;
                 };
             }
@@ -227,6 +262,10 @@ public class StockManometerBlockEntity extends BlockEntity {
                     case 0 -> mode = Math.floorMod(value, 3);
                     case SET_THRESHOLD -> threshold = Math.max(1, value);
                     case SET_SECOND -> hysteresis = Math.max(0, value);
+                    case SET_BRIDGE_NEXT -> {
+                        Direction side = Direction.values()[Math.floorMod(value, 6)];
+                        setBridgeMode(side, getBridgeMode(side) + 1);
+                    }
                     default -> {
                         return;
                     }
@@ -236,7 +275,7 @@ public class StockManometerBlockEntity extends BlockEntity {
 
             @Override
             public int getCount() {
-                return 8;
+                return 9;
             }
         };
     }
@@ -271,6 +310,7 @@ public class StockManometerBlockEntity extends BlockEntity {
         tag.putLong("Stock", stockCount);
         tag.put("Filter", filter.createTag(registries));
         tag.put("Upgrades", upgrades.createTag(registries));
+        tag.putInt("Bridges", bridgeModes);
     }
 
     protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
@@ -281,6 +321,7 @@ public class StockManometerBlockEntity extends BlockEntity {
         stockCount = tag.getLongOr("Stock", 0);
         filter.fromTag(tag.getListOrEmpty("Filter"), registries);
         upgrades.fromTag(tag.getListOrEmpty("Upgrades"), registries);
+        bridgeModes = tag.getIntOr("Bridges", 0);
     }
 
     @Override
@@ -289,6 +330,7 @@ public class StockManometerBlockEntity extends BlockEntity {
         tag.putInt("Signal", signal);
         tag.putLong("Stock", stockCount);
         tag.putInt("Threshold", threshold);
+        tag.putInt("Bridges", bridgeModes);
         return tag;
     }
 

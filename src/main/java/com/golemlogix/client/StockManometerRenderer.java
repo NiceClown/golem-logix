@@ -86,8 +86,8 @@ public class StockManometerRenderer extends com.golemlogix.client.render.LegacyB
 
     /**
      * The bridges, drawn in the world's directions so the decks slope and the golems stand upright however the clock hangs. A bridge
-     * runs from the clock's rim on the side of each neighbour that takes the signal, and it is there only while that neighbour
-     * is. While the signal is on, its golem carries redstone dust over to the receiver and comes back for more, the faster the
+     * runs from the clock's rim on the side of each neighbour that takes the signal (see hasBridge), and only while that neighbour
+     * is there. While the signal is on, its golem carries redstone dust over to the receiver and comes back for more, the faster the
      * stronger the signal; with no signal it waits at the clock, its hands empty.
      */
     private static void bridges(StockManometerBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light) {
@@ -101,7 +101,7 @@ public class StockManometerRenderer extends com.golemlogix.client.render.LegacyB
         VertexConsumer copper = buffers.getBuffer(RenderTypes.entityCutout(COPPER));
         for (Direction d : Direction.values()) {
             int i = d.ordinal();
-            if (!StockManometerBlock.isReceiver(level, pos, d)) {
+            if (!be.hasBridge(d)) {
                 be.bridgePhase[i] = 0f;
                 continue;
             }
