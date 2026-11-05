@@ -7,7 +7,7 @@
   slots every 5. Compressed Co-Processors in an interface now speed up only keeping its stock.
 
 - **Buses hold up to 28 Compressed Co-Processors**, as a stack in one upgrade slot; four upgrades already in a bus come together
-  there on loading. The rate grows in a straight line: 2 items a tick with none, 20 with four (about a fully sped-up AE2 bus),
+  there on loading, and the slot shows a count even for one, so it is clear more fit. The rate grows in a straight line: 2 items a tick with none, 20 with four (about a fully sped-up AE2 bus),
   128 with 28, the old top speed. Fluids: 2500 mB a tick with four. The Interface keeps its four upgrades at the same rate; the
   Formation Bus keeps its four too, in one slot.
 - **Buses pace themselves and keep their full speed.** A bus with a lot to move runs at its full rate within a few operations, a
@@ -19,6 +19,7 @@
   next tick when they use up their time, and they catch up afterwards. The command `/golemlogix_buses` shows operations a second and
   what the buses cost.
 - The co-processor stacks to 64.
+- The guide book explains all of this: the speeds, the one slot, how a bus paces itself, and the tools for server owners.
 
 ## 2.1.2 (26.1.2) — Sharp at a distance
 

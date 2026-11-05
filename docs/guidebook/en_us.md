@@ -1596,6 +1596,22 @@ With upgrades a bus moves every 0.25 s, without them every 0.4 s. All its upgrad
 
 Fluids speed up too: 1000 mB per move without upgrades, 12500 with four, 83750 with 28.
 
+Four upgrades are about as fast as a fully sped-up AE2 bus. The rest are for very large bases.
+
+#### A bus paces itself
+
+A bus works only as often as it has to, and that costs it no speed: it moves as much as the time since its last move allows.
+
+- **A lot to move**: full speed within a few moves.
+- **A trickle**: it waits for a batch, up to a second.
+- **Nothing to do**: it sleeps, up to two seconds. A change in the block in front wakes it at once, and so does anything entering or leaving its own network if it is an export bus.
+
+#### For server owners
+
+The command **/golemlogix_buses** shows how many operations the buses make and how much of each tick they take.
+
+The config setting **busMaxMillisPerTick** (10 by default, of the 50 ms a tick has; 0 for no limit) caps that: over it, buses wait for the next tick and catch up afterwards.
+
 <!-- {"type": "crafting", "recipe": "golem_logix:autocraft_module"} -->
 
 An export bus with this module: if an item from the filter is not in the network but has a pattern, the bus orders crafting (a batch at most every 2 s) and delivers the result when it is ready. No new order while one is in progress.
@@ -1717,7 +1733,7 @@ Fluid poured into the interface (by a pipe or a bucket) goes into the network.
 
 #### Upgrades
 
-Like the export bus: up to four **Compressed Co-Processors**, an **Autocraft Module** (orders stock the network lacks) and a **Redstone Module**.
+Up to four **Compressed Co-Processors**, an **Autocraft Module** (orders stock the network lacks) and a **Redstone Module**. Co-processors speed up only keeping the stock: what is put in goes to the network at once anyway.
 
 While the interface works, the turbines in its intakes spin and the metronomes on its sides keep time - faster with speed upgrades.
 

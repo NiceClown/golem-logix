@@ -206,6 +206,11 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
             return;
         }
         super.extractSlot(g, slot, mouseX, mouseY);
+        // the game shows no count for one item: a slot that holds many says so, so a lone upgrade does not look like the limit
+        if (menu instanceof com.golemlogix.menu.GolemMenu up && slot.getItem().getCount() == 1 && up.hasUpgradeSlots()
+                && slot.index >= up.upgradeStart() && slot.index < up.upgradeEnd() && slot.getMaxStackSize() > 1) {
+            g.itemDecorations(font, slot.getItem(), slot.x, slot.y, "1");
+        }
         // a fuzzy ghost: "#" with a tag chosen, "≈" for the same item with any components
         if (menu instanceof com.golemlogix.menu.GolemMenu gm && slot.hasItem() && gm.fuzzyActive(slot.index)) {
             String mark = com.golemlogix.system.Fuzzy.tag(slot.getItem()) != null ? "#" : "≈";
