@@ -253,7 +253,21 @@ public final class GolemGameTestRegistry {
             new Test("autocraftcyclicpatternsdonothang", GolemGameTestsExtra::autocraftCyclicPatternsDoNotHang, 100, 0),
             new Test("networksplitwhentrunkiscut", GolemGameTestsExtra::networkSplitWhenTrunkIsCut, 200, 0),
             new Test("autocrafttwocalculatorsatonce", GolemGameTestsExtra::autocraftTwoCalculatorsAtOnce, 200, 0),
-            new Test("autocraftsurvivespowerloss", GolemGameTestsExtra::autocraftSurvivesPowerLoss, 200, 0)
+            new Test("autocraftsurvivespowerloss", GolemGameTestsExtra::autocraftSurvivesPowerLoss, 200, 0),
+            // Newly added tests (promises & edge cases)
+            new Test("autocraftmultistepsurvivesreload", GolemGameTestsExtra::autocraftMultiStepSurvivesReload, 400, 0),
+            new Test("autocraftmachinestepsurvivesreload", GolemGameTestsExtra::autocraftMachineStepSurvivesReload, 500, 0),
+            new Test("securityrevokedwhilewindowopen", GolemGameTestsExtra::securityRevokedWhileWindowOpen, 150, 0),
+            new Test("securitypersistsacrossreload", GolemGameTestsExtra::securityPersistsAcrossReload, 100, 0),
+            new Test("stockmanometerbelowhysteresis", GolemGameTestsExtra::stockManometerBelowHysteresis, 120, 0),
+            new Test("stockmanometersettingssurvivereload", GolemGameTestsExtra::stockManometerSettingsSurviveReload, 100, 0),
+            new Test("atlasrejectsbadlayouts", GolemGameTestsExtra::atlasRejectsBadLayouts, 120, 0),
+            new Test("redstonemodesonbuses", GolemGameTestsExtra::redstoneModesOnBuses, 300, 0),
+            new Test("fuzzyonformationandannihilationbus", GolemGameTestsExtra::fuzzyOnFormationAndAnnihilationBus, 250, 0),
+            new Test("providerfeedsanothersidewhenoneisfull", GolemGameTestsExtra::providerFeedsAnotherSideWhenOneIsFull, 400, 0),
+            new Test("busthroughputmatchesupgrades", GolemGameTestsExtra::busThroughputMatchesUpgrades, 340, 0),
+            new Test("stockrequesterkeepsfluid", GolemGameTestsExtra::stockRequesterKeepsFluid, 320, 0),
+            new Test("networkkeepscontentsacrossdiskmove", GolemGameTestsExtra::networkKeepsContentsAcrossDiskMove, 200, 0)
     );
 
     private GolemGameTestRegistry() {

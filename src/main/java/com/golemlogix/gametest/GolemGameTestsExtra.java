@@ -60,8 +60,23 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.InteractionHand;
 import java.util.Map;
-
 import java.util.List;
+import com.golemlogix.blocks.ProviderOutput;
+import com.golemlogix.blocks.CopperDriveBayBlock;
+import com.golemlogix.blockentity.FormationBusBlockEntity;
+import com.golemlogix.blockentity.CopperTankBlockEntity;
+import com.golemlogix.blockentity.InterfaceBlockEntity;
+import com.golemlogix.system.AtlasStructure;
+import com.golemlogix.system.Fuzzy;
+import com.golemlogix.system.Ingredients;
+import com.golemlogix.system.DiskStorage;
+import com.golemlogix.upgrade.BusSpeed;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.state.properties.ChestType;
+import net.minecraft.core.component.DataComponentMap;
 
 import static com.golemlogix.gametest.GolemGameTests.*;
 
@@ -2169,6 +2184,943 @@ public final class GolemGameTestsExtra {
                         helper.assertTrue(nRestored.itemCountOf(planksKey) == 20, "20 planks delivered with no loss");
                         helper.assertTrue(nRestored.itemCountOf(logKey) == 5, "remaining 5 oak logs intact in storage");
                     });
+                });
+            });
+        });
+    }
+
+    // =========================================================================
+    // 10. NEW ADVANCED GAME TESTS (RELOADS, SECURITY, HYSTERESIS, ETC.)
+    // =========================================================================
+
+    /**
+     * A real reload: the block entity is replaced by a new object that knows only what was saved, and the network is built again.
+     * Loading a tag into the same object proves nothing, it still remembers everything.
+     */
+    private static <T extends net.minecraft.world.level.block.entity.BlockEntity> T reload(GameTestHelper helper, BlockPos rel, Class<T> type) {
+        BlockPos abs = helper.absolutePos(rel);
+        var level = helper.getLevel();
+        var old = level.getBlockEntity(abs);
+        CompoundTag tag = old.saveWithFullMetadata(level.registryAccess());
+        var fresh = net.minecraft.world.level.block.entity.BlockEntity.loadStatic(abs, old.getBlockState(), tag, level.registryAccess());
+        level.setBlockEntity(fresh);
+        GolemNetwork.refresh(level, abs);
+        return type.cast(fresh);
+    }
+
+    /**
+     * 1. A job of a nested plan (sticks from planks from logs) is saved and reloaded while part way through,
+     * then finishes with the right result and no items lost or duplicated.
+     */
+    public static void autocraftMultiStepSurvivesReload(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+
+        // Pattern 1: 1 Oak Log -> 4 Oak Planks
+        provider.getContainer().setItem(0, card(craftingPattern(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.OAK_LOG))));
+        // Pattern 2: 2 Oak Planks -> 4 Sticks
+        java.util.List<ItemStack> stickGrid = new java.util.ArrayList<>();
+        for (int i = 0; i < 9; i++) {
+            stickGrid.add(i == 0 || i == 3 ? new ItemStack(Items.OAK_PLANKS) : ItemStack.EMPTY);
+        }
+        provider.getContainer().setItem(1, card(new PatternData(true, stickGrid, List.of(new ItemStack(Items.STICK, 4)))));
+
+        ItemKey stickKey = ItemKey.of(new ItemStack(Items.STICK));
+        ItemKey plankKey = ItemKey.of(new ItemStack(Items.OAK_PLANKS));
+        ItemKey logKey = ItemKey.of(new ItemStack(Items.OAK_LOG));
+
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, bay);
+            // 5 logs: 2 needed for 8 planks -> 16 sticks; 3 logs should remain untouched
+            n.insertItem(new ItemStack(Items.OAK_LOG, 5), false);
+
+            var start = n.startCrafting(stickKey, 16);
+            helper.assertTrue(start.type() == GolemNetwork.StartType.STARTED, "multi-step job started: " + start.type());
+
+            CryoCalculatorBlockEntity cpu = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class);
+            helper.assertTrue(!cpu.isIdle(), "calculator actively working on job");
+
+            // Part way through (after 5 ticks, job has started execution of steps)
+            helper.runAfterDelay(5, () -> {
+                helper.assertTrue(!cpu.isIdle(), "job still in progress when reloaded");
+                CryoCalculatorBlockEntity loaded = reload(helper, CPU, CryoCalculatorBlockEntity.class);
+                helper.assertTrue(!loaded.isIdle(), "job preserved in calculator after reload");
+
+                helper.succeedWhen(() -> {
+                    GolemNetwork nAfter = net(helper, bay);
+                    helper.assertTrue(loaded.isIdle(), "calculator finishes job");
+                    helper.assertTrue(nAfter.itemCountOf(stickKey) == 16, "exactly 16 sticks delivered (got " + nAfter.itemCountOf(stickKey) + ")");
+                    helper.assertTrue(nAfter.itemCountOf(plankKey) == 0, "no intermediate planks leaked or duplicated (got " + nAfter.itemCountOf(plankKey) + ")");
+                    helper.assertTrue(nAfter.itemCountOf(logKey) == 3, "exactly 3 oak logs remaining in storage (got " + nAfter.itemCountOf(logKey) + ")");
+                });
+            });
+        });
+    }
+
+    /**
+     * A portion is inside a machine when the world is reloaded. The job still knows what it waits for: in wait-for-result mode it
+     * does not load the next portion, and what the machine hands back goes to the job, which goes on to the step that needs it.
+     */
+    public static void autocraftMachineStepSurvivesReload(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+        provider.setBlocking(true);
+        // Machine step: 1 raw iron -> 1 ingot. Crafting step that needs its result: 9 ingots -> 1 block
+        provider.getContainer().setItem(0, card(new PatternData(false,
+                List.of(new ItemStack(Items.RAW_IRON)), List.of(new ItemStack(Items.IRON_INGOT)))));
+        java.util.List<ItemStack> grid = new java.util.ArrayList<>();
+        for (int i = 0; i < 9; i++) {
+            grid.add(new ItemStack(Items.IRON_INGOT));
+        }
+        provider.getContainer().setItem(1, card(new PatternData(true, grid, List.of(new ItemStack(Items.IRON_BLOCK)))));
+
+        BlockPos machinePos = PROV.east();
+        helper.setBlock(machinePos, Blocks.CHEST);
+        ChestBlockEntity machine = helper.getBlockEntity(machinePos, ChestBlockEntity.class);
+        ItemKey raw = ItemKey.of(new ItemStack(Items.RAW_IRON));
+        ItemKey ingot = ItemKey.of(new ItemStack(Items.IRON_INGOT));
+        ItemKey block = ItemKey.of(new ItemStack(Items.IRON_BLOCK));
+        java.util.function.IntSupplier inMachine = () -> {
+            int count = 0;
+            for (int i = 0; i < machine.getContainerSize(); i++) {
+                count += machine.getItem(i).getCount();
+            }
+            return count;
+        };
+
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.RAW_IRON, 12), false);
+            var start = n.startCrafting(block, 1);
+            helper.assertTrue(start.type() == GolemNetwork.StartType.STARTED, "the job started: " + start.type());
+        });
+        helper.runAfterDelay(30, () -> {
+            helper.assertTrue(inMachine.getAsInt() == 1, "one portion in the machine in wait mode (got " + inMachine.getAsInt() + ")");
+            CryoCalculatorBlockEntity loaded = reload(helper, CPU, CryoCalculatorBlockEntity.class);
+            helper.assertTrue(!loaded.isIdle(), "the job is still there after the reload");
+        });
+        helper.runAfterDelay(50, () -> helper.assertTrue(inMachine.getAsInt() == 1,
+                "it still waits for that portion after the reload (in the machine: " + inMachine.getAsInt() + ")"));
+        // From now on the machine works
+        for (int t = 51; t <= 350; t++) {
+            helper.runAfterDelay(t, () -> {
+                for (int i = 0; i < machine.getContainerSize(); i++) {
+                    ItemStack in = machine.getItem(i);
+                    if (in.is(Items.RAW_IRON)) {
+                        int count = in.getCount();
+                        machine.setItem(i, ItemStack.EMPTY);
+                        net(helper, bay).insertFromMachine(new ItemStack(Items.IRON_INGOT, count));
+                    }
+                }
+            });
+        }
+        helper.runAfterDelay(52, () -> helper.succeedWhen(() -> {
+            GolemNetwork n = net(helper, bay);
+            helper.assertTrue(n.itemCountOf(block) == 1, "the block was made (got " + n.itemCountOf(block) + ")");
+            helper.assertTrue(n.itemCountOf(ingot) == 0, "no ingot left over (got " + n.itemCountOf(ingot) + ")");
+            helper.assertTrue(n.itemCountOf(raw) == 3, "exactly nine raw iron were used (left " + n.itemCountOf(raw) + ")");
+            helper.assertTrue(helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class).isIdle(), "the calculator is free");
+        }));
+    }
+
+    /**
+     * 2. A player has a terminal window open and rights through a card; the card is taken out of the Security Terminal;
+     * the player's further actions through that same open window (take, insert, order a craft) are refused.
+     */
+    public static void securityRevokedWhileWindowOpen(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos secPos = BUS_OUT;
+        helper.setBlock(secPos, ModBlocks.SECURITY_TERMINAL.get().defaultBlockState().setValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING, Direction.NORTH));
+        SecurityTerminalBlockEntity sec = helper.getBlockEntity(secPos, SecurityTerminalBlockEntity.class);
+
+        ServerPlayer owner = testPlayer(helper);
+        sec.setOwner(owner);
+
+        ServerPlayer player = net.neoforged.neoforge.common.util.FakePlayerFactory.get(helper.getLevel(),
+                new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "player-open-window"));
+        sec.getCards().setItem(0, IdentityPunchCardItem.of(player.getUUID(), "player-open-window",
+                SecurityPermission.EXTRACT.mask | SecurityPermission.INSERT.mask | SecurityPermission.CRAFT.mask));
+
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+        provider.getContainer().setItem(0, card(craftingPattern(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.OAK_LOG))));
+
+        BlockPos termPos = TERM;
+        helper.setBlock(termPos, ModBlocks.ANALOG_TERMINAL.get().defaultBlockState());
+        BlockPos absTerm = helper.absolutePos(termPos);
+
+        helper.runAfterDelay(10, () -> {
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.DIAMOND, 50), false);
+            n.insertItem(new ItemStack(Items.OAK_LOG, 10), false);
+            ItemKey diamond = ItemKey.of(new ItemStack(Items.DIAMOND));
+
+            // Player opens terminal window
+            TerminalMenu menu = new TerminalMenu(88, player.getInventory(), helper.getLevel(), absTerm, absTerm,
+                    ModBlocks.ANALOG_TERMINAL.get(), false, false, 0);
+            player.containerMenu = menu;
+
+            // Positive control: actions succeed while card is in the Security Terminal
+            menu.setCarried(new ItemStack(Items.GOLD_INGOT, 5));
+            menu.handleAction(player, new TerminalActionPayload(88, TerminalActionPayload.Action.INSERT_ALL, ItemStack.EMPTY, FluidStack.EMPTY));
+            helper.assertTrue(menu.getCarried().isEmpty(), "positive control: player with card can insert");
+            helper.assertTrue(n.itemCountOf(ItemKey.of(new ItemStack(Items.GOLD_INGOT))) == 5, "positive control: gold stored");
+
+            // Rights revoked: remove card from Security Terminal while window stays open
+            sec.getCards().setItem(0, ItemStack.EMPTY);
+            sec.setChanged();
+            helper.assertTrue(!n.hasPermission(player, SecurityPermission.EXTRACT), "permissions revoked on network");
+
+            // 1. Take action refused
+            menu.handleAction(player, new TerminalActionPayload(88, TerminalActionPayload.Action.TAKE_STACK, new ItemStack(Items.DIAMOND), FluidStack.EMPTY));
+            helper.assertTrue(menu.getCarried().isEmpty(), "TAKE_STACK refused after rights revoked");
+            helper.assertTrue(n.itemCountOf(diamond) == 50, "diamonds untouched in storage");
+
+            // 2. Insert action refused
+            menu.setCarried(new ItemStack(Items.IRON_INGOT, 8));
+            menu.handleAction(player, new TerminalActionPayload(88, TerminalActionPayload.Action.INSERT_ALL, ItemStack.EMPTY, FluidStack.EMPTY));
+            helper.assertTrue(menu.getCarried().getCount() == 8, "INSERT_ALL refused after rights revoked");
+            helper.assertTrue(n.itemCountOf(ItemKey.of(new ItemStack(Items.IRON_INGOT))) == 0, "iron not inserted");
+
+            // 3. Craft action refused
+            menu.handleCraftRequest(player, new CraftRequestPayload(88, new ItemStack(Items.OAK_PLANKS), 4, false, 1));
+            CryoCalculatorBlockEntity cpu = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class);
+            helper.assertTrue(cpu.isIdle(), "craft order refused after rights revoked");
+
+            // The same order goes through once the card is back, so it was the rights that stopped it
+            sec.getCards().setItem(0, IdentityPunchCardItem.of(player.getUUID(), "player-open-window", SecurityPermission.CRAFT.mask));
+            menu.handleCraftRequest(player, new CraftRequestPayload(88, new ItemStack(Items.OAK_PLANKS), 4, false, 1));
+            helper.assertTrue(!cpu.isIdle(), "positive control: the same craft order is taken with the card back");
+
+            helper.succeed();
+        });
+    }
+
+    /**
+     * 3. The Security Terminal's owner and cards, with their rights, survive a save and load:
+     * rights are still enforced afterwards.
+     */
+    public static void securityPersistsAcrossReload(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos secPos = BUS_OUT;
+        helper.setBlock(secPos, ModBlocks.SECURITY_TERMINAL.get().defaultBlockState().setValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING, Direction.NORTH));
+        SecurityTerminalBlockEntity sec = helper.getBlockEntity(secPos, SecurityTerminalBlockEntity.class);
+
+        ServerPlayer owner = testPlayer(helper);
+        sec.setOwner(owner);
+
+        ServerPlayer playerWithCard = net.neoforged.neoforge.common.util.FakePlayerFactory.get(helper.getLevel(),
+                new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "player-card-persists"));
+        sec.getCards().setItem(0, IdentityPunchCardItem.of(playerWithCard.getUUID(), "player-card-persists", SecurityPermission.EXTRACT.mask));
+
+        ServerPlayer playerNoCard = net.neoforged.neoforge.common.util.FakePlayerFactory.get(helper.getLevel(),
+                new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "player-nocard-persists"));
+
+        helper.runAfterDelay(10, () -> {
+            SecurityTerminalBlockEntity loaded = reload(helper, secPos, SecurityTerminalBlockEntity.class);
+
+            helper.assertTrue(owner.getUUID().equals(loaded.getOwnerId()), "owner UUID survives reload");
+            helper.assertTrue(owner.getScoreboardName().equals(loaded.getOwnerName()), "owner name survives reload");
+            helper.assertTrue(!loaded.getCards().getItem(0).isEmpty(), "punch card survives reload");
+
+            GolemNetwork n = net(helper, bay);
+            helper.assertTrue(n.hasPermission(owner, SecurityPermission.BUILD), "owner keeps BUILD permission after reload");
+            helper.assertTrue(n.hasPermission(owner, SecurityPermission.EXTRACT), "owner keeps EXTRACT permission after reload");
+            helper.assertTrue(n.hasPermission(playerWithCard, SecurityPermission.EXTRACT), "cardholder keeps EXTRACT permission after reload");
+            helper.assertTrue(!n.hasPermission(playerWithCard, SecurityPermission.BUILD), "cardholder still denied BUILD permission");
+            helper.assertTrue(!n.hasPermission(playerWithCard, SecurityPermission.INSERT), "cardholder still denied INSERT permission");
+            helper.assertTrue(!n.hasPermission(playerNoCard, SecurityPermission.EXTRACT), "cardless player still denied EXTRACT permission");
+            helper.assertTrue(!n.hasPermission(playerNoCard, SecurityPermission.BUILD), "cardless player still denied BUILD permission");
+
+            helper.succeed();
+        });
+    }
+
+    /**
+     * 4. Stock Manometer mode "below" with hysteresis (guide book's logs example: 500 and 2000):
+     * on at the first mark (<= 500), stays on up to the second, off above it (>= 2000),
+     * on again only when falling back to the first mark (<= 500).
+     */
+    public static void stockManometerBelowHysteresis(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.getBlockEntity(bay, CopperDriveBayBlockEntity.class).getContainer().setItem(0, new ItemStack(ModItems.COPPER_DISK_64K.get()));
+
+        BlockPos manoPos = BUS_OUT;
+        helper.setBlock(manoPos, ModBlocks.STOCK_MANOMETER.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        StockManometerBlockEntity mano = helper.getBlockEntity(manoPos, StockManometerBlockEntity.class);
+        mano.getFilter().setItem(0, new ItemStack(Items.OAK_LOG));
+        mano.setMode(StockManometerBlockEntity.MODE_BELOW);
+        mano.setThreshold(500);
+        mano.setHysteresis(2000);
+
+        helper.runAfterDelay(15, () -> {
+            helper.assertTrue(mano.getSignal() == 15, "0 <= 500: signal starts ON (15)");
+
+            // Add 1000 logs: between 500 and 2000 -> signal stays ON (15)
+            net(helper, bay).insertItem(new ItemStack(Items.OAK_LOG, 1000), false);
+
+            helper.runAfterDelay(15, () -> {
+                helper.assertTrue(mano.getSignal() == 15, "stock=1000 stays ON (15) between 500 and 2000");
+
+                // Add 1500 logs (total = 2500): above 2000 -> signal turns OFF (0)
+                net(helper, bay).insertItem(new ItemStack(Items.OAK_LOG, 1500), false);
+
+                helper.runAfterDelay(15, () -> {
+                    helper.assertTrue(mano.getSignal() == 0, "stock=2500 turns OFF (0) above 2000");
+
+                    // Extract 1500 logs (total = 1000): between 500 and 2000 -> signal stays OFF (0)
+                    net(helper, bay).extractItem(new ItemStack(Items.OAK_LOG), 1500, false);
+
+                    helper.runAfterDelay(15, () -> {
+                        helper.assertTrue(mano.getSignal() == 0, "stock=1000 stays OFF (0) while falling, until <= 500");
+
+                        // Extract 600 logs (total = 400): at or below 500 -> signal turns ON (15) again
+                        net(helper, bay).extractItem(new ItemStack(Items.OAK_LOG), 600, false);
+
+                        helper.runAfterDelay(15, () -> {
+                            helper.assertTrue(mano.getSignal() == 15, "stock=400 turns ON (15) again at <= 500");
+                            helper.succeed();
+                        });
+                    });
+                });
+            });
+        });
+    }
+
+    /**
+     * 5. Stock Manometer mode, both numbers and the filter survive a save and load,
+     * and the signal behaves the same afterwards.
+     */
+    public static void stockManometerSettingsSurviveReload(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos manoPos = BUS_OUT;
+        helper.setBlock(manoPos, ModBlocks.STOCK_MANOMETER.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        StockManometerBlockEntity mano = helper.getBlockEntity(manoPos, StockManometerBlockEntity.class);
+        mano.getFilter().setItem(0, new ItemStack(Items.DIAMOND));
+        mano.setMode(StockManometerBlockEntity.MODE_BELOW);
+        mano.setThreshold(50);
+        mano.setHysteresis(200);
+
+        // It first sees an empty network and latches on; 100 diamonds lie between the two marks, so it holds
+        helper.runAfterDelay(15, () -> net(helper, bay).insertItem(new ItemStack(Items.DIAMOND, 100), false));
+        helper.runAfterDelay(30, () -> {
+            helper.assertTrue(mano.getSignal() == 15, "initial signal is 15 in below mode");
+
+            StockManometerBlockEntity loaded = reload(helper, manoPos, StockManometerBlockEntity.class);
+
+            helper.assertTrue(loaded.getMode() == StockManometerBlockEntity.MODE_BELOW, "mode preserved after reload");
+            helper.assertTrue(loaded.getThreshold() == 50, "threshold preserved after reload");
+            helper.assertTrue(loaded.getHysteresis() == 200, "hysteresis preserved after reload");
+            helper.assertTrue(loaded.getFilter().getItem(0).is(Items.DIAMOND), "filter preserved after reload");
+            helper.assertTrue(loaded.getSignal() == 15, "signal state preserved after reload");
+
+            // Verify behavior continues identically:
+            // Insert 150 diamonds (total = 250 > 200) -> turns OFF (0)
+            net(helper, bay).insertItem(new ItemStack(Items.DIAMOND, 150), false);
+
+            helper.runAfterDelay(15, () -> {
+                helper.assertTrue(loaded.getSignal() == 0, "signal turns OFF (0) above hysteresis mark (250 > 200)");
+
+                // Extract 170 diamonds (total = 80, between 50 and 200) -> stays OFF (0)
+                net(helper, bay).extractItem(new ItemStack(Items.DIAMOND), 170, false);
+
+                helper.runAfterDelay(15, () -> {
+                    helper.assertTrue(loaded.getSignal() == 0, "signal stays OFF (0) in deadband (80)");
+
+                    // Extract 50 diamonds (total = 30 <= 50) -> turns ON (15)
+                    net(helper, bay).extractItem(new ItemStack(Items.DIAMOND), 50, false);
+
+                    helper.runAfterDelay(15, () -> {
+                        helper.assertTrue(loaded.getSignal() == 15, "signal turns ON (15) below threshold (30 <= 50)");
+                        helper.succeed();
+                    });
+                });
+            });
+        });
+    }
+
+    /**
+     * 6. An Atlas Array built wrongly (missing part, expander in crown, base, or corner) does not provide
+     * array capacity; positive controls with basic and quantum expanders provide the book's stated capacity.
+     */
+    public static void atlasRejectsBadLayouts(GameTestHelper helper) {
+        // Positive Control 1: Correct layout with 4 basic + 4 quantum expanders = 1280 channels (256/line)
+        buildArray(helper, 4, 4);
+        powered(helper);
+        putBay(helper, BAY);
+
+        helper.runAfterDelay(5, () -> {
+            var rOk1 = AtlasStructure.check(helper.getLevel(), helper.absolutePos(CORE));
+            helper.assertTrue(rOk1.valid(), "4+4 expander array is valid multiblock");
+            helper.assertTrue(rOk1.expanders() == 4 && rOk1.quantumExpanders() == 4, "expanders counted: 4+4");
+            GolemNetwork net1 = net(helper, BAY);
+            helper.assertTrue(net1.channelCapacity() == 1280, "4+4 expanders give 1280 channels, got " + net1.channelCapacity());
+            helper.assertTrue(net1.lineCapacity() == 256, "4+4 expanders give 256 line capacity, got " + net1.lineCapacity());
+
+            // Positive Control 2: Correct layout with 8 quantum expanders = 1600 channels (320/line)
+            buildArray(helper, 0, 8);
+            var rOk2 = AtlasStructure.check(helper.getLevel(), helper.absolutePos(CORE));
+            helper.assertTrue(rOk2.valid(), "8 quantum expander array is valid multiblock");
+            helper.assertTrue(rOk2.quantumExpanders() == 8, "8 quantum expanders counted");
+            GolemNetwork net2 = net(helper, BAY);
+            helper.assertTrue(net2.channelCapacity() == 1600, "8 quantum expanders give 1600 channels, got " + net2.channelCapacity());
+            helper.assertTrue(net2.lineCapacity() == 320, "8 quantum expanders give 320 line capacity, got " + net2.lineCapacity());
+
+            // Negative Control 1: Missing part (hole in crown)
+            BlockPos crownPos = ORIGIN.offset(1, 3, 0);
+            helper.setBlock(crownPos, Blocks.AIR);
+            var rHole = AtlasStructure.check(helper.getLevel(), helper.absolutePos(CORE));
+            helper.assertTrue(!rHole.valid(), "missing crown block invalidates array");
+            helper.assertTrue(net(helper, BAY).channelCapacity() <= 16, "capacity drops when part missing");
+
+            // Negative Control 2: Expander in crown (layer 3)
+            helper.setBlock(crownPos, ModBlocks.CHANNEL_EXPANDER.get().defaultBlockState());
+            var rCrownExp = AtlasStructure.check(helper.getLevel(), helper.absolutePos(CORE));
+            helper.assertTrue(!rCrownExp.valid(), "expander in crown is rejected");
+            helper.assertTrue(net(helper, BAY).channelCapacity() <= 16, "capacity drops with expander in crown");
+            put(helper, crownPos, ModBlocks.ATLAS_CASING.get()); // restore
+
+            // Negative Control 3: Expander in base (layer 0)
+            BlockPos basePos = ORIGIN.offset(1, 0, 0);
+            helper.setBlock(basePos, ModBlocks.CHANNEL_EXPANDER.get().defaultBlockState());
+            var rBaseExp = AtlasStructure.check(helper.getLevel(), helper.absolutePos(CORE));
+            helper.assertTrue(!rBaseExp.valid(), "expander in base is rejected");
+            helper.assertTrue(net(helper, BAY).channelCapacity() <= 16, "capacity drops with expander in base");
+            put(helper, basePos, ModBlocks.ATLAS_CONDUIT.get()); // restore
+
+            // Negative Control 4: Expander in corner (layer 1 Atlant position)
+            BlockPos cornerPos = ORIGIN.offset(1, 1, 1);
+            helper.setBlock(cornerPos, ModBlocks.CHANNEL_EXPANDER.get().defaultBlockState());
+            var rCornerExp = AtlasStructure.check(helper.getLevel(), helper.absolutePos(CORE));
+            helper.assertTrue(!rCornerExp.valid(), "expander in corner is rejected");
+            helper.assertTrue(net(helper, BAY).channelCapacity() <= 16, "capacity drops with expander in corner");
+
+            helper.succeed();
+        });
+    }
+
+    /**
+     * 7. The Redstone Module's modes (HIGH, LOW, IGNORE, PULSE) actually govern the export bus, and the interface;
+     * each with a positive control. The Formation Bus at least for HIGH.
+     */
+    public static void redstoneModesOnBuses(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.getBlockEntity(bay, CopperDriveBayBlockEntity.class).getContainer().setItem(1, new ItemStack(ModItems.COPPER_DISK_64K.get()));
+        GolemNetwork n = net(helper, bay);
+        // enough that emptying the chest between the phases does not run the network dry
+        n.insertItem(new ItemStack(Items.COBBLESTONE, 4000), false);
+        n.insertItem(new ItemStack(Items.IRON_INGOT, 640), false);
+        n.insertItem(new ItemStack(Items.STONE, 64), false);
+
+        // 1. Export Bus at BUS_OUT facing north into chest at BUS_OUT.north()
+        BlockPos chestPos = BUS_OUT.north();
+        helper.setBlock(chestPos, Blocks.CHEST);
+        ChestBlockEntity chest = helper.getBlockEntity(chestPos, ChestBlockEntity.class);
+        helper.setBlock(BUS_OUT, ModBlocks.INJECTOR_EXPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        BusBlockEntity exportBus = helper.getBlockEntity(BUS_OUT, BusBlockEntity.class);
+        exportBus.getFilters().setItem(0, new ItemStack(Items.COBBLESTONE));
+        exportBus.getUpgrades().setItem(0, new ItemStack(ModItems.REDSTONE_MODULE.get()));
+        BlockPos redstonePos = BUS_OUT.above();
+
+        // 2. Interface at BUS_IN with 5 Iron Ingots in config slot 0
+        helper.setBlock(BUS_IN, ModBlocks.GOLEM_INTERFACE.get().defaultBlockState());
+        InterfaceBlockEntity iface = helper.getBlockEntity(BUS_IN, InterfaceBlockEntity.class);
+        iface.getConfig().setItem(0, new ItemStack(Items.IRON_INGOT, 5));
+        iface.getUpgrades().setItem(0, new ItemStack(ModItems.REDSTONE_MODULE.get()));
+        BlockPos ifaceRedstonePos = BUS_IN.above();
+
+        // 3. Formation Bus at TERM facing north into AIR
+        BlockPos formPos = TERM;
+        BlockPos formFront = formPos.north();
+        helper.setBlock(formFront, Blocks.AIR);
+        helper.setBlock(formPos, ModBlocks.FORMATION_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        FormationBusBlockEntity formBus = helper.getBlockEntity(formPos, FormationBusBlockEntity.class);
+        formBus.getFilters().setItem(0, new ItemStack(Items.STONE));
+        formBus.getUpgrades().setItem(0, new ItemStack(ModItems.REDSTONE_MODULE.get()));
+        BlockPos formRedstonePos = formPos.above();
+
+        // Mode HIGH on all 3
+        exportBus.menuData().set(1, RedstoneMode.HIGH.ordinal());
+        iface.menuData().set(0, RedstoneMode.HIGH.ordinal());
+        formBus.menuData().set(1, RedstoneMode.HIGH.ordinal());
+
+        helper.runAfterDelay(20, () -> {
+            // Unpowered under HIGH: nothing moved
+            helper.assertTrue(chest.isEmpty(), "export bus HIGH unpowered moves nothing");
+            helper.assertTrue(iface.getStock().getItem(0).isEmpty(), "interface HIGH unpowered restocks nothing");
+            helper.assertBlockPresent(Blocks.AIR, formFront);
+
+            // Power all three
+            helper.setBlock(redstonePos, Blocks.REDSTONE_BLOCK);
+            helper.setBlock(ifaceRedstonePos, Blocks.REDSTONE_BLOCK);
+            helper.setBlock(formRedstonePos, Blocks.REDSTONE_BLOCK);
+
+            helper.runAfterDelay(30, () -> {
+                // Powered under HIGH: positive controls succeed
+                helper.assertTrue(!chest.isEmpty(), "positive control: export bus HIGH powered exports cobblestone");
+                helper.assertTrue(!iface.getStock().getItem(0).isEmpty(), "positive control: interface HIGH powered restocks iron");
+                helper.assertBlockPresent(Blocks.STONE, formFront);
+
+                // Clear targets and power
+                chest.clearContent();
+                iface.getStock().clearContent();
+                helper.setBlock(formFront, Blocks.AIR);
+                helper.setBlock(redstonePos, Blocks.AIR);
+                helper.setBlock(ifaceRedstonePos, Blocks.AIR);
+                helper.setBlock(formRedstonePos, Blocks.AIR);
+
+                // Mode LOW on Export Bus & Interface
+                exportBus.menuData().set(1, RedstoneMode.LOW.ordinal());
+                iface.menuData().set(0, RedstoneMode.LOW.ordinal());
+
+                helper.runAfterDelay(30, () -> {
+                    // Unpowered under LOW: positive control succeeds
+                    helper.assertTrue(!chest.isEmpty(), "positive control: export bus LOW unpowered exports cobblestone");
+                    helper.assertTrue(!iface.getStock().getItem(0).isEmpty(), "positive control: interface LOW unpowered restocks iron");
+
+                    // Clear targets and power under LOW: must block
+                    chest.clearContent();
+                    iface.getStock().clearContent();
+                    helper.setBlock(redstonePos, Blocks.REDSTONE_BLOCK);
+                    helper.setBlock(ifaceRedstonePos, Blocks.REDSTONE_BLOCK);
+
+                    helper.runAfterDelay(20, () -> {
+                        helper.assertTrue(chest.isEmpty(), "export bus LOW powered moves nothing");
+                        helper.assertTrue(iface.getStock().getItem(0).isEmpty(), "interface LOW powered restocks nothing");
+
+                        // Mode IGNORE on Export Bus & Interface
+                        exportBus.menuData().set(1, RedstoneMode.IGNORE.ordinal());
+                        iface.menuData().set(0, RedstoneMode.IGNORE.ordinal());
+                        helper.setBlock(redstonePos, Blocks.AIR);
+                        helper.setBlock(ifaceRedstonePos, Blocks.AIR);
+
+                        helper.runAfterDelay(30, () -> {
+                            helper.assertTrue(!chest.isEmpty(), "positive control: export bus IGNORE works unpowered");
+                            helper.assertTrue(!iface.getStock().getItem(0).isEmpty(), "positive control: interface IGNORE works unpowered");
+
+                            // Mode PULSE on Export Bus & Interface
+                            chest.clearContent();
+                            iface.getStock().clearContent();
+                            exportBus.menuData().set(1, RedstoneMode.PULSE.ordinal());
+                            iface.menuData().set(0, RedstoneMode.PULSE.ordinal());
+
+                            helper.runAfterDelay(20, () -> {
+                                helper.assertTrue(chest.isEmpty(), "export bus PULSE without pulse moves nothing");
+                                helper.assertTrue(iface.getStock().getItem(0).isEmpty(), "interface PULSE without pulse restocks nothing");
+
+                                // Provide a redstone pulse
+                                helper.setBlock(redstonePos, Blocks.REDSTONE_BLOCK);
+                                helper.setBlock(ifaceRedstonePos, Blocks.REDSTONE_BLOCK);
+
+                                helper.runAfterDelay(25, () -> {
+                                    helper.assertTrue(!chest.isEmpty(), "positive control: export bus PULSE works on pulse");
+                                    helper.assertTrue(!iface.getStock().getItem(0).isEmpty(), "positive control: interface PULSE works on pulse");
+                                    helper.succeed();
+                                });
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    }
+
+    /**
+     * 8. A Fuzzy Card with a tag filter on the Formation Bus and on the Annihilation Bus does what the book says;
+     * without the card the same filter is exact.
+     */
+    public static void fuzzyOnFormationAndAnnihilationBus(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+
+        // Network storage has Birch Planks (not Oak Planks)
+        net(helper, bay).insertItem(new ItemStack(Items.BIRCH_PLANKS, 32), false);
+
+        // Tag filter: Oak Planks item with #minecraft:planks tag
+        ItemStack tagFilter = Fuzzy.withTag(new ItemStack(Items.OAK_PLANKS), ItemTags.PLANKS);
+
+        // 1. Formation Bus facing north into AIR
+        BlockPos formPos = BUS_OUT;
+        BlockPos formFront = formPos.north();
+        helper.setBlock(formFront, Blocks.AIR);
+        helper.setBlock(formPos, ModBlocks.FORMATION_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        FormationBusBlockEntity formBus = helper.getBlockEntity(formPos, FormationBusBlockEntity.class);
+        formBus.getFilters().setItem(0, tagFilter.copy());
+
+        // 2. Annihilation Bus facing north into Birch Planks
+        BlockPos anniPos = TERM;
+        BlockPos anniFront = anniPos.north();
+        helper.setBlock(anniFront, Blocks.BIRCH_PLANKS);
+        helper.setBlock(anniPos, ModBlocks.ANNIHILATION_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        AnnihilationBusBlockEntity anniBus = helper.getBlockEntity(anniPos, AnnihilationBusBlockEntity.class);
+        anniBus.menuData().set(3, 0); // Allow list mode
+        anniBus.getFilters().setItem(0, tagFilter.copy());
+
+        // Part A: WITHOUT Fuzzy Card -> exact matching only
+        helper.runAfterDelay(30, () -> {
+            helper.assertBlockPresent(Blocks.AIR, formFront);
+            helper.assertBlockPresent(Blocks.BIRCH_PLANKS, anniFront);
+
+            // Part B: WITH Fuzzy Card -> matches Birch Planks through #minecraft:planks tag
+            formBus.getUpgrades().setItem(0, new ItemStack(ModItems.FUZZY_CARD.get()));
+            formBus.wake();
+            anniBus.getUpgrades().setItem(0, new ItemStack(ModItems.FUZZY_CARD.get()));
+            anniBus.wake();
+
+            helper.succeedWhen(() -> {
+                helper.assertBlockPresent(Blocks.BIRCH_PLANKS, formFront);
+                helper.assertBlockNotPresent(Blocks.BIRCH_PLANKS, anniFront);
+            });
+        });
+    }
+
+    /**
+     * 9. Pattern Provider with machines on two sides: with all sides allowed, what does not fit one goes to the other;
+     * with a chosen output side only that one is fed, and once a full machine has room the work resumes.
+     * Blocking mode: the next portion waits for the result of the previous one.
+     */
+    public static void providerFeedsAnotherSideWhenOneIsFull(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+
+        // the array stands to the west of the provider: its free sides are north and south
+        BlockPos westPos = PROV.north();
+        BlockPos eastPos = PROV.south();
+        helper.setBlock(westPos, Blocks.CHEST);
+        helper.setBlock(eastPos, Blocks.CHEST);
+        ChestBlockEntity westChest = helper.getBlockEntity(westPos, ChestBlockEntity.class);
+        ChestBlockEntity eastChest = helper.getBlockEntity(eastPos, ChestBlockEntity.class);
+
+        PatternData ironPattern = new PatternData(false,
+                List.of(new ItemStack(Items.RAW_IRON)), List.of(new ItemStack(Items.IRON_INGOT)));
+        provider.getContainer().setItem(0, card(ironPattern));
+
+        // Part 1: All sides allowed. West chest is full, East chest has room.
+        for (int i = 0; i < westChest.getContainerSize(); i++) {
+            westChest.setItem(i, new ItemStack(Items.STONE, 64));
+        }
+        provider.setOutput(ProviderOutput.ALL);
+        var pushedAll = provider.tryPush(ironPattern);
+        helper.assertTrue(pushedAll != null, "pushed successfully with all sides allowed");
+        helper.assertTrue(eastChest.countItem(Items.RAW_IRON) == 1, "went to free east side when west is full");
+        helper.assertTrue(westChest.countItem(Items.RAW_IRON) == 0, "west chest untouched");
+
+        // Part 2: Chosen output side WEST. West is full, East has room.
+        provider.setOutput(ProviderOutput.NORTH);
+        var pushedWestFull = provider.tryPush(ironPattern);
+        helper.assertTrue(pushedWestFull == null, "refused push when chosen output side is full even though east has room");
+        helper.assertTrue(eastChest.countItem(Items.RAW_IRON) == 1, "east chest did not receive anything");
+
+        // Make room in West chest -> push resumes
+        westChest.setItem(0, ItemStack.EMPTY);
+        var pushedWestRoom = provider.tryPush(ironPattern);
+        helper.assertTrue(pushedWestRoom != null, "resumes pushing to west once room is made");
+        helper.assertTrue(westChest.countItem(Items.RAW_IRON) == 1, "west chest received raw iron");
+
+        // Part 3: Blocking mode in autocrafting
+        westChest.clearContent();
+        eastChest.clearContent();
+        provider.setOutput(ProviderOutput.ALL);
+        provider.setBlocking(true);
+
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.RAW_IRON, 10), false);
+            var start = n.startCrafting(ItemKey.of(new ItemStack(Items.IRON_INGOT)), 5);
+            helper.assertTrue(start.type() == GolemNetwork.StartType.STARTED, "craft started");
+
+            helper.runAfterDelay(15, () -> {
+                int totalInChests = westChest.countItem(Items.RAW_IRON) + eastChest.countItem(Items.RAW_IRON);
+                helper.assertTrue(totalInChests == 1, "blocking mode: exactly 1 portion pushed while awaiting result (got " + totalInChests + ")");
+                helper.assertTrue(n.providerBusy(helper.absolutePos(PROV)), "provider is busy awaiting machine output");
+
+                // Machine finishes portion 1 and returns Iron Ingot into the network
+                n.insertFromMachine(new ItemStack(Items.IRON_INGOT));
+
+                helper.runAfterDelay(15, () -> {
+                    int totalAfterResult = westChest.countItem(Items.RAW_IRON) + eastChest.countItem(Items.RAW_IRON);
+                    helper.assertTrue(totalAfterResult >= 2, "blocking mode: second portion pushed once previous result received (got " + totalAfterResult + ")");
+                    helper.succeed();
+                });
+            });
+        });
+    }
+
+    /**
+     * 10. Items really moved in a fixed time, end to end through a chest and a bus,
+     * for an import and an export bus with 0, 4 and 28 Compressed Co-Processors: about 2, 20 and 128 items a tick;
+     * fluids too with 4: about 2500 mB a tick. Large disk and non-limiting target.
+     */
+    public static void busThroughputMatchesUpgrades(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        CopperDriveBayBlockEntity driveBay = helper.getBlockEntity(bay, CopperDriveBayBlockEntity.class);
+        driveBay.getContainer().setItem(0, new ItemStack(ModItems.COPPER_DISK_256K.get()));
+        driveBay.getContainer().setItem(1, new ItemStack(ModItems.FLUID_DISK_256K.get()));
+
+        // Double chest at (2, 1, 4) and (2, 1, 3), BUS_IN at (3, 1, 4) faces it
+        BlockPos chest1 = new BlockPos(2, 1, 4);
+        BlockPos chest2 = new BlockPos(2, 1, 3);
+        helper.setBlock(chest1, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.WEST).setValue(ChestBlock.TYPE, ChestType.LEFT));
+        helper.setBlock(chest2, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.WEST).setValue(ChestBlock.TYPE, ChestType.RIGHT));
+        ChestBlockEntity c1 = helper.getBlockEntity(chest1, ChestBlockEntity.class);
+        ChestBlockEntity c2 = helper.getBlockEntity(chest2, ChestBlockEntity.class);
+        ItemKey cobble = ItemKey.of(new ItemStack(Items.COBBLESTONE));
+
+        java.util.function.Supplier<Integer> chestCount = () -> {
+            int count = 0;
+            for (int i = 0; i < c1.getContainerSize(); i++) count += c1.getItem(i).getCount();
+            for (int i = 0; i < c2.getContainerSize(); i++) count += c2.getItem(i).getCount();
+            return count;
+        };
+        // the test framework keeps one time per Runnable object: scheduling the same object again moves it, so each call wraps it
+        Runnable emptyChest = () -> {
+            c1.clearContent();
+            c2.clearContent();
+        };
+        Runnable fillChest = () -> {
+            for (int i = 0; i < c1.getContainerSize(); i++) c1.setItem(i, new ItemStack(Items.COBBLESTONE, 64));
+            for (int i = 0; i < c2.getContainerSize(); i++) c2.setItem(i, new ItemStack(Items.COBBLESTONE, 64));
+        };
+
+        // A bus that has rested moves up to a second's worth at once, as designed: every window below opens after
+        // that first move, so it measures the steady rate. Items: 2, 20, 128 a tick.
+        helper.setBlock(BUS_IN, ModBlocks.INJECTOR_EXPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.WEST));
+        BusBlockEntity exportBus = helper.getBlockEntity(BUS_IN, BusBlockEntity.class);
+        exportBus.getFilters().setItem(0, new ItemStack(Items.COBBLESTONE));
+        net(helper, bay).insertItem(new ItemStack(Items.COBBLESTONE, 20000), false);
+
+        helper.runAfterDelay(30, () -> emptyChest.run());
+        helper.runAfterDelay(70, () -> {
+            int moved = chestCount.get();
+            helper.assertTrue(moved >= 55 && moved <= 110, "export, no upgrades: ~80 items in 40 ticks (got " + moved + ")");
+            exportBus.getUpgrades().setItem(0, new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get(), 4));
+            exportBus.wake();
+        });
+        helper.runAfterDelay(80, () -> emptyChest.run());
+        helper.runAfterDelay(100, () -> {
+            int moved = chestCount.get();
+            helper.assertTrue(moved >= 250 && moved <= 600, "export, 4 upgrades: ~400 items in 20 ticks (got " + moved + ")");
+            exportBus.getUpgrades().setItem(0, new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get(), 28));
+            exportBus.wake();
+        });
+        helper.runAfterDelay(110, () -> emptyChest.run());
+        helper.runAfterDelay(130, () -> {
+            int moved = chestCount.get();
+            helper.assertTrue(moved >= 1800 && moved <= 3200, "export, 28 upgrades: ~2560 items in 20 ticks (got " + moved + ")");
+
+            // The same three speeds through an import bus
+            helper.setBlock(BUS_IN, ModBlocks.VACUUM_IMPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.WEST));
+            fillChest.run();
+        });
+
+        long[] before = new long[1];
+        Runnable mark = () -> before[0] = net(helper, bay).itemCountOf(cobble);
+        helper.runAfterDelay(160, mark);
+        helper.runAfterDelay(200, () -> {
+            long moved = net(helper, bay).itemCountOf(cobble) - before[0];
+            helper.assertTrue(moved >= 55 && moved <= 110, "import, no upgrades: ~80 items in 40 ticks (got " + moved + ")");
+            BusBlockEntity importBus = helper.getBlockEntity(BUS_IN, BusBlockEntity.class);
+            importBus.getUpgrades().setItem(0, new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get(), 4));
+            importBus.wake();
+        });
+        helper.runAfterDelay(210, () -> {
+            fillChest.run();
+            mark.run();
+        });
+        helper.runAfterDelay(230, () -> {
+            long moved = net(helper, bay).itemCountOf(cobble) - before[0];
+            helper.assertTrue(moved >= 250 && moved <= 600, "import, 4 upgrades: ~400 items in 20 ticks (got " + moved + ")");
+            BusBlockEntity importBus = helper.getBlockEntity(BUS_IN, BusBlockEntity.class);
+            importBus.getUpgrades().setItem(0, new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get(), 28));
+            importBus.wake();
+        });
+        helper.runAfterDelay(240, () -> {
+            fillChest.run();
+            mark.run();
+        });
+        helper.runAfterDelay(260, () -> {
+            long moved = net(helper, bay).itemCountOf(cobble) - before[0];
+            helper.assertTrue(moved >= 1800 && moved <= 3200, "import, 28 upgrades: ~2560 items in 20 ticks (got " + moved + ")");
+
+            // Fluid through an export bus with 4 upgrades: 2500 mB a tick
+            BlockPos tankPos = BUS_OUT.north();
+            helper.setBlock(tankPos, ModBlocks.COPPER_TANK.get().defaultBlockState());
+            CopperTankBlockEntity tank = helper.getBlockEntity(tankPos, CopperTankBlockEntity.class);
+            CompoundTag capTag = new CompoundTag();
+            capTag.putInt("Capacity", 250_000);
+            tank.loadWithComponents(net.minecraft.world.level.storage.TagValueInput.create(
+                    net.minecraft.util.ProblemReporter.DISCARDING, helper.getLevel().registryAccess(), capTag));
+
+            helper.setBlock(BUS_OUT, ModBlocks.INJECTOR_EXPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+            BusBlockEntity fluidBus = helper.getBlockEntity(BUS_OUT, BusBlockEntity.class);
+            fluidBus.getFilters().setItem(0, FluidGhostItem.of(new FluidStack(Fluids.WATER, 1000)));
+            fluidBus.getUpgrades().setItem(0, new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get(), 4));
+            int stored = net(helper, bay).insertFluid(new FluidStack(Fluids.WATER, 200_000), false);
+            helper.assertTrue(stored == 200_000, "the fluid disk holds the water for the test (took " + stored + " mB)");
+        });
+        int[] tankBefore = new int[1];
+        helper.runAfterDelay(270, () -> tankBefore[0] = helper.getBlockEntity(BUS_OUT.north(), CopperTankBlockEntity.class).fluid().getAmount());
+        helper.runAfterDelay(290, () -> {
+            int moved = helper.getBlockEntity(BUS_OUT.north(), CopperTankBlockEntity.class).fluid().getAmount() - tankBefore[0];
+            helper.assertTrue(moved >= 35_000 && moved <= 65_000, "fluid export, 4 upgrades: ~50000 mB in 20 ticks (got " + moved + " mB)");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * 11. An Order Ledger in fluid mode with a real pattern that makes a fluid:
+     * it orders the craft, the fluid reaches its target, and it stops ordering.
+     */
+    public static void stockRequesterKeepsFluid(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        CopperDriveBayBlockEntity driveBay = helper.getBlockEntity(bay, CopperDriveBayBlockEntity.class);
+        driveBay.getContainer().setItem(0, new ItemStack(ModItems.COPPER_DISK_16K.get()));
+        driveBay.getContainer().setItem(1, new ItemStack(ModItems.FLUID_DISK_16K.get()));
+
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+
+        // Pattern: 1 Ice -> 1000 mB Water
+        ItemStack waterGhost = FluidGhostItem.of(new FluidStack(Fluids.WATER, 1000));
+        provider.getContainer().setItem(0, card(new PatternData(false,
+                List.of(new ItemStack(Items.ICE)), List.of(waterGhost))));
+
+        // The machine: a chest beside the provider; the loop below melts each ice it gets into a bucket's worth
+        BlockPos machinePos = PROV.east();
+        helper.setBlock(machinePos, Blocks.CHEST);
+        ChestBlockEntity machine = helper.getBlockEntity(machinePos, ChestBlockEntity.class);
+
+        net(helper, bay).insertItem(new ItemStack(Items.ICE, 10), false);
+        ItemKey iceKey = ItemKey.of(new ItemStack(Items.ICE));
+
+        helper.setBlock(BUS_OUT, ModBlocks.STOCK_REQUESTER.get().defaultBlockState());
+        StockRequesterBlockEntity req = helper.getBlockEntity(BUS_OUT, StockRequesterBlockEntity.class);
+        ItemStack reqFilter = FluidGhostItem.of(new FluidStack(Fluids.WATER, 1000));
+        reqFilter.set(ModDataComponents.KEEP_AMOUNT.get(), 2000); // Target = 2000 mB Water
+        req.getFilters().setItem(0, reqFilter);
+
+        boolean[] sawCrafting = new boolean[1];
+        for (int t = 1; t <= 280; t++) {
+            helper.runAfterDelay(t, () -> {
+                if (req.getSlotStatus(0) == StockRequesterBlockEntity.STATUS_CRAFTING) {
+                    sawCrafting[0] = true;
+                }
+                GolemNetwork n = net(helper, bay);
+                for (int i = 0; i < machine.getContainerSize(); i++) {
+                    ItemStack in = machine.getItem(i);
+                    if (in.is(Items.ICE)) {
+                        int count = in.getCount();
+                        machine.setItem(i, ItemStack.EMPTY);
+                        n.insertFluidFromMachine(new FluidStack(Fluids.WATER, 1000 * count), null);
+                    }
+                }
+            });
+        }
+
+        // It reaches the target, for exactly the ice that takes, and then it stops
+        helper.runAfterDelay(100, () -> {
+            GolemNetwork n = net(helper, bay);
+            helper.assertTrue(sawCrafting[0], "the ledger reported that it was crafting");
+            long water = n.fluidCountOf(Fluids.WATER);
+            helper.assertTrue(water == 2000, "water reaches the target of 2000 mB exactly (got " + water + ")");
+            helper.assertTrue(n.itemCountOf(iceKey) == 8, "two ice were used (left " + n.itemCountOf(iceKey) + ")");
+        });
+        helper.runAfterDelay(140, () -> {
+            GolemNetwork n = net(helper, bay);
+            CryoCalculatorBlockEntity cpu = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class);
+            helper.assertTrue(cpu.isIdle(), "no further job once the target is reached");
+            helper.assertTrue(req.getSlotStatus(0) == StockRequesterBlockEntity.STATUS_OK, "status is OK once the target is reached");
+            helper.assertTrue(n.fluidCountOf(Fluids.WATER) == 2000, "no further water was ordered");
+            helper.assertTrue(n.itemCountOf(iceKey) == 8, "no further ice was used");
+
+            // Use some water: it keeps the stock, so it orders just what is missing
+            FluidStack taken = n.extractFluid(new FluidStack(Fluids.WATER, 1000), 1000, false);
+            helper.assertTrue(taken.getAmount() == 1000, "took 1000 mB out of the network");
+        });
+        helper.runAfterDelay(260, () -> {
+            GolemNetwork n = net(helper, bay);
+            long water = n.fluidCountOf(Fluids.WATER);
+            helper.assertTrue(water == 2000, "the used water was made again (got " + water + ")");
+            helper.assertTrue(n.itemCountOf(iceKey) == 7, "one more ice was used (left " + n.itemCountOf(iceKey) + ")");
+            helper.assertTrue(helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class).isIdle(), "and the calculator is idle again");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * 12. A disk with items taken out of one cabinet and put into another cabinet in the network keeps every item
+     * and its count, and items in a disk are not lost when the cabinet is broken and replaced.
+     */
+    public static void networkKeepsContentsAcrossDiskMove(GameTestHelper helper) {
+        BlockPos bay1 = baseNetwork(helper);
+        CopperDriveBayBlockEntity drive1 = helper.getBlockEntity(bay1, CopperDriveBayBlockEntity.class);
+        drive1.getContainer().setItem(0, new ItemStack(ModItems.COPPER_DISK_64K.get()));
+
+        // Second cabinet at (6, 1, 7) facing SOUTH (touches corner bushing at (6, 1, 6))
+        BlockPos bay2 = new BlockPos(6, 1, 7);
+        putBay(helper, bay2);
+
+        ItemKey diamond = ItemKey.of(new ItemStack(Items.DIAMOND));
+        ItemKey gold = ItemKey.of(new ItemStack(Items.GOLD_INGOT));
+        ItemKey emerald = ItemKey.of(new ItemStack(Items.EMERALD));
+
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, bay1);
+            n.insertItem(new ItemStack(Items.DIAMOND, 42), false);
+            n.insertItem(new ItemStack(Items.GOLD_INGOT, 128), false);
+            n.insertItem(new ItemStack(Items.EMERALD, 15), false);
+
+            helper.assertTrue(n.itemCountOf(diamond) == 42, "initial diamonds stored");
+            helper.assertTrue(n.itemCountOf(gold) == 128, "initial gold stored");
+            helper.assertTrue(n.itemCountOf(emerald) == 15, "initial emerald stored");
+
+            // 1. Move disk from Cabinet 1 to Cabinet 2
+            ItemStack disk = drive1.getContainer().removeItemNoUpdate(0);
+            drive1.setChanged();
+
+            GolemNetwork nEmpty = net(helper, bay1);
+            helper.assertTrue(nEmpty.itemCountOf(diamond) == 0, "storage empty without disk");
+
+            CopperDriveBayBlockEntity drive2 = helper.getBlockEntity(bay2, CopperDriveBayBlockEntity.class);
+            drive2.getContainer().setItem(0, disk);
+            drive2.setChanged();
+
+            GolemNetwork nMoved = net(helper, bay1);
+            helper.assertTrue(nMoved.itemCountOf(diamond) == 42, "diamonds preserved in new cabinet");
+            helper.assertTrue(nMoved.itemCountOf(gold) == 128, "gold preserved in new cabinet");
+            helper.assertTrue(nMoved.itemCountOf(emerald) == 15, "emerald preserved in new cabinet");
+
+            // 2. Break Cabinet 2 and replace it
+            ItemStack savedDisk = drive2.getContainer().getItem(0).copy();
+            Direction facing = Direction.SOUTH;
+            for (CopperDriveBayBlock.Part p : CopperDriveBayBlock.Part.values()) {
+                helper.setBlock(CopperDriveBayBlock.partPos(bay2, facing, p), Blocks.AIR);
+            }
+
+            helper.runAfterDelay(10, () -> {
+                putBay(helper, bay2);
+                CopperDriveBayBlockEntity driveReplaced = helper.getBlockEntity(bay2, CopperDriveBayBlockEntity.class);
+                driveReplaced.getContainer().setItem(0, savedDisk);
+                driveReplaced.setChanged();
+
+                helper.runAfterDelay(10, () -> {
+                    reload(helper, bay2, CopperDriveBayBlockEntity.class);
+                    GolemNetwork nReplaced = net(helper, bay1);
+                    helper.assertTrue(nReplaced.itemCountOf(diamond) == 42, "diamonds preserved after cabinet replaced and reloaded");
+                    helper.assertTrue(nReplaced.itemCountOf(gold) == 128, "gold preserved after cabinet replaced");
+                    helper.assertTrue(nReplaced.itemCountOf(emerald) == 15, "emerald preserved after cabinet replaced");
+
+                    ItemStack ext = nReplaced.extractItem(new ItemStack(Items.DIAMOND), 42, false);
+                    helper.assertTrue(ext.getCount() == 42, "all 42 diamonds extracted cleanly");
+                    helper.assertTrue(nReplaced.itemCountOf(diamond) == 0, "diamonds cleanly cleared");
+                    helper.succeed();
                 });
             });
         });
