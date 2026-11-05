@@ -230,6 +230,7 @@
   "gui.golem_logix.encoder.load": "Read",
   "gui.golem_logix.calc.cancel": "Abort job",
   "gui.golem_logix.calc.waiting": "Waiting for data...",
+  "gui.golem_logix.calc.helping": "Idle: lending its steps to this order",
   "gui.golem_logix.calc.idle": "Idle. Order crafting from a terminal.",
   "gui.golem_logix.calc.status.running": "Computing...",
   "gui.golem_logix.calc.status.waiting_machine": "Waiting for a machine",

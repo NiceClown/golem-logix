@@ -15,11 +15,12 @@ import java.util.List;
 /**
  * Server -> client: job state of a Cryo-Calculator.
  *
- * @param state -1 = idle, otherwise the ordinal of CraftingJob.Status
+ * @param state   -1 = idle, otherwise the ordinal of CraftingJob.Status
+ * @param helping the job shown is another processor's: this one is idle and lends it its steps
  */
 public record CalculatorStatusPayload(int containerId, int state, long done, long total, int coprocessors, int workers,
                                       long awaiting, boolean online, ItemStack target, long amount,
-                                      List<ItemStack> contents) implements CustomPacketPayload {
+                                      List<ItemStack> contents, boolean helping) implements CustomPacketPayload {
     public static final Type<CalculatorStatusPayload> TYPE =
             new Type<>(Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "calculator_status"));
 
@@ -39,6 +40,7 @@ public record CalculatorStatusPayload(int containerId, int state, long done, lon
                 for (ItemStack s : p.contents) {
                     ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, s);
                 }
+                buf.writeBoolean(p.helping);
             },
             buf -> {
                 int id = buf.readVarInt();
@@ -56,7 +58,7 @@ public record CalculatorStatusPayload(int containerId, int state, long done, lon
                 for (int i = 0; i < n; i++) {
                     contents.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(buf));
                 }
-                return new CalculatorStatusPayload(id, state, done, total, cop, workers, awaiting, online, target, amount, contents);
+                return new CalculatorStatusPayload(id, state, done, total, cop, workers, awaiting, online, target, amount, contents, buf.readBoolean());
             });
 
     @Override

@@ -62,6 +62,7 @@ import net.minecraft.world.InteractionHand;
 import java.util.Map;
 import java.util.List;
 import com.golemlogix.blocks.ProviderOutput;
+import com.golemlogix.crafting.CraftingJob;
 import com.golemlogix.blocks.CopperDriveBayBlock;
 import com.golemlogix.blockentity.FormationBusBlockEntity;
 import com.golemlogix.blockentity.CopperTankBlockEntity;
@@ -2971,6 +2972,285 @@ public final class GolemGameTestsExtra {
             helper.assertTrue(moved >= 35_000 && moved <= 65_000, "fluid export, 4 upgrades: ~50000 mB in 20 ticks (got " + moved + " mB)");
             helper.succeed();
         });
+    }
+
+    /** The stick and plank recipes on a provider, and a large storage. */
+    private static BlockPos hugeRig(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        CopperDriveBayBlockEntity drive = helper.getBlockEntity(bay, CopperDriveBayBlockEntity.class);
+        for (int i = 0; i < 4; i++) {
+            drive.getContainer().setItem(i, new ItemStack(ModItems.COPPER_DISK_256K.get()));
+        }
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+        provider.getContainer().setItem(0, card(craftingPattern(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.OAK_LOG))));
+        java.util.List<ItemStack> grid = new java.util.ArrayList<>();
+        for (int i = 0; i < 9; i++) {
+            grid.add(i == 0 || i == 3 ? new ItemStack(Items.OAK_PLANKS) : ItemStack.EMPTY);
+        }
+        provider.getContainer().setItem(1, card(new PatternData(true, grid, List.of(new ItemStack(Items.STICK, 4)))));
+        return bay;
+    }
+
+    /**
+     * An order of hundreds of thousands of items goes through. Sticks: 150000 crafts from planks, 75000 crafts of planks from logs.
+     * Every step is accounted for, and the server's time limit holds it back within a tick without stopping it.
+     */
+    public static void autocraftHugeOrder(GameTestHelper helper) {
+        BlockPos bay = hugeRig(helper);
+        ItemKey stick = ItemKey.of(new ItemStack(Items.STICK));
+        ItemKey plank = ItemKey.of(new ItemStack(Items.OAK_PLANKS));
+        ItemKey log = ItemKey.of(new ItemStack(Items.OAK_LOG));
+
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.OAK_LOG, 100_000), false);
+            var start = n.startCrafting(stick, 600_000);
+            helper.assertTrue(start.type() == GolemNetwork.StartType.STARTED, "the huge order started: " + start.type());
+            helper.assertTrue(start.plan().totalExecutions() == 225_000, "225000 executions, got " + start.plan().totalExecutions());
+
+            CraftingJob job = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class).getJob();
+            job.tick(n, 1_000_000);
+            long first = job.doneExecutions();
+            helper.assertTrue(first > 0 && first < 225_000, "the time limit stopped the cycle part way (did " + first + ")");
+            helper.assertTrue(job.status() == CraftingJob.Status.RUNNING, "and the job goes on: " + job.status());
+            job.tick(n, 1_000_000);
+            helper.assertTrue(job.doneExecutions() > first, "past the limit a job still does a step");
+        });
+        // the limit is shared with all the other jobs on the server: this takes a part of it, to leave them theirs
+        for (int t = 6; t <= 1400; t++) {
+            helper.runAfterDelay(t, () -> {
+                CraftingJob job = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class).getJob();
+                if (job != null) {
+                    job.tick(net(helper, bay), 1000);
+                }
+            });
+        }
+        helper.runAfterDelay(7, () -> helper.succeedWhen(() -> {
+            GolemNetwork n = net(helper, bay);
+            helper.assertTrue(helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class).isIdle(), "the calculator finishes");
+            helper.assertTrue(n.itemCountOf(stick) == 600_000, "600000 sticks, got " + n.itemCountOf(stick));
+            helper.assertTrue(n.itemCountOf(plank) == 0, "no planks left, got " + n.itemCountOf(plank));
+            helper.assertTrue(n.itemCountOf(log) == 25_000, "25000 logs left, got " + n.itemCountOf(log));
+        }));
+    }
+
+    /**
+     * Planning does not depend on the depth of the recipes or on the amount. Thirty levels of three items, each made from all three
+     * of the level below: 3^30 paths through the recipes, which no walk over them would ever finish. A shared ingredient is rounded
+     * up once, not per consumer, and steps come after what they need.
+     */
+    public static void plannerDeepAndHuge(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, bay);
+            List<net.minecraft.world.item.Item> items = net.minecraft.core.registries.BuiltInRegistries.ITEM.stream()
+                    .filter(i -> i != Items.AIR && new ItemStack(i).getMaxStackSize() == 64).toList();
+            int base = 100, width = 3, levels = 30;
+            for (int l = 1; l <= levels; l++) {
+                for (int j = 0; j < width; j++) {
+                    List<ItemStack> in = new java.util.ArrayList<>();
+                    for (int k = 0; k < width; k++) {
+                        in.add(new ItemStack(items.get(base + (l - 1) * width + k)));
+                    }
+                    ItemStack out = new ItemStack(items.get(base + l * width + j));
+                    n.patternIndex().put(ItemKey.of(out), new GolemNetwork.PatternRef(new PatternData(false, in, List.of(out)), null));
+                }
+            }
+            var plan = com.golemlogix.crafting.CraftingPlanner.plan(n, ItemKey.of(new ItemStack(items.get(base + levels * width))), 1);
+            long powerOf3 = 1;
+            for (int i = 0; i < levels - 1; i++) {
+                powerOf3 *= 3;
+            }
+            // one at the top, then the levels below take 3, 9, 27... executions in all, down to 3^29: the sum of 3^0..3^29
+            long executions = (powerOf3 * 3 - 1) / 2;
+            helper.assertTrue(plan.totalExecutions() == executions, "executions " + plan.totalExecutions() + ", expected " + executions);
+            helper.assertTrue(plan.steps().size() == 1 + width * (levels - 1), "one step per recipe used, got " + plan.steps().size());
+            helper.assertTrue(plan.missing().size() == width, "the three base items are missing, got " + plan.missing().size());
+            for (long need : plan.missing().values()) {
+                helper.assertTrue(need == powerOf3, "each base item is needed " + powerOf3 + " times, got " + need);
+            }
+
+            // A and B both need one plank, a craft gives four, there is one log
+            n.patternIndex().clear();
+            ItemStack a = new ItemStack(Items.STICK), b = new ItemStack(Items.BOWL), top = new ItemStack(Items.BEETROOT_SOUP);
+            PatternData plank = new PatternData(false, List.of(new ItemStack(Items.OAK_LOG)), List.of(new ItemStack(Items.OAK_PLANKS, 4)));
+            PatternData topPattern = new PatternData(false, List.of(a, b), List.of(top));
+            n.patternIndex().put(ItemKey.of(top), new GolemNetwork.PatternRef(topPattern, null));
+            n.patternIndex().put(ItemKey.of(a), new GolemNetwork.PatternRef(new PatternData(false, List.of(new ItemStack(Items.OAK_PLANKS)), List.of(a)), null));
+            n.patternIndex().put(ItemKey.of(b), new GolemNetwork.PatternRef(new PatternData(false, List.of(new ItemStack(Items.OAK_PLANKS)), List.of(b)), null));
+            n.patternIndex().put(ItemKey.of(new ItemStack(Items.OAK_PLANKS)), new GolemNetwork.PatternRef(plank, null));
+            n.insertItem(new ItemStack(Items.OAK_LOG, 1), false);
+            var shared = com.golemlogix.crafting.CraftingPlanner.plan(n, ItemKey.of(top), 1);
+            helper.assertTrue(shared.missing().isEmpty(), "one log is enough for both: " + shared.missing());
+            helper.assertTrue(shared.totalExecutions() == 4, "four executions, got " + shared.totalExecutions());
+            helper.assertTrue(shared.steps().get(0).pattern().equals(plank), "the planks come first");
+            helper.assertTrue(shared.steps().get(3).pattern().equals(topPattern), "the order comes last");
+
+            GolemNetwork.patternsChanged();
+            helper.succeed();
+        });
+    }
+
+    /**
+     * An idle calculator lends a running job its steps, so one order goes as fast as the two together. It stays free: a new order
+     * takes it at once, and both finish with the right results.
+     */
+    public static void idleCalculatorLendsItsSteps(GameTestHelper helper) {
+        BlockPos bay = hugeRig(helper);
+        helper.setBlock(BUS_OUT, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        CryoCalculatorBlockEntity[] cpus = {helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class),
+                helper.getBlockEntity(BUS_OUT, CryoCalculatorBlockEntity.class)};
+        ItemKey plank = ItemKey.of(new ItemStack(Items.OAK_PLANKS));
+        ItemKey stick = ItemKey.of(new ItemStack(Items.STICK));
+        int[] owner = new int[1];
+
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.OAK_LOG, 104), false);
+            n.insertItem(new ItemStack(Items.OAK_PLANKS, 2), false);
+            var start = n.startCrafting(plank, 400);
+            helper.assertTrue(start.type() == GolemNetwork.StartType.STARTED, "the first order started: " + start.type());
+            owner[0] = cpus[0].isIdle() ? 1 : 0;
+        });
+        // 40 ticks are 10 cycles of one step each: alone it could do 11 at most
+        helper.runAfterDelay(45, () -> {
+            CraftingJob job = cpus[owner[0]].getJob();
+            CryoCalculatorBlockEntity other = cpus[1 - owner[0]];
+            helper.assertTrue(job.doneExecutions() >= 16, "two calculators work on it (done " + job.doneExecutions() + ")");
+            helper.assertTrue(other.isIdle(), "the helper has no job of its own");
+            helper.assertTrue(other.helpedJob() == job, "and knows whom it helps");
+
+            GolemNetwork n = net(helper, bay);
+            var second = n.startCrafting(stick, 4);
+            helper.assertTrue(second.type() == GolemNetwork.StartType.STARTED, "a new order is taken: " + second.type());
+            helper.assertTrue(!other.isIdle(), "by the calculator that was helping, at once");
+            helper.assertTrue(other.helpedJob() == null || other.getJob() != null, "which now works on its own");
+        });
+        helper.runAfterDelay(46, () -> helper.succeedWhen(() -> {
+            GolemNetwork n = net(helper, bay);
+            helper.assertTrue(cpus[0].isIdle() && cpus[1].isIdle(), "both finish");
+            helper.assertTrue(n.itemCountOf(plank) == 400, "400 planks, got " + n.itemCountOf(plank));
+            helper.assertTrue(n.itemCountOf(stick) == 4, "4 sticks, got " + n.itemCountOf(stick));
+        }));
+    }
+
+    /** A calculator under a Redstone Module keeps the pace of its signal: it neither gets help nor gives it. */
+    public static void redstoneCalculatorKeepsToItself(GameTestHelper helper) {
+        BlockPos bay = hugeRig(helper);
+        helper.setBlock(BUS_OUT, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        CryoCalculatorBlockEntity one = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class);
+        CryoCalculatorBlockEntity two = helper.getBlockEntity(BUS_OUT, CryoCalculatorBlockEntity.class);
+        ItemKey plank = ItemKey.of(new ItemStack(Items.OAK_PLANKS));
+        // Both ignore the signal, so they work; the module alone is what should keep them apart
+        for (CryoCalculatorBlockEntity c : List.of(one, two)) {
+            c.getUpgrades().setItem(com.golemlogix.upgrade.UpgradeSpec.CALCULATOR.slotOf(com.golemlogix.upgrade.UpgradeType.REDSTONE),
+                    new ItemStack(ModItems.REDSTONE_MODULE.get()));
+            c.menuData().set(0, com.golemlogix.upgrade.RedstoneMode.IGNORE.ordinal());
+        }
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.OAK_LOG, 100), false);
+            helper.assertTrue(n.startCrafting(plank, 400).type() == GolemNetwork.StartType.STARTED, "the order started");
+        });
+        helper.runAfterDelay(45, () -> {
+            CryoCalculatorBlockEntity owner = one.isIdle() ? two : one;
+            CryoCalculatorBlockEntity other = one.isIdle() ? one : two;
+            long done = owner.getJob().doneExecutions();
+            helper.assertTrue(done >= 7 && done <= 12, "it works alone at one step a cycle (done " + done + ")");
+            helper.assertTrue(other.helpedJob() == null, "the other one does not help");
+
+            // The module on the job alone: it gets no help
+            other.getUpgrades().setItem(com.golemlogix.upgrade.UpgradeSpec.CALCULATOR.slotOf(com.golemlogix.upgrade.UpgradeType.REDSTONE), ItemStack.EMPTY);
+            helper.runAfterDelay(20, () -> {
+                helper.assertTrue(other.helpedJob() == null, "a job under a module gets no help");
+                // The module on the idle one alone: it gives none
+                owner.getUpgrades().setItem(com.golemlogix.upgrade.UpgradeSpec.CALCULATOR.slotOf(com.golemlogix.upgrade.UpgradeType.REDSTONE), ItemStack.EMPTY);
+                other.getUpgrades().setItem(com.golemlogix.upgrade.UpgradeSpec.CALCULATOR.slotOf(com.golemlogix.upgrade.UpgradeType.REDSTONE), new ItemStack(ModItems.REDSTONE_MODULE.get()));
+                helper.runAfterDelay(20, () -> {
+                    helper.assertTrue(other.helpedJob() == null, "a calculator under a module gives no help");
+                    // No modules at all: it helps
+                    other.getUpgrades().setItem(com.golemlogix.upgrade.UpgradeSpec.CALCULATOR.slotOf(com.golemlogix.upgrade.UpgradeType.REDSTONE), ItemStack.EMPTY);
+                    helper.runAfterDelay(20, () -> {
+                        helper.assertTrue(other.helpedJob() == owner.getJob(), "positive control: without modules it helps");
+                        helper.succeed();
+                    });
+                });
+            });
+        });
+    }
+
+    /** A crafting step remembers the recipe's result for its cells, and only for those: other cells give their own. */
+    public static void craftingStepCacheFollowsTheCells(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var step = new CraftingJob.StepState(craftingPattern(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.OAK_LOG)), 4);
+        List<ItemStack> oak = List.of(new ItemStack(Items.OAK_LOG));
+        List<ItemStack> birch = List.of(new ItemStack(Items.BIRCH_LOG));
+        List<ItemStack> nothing = List.of(new ItemStack(Items.DIRT));
+        helper.assertTrue(step.craft(level, oak).get(0).is(Items.OAK_PLANKS), "oak logs make oak planks");
+        helper.assertTrue(step.craft(level, oak).get(0).getCount() == 4, "and again, four of them");
+        helper.assertTrue(step.craft(level, birch).get(0).is(Items.BIRCH_PLANKS), "birch logs make birch planks, not what oak gave");
+        helper.assertTrue(step.craft(level, nothing) == null, "cells with no recipe make nothing");
+        helper.assertTrue(step.craft(level, oak).get(0).is(Items.OAK_PLANKS), "and oak logs still work after that");
+        helper.succeed();
+    }
+
+    /**
+     * Thousands of portions inside machines take one record in the save per Provider, not one each. They survive a reload, and every
+     * result comes back to the job.
+     */
+    public static void autocraftManyPortionsKeepTheSaveSmall(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.getBlockEntity(bay, CopperDriveBayBlockEntity.class).getContainer().setItem(0, new ItemStack(ModItems.COPPER_DISK_64K.get()));
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        helper.getBlockEntity(PROV, PatternProviderBlockEntity.class).getContainer().setItem(0, card(new PatternData(false,
+                List.of(new ItemStack(Items.RAW_IRON)), List.of(new ItemStack(Items.IRON_INGOT)))));
+        helper.setBlock(PROV.east(), Blocks.CHEST);
+        ChestBlockEntity machine = helper.getBlockEntity(PROV.east(), ChestBlockEntity.class);
+        ItemKey ingot = ItemKey.of(new ItemStack(Items.IRON_INGOT));
+
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.RAW_IRON, 1500), false);
+            helper.assertTrue(n.startCrafting(ingot, 1500).type() == GolemNetwork.StartType.STARTED, "the order started");
+        });
+        boolean[] reloaded = new boolean[1];
+        for (int t = 6; t <= 1700; t++) {
+            helper.runAfterDelay(t, () -> {
+                CraftingJob job = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class).getJob();
+                if (job != null && job.remainingExecutions() > 0) {
+                    job.tick(net(helper, bay), 1500);
+                    return;
+                }
+                if (job == null) {
+                    return;
+                }
+                // all are out: first the save, then the machine hands everything back
+                if (!reloaded[0]) {
+                    reloaded[0] = true;
+                    helper.assertTrue(job.awaitingTotal() == 1500, "1500 portions are out, got " + job.awaitingTotal());
+                    int chars = job.save(helper.getLevel().registryAccess()).toString().length();
+                    helper.assertTrue(chars < 3000, "the job's save stays small (" + chars + " characters)");
+                    reload(helper, CPU, CryoCalculatorBlockEntity.class);
+                    return;
+                }
+                for (int i = 0; i < machine.getContainerSize(); i++) {
+                    int count = machine.getItem(i).getCount();
+                    if (count > 0) {
+                        machine.setItem(i, ItemStack.EMPTY);
+                        net(helper, bay).insertFromMachine(new ItemStack(Items.IRON_INGOT, count));
+                    }
+                }
+            });
+        }
+        helper.runAfterDelay(7, () -> helper.succeedWhen(() -> {
+            helper.assertTrue(reloaded[0], "the portions went out and the job was reloaded");
+            helper.assertTrue(helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class).isIdle(), "the job finishes");
+            long ingots = net(helper, bay).itemCountOf(ingot);
+            helper.assertTrue(ingots == 1500, "every ingot came back, got " + ingots);
+        }));
     }
 
     /**

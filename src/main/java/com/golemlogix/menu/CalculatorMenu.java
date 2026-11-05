@@ -89,9 +89,15 @@ public class CalculatorMenu extends GolemMenu {
         GolemNetwork net = GolemNetwork.get(be.getLevel(), be.getBlockPos());
         boolean online = net.isOnline();
         CalculatorStatusPayload p;
-        if (job == null) {
+        CraftingJob helped = job == null ? be.helpedJob() : null;
+        if (helped != null) {
+            // no order of its own: it shows the one it is lending its steps to
+            p = new CalculatorStatusPayload(containerId, helped.status().ordinal(), helped.doneExecutions(), helped.totalExecutions(),
+                    be.getCoprocessors(), be.getWorkers(), helped.awaitingTotal(), online,
+                    helped.target().toStack(1), helped.amount(), List.of(), true);
+        } else if (job == null) {
             p = new CalculatorStatusPayload(containerId, -1, 0, 0, be.getCoprocessors(), be.getWorkers(), 0, online,
-                    ItemStack.EMPTY, 0, List.of());
+                    ItemStack.EMPTY, 0, List.of(), false);
         } else {
             List<ItemStack> contents = new ArrayList<>();
             for (Map.Entry<com.golemlogix.system.ItemKey, Long> e : job.inventory().entrySet()) {
@@ -105,7 +111,7 @@ public class CalculatorMenu extends GolemMenu {
             }
             p = new CalculatorStatusPayload(containerId, job.status().ordinal(), job.doneExecutions(), job.totalExecutions(),
                     be.getCoprocessors(), be.getWorkers(), job.awaitingTotal(), online,
-                    job.target().toStack(1), job.amount(), contents);
+                    job.target().toStack(1), job.amount(), contents, false);
         }
         if (!p.equals(lastSent)) {
             lastSent = p;

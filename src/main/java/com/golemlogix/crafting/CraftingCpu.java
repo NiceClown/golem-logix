@@ -52,6 +52,11 @@ public interface CraftingCpu {
     /** Number of speed-ups shown in the monitor (placed coprocessors; for the mainframe, compressed ones with the multiplier). */
     int getCoprocessors();
 
+    /** Idle processors may lend this one's job their steps. One under a Redstone Module keeps the pace its signal sets. */
+    default boolean acceptsHelp() {
+        return true;
+    }
+
     /** Whether it can take a job now: the block has a channel in this network. */
     default boolean canRun(GolemNetwork net) {
         return net.isDeviceActive(cpuPos());

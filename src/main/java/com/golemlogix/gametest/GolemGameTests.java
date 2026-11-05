@@ -1656,7 +1656,7 @@ public class GolemGameTests {
     }
 
     /** A north-facing Cryo-Mainframe with the owner at ctl: glass, casings at the back and atlants on the sides. */
-    private static void buildMainframe(GameTestHelper helper, BlockPos ctl) {
+    static void buildMainframe(GameTestHelper helper, BlockPos ctl) {
         helper.setBlock(ctl, ModBlocks.CRYO_MAINFRAME.get().defaultBlockState()
                 .setValue(com.golemlogix.blocks.CryoMainframeBlock.FACING, Direction.NORTH));
         BlockPos abs = helper.absolutePos(ctl);
@@ -1665,6 +1665,45 @@ public class GolemGameTests {
             BlockPos p = com.golemlogix.system.MainframeStructure.cellPos(abs, Direction.NORTH, i);
             helper.getLevel().setBlock(p, com.golemlogix.system.MainframeStructure.originalState(i, Direction.EAST), 3);
         }
+    }
+
+    /** The idle cores of a mainframe lend a running job their steps, and stay free: a new order takes a core at once. */
+    public static void idleMainframeCoresLend(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos ctl = new BlockPos(5, 1, 1);
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+        provider.getContainer().setItem(0, card(craftingPattern(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.OAK_LOG))));
+        provider.getContainer().setItem(1, card(craftingPattern(new ItemStack(Items.OAK_BUTTON), new ItemStack(Items.OAK_PLANKS))));
+        ItemKey plank = ItemKey.of(new ItemStack(Items.OAK_PLANKS));
+        helper.runAfterDelay(5, () -> {
+            put(helper, new BlockPos(4, 1, 3), ModBlocks.BASIC_SNOW_PIPE.get());
+            buildMainframe(helper, ctl);
+        });
+        helper.runAfterDelay(35, () -> {
+            var mf = helper.getBlockEntity(ctl, com.golemlogix.blockentity.CryoMainframeBlockEntity.class);
+            mf.getCalculators().setItem(0, new ItemStack(ModBlocks.CRYO_CALCULATOR.get()));
+            mf.getCalculators().setItem(5, new ItemStack(ModBlocks.CRYO_CALCULATOR.get()));
+            helper.assertTrue(mf.cores().size() == 4, "four cores, got " + mf.cores().size());
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.OAK_LOG, 510), false);
+            helper.assertTrue(n.startCrafting(plank, 2000).type() == GolemNetwork.StartType.STARTED, "the order started");
+        });
+        // 40 ticks are 10 cycles: one core does 11 steps at most, four about 40
+        helper.runAfterDelay(75, () -> {
+            var mf = helper.getBlockEntity(ctl, com.golemlogix.blockentity.CryoMainframeBlockEntity.class);
+            helper.assertTrue(mf.busyCores() == 1, "one core holds the order, busy: " + mf.busyCores());
+            GolemNetwork n = net(helper, bay);
+            long done = 0;
+            for (var cpu : n.cpus()) {
+                done += cpu.getJob() == null ? 0 : cpu.getJob().doneExecutions();
+            }
+            helper.assertTrue(done >= 28, "the idle cores help (done " + done + ")");
+            var second = n.startCrafting(ItemKey.of(new ItemStack(Items.OAK_BUTTON)), 1);
+            helper.assertTrue(second.type() == GolemNetwork.StartType.STARTED, "a new order is taken at once: " + second.type());
+            helper.assertTrue(mf.busyCores() == 2, "by a core that was helping, busy: " + mf.busyCores());
+            helper.succeed();
+        });
     }
 
     /**

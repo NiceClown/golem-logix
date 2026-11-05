@@ -230,6 +230,7 @@
   "gui.golem_logix.encoder.load": "Считать",
   "gui.golem_logix.calc.cancel": "Прервать",
   "gui.golem_logix.calc.waiting": "Ожидание данных...",
+  "gui.golem_logix.calc.helping": "Простаивает: помогает этому заказу",
   "gui.golem_logix.calc.idle": "Простой. Закажите крафт в терминале.",
   "gui.golem_logix.calc.status.running": "Вычисление...",
   "gui.golem_logix.calc.status.waiting_machine": "Ждём машину",

@@ -1569,6 +1569,24 @@ public final class GolemNetwork {
     }
 
     /**
+     * The job an idle processor should lend its steps to: of those that could use more, the one with the most left. Null when none
+     * could, or when autocrafting has used up this tick's time. Lending keeps nothing back: the processor stays free for a new order.
+     */
+    @Nullable
+    public com.golemlogix.crafting.CraftingJob jobWantingHelp() {
+        com.golemlogix.crafting.CraftingJob best = null;
+        long most = 0;
+        for (com.golemlogix.crafting.CraftingCpu c : cpus) {
+            com.golemlogix.crafting.CraftingJob job = c.isRemoved() ? null : c.getJob();
+            if (job != null && job.wantsHelp() && job.remainingExecutions() > most && c.acceptsHelp() && c.canRun(this)) {
+                best = job;
+                most = job.remainingExecutions();
+            }
+        }
+        return best != null && com.golemlogix.system.CraftLoad.nanosLeft(level()) > 0 ? best : null;
+    }
+
+    /**
      * Plans and starts autocrafting of several items at once on the first free Cryo-Calculator.
      * requester = the player who gets the "ready" notification; bus = the export bus that ordered the craft itself.
      */

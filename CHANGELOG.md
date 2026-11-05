@@ -20,8 +20,14 @@
   what the buses cost.
 - The co-processor stacks to 64.
 - The guide book explains all of this: the speeds, the one slot, how a bus paces itself, and the tools for server owners.
+- Autocrafting has no limit on the size of an order any more. It used to refuse anything over 200 000 executions, and said an item was missing.
+- Idle Cryo-Calculators and mainframe cores help: they lend their steps to the running job with the most left, always, for orders of any size,
+  and stay free, so a new order takes one at once. A processor under a Redstone Module keeps to itself.
+- The planner settles each item once instead of walking every path through the recipes: its time no longer grows with how deep they nest.
+- Crafting steps no longer look their recipe up every time, and a job keeps one record per gateway however many portions are in machines,
+  so a big job stays cheap to run and small in the save. New config craftMaxMillisPerTick (10) caps what autocrafting may take of a tick.
 - The game tests were reviewed: two duplicates went, tests that could not fail now can (each checked by breaking the mod on purpose),
-  and new ones cover cyclic patterns, a network cut in two, two calculators at once, power loss during a job, a job reloaded with a portion inside a machine, rights taken away with a window open, rights and the Stock Manometer after a reload, wrongly built arrays, redstone modes and Fuzzy Cards on more buses, a provider feeding several sides, a disk moved between cabinets, a Ledger keeping a fluid and real bus throughput (215 in all).
+  and new ones cover cyclic patterns, a network cut in two, two calculators at once, power loss during a job, a job reloaded with a portion inside a machine, rights taken away with a window open, rights and the Stock Manometer after a reload, wrongly built arrays, redstone modes and Fuzzy Cards on more buses, a provider feeding several sides, a disk moved between cabinets, a Ledger keeping a fluid, real bus throughput, huge orders and processors helping each other (222 in all).
 
 ## 2.1.2 (26.1.2) — Sharp at a distance
 

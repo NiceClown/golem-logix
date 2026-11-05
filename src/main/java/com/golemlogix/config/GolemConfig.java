@@ -27,6 +27,7 @@ public final class GolemConfig {
     public static final ModConfigSpec.IntValue BUS_FLUID_PER_OPERATION;
     public static final ModConfigSpec.IntValue BUS_INTERVAL_TICKS;
     public static final ModConfigSpec.IntValue BUS_MAX_MILLIS_PER_TICK;
+    public static final ModConfigSpec.IntValue CRAFT_MAX_MILLIS_PER_TICK;
     public static final ModConfigSpec.IntValue LOCAL_WIRELESS_RANGE;
     public static final ModConfigSpec.IntValue CRYO_JAR_CAPACITY;
     public static final ModConfigSpec.IntValue DISTILL_RATE;
@@ -96,6 +97,9 @@ public final class GolemConfig {
         BUS_MAX_MILLIS_PER_TICK = b.comment("How long all buses together may work in one tick (milliseconds, of the 50 a tick has; 0: no limit).",
                         "Over it, buses wait for the next tick and catch up afterwards. /golemlogix_buses shows what they take.")
                 .defineInRange("busMaxMillisPerTick", 10, 0, 50);
+        CRAFT_MAX_MILLIS_PER_TICK = b.comment("How long all autocrafting jobs together may work in one tick (milliseconds, of the 50 a tick has; 0: no limit).",
+                        "Over it, a job goes on in its next cycle.")
+                .defineInRange("craftMaxMillisPerTick", 10, 0, 50);
         b.pop();
 
         b.push("wireless");

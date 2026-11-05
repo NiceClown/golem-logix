@@ -60,6 +60,12 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
     private long lastCurrentSync = -100;
     /** Display for clients: even an instant order stays visible for at least VisualHold.TICKS ticks (crafting is not slowed down). */
     private final VisualHold hold = new VisualHold();
+    /** The job this idle calculator last lent its steps to, and until when it counts as lending. */
+    @Nullable
+    private CraftingJob helped;
+    private long helpUntil;
+    /** A lending calculator looks busy this long: a job that waits a moment for its machines does not make it flicker. */
+    private static final int HELP_HOLD = 20;
 
     /**
      * Whether the coprocessors speed up work right now (a cycle with several steps at once happened in the last BOOST_HOLD ticks):
@@ -258,7 +264,10 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
 
         boolean wasActive = be.active;
         if (be.job == null) {
-            be.active = false;
+            if ((time + pos.asLong()) % CYCLE_TICKS == 0 && !hasRedstone) {
+                be.lendSteps(level, pos, time);
+            }
+            be.active = time < be.helpUntil;
         } else if ((time + pos.asLong()) % CYCLE_TICKS == 0) {
             GolemNetwork net = GolemNetwork.get(level, pos);
             boolean ok = net.isOnline() && net.isDeviceActive(pos);
@@ -318,6 +327,47 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         if (be.hold.ended(time)) {
             be.syncToClient();
         }
+    }
+
+    /**
+     * With no order of its own a calculator works on someone else's: it stays free, so a new order takes it at once. A calculator
+     * under a Redstone Module does neither: it keeps to its own job, at the pace its signal sets.
+     */
+    private void lendSteps(Level level, BlockPos pos, long time) {
+        GolemNetwork net = GolemNetwork.get(level, pos);
+        if (!net.isOnline() || !net.isDeviceActive(pos)) {
+            return;
+        }
+        CraftingJob target = net.jobWantingHelp();
+        if (target == null) {
+            return;
+        }
+        long before = target.doneExecutions();
+        target.tick(net, getWorkers());
+        long done = target.doneExecutions() - before;
+        if (done <= 0) {
+            return;
+        }
+        helped = target;
+        helpUntil = time + HELP_HOLD;
+        level.playSound(null, pos, ModSounds.RELAY_CLICK.get(), SoundSource.BLOCKS, 0.3f, 1.2f);
+        if (done > BASE_WORKERS) {
+            boostUntil = time + BOOST_HOLD;
+        }
+        if (hold.show(target.current().stack(), time)) {
+            syncToClient();
+        }
+    }
+
+    /** The job this idle calculator is lending its steps to, for its window. */
+    @Nullable
+    public CraftingJob helpedJob() {
+        return level != null && level.getGameTime() < helpUntil && helped != null && !helped.isDone() ? helped : null;
+    }
+
+    @Override
+    public boolean acceptsHelp() {
+        return !upgrades.has(UpgradeType.REDSTONE);
     }
 
     /** Mini model above the calculator: sent to clients only when the item changes and at most twice a second. */

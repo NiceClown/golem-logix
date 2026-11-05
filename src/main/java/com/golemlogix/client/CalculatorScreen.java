@@ -89,7 +89,11 @@ public class CalculatorScreen extends GolemScreen<CalculatorMenu> {
                 g.text(font, name, x + 20, y + 1, GolemGui.PARCHMENT, false);
             }
             CraftingJob.Status st = status(s.state());
-            g.text(font, Component.translatable("gui.golem_logix.calc.status." + st.name().toLowerCase()), x, y + 16, statusColor(st), false);
+            if (s.helping()) {
+                g.text(font, font.plainSubstrByWidth(Component.translatable("gui.golem_logix.calc.helping").getString(), 148), x, y + 16, GolemGui.CYAN, false);
+            } else {
+                g.text(font, Component.translatable("gui.golem_logix.calc.status." + st.name().toLowerCase()), x, y + 16, statusColor(st), false);
+            }
             double frac = s.total() <= 0 ? 0 : (double) s.done() / s.total();
             GolemGui.bar(g, x, y + 28, 148, 10, frac, GolemGui.CYAN_DARK);
             g.centeredText(font, s.done() + " / " + s.total(), x + 74, y + 29, GolemGui.PARCHMENT);

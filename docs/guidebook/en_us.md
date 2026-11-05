@@ -1612,6 +1612,8 @@ The command **/golemlogix_buses** shows how many operations the buses make and h
 
 The config setting **busMaxMillisPerTick** (10 by default, of the 50 ms a tick has; 0 for no limit) caps that: over it, buses wait for the next tick and catch up afterwards.
 
+Autocrafting has its own, **craftMaxMillisPerTick** (10 by default): however many calculators work, over it a job goes on in its next cycle.
+
 <!-- {"type": "crafting", "recipe": "golem_logix:autocraft_module"} -->
 
 An export bus with this module: if an item from the filter is not in the network but has a pattern, the bus orders crafting (a batch at most every 2 s) and delivers the result when it is ready. No new order while one is in progress.
@@ -1875,7 +1877,15 @@ Each step costs **2 Source**.
 
 Right-click shows the target, progress “steps/total”, status, number of co-processors, items inside and an “Abort” button. On the right - slots for Compressed Co-Processors and the Redstone Module.
 
-*Several calculators work in parallel - each takes its own order.*
+#### Co-processing
+
+Several calculators work in parallel - each takes its own order. And a calculator with **no order of its own helps**: it lends its steps to the running job that has most left and could use them. One order goes as fast as all the free calculators of the network together.
+
+It keeps nothing back: a new order takes a helping calculator at once. Its window shows whom it is helping.
+
+A job that is only waiting for its machines gets no help, there would be nothing to do. A calculator with a **Redstone Module** keeps to itself: it neither gives help nor gets it, it works at the pace of its signal.
+
+There is no limit on the size of an order: hundreds of thousands of items, or millions, plan in an instant. Mind what it takes: every step costs Source, and machines work at their own speed.
 
 #### You can see it think
 
@@ -1981,6 +1991,8 @@ The window has two shelves of six slots for Cryo Calculators and an upgrade colu
 - Every calculator inside gives **2 cores**. A core is an independent CPU: it takes its own order, just like a separate calculator. 12 calculators — 24 parallel orders on one channel.
 
 - Every **Compressed Co-processor** (up to six) counts **twice** and speeds up **all cores at once**: a core does 1 + 8×N steps per cycle — up to 49 with six.
+
+Idle cores help a running job just as idle calculators do, whether it is on this cabinet or elsewhere in the network, and a new order takes a core at once.
 
 The Recipe Monitor lists the cabinet's cores as separate rows (#1, #2...).
 

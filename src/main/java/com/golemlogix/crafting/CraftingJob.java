@@ -41,9 +41,25 @@ public class CraftingJob {
             this.pattern = pattern;
             this.remaining = remaining;
         }
+
+        // what the crafting grid gave for these cells last time: looking a recipe up is what costs most in a crafting step
+        private List<ItemStack> lastCells;
+        private List<ItemStack> lastResult;
+
+        /** The crafting table's result for these cells, or null if there is no such recipe. */
+        @Nullable
+        public List<ItemStack> craft(Level level, List<ItemStack> cells) {
+            if (lastCells != null && ItemStack.listMatches(lastCells, cells)) {
+                return lastResult;
+            }
+            List<ItemStack> result = craftResult(level, cells);
+            lastCells = result == null ? null : cells;
+            lastResult = result;
+            return result;
+        }
     }
 
-    /** A portion unloaded into a machine by a Provider: what we still expect from it (for the wait-for-result mode). */
+    /** What is unloaded through one Provider and not back yet: what we still expect from it (for the wait-for-result mode). */
     public static final class InFlight {
         public final BlockPos provider;
         public final Map<ItemKey, Long> left = new LinkedHashMap<>();
@@ -83,6 +99,8 @@ public class CraftingJob {
     /** What is being made right now, for the mini model above the calculator. */
     @Nullable
     private ItemKey current;
+    /** Its last cycle ended only because the steps ran out: more of them would have got more done. */
+    private boolean starved;
 
     public CraftingJob(CraftingPlan plan, Map<ItemKey, Long> reserved) {
         this.targets.putAll(plan.targets());
@@ -160,6 +178,15 @@ public class CraftingJob {
 
     public boolean isDone() {
         return status == Status.DONE;
+    }
+
+    /** Whether an idle processor would get something done by lending this job its steps. */
+    public boolean wantsHelp() {
+        return starved && status == Status.RUNNING;
+    }
+
+    public long remainingExecutions() {
+        return totalExecutions - doneExecutions;
     }
 
     /** How many of this item the job is still waiting for from machines. */
@@ -262,19 +289,28 @@ public class CraftingJob {
 
         Status blocked = null;
         int budget = workers;
+        long started = System.nanoTime();
+        long nanosLeft = com.golemlogix.system.CraftLoad.nanosLeft(level);
+        boolean outOfTime = false;
 
         for (StepState s : steps) {
             if (s.remaining <= 0) {
                 continue;
             }
+            List<PatternProviderBlockEntity> candidates = null;
             while (budget > 0 && s.remaining > 0) {
+                // the server's limit; every cycle still gets one step done, so no job starves
+                if (budget < workers && System.nanoTime() - started >= nanosLeft) {
+                    outOfTime = true;
+                    break;
+                }
                 // the very items of this execution: the encoded ones, or for a fuzzy pattern what may stand for them
                 Taken taken = take(s.pattern, level);
                 if (taken == null) {
                     break;
                 }
                 if (s.pattern.crafting()) {
-                    List<ItemStack> result = craftResult(level, taken.stacks());
+                    List<ItemStack> result = s.craft(level, taken.stacks());
                     if (result == null) {
                         blocked = Status.INVALID_PATTERN;
                         break;
@@ -291,7 +327,9 @@ public class CraftingJob {
                 } else {
                     // every gateway with this recipe, the one holding this very pattern first: the portion goes to the first
                     // whose machine takes it (the same plate may sit on a gateway that has no machine beside it)
-                    List<PatternProviderBlockEntity> candidates = net.providersFor(s.pattern);
+                    if (candidates == null) {
+                        candidates = net.providersFor(s.pattern);
+                    }
                     if (candidates.isEmpty()) {
                         blocked = Status.NO_PROVIDER;
                         break;
@@ -335,13 +373,14 @@ public class CraftingJob {
                     for (ItemStack back : pushed) {
                         add(inventory, back);
                     }
-                    InFlight f = new InFlight(provider.getBlockPos());
+                    // one record per Provider however many portions are out: a job of millions must not fill the save
+                    InFlight f = inFlightOf(provider.getBlockPos());
                     for (Map.Entry<ItemKey, Integer> out : s.pattern.outputTotals().entrySet()) {
                         awaiting.merge(out.getKey(), (long) out.getValue(), Long::sum);
                         f.left.merge(out.getKey(), (long) out.getValue(), Long::sum);
                     }
-                    if (!f.left.isEmpty()) {
-                        inFlight.add(f);
+                    if (f.left.isEmpty()) {
+                        inFlight.remove(f);
                     }
                 }
                 ItemStack primary = s.pattern.primaryOutput();
@@ -352,7 +391,7 @@ public class CraftingJob {
                 doneExecutions++;
                 budget--;
             }
-            if (budget <= 0) {
+            if (budget <= 0 || outOfTime) {
                 break;
             }
         }
@@ -369,11 +408,24 @@ public class CraftingJob {
             deliver(net);
         } else if (blocked != null) {
             status = blocked;
-        } else if (!awaiting.isEmpty() && budget > 0) {
+        } else if (!awaiting.isEmpty() && budget > 0 && !outOfTime) {
             status = Status.WAITING_MACHINE;
         } else {
             status = Status.RUNNING;
         }
+        starved = budget <= 0 && !allStepsIssued;
+        com.golemlogix.system.CraftLoad.ran(System.nanoTime() - started);
+    }
+
+    private InFlight inFlightOf(BlockPos provider) {
+        for (InFlight f : inFlight) {
+            if (f.provider.equals(provider)) {
+                return f;
+            }
+        }
+        InFlight f = new InFlight(provider);
+        inFlight.add(f);
+        return f;
     }
 
     private void deliver(GolemNetwork net) {

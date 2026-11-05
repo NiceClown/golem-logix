@@ -257,6 +257,13 @@ public final class GolemGameTestRegistry {
             // Newly added tests (promises & edge cases)
             new Test("autocraftmultistepsurvivesreload", GolemGameTestsExtra::autocraftMultiStepSurvivesReload, 400, 0),
             new Test("autocraftmachinestepsurvivesreload", GolemGameTestsExtra::autocraftMachineStepSurvivesReload, 500, 0),
+            new Test("autocrafthugeorder", GolemGameTestsExtra::autocraftHugeOrder, 1500, 0),
+            new Test("plannerdeepandhuge", GolemGameTestsExtra::plannerDeepAndHuge, 100, 0),
+            new Test("idlecalculatorlendsitssteps", GolemGameTestsExtra::idleCalculatorLendsItsSteps, 600, 0),
+            new Test("redstonecalculatorkeepstoitself", GolemGameTestsExtra::redstoneCalculatorKeepsToItself, 200, 0),
+            new Test("autocraftmanyportionskeepthesavesmall", GolemGameTestsExtra::autocraftManyPortionsKeepTheSaveSmall, 1800, 0),
+            new Test("idlemainframecoreslend", GolemGameTests::idleMainframeCoresLend, 200, 0),
+            new Test("craftingstepcachefollowsthecells", GolemGameTestsExtra::craftingStepCacheFollowsTheCells, 40, 0),
             new Test("securityrevokedwhilewindowopen", GolemGameTestsExtra::securityRevokedWhileWindowOpen, 150, 0),
             new Test("securitypersistsacrossreload", GolemGameTestsExtra::securityPersistsAcrossReload, 100, 0),
             new Test("stockmanometerbelowhysteresis", GolemGameTestsExtra::stockManometerBelowHysteresis, 120, 0),

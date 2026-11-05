@@ -67,6 +67,8 @@ public class CryoMainframeBlockEntity extends BlockEntity {
     private boolean active = false;
     private boolean boosted = false;
     private long boostUntil = 0;
+    /** Until when its idle cores count as lending their steps to a job (see the calculator). */
+    private long helpUntil = 0;
     /** What was last sent to clients (so it is only sent on change). */
     private String sentSummary = "";
     private long lastSync = -100;
@@ -239,6 +241,11 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         @Override
         public boolean isRemoved() {
             return CryoMainframeBlockEntity.this.isRemoved() || !cores.contains(this);
+        }
+
+        @Override
+        public boolean acceptsHelp() {
+            return formed() && !upgrades.has(UpgradeType.REDSTONE);
         }
 
         @Override
@@ -437,13 +444,36 @@ public class CryoMainframeBlockEntity extends BlockEntity {
                     changed = true;
                 }
             }
+            // idle cores work on whatever job could use more steps, and stay free for a new order
+            if (ok && !hasRedstone) {
+                for (int idle = be.cores.size() - be.busyCores(); idle > 0; idle--) {
+                    CraftingJob target = net.jobWantingHelp();
+                    if (target == null) {
+                        break;
+                    }
+                    long before = target.doneExecutions();
+                    target.tick(net, workers);
+                    long done = target.doneExecutions() - before;
+                    if (done <= 0) {
+                        break;
+                    }
+                    clicked = true;
+                    be.helpUntil = time + 20;
+                    if (done > CryoCalculatorBlockEntity.BASE_WORKERS) {
+                        be.boostUntil = time + BOOST_HOLD;
+                    }
+                    if (shelf < be.holds.length) {
+                        changed |= be.holds[shelf++].show(target.current().stack(), time);
+                    }
+                }
+            }
             if (clicked) {
                 level.playSound(null, pos, ModSounds.RELAY_CLICK.get(), SoundSource.BLOCKS, 0.3f, 1.0f);
             }
             if (anyJob) {
                 be.setChanged();
             }
-            be.active = ok && allowed && be.busyCores() > 0;
+            be.active = ok && allowed && (be.busyCores() > 0 || time < be.helpUntil);
             if (changed) {
                 be.syncNow();
             } else {
