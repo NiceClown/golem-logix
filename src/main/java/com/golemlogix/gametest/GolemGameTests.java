@@ -4686,6 +4686,158 @@ public class GolemGameTests {
     }
 
     /**
+     * Cryo-Source Jars join: four in a square into a Giga Jar, nine into a reactor. Their Source is added up, they hold a little more
+     * than apart and count as one supplier; a jar broken out takes the whole apart and the rest share out the Source. Three in a row
+     * or at different heights stay jars.
+     */
+    public static void cryoJarsJoin(GameTestHelper helper) {
+        var level = helper.getLevel();
+        Block jarBlock = ModBlocks.CRYO_SOURCE_JAR.get();
+        int one = com.golemlogix.config.GolemConfig.CRYO_JAR_CAPACITY.get();
+        int gigaBonus = com.golemlogix.config.GolemConfig.CRYO_JAR_GIGA_BONUS.get(), superBonus = com.golemlogix.config.GolemConfig.CRYO_JAR_SUPER_BONUS.get();
+        java.util.function.Function<BlockPos, com.golemlogix.blockentity.CryoJarBlockEntity> jar =
+                p -> helper.getBlockEntity(p, com.golemlogix.blockentity.CryoJarBlockEntity.class);
+        java.util.function.Consumer<BlockPos> put = p -> com.golemlogix.blocks.CryoJarBlock.place(level, helper.absolutePos(p), Direction.SOUTH, jarBlock);
+        java.util.function.Function<BlockPos, com.golemlogix.blocks.JarForm> form =
+                p -> helper.getBlockState(p).getValue(com.golemlogix.blocks.CryoJarBlock.FORM);
+        BlockPos c = new BlockPos(2, 1, 2);
+
+        // three in a row and one a block higher are no square
+        put.accept(c);
+        put.accept(c.east());
+        put.accept(c.south());
+        put.accept(c.east().south().above());
+        jar.apply(c).fill(1000, false);
+        jar.apply(c.east()).fill(2000, false);
+        jar.apply(c.south()).fill(3000, false);
+        helper.runAfterDelay(5, () -> {
+            helper.assertTrue(form.apply(c) == com.golemlogix.blocks.JarForm.SINGLE, "three jars and a higher one stay jars");
+            // the fourth where it belongs
+            helper.setBlock(c.east().south().above(2), Blocks.AIR);
+            helper.setBlock(c.east().south().above(), Blocks.AIR);
+        });
+        helper.runAfterDelay(8, () -> put.accept(c.east().south()));
+        helper.runAfterDelay(12, () -> {
+            for (BlockPos p : List.of(c, c.east(), c.south(), c.east().south())) {
+                helper.assertTrue(form.apply(p) == com.golemlogix.blocks.JarForm.GIGA, "the square is a Giga Jar at " + p);
+                helper.assertTrue(helper.getBlockState(p.above()).getValue(com.golemlogix.blocks.CryoJarBlock.FORM) == com.golemlogix.blocks.JarForm.GIGA, "the upper halves too");
+            }
+            var whole = jar.apply(c);
+            helper.assertTrue(whole.isController(), "the corner with the lowest x and z holds it");
+            helper.assertTrue(whole.capacity() == one * 4 * (100 + gigaBonus) / 100, "four jars and a bonus: " + whole.capacity());
+            helper.assertTrue(whole.available() == 6000, "their Source is added up: " + whole.available());
+            helper.assertTrue(jar.apply(c.east().south()).available() == 6000, "any jar answers for the whole");
+            helper.assertTrue(jar.apply(c.east().south().above()).available() == 6000, "and any half");
+            helper.assertTrue(com.golemlogix.system.SourceHelper.asSupplier(jar.apply(c.south().above())) == whole, "as one supplier");
+            helper.assertTrue(jar.apply(c.east()).drain(500) == 500 && whole.available() == 5500, "drawn from any jar");
+            helper.assertTrue(jar.apply(c.south()).fill(Integer.MAX_VALUE, false) == whole.capacity() - 5500, "and filled, to the top of the whole");
+            whole.drain(whole.available() - 8000);
+
+            // a save and a load: the jar that is not the corner still knows the whole
+            CompoundTag tag = jar.apply(c.east()).saveWithFullMetadata(level.registryAccess());
+            var abs = helper.absolutePos(c.east());
+            var fresh = net.minecraft.world.level.block.entity.BlockEntity.loadStatic(abs, helper.getBlockState(c.east()), tag, level.registryAccess());
+            level.setBlockEntity(fresh);
+            helper.assertTrue(((com.golemlogix.blockentity.CryoJarBlockEntity) fresh).available() == 8000, "after a reload too");
+
+            // Grow it to nine
+            for (BlockPos p : List.of(c.east(2), c.east(2).south(), c.south(2), c.east().south(2), c.east(2).south(2))) {
+                put.accept(p);
+            }
+        });
+        helper.runAfterDelay(16, () -> {
+            for (int x = 0; x < 3; x++) {
+                for (int z = 0; z < 3; z++) {
+                    helper.assertTrue(form.apply(c.offset(x, 0, z)) == com.golemlogix.blocks.JarForm.SUPER, "all nine are a reactor");
+                }
+            }
+            var whole = jar.apply(c);
+            helper.assertTrue(whole.capacity() == one * 9 * (100 + superBonus) / 100, "nine jars and a bonus: " + whole.capacity());
+            helper.assertTrue(whole.available() == 8000, "with the Giga Jar's Source inside: " + whole.available());
+            whole.fill(20000, false);
+            helper.assertTrue(whole.available() == 28000, "it fills past what jars hold");
+
+            // Break the middle: the eight share out what is there
+            level.destroyBlock(helper.absolutePos(c.east().south()), true);
+        });
+        helper.runAfterDelay(20, () -> {
+            helper.assertBlockNotPresent(jarBlock, c.east().south());
+            int total = 0, jars = 0;
+            for (int x = 0; x < 3; x++) {
+                for (int z = 0; z < 3; z++) {
+                    if (x == 1 && z == 1) {
+                        continue;
+                    }
+                    var j = jar.apply(c.offset(x, 0, z));
+                    helper.assertTrue(form.apply(c.offset(x, 0, z)) == com.golemlogix.blocks.JarForm.SINGLE, "with a hole in the middle no square is left");
+                    total += j.available();
+                    jars++;
+                }
+            }
+            helper.assertTrue(jars == 8 && total == 28000, "the eight kept the Source: " + total);
+
+            // A square breaking with more Source than the jars left can hold keeps what they hold
+            var corner = jar.apply(c);
+            helper.assertTrue(corner.fill(Integer.MAX_VALUE, true) == one - corner.available(), "a lone jar is its own size again");
+
+            // Fill the hole: all nine again. Then break a corner: a square of four is left, and it joins by itself
+            put.accept(c.east().south());
+        });
+        helper.runAfterDelay(24, () -> {
+            helper.assertTrue(form.apply(c) == com.golemlogix.blocks.JarForm.SUPER, "nine again make a reactor");
+            helper.assertTrue(jar.apply(c).available() == 28000, "with the Source of all eight: " + jar.apply(c).available());
+            level.destroyBlock(helper.absolutePos(c), true);
+        });
+        helper.runAfterDelay(28, () -> {
+            int gigas = 0, total = 0;
+            for (int x = 0; x < 3; x++) {
+                for (int z = 0; z < 3; z++) {
+                    if (x + z == 0) {
+                        continue;
+                    }
+                    BlockPos p = c.offset(x, 0, z);
+                    if (form.apply(p) == com.golemlogix.blocks.JarForm.GIGA) {
+                        gigas++;
+                        if (jar.apply(p).isController()) {
+                            total += jar.apply(p).available();
+                        }
+                    } else {
+                        total += jar.apply(p).available();
+                    }
+                }
+            }
+            helper.assertTrue(gigas >= 4 && gigas % 4 == 0, "what is left joined into Giga Jars, jars in them: " + gigas);
+            helper.assertTrue(total == 28000, "and kept the Source: " + total);
+            helper.succeed();
+        });
+    }
+
+    /** A reactor on the network is one supplier, however many of its blocks touch it, and the network draws on it through any jar. */
+    public static void joinedJarFeedsNetwork(GameTestHelper helper) {
+        buildArray(helper, 0, 0);
+        var level = helper.getLevel();
+        // against the corner bushing (4,1,6); the square goes away from the array
+        BlockPos c = new BlockPos(2, 1, 5);
+        for (BlockPos p : List.of(c, c.east(), c.south(), c.east().south())) {
+            com.golemlogix.blocks.CryoJarBlock.place(level, helper.absolutePos(p), Direction.SOUTH, ModBlocks.CRYO_SOURCE_JAR.get());
+        }
+        helper.runAfterDelay(5, () -> {
+            var whole = helper.getBlockEntity(c, com.golemlogix.blockentity.CryoJarBlockEntity.class);
+            helper.assertTrue(whole.form() == com.golemlogix.blocks.JarForm.GIGA, "the jars joined");
+            whole.fill(30000, false);
+        });
+        helper.runAfterDelay(15, () -> {
+            GolemNetwork n = net(helper, ORIGIN);
+            helper.assertTrue(n.sources().size() == 1, "one supplier, got " + n.sources().size());
+            helper.assertTrue(n.sources().get(0).available() > 29000, "with all of its Source: " + n.sources().get(0).available());
+        });
+        helper.runAfterDelay(80, () -> {
+            helper.assertTrue(net(helper, ORIGIN).isOnline(), "the network runs on it");
+            helper.succeed();
+        });
+    }
+
+    /**
      * Cryo-Distillation Tower: takes only blood (the tag golem_logix:cryo_distillable) through any of its blocks and never gives it
      * back; distils it into the jar beside it, 1 mB to 1 Source; breaking the middle takes the whole tower. Without Neo Vitae (an
      * empty tag) only the refusals and the tower's shape are checked.
@@ -4702,18 +4854,24 @@ public class GolemGameTests {
         var exec = net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE;
         var top = com.golemlogix.system.LegacyResources.fluids(level, helper.absolutePos(base.above(2)), Direction.UP);
         helper.assertTrue(top != null, "the head takes fluids too");
-        // Compressed Co-Processors speed it up: up to four, nothing else goes into those slots
+        // Compressed Co-Processors speed it up, all in one slot, up to 28; nothing else goes in. From the fifth on, every four
+        // make the tank a little larger; four are what they always were
         var up = tower.getUpgrades();
         int baseRate = tower.rate();
+        int bonus = com.golemlogix.config.GolemConfig.DISTILL_COPROCESSOR_BONUS.get();
         ItemStack copro = new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get());
-        helper.assertTrue(up.getContainerSize() == 4 && !up.canPlaceItem(0, new ItemStack(ModItems.FUZZY_CARD.get())),
-                "four slots, co-processors only");
-        for (int i = 0; i < 4; i++) {
-            helper.assertTrue(up.canPlaceItem(i, copro), "co-processor " + (i + 1) + " fits");
-            up.setItem(i, copro.copy());
+        helper.assertTrue(up.getContainerSize() == 1 && !up.canPlaceItem(0, new ItemStack(ModItems.FUZZY_CARD.get())),
+                "one slot, co-processors only");
+        helper.assertTrue(up.canPlaceItem(0, copro), "a co-processor fits");
+        int tank = com.golemlogix.blockentity.DistillationTowerBlockEntity.TANK;
+        int perFour = com.golemlogix.blockentity.DistillationTowerBlockEntity.TANK_PER_FOUR;
+        for (int[] c : new int[][]{{1, 0}, {4, 0}, {5, 1}, {8, 1}, {9, 2}, {12, 2}, {13, 3}, {25, 6}, {28, 6}}) {
+            up.setItem(0, new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get(), c[0]));
+            helper.assertTrue(tower.rate() == baseRate + c[0] * bonus, c[0] + " co-processors distil " + tower.rate() + " mB a second");
+            helper.assertTrue(tower.capacity() == tank + c[1] * perFour, c[0] + " co-processors: a tank of " + tower.capacity());
         }
-        helper.assertTrue(tower.rate() == baseRate + 4 * com.golemlogix.config.GolemConfig.DISTILL_COPROCESSOR_BONUS.get(),
-                "four co-processors: " + baseRate + " -> " + tower.rate() + " mB a second");
+        up.setItem(0, new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get(), 4));
+        helper.assertTrue(tower.rate() == baseRate + 4 * bonus && tower.capacity() == tank, "four co-processors, as before");
         helper.assertTrue(top.fill(new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000), exec) == 0,
                 "water is no blood");
         net.minecraft.world.level.material.Fluid blood = net.minecraft.core.registries.BuiltInRegistries.FLUID

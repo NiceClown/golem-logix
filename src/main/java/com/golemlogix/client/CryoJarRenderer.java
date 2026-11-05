@@ -55,13 +55,21 @@ public class CryoJarRenderer extends com.golemlogix.client.render.LegacyBer<Cryo
         return Identifier.withDefaultNamespace("block/" + name);
     }
 
+    private final net.minecraft.client.model.geom.ModelPart ironGolem;
+
     public CryoJarRenderer(BlockEntityRendererProvider.Context context) {
+        ironGolem = context.bakeLayer(net.minecraft.client.model.geom.ModelLayers.IRON_GOLEM);
     }
 
     @Override
     public AABB getRenderBoundingBox(CryoJarBlockEntity be) {
         BlockPos p = be.getBlockPos();
-        return new AABB(p.getX() - 0.5, p.getY(), p.getZ() - 0.5, p.getX() + 1.5, p.getY() + 2.2, p.getZ() + 1.5);
+        // a joined whole is drawn from its corner, derrick and rings included
+        return switch (be.form()) {
+            case SINGLE -> new AABB(p.getX() - 0.5, p.getY(), p.getZ() - 0.5, p.getX() + 1.5, p.getY() + 2.2, p.getZ() + 1.5);
+            case GIGA -> new AABB(p.getX() - 0.5, p.getY(), p.getZ() - 0.5, p.getX() + 2.5, p.getY() + 4.2, p.getZ() + 2.5);
+            case SUPER -> new AABB(p.getX() - 0.5, p.getY(), p.getZ() - 0.5, p.getX() + 3.5, p.getY() + 5.5, p.getZ() + 3.5);
+        };
     }
 
     @Override
@@ -69,6 +77,12 @@ public class CryoJarRenderer extends com.golemlogix.client.render.LegacyBer<Cryo
         Level level = be.getLevel();
         BlockState state = be.getBlockState();
         if (level == null || !state.hasProperty(CryoJarBlock.FACING) || state.getValue(CryoJarBlock.HALF) != DoubleBlockHalf.LOWER) {
+            return;
+        }
+        if (be.form() != com.golemlogix.blocks.JarForm.SINGLE) {
+            if (be.isController()) {
+                JarWholeRenderer.render(be, ironGolem, partialTick, pose, buffers);
+            }
             return;
         }
         BlockPos pos = be.getBlockPos();
@@ -176,7 +190,7 @@ public class CryoJarRenderer extends com.golemlogix.client.render.LegacyBer<Cryo
      * Brass sockets where network pipes dock onto the jar: on the sides of both halves and on the cap (where the vent pipe then gives
      * way to the socket). Pixels in the world's own frame of the lower half (Y 0..32). Returns whether a pipe docks from above.
      */
-    private static boolean sockets(VertexConsumer vc, PoseStack.Pose p, Level level, BlockPos pos, int light) {
+    static boolean sockets(VertexConsumer vc, PoseStack.Pose p, Level level, BlockPos pos, int light) {
         boolean above = false;
         for (int half = 0; half < 2; half++) {
             for (Direction d : Direction.values()) {

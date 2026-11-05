@@ -26,7 +26,9 @@ import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
  * batch. From outside the tank only takes blood: nothing pumps it back out.
  */
 public class DistillationTowerBlockEntity extends BlockEntity {
+    /** The tank with up to four co-processors. Every further four, from the fifth on, make it a little larger. */
     public static final int TANK = 8000;
+    public static final int TANK_PER_FOUR = 2000;
     private static final int PERIOD = 10;
 
     private final FluidTank tank = new FluidTank(TANK, fs -> fs.is(ModTags.CRYO_DISTILLABLE)) {
@@ -49,7 +51,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
 
         @Override
         public int getTankCapacity(int t) {
-            return TANK;
+            return capacity();
         }
 
         @Override
@@ -59,7 +61,10 @@ public class DistillationTowerBlockEntity extends BlockEntity {
 
         @Override
         public int fill(FluidStack resource, FluidAction action) {
-            return tank.fill(resource, action);
+            // with co-processors taken out the tank can hold more than it may: nothing more goes in until it has come down
+            int cap = capacity();
+            tank.setCapacity(cap);
+            return tank.getFluidAmount() >= cap ? 0 : tank.fill(resource, action);
         }
 
         @Override
@@ -85,6 +90,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
     private boolean clientWorkingSent;
     // client
     private int clientBlood;
+    private int clientCapacity = TANK;
     private boolean clientWorking;
     /** Client: how hard it works 0..1 (spins up and down smoothly), the blood level 0..1, the coil phase. */
     public float work, workPrev, blood, bloodPrev, phase, phasePrev;
@@ -127,7 +133,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         if (dirty && now - lastSync >= 10) {
             dirty = false;
             int amount = tank.getFluidAmount();
-            if (sentBlood < 0 || Math.abs(amount - sentBlood) >= TANK / 50 || (amount == 0) != (sentBlood == 0) || working != clientWorkingSent) {
+            if (sentBlood < 0 || Math.abs(amount - sentBlood) >= capacity() / 50 || (amount == 0) != (sentBlood == 0) || working != clientWorkingSent) {
                 sentBlood = amount;
                 clientWorkingSent = working;
                 lastSync = now;
@@ -171,12 +177,18 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         return upgrades;
     }
 
+    /** How much blood the tank holds: larger with every four co-processors past the first four. */
+    public int capacity() {
+        int coprocessors = upgrades.count(com.golemlogix.upgrade.UpgradeType.SPEED);
+        return TANK + TANK_PER_FOUR * (Math.max(0, coprocessors - 1) / 4);
+    }
+
     /** Blood a second: the base rate and the co-processors' share. */
     public int rate() {
         return GolemConfig.DISTILL_RATE.get() + GolemConfig.DISTILL_COPROCESSOR_BONUS.get() * upgrades.count(com.golemlogix.upgrade.UpgradeType.SPEED);
     }
 
-    /** The window's numbers: blood mB, mB a second, Source a second x10, status, co-processors. */
+    /** The window's numbers: blood mB, mB a second, Source a second x10, status, co-processors, the tank's size. */
     public net.minecraft.world.inventory.ContainerData menuData() {
         return new net.minecraft.world.inventory.ContainerData() {
             @Override
@@ -187,6 +199,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
                     case 2 -> (int) Math.round(rate() * GolemConfig.DISTILL_SOURCE_PER_MB.get() * 10);
                     case 3 -> tank.isEmpty() ? 0 : status;
                     case 4 -> upgrades.count(com.golemlogix.upgrade.UpgradeType.SPEED);
+                    case 5 -> capacity();
                     default -> 0;
                 };
             }
@@ -197,7 +210,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
 
             @Override
             public int getCount() {
-                return 5;
+                return 6;
             }
         };
     }
@@ -211,7 +224,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
     public Component statusLine() {
         FluidStack f = tank.getFluid();
         Component name = f.isEmpty() ? Component.translatable("block.golem_logix.cryo_distillation_tower.empty") : f.getHoverName();
-        return Component.translatable("message.golem_logix.distillation_tower", name, tank.getFluidAmount(), TANK);
+        return Component.translatable("message.golem_logix.distillation_tower", name, tank.getFluidAmount(), capacity());
     }
 
     public void clientTick() {
@@ -219,7 +232,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         bloodPrev = blood;
         phasePrev = phase;
         work += ((clientWorking ? 1f : 0f) - work) * (clientWorking ? 0.06f : 0.03f);
-        blood += (clientBlood / (float) TANK - blood) * 0.1f;
+        blood += (clientBlood / (float) Math.max(1, clientCapacity) - blood) * 0.1f;
         phase += 0.02f + 0.18f * work;
         if (clientWorking && level.getRandom().nextInt(4) == 0) {
             // frost breathing out of the louvres, a wisp of steam from the outlet
@@ -243,18 +256,21 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         com.golemlogix.system.NbtBridge.loadTank(tank, registries, tag.getCompoundOrEmpty("Tank"));
         carry = tag.getDoubleOr("Carry", 0);
         upgrades.fromTag(tag.getListOrEmpty("Upgrades"), registries);
+        tank.setCapacity(capacity());
     }
 
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();
         tag.putInt("Blood", tank.getFluidAmount());
+        tag.putInt("Capacity", capacity());
         tag.putBoolean("Working", working);
         return tag;
     }
 
     public void readUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
         clientBlood = tag.getIntOr("Blood", 0);
+        clientCapacity = tag.getIntOr("Capacity", TANK);
         clientWorking = tag.getBooleanOr("Working", false);
     }
 

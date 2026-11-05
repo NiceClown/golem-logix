@@ -30,6 +30,8 @@ public final class GolemConfig {
     public static final ModConfigSpec.IntValue CRAFT_MAX_MILLIS_PER_TICK;
     public static final ModConfigSpec.IntValue LOCAL_WIRELESS_RANGE;
     public static final ModConfigSpec.IntValue CRYO_JAR_CAPACITY;
+    public static final ModConfigSpec.IntValue CRYO_JAR_GIGA_BONUS;
+    public static final ModConfigSpec.IntValue CRYO_JAR_SUPER_BONUS;
     public static final ModConfigSpec.IntValue DISTILL_RATE;
     public static final ModConfigSpec.DoubleValue DISTILL_SOURCE_PER_MB;
     public static final ModConfigSpec.IntValue DISTILL_COPROCESSOR_BONUS;
@@ -110,6 +112,10 @@ public final class GolemConfig {
         b.push("distillation");
         CRYO_JAR_CAPACITY = b.comment("Source a Cryo-Source Jar holds.")
                 .defineInRange("cryoJarCapacity", 10000, 100, 10000000);
+        CRYO_JAR_GIGA_BONUS = b.comment("Extra Source four jars joined into a Giga Jar hold (percent of what the four hold alone).")
+                .defineInRange("cryoJarGigaBonus", 10, 0, 1000);
+        CRYO_JAR_SUPER_BONUS = b.comment("Extra Source nine jars joined into an Antigravity Reactor hold (percent of what the nine hold alone).")
+                .defineInRange("cryoJarSuperBonus", 20, 0, 1000);
         DISTILL_RATE = b.comment("Blood (mB) a Cryo-Distillation Tower distils every second.")
                 .defineInRange("distillRate", 20, 1, 100000);
         DISTILL_COPROCESSOR_BONUS = b.comment("Extra blood (mB a second) each Compressed Co-Processor in the tower distils.")

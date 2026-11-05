@@ -2168,7 +2168,8 @@ public final class GolemGameTestsExtra {
             // Cut power by removing Creative Source Jar
             helper.setBlock(JAR, Blocks.AIR);
 
-            helper.runAfterDelay(15, () -> {
+            // the core looks at its supply once a second, at a moment of its own: this waits for that whatever the moment
+            helper.runAfterDelay(30, () -> {
                 GolemNetwork nOffline = net(helper, bay);
                 helper.assertTrue(!nOffline.isOnline(), "network goes offline without Source");
                 helper.assertTrue(!cpu.isIdle(), "job preserved in calculator across power loss");

@@ -26,6 +26,11 @@ public abstract class LegacyBer<T extends BlockEntity> implements BlockEntityRen
     /** Where the camera is this frame (world), for renderers that skip what cannot be seen from there. */
     protected static Vec3 camera = Vec3.ZERO;
 
+    /** Where the camera is this frame. */
+    public static Vec3 camera() {
+        return camera;
+    }
+
     @Override
     public State<T> createRenderState() {
         return new State<>();

@@ -26,8 +26,11 @@
 - The planner settles each item once instead of walking every path through the recipes: its time no longer grows with how deep they nest.
 - Crafting steps no longer look their recipe up every time, and a job keeps one record per gateway however many portions are in machines,
   so a big job stays cheap to run and small in the save. New config craftMaxMillisPerTick (10) caps what autocrafting may take of a tick.
+- The Cryo-Distillation Tower takes up to 28 Compressed Co-Processors in one slot (580 mB of blood a second), and past the fourth every four
+  make its tank larger. It used to stop at four, which a single spawner on a good altar outran fifteen times over.
+- Cryo-Source Jars join by themselves: four in a square are a Giga Jar, nine an Antigravity Reactor, one store with a little more room.
 - The game tests were reviewed: two duplicates went, tests that could not fail now can (each checked by breaking the mod on purpose),
-  and new ones cover cyclic patterns, a network cut in two, two calculators at once, power loss during a job, a job reloaded with a portion inside a machine, rights taken away with a window open, rights and the Stock Manometer after a reload, wrongly built arrays, redstone modes and Fuzzy Cards on more buses, a provider feeding several sides, a disk moved between cabinets, a Ledger keeping a fluid, real bus throughput, huge orders and processors helping each other (222 in all).
+  and new ones cover cyclic patterns, a network cut in two, two calculators at once, power loss during a job, a job reloaded with a portion inside a machine, rights taken away with a window open, rights and the Stock Manometer after a reload, wrongly built arrays, redstone modes and Fuzzy Cards on more buses, a provider feeding several sides, a disk moved between cabinets, a Ledger keeping a fluid, real bus throughput, huge orders and processors helping each other (224 in all).
 
 ## 2.1.2 (26.1.2) — Sharp at a distance
 

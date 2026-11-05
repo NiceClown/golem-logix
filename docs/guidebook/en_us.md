@@ -209,6 +209,25 @@ Put the jars against the plinth, on the same level as it: then a pipe runs from 
 
 A jar holds **10 000 Source**. Put it against any block of the network: a pipe docks onto it with a brass socket.
 
+#### Speeding the tower up
+
+**Compressed Co-Processors** go into the tower's one slot, up to **28**. Each distils **20 mB** more a second: four make 100 mB, or 150 Source, all 28 make 580 mB, or 870 Source.
+
+Past the fourth the tank grows too: every further four add **2000 mB**, up to 20 000 mB.
+
+#### Joining jars
+
+Jars side by side on one level join by themselves, as soon as the square is complete:
+
+- four in a 2 by 2 square are a **Giga Jar**: a derrick over one great tank, worked by copper golems. It holds **44 000 Source**, a tenth more than the four alone;
+- nine in a 3 by 3 square are an **Antigravity Reactor**: the Source floats free in its rings, and a crew of all three kinds of golem keeps it there. It holds **108 000 Source**, a fifth more than the nine alone.
+
+Leave them room above: a Giga Jar's derrick rises to 4 blocks, a reactor's rings to 5. Only the two lower blocks are solid.
+
+A Giga Jar with five more jars around it becomes a reactor. To the network and to a tower a whole is one jar: touching any of its blocks is touching it.
+
+Break any jar and the whole comes apart: the jars left share its Source out, as far as each of them holds it. Whatever is left over is lost, so empty a full reactor before taking it down.
+
 <!-- {"type": "crafting", "recipe": "golem_logix:cryo_distillation_tower"} -->
 
 Three blocks high: a rune plinth, a glass column with the coil, a brass head under snow. A Tabula Rasa from the Ara Vitae seals the plinth.
