@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.3 (26.1.2) — No waiting at the door
+
+- The Golem Interface and the Pattern Provider hand what they are given to the network at once, however much it is, as AE2 does: a
+  machine no longer backs up behind them. The interface used to pass 16 items every 8 ticks and the provider emptied its return
+  slots every 5. Compressed Co-Processors in an interface now speed up only keeping its stock.
+
 ## 2.1.2 (26.1.2) — Sharp at a distance
 
 - Fixed: textures that do not divide by 16 limited the mipmaps of the whole block atlas, so distant blocks of every mod in a pack

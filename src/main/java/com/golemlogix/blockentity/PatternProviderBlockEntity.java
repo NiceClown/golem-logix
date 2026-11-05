@@ -40,8 +40,9 @@ public class PatternProviderBlockEntity extends BlockEntity {
     public static final int RETURN_SLOTS = 3;
     /** Return tanks for fluids (a machine's fluid result), each this many mB. */
     public static final int RETURN_TANKS = 3, RETURN_TANK_MB = 16_000;
-    /** How often the return slots are emptied into the network (ticks). */
-    private static final int RETURN_INTERVAL = 5;
+    /** When the network took nothing (it is full or offline), how long before the return slots try again (ticks). */
+    private static final int RETURN_RETRY = 5;
+    private long nextFlush = 0;
 
     private final OwnedContainer container = new OwnedContainer(SLOTS, this,
             s -> s.has(ModDataComponents.PATTERN.get())) {
@@ -300,13 +301,18 @@ public class PatternProviderBlockEntity extends BlockEntity {
         if (be.upgrades.has(UpgradeType.REDSTONE)) {
             be.redstone.observe(level.hasNeighborSignal(pos));
         }
-        if (Math.floorMod(level.getGameTime() + pos.asLong(), RETURN_INTERVAL) == 0) {
-            be.flushReturns(level, pos);
+        // what comes back goes on at once: a machine must not wait for the network
+        long now = level.getGameTime();
+        if (now >= be.nextFlush && !be.flushReturns(level, pos)) {
+            be.nextFlush = now + RETURN_RETRY;
         }
     }
 
-    /** Return slots and tanks -> network: first to the jobs waiting for these, the rest into storage; what does not fit stays. */
-    private void flushReturns(Level level, BlockPos pos) {
+    /**
+     * Return slots and tanks -> network: first to the jobs waiting for these, the rest into storage; what does not fit stays.
+     * False when there was something to hand over and the network took none of it.
+     */
+    private boolean flushReturns(Level level, BlockPos pos) {
         boolean any = false;
         for (int i = 0; i < RETURN_SLOTS && !any; i++) {
             any = !returns.getItem(i).isEmpty();
@@ -315,12 +321,13 @@ public class PatternProviderBlockEntity extends BlockEntity {
             any = !returnFluids[i].isEmpty();
         }
         if (!any) {
-            return;
+            return true;
         }
         com.golemlogix.system.GolemNetwork net = com.golemlogix.system.GolemNetwork.get(level, pos);
         if (!net.isOnline() || !net.isDeviceActive(pos)) {
-            return;
+            return false;
         }
+        boolean moved = false;
         for (int i = 0; i < RETURN_SLOTS; i++) {
             ItemStack in = returns.getItem(i);
             if (in.isEmpty()) {
@@ -329,6 +336,7 @@ public class PatternProviderBlockEntity extends BlockEntity {
             ItemStack leftover = net.insertFromMachine(in.copy());
             if (leftover.getCount() != in.getCount()) {
                 returns.setItem(i, leftover);
+                moved = true;
             }
         }
         for (int i = 0; i < RETURN_TANKS; i++) {
@@ -338,9 +346,11 @@ public class PatternProviderBlockEntity extends BlockEntity {
                 if (n > 0) {
                     returnFluids[i] = f.copyWithAmount(Math.max(0, f.getAmount() - n));
                     setChanged();
+                    moved = true;
                 }
             }
         }
+        return moved;
     }
 
     public List<PatternData> getPatterns() {

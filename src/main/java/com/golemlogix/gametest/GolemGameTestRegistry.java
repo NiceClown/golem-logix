@@ -93,6 +93,7 @@ public final class GolemGameTestRegistry {
             new Test("bussleepsandwakes", GolemGameTests::busSleepsAndWakes, 200, 0),
             new Test("coresendscargosamples", GolemGameTests::coreSendsCargoSamples, 100, 0),
             new Test("interfacekeepsstockandaccepts", GolemGameTests::interfaceKeepsStockAndAccepts, 300, 0),
+            new Test("intakeatonce", GolemGameTests::intakeAtOnce, 100, 0),
             new Test("interfacemenuamounts", GolemGameTests::interfaceMenuAmounts, 300, 0),
             new Test("provideroutputside", GolemGameTests::providerOutputSide, 60, 0),
             new Test("drivebaydoorfollowswindow", GolemGameTests::driveBayDoorFollowsWindow, 60, 0),

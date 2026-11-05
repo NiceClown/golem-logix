@@ -1420,6 +1420,29 @@ public class GolemGameTests {
         });
     }
 
+    /** What a machine hands to an interface or a provider reaches the network within a couple of ticks, however much it is. */
+    public static void intakeAtOnce(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(BUS_OUT, ModBlocks.GOLEM_INTERFACE.get().defaultBlockState());
+        helper.setBlock(BUS_IN, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        var iface = helper.getBlockEntity(BUS_OUT, com.golemlogix.blockentity.InterfaceBlockEntity.class);
+        var provider = helper.getBlockEntity(BUS_IN, PatternProviderBlockEntity.class);
+        helper.runAfterDelay(30, () -> {
+            var handler = iface.automation();
+            helper.assertTrue(handler.insertItem(9, new ItemStack(Items.IRON_INGOT, 64), false).isEmpty(), "intake takes a stack");
+            helper.assertTrue(handler.insertItem(10, new ItemStack(Items.IRON_INGOT, 64), false).isEmpty(), "and another");
+            provider.getReturns().setItem(0, new ItemStack(Items.GOLD_INGOT, 64));
+            helper.runAfterDelay(2, () -> {
+                GolemNetwork n = net(helper, bay);
+                helper.assertTrue(n.itemCountOf(ItemKey.of(new ItemStack(Items.IRON_INGOT))) == 128,
+                        "the interface handed all of it over, network has " + n.itemCountOf(ItemKey.of(new ItemStack(Items.IRON_INGOT))));
+                helper.assertTrue(n.itemCountOf(ItemKey.of(new ItemStack(Items.GOLD_INGOT))) == 64,
+                        "the provider handed all of it over, network has " + n.itemCountOf(ItemKey.of(new ItemStack(Items.GOLD_INGOT))));
+                helper.succeed();
+            });
+        });
+    }
+
     public static void interfaceKeepsStockAndAccepts(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         helper.setBlock(BUS_OUT, ModBlocks.GOLEM_INTERFACE.get().defaultBlockState());
