@@ -1562,7 +1562,7 @@ A **bucket (or any container holding fluid)** in a slot is a fluid filter. Becau
 
 To the right of the bus window there is a column of **upgrade slots**, each for one kind of upgrade: its faint ghost shows which. Shift-clicking an upgrade in your inventory puts it into its free slot. The same holds in every machine with upgrades.
 
-- **Compressed Co-Processor** - a speed upgrade: up to **4** in an import or export bus.
+- **Compressed Co-Processor** - a speed upgrade: up to **28** in an import or export bus, all in one slot.
 
 - **Autocraft Module** - export bus only: it orders what is missing from the Cryo-Calculators.
 
@@ -1582,15 +1582,19 @@ The Mana Saturator's golem flattens a Cooling Co-Processor into a thin pack of f
 #### Bus speed
 <!-- {"type": "table", "widths": [60, 34, 54]} -->
 
-| Upgrades | Per move | How often |
+| Upgrades | Per move | Per second |
 |---|---|---|
-| none | 16 | 0.4 s |
-| 1 | 32 | 0.3 s |
-| 2 | 64 | 0.2 s |
-| 3 | 96 | 0.1 s |
-| 4 | 128 | 1 tick |
+| none | 16 | 40 |
+| 1 | 33 | 130 |
+| 2 | 55 | 220 |
+| 4 | 100 | 400 |
+| 8 | 190 | 760 |
+| 16 | 370 | 1480 |
+| 28 | 640 | 2560 |
 
-Fluids speed up the same way: 1000 mB per move without upgrades and up to 8000 mB with four.
+With upgrades a bus moves every 0.25 s, without them every 0.4 s. All its upgrades go into **one slot**, up to 28.
+
+Fluids speed up too: 1000 mB per move without upgrades, 12500 with four, 83750 with 28.
 
 <!-- {"type": "crafting", "recipe": "golem_logix:autocraft_module"} -->
 

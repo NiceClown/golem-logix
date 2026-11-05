@@ -953,7 +953,7 @@ public class GolemGameTests {
                     "a bare-handed click opens the Formation Bus window, got " + player.containerMenu);
             var menu = (com.golemlogix.menu.BusMenu) player.containerMenu;
             assertSlotsLaidOut(helper, menu, com.golemlogix.menu.BusMenu.IMAGE_WIDTH, com.golemlogix.menu.BusMenu.IMAGE_HEIGHT);
-            helper.assertTrue(menu.upgradeSpec() == com.golemlogix.upgrade.UpgradeSpec.EXPORT_BUS, "upgrades as on the Export Bus");
+            helper.assertTrue(menu.upgradeSpec() == com.golemlogix.upgrade.UpgradeSpec.FORMATION_BUS, "upgrades as on the Export Bus");
             player.getInventory().setItem(0, new ItemStack(Items.OAK_LOG, 5));
             menu.clicked(menu.slots.size() - 9, 0, net.minecraft.world.inventory.ContainerInput.QUICK_MOVE, player);
             helper.assertTrue(be.getFilters().getItem(0).is(Items.OAK_LOG) && player.getInventory().getItem(0).getCount() == 5,
@@ -1417,6 +1417,49 @@ public class GolemGameTests {
             }
             helper.assertTrue(emptyElsewhere[0], "another thread gets nothing from the disks");
             helper.succeed();
+        });
+    }
+
+    /** A trickle takes few operations and is all carried; a lot to move runs at the bus's full rate at once. */
+    public static void busAdaptsToLoad(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.getBlockEntity(BAY, CopperDriveBayBlockEntity.class).getContainer().setItem(1, new ItemStack(ModItems.COPPER_DISK_64K.get()));
+        helper.setBlock(BUS_IN, ModBlocks.VACUUM_IMPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.WEST));
+        BlockPos chest = new BlockPos(2, 1, 4);
+        helper.setBlock(chest, Blocks.CHEST);
+        BusBlockEntity bus = helper.getBlockEntity(BUS_IN, BusBlockEntity.class);
+        bus.getUpgrades().setItem(0, new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get(), 4));
+        Container c = ((Container) helper.getBlockEntity(chest, net.minecraft.world.level.block.entity.BlockEntity.class));
+        int[] startOps = new int[1];
+        ItemKey iron = ItemKey.of(new ItemStack(Items.IRON_INGOT)), cobble = ItemKey.of(new ItemStack(Items.COBBLESTONE));
+        helper.runAfterDelay(30, () -> startOps[0] = bus.operations);
+        // one ingot every 2 ticks for 100 ticks: at a steady 5 ticks that would be 20 operations
+        for (int t = 0; t < 50; t++) {
+            helper.runAfterDelay(30 + t * 2, () -> {
+                ItemStack in = c.getItem(0);
+                c.setItem(0, in.isEmpty() ? new ItemStack(Items.IRON_INGOT) : in.copyWithCount(in.getCount() + 1));
+            });
+        }
+        helper.runAfterDelay(160, () -> {
+            int ops = bus.operations - startOps[0];
+            helper.assertTrue(net(helper, bay).itemCountOf(iron) == 50, "the trickle all arrived, got " + net(helper, bay).itemCountOf(iron));
+            helper.assertTrue(ops <= 12, "a trickle takes few operations, took " + ops);
+            for (int i = 0; i < 20; i++) {
+                c.setItem(i, new ItemStack(Items.COBBLESTONE, 64));
+            }
+            helper.runAfterDelay(50, () -> {
+                long n = net(helper, bay).itemCountOf(cobble);
+                // 20 items a tick, with what the last second has saved up
+                helper.assertTrue(n >= 800 && n <= 1280, "a lot to move goes at the full rate at once, moved " + n + " in 50 ticks");
+                var server = helper.getLevel().getServer();
+                try {
+                    helper.assertTrue(server.getCommands().getDispatcher().execute("golemlogix_buses", server.createCommandSourceStack()) == 1,
+                            "the load command answers");
+                } catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
+                    throw new IllegalStateException("the load command is missing: " + e.getMessage());
+                }
+                helper.succeed();
+            });
         });
     }
 
@@ -4155,36 +4198,63 @@ public class GolemGameTests {
         });
     }
 
-    /** Six upgrade slots, each for one kind: four speed upgrades, an Autocraft Module only on export, one module of each kind; speed upgrades are saved. */
+    /**
+     * A bus's upgrade slots, each for one kind: one for all its speed upgrades as a stack (four make 20 items a tick, 28 make 128), then
+     * an Autocraft Module only on export, one module of each other kind. A save from when speed upgrades had four slots still loads.
+     */
     public static void busUpgradeSlots(GameTestHelper helper) {
         BlockPos at = new BlockPos(2, 1, 2);
         helper.setBlock(at, ModBlocks.VACUUM_IMPORT_BUS.get().defaultBlockState());
         BusBlockEntity in = helper.getBlockEntity(at, BusBlockEntity.class);
         var up = in.getUpgrades();
-        helper.assertTrue(up.getContainerSize() == 6 && up.getMaxStackSize() == 1, "six single-item upgrade slots");
-        int baseInterval = in.interval();
-        int baseAmount = in.itemsPerOperation();
+        helper.assertTrue(up.getContainerSize() == 3, "three upgrade slots");
+        double base = (double) in.itemsPerOperation() / in.interval();
+        helper.assertTrue(base == 2.0, "2 items a tick with no upgrades, got " + base);
         ItemStack speed = new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get());
-        for (int i = 0; i < 4; i++) {
-            helper.assertTrue(up.canPlaceItem(i, speed), "speed upgrade " + (i + 1) + " fits");
-            up.setItem(i, speed.copy());
+        helper.assertTrue(up.canPlaceItem(0, speed), "speed upgrades go into the first slot");
+        helper.assertTrue(!up.canPlaceItem(1, speed), "and only there");
+        up.setItem(0, speed.copyWithCount(4));
+        helper.assertTrue(up.getItem(0).getCount() == 4, "the slot holds them as a stack");
+        double rate = (double) in.itemsPerOperation() / in.interval();
+        helper.assertTrue(rate == 20.0, "four upgrades make 20 items a tick, got " + rate);
+        helper.assertTrue(in.interval() == 5, "a sped-up bus works every 5 ticks, got " + in.interval());
+        double fluidRate = (double) in.fluidPerOperation() / in.interval();
+        helper.assertTrue(fluidRate == 2500.0, "and 2500 mB a tick, got " + fluidRate);
+        helper.assertTrue(!up.canPlaceItem(1, new ItemStack(ModItems.AUTOCRAFT_MODULE.get())), "the import bus takes no autocraft module");
+        helper.assertTrue(!up.canPlaceItem(1, new ItemStack(Items.DIAMOND)), "not an upgrade");
+        helper.assertTrue(up.canPlaceItem(1, new ItemStack(ModItems.REDSTONE_MODULE.get())), "a redstone module fits");
+        up.setItem(1, new ItemStack(ModItems.REDSTONE_MODULE.get()));
+        helper.assertTrue(!up.canPlaceItem(2, new ItemStack(ModItems.REDSTONE_MODULE.get())), "only one redstone module");
+        up.setItem(0, speed.copyWithCount(com.golemlogix.upgrade.UpgradeSpec.BUS_MAX_SPEED));
+        rate = (double) in.itemsPerOperation() / in.interval();
+        helper.assertTrue(rate == 128.0, "a full slot makes 128 items a tick, got " + rate);
+        up.setItem(0, speed.copyWithCount(4));
+
+        // a bus saved with four speed slots, then the redstone module after them
+        var oldRegistries = helper.getLevel().registryAccess();
+        var oldSave = new net.minecraft.nbt.ListTag();
+        ItemStack[] oldItems = {speed, speed, speed, speed, new ItemStack(ModItems.REDSTONE_MODULE.get())};
+        for (int i = 0; i < oldItems.length; i++) {
+            CompoundTag entry = new CompoundTag();
+            entry.putByte("Slot", (byte) i);
+            oldSave.add(com.golemlogix.system.NbtBridge.saveItemInto(oldItems[i].copy(), oldRegistries, entry));
         }
-        helper.assertTrue(!up.canPlaceItem(4, speed), "a fifth speed upgrade is rejected");
-        helper.assertTrue(!up.canPlaceItem(4, new ItemStack(ModItems.AUTOCRAFT_MODULE.get())), "the import bus takes no autocraft module");
-        helper.assertTrue(!up.canPlaceItem(4, new ItemStack(Items.DIAMOND)), "not an upgrade");
-        helper.assertTrue(up.canPlaceItem(4, new ItemStack(ModItems.REDSTONE_MODULE.get())), "a redstone module fits");
-        up.setItem(4, new ItemStack(ModItems.REDSTONE_MODULE.get()));
-        helper.assertTrue(!up.canPlaceItem(5, new ItemStack(ModItems.REDSTONE_MODULE.get())), "only one redstone module");
-        helper.assertTrue(in.itemsPerOperation() == baseAmount * 8, "four upgrades move 8x as much, got " + in.itemsPerOperation());
-        helper.assertTrue(in.interval() < baseInterval && in.interval() >= 1, "four upgrades work more often: " + in.interval() + " < " + baseInterval);
+        BlockPos atOld = new BlockPos(8, 1, 2);
+        helper.setBlock(atOld, ModBlocks.VACUUM_IMPORT_BUS.get().defaultBlockState());
+        var oldUp = helper.getBlockEntity(atOld, BusBlockEntity.class).getUpgrades();
+        oldUp.fromTag(oldSave, oldRegistries);
+        helper.assertTrue(oldUp.getItem(0).getCount() == 4 && oldUp.count(com.golemlogix.upgrade.UpgradeType.SPEED) == 4,
+                "four speed slots come together, got " + oldUp.getItem(0));
+        helper.assertTrue(oldUp.getItem(1).is(ModItems.REDSTONE_MODULE.get()), "the redstone module moves to its slot, got " + oldUp.getItem(1));
 
         BlockPos at2 = new BlockPos(4, 1, 2);
         helper.setBlock(at2, ModBlocks.INJECTOR_EXPORT_BUS.get().defaultBlockState());
         var up2 = (helper.getBlockEntity(at2, BusBlockEntity.class)).getUpgrades();
+        helper.assertTrue(up2.getContainerSize() == 4, "four slots on the export bus");
         helper.assertTrue(!up2.canPlaceItem(0, new ItemStack(ModItems.AUTOCRAFT_MODULE.get())), "a speed slot takes no autocraft module");
-        helper.assertTrue(up2.canPlaceItem(4, new ItemStack(ModItems.AUTOCRAFT_MODULE.get())), "the export bus takes the autocraft module");
-        up2.setItem(4, new ItemStack(ModItems.AUTOCRAFT_MODULE.get()));
-        helper.assertTrue(!up2.canPlaceItem(5, new ItemStack(ModItems.AUTOCRAFT_MODULE.get())), "only one autocraft module");
+        helper.assertTrue(up2.canPlaceItem(1, new ItemStack(ModItems.AUTOCRAFT_MODULE.get())), "the export bus takes the autocraft module");
+        up2.setItem(1, new ItemStack(ModItems.AUTOCRAFT_MODULE.get()));
+        helper.assertTrue(!up2.canPlaceItem(2, new ItemStack(ModItems.AUTOCRAFT_MODULE.get())), "only one autocraft module");
 
         BlockPos at3 = new BlockPos(6, 1, 2);
         helper.setBlock(at3, ModBlocks.PERISCOPE_STORAGE_BUS.get().defaultBlockState());
@@ -4202,13 +4272,25 @@ public class GolemGameTests {
         // an old save with the modules anywhere: on loading every upgrade goes into a slot of its own kind
         up.clearContent();
         up.setItem(0, new ItemStack(ModItems.REDSTONE_MODULE.get()));
-        up.setItem(5, speed.copy());
+        up.setItem(2, speed.copy());
         CompoundTag old = in.saveWithFullMetadata(registries);
         BusBlockEntity sorted = new BusBlockEntity(helper.absolutePos(at), helper.getBlockState(at));
         sorted.loadWithComponents(net.minecraft.world.level.storage.TagValueInput.create(net.minecraft.util.ProblemReporter.DISCARDING, registries, old));
         var su = sorted.getUpgrades();
-        helper.assertTrue(su.getItem(0).is(ModItems.COMPRESSED_COPROCESSOR.get()) && su.getItem(4).is(ModItems.REDSTONE_MODULE.get())
-                && su.getItem(5).isEmpty(), "old upgrades are sorted into their slots: " + su.getItem(0) + ", " + su.getItem(4) + ", " + su.getItem(5));
+        helper.assertTrue(su.getItem(0).is(ModItems.COMPRESSED_COPROCESSOR.get()) && su.getItem(1).is(ModItems.REDSTONE_MODULE.get())
+                && su.getItem(2).isEmpty(), "old upgrades are sorted into their slots: " + su.getItem(0) + ", " + su.getItem(1) + ", " + su.getItem(2));
+
+        // the window: a shift-click puts as many as fit into the one slot, and takes them all out again
+        up.clearContent();
+        ServerPlayer player = testPlayer(helper);
+        var menu = new com.golemlogix.menu.BusMenu(56, player.getInventory(), in.getFilters(), in.getUpgrades(),
+                com.golemlogix.menu.BusMenu.KIND_IMPORT, in.menuData());
+        player.getInventory().setItem(0, speed.copyWithCount(30));
+        menu.clicked(menu.slots.size() - 9, 0, net.minecraft.world.inventory.ContainerInput.QUICK_MOVE, player);
+        helper.assertTrue(up.getItem(0).getCount() == com.golemlogix.upgrade.UpgradeSpec.BUS_MAX_SPEED && player.getInventory().getItem(0).getCount() == 2,
+                "28 go in and 2 stay, slot " + up.getItem(0) + ", hand " + player.getInventory().getItem(0));
+        menu.clicked(menu.upgradeStart(), 0, net.minecraft.world.inventory.ContainerInput.QUICK_MOVE, player);
+        helper.assertTrue(up.getItem(0).isEmpty(), "and all come out, slot " + up.getItem(0));
         helper.succeed();
     }
 

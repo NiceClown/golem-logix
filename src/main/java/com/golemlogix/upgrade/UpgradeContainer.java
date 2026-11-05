@@ -6,7 +6,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 /**
- * A machine's upgrade slots: one upgrade in each, every slot for one kind (UpgradeSpec.typeAt; the window shows its ghost).
+ * A machine's upgrade slots: one upgrade in each (speed upgrades may share one, see UpgradeSpec), every slot for one kind (UpgradeSpec.typeAt; the window shows its ghost).
  * Upgrades from an older save are put into their own slots on loading; one with no slot left (the Annihilation Bus took speed
  * upgrades once) waits in strays until the machine drops it.
  */
@@ -32,7 +32,12 @@ public class UpgradeContainer extends OwnedContainer {
 
     @Override
     public int getMaxStackSize() {
-        return 1;
+        return spec.perSlot(UpgradeType.SPEED);
+    }
+
+    @Override
+    public int getMaxStackSize(ItemStack stack) {
+        return stack.getItem() instanceof UpgradeItem up ? spec.perSlot(up.type()) : 1;
     }
 
     /** Whether an upgrade can go into slot slot (considering what is already in the others). */
@@ -65,15 +70,25 @@ public class UpgradeContainer extends OwnedContainer {
             }
         }
         for (ItemStack s : rest) {
-            int to = -1;
-            for (int i = 0; i < getContainerSize() && to < 0; i++) {
-                if (getItem(i).isEmpty() && accepts(spec, s, this, i)) {
-                    to = i;
+            // a save from when a bus had four speed slots: they come together in the one slot; what does not fit stays a stray
+            for (int i = 0; i < getContainerSize() && !s.isEmpty(); i++) {
+                if (!accepts(spec, s, this, i)) {
+                    continue;
                 }
+                ItemStack in = getItem(i);
+                int room = getMaxStackSize(s) - in.getCount();
+                if (room <= 0 || !in.isEmpty() && !ItemStack.isSameItemSameComponents(in, s)) {
+                    continue;
+                }
+                int n = Math.min(room, s.getCount());
+                if (in.isEmpty()) {
+                    setItem(i, s.copyWithCount(n));
+                } else {
+                    in.grow(n);
+                }
+                s.shrink(n);
             }
-            if (to >= 0) {
-                setItem(to, s);
-            } else {
+            if (!s.isEmpty()) {
                 strays.add(s);
             }
         }
@@ -94,7 +109,7 @@ public class UpgradeContainer extends OwnedContainer {
         int n = 0;
         for (int i = 0; i < getContainerSize(); i++) {
             if (getItem(i).getItem() instanceof UpgradeItem up && up.type() == type) {
-                n++;
+                n += getItem(i).getCount();
             }
         }
         return Math.min(n, spec.max(type));

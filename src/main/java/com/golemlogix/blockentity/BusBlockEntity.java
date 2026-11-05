@@ -55,8 +55,6 @@ import java.util.Optional;
 public class BusBlockEntity extends BlockEntity {
     public static final int FILTER_SLOTS = 9;
     /** Multipliers of "items at a time" and of the interval by the number of speed upgrades (0..4). */
-    private static final int[] AMOUNT_MULT = {1, 2, 4, 6, 8};
-    private static final double[] INTERVAL_MULT = {1.0, 0.75, 0.5, 0.25, 0.125};
     /** How often a bus with an Autocraft Module may order a craft (ticks). */
     private static final int CRAFT_REQUEST_COOLDOWN = 40;
     /** Work sound at most once every half second (with speed upgrades the bus works almost every tick). */
@@ -78,13 +76,32 @@ public class BusBlockEntity extends BlockEntity {
     private long lastCraftRequest = -1000;
 
     /**
-     * An idle bus (its last operations moved nothing) sleeps longer and longer: its interval, doubled each time, up to a second.
-     * A neighbour change, a new filter or upgrade, or (for an export bus) anything entering or leaving the network wakes it.
+     * When a bus works. A bus goes as often as its load calls for, and never loses speed by it, because it moves as much as the ticks
+     * since its last operation allow:
+     * <ul>
+     * <li>a bus with a lot to move works at its interval (a heavy operation halves the wait, so it is at full speed in a few);</li>
+     * <li>a trickle waits for a batch: a light operation doubles the wait, up to a second;</li>
+     * <li>a bus with nothing to do sleeps: its interval, doubled with every idle operation, up to two seconds. A change in the block
+     * in front, a new filter or upgrade or (for an export bus) anything entering or leaving its network wakes it.</li>
+     * </ul>
+     * Until nextRun comes, a bus only compares two numbers.
      */
-    private static final int MAX_IDLE_TICKS = 20, MAX_IDLE_STEPS = 5;
+    private static final int MAX_IDLE_TICKS = 40, MAX_IDLE_STEPS = 6, MAX_LIGHT_TICKS = 20, CREDIT_TICKS = 20;
+    /** An operation that moves less than this (items; 62 mB count as an item) is light, one that moves this twice over is heavy. */
+    private static final int LIGHT_LOAD = 16;
     private int idleSteps;
-    private long sleepUntil;
+    private int period;
+    private long nextRun;
+    private long lastRun;
+    private int deferrals;
+    private boolean sleeping;
     private long sleepEpoch;
+    private long sleepNetworkEpoch;
+    private int fluidMoved;
+    /** What this operation may move. */
+    private int opItems, opFluid;
+    /** Operations so far (the game test counts them). */
+    public int operations;
     /** The handlers of the block in front, kept until NeoForge reports a change there (which also wakes the bus). */
     @org.jetbrains.annotations.Nullable
     private com.golemlogix.system.TargetCaps caps;
@@ -119,7 +136,16 @@ public class BusBlockEntity extends BlockEntity {
     /** Ends the idle sleep: the bus works at its next turn. */
     public void wake() {
         idleSteps = 0;
-        sleepUntil = 0;
+        period = 0;
+        nextRun = 0;
+        sleeping = false;
+    }
+
+    /** The block in front changed. A sleeping bus wakes; a working one keeps its pace (its own moves change that block too). */
+    public void nudge() {
+        if (sleeping) {
+            wake();
+        }
     }
 
     /** Filters, upgrades, priority or the redstone mode changed: look again at once. */
@@ -175,16 +201,15 @@ public class BusBlockEntity extends BlockEntity {
 
     /** Ticks between operations, counting speed upgrades. */
     public int interval() {
-        int n = upgrades.count(UpgradeType.SPEED);
-        return Math.max(1, (int) Math.round(GolemConfig.BUS_INTERVAL_TICKS.get() * INTERVAL_MULT[n]));
+        return com.golemlogix.upgrade.BusSpeed.interval(upgrades.count(UpgradeType.SPEED));
     }
 
     public int itemsPerOperation() {
-        return GolemConfig.BUS_ITEMS_PER_OPERATION.get() * AMOUNT_MULT[upgrades.count(UpgradeType.SPEED)];
+        return com.golemlogix.upgrade.BusSpeed.items(upgrades.count(UpgradeType.SPEED));
     }
 
     public int fluidPerOperation() {
-        return GolemConfig.BUS_FLUID_PER_OPERATION.get() * AMOUNT_MULT[upgrades.count(UpgradeType.SPEED)];
+        return com.golemlogix.upgrade.BusSpeed.fluid(upgrades.count(UpgradeType.SPEED));
     }
 
     // ------------------------------------------------------------------ tick
@@ -195,15 +220,32 @@ public class BusBlockEntity extends BlockEntity {
         if (hasRedstone) {
             be.redstone.observe(powered);
         }
+        long now = level.getGameTime();
+        if (now < be.nextRun) {
+            if (!be.sleeping || !be.isExport() || be.sleepEpoch == GolemNetwork.storageEpoch()) {
+                return;
+            }
+            // something changed in some network: an export bus wakes only if it was its own
+            be.sleepEpoch = GolemNetwork.storageEpoch();
+            if (GolemNetwork.get(level, pos).networkEpoch() == be.sleepNetworkEpoch) {
+                return;
+            }
+            be.wake();
+        }
         GolemNetwork net = GolemNetwork.get(level, pos);
         int interval = be.interval();
-        if (Math.floorMod(level.getGameTime() - net.busRank(be), interval) != 0) {
-            return;
+        if (be.period < interval) {
+            be.period = interval;
         }
-        long now = level.getGameTime();
-        if (now < be.sleepUntil && !(be.isExport() && be.sleepEpoch != GolemNetwork.storageEpoch())) {
-            return;
+        // at full speed the buses of a network take turns by priority; a bus that was put off goes at once
+        if (be.period == interval && be.deferrals == 0) {
+            int phase = Math.floorMod(now - net.busRank(be), interval);
+            if (phase != 0) {
+                be.nextRun = now + interval - phase;
+                return;
+            }
         }
+        be.nextRun = now + be.period;
         if (!net.isOnline() || !net.isDeviceActive(pos)) {
             return;
         }
@@ -222,20 +264,46 @@ public class BusBlockEntity extends BlockEntity {
         if (items == null && fluids == null) {
             return;
         }
+        if (be.deferrals < com.golemlogix.system.BusLoad.MAX_DEFERRALS && com.golemlogix.system.BusLoad.overBudget(level)) {
+            be.deferrals++;
+            be.nextRun = now + 1;
+            com.golemlogix.system.BusLoad.deferred();
+            return;
+        }
+        be.deferrals = 0;
+        // as much as the ticks since the last operation allow
+        long ticks = Math.max(interval, Math.min(Math.max(interval, CREDIT_TICKS), now - be.lastRun));
+        be.opItems = (int) (be.itemsPerOperation() * ticks / interval);
+        be.opFluid = (int) (be.fluidPerOperation() * ticks / interval);
         be.moved = 0;
+        be.fluidMoved = 0;
+        be.operations++;
+        long started = System.nanoTime();
         if (be.isExport()) {
             be.doExport(level, net, target, items, fluids);
         } else {
             be.doImport(level, pos, net, target, items, fluids);
         }
+        com.golemlogix.system.BusLoad.ran(System.nanoTime() - started);
+        be.lastRun = now;
         if (be.moved == 0) {
-            // nothing to do: sleep for the interval doubled with every idle operation, at most a second
+            // nothing to do: sleep for the interval doubled with every idle operation
             be.idleSteps = Math.min(MAX_IDLE_STEPS, be.idleSteps + 1);
-            be.sleepUntil = now + Math.max(interval, Math.min(MAX_IDLE_TICKS, interval << be.idleSteps));
+            be.period = interval;
+            be.nextRun = now + Math.max(interval, Math.min(MAX_IDLE_TICKS, interval << be.idleSteps));
+            be.sleeping = true;
             be.sleepEpoch = GolemNetwork.storageEpoch();
+            be.sleepNetworkEpoch = net.networkEpoch();
         } else {
             be.idleSteps = 0;
-            be.sleepUntil = 0;
+            be.sleeping = false;
+            int load = be.moved - be.fluidMoved + be.fluidMoved / 62;
+            if (load < LIGHT_LOAD) {
+                be.period = Math.max(interval, Math.min(MAX_LIGHT_TICKS, be.period * 2));
+            } else if (load >= LIGHT_LOAD * 2) {
+                be.period = Math.max(interval, be.period / 2);
+            }
+            be.nextRun = now + be.period;
             // pulse mode: one action per pulse
             be.redstone.allows(hasRedstone, powered, true);
             if (now - be.lastSound >= SOUND_COOLDOWN) {
@@ -304,7 +372,7 @@ public class BusBlockEntity extends BlockEntity {
         boolean noFilters = itemFilters.isEmpty() && fluidFilters.isEmpty();
 
         if (items != null && (denyList || noFilters || !itemFilters.isEmpty())) {
-            int budget = itemsPerOperation();
+            int budget = opItems;
             for (int i = 0; i < items.getSlots() && budget > 0; i++) {
                 ItemStack inSlot = items.getStackInSlot(i);
                 if (inSlot.isEmpty() || !passes(inSlot, itemFilters, noFilters, fuzzy(), denyList)) {
@@ -340,7 +408,7 @@ public class BusBlockEntity extends BlockEntity {
         }
 
         if (fluids != null && (denyList || noFilters || !fluidFilters.isEmpty())) {
-            int budget = fluidPerOperation();
+            int budget = opFluid;
             for (int i = 0; i < fluids.getTanks() && budget > 0; i++) {
                 FluidStack f = fluids.getFluidInTank(i);
                 if (f.isEmpty()) {
@@ -368,6 +436,7 @@ public class BusBlockEntity extends BlockEntity {
                 }
                 budget -= real.getAmount();
                 moved += stored;
+                fluidMoved += stored;
             }
         }
     }
@@ -393,8 +462,8 @@ public class BusBlockEntity extends BlockEntity {
     // ---------------------------------------------------------------- export
 
     private void doExport(Level level, GolemNetwork net, BlockPos target, IItemHandler items, IFluidHandler fluids) {
-        int itemBudget = itemsPerOperation();
-        int fluidBudget = fluidPerOperation();
+        int itemBudget = opItems;
+        int fluidBudget = opFluid;
         Map<ItemKey, Long> toCraft = new LinkedHashMap<>();
 
         int[] slotOrder = exportOrder(level);
@@ -533,6 +602,7 @@ public class BusBlockEntity extends BlockEntity {
                 }
                 fluidBudget -= filled;
                 this.moved += filled;
+                fluidMoved += filled;
             }
         }
 

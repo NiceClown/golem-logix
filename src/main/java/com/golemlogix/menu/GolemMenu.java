@@ -144,15 +144,26 @@ public abstract class GolemMenu extends AbstractContainerMenu {
         }
         for (int i = upgradeStart; i < upgradeEnd; i++) {
             Slot s = this.slots.get(i);
-            if (!s.hasItem() && s.mayPlace(stack)) {
-                s.setByPlayer(stack.split(1));
-                return true;
+            if (!s.mayPlace(stack) || s.hasItem() && !ItemStack.isSameItemSameComponents(s.getItem(), stack)) {
+                continue;
             }
+            int n = Math.min(s.getMaxStackSize(stack) - s.getItem().getCount(), stack.getCount());
+            if (n <= 0) {
+                continue;
+            }
+            if (s.hasItem()) {
+                s.getItem().grow(n);
+                stack.shrink(n);
+                s.setChanged();
+            } else {
+                s.setByPlayer(stack.split(n));
+            }
+            return true;
         }
         return false;
     }
 
-    /** Upgrade slot: one item, only a type that suits this machine and no more than the limit. */
+    /** Upgrade slot: only a type that suits this machine and no more than the slot holds of it. */
     public static class UpgradeSlot extends Slot {
         private final UpgradeSpec spec;
 
@@ -168,12 +179,13 @@ public abstract class GolemMenu extends AbstractContainerMenu {
 
         @Override
         public int getMaxStackSize() {
-            return 1;
+            com.golemlogix.upgrade.UpgradeType type = spec.typeAt(getContainerSlot());
+            return type == null ? 1 : spec.perSlot(type);
         }
 
         @Override
         public int getMaxStackSize(ItemStack stack) {
-            return 1;
+            return getMaxStackSize();
         }
     }
 

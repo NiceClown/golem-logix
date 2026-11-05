@@ -64,7 +64,7 @@ public abstract class AbstractBusBlock extends DirectionalBlock implements com.g
     protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, @Nullable net.minecraft.world.level.redstone.Orientation orientation, boolean moving) {
         super.neighborChanged(state, level, pos, block, orientation, moving);
         if (level.getBlockEntity(pos) instanceof BusBlockEntity bus) {
-            bus.wake();
+            bus.nudge();
         }
     }
 
@@ -72,7 +72,7 @@ public abstract class AbstractBusBlock extends DirectionalBlock implements com.g
     @Override
     public void onNeighborChange(BlockState state, net.minecraft.world.level.LevelReader level, BlockPos pos, BlockPos neighbor) {
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof BusBlockEntity bus) {
-            bus.wake();
+            bus.nudge();
         }
     }
 

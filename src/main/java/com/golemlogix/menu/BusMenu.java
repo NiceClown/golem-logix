@@ -45,7 +45,8 @@ public class BusMenu extends GolemMenu {
 
     public static UpgradeSpec specOf(int kind) {
         return switch (kind) {
-            case KIND_EXPORT, KIND_FORMATION -> UpgradeSpec.EXPORT_BUS;
+            case KIND_EXPORT -> UpgradeSpec.EXPORT_BUS;
+            case KIND_FORMATION -> UpgradeSpec.FORMATION_BUS;
             case KIND_IMPORT -> UpgradeSpec.IMPORT_BUS;
             default -> UpgradeSpec.PERISCOPE;
         };

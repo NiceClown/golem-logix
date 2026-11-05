@@ -84,7 +84,7 @@ public class ModItems {
     // Machine upgrades
     public static final DeferredItem<UpgradeItem> COMPRESSED_COPROCESSOR = item("compressed_coprocessor",
             () -> new UpgradeItem(com.golemlogix.upgrade.UpgradeType.SPEED, "tooltip.golem_logix.compressed_coprocessor",
-                    props().stacksTo(16)));
+                    props().stacksTo(64)));
     /** The Co-Processor on Create's assembly line (the transitional item of its sequenced assembly recipe). */
     public static final DeferredItem<com.golemlogix.items.IncompleteAssemblyItem> INCOMPLETE_COMPRESSED_COPROCESSOR =
             item("incomplete_compressed_coprocessor", () -> new com.golemlogix.items.IncompleteAssemblyItem(props()));

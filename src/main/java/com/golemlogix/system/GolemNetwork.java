@@ -131,6 +131,13 @@ public final class GolemNetwork {
         return storageEpoch;
     }
 
+    /** The storage epoch when this network's own contents last changed. */
+    private long networkEpoch;
+
+    public long networkEpoch() {
+        return networkEpoch;
+    }
+
     /** A storage behind a periscope; on the server the periscope (owner) keeps its handlers cached. */
     public record External(Level level, BlockPos target, Direction face, int priority, BlockPos periscope,
                            @Nullable PeriscopeBlockEntity owner) {
@@ -1177,7 +1184,7 @@ public final class GolemNetwork {
             }
             markBaysChanged(touched);
             if (remaining.getCount() != input.getCount()) {
-                storageEpoch++;
+                networkEpoch = ++storageEpoch;
             }
             return remaining;
         }
@@ -1263,7 +1270,7 @@ public final class GolemNetwork {
         if (!simulate) {
             markBaysChanged(touched);
             if (left != amount) {
-                storageEpoch++;
+                networkEpoch = ++storageEpoch;
             }
         }
         int taken = amount - left;
@@ -1362,7 +1369,7 @@ public final class GolemNetwork {
         }
         markBaysChanged(touched);
         if (!simulate && left != input.getAmount()) {
-            storageEpoch++;
+            networkEpoch = ++storageEpoch;
         }
         return input.getAmount() - left;
     }
@@ -1413,7 +1420,7 @@ public final class GolemNetwork {
         if (!simulate) {
             markBaysChanged(touched);
             if (left != amount) {
-                storageEpoch++;
+                networkEpoch = ++storageEpoch;
             }
         }
         int taken = amount - left;

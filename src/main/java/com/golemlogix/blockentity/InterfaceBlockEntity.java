@@ -40,8 +40,6 @@ import java.util.Map;
  */
 public class InterfaceBlockEntity extends BlockEntity {
     public static final int SLOTS = 9;
-    private static final int[] AMOUNT_MULT = {1, 2, 4, 6, 8};
-    private static final double[] INTERVAL_MULT = {1.0, 0.75, 0.5, 0.25, 0.125};
     private static final int CRAFT_REQUEST_COOLDOWN = 40;
     private static final int SOUND_COOLDOWN = 12;
     /** Block event "the interface did some work" (parameter = number of speed upgrades): the client swings the metronomes and spins the turbines. */
@@ -234,7 +232,7 @@ public class InterfaceBlockEntity extends BlockEntity {
     }
 
     public int fluidPerOperation() {
-        return GolemConfig.BUS_FLUID_PER_OPERATION.get() * AMOUNT_MULT[upgrades.count(UpgradeType.SPEED)];
+        return com.golemlogix.upgrade.BusSpeed.fluid(upgrades.count(UpgradeType.SPEED));
     }
 
     /** Fluid stock: foreign and excess fluid goes to the network, the missing amount comes from it. Returns the mB moved. */
@@ -448,12 +446,11 @@ public class InterfaceBlockEntity extends BlockEntity {
     }
 
     public int interval() {
-        int n = upgrades.count(UpgradeType.SPEED);
-        return Math.max(1, (int) Math.round(GolemConfig.BUS_INTERVAL_TICKS.get() * INTERVAL_MULT[n]));
+        return com.golemlogix.upgrade.BusSpeed.interval(upgrades.count(UpgradeType.SPEED));
     }
 
     public int itemsPerOperation() {
-        return GolemConfig.BUS_ITEMS_PER_OPERATION.get() * AMOUNT_MULT[upgrades.count(UpgradeType.SPEED)];
+        return com.golemlogix.upgrade.BusSpeed.items(upgrades.count(UpgradeType.SPEED));
     }
 
     /** How many items to keep in slot i (at most a stack; none for a slot in "fluid" mode). */

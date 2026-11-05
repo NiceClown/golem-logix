@@ -47,7 +47,7 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
     public static final int IN_ORDER = 0, ROUND_ROBIN = 1, RANDOM = 2;
 
     private final OwnedContainer filters = new OwnedContainer(FILTER_SLOTS, this, s -> true);
-    private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.EXPORT_BUS, this);
+    private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.FORMATION_BUS, this);
     private final RedstoneControl redstone = new RedstoneControl();
 
     /** The block the golem is pushing out (already taken out of the network), when the push began and how long it lasts. */

@@ -60,6 +60,23 @@ public class GolemLogixMod {
 
     @EventBusSubscriber(modid = MOD_ID)
     public static class GameEvents {
+        /** /golemlogix_buses: what the buses cost the server over the last few seconds. */
+        @SubscribeEvent
+        public static void onRegisterCommands(net.neoforged.neoforge.event.RegisterCommandsEvent event) {
+            event.getDispatcher().register(net.minecraft.commands.Commands.literal("golemlogix_buses")
+                    .requires(net.minecraft.commands.Commands.hasPermission(net.minecraft.commands.Commands.LEVEL_GAMEMASTERS))
+                    .executes(ctx -> {
+                        ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.translatable("message.golem_logix.bus_load",
+                                com.golemlogix.system.BusLoad.opsPerSecond(),
+                                String.format(java.util.Locale.ROOT, "%.2f", com.golemlogix.system.BusLoad.millisPerTick()),
+                                String.format(java.util.Locale.ROOT, "%.1f", com.golemlogix.system.BusLoad.percentOfTick()),
+                                String.format(java.util.Locale.ROOT, "%.2f", com.golemlogix.system.BusLoad.worstMillis()),
+                                com.golemlogix.config.GolemConfig.BUS_MAX_MILLIS_PER_TICK.get(),
+                                com.golemlogix.system.BusLoad.deferredPerSecond()), false);
+                        return 1;
+                    }));
+        }
+
         @SubscribeEvent
         public static void onServerStopped(ServerStoppedEvent event) {
             GolemNetwork.forgetAll();

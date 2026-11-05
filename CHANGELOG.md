@@ -6,6 +6,20 @@
   machine no longer backs up behind them. The interface used to pass 16 items every 8 ticks and the provider emptied its return
   slots every 5. Compressed Co-Processors in an interface now speed up only keeping its stock.
 
+- **Buses hold up to 28 Compressed Co-Processors**, as a stack in one upgrade slot; four upgrades already in a bus come together
+  there on loading. The rate grows in a straight line: 2 items a tick with none, 20 with four (about a fully sped-up AE2 bus),
+  128 with 28, the old top speed. Fluids: 2500 mB a tick with four. The Interface keeps its four upgrades at the same rate; the
+  Formation Bus keeps its four too, in one slot.
+- **Buses pace themselves and keep their full speed.** A bus with a lot to move runs at its full rate within a few operations, a
+  trickle waits for a batch (up to a second), an idle bus sleeps (up to two seconds) and wakes as soon as the block in front
+  changes or, for an export bus, its own network's contents do. A bus moves as much as the ticks since its last operation allow, so
+  pacing costs no throughput. A sped-up bus works every 5 ticks and moves more at a time, and a waiting one no longer looks at the
+  network at all.
+- **Server tools:** the config `busMaxMillisPerTick` (10 by default, of the 50 ms a tick has; 0 for no limit) puts buses off to the
+  next tick when they use up their time, and they catch up afterwards. The command `/golemlogix_buses` shows operations a second and
+  what the buses cost.
+- The co-processor stacks to 64.
+
 ## 2.1.2 (26.1.2) — Sharp at a distance
 
 - Fixed: textures that do not divide by 16 limited the mipmaps of the whole block atlas, so distant blocks of every mod in a pack

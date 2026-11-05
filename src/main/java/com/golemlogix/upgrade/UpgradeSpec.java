@@ -1,18 +1,27 @@
 package com.golemlogix.upgrade;
 
 /**
- * What a machine accepts: how many slots and which upgrades (and how many speed upgrades). Each slot is for one kind, in this
- * order: the speed upgrades, then the Autocraft Module, the Redstone Module, the Fuzzy Card and the Plasma Temper.
+ * What a machine accepts: how many slots and which upgrades (and how many speed upgrades). Each slot is for one kind, in order: the
+ * speed upgrades, then the Autocraft Module, the Redstone Module, the Fuzzy Card and the Plasma Temper. The speed upgrades have a slot
+ * each, or with speedStacks all share one slot that holds them as a stack.
  */
-public record UpgradeSpec(int slots, int maxSpeed, boolean crafting, boolean redstone, boolean fuzzy, boolean temper) {
-    public UpgradeSpec(int slots, int maxSpeed, boolean crafting, boolean redstone, boolean fuzzy) {
-        this(slots, maxSpeed, crafting, redstone, fuzzy, false);
+public record UpgradeSpec(int slots, int maxSpeed, boolean crafting, boolean redstone, boolean fuzzy, boolean temper, boolean speedStacks) {
+    public UpgradeSpec(int slots, int maxSpeed, boolean crafting, boolean redstone, boolean fuzzy, boolean temper) {
+        this(slots, maxSpeed, crafting, redstone, fuzzy, temper, false);
     }
 
-    /** Import bus: up to 4 speed upgrades, redstone and a Fuzzy Card. */
-    public static final UpgradeSpec IMPORT_BUS = new UpgradeSpec(6, 4, false, true, true);
-    /** Export bus: up to 4 speed upgrades, autocraft, redstone and a Fuzzy Card. */
-    public static final UpgradeSpec EXPORT_BUS = new UpgradeSpec(7, 4, true, true, true);
+    public UpgradeSpec(int slots, int maxSpeed, boolean crafting, boolean redstone, boolean fuzzy) {
+        this(slots, maxSpeed, crafting, redstone, fuzzy, false, false);
+    }
+
+    /** The most speed upgrades an import or export bus holds (see BusSpeed). */
+    public static final int BUS_MAX_SPEED = 28;
+    /** Import bus: one slot of speed upgrades, redstone and a Fuzzy Card. */
+    public static final UpgradeSpec IMPORT_BUS = new UpgradeSpec(3, BUS_MAX_SPEED, false, true, true, false, true);
+    /** Export bus: one slot of speed upgrades, autocraft, redstone and a Fuzzy Card. */
+    public static final UpgradeSpec EXPORT_BUS = new UpgradeSpec(4, BUS_MAX_SPEED, true, true, true, false, true);
+    /** Formation Bus: like the export bus, but it sets one block at a time, and four upgrades are all that can speed that up. */
+    public static final UpgradeSpec FORMATION_BUS = new UpgradeSpec(4, 4, true, true, true, false, true);
     /**
      * Annihilation Bus: an Autocraft Module (it refills its tool slot from the network, and orders what the network lacks),
      * redstone, a Fuzzy Card and the Plasma Temper - its speed is its tool's (and the tool's enchantments).
@@ -38,10 +47,11 @@ public record UpgradeSpec(int slots, int maxSpeed, boolean crafting, boolean red
     /** The kind of upgrade slot slot is for. */
     public UpgradeType typeAt(int slot) {
         int k = slot;
-        if (k < maxSpeed) {
+        int speedSlots = speedStacks ? Math.min(1, maxSpeed) : maxSpeed;
+        if (k < speedSlots) {
             return UpgradeType.SPEED;
         }
-        k -= maxSpeed;
+        k -= speedSlots;
         for (UpgradeType t : new UpgradeType[]{UpgradeType.CRAFTING, UpgradeType.REDSTONE, UpgradeType.FUZZY, UpgradeType.TEMPER}) {
             if (max(t) > 0 && k-- == 0) {
                 return t;
@@ -58,6 +68,11 @@ public record UpgradeSpec(int slots, int maxSpeed, boolean crafting, boolean red
             }
         }
         return -1;
+    }
+
+    /** How many of this upgrade one slot holds. */
+    public int perSlot(UpgradeType type) {
+        return type == UpgradeType.SPEED && speedStacks ? maxSpeed : 1;
     }
 
     public int max(UpgradeType type) {
