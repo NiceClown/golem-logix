@@ -551,6 +551,12 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
                     if (row.craftable() && row.count() > 0) {
                         g.fill(x - 1, y - 1, x + 3, y + 3, GolemGui.CYAN);
                     }
+                    if (com.golemlogix.system.Gear.is(row.stack())) {
+                        // a yellow exclamation mark in the top right corner: see overGearMark
+                        g.fill(x + 11, y - 1, x + 17, y + 8, 0xE0201808);
+                        g.fill(x + 13, y, x + 15, y + 4, 0xFFFFD83A);
+                        g.fill(x + 13, y + 5, x + 15, y + 7, 0xFFFFD83A);
+                    }
                 }
                 if (idx == hovered) {
                     g.fill(x, y, x + 16, y + 16, 0x80FFFFFF);
@@ -586,6 +592,16 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
 
     private void drawFluid(GuiGraphicsExtractor g, FluidStack fluid, int x, int y) {
         FluidIcons.draw(g, fluid, x, y);
+    }
+
+    /** Whether the cursor is on the exclamation mark of a piece of equipment in the list. */
+    private boolean overGearMark(double mouseX, double mouseY) {
+        int idx = hoveredIndex(mouseX, mouseY);
+        if (idx < 0 || rows.get(idx).isFluid() || !com.golemlogix.system.Gear.is(rows.get(idx).stack())) {
+            return false;
+        }
+        double cx = (mouseX - (leftPos + TerminalMenu.LIST_X)) % 18, cy = (mouseY - (topPos + TerminalMenu.LIST_Y)) % 18;
+        return cx >= 11 && cy < 10;
     }
 
     private int hoveredIndex(double mouseX, double mouseY) {
@@ -638,6 +654,13 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     }
 
     private void renderEntryTooltip(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+        if (overGearMark(mouseX, mouseY)) {
+            g.setComponentTooltipForNextFrame(font, List.of(
+                    Component.translatable("gui.golem_logix.gear.title").withStyle(ChatFormatting.YELLOW),
+                    Component.translatable("gui.golem_logix.gear.why", com.golemlogix.system.Gear.COST).withStyle(ChatFormatting.GRAY),
+                    Component.translatable("gui.golem_logix.gear.click").withStyle(ChatFormatting.DARK_AQUA)), mouseX, mouseY);
+            return;
+        }
         int idx = hoveredIndex(mouseX, mouseY);
         if (idx >= 0) {
             List<Component> lines = new ArrayList<>();
@@ -715,6 +738,10 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
             return true;
         }
 
+        if (button == 0 && menu.getCarried().isEmpty() && overGearMark(mouseX, mouseY)) {
+            minecraft.setScreen(com.golemlogix.client.book.BookScreen.openAt("st_gear"));
+            return true;
+        }
         if (overList(mouseX, mouseY)) {
             if (handleListClick(mouseX, mouseY, button)) {
                 return true;

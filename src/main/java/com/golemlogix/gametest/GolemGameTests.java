@@ -2428,13 +2428,13 @@ public class GolemGameTests {
         java.util.UUID itemId = itemDisk.get(ModDataComponents.DISK_ID.get());
         java.util.UUID fluidId = fluidDisk.get(ModDataComponents.DISK_ID.get());
         helper.assertTrue(itemId != null && fluidId != null && !itemId.equals(fluidId), "disks get unique ids");
-        helper.assertTrue(itemDisk.get(ModDataComponents.STORED.get()) == 501, "STORED mirrors the content");
+        helper.assertTrue(itemDisk.get(ModDataComponents.STORED.get()) == 4500, "STORED mirrors the content");
 
         DiskStore store = DiskStore.get(level.getServer());
         CompoundTag tag = store.save(new CompoundTag(), level.registryAccess());
         DiskStore loaded = DiskStore.load(tag, level.registryAccess());
         DiskStore.Disk a = loaded.getOrNull(itemId);
-        helper.assertTrue(a != null && a.storedItems == 501, "items survive the save");
+        helper.assertTrue(a != null && a.storedItems == 4500, "items survive the save");
         helper.assertTrue(a.items.get(ItemKey.of(new ItemStack(Items.COBBLESTONE))) == 500, "cobblestone count");
         helper.assertTrue(a.items.get(ItemKey.of(sword)) == 1, "damaged sword is a separate type");
         DiskStore.Disk f = loaded.getOrNull(fluidId);
@@ -2442,7 +2442,7 @@ public class GolemGameTests {
 
         ItemStack moved = itemDisk.copy();
         helper.assertTrue(DiskStorage.extractItem(moved, new ItemStack(Items.COBBLESTONE), 100, false) == 100, "extract via the copy");
-        helper.assertTrue(DiskStorage.storedItems(itemDisk) == 401, "copy and original share the same storage");
+        helper.assertTrue(DiskStorage.storedItems(itemDisk) == 4400, "copy and original share the same storage");
         helper.assertTrue(DiskStorage.extractItem(moved, new ItemStack(Items.COBBLESTONE), 1000, false) == 400, "rest of cobble");
         helper.assertTrue(DiskStorage.extractItem(moved, sword, 5, false) == 1, "sword back");
         helper.assertTrue(DiskStorage.storedItems(itemDisk) == 0 && moved.get(ModDataComponents.STORED.get()) == null,

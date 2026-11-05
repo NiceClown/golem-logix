@@ -1148,6 +1148,8 @@ Range card: the link reaches anywhere in the same dimension.
 
 A disk counts its capacity in **pieces**: a 1k disk holds 1,000 items of any kinds together - one type or a thousand different ones. There is no separate limit on the number of types.
 
+**Equipment is the exception: see “Equipment on disks”.**
+
 ##### Capacities
 
 - 1k - 1,000 items, 4k - 4,000, 16k - 16,000, 64k - 64,000, **256k - 256,000**.
@@ -1175,6 +1177,30 @@ Three 16k disks, gold and matrices.
 <!-- {"type": "crafting", "recipe": "golem_logix:copper_disk_256k"} -->
 
 Three 64k disks, diamonds and cores.
+
+### Equipment on disks: read this!
+<!-- {"id": "st_gear", "icon": "minecraft:diamond_chestplate", "x": 0, "y": 1, "parents": ["st_disks"], "gold": true} -->
+
+#### 4,000 pieces each
+
+**A worn, enchanted or otherwise individual piece of equipment takes 4,000 pieces of a disk.** In terminals it carries a **yellow exclamation mark**.
+
+A 256k disk holds **64** such things. Disks of 1k and 4k always take **one**, however full they are.
+
+*The tape keeps runes: one image and a number of copies. A thing with its own history has no such image. Scars cannot be counted, so a golem freezes it into the tape whole, and that block of ice takes the room of four thousand runes.*
+
+#### What counts
+
+- Counts: what does not stack and differs from its plain self: damaged, enchanted, named, or full of its own data, like a filled shulker box.
+- Does not count: a new, unused sword or armour piece, however many; **buckets and tanks holding a fluid**; potions.
+
+A disk that holds more than this from an older world loses nothing. You can take from it, but nothing goes in until there is room.
+
+##### Why it is so
+
+A network slows down with the number of different kinds it must go through, not the number of items. A mob farm can pour in tens of thousands of different swords, and that can bring a server down.
+
+Keep equipment you want to keep in a chest behind a **Periscope**, and destroy what you do not want before it reaches the network.
 
 ### Cryo Fluid Disks
 <!-- {"id": "st_fluid", "icon": "golem_logix:fluid_disk_16k", "x": 1, "y": -1, "parents": ["st_disks"]} -->

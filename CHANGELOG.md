@@ -30,8 +30,12 @@
   make its tank larger. It used to stop at four, which a single spawner on a good altar outran fifteen times over.
 - Cryo-Source Jars join by themselves: four in a square are a Giga Jar, nine an Antigravity Reactor, one store with a little more room.
   Both were checked under Iris with a shader pack, and renderers can now build their geometry once and replay it (BerBuffers.Baked).
+- Equipment on disks: a worn, enchanted or otherwise individual thing takes 4,000 pieces of a disk (1k and 4k disks always take one), with a
+  yellow mark in terminals that leads to the guide book. Buckets, potions and the tag golem_logix:not_gear are exempt. Older disks lose nothing.
+- Terminals send only what changed instead of the whole list, and open windows share one reading of the network.
+- Automatic orders that lack ingredients wait before planning again, from 1 second up to 30, and do not plan at all without a free calculator.
 - The game tests were reviewed: two duplicates went, tests that could not fail now can (each checked by breaking the mod on purpose),
-  and new ones cover cyclic patterns, a network cut in two, two calculators at once, power loss during a job, a job reloaded with a portion inside a machine, rights taken away with a window open, rights and the Stock Manometer after a reload, wrongly built arrays, redstone modes and Fuzzy Cards on more buses, a provider feeding several sides, a disk moved between cabinets, a Ledger keeping a fluid, real bus throughput, huge orders and processors helping each other (224 in all).
+  and new ones cover cyclic patterns, a network cut in two, two calculators at once, power loss during a job, a job reloaded with a portion inside a machine, rights taken away with a window open, rights and the Stock Manometer after a reload, wrongly built arrays, redstone modes and Fuzzy Cards on more buses, a provider feeding several sides, a disk moved between cabinets, a Ledger keeping a fluid, real bus throughput, huge orders and processors helping each other (227 in all).
 
 ## 2.1.2 (26.1.2) — Sharp at a distance
 

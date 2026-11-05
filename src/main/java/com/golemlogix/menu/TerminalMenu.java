@@ -129,6 +129,7 @@ public class TerminalMenu extends GolemMenu {
 
     // --- client side
     public final List<TerminalListPayload.Entry> clientEntries = new ArrayList<>();
+    private final Map<ItemKey, Integer> clientIndex = new java.util.HashMap<>();
     public TerminalInfoPayload clientInfo = null;
     public int clientVersion = 0;
 
@@ -821,14 +822,16 @@ public class TerminalMenu extends GolemMenu {
             drainCharge(sp, net);
         }
 
-        Map<ItemKey, Long> items = err == null ? net.listItems() : Map.of();
+        Map<ItemKey, Long> items = err == null ? net.listItemsShared() : Map.of();
         Set<ItemKey> craftable = err == null ? new HashSet<>(net.patternIndex().keySet()) : Set.of();
 
-        if (lastItems == null || !items.equals(lastItems) || !craftable.equals(lastCraftable)) {
-            lastItems = new LinkedHashMap<>(items);
-            lastCraftable = new HashSet<>(craftable);
+        if (lastItems == null) {
             sendList(sp, items, craftable);
+        } else if (!items.equals(lastItems) || !craftable.equals(lastCraftable)) {
+            sendChanges(sp, items, craftable);
         }
+        lastItems = items;
+        lastCraftable = craftable;
 
         int busy = 0;
         int total = 0;
@@ -879,6 +882,37 @@ public class TerminalMenu extends GolemMenu {
         return true;
     }
 
+    /** Only what changed since the last time: an entry with nothing stored that cannot be crafted is gone. */
+    private void sendChanges(ServerPlayer sp, Map<ItemKey, Long> items, Set<ItemKey> craftable) {
+        List<TerminalListPayload.Entry> changes = new ArrayList<>();
+        for (Map.Entry<ItemKey, Long> e : items.entrySet()) {
+            ItemKey k = e.getKey();
+            boolean can = craftable.contains(k);
+            if (!e.getValue().equals(lastItems.get(k)) || can != lastCraftable.contains(k)) {
+                changes.add(new TerminalListPayload.Entry(k.stack(), e.getValue(), can));
+            }
+        }
+        for (ItemKey k : lastItems.keySet()) {
+            if (!items.containsKey(k)) {
+                changes.add(new TerminalListPayload.Entry(k.stack(), 0, craftable.contains(k)));
+            }
+        }
+        for (ItemKey k : craftable) {
+            if (!items.containsKey(k) && !lastItems.containsKey(k) && !lastCraftable.contains(k)) {
+                changes.add(new TerminalListPayload.Entry(k.stack(), 0, true));
+            }
+        }
+        for (ItemKey k : lastCraftable) {
+            if (!items.containsKey(k) && !lastItems.containsKey(k) && !craftable.contains(k)) {
+                changes.add(new TerminalListPayload.Entry(k.stack(), 0, false));
+            }
+        }
+        for (int i = 0; i < changes.size(); i += TerminalListPayload.CHUNK) {
+            int end = Math.min(changes.size(), i + TerminalListPayload.CHUNK);
+            PacketDistributor.sendToPlayer(sp, new TerminalListPayload(containerId, false, new ArrayList<>(changes.subList(i, end))));
+        }
+    }
+
     private void sendList(ServerPlayer sp, Map<ItemKey, Long> items, Set<ItemKey> craftable) {
         List<TerminalListPayload.Entry> all = new ArrayList<>(items.size() + craftable.size());
         for (Map.Entry<ItemKey, Long> e : items.entrySet()) {
@@ -904,8 +938,28 @@ public class TerminalMenu extends GolemMenu {
     public void clientReceiveList(TerminalListPayload p) {
         if (p.reset()) {
             clientEntries.clear();
+            clientIndex.clear();
         }
-        clientEntries.addAll(p.entries());
+        for (TerminalListPayload.Entry e : p.entries()) {
+            ItemKey k = ItemKey.of(e.key());
+            Integer at = clientIndex.get(k);
+            if (e.count() <= 0 && !e.craftable()) {
+                if (at != null) {
+                    // the last entry takes the place of the one that is gone (the screen sorts its own copy)
+                    TerminalListPayload.Entry last = clientEntries.remove(clientEntries.size() - 1);
+                    if (at < clientEntries.size()) {
+                        clientEntries.set(at, last);
+                        clientIndex.put(ItemKey.of(last.key()), at);
+                    }
+                    clientIndex.remove(k);
+                }
+            } else if (at != null) {
+                clientEntries.set(at, e);
+            } else {
+                clientIndex.put(k, clientEntries.size());
+                clientEntries.add(e);
+            }
+        }
         clientVersion++;
     }
 

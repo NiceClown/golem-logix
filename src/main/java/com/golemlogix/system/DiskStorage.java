@@ -17,7 +17,7 @@ import java.util.UUID;
 /**
  * Operations with magnetic disks. The contents are stored on the server in DiskStore by the disk UUID;
  * the disk itself only carries the UUID and the STORED counter (for the tooltip and the fill bar).
- * A disk stores a plain amount, any number of types.
+ * A disk stores a plain amount of pieces, any number of types; equipment takes many pieces each (see Gear).
  */
 public final class DiskStorage {
     private DiskStorage() {
@@ -123,15 +123,31 @@ public final class DiskStorage {
         }
         DiskStore.Disk d = simulate ? read(disk) : st.getOrCreate(ensureId(disk));
         long stored = d == null ? 0 : d.storedItems;
-        int n = (int) Math.min(capacity(disk) - stored, stack.getCount());
+        int cost = Gear.cost(stack);
+        int n = (int) Math.min((capacity(disk) - stored) / cost, stack.getCount());
+        // a disk too small for even one by the sum, or partly filled, still takes one piece of equipment if it has none
+        if (n <= 0 && cost > 1 && capacity(disk) <= Gear.COST && !holdsGear(d)) {
+            n = 1;
+        }
         if (n <= 0 || simulate) {
             return Math.max(n, 0);
         }
         d.items.merge(ItemKey.of(stack), n, Integer::sum);
-        d.storedItems += n;
+        d.storedItems += (long) n * cost;
         markStored(disk, d, d.storedItems);
         st.setDirty();
         return n;
+    }
+
+    private static boolean holdsGear(@Nullable DiskStore.Disk d) {
+        if (d != null) {
+            for (ItemKey k : d.items.keySet()) {
+                if (Gear.is(k.stack())) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /** Takes items from the disk. Returns how many were actually taken. */
@@ -156,7 +172,7 @@ public final class DiskStorage {
             } else {
                 d.items.put(key, have - take);
             }
-            d.storedItems -= take;
+            d.storedItems = Math.max(0, d.storedItems - (long) take * Gear.cost(template));
             markStored(disk, d, d.storedItems);
             st.setDirty();
         }

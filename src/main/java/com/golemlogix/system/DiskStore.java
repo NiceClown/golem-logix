@@ -108,7 +108,7 @@ public class DiskStore extends SavedData {
                 int count = it.getIntOr("Count", 0);
                 if (!stack.isEmpty() && count > 0) {
                     disk.items.put(ItemKey.of(stack), count);
-                    disk.storedItems += count;
+                    disk.storedItems += (long) count * Gear.cost(stack);
                 }
             }
             ListTag fluids = t.getListOrEmpty("Fluids");

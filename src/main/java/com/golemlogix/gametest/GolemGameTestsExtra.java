@@ -3255,6 +3255,103 @@ public final class GolemGameTestsExtra {
     }
 
     /**
+     * Equipment takes 4000 pieces of a disk; 1k and 4k disks always take one; things that do not count stack up as pieces. Old contents
+     * over the limit stay, nothing more goes in.
+     */
+    public static void gearOnDisks(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        CopperDriveBayBlockEntity drive = helper.getBlockEntity(bay, CopperDriveBayBlockEntity.class);
+        drive.getContainer().setItem(0, new ItemStack(ModItems.COPPER_DISK_16K.get()));
+        ItemStack big = drive.getContainer().getItem(0);
+        ItemStack worn = new ItemStack(Items.IRON_SWORD);
+        worn.setDamageValue(5);
+        helper.assertTrue(com.golemlogix.system.Gear.is(worn), "a worn sword is equipment");
+        helper.assertTrue(!com.golemlogix.system.Gear.is(new ItemStack(Items.IRON_SWORD)), "a new one is not");
+        helper.assertTrue(!com.golemlogix.system.Gear.is(new ItemStack(Items.WATER_BUCKET)) && !com.golemlogix.system.Gear.is(new ItemStack(Items.COBBLESTONE)), "a bucket and stone are not");
+        ItemStack potion = new ItemStack(Items.POTION);
+        potion.set(net.minecraft.core.component.DataComponents.POTION_CONTENTS, new net.minecraft.world.item.alchemy.PotionContents(net.minecraft.world.item.alchemy.Potions.WATER));
+        helper.assertTrue(!com.golemlogix.system.Gear.is(potion), "a potion is not");
+
+        for (int i = 1; i <= 4; i++) {
+            ItemStack s = new ItemStack(Items.IRON_SWORD);
+            s.setDamageValue(i);
+            helper.assertTrue(com.golemlogix.system.DiskStorage.insertItem(big, s, false) == 1, "16k takes equipment number " + i);
+        }
+        helper.assertTrue(com.golemlogix.system.DiskStorage.storedItems(big) == 16000, "four take the whole disk");
+        helper.assertTrue(com.golemlogix.system.DiskStorage.insertItem(big, worn, true) == 0, "a fifth does not fit");
+        helper.assertTrue(com.golemlogix.system.DiskStorage.insertItem(big, new ItemStack(Items.COBBLESTONE), true) == 0, "nor a stone");
+        ItemStack first = new ItemStack(Items.IRON_SWORD);
+        first.setDamageValue(1);
+        helper.assertTrue(com.golemlogix.system.DiskStorage.extractItem(big, first, 1, false) == 1, "one comes out");
+        helper.assertTrue(com.golemlogix.system.DiskStorage.storedItems(big) == 12000, "and frees its 4000");
+
+        for (var disk : List.of(ModItems.COPPER_DISK_1K.get(), ModItems.COPPER_DISK_4K.get())) {
+            ItemStack small = new ItemStack(disk);
+            helper.assertTrue(com.golemlogix.system.DiskStorage.insertItem(small, new ItemStack(Items.COBBLESTONE, 500), false) == 500, "stone first");
+            helper.assertTrue(com.golemlogix.system.DiskStorage.insertItem(small, worn, false) == 1, "a small disk takes one, even partly filled");
+            ItemStack other = new ItemStack(Items.IRON_SWORD);
+            other.setDamageValue(9);
+            helper.assertTrue(com.golemlogix.system.DiskStorage.insertItem(small, other, true) == 0, "but only one");
+            helper.assertTrue(com.golemlogix.system.DiskStorage.insertItem(small, new ItemStack(Items.COBBLESTONE), true) == 0, "and is full then");
+            helper.assertTrue(com.golemlogix.system.DiskStorage.extractItem(small, worn, 1, false) == 1, "it comes out");
+            helper.assertTrue(com.golemlogix.system.DiskStorage.storedItems(small) == 500, "the stone stays");
+        }
+        helper.succeed();
+    }
+
+    /** A device whose order lacks ingredients does not plan again at once; the pause grows, and ingredients end it soon. */
+    public static void failedOrdersWait(GameTestHelper helper) {
+        BlockPos bay = hugeRig(helper);
+        ItemKey plank = ItemKey.of(new ItemStack(Items.OAK_PLANKS));
+        BlockPos device = helper.absolutePos(BUS_OUT);
+        java.util.Map<ItemKey, Long> order = java.util.Map.of(plank, 4L);
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, bay);
+            var first = n.startCrafting(order, null, device);
+            helper.assertTrue(first.type() == GolemNetwork.StartType.MISSING && first.plan() != null, "the first try plans and fails");
+            var second = n.startCrafting(order, null, device);
+            helper.assertTrue(second.type() == GolemNetwork.StartType.MISSING && second.plan() == null, "the next one does not plan");
+            helper.assertTrue(n.startCrafting(order, null, null).plan() != null, "a player's order is never held back");
+        });
+        helper.runAfterDelay(30, () -> {
+            GolemNetwork n = net(helper, bay);
+            helper.assertTrue(n.startCrafting(order, null, device).plan() != null, "after a second it tries again");
+            helper.assertTrue(n.startCrafting(order, null, device).plan() == null, "and waits again");
+        });
+        helper.runAfterDelay(45, () -> {
+            helper.assertTrue(net(helper, bay).startCrafting(order, null, device).plan() == null, "now two seconds, not one");
+            net(helper, bay).insertItem(new ItemStack(Items.OAK_LOG, 1), false);
+        });
+        helper.runAfterDelay(90, () -> {
+            helper.assertTrue(net(helper, bay).startCrafting(order, null, device).type() == GolemNetwork.StartType.STARTED, "ingredients end the wait");
+            helper.succeed();
+        });
+    }
+
+    /** Terminal windows get only what changed, and end up with the same list as the network. */
+    public static void terminalSendsChanges(GameTestHelper helper) {
+        BlockPos bay = hugeRig(helper);
+        ServerPlayer player = testPlayer(helper);
+        helper.setBlock(TERM, ModBlocks.ANALOG_TERMINAL.get().defaultBlockState());
+        BlockPos abs = helper.absolutePos(TERM);
+        TerminalMenu client = new TerminalMenu(90, player.getInventory(), helper.getLevel(), abs, abs, ModBlocks.ANALOG_TERMINAL.get(), false, false, 0);
+        var stone = new ItemStack(Items.STONE);
+        var dirt = new ItemStack(Items.DIRT);
+        // the client side's merging, entry by entry
+        client.clientReceiveList(new com.golemlogix.network.TerminalListPayload(90, true, List.of(
+                new com.golemlogix.network.TerminalListPayload.Entry(stone, 5, false), new com.golemlogix.network.TerminalListPayload.Entry(dirt, 7, false))));
+        client.clientReceiveList(new com.golemlogix.network.TerminalListPayload(90, false, List.of(new com.golemlogix.network.TerminalListPayload.Entry(stone, 9, false))));
+        helper.assertTrue(client.clientEntries.size() == 2 && client.clientEntries.get(0).count() == 9, "a changed count replaces its entry");
+        client.clientReceiveList(new com.golemlogix.network.TerminalListPayload(90, false, List.of(new com.golemlogix.network.TerminalListPayload.Entry(stone, 0, false))));
+        helper.assertTrue(client.clientEntries.size() == 1 && client.clientEntries.get(0).key().is(Items.DIRT), "an empty entry goes");
+        client.clientReceiveList(new com.golemlogix.network.TerminalListPayload(90, false, List.of(new com.golemlogix.network.TerminalListPayload.Entry(stone, 0, true))));
+        helper.assertTrue(client.clientEntries.size() == 2, "what can be crafted stays listed with nothing stored");
+        client.clientReceiveList(new com.golemlogix.network.TerminalListPayload(90, true, List.of()));
+        helper.assertTrue(client.clientEntries.isEmpty(), "a reset clears it");
+        helper.succeed();
+    }
+
+    /**
      * 11. An Order Ledger in fluid mode with a real pattern that makes a fluid:
      * it orders the craft, the fluid reaches its target, and it stops ordering.
      */

@@ -266,6 +266,7 @@ public final class GolemNetwork {
 
     /** The server stopped: nothing of its levels is kept. */
     public static void forgetAll() {
+        OrderBackoff.forget();
         SERVER_CACHE.clear();
         CHANGED.clear();
         serverVersion++;
@@ -1080,6 +1081,19 @@ public final class GolemNetwork {
         return all;
     }
 
+    private Map<ItemKey, Long> sharedList;
+    private long sharedListTick = -1;
+
+    /** The list for the terminals: open windows of one tick share one reading of the network. Not to be changed. */
+    public Map<ItemKey, Long> listItemsShared() {
+        long now = level().getGameTime();
+        if (sharedList == null || sharedListTick != now) {
+            sharedList = listItems();
+            sharedListTick = now;
+        }
+        return sharedList;
+    }
+
     public long itemCountOf(ItemKey key) {
         long n = 0;
         for (ItemStack disk : allDisks(false)) {
@@ -1153,11 +1167,18 @@ public final class GolemNetwork {
         List<Tier> tiers = tiers(true);
 
         if (simulate) {
-            long free = 0;
-            for (ItemStack disk : allDisks(false)) {
-                free += DiskStorage.capacity(disk) - DiskStorage.storedItems(disk);
+            if (Gear.is(remaining)) {
+                // equipment takes more of a disk, and small disks have a rule of their own: each disk answers for itself
+                for (ItemStack disk : allDisks(false)) {
+                    remaining.shrink(DiskStorage.insertItem(disk, remaining, true));
+                }
+            } else {
+                long free = 0;
+                for (ItemStack disk : allDisks(false)) {
+                    free += Math.max(0, DiskStorage.capacity(disk) - DiskStorage.storedItems(disk));
+                }
+                remaining.shrink((int) Math.min(free, remaining.getCount()));
             }
-            remaining.shrink((int) Math.min(free, remaining.getCount()));
         } else {
             Set<CopperDriveBayBlockEntity> touched = new HashSet<>();
             for (Tier tier : tiers) {
@@ -1602,9 +1623,25 @@ public final class GolemNetwork {
                 return new StartResult(StartType.NO_PATTERN, null);
             }
         }
+        // a device's order: no plan without a free calculator, and none yet if it has just failed
+        long now = level().getGameTime();
+        if (bus != null) {
+            if (freeCpu() == null) {
+                return new StartResult(StartType.NO_CPU, null);
+            }
+            if (OrderBackoff.waiting(bus, targets.keySet(), now, networkEpoch)) {
+                return new StartResult(StartType.MISSING, null);
+            }
+        }
         CraftingPlan plan = CraftingPlanner.plan(this, targets);
         if (!plan.missing().isEmpty()) {
+            if (bus != null) {
+                OrderBackoff.failed(bus, targets.keySet(), now, networkEpoch);
+            }
             return new StartResult(StartType.MISSING, plan);
+        }
+        if (bus != null) {
+            OrderBackoff.succeeded(bus, targets.keySet());
         }
         if (plan.steps().isEmpty()) {
             return new StartResult(StartType.NO_PATTERN, plan);
