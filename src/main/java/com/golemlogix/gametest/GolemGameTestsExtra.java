@@ -3271,6 +3271,9 @@ public final class GolemGameTestsExtra {
         ItemStack potion = new ItemStack(Items.POTION);
         potion.set(net.minecraft.core.component.DataComponents.POTION_CONTENTS, new net.minecraft.world.item.alchemy.PotionContents(net.minecraft.world.item.alchemy.Potions.WATER));
         helper.assertTrue(!com.golemlogix.system.Gear.is(potion), "a potion is not");
+        ItemStack book = new ItemStack(Items.ENCHANTED_BOOK);
+        book.enchant(helper.getLevel().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT).getOrThrow(Enchantments.MENDING), 1);
+        helper.assertTrue(!com.golemlogix.system.Gear.is(book), "an enchanted book is not");
 
         for (int i = 1; i <= 4; i++) {
             ItemStack s = new ItemStack(Items.IRON_SWORD);

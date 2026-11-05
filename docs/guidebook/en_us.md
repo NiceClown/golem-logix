@@ -1192,7 +1192,7 @@ A 256k disk holds **64** such things. Disks of 1k and 4k always take **one**, ho
 #### What counts
 
 - Counts: what does not stack and differs from its plain self: damaged, enchanted, named, or full of its own data, like a filled shulker box.
-- Does not count: a new, unused sword or armour piece, however many; **buckets and tanks holding a fluid**; potions.
+- Does not count: a new, unused sword or armour piece, however many; **buckets and tanks holding a fluid**; potions; enchanted books.
 
 A disk that holds more than this from an older world loses nothing. You can take from it, but nothing goes in until there is room.
 

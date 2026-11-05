@@ -31,7 +31,7 @@
 - Cryo-Source Jars join by themselves: four in a square are a Giga Jar, nine an Antigravity Reactor, one store with a little more room.
   Both were checked under Iris with a shader pack, and renderers can now build their geometry once and replay it (BerBuffers.Baked).
 - Equipment on disks: a worn, enchanted or otherwise individual thing takes 4,000 pieces of a disk (1k and 4k disks always take one), with a
-  yellow mark in terminals that leads to the guide book. Buckets, potions and the tag golem_logix:not_gear are exempt. Older disks lose nothing.
+  yellow mark in terminals that leads to the guide book. Buckets, potions, enchanted books and the tag golem_logix:not_gear are exempt. Older disks lose nothing.
 - Terminals send only what changed instead of the whole list, and open windows share one reading of the network.
 - Automatic orders that lack ingredients wait before planning again, from 1 second up to 30, and do not plan at all without a free calculator.
 - The game tests were reviewed: two duplicates went, tests that could not fail now can (each checked by breaking the mod on purpose),
