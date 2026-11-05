@@ -75,6 +75,33 @@ public final class BerBuffers implements MultiBufferSource {
         return collector;
     }
 
+    /**
+     * Geometry built once and then only replayed, for machines with thousands of faces: nothing is computed or stored again per frame,
+     * and the vertices go straight to the game. Build it with bake, with the pose and the light of no account.
+     */
+    public static final class Baked {
+        private final Recorder recorder;
+
+        private Baked(Recorder recorder) {
+            this.recorder = recorder;
+        }
+
+        /** Draws it where the pose stands now. tint: replaces the colour it was built with, 0 keeps that. */
+        public void draw(MultiBufferSource buffers, RenderType type, PoseStack.Pose pose, int light, int tint) {
+            if (buffers instanceof BerBuffers b && recorder.count > 0) {
+                org.joml.Matrix4f m = new org.joml.Matrix4f(pose.pose());
+                org.joml.Matrix3f n = new org.joml.Matrix3f(pose.normal());
+                b.collector.submitCustomGeometry(new PoseStack(), type, (p, vc) -> recorder.replay(vc, m, n, light, tint));
+            }
+        }
+    }
+
+    public static Baked bake(java.util.function.BiConsumer<VertexConsumer, PoseStack> draw) {
+        Recorder recorder = new Recorder();
+        draw.accept(recorder, new PoseStack());
+        return new Baked(recorder);
+    }
+
     /** Vertices of one render type: position, colour, texture, overlay, light, normal. */
     private static final class Recorder implements VertexConsumer {
         private float[] f = new float[9 * 128];
@@ -152,6 +179,18 @@ public final class BerBuffers implements MultiBufferSource {
         public VertexConsumer setLineWidth(float width) {
             f[base() + 5] = width;
             return this;
+        }
+
+        void replay(VertexConsumer vc, org.joml.Matrix4f m, org.joml.Matrix3f n3, int light, int tint) {
+            for (int n = 0; n < count; n++) {
+                int b = n * 9, c = n * 3;
+                float x = f[b], y = f[b + 1], z = f[b + 2], nx = f[b + 6], ny = f[b + 7], nz = f[b + 8];
+                vc.addVertex(m.m00() * x + m.m10() * y + m.m20() * z + m.m30(), m.m01() * x + m.m11() * y + m.m21() * z + m.m31(),
+                                m.m02() * x + m.m12() * y + m.m22() * z + m.m32())
+                        .setColor(tint != 0 ? tint : i[c]).setUv(f[b + 3], f[b + 4]).setOverlay(i[c + 1]).setLight(light)
+                        .setNormal(n3.m00() * nx + n3.m10() * ny + n3.m20() * nz, n3.m01() * nx + n3.m11() * ny + n3.m21() * nz,
+                                n3.m02() * nx + n3.m12() * ny + n3.m22() * nz);
+            }
         }
 
         void replay(VertexConsumer vc) {

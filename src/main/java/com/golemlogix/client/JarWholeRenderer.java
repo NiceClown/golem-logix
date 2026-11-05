@@ -3,6 +3,7 @@ package com.golemlogix.client;
 import com.golemlogix.blockentity.CryoJarBlockEntity;
 import com.golemlogix.blocks.CryoJarBlock;
 import com.golemlogix.blocks.JarForm;
+import com.golemlogix.client.render.BerBuffers;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -48,12 +49,20 @@ import static com.golemlogix.client.CryoMainframeRenderer.limb;
  * larger the fuller it is, with shards drifting up around it. Iron golems walk the great ring round, copper golems keep the wheels,
  * snow golems throw frost at it.</li>
  * </ul>
- * Golems stop being drawn past CREW_SIGHT: from that far they are specks, and they cost the most.
+ * What does not change from frame to frame, and the rings, which only turn, are built once and replayed (see BerBuffers.Baked): these
+ * machines have thousands of faces, and building them anew each frame cost more than a millisecond a pair. Past DETAIL_SIGHT the small
+ * parts go, past CREW_SIGHT the golems.
+ * <p>
+ * Translucent parts: the game's emissive translucent type writes no depth, so whatever stands behind a tank (water, stained glass, the
+ * nixie digits of a heat lamp, all drawn later) is still seen through it. Shader packs burn that type out to white and would hide those
+ * things behind any glass drawn here, so under a running pack the Source takes the plain translucent type and the glass is left out, as
+ * on the heat lamps. Nothing here runs a pipeline of its own, which packs ignore.
  */
 final class JarWholeRenderer {
     private static final Identifier GOLEM = Identifier.withDefaultNamespace("textures/entity/iron_golem/iron_golem.png");
-    private static final int CREW_SIGHT = 48;
+    private static final int CREW_SIGHT = 48, DETAIL_SIGHT = 32;
     private static final int SOURCE_GLOW = 8;
+    private static final float TOP = 31.4f;
     private static final Identifier GRATE = Identifier.withDefaultNamespace("block/iron_trapdoor");
     private static final int LIGHT_BRASS = 0xFFE8C878, DIM_BRASS = 0xFFC8A060;
 
@@ -76,7 +85,12 @@ final class JarWholeRenderer {
         float time = level.getGameTime() + partialTick;
         boolean charged = be.clientSource() > 0;
         Vec3 cam = com.golemlogix.client.render.LegacyBer.camera();
-        boolean crew = cam.distanceToSqr(pos.getX() + width / 2.0, pos.getY() + 2.0, pos.getZ() + width / 2.0) < CREW_SIGHT * CREW_SIGHT;
+        double distance = cam.distanceToSqr(pos.getX() + width / 2.0, pos.getY() + 2.0, pos.getZ() + width / 2.0);
+        boolean crew = distance < CREW_SIGHT * CREW_SIGHT, detail = distance < DETAIL_SIGHT * DETAIL_SIGHT;
+        // what dims glass that glows by itself: how much light really falls on it now
+        int skyNow = Math.max(0, LightCoordsUtil.sky(light) - level.getSkyDarken());
+        float ambient = 0.45f + 0.55f * Math.max(LightCoordsUtil.block(light), skyNow) / 15f;
+        Meshes meshes = meshes();
 
         // brass sockets where pipes dock, in the world's own directions
         VertexConsumer solid = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
@@ -92,9 +106,9 @@ final class JarWholeRenderer {
         // the corner's facing turns the whole machine, about its own middle
         pose.rotateAround(Axis.YP.rotationDegrees(180f - facing.toYRot()), width / 2f, 0f, width / 2f);
         if (form == JarForm.GIGA) {
-            giga(pose, buffers, light, time, fill, charged, crew);
+            giga(pose, buffers, meshes, light, time, fill, charged, crew, detail, ambient);
         } else {
-            reactor(pose, buffers, ironGolem, light, time, fill, charged, crew);
+            reactor(pose, buffers, meshes, ironGolem, light, time, fill, charged, crew, detail);
         }
         pose.popPose();
     }
@@ -129,15 +143,79 @@ final class JarWholeRenderer {
 
     // ------------------------------------------------------------------------------------------------ the Giga Jar
 
-    private static void giga(PoseStack pose, MultiBufferSource buffers, int light, float time, float fill, boolean on, boolean crew) {
-        VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
+    /** What is built once: per machine a near and a far version, the glowing runes apart (their colour pulses), and the rings. */
+    private record Meshes(net.minecraft.client.renderer.texture.TextureAtlasSprite atlasMark, BerBuffers.Baked gigaNear, BerBuffers.Baked gigaFar, BerBuffers.Baked gigaRunes,
+                          BerBuffers.Baked reactorNear, BerBuffers.Baked reactorFar, BerBuffers.Baked reactorRunes, BerBuffers.Baked collar, BerBuffers.Baked lowRing,
+                          BerBuffers.Baked outerRing, BerBuffers.Baked outerRunes, BerBuffers.Baked levelRing, BerBuffers.Baked levelRingFar, BerBuffers.Baked innerRing) {
+    }
+
+    private static Meshes meshes;
+
+    /** Built at first use and again after a resource reload, when the atlas has changed under them. */
+    private static Meshes meshes() {
+        net.minecraft.client.renderer.texture.TextureAtlasSprite mark = CryoMainframeRenderer.sprite(BRASS);
+        if (meshes == null || meshes.atlasMark() != mark) {
+            meshes = new Meshes(mark,
+                    BerBuffers.bake((vc, pose) -> gigaStatic(vc, pose, true)),
+                    BerBuffers.bake((vc, pose) -> gigaStatic(vc, pose, false)),
+                    BerBuffers.bake((vc, pose) -> runeBands(vc, pose, 32f, 2f, 5.4f, 0.74f)),
+                    BerBuffers.bake((vc, pose) -> reactorStatic(vc, pose, true)),
+                    BerBuffers.bake((vc, pose) -> reactorStatic(vc, pose, false)),
+                    BerBuffers.bake(JarWholeRenderer::reactorRunes),
+                    BerBuffers.bake((vc, pose) -> {
+                        ring(vc, pose, 12.4f, 1.6f, 1.2f, 24, COPPER, WHITE, 0);
+                        teeth(vc, pose, 16, 13.2f, 14.6f, 0.8f, 0.6f, COPPER, 0xFFD89070);
+                    }),
+                    BerBuffers.bake((vc, pose) -> {
+                        ring(vc, pose, 17f, 1.8f, 1.8f, 28, BRASS, WHITE, 0);
+                        teeth(vc, pose, 14, 15f, 16.2f, 0.9f, 1.1f, COPPER, WHITE);
+                    }),
+                    BerBuffers.bake((vc, pose) -> ring(vc, pose, 20f, 2f, 2.4f, 32, FRAME, WHITE, 0)),
+                    BerBuffers.bake((vc, pose) -> runeRing(vc, pose, 20f, 2.5f, 32)),
+                    BerBuffers.bake((vc, pose) -> {
+                        ring(vc, pose, 16.4f, 1.7f, 2f, 28, BRASS, LIGHT_BRASS, 0);
+                        teeth(vc, pose, 20, 14.7f, 15.6f, 0.6f, 0.7f, BRASS, WHITE);
+                        // icicles on every third tooth: the ring's plane is XY here, its underside towards +Z
+                        for (int i = 0; i < 20; i += 3) {
+                            pose.pushPose();
+                            pose.mulPose(Axis.ZP.rotationDegrees(i * 18f));
+                            box(vc, pose.last(), -0.3f, 16.1f, 1f, 0.3f, 16.7f, 1f + 1.2f + (i % 2), ICE, WHITE, 0);
+                            pose.popPose();
+                        }
+                    }),
+                    BerBuffers.bake((vc, pose) -> ring(vc, pose, 16.4f, 1.7f, 2f, 16, BRASS, LIGHT_BRASS, 0)),
+                    BerBuffers.bake((vc, pose) -> ring(vc, pose, 13.4f, 1f, 1.2f, 24, COPPER, WHITE, 0)));
+        }
+        return meshes;
+    }
+
+    private static net.minecraft.client.renderer.rendertype.RenderType clearType(boolean shaderPack) {
+        return shaderPack ? RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS) : RenderTypes.entityTranslucentEmissive(TextureAtlas.LOCATION_BLOCKS);
+    }
+
+    /** The colour of runes at this moment: dim while there is no Source, breathing while there is. */
+    private static int runeColor(float time, boolean on) {
+        float glow = on ? 0.55f + 0.45f * (0.8f + 0.2f * Mth.sin(time * 0.08f)) : 0.18f;
+        return 0xFF000000 | ((int) (0x50 * glow) << 16) | ((int) (0xF0 * glow) << 8) | (int) (0xF0 * glow);
+    }
+
+    private static void teeth(VertexConsumer vc, PoseStack pose, int count, float r0, float r1, float halfWide, float halfDeep, Identifier tex, int color) {
+        for (int i = 0; i < count; i++) {
+            pose.pushPose();
+            pose.mulPose(Axis.ZP.rotationDegrees(i * 360f / count));
+            box(vc, pose.last(), -halfWide, r0, -halfDeep, halfWide, r1, halfDeep, tex, color, 0);
+            pose.popPose();
+        }
+    }
+
+    private static void gigaStatic(VertexConsumer vc, PoseStack pose, boolean detail) {
         PoseStack.Pose p = pose.last();
-        // the plinth, runes all round
+        int light = 0;
+        // the plinth
         box(vc, p, 0.4f, 0, 0.4f, 31.6f, 1.4f, 31.6f, DARK, WHITE, light);
         box(vc, p, 0.8f, 1.4f, 0.8f, 31.2f, 6.2f, 31.2f, BRICK, BRICK_TINT, light);
         box(vc, p, 0.5f, 6.2f, 0.5f, 31.5f, 7.4f, 31.5f, DARK, WHITE, light);
-        runeBands(vc, pose, 32f, 2f, 5.4f, 0.74f, time, on, light);
-        cornerSnow(vc, p, 32f, 7.4f, light);
+        cornerSnow(vc, p, 32f, 7.4f, detail, light);
 
         // the tank's frame: corner posts, a post in the middle of each side, rings below and above
         for (float[] c : new float[][]{{1.6f, 1.6f}, {28.9f, 1.6f}, {1.6f, 28.9f}, {28.9f, 28.9f}}) {
@@ -156,14 +234,15 @@ final class JarWholeRenderer {
         for (float[] s : new float[][]{{1.2f, 1.2f, 7f, 4f}, {25.8f, 1.2f, 30.8f, 3.4f}, {1.2f, 26f, 5f, 30.8f}, {26.5f, 27f, 30.8f, 30.8f}}) {
             box(vc, p, s[0], 31.6f, s[1], s[2], 32.2f, s[3], SNOW, WHITE, light);
         }
-        for (float[] i : new float[][]{{3f, 1.6f}, {6.5f, 2.4f}, {11f, 1.3f}, {18f, 2f}, {23.4f, 1.5f}, {28f, 2.6f}}) {
-            box(vc, p, i[0], 26.8f - i[1], 1.0f, i[0] + 0.6f, 26.8f, 1.6f, ICE, WHITE, light);
+        if (detail) {
+            for (float[] i : new float[][]{{3f, 1.6f}, {6.5f, 2.4f}, {11f, 1.3f}, {18f, 2f}, {23.4f, 1.5f}, {28f, 2.6f}}) {
+                box(vc, p, i[0], 26.8f - i[1], 1.0f, i[0] + 0.6f, 26.8f, 1.6f, ICE, WHITE, light);
+            }
+            // the ladder up the right side, from the plinth to a catwalk; another catwalk on the left for the golem at the valve
+            ladder(vc, p, 31.2f, 7.4f, 30.8f, 20f, 25f, light);
+            catwalk(vc, pose, 30.4f, 36.4f, 18.6f, 26.4f, 30.8f, 30.4f, 25.4f, light);
+            catwalk(vc, pose, -4.4f, 1.6f, 0.6f, 7f, 30.8f, 1.6f, 25.4f, light);
         }
-
-        // the ladder up the right side, from the plinth to a catwalk; another catwalk on the left for the golem at the valve
-        ladder(vc, p, 31.2f, 7.4f, 30.8f, 20f, 25f, light);
-        catwalk(vc, pose, 30.4f, 36.4f, 18.6f, 26.4f, 30.8f, 30.4f, 25.4f, light);
-        catwalk(vc, pose, -4.4f, 1.6f, 0.6f, 7f, 30.8f, 1.6f, 25.4f, light);
 
         // the samson post: four legs leaning together, girders and cross-braces on all four faces
         float[][] feet = {{9f, 9f}, {23f, 9f}, {23f, 23f}, {9f, 23f}};
@@ -180,13 +259,39 @@ final class JarWholeRenderer {
                 Vector3f a = lerp(feet[i], tops[i], y0, y1, levels[l]), b = lerp(feet[j], tops[j], y0, y1, levels[l]);
                 Vector3f c = lerp(feet[i], tops[i], y0, y1, levels[l + 1]), d = lerp(feet[j], tops[j], y0, y1, levels[l + 1]);
                 limb(vc, pose, c, d, 0.9f, FRAME, light);
-                limb(vc, pose, a, d, 0.6f, FRAME, light);
-                limb(vc, pose, b, c, 0.6f, FRAME, light);
+                if (detail) {
+                    limb(vc, pose, a, d, 0.6f, FRAME, light);
+                    limb(vc, pose, b, c, 0.6f, FRAME, light);
+                }
             }
         }
         box(vc, p, 13.2f, 56f, 13.2f, 18.8f, 57.6f, 18.8f, FRAME, WHITE, light);
         box(vc, p, 15f, 57.6f, 13.6f, 17f, 59.4f, 18.4f, BRASS, LIGHT_BRASS, light);
 
+        // the gearbox at the back right
+        box(vc, p, 22.4f, 31.6f, 21f, 29.4f, 36.2f, 28.4f, FRAME, WHITE, light);
+        box(vc, p, 22f, 36.2f, 20.6f, 29.8f, 37f, 28.8f, BRASS, DIM_BRASS, light);
+        box(vc, p, 24f, 37f, 20.8f, 26.8f, 43f, 22.4f, FRAME, WHITE, light);
+        // where the rod goes through the deck
+        box(vc, p, 0.6f, 31.6f, 14f, 4.6f, 33.2f, 18f, BRASS, DIM_BRASS, light);
+
+        if (detail) {
+            // the valve the first golem turns, on a stand at the deck's front left, and the gauge the second one watches
+            box(vc, p, 3.6f, 31.6f, 3f, 4.8f, 36.6f, 4.2f, COPPER, WHITE, light);
+            box(vc, p, 2.8f, 31.6f, 2.2f, 5.6f, 32.2f, 5f, BRASS, DIM_BRASS, light);
+            box(vc, p, 21.6f, 31.6f, 8f, 27.4f, 38f, 9f, FRAME, WHITE, light);
+            fitWall(vc, p, 22.2f, 32.6f, 26.8f, 37.2f, 7.96f, GAUGE, WHITE, light);
+        }
+    }
+
+    private static void giga(PoseStack pose, MultiBufferSource buffers, Meshes meshes, int light, float time, float fill, boolean on, boolean crew, boolean detail,
+                             float ambient) {
+        net.minecraft.client.renderer.rendertype.RenderType solid = RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS);
+        (detail ? meshes.gigaNear() : meshes.gigaFar()).draw(buffers, solid, pose.last(), light, 0);
+        meshes.gigaRunes().draw(buffers, solid, pose.last(), on ? LightCoordsUtil.FULL_BRIGHT : light, runeColor(time, on));
+
+        VertexConsumer vc = buffers.getBuffer(solid);
+        PoseStack.Pose p = pose.last();
         // what the crank does: it turns, and the beam follows it through the pitman arm
         float crank = on ? time * 0.075f : 0.6f;
         float crankRadius = 3.2f;
@@ -194,11 +299,8 @@ final class JarWholeRenderer {
         float tailRise = crankRadius * Mth.sin(crank);
         float beamAngle = (float) Math.atan2(tailRise, tailArm);
 
-        // the gearbox and the crank at the back right, its wheel on the front of the box
+        // the crank on the gearbox, its wheel on the front of the box
         float crankX = 25.4f, crankY = 41f, crankZ = 20.2f;
-        box(vc, p, 22.4f, 31.6f, 21f, 29.4f, 36.2f, 28.4f, FRAME, WHITE, light);
-        box(vc, p, 22f, 36.2f, 20.6f, 29.8f, 37f, 28.8f, BRASS, DIM_BRASS, light);
-        box(vc, p, 24f, 37f, 20.8f, 26.8f, 43f, 22.4f, FRAME, WHITE, light);
         wheelZ(vc, pose, crankX, crankY, crankZ, 4f, crank * Mth.RAD_TO_DEG, light);
         // the counterweight: a heavy brass lobe opposite the crank pin
         pose.pushPose();
@@ -235,29 +337,29 @@ final class JarWholeRenderer {
         float rodTop = beamPivotY - headArm * Mth.sin(beamAngle) - 5.4f;
         float rodX = beamPivotX - headArm - 1.4f;
         box(vc, p, rodX - 0.45f, rodTop - 44f, 15.55f, rodX + 0.45f, rodTop, 16.45f, BRASS, LIGHT_BRASS, light);
-        box(vc, p, rodX - 2f, 31.6f, 14f, rodX + 2f, 33.2f, 18f, BRASS, DIM_BRASS, light);
         box(vc, p, rodX - 2.2f, rodTop - 47.4f, 13.8f, rodX + 2.2f, rodTop - 44f, 18.2f, FRAME, WHITE, light);
 
-        // the valve the first golem turns, on a stand at the deck's front left, and the gauge the second one watches
-        box(vc, p, 3.6f, 31.6f, 3f, 4.8f, 36.6f, 4.2f, COPPER, WHITE, light);
-        box(vc, p, 2.8f, 31.6f, 2.2f, 5.6f, 32.2f, 5f, BRASS, DIM_BRASS, light);
         float turn = CryoJarRenderer.turnAngle(time, on);
-        CryoJarRenderer.wheel(vc, pose, 3f, 35.8f, 3.6f, 2.2f, turn, light);
-        box(vc, p, 21.6f, 31.6f, 8f, 27.4f, 38f, 9f, FRAME, WHITE, light);
-        fitWall(vc, p, 22.2f, 32.6f, 26.8f, 37.2f, 7.96f, GAUGE, WHITE, light);
+        if (detail) {
+            CryoJarRenderer.wheel(vc, pose, 3f, 35.8f, 3.6f, 2.2f, turn, light);
+        }
 
         if (crew) {
             gigaCrew(pose, buffers, light, time, turn, on);
         }
 
-        // the Source and the glass over it
-        VertexConsumer tv = buffers.getBuffer(RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
+        // the Source and the glass over it; see the class comment on why these types
+        boolean pack = com.golemlogix.client.render.GlowTypes.shaderPackActive();
+        VertexConsumer tv = buffers.getBuffer(clearType(pack));
         PoseStack.Pose t = pose.last();
         float bottom = 8.26f, top = 26.74f;
         if (fill > 0.002f) {
-            box(tv, t, 3.1f, bottom, 3.1f, 28.9f, bottom + (top - bottom) * fill, 28.9f, CRYO, 0xE0FFFFFF, LightCoordsUtil.FULL_BRIGHT);
+            box(tv, t, 3.1f, bottom, 3.1f, 28.9f, bottom + (top - bottom) * fill, 28.9f, CRYO, 0xC8FFFFFF, LightCoordsUtil.FULL_BRIGHT);
         }
-        box(tv, t, 2.6f, 8.23f, 2.6f, 29.4f, 26.77f, 29.4f, GLASS, 0x90E8F8FF, light);
+        if (!pack) {
+            int glass = 0x90000000 | ((int) (0xE8 * ambient) << 16) | ((int) (0xF8 * ambient) << 8) | (int) (0xFF * ambient);
+            box(tv, t, 2.6f, 8.23f, 2.6f, 29.4f, 26.77f, 29.4f, GLASS, glass, LightCoordsUtil.FULL_BRIGHT);
+        }
     }
 
     private static void gigaCrew(PoseStack pose, MultiBufferSource buffers, int light, float time, float turn, boolean on) {
@@ -285,101 +387,108 @@ final class JarWholeRenderer {
 
     // ------------------------------------------------------------------------------------------------ the reactor
 
-    private static void reactor(PoseStack pose, MultiBufferSource buffers, ModelPart ironGolem, int light, float time, float fill, boolean on, boolean crew) {
-        VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
+    private static void reactorStatic(VertexConsumer vc, PoseStack pose, boolean detail) {
         PoseStack.Pose p = pose.last();
-        float top = 31.4f;
+        int light = 0;
+        float top = TOP;
         // the base: a dark foot, brick, a rim
         box(vc, p, 0.3f, 0, 0.3f, 47.7f, 1.8f, 47.7f, DARK, WHITE, light);
         box(vc, p, 0.8f, 1.8f, 0.8f, 47.2f, 29.6f, 47.2f, BRICK, BRICK_TINT, light);
         box(vc, p, 0.4f, 29.6f, 0.4f, 47.6f, top, 47.6f, BRICK, 0xFFE0B8A8, light);
-        reactorSides(vc, pose, time, on, light);
-        cornerSnow(vc, p, 48f, top, light);
+        reactorSides(vc, pose, detail, light);
+        cornerSnow(vc, p, 48f, top, detail, light);
+        box(vc, p, 11f, top, 11f, 37f, top + 0.3f, 37f, DARK, WHITE, light);
+        if (!detail) {
+            return;
+        }
         for (float[] i : new float[][]{{3f, 2.2f}, {8f, 3f}, {14f, 1.6f}, {21f, 2.6f}, {30f, 1.8f}, {38f, 3.2f}, {44f, 2f}}) {
             box(vc, p, i[0], 29.6f - i[1], 0.2f, i[0] + 0.7f, 29.6f, 0.9f, ICE, WHITE, light);
         }
-
-        // the well in the middle of the top: a brass rim, a floor of runes, a lit gap
-        float glow = on ? 0.75f + 0.25f * Mth.sin(time * 0.06f) : 0.2f;
-        int rune = 0xFF000000 | ((int) (0x50 * glow) << 16) | ((int) (0xF0 * glow) << 8) | (int) (0xF0 * glow);
-        box(vc, p, 11f, top, 11f, 37f, top + 0.3f, 37f, DARK, WHITE, light);
-        flatRunes(vc, p, 13f, 35f, top + 0.34f, rune, on ? LightCoordsUtil.FULL_BRIGHT : light);
-        pose.pushPose();
-        pose.translate(24f / 16f, (top + 0.9f) / 16f, 24f / 16f);
-        pose.mulPose(Axis.YP.rotationDegrees(on ? -time * 0.25f : 0f));
-        pose.mulPose(Axis.XP.rotationDegrees(90f));
-        ring(vc, pose, 12.4f, 1.6f, 1.2f, 24, COPPER, WHITE, light);
-        for (int i = 0; i < 16; i++) {
-            pose.pushPose();
-            pose.mulPose(Axis.ZP.rotationDegrees(i * 22.5f));
-            box(vc, pose.last(), -0.8f, 13.2f, -0.6f, 0.8f, 14.6f, 0.6f, COPPER, 0xFFD89070, light);
-            pose.popPose();
-        }
-        pose.popPose();
-
-        float cx = 24f, cz = 24f, cy = 60f;
-        // the toothed ring low over the well, that the iron golems walk round
-        pose.pushPose();
-        pose.translate(cx / 16f, 39.6f / 16f, cz / 16f);
-        pose.mulPose(Axis.YP.rotationDegrees(on ? time * 0.5f : 0f));
-        pose.mulPose(Axis.XP.rotationDegrees(90f));
-        ring(vc, pose, 17f, 1.8f, 1.8f, 28, BRASS, WHITE, light);
-        for (int i = 0; i < 14; i++) {
-            pose.pushPose();
-            pose.mulPose(Axis.ZP.rotationDegrees(i * 360f / 14f));
-            box(vc, pose.last(), -0.9f, 15f, -1.1f, 0.9f, 16.2f, 1.1f, COPPER, WHITE, light);
-            pose.popPose();
-        }
-        pose.popPose();
-
-        // the gimbal: nothing holds it up. The outer ring stands up and swings slowly, the brass one lies level, the inner one tumbles
-        float spin = on ? time : 0f;
-        pose.pushPose();
-        pose.translate(cx / 16f, cy / 16f, cz / 16f);
-        pose.mulPose(Axis.YP.rotationDegrees(spin * 0.35f));
-        ring(vc, pose, 20f, 2f, 2.4f, 32, FRAME, WHITE, light);
-        runeRing(vc, pose, 20f, 2.5f, 32, rune, on ? LightCoordsUtil.FULL_BRIGHT : light);
-        pose.mulPose(Axis.XP.rotationDegrees(90f));
-        ring(vc, pose, 16.4f, 1.7f, 2f, 28, BRASS, LIGHT_BRASS, light);
-        for (int i = 0; i < 20; i++) {
-            pose.pushPose();
-            pose.mulPose(Axis.ZP.rotationDegrees(i * 18f));
-            box(vc, pose.last(), -0.6f, 14.7f, -0.7f, 0.6f, 15.6f, 0.7f, BRASS, WHITE, light);
-            if (i % 3 == 0) {
-                // the ring's plane is XY here: its underside is towards +Z
-                box(vc, pose.last(), -0.3f, 16.1f, 1f, 0.3f, 16.7f, 1f + 1.2f + (i % 2), ICE, WHITE, light);
-            }
-            pose.popPose();
-        }
-        pose.mulPose(Axis.XP.rotationDegrees(spin * 0.7f + 35f));
-        ring(vc, pose, 13.4f, 1f, 1.2f, 24, COPPER, WHITE, light);
-        pose.popPose();
-
-        // the hand wheels and stands the copper golems work, on the middle of three sides of the top
-        float turn = CryoJarRenderer.turnAngle(time, on);
-        p = pose.last();
+        // the stands of the hand wheels the copper golems work, on the middle of three sides of the top
         box(vc, p, 22f, top, 4.4f, 26f, top + 0.6f, 8f, BRASS, DIM_BRASS, light);
         box(vc, p, 23.4f, top, 5.6f, 24.6f, top + 5f, 6.8f, COPPER, WHITE, light);
-        CryoJarRenderer.wheel(vc, pose, 22.8f, top + 4.2f, 6.2f, 2.2f, turn, light);
         box(vc, p, 40f, top, 22f, 43.6f, top + 0.6f, 26f, BRASS, DIM_BRASS, light);
         box(vc, p, 41.2f, top, 23.4f, 42.4f, top + 5f, 24.6f, COPPER, WHITE, light);
-        CryoJarRenderer.wheel(vc, pose, 40.6f, top + 4.2f, 24f, 2.2f, turn, light);
         box(vc, p, 4.4f, top, 22f, 8f, top + 0.6f, 26f, BRASS, DIM_BRASS, light);
         box(vc, p, 5.6f, top, 23.4f, 6.8f, top + 5f, 24.6f, COPPER, WHITE, light);
-        CryoJarRenderer.wheel(vc, pose, 7.4f, top + 4.2f, 24f, 2.2f, -turn, light);
-        // cold vents where the snow golems stand
+        // snowdrifts where the snow golems stand
         for (float[] v : new float[][]{{39f, 4f}, {5f, 39f}}) {
             box(vc, p, v[0] - 3f, top, v[1] - 2.6f, v[0] + 3f, top + 0.5f, v[1] + 2.6f, SNOW, WHITE, light);
             box(vc, p, v[0] - 1.6f, top + 0.5f, v[1] - 3f, v[0] + 1.6f, top + 0.9f, v[1] + 3f, SNOW, WHITE, light);
         }
+    }
+
+    private static void reactorRunes(VertexConsumer vc, PoseStack pose) {
+        for (int side = 0; side < 4; side++) {
+            pose.pushPose();
+            pose.rotateAround(Axis.YP.rotationDegrees(side * 90f), 1.5f, 0f, 1.5f);
+            fitWall(vc, pose.last(), 13.4f, 15f, 34.6f, 25.6f, 0.46f, RUNES, WHITE, 0);
+            pose.popPose();
+        }
+        flatRunes(vc, pose.last(), 13f, 35f, TOP + 0.34f, WHITE, 0);
+    }
+
+    private static void reactor(PoseStack pose, MultiBufferSource buffers, Meshes meshes, ModelPart ironGolem, int light, float time, float fill, boolean on, boolean crew,
+                                boolean detail) {
+        net.minecraft.client.renderer.rendertype.RenderType solid = RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS);
+        float top = TOP;
+        int runeLight = on ? LightCoordsUtil.FULL_BRIGHT : light;
+        int rune = runeColor(time, on);
+        (detail ? meshes.reactorNear() : meshes.reactorFar()).draw(buffers, solid, pose.last(), light, 0);
+        meshes.reactorRunes().draw(buffers, solid, pose.last(), runeLight, rune);
+
+        float cx = 24f, cz = 24f, cy = 60f;
+        float spin = on ? time : 0f;
+        if (detail) {
+            // the toothed collar round the well
+            pose.pushPose();
+            pose.translate(cx / 16f, (top + 0.9f) / 16f, cz / 16f);
+            pose.mulPose(Axis.YP.rotationDegrees(-spin * 0.25f));
+            pose.mulPose(Axis.XP.rotationDegrees(90f));
+            meshes.collar().draw(buffers, solid, pose.last(), light, 0);
+            pose.popPose();
+        }
+        // the toothed ring low over the well, that the iron golems walk round
+        pose.pushPose();
+        pose.translate(cx / 16f, 39.6f / 16f, cz / 16f);
+        pose.mulPose(Axis.YP.rotationDegrees(spin * 0.5f));
+        pose.mulPose(Axis.XP.rotationDegrees(90f));
+        meshes.lowRing().draw(buffers, solid, pose.last(), light, 0);
+        pose.popPose();
+
+        // the gimbal: nothing holds it up. The outer ring stands up and swings slowly, the brass one lies level, the inner one tumbles
+        pose.pushPose();
+        pose.translate(cx / 16f, cy / 16f, cz / 16f);
+        pose.mulPose(Axis.YP.rotationDegrees(spin * 0.35f));
+        meshes.outerRing().draw(buffers, solid, pose.last(), light, 0);
+        meshes.outerRunes().draw(buffers, solid, pose.last(), runeLight, rune);
+        pose.mulPose(Axis.XP.rotationDegrees(90f));
+        (detail ? meshes.levelRing() : meshes.levelRingFar()).draw(buffers, solid, pose.last(), light, 0);
+        pose.mulPose(Axis.XP.rotationDegrees(spin * 0.7f + 35f));
+        meshes.innerRing().draw(buffers, solid, pose.last(), light, 0);
+        pose.popPose();
+
+        float turn = CryoJarRenderer.turnAngle(time, on);
+        if (detail) {
+            VertexConsumer vc = buffers.getBuffer(solid);
+            CryoJarRenderer.wheel(vc, pose, 22.8f, top + 4.2f, 6.2f, 2.2f, turn, light);
+            CryoJarRenderer.wheel(vc, pose, 40.6f, top + 4.2f, 24f, 2.2f, turn, light);
+            CryoJarRenderer.wheel(vc, pose, 7.4f, top + 4.2f, 24f, 2.2f, -turn, light);
+            for (int side = 0; side < 4; side++) {
+                pose.pushPose();
+                pose.rotateAround(Axis.YP.rotationDegrees(side * 90f), 1.5f, 0f, 1.5f);
+                wheelZ(vc, pose, 41.5f, 13f, 0.05f, 2.4f, CryoJarRenderer.turnAngle(time + side * 23f, on), light);
+                pose.popPose();
+            }
+        }
 
         if (crew) {
             reactorCrew(pose, buffers, ironGolem, light, time, turn, on, top, cx, cz);
-            frost(buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS)), pose.last(), time, on, top, cx, cy, cz, light);
+            frost(buffers.getBuffer(solid), pose.last(), time, on, top, cx, cy, cz, light);
         }
 
-        // the Source, floating: a ball of slices, larger the fuller it is, turning; shards rise around it
-        VertexConsumer ballBuffer = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
+        // the Source, floating: larger the fuller it is, turning; drops rise around it
+        VertexConsumer ballBuffer = buffers.getBuffer(solid);
         pose.pushPose();
         pose.translate(cx / 16f, (cy + 0.8f * Mth.sin(time * 0.03f)) / 16f, cz / 16f);
         pose.mulPose(Axis.YP.rotationDegrees(time * 0.6f));
@@ -387,7 +496,7 @@ final class JarWholeRenderer {
         ball(ballBuffer, pose.last(), radius, on ? CRYO : ICE, WHITE, on ? LightCoordsUtil.FULL_BRIGHT : light);
         pose.popPose();
         if (on) {
-            VertexConsumer tv = buffers.getBuffer(RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
+            VertexConsumer tv = buffers.getBuffer(clearType(com.golemlogix.client.render.GlowTypes.shaderPackActive()));
             PoseStack.Pose t = pose.last();
             for (int i = 0; i < 10; i++) {
                 float k = (time * 0.006f + i * 0.137f) % 1f;
@@ -476,11 +585,8 @@ final class JarWholeRenderer {
         pose.popPose();
     }
 
-    /** The carving on the reactor's four sides: a dark recess with a large rune band, a gauge, and a copper pipe on brackets with a hand wheel. */
-    private static void reactorSides(VertexConsumer vc, PoseStack pose, float time, boolean on, int light) {
-        float glow = on ? 0.6f + 0.4f * (0.8f + 0.2f * Mth.sin(time * 0.08f)) : 0.18f;
-        int rune = 0xFF000000 | ((int) (0x50 * glow) << 16) | ((int) (0xF0 * glow) << 8) | (int) (0xF0 * glow);
-        int runeLight = on ? LightCoordsUtil.FULL_BRIGHT : light;
+    /** What does not move on the reactor's four sides: a dark recess for the runes, a gauge, and a copper pipe on brackets. */
+    private static void reactorSides(VertexConsumer vc, PoseStack pose, boolean detail, int light) {
         for (int side = 0; side < 4; side++) {
             pose.pushPose();
             pose.rotateAround(Axis.YP.rotationDegrees(side * 90f), 1.5f, 0f, 1.5f);
@@ -488,14 +594,14 @@ final class JarWholeRenderer {
             box(vc, p, 12f, 13.6f, 0.5f, 36f, 27f, 0.82f, DARK, WHITE, light);
             box(vc, p, 11.4f, 13f, 0.3f, 36.6f, 13.6f, 0.82f, BRASS, DIM_BRASS, light);
             box(vc, p, 11.4f, 27f, 0.3f, 36.6f, 27.6f, 0.82f, BRASS, DIM_BRASS, light);
-            fitWall(vc, p, 13.4f, 15f, 34.6f, 25.6f, 0.46f, RUNES, rune, runeLight);
-            fitWall(vc, p, 3f, 18f, 9f, 24f, 0.72f, GAUGE, WHITE, light);
-            box(vc, p, 4f, 2.4f, 0.2f, 44f, 4.6f, 0.8f, COPPER, WHITE, light);
-            for (float x : new float[]{6f, 16f, 32f, 42f}) {
-                box(vc, p, x - 0.8f, 1.8f, 0f, x + 0.8f, 5.2f, 0.9f, BRASS, DIM_BRASS, light);
+            if (detail) {
+                fitWall(vc, p, 3f, 18f, 9f, 24f, 0.72f, GAUGE, WHITE, light);
+                box(vc, p, 4f, 2.4f, 0.2f, 44f, 4.6f, 0.8f, COPPER, WHITE, light);
+                for (float x : new float[]{6f, 16f, 32f, 42f}) {
+                    box(vc, p, x - 0.8f, 1.8f, 0f, x + 0.8f, 5.2f, 0.9f, BRASS, DIM_BRASS, light);
+                }
+                box(vc, p, 40.4f, 4.6f, 0.2f, 42.6f, 12f, 0.8f, COPPER, WHITE, light);
             }
-            box(vc, p, 40.4f, 4.6f, 0.2f, 42.6f, 12f, 0.8f, COPPER, WHITE, light);
-            wheelZ(vc, pose, 41.5f, 13f, 0.05f, 2.4f, CryoJarRenderer.turnAngle(time + side * 23f, on), light);
             pose.popPose();
         }
     }
@@ -506,22 +612,23 @@ final class JarWholeRenderer {
         return new Vector3f(Mth.lerp(k, foot[0], top[0]), Mth.lerp(k, y0, y1), Mth.lerp(k, foot[1], top[1]));
     }
 
-    /** A rune band along the foot of each of the four sides. */
-    private static void runeBands(VertexConsumer vc, PoseStack pose, float size, float y0, float y1, float z, float time, boolean on, int light) {
-        float glow = on ? 0.55f + 0.45f * (0.8f + 0.2f * Mth.sin(time * 0.08f)) : 0.18f;
-        int rune = 0xFF000000 | ((int) (0x50 * glow) << 16) | ((int) (0xF0 * glow) << 8) | (int) (0xF0 * glow);
+    /** A rune band along the foot of each of the four sides (its colour comes when it is drawn). */
+    private static void runeBands(VertexConsumer vc, PoseStack pose, float size, float y0, float y1, float z) {
         for (int side = 0; side < 4; side++) {
             pose.pushPose();
             pose.rotateAround(Axis.YP.rotationDegrees(side * 90f), size / 32f, 0f, size / 32f);
-            fitWall(vc, pose.last(), 3f, y0, size - 3f, y1, z, RUNES, rune, on ? LightCoordsUtil.FULL_BRIGHT : light);
+            fitWall(vc, pose.last(), 3f, y0, size - 3f, y1, z, RUNES, WHITE, 0);
             pose.popPose();
         }
     }
 
     /** Snow on the four corners of a ledge, with icicles hanging off. */
-    private static void cornerSnow(VertexConsumer vc, PoseStack.Pose p, float size, float y, int light) {
+    private static void cornerSnow(VertexConsumer vc, PoseStack.Pose p, float size, float y, boolean icicles, int light) {
         for (float[] c : new float[][]{{0f, 0f}, {size - 5f, 0f}, {0f, size - 5f}, {size - 5f, size - 5f}}) {
             box(vc, p, c[0] + 0.1f, y, c[1] + 0.1f, c[0] + 4.9f, y + 0.9f, c[1] + 4.9f, SNOW, WHITE, light);
+        }
+        if (!icicles) {
+            return;
         }
         for (float[] i : new float[][]{{0.8f, 0.2f, 1.8f}, {3.2f, 0.2f, 1.2f}, {size - 3f, 0.2f, 2f}, {size - 1.2f, 2f, 1.3f}, {0.2f, size - 2.4f, 1.6f},
                 {size - 2f, size - 0.8f, 1.8f}}) {
@@ -567,12 +674,12 @@ final class JarWholeRenderer {
     }
 
     /** Glowing rune plates on the front of a ring: every other segment carries one. */
-    private static void runeRing(VertexConsumer vc, PoseStack pose, float radius, float faceZ, int segments, int color, int light) {
+    private static void runeRing(VertexConsumer vc, PoseStack pose, float radius, float faceZ, int segments) {
         for (int i = 0; i < segments; i += 2) {
             pose.pushPose();
             pose.mulPose(Axis.ZP.rotationDegrees(i * 360f / segments));
             for (float z : new float[]{-faceZ / 2f - 0.02f, faceZ / 2f + 0.02f}) {
-                box(vc, pose.last(), -1.3f, radius - 0.7f, z - 0.02f, 1.3f, radius + 0.7f, z + 0.02f, RUNES, color, light);
+                box(vc, pose.last(), -1.3f, radius - 0.7f, z - 0.02f, 1.3f, radius + 0.7f, z + 0.02f, RUNES, WHITE, 0);
             }
             pose.popPose();
         }

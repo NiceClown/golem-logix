@@ -55,6 +55,27 @@ public final class GlowTypes {
         return IRIS;
     }
 
+    private static java.lang.invoke.MethodHandle packInUse;
+    private static boolean packLookupDone;
+
+    /** Whether a shader pack is running this moment (Iris can be loaded with shaders off, and they can be switched in game). */
+    public static boolean shaderPackActive() {
+        if (!IRIS) {
+            return false;
+        }
+        try {
+            if (!packLookupDone) {
+                packLookupDone = true;
+                Class<?> api = Class.forName("net.irisshaders.iris.api.v0.IrisApi");
+                Object instance = api.getMethod("getInstance").invoke(null);
+                packInUse = java.lang.invoke.MethodHandles.publicLookup().unreflect(api.getMethod("isShaderPackInUse")).bindTo(instance);
+            }
+            return packInUse != null && (boolean) packInUse.invoke();
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
     /** Glowing geometry with this texture: black is see-through, everything else lights up what is behind it. */
     public static RenderType glow(Identifier texture) {
         return IRIS ? SHADER_SAFE.apply(texture) : GLOW.apply(texture);
