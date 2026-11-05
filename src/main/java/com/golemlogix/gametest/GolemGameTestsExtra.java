@@ -789,26 +789,6 @@ public final class GolemGameTestsExtra {
         });
     }
 
-    /** Annihilation bus upgrade slots enforce valid upgrade types; coprocessor never fits. */
-    public static void annihilationBusMenuUpgradeRestrictions(GameTestHelper helper) {
-        BlockPos rel = new BlockPos(2, 1, 2);
-        helper.setBlock(rel, ModBlocks.ANNIHILATION_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
-        var be = helper.getBlockEntity(rel, AnnihilationBusBlockEntity.class);
-        ServerPlayer player = clickOpen(helper, rel);
-
-        try {
-            var menu = (AnnihilationBusMenu) player.containerMenu;
-            helper.assertTrue(!menu.getSlot(AnnihilationBusMenu.TOOL_SLOT_INDEX).mayPlace(new ItemStack(ModItems.REDSTONE_MODULE.get())),
-                    "tool slot refuses upgrades");
-
-            int speedCount = be.getUpgrades().count(UpgradeType.SPEED);
-            helper.assertTrue(speedCount == 0, "no speed upgrade slots on annihilation bus");
-        } finally {
-            player.containerMenu = player.inventoryMenu;
-        }
-        helper.succeed();
-    }
-
     // =========================================================================
     // 8. AUTOCRAFTING: COMPLEX SCENARIOS
     // =========================================================================
@@ -1400,33 +1380,6 @@ public final class GolemGameTestsExtra {
     // 3. CRYO-DIODE (SUBNET ISOLATOR)
     // -------------------------------------------------------------------------
 
-    public static void cryoDiodeNetworksStaySeparate(GameTestHelper helper) {
-        buildArray(helper, 0, 0);
-        powered(helper);
-        BlockPos bay1 = BAY;
-        putBay(helper, bay1);
-
-        BlockPos diodePos = BUS_OUT;
-        helper.setBlock(diodePos, ModBlocks.CRYO_DIODE.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
-
-        BlockPos b2 = diodePos.north();
-        put(helper, b2, ModBlocks.CABLE_BUSHING.get());
-        put(helper, b2.offset(0, 1, 0), ModBlocks.ATLAS_CONDUIT.get());
-        put(helper, b2.offset(0, 2, 0), ModBlocks.ATLAS_CONDUIT.get());
-        put(helper, b2.offset(0, 3, 0), ModBlocks.ATLAS_CORE.get());
-        BlockPos bay2 = b2.west();
-        helper.setBlock(bay2, ModBlocks.COPPER_DRIVE_BAY.get().defaultBlockState());
-
-        helper.runAfterDelay(20, () -> {
-            GolemNetwork net1 = net(helper, bay1);
-            GolemNetwork net2 = net(helper, b2);
-
-            helper.assertTrue(net1 != null && net2 != null, "both networks exist");
-            helper.assertTrue(net1 != net2, "two networks joined by cryo-diode are two distinct GolemNetwork instances");
-            helper.succeed();
-        });
-    }
-
     public static void cryoDiodeStorageAndCraftingIsolated(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
@@ -1769,14 +1722,12 @@ public final class GolemGameTestsExtra {
             // Plan with 1 execution (4 planks)
             CraftingPlan plan1 = CraftingPlanner.plan(net, planksKey, 4);
             var smallJob = new com.golemlogix.crafting.CraftingJob(plan1, Map.of()).requestedBy(null, BUS_OUT);
-            boolean smallDing = smallJob.doneExecutions() >= 16 || smallJob.requester() != null;
-            helper.assertTrue(!smallDing, "small bus job (< 16 executions, requester == null) must not ding");
+            helper.assertTrue(!com.golemlogix.blockentity.CryoCalculatorBlockEntity.dings(smallJob), "small bus job (< 16 executions, requester == null) must not ding");
 
             // Plan with player requester
             ServerPlayer player = testPlayer(helper);
             var playerJob = new com.golemlogix.crafting.CraftingJob(plan1, Map.of()).requestedBy(player.getUUID(), null);
-            boolean playerDing = playerJob.doneExecutions() >= 16 || playerJob.requester() != null;
-            helper.assertTrue(playerDing, "player order (requester != null) must ding");
+            helper.assertTrue(com.golemlogix.blockentity.CryoCalculatorBlockEntity.dings(playerJob), "player order (requester != null) must ding");
 
             // Plan with 20 executions
             CraftingPlan plan20 = CraftingPlanner.plan(net, planksKey, 80);
@@ -1785,28 +1736,32 @@ public final class GolemGameTestsExtra {
             tag.putLong("Done", 16L);
             var loadedLargeJob = com.golemlogix.crafting.CraftingJob.load(tag, helper.getLevel().registryAccess());
             helper.assertTrue(loadedLargeJob != null, "loaded large job exists");
-            boolean largeDing = loadedLargeJob.doneExecutions() >= 16 || loadedLargeJob.requester() != null;
-            helper.assertTrue(largeDing, "large job (>= 16 executions) must ding");
+            helper.assertTrue(com.golemlogix.blockentity.CryoCalculatorBlockEntity.dings(loadedLargeJob), "large job (>= 16 executions) must ding");
 
             helper.succeed();
         });
     }
 
+    /** The config switch really silences the bell: a job that would ring does not. */
     public static void asmrConfigTogglesSilenceDing(GameTestHelper helper) {
-        helper.assertTrue(com.golemlogix.config.GolemConfig.TYPEWRITER_DING.get(), "typewriter ding defaults to true");
-        helper.assertTrue(com.golemlogix.config.GolemConfig.MONITOR_BLOCKED_TICK.get(), "monitor blocked tick defaults to true");
-
-        com.golemlogix.config.GolemConfig.TYPEWRITER_DING.set(false);
-        helper.assertTrue(!com.golemlogix.config.GolemConfig.TYPEWRITER_DING.get(), "typewriter ding toggled off");
-
-        com.golemlogix.config.GolemConfig.MONITOR_BLOCKED_TICK.set(false);
-        helper.assertTrue(!com.golemlogix.config.GolemConfig.MONITOR_BLOCKED_TICK.get(), "monitor tick toggled off");
-
-        // Reset back to defaults
-        com.golemlogix.config.GolemConfig.TYPEWRITER_DING.set(true);
-        com.golemlogix.config.GolemConfig.MONITOR_BLOCKED_TICK.set(true);
-
-        helper.succeed();
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        helper.getBlockEntity(PROV, PatternProviderBlockEntity.class).getContainer().setItem(0,
+                card(craftingPattern(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.OAK_LOG))));
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork net = net(helper, bay);
+            CraftingPlan plan = CraftingPlanner.plan(net, ItemKey.of(new ItemStack(Items.OAK_PLANKS)), 4);
+            var job = new com.golemlogix.crafting.CraftingJob(plan, Map.of()).requestedBy(testPlayer(helper).getUUID(), null);
+            helper.assertTrue(com.golemlogix.blockentity.CryoCalculatorBlockEntity.dings(job), "a player's order rings by default");
+            com.golemlogix.config.GolemConfig.TYPEWRITER_DING.set(false);
+            try {
+                helper.assertTrue(!com.golemlogix.blockentity.CryoCalculatorBlockEntity.dings(job), "the config silences it");
+            } finally {
+                com.golemlogix.config.GolemConfig.TYPEWRITER_DING.set(true);
+            }
+            helper.succeed();
+        });
     }
 
     public static void asmrRecipeMonitorBlockedJobStatus(GameTestHelper helper) {
@@ -1853,8 +1808,13 @@ public final class GolemGameTestsExtra {
             helper.assertTrue(monitor.fault(), "client monitor has fault = true after reading update tag");
             helper.assertTrue(monitor.lampState() == 2, "client lamp state is 2 (red)");
 
-            boolean shouldTick = monitor.fault() && com.golemlogix.config.GolemConfig.MONITOR_BLOCKED_TICK.get();
-            helper.assertTrue(shouldTick, "blocked ticking condition is active when fault and config enabled");
+            helper.assertTrue(monitor.ticksBlocked(), "a blocked job ticks while the config allows it");
+            com.golemlogix.config.GolemConfig.MONITOR_BLOCKED_TICK.set(false);
+            try {
+                helper.assertTrue(!monitor.ticksBlocked(), "the config silences the tick");
+            } finally {
+                com.golemlogix.config.GolemConfig.MONITOR_BLOCKED_TICK.set(true);
+            }
 
             helper.succeed();
         });

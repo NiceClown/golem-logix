@@ -231,6 +231,11 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         }
     }
 
+    /** Whether a finished job rings the typewriter's bell: a big one or one a player ordered, unless the config silences it. */
+    public static boolean dings(com.golemlogix.crafting.CraftingJob job) {
+        return com.golemlogix.config.GolemConfig.TYPEWRITER_DING.get() && (job.doneExecutions() >= 16 || job.requester() != null);
+    }
+
     public static void serverTick(Level level, BlockPos pos, BlockState state, CryoCalculatorBlockEntity be) {
         long time = level.getGameTime();
         boolean hasRedstone = be.upgrades.has(UpgradeType.REDSTONE);
@@ -278,11 +283,8 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
                 }
                 boolean justShown = be.hold.show(be.job.current().stack(), time);
                 if (be.job.isDone()) {
-                    if (com.golemlogix.config.GolemConfig.TYPEWRITER_DING.get()) {
-                        if (be.job.doneExecutions() >= 16 || be.job.requester() != null) {
-                            level.playSound(null, pos, SoundEvents.NOTE_BLOCK_BELL.value(),
-                                    SoundSource.BLOCKS, 0.7f, 1.8f);
-                        }
+                    if (dings(be.job)) {
+                        level.playSound(null, pos, SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.BLOCKS, 0.7f, 1.8f);
                     }
                     notifyFinished(level, be.job);
                     be.job = null;

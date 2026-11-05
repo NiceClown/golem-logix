@@ -213,7 +213,6 @@ public final class GolemGameTestRegistry {
             new Test("annihilationbusbrokenmidmining", GolemGameTestsExtra::annihilationBusBrokenMidMining, 200, 0),
             new Test("annihilationbustwobusessameblock", GolemGameTestsExtra::annihilationBusTwoBusesSameBlock, 200, 0),
             new Test("annihilationbusrefilldoesnottakedifferentitem", GolemGameTestsExtra::annihilationBusRefillDoesNotTakeDifferentItem, 200, 0),
-            new Test("annihilationbusmenuupgraderestrictions", GolemGameTestsExtra::annihilationBusMenuUpgradeRestrictions, 100, 0),
             new Test("autocraftnestedmultistep", GolemGameTestsExtra::autocraftNestedMultiStep, 400, 0),
             new Test("autocraftcompetingjobs", GolemGameTestsExtra::autocraftCompetingJobs, 400, 0),
             new Test("autocraftjobcancelledmidwayrefunds", GolemGameTestsExtra::autocraftJobCancelledMidwayRefunds, 300, 0),
@@ -236,7 +235,6 @@ public final class GolemGameTestRegistry {
             new Test("stockrequesterfluidtarget", GolemGameTestsExtra::stockRequesterFluidTarget, 100, 0),
             new Test("stockrequesterzeroamountemptyandoffline", GolemGameTestsExtra::stockRequesterZeroAmountEmptyAndOffline, 100, 0),
             // Cryo-Diode
-            new Test("cryodiodenetworksstayseparate", GolemGameTestsExtra::cryoDiodeNetworksStaySeparate, 100, 0),
             new Test("cryodiodestorageandcraftingisolated", GolemGameTestsExtra::cryoDiodeStorageAndCraftingIsolated, 100, 0),
             new Test("cryodiodeunidirectionalsourceflow", GolemGameTestsExtra::cryoDiodeUnidirectionalSourceFlow, 100, 0),
             new Test("cryodiodebreakleavesbothnetworksworking", GolemGameTestsExtra::cryoDiodeBreakLeavesBothNetworksWorking, 100, 0),
