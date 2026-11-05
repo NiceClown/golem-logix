@@ -677,7 +677,6 @@
   "gui.golem_logix.encoder.count": "Amount",
   "gui.golem_logix.encoder.count_what": "how many in the pattern",
   "gui.golem_logix.encoder.count_info": "Per run, items up to 99.",
-  "message.golem_logix.beta": "Golem Logix %s is a beta: the new devices' look will still be reworked. Problems and ideas: %s",
   "gui.golem_logix.manometer.status": "Now: %s, signal %s",
   "gui.golem_logix.requester.status.ok": "Stock satisfied",
   "gui.golem_logix.requester.status.crafting": "Crafting in progress",

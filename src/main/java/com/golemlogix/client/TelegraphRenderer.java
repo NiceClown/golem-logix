@@ -183,7 +183,7 @@ public class TelegraphRenderer extends com.golemlogix.client.render.LegacyBer<Te
             pose.pushPose();
             pose.mulPose(Axis.YP.rotationDegrees(w[0]));
             for (float x = w[2]; x < w[3] - 0.5f; x += 8f) {
-                fitWall(vc, pose.last(), x, 10.9f, Math.min(x + 8f, w[3]), 12.4f, w[1], BAND, white, light);
+                fitWall(vc, pose.last(), x, 10.7f, Math.min(x + 8f, w[3]), 12.7f, w[1], BAND, white, light);
             }
             pose.popPose();
         }

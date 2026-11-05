@@ -24,6 +24,8 @@ public class StockManometerRenderer extends com.golemlogix.client.render.LegacyB
 
     private static final Identifier COPPER = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/dev_copper_plain.png");
     private static final float TINY_SCALE = 0.11f;
+    /** Beyond this (blocks) a golem two pixels tall cannot be made out and is not drawn; the bridges stay, they are the indicator. */
+    private static final double TINY_SIGHT = 24.0;
     /** Deck half width and thickness, handrail height, the distance between posts (blocks). */
     private static final float DECK_W = 0.7f / 16f, DECK_T = 0.2f / 16f, RAIL_H = 0.9f / 16f, POST_STEP = 2f / 16f;
 
@@ -98,6 +100,7 @@ public class StockManometerRenderer extends com.golemlogix.client.render.LegacyB
         int steps = (int) Math.max(0, Math.min(3, now - be.bridgeTick));
         be.bridgeTick = now;
         int signal = be.getSignal();
+        boolean near = camera.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) < TINY_SIGHT * TINY_SIGHT;
         VertexConsumer copper = buffers.getBuffer(RenderTypes.entityCutout(COPPER));
         for (Direction d : Direction.values()) {
             int i = d.ordinal();
@@ -125,6 +128,9 @@ public class StockManometerRenderer extends com.golemlogix.client.render.LegacyB
                 }
             }
             be.bridgePhase[i] = phase;
+            if (!near) {
+                continue;
+            }
             boolean moving = phase > 0f || signal > 0;
             float shown = moving ? phase + speed * partialTick : 0f;
             boolean carrying = moving && shown < 1f;

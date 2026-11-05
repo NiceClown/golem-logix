@@ -37,12 +37,9 @@ public class CopperTankRenderer extends com.golemlogix.client.render.LegacyBer<C
         float nx = -dy * w, ny = dx * w;
         float[][] c = {{GAUGE_X - nx, GAUGE_Y - ny}, {GAUGE_X + nx, GAUGE_Y + ny},
                 {GAUGE_X + dx * len + nx, GAUGE_Y + dy * len + ny}, {GAUGE_X + dx * len - nx, GAUGE_Y + dy * len - ny}};
-        for (int side = 0; side < 2; side++) {
-            for (int i = 0; i < 4; i++) {
-                float[] v = c[side == 0 ? i : 3 - i];
-                vc.addVertex(p, v[0] / 16f, v[1] / 16f, GAUGE_Z / 16f).setColor(0xFFC8281E).setUv(0.5f, 0.5f)
-                        .setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(p, 0, 0, -1);
-            }
+        for (float[] v : c) {
+            vc.addVertex(p, v[0] / 16f, v[1] / 16f, GAUGE_Z / 16f).setColor(0xFFC8281E).setUv(0.5f, 0.5f)
+                    .setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(p, 0, 0, -1);
         }
     }
 

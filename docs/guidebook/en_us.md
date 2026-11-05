@@ -1657,6 +1657,18 @@ Logs never under 500, never over 2 000: mode "below", switch on **500**, switch 
 
 *With an Autocraft Module the Warden lights up while the network crafts the thing - to run a machine only for an order.*
 
+#### Copper bridges
+
+Thin copper bridges run from the clock to whatever takes its signal: dust, a repeater from behind, a lamp, a piston, a door, many machines of other mods. A neighbour with no bridge takes no signal, as far as the Warden can tell.
+
+While the signal is on, a very small copper golem carries redstone dust over each bridge and comes back for more, the faster the stronger the signal. With no signal it waits at the clock.
+
+#### When the Warden cannot tell
+
+The game cannot say which blocks react to redstone, so the Warden may miss one or see one that does not react. For each side with a block, the window has a button on the left with that block's picture. A click goes round **auto**, **always** and **never**.
+
+The buttons change only the bridges: the signal goes out on every side regardless.
+
 ### Layouts
 <!-- {"id": "bus_examples", "icon": "minecraft:furnace", "x": 3, "y": 0, "parents": ["bus_filters"]} -->
 
@@ -2088,6 +2100,16 @@ The Storekeeper orders a little at a time - up to a stack of items or 16 buckets
 - **cyan** - an order is running;
 - **yellow** - no pattern for it;
 - **red** - not enough ingredients.
+
+#### What the pages show
+
+Everything in the ledger is drawn on its open pages, like the picture on a storage drawer: you can read it without opening the window.
+
+The poppy on the clerk's antenna tells how the orders go:
+
+- **blinking red** - ingredients are missing;
+- **blinking yellow** - there is no pattern;
+- **green** - all is well.
 
 ### Machine steps
 <!-- {"id": "ac_machines", "icon": "minecraft:blast_furnace", "x": 3, "y": 0, "parents": ["ac_order"]} -->

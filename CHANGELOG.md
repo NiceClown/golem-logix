@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.1.2 (26.1.2) — Sharp at a distance
+
+- Fixed: textures that do not divide by 16 limited the mipmaps of the whole block atlas, so distant blocks of every mod in a pack
+  shimmered. All of the mod's block textures now divide by 16; they look the same.
+- The guide book explains the Stock Manometer's bridges and their buttons, and the Order Ledger's pages and poppy.
+- No more message in the chat on joining a world.
+- The very small golems on the Manometer's bridges are not drawn from more than 24 blocks away; the bridges stay.
+- Fixed: a doubled quad on the Copper Tank's needle.
+
 ## 2.1.1 (26.1.2) — The Warden's bridges
 
 Still a **beta**: the promised rework of the new devices' look, and the design code carried over to the older blocks.

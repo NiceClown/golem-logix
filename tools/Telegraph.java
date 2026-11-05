@@ -39,13 +39,13 @@ final class Telegraph {
         return p;
     }
 
-    /** A band of runes above the brass belt (16 x 3, laid along the walls in 8-pixel pieces). */
+    /** A band of runes above the brass belt (16 x 4, laid along the walls in 8-pixel pieces). */
     static Paint runeBand(int seed) {
-        Paint p = new Paint(16, 3, Forge2.K);
-        p.fill(0, 0, 16, 3, (u, v) -> rust(u + seed, v, 0.3));
+        Paint p = new Paint(16, 4, Forge2.K);
+        p.fill(0, 0, 16, 4, (u, v) -> rust(u + seed, v, 0.3));
         p.rect(0, 0, 16, 0.3, Items.at(BRASS, 4.4));
-        p.rect(0, 2.7, 16, 3, Items.at(BRASS, 2.6));
-        Carve.runeRow(p, 0.7, 15.6, 0.65, 1.0, seed, Items.at(COPPER, 0.5), Items.at(CYAN, 4.6));
+        p.rect(0, 3.7, 16, 4, Items.at(BRASS, 2.6));
+        Carve.runeRow(p, 0.7, 15.6, 1.15, 1.0, seed, Items.at(COPPER, 0.5), Items.at(CYAN, 4.6));
         return p;
     }
 

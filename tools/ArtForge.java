@@ -705,6 +705,7 @@ public class ArtForge {
         Distillery.all();
         Interface.all();
         Top6.all();
+        MipSafe.all();
         Logo.make();
         System.out.println("ArtForge: done");
     }
