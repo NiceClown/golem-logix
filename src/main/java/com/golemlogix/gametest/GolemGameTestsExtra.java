@@ -75,6 +75,21 @@ public final class GolemGameTestsExtra {
     private GolemGameTestsExtra() {
     }
 
+    /** Positive control helper: places stone at front, wakes the bus, and asserts it mines stone into cobblestone in network. */
+    static void assertMinesStone(GameTestHelper helper, BlockPos bay, BlockPos bus, BlockPos front) {
+        long before = net(helper, bay).itemCountOf(ItemKey.of(new ItemStack(Items.COBBLESTONE)));
+        helper.setBlock(front, Blocks.STONE);
+        var be = helper.getBlockEntity(bus, AnnihilationBusBlockEntity.class);
+        if (be != null) {
+            be.wake();
+        }
+        helper.succeedWhen(() -> {
+            helper.assertBlockNotPresent(Blocks.STONE, front);
+            helper.assertTrue(net(helper, bay).itemCountOf(ItemKey.of(new ItemStack(Items.COBBLESTONE))) > before,
+                    "positive control: bus must mine stone");
+        });
+    }
+
     // =========================================================================
     // 1. ANNIHILATION BUS: BREAKING SCENARIOS
     // =========================================================================
@@ -97,7 +112,7 @@ public final class GolemGameTestsExtra {
             helper.assertBlockPresent(Blocks.BARRIER, front);
             helper.assertTrue(net(helper, bay).itemCountOf(ItemKey.of(new ItemStack(Items.BARRIER))) == 0,
                     "barrier must not be in the network");
-            helper.succeed();
+            assertMinesStone(helper, bay, bus, front);
         });
     }
 
@@ -116,7 +131,7 @@ public final class GolemGameTestsExtra {
         helper.runAfterDelay(100, () -> {
             var be = helper.getBlockEntity(bus, AnnihilationBusBlockEntity.class);
             helper.assertTrue(!be.swinging(), "bus must not swing at air");
-            helper.succeed();
+            assertMinesStone(helper, bay, bus, front);
         });
     }
 
@@ -233,7 +248,14 @@ public final class GolemGameTestsExtra {
         helper.runAfterDelay(150, () -> {
             // When grownOnly is ON, immature crop must stay
             helper.assertBlockPresent(Blocks.WHEAT, front);
-            helper.succeed();
+            // Positive control: mature crop MUST be mined when grownOnly is ON
+            helper.setBlock(front, ((net.minecraft.world.level.block.CropBlock) Blocks.WHEAT).getStateForAge(7));
+            be.wake();
+            helper.succeedWhen(() -> {
+                helper.assertBlockNotPresent(Blocks.WHEAT, front);
+                helper.assertTrue(net(helper, bay).itemCountOf(ItemKey.of(new ItemStack(Items.WHEAT))) >= 1,
+                        "positive control: mature crop harvested");
+            });
         });
     }
 
@@ -254,7 +276,9 @@ public final class GolemGameTestsExtra {
         helper.runAfterDelay(80, () -> {
             // The stone should stay because cobblestone cannot fit into the disk
             helper.assertBlockPresent(Blocks.STONE, front);
-            helper.succeed();
+            // Positive control: extract dirt to make room, now bus must mine stone
+            net(helper, bay).extractItem(new ItemStack(Items.DIRT), 64, false);
+            assertMinesStone(helper, bay, bus, front);
         });
     }
 
@@ -300,11 +324,23 @@ public final class GolemGameTestsExtra {
         pick.enchant(fortune, 3);
         be.getTool().setItem(0, pick);
 
-        helper.runAfterDelay(70, () -> {
+        int[] mined = {0};
+        final int TARGET = 12;
+        helper.succeedWhen(() -> {
+            if (helper.getBlockState(front).isAir()) {
+                if (mined[0] < TARGET) {
+                    mined[0]++;
+                    if (mined[0] < TARGET) {
+                        helper.setBlock(front, Blocks.COAL_ORE);
+                        be.wake();
+                    }
+                }
+            }
+            helper.assertTrue(mined[0] == TARGET, "must mine all target ores");
             helper.assertBlockNotPresent(Blocks.COAL_ORE, front);
             long coal = net(helper, bay).itemCountOf(ItemKey.of(new ItemStack(Items.COAL)));
             helper.assertTrue(coal >= 1, "coal was harvested into network, got: " + coal);
-            helper.succeed();
+            helper.assertTrue(coal > TARGET, "Fortune III yielded bonus drops: " + coal + " coal from " + TARGET + " ores");
         });
     }
 
@@ -379,7 +415,9 @@ public final class GolemGameTestsExtra {
             ItemStack held = be.getTool().getItem(0);
             helper.assertTrue(!held.isEmpty() && held.getDamageValue() == pick.getMaxDamage() - 1,
                     "tool preserved at 1 durability");
-            helper.succeed();
+            // Positive control: with a fresh tool, it must mine stone
+            be.getTool().setItem(0, new ItemStack(Items.IRON_PICKAXE));
+            assertMinesStone(helper, bay, bus, front);
         });
     }
 
@@ -403,7 +441,9 @@ public final class GolemGameTestsExtra {
             helper.assertBlockNotPresent(Blocks.DIRT, front);
             helper.assertTrue(net(helper, bay).itemCountOf(ItemKey.of(new ItemStack(Items.DIRT))) == 1,
                     "dirt was mined with a stick");
-            helper.succeed();
+            // Positive control: with a real tool in slot, stone can now be mined
+            be.getTool().setItem(0, new ItemStack(Items.IRON_PICKAXE));
+            assertMinesStone(helper, bay, bus, front);
         });
     }
 
@@ -444,7 +484,12 @@ public final class GolemGameTestsExtra {
 
             helper.runAfterDelay(40, () -> {
                 helper.assertTrue(pig.isAlive(), "pig not attacked with empty allow list");
-                helper.succeed();
+                // Positive control: switch to deny list mode (allow all with empty filter), pig must now die
+                be.menuData().set(3, 1);
+                be.wake();
+                helper.succeedWhen(() -> {
+                    helper.assertTrue(!pig.isAlive(), "positive control: bus attacks and kills pig once allow list restriction is lifted");
+                });
             });
         });
     }
@@ -548,9 +593,9 @@ public final class GolemGameTestsExtra {
                 .setValue(LeverBlock.POWERED, false));
         be.wake();
 
-        helper.runAfterDelay(60, () -> {
+        helper.succeedWhen(() -> {
             helper.assertTrue(be.lastUse() > 0, "the bus interacted with the lever");
-            helper.succeed();
+            helper.assertTrue(helper.getBlockState(front).getValue(LeverBlock.POWERED), "lever POWERED state changed to true");
         });
     }
 
@@ -580,7 +625,14 @@ public final class GolemGameTestsExtra {
         helper.runAfterDelay(60, () -> {
             helper.assertTrue(namedPig.isAlive(), "named pig must never be attacked");
             helper.assertTrue(stand.isAlive(), "armor stand must never be attacked");
-            helper.succeed();
+            // Positive control: plain mob must die
+            namedPig.discard();
+            stand.discard();
+            var plainPig = helper.spawnWithNoFreeWill(EntityType.PIG, front);
+            be.wake();
+            helper.succeedWhen(() -> {
+                helper.assertTrue(!plainPig.isAlive(), "positive control: plain mob must die");
+            });
         });
     }
 
@@ -602,7 +654,13 @@ public final class GolemGameTestsExtra {
 
         helper.runAfterDelay(60, () -> {
             helper.assertTrue(babyPig.isAlive(), "baby pig is spared when grownOnly is on");
-            helper.succeed();
+            // Positive control: adult mob must die
+            babyPig.discard();
+            var adultPig = helper.spawnWithNoFreeWill(EntityType.PIG, front);
+            be.wake();
+            helper.succeedWhen(() -> {
+                helper.assertTrue(!adultPig.isAlive(), "positive control: adult mob must die");
+            });
         });
     }
 
@@ -671,7 +729,7 @@ public final class GolemGameTestsExtra {
         be.menuData().set(0, RedstoneMode.HIGH.ordinal());
         helper.setBlock(front, Blocks.STONE);
 
-        // Without signal in HIGH mode: waits
+        // 1. Without signal in HIGH mode: waits
         helper.runAfterDelay(40, () -> {
             helper.assertBlockPresent(Blocks.STONE, front);
             // Power the bus from above (without breaking the Atlas Array below/behind)
@@ -679,9 +737,44 @@ public final class GolemGameTestsExtra {
         });
 
         // With signal in HIGH mode: mines
-        helper.runAfterDelay(100, () -> {
+        helper.runAfterDelay(90, () -> {
             helper.assertBlockNotPresent(Blocks.STONE, front);
-            helper.succeed();
+
+            // 2. LOW mode: waits while powered, mines when unpowered
+            be.menuData().set(0, RedstoneMode.LOW.ordinal());
+            helper.setBlock(front, Blocks.STONE);
+            be.wake();
+            helper.runAfterDelay(30, () -> {
+                helper.assertBlockPresent(Blocks.STONE, front);
+                // Remove signal in LOW mode: should mine
+                helper.setBlock(bus.above(), Blocks.AIR);
+                be.wake();
+                helper.runAfterDelay(50, () -> {
+                    helper.assertBlockNotPresent(Blocks.STONE, front);
+
+                    // 3. IGNORE mode: mines without signal
+                    be.menuData().set(0, RedstoneMode.IGNORE.ordinal());
+                    helper.setBlock(front, Blocks.STONE);
+                    be.wake();
+                    helper.runAfterDelay(50, () -> {
+                        helper.assertBlockNotPresent(Blocks.STONE, front);
+
+                        // 4. PULSE mode: waits without pulse, mines on rising pulse edge
+                        be.menuData().set(0, RedstoneMode.PULSE.ordinal());
+                        helper.setBlock(front, Blocks.STONE);
+                        be.wake();
+                        helper.runAfterDelay(25, () -> {
+                            helper.assertBlockPresent(Blocks.STONE, front);
+                            // Send rising edge pulse
+                            helper.setBlock(bus.above(), Blocks.REDSTONE_BLOCK);
+                            be.wake();
+                            helper.succeedWhen(() -> {
+                                helper.assertBlockNotPresent(Blocks.STONE, front);
+                            });
+                        });
+                    });
+                });
+            });
         });
     }
 
@@ -697,7 +790,13 @@ public final class GolemGameTestsExtra {
 
         helper.runAfterDelay(60, () -> {
             helper.assertBlockPresent(Blocks.STONE, front);
-            helper.succeed();
+            // Positive control: place Core back, bus must now mine stone
+            put(helper, CORE, ModBlocks.ATLAS_CORE.get());
+            var core = helper.getBlockEntity(CORE, com.golemlogix.blockentity.AtlasCoreBlockEntity.class);
+            if (core != null) {
+                core.refresh(helper.getLevel(), helper.absolutePos(CORE));
+            }
+            assertMinesStone(helper, bay, bus, front);
         });
     }
 
@@ -715,7 +814,20 @@ public final class GolemGameTestsExtra {
             helper.assertBlockNotPresent(Blocks.STONE, above);
             helper.assertTrue(net(helper, bay).itemCountOf(ItemKey.of(new ItemStack(Items.COBBLESTONE))) == 1,
                     "stone above was mined");
-            helper.succeed();
+
+            // Facing DOWN
+            BlockPos below = bus.below();
+            helper.setBlock(bus, ModBlocks.ANNIHILATION_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.DOWN));
+            helper.setBlock(below, Blocks.STONE);
+            var be = helper.getBlockEntity(bus, AnnihilationBusBlockEntity.class);
+            if (be != null) {
+                be.wake();
+            }
+            helper.succeedWhen(() -> {
+                helper.assertBlockNotPresent(Blocks.STONE, below);
+                helper.assertTrue(net(helper, bay).itemCountOf(ItemKey.of(new ItemStack(Items.COBBLESTONE))) == 2,
+                        "stone below was mined");
+            });
         });
     }
 
@@ -785,7 +897,16 @@ public final class GolemGameTestsExtra {
         helper.runAfterDelay(30, () -> {
             helper.assertTrue(be.getTool().getItem(0).isEmpty(),
                     "does not grab diamond pickaxe when expecting iron pickaxe");
-            helper.succeed();
+            // Positive control: inserting expected iron pickaxe refills the slot and mines stone
+            net(helper, bay).insertItem(new ItemStack(Items.IRON_PICKAXE), false);
+            helper.setBlock(front, Blocks.STONE);
+            be.wake();
+            helper.succeedWhen(() -> {
+                helper.assertTrue(be.getTool().getItem(0).is(Items.IRON_PICKAXE), "tool slot refilled with iron pickaxe");
+                helper.assertBlockNotPresent(Blocks.STONE, front);
+                helper.assertTrue(net(helper, bay).itemCountOf(ItemKey.of(new ItemStack(Items.COBBLESTONE))) >= 1,
+                        "positive control: bus refilled iron pickaxe and mined stone");
+            });
         });
     }
 
@@ -1159,7 +1280,10 @@ public final class GolemGameTestsExtra {
 
             helper.runAfterDelay(15, () -> {
                 helper.assertTrue(mano.getSignal() == 15, "signal 15 while autocraft is running");
-                helper.succeed();
+                helper.succeedWhen(() -> {
+                    helper.assertTrue(helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class).isIdle(), "craft finished");
+                    helper.assertTrue(mano.getSignal() == 0, "signal drops back to 0 when craft ends");
+                });
             });
         });
     }
@@ -1353,25 +1477,39 @@ public final class GolemGameTestsExtra {
         helper.setBlock(reqPos, ModBlocks.STOCK_REQUESTER.get().defaultBlockState());
         StockRequesterBlockEntity req = helper.getBlockEntity(reqPos, StockRequesterBlockEntity.class);
 
-        // Slot 0 empty
-        // Slot 1 has item with keep amount = 0 configured via menu
-        req.getFilters().setItem(1, new ItemStack(Items.DIAMOND));
-        ServerPlayer player = testPlayer(helper);
-        StockRequesterMenu reqMenu = new StockRequesterMenu(1, player.getInventory(), req.getFilters(), req.menuData(), req.getBlockPos());
-        reqMenu.setKeep(1, 0);
+        // First configure with target amount > 0 without pattern, proving the ledger actively updates
+        ItemStack diamondFilter = new ItemStack(Items.DIAMOND);
+        diamondFilter.set(ModDataComponents.KEEP_AMOUNT.get(), 10);
+        req.getFilters().setItem(1, diamondFilter);
 
         helper.runAfterDelay(15, () -> {
-            helper.assertTrue(req.getSlotStatus(0) == StockRequesterBlockEntity.STATUS_OK, "empty slot stays STATUS_OK");
-            helper.assertTrue(req.getSlotStatus(1) == StockRequesterBlockEntity.STATUS_OK, "amount 0 slot stays STATUS_OK");
+            helper.assertTrue(req.getSlotStatus(1) == StockRequesterBlockEntity.STATUS_NO_PATTERN,
+                    "proves ledger updates: status is STATUS_NO_PATTERN before amount is 0");
 
-            // Test offline: remove core to take network offline
-            helper.setBlock(CORE, Blocks.AIR);
+            // Slot 0 empty
+            // Slot 1 keep amount set to 0 via menu
+            ServerPlayer player = testPlayer(helper);
+            StockRequesterMenu reqMenu = new StockRequesterMenu(1, player.getInventory(), req.getFilters(), req.menuData(), req.getBlockPos());
+            reqMenu.setKeep(1, 0);
+
             helper.runAfterDelay(15, () -> {
-                GolemNetwork net = net(helper, bay);
-                helper.assertTrue(!net.isOnline(), "network is offline");
-                helper.assertTrue(req.getSlotStatus(0) == StockRequesterBlockEntity.STATUS_OK, "offline requester stays STATUS_OK");
-                helper.assertTrue(req.getSlotStatus(1) == StockRequesterBlockEntity.STATUS_OK, "offline requester stays STATUS_OK");
-                helper.succeed();
+                helper.assertTrue(req.getSlotStatus(0) == StockRequesterBlockEntity.STATUS_OK, "empty slot stays STATUS_OK");
+                helper.assertTrue(req.getSlotStatus(1) == StockRequesterBlockEntity.STATUS_OK, "amount 0 slot stays STATUS_OK");
+
+                // Set non-default status on slot 1 again before testing offline
+                reqMenu.setKeep(1, 10);
+                helper.runAfterDelay(15, () -> {
+                    helper.assertTrue(req.getSlotStatus(1) == StockRequesterBlockEntity.STATUS_NO_PATTERN, "slot 1 active before network goes offline");
+                    // Test offline: remove core to take network offline
+                    helper.setBlock(CORE, Blocks.AIR);
+                    helper.runAfterDelay(15, () -> {
+                        GolemNetwork net = net(helper, bay);
+                        helper.assertTrue(!net.isOnline(), "network is offline");
+                        helper.assertTrue(req.getSlotStatus(0) == StockRequesterBlockEntity.STATUS_OK, "offline requester stays STATUS_OK");
+                        helper.assertTrue(req.getSlotStatus(1) == StockRequesterBlockEntity.STATUS_OK, "offline requester stays STATUS_OK");
+                        helper.succeed();
+                    });
+                });
             });
         });
     }
@@ -1464,6 +1602,7 @@ public final class GolemGameTestsExtra {
         powered(helper);
         BlockPos bay1 = BAY;
         putBay(helper, bay1);
+        helper.getBlockEntity(bay1, CopperDriveBayBlockEntity.class).getContainer().setItem(0, new ItemStack(ModItems.COPPER_DISK_1K.get()));
 
         BlockPos diodePos = BUS_OUT;
         helper.setBlock(diodePos, ModBlocks.CRYO_DIODE.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
@@ -1474,8 +1613,10 @@ public final class GolemGameTestsExtra {
         put(helper, b2.offset(0, 2, 0), ModBlocks.ATLAS_CONDUIT.get());
         put(helper, b2.offset(0, 3, 0), ModBlocks.ATLAS_CORE.get());
         put(helper, b2.offset(0, -1, 0), ModBlocks.CREATIVE_SOURCE_JAR.get()); // Give Net 2 its own power
-        BlockPos bay2 = b2.west();
-        helper.setBlock(bay2, ModBlocks.COPPER_DRIVE_BAY.get().defaultBlockState());
+        // the cabinet is 2x2, its other parts to the east and above: it stands clear of the bushing and touches it
+        BlockPos bay2 = b2.west(2);
+        putBay(helper, bay2);
+        helper.getBlockEntity(bay2, CopperDriveBayBlockEntity.class).getContainer().setItem(0, new ItemStack(ModItems.COPPER_DISK_1K.get()));
 
         helper.runAfterDelay(15, () -> {
             helper.setBlock(diodePos, Blocks.AIR);
@@ -1485,6 +1626,15 @@ public final class GolemGameTestsExtra {
                 GolemNetwork net2 = net(helper, b2);
                 helper.assertTrue(net1 != null && net1.isOnline(), "network 1 remains online and operational after diode break");
                 helper.assertTrue(net2 != null && net2.isOnline(), "network 2 remains online and operational after diode break");
+
+                // Prove each network still stores items after the break
+                net1.insertItem(new ItemStack(Items.DIAMOND, 10), false);
+                net2.insertItem(new ItemStack(Items.EMERALD, 5), false);
+                helper.assertTrue(net1.itemCountOf(ItemKey.of(new ItemStack(Items.DIAMOND))) == 10, "net 1 stores diamonds after break");
+                helper.assertTrue(net1.itemCountOf(ItemKey.of(new ItemStack(Items.EMERALD))) == 0, "net 1 does not store net 2 items");
+                helper.assertTrue(net2.itemCountOf(ItemKey.of(new ItemStack(Items.EMERALD))) == 5, "net 2 stores emeralds after break");
+                helper.assertTrue(net2.itemCountOf(ItemKey.of(new ItemStack(Items.DIAMOND))) == 0, "net 2 does not store net 1 items");
+
                 helper.succeed();
             });
         });
@@ -1555,12 +1705,18 @@ public final class GolemGameTestsExtra {
                 new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "player-craft-only"));
         sec.getCards().setItem(2, IdentityPunchCardItem.of(playerCraftOnly.getUUID(), "player-craft-only", SecurityPermission.CRAFT.mask));
 
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+        provider.getContainer().setItem(0, card(craftingPattern(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.OAK_LOG))));
+
         BlockPos absTerm = helper.absolutePos(TERM);
         helper.setBlock(TERM, ModBlocks.ANALOG_TERMINAL.get().defaultBlockState());
 
         helper.runAfterDelay(10, () -> {
             GolemNetwork n = net(helper, bay);
             n.insertItem(new ItemStack(Items.DIAMOND, 50), false);
+            n.insertItem(new ItemStack(Items.OAK_LOG, 10), false);
             ItemKey diamond = ItemKey.of(new ItemStack(Items.DIAMOND));
 
             // 1. Player with INSERT only: can insert, CANNOT extract
@@ -1575,21 +1731,29 @@ public final class GolemGameTestsExtra {
             helper.assertTrue(menuInsert.getCarried().isEmpty(), "player with INSERT only is denied TAKE_STACK");
             helper.assertTrue(n.itemCountOf(diamond) == 50, "network items untouched by denied take");
 
-            // 2. Player with EXTRACT only: can extract, CANNOT order craft
+            // 2. Player with EXTRACT only: can extract, CANNOT order craft (tested with real pattern!)
             TerminalMenu menuExtract = new TerminalMenu(82, playerExtractOnly.getInventory(), helper.getLevel(), absTerm, absTerm,
                     ModBlocks.ANALOG_TERMINAL.get(), false, false, 0);
             playerExtractOnly.containerMenu = menuExtract;
             menuExtract.handleAction(playerExtractOnly, new TerminalActionPayload(82, TerminalActionPayload.Action.TAKE_STACK, new ItemStack(Items.DIAMOND), FluidStack.EMPTY));
             helper.assertTrue(menuExtract.getCarried().getCount() == 50, "player with EXTRACT successfully takes items");
 
-            menuExtract.handleCraftRequest(playerExtractOnly, new CraftRequestPayload(82, new ItemStack(Items.DIAMOND), 1, false, 1));
+            menuExtract.handleCraftRequest(playerExtractOnly, new CraftRequestPayload(82, new ItemStack(Items.OAK_PLANKS), 4, false, 1));
             helper.assertTrue(n.cpus().stream().allMatch(com.golemlogix.crafting.CraftingCpu::isIdle), "craft denied without CRAFT permission");
 
-            // 3. Player with CRAFT only
+            // 3. Player with CRAFT only: CANNOT extract, CAN order craft of real pattern
             TerminalMenu menuCraft = new TerminalMenu(83, playerCraftOnly.getInventory(), helper.getLevel(), absTerm, absTerm,
                     ModBlocks.ANALOG_TERMINAL.get(), false, false, 0);
             playerCraftOnly.containerMenu = menuCraft;
             helper.assertTrue(n.hasPermission(playerCraftOnly, SecurityPermission.CRAFT), "player has CRAFT permission");
+
+            menuCraft.handleAction(playerCraftOnly, new TerminalActionPayload(83, TerminalActionPayload.Action.TAKE_STACK, new ItemStack(Items.OAK_LOG), FluidStack.EMPTY));
+            helper.assertTrue(menuCraft.getCarried().isEmpty(), "player with CRAFT only is denied TAKE_STACK");
+            helper.assertTrue(n.itemCountOf(ItemKey.of(new ItemStack(Items.OAK_LOG))) == 10, "items untouched by denied take");
+
+            menuCraft.handleCraftRequest(playerCraftOnly, new CraftRequestPayload(83, new ItemStack(Items.OAK_PLANKS), 4, false, 1));
+            CryoCalculatorBlockEntity cpu = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class);
+            helper.assertTrue(!cpu.isIdle(), "ordering craft of real pattern starts a job for player with CRAFT permission");
 
             helper.succeed();
         });
@@ -1817,6 +1981,196 @@ public final class GolemGameTestsExtra {
             }
 
             helper.succeed();
+        });
+    }
+
+    // =========================================================================
+    // 9. NEW TESTS: COMPLEX NETWORKS & EDGE CASES
+    // =========================================================================
+
+    /** Patterns where A needs B and B needs A: planner returns without stack overflow, reports missing, and non-cyclic craft still plans. */
+    public static void autocraftCyclicPatternsDoNotHang(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+
+        // Cyclic recipes: Iron Ingot needs Gold Ingot, Gold Ingot needs Iron Ingot
+        provider.getContainer().setItem(0, card(new PatternData(false,
+                List.of(new ItemStack(Items.GOLD_INGOT)), List.of(new ItemStack(Items.IRON_INGOT)))));
+        provider.getContainer().setItem(1, card(new PatternData(false,
+                List.of(new ItemStack(Items.IRON_INGOT)), List.of(new ItemStack(Items.GOLD_INGOT)))));
+        // Independent recipe: 1 Oak Log -> 4 Oak Planks
+        provider.getContainer().setItem(2, card(craftingPattern(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.OAK_LOG))));
+
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.OAK_LOG, 10), false);
+
+            ItemKey iron = ItemKey.of(new ItemStack(Items.IRON_INGOT));
+            ItemKey planks = ItemKey.of(new ItemStack(Items.OAK_PLANKS));
+
+            // Planning for cyclic recipe must return without hang/overflow and report missing
+            CraftingPlan planCyclic = CraftingPlanner.plan(n, iron, 1);
+            helper.assertTrue(!planCyclic.missing().isEmpty(), "cyclic recipe cannot be made, reports missing: " + planCyclic.missing());
+            helper.assertTrue(n.startCrafting(iron, 1).type() != GolemNetwork.StartType.STARTED, "cyclic craft cannot start");
+
+            // Independent recipe must still plan and craft cleanly
+            CraftingPlan planOk = CraftingPlanner.plan(n, planks, 4);
+            helper.assertTrue(planOk.missing().isEmpty(), "independent recipe has nothing missing: " + planOk.missing());
+            helper.assertTrue(n.startCrafting(planks, 4).type() == GolemNetwork.StartType.STARTED, "independent craft starts");
+
+            helper.succeed();
+        });
+    }
+
+    /** Removing a pipe splits the network into two: storage and devices leave the first, and reconnecting rejoins them. */
+    public static void networkSplitWhenTrunkIsCut(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        net(helper, bay).insertItem(new ItemStack(Items.DIAMOND, 10), false);
+
+        BlockPos trunk1 = BUS_OUT;
+        BlockPos trunk2 = trunk1.north();
+        BlockPos trunk3 = trunk2.north();
+        put(helper, trunk1, ModBlocks.BASIC_SNOW_PIPE.get());
+        put(helper, trunk2, ModBlocks.BASIC_SNOW_PIPE.get());
+        put(helper, trunk3, ModBlocks.BASIC_SNOW_PIPE.get());
+
+        BlockPos farTerm = trunk3.east();
+        put(helper, farTerm, ModBlocks.ANALOG_TERMINAL.get());
+
+        BlockPos peri = trunk3.west();
+        BlockPos chest = peri.west();
+        helper.setBlock(chest, Blocks.CHEST);
+        Container c = (Container) helper.getBlockEntity(chest, net.minecraft.world.level.block.entity.BlockEntity.class);
+        c.setItem(0, new ItemStack(Items.EMERALD, 20));
+        periscope(helper, peri, Direction.WEST);
+
+        helper.runAfterDelay(15, () -> {
+            GolemNetwork initial = net(helper, bay);
+            helper.assertTrue(initial.itemCountOf(ItemKey.of(new ItemStack(Items.DIAMOND))) == 10, "diamond in main storage");
+            helper.assertTrue(initial.itemCountOf(ItemKey.of(new ItemStack(Items.EMERALD))) == 20, "emerald in periscope storage before cut");
+            helper.assertTrue(initial.isDeviceActive(helper.absolutePos(farTerm)), "far terminal has channel before cut");
+
+            // Cut trunk in the middle
+            helper.setBlock(trunk2, Blocks.AIR);
+
+            helper.runAfterDelay(15, () -> {
+                GolemNetwork mainNet = net(helper, bay);
+                GolemNetwork cutNet = net(helper, peri);
+                helper.assertTrue(mainNet.hasCore(), "main network retains core");
+                helper.assertTrue(!cutNet.hasCore(), "cut-off part has no core");
+                helper.assertTrue(mainNet.itemCountOf(ItemKey.of(new ItemStack(Items.DIAMOND))) == 10, "main network retains diamonds");
+                helper.assertTrue(mainNet.itemCountOf(ItemKey.of(new ItemStack(Items.EMERALD))) == 0, "cut-off emerald storage leaves main network");
+                helper.assertTrue(!mainNet.isDeviceActive(helper.absolutePos(farTerm)), "cut-off terminal loses channel on main network");
+
+                // Place pipe back to rejoin
+                put(helper, trunk2, ModBlocks.BASIC_SNOW_PIPE.get());
+
+                helper.runAfterDelay(15, () -> {
+                    GolemNetwork rejoined = net(helper, bay);
+                    helper.assertTrue(rejoined.itemCountOf(ItemKey.of(new ItemStack(Items.DIAMOND))) == 10, "diamond still present");
+                    helper.assertTrue(rejoined.itemCountOf(ItemKey.of(new ItemStack(Items.EMERALD))) == 20, "emerald storage rejoined");
+                    helper.assertTrue(rejoined.isDeviceActive(helper.absolutePos(farTerm)), "far terminal active again");
+                    helper.succeed();
+                });
+            });
+        });
+    }
+
+    /** Two Cryo-Calculators run two different orders at the same time; both finish with right results and no items lost or duplicated. */
+    public static void autocraftTwoCalculatorsAtOnce(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos cpu1 = CPU;
+        BlockPos cpu2 = BUS_OUT;
+        helper.setBlock(cpu1, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(cpu2, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+
+        // Pattern 1: 1 Oak Log -> 4 Oak Planks
+        provider.getContainer().setItem(0, card(craftingPattern(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.OAK_LOG))));
+        // Pattern 2: 1 Iron Block -> 9 Iron Ingots
+        provider.getContainer().setItem(1, card(craftingPattern(new ItemStack(Items.IRON_INGOT, 9), new ItemStack(Items.IRON_BLOCK))));
+
+        ItemKey planksKey = ItemKey.of(new ItemStack(Items.OAK_PLANKS));
+        ItemKey ingotsKey = ItemKey.of(new ItemStack(Items.IRON_INGOT));
+        ItemKey logKey = ItemKey.of(new ItemStack(Items.OAK_LOG));
+        ItemKey ironBlockKey = ItemKey.of(new ItemStack(Items.IRON_BLOCK));
+
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.OAK_LOG, 5), false);
+            n.insertItem(new ItemStack(Items.IRON_BLOCK, 3), false);
+
+            var start1 = n.startCrafting(planksKey, 20);
+            var start2 = n.startCrafting(ingotsKey, 27);
+            helper.assertTrue(start1.type() == GolemNetwork.StartType.STARTED, "order 1 started");
+            helper.assertTrue(start2.type() == GolemNetwork.StartType.STARTED, "order 2 started");
+
+            CryoCalculatorBlockEntity be1 = helper.getBlockEntity(cpu1, CryoCalculatorBlockEntity.class);
+            CryoCalculatorBlockEntity be2 = helper.getBlockEntity(cpu2, CryoCalculatorBlockEntity.class);
+            helper.assertTrue(!be1.isIdle() && !be2.isIdle(), "both calculators running at once");
+
+            helper.succeedWhen(() -> {
+                helper.assertTrue(be1.isIdle() && be2.isIdle(), "both calculators finished and idle");
+                helper.assertTrue(n.itemCountOf(planksKey) == 20, "20 planks delivered");
+                helper.assertTrue(n.itemCountOf(ingotsKey) == 27, "27 iron ingots delivered");
+                helper.assertTrue(n.itemCountOf(logKey) == 0, "all 5 oak logs consumed cleanly");
+                helper.assertTrue(n.itemCountOf(ironBlockKey) == 0, "all 3 iron blocks consumed cleanly");
+            });
+        });
+    }
+
+    /** Source runs out during a job; job does not lose items, and finishes once power returns. */
+    public static void autocraftSurvivesPowerLoss(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+        provider.getContainer().setItem(0, card(craftingPattern(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.OAK_LOG))));
+
+        ItemKey planksKey = ItemKey.of(new ItemStack(Items.OAK_PLANKS));
+        ItemKey logKey = ItemKey.of(new ItemStack(Items.OAK_LOG));
+
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, bay);
+            if (!com.golemlogix.system.SourceHelper.sourceRequired()) {
+                helper.assertTrue(n.isOnline(), "without Ars Nouveau the network needs no Source");
+                helper.succeed();
+                return;
+            }
+
+            n.insertItem(new ItemStack(Items.OAK_LOG, 10), false);
+            var start = n.startCrafting(planksKey, 20);
+            helper.assertTrue(start.type() == GolemNetwork.StartType.STARTED, "job started");
+
+            CryoCalculatorBlockEntity cpu = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class);
+            helper.assertTrue(!cpu.isIdle(), "calculator working on job");
+
+            // Cut power by removing Creative Source Jar
+            helper.setBlock(JAR, Blocks.AIR);
+
+            helper.runAfterDelay(15, () -> {
+                GolemNetwork nOffline = net(helper, bay);
+                helper.assertTrue(!nOffline.isOnline(), "network goes offline without Source");
+                helper.assertTrue(!cpu.isIdle(), "job preserved in calculator across power loss");
+
+                // Restore power
+                powered(helper);
+
+                helper.runAfterDelay(20, () -> {
+                    GolemNetwork nRestored = net(helper, bay);
+                    helper.assertTrue(nRestored.isOnline(), "network online after power restored");
+
+                    helper.succeedWhen(() -> {
+                        helper.assertTrue(cpu.isIdle(), "job finishes once power returns");
+                        helper.assertTrue(nRestored.itemCountOf(planksKey) == 20, "20 planks delivered with no loss");
+                        helper.assertTrue(nRestored.itemCountOf(logKey) == 5, "remaining 5 oak logs intact in storage");
+                    });
+                });
+            });
         });
     }
 }

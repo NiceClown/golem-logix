@@ -707,6 +707,22 @@ public class GolemGameTests {
             net(helper, bay).insertItem(new ItemStack(Items.COBBLESTONE, 64), false);
             net(helper, bay).insertItem(new ItemStack(Items.DIRT, 64), false);
         });
+        List<net.minecraft.world.item.Item> history = new ArrayList<>();
+        int[] last = {0, 0};
+        for (int t = 6; t < 60; t++) {
+            helper.runAfterDelay(t, () -> {
+                int cobble = count(c, Items.COBBLESTONE);
+                int dirt = count(c, Items.DIRT);
+                if (cobble > last[0]) {
+                    history.add(Items.COBBLESTONE);
+                    last[0] = cobble;
+                }
+                if (dirt > last[1]) {
+                    history.add(Items.DIRT);
+                    last[1] = dirt;
+                }
+            });
+        }
         helper.runAfterDelay(60, () -> {
             int cobble = 0, dirt = 0;
             for (int i = 0; i < c.getContainerSize(); i++) {
@@ -715,6 +731,10 @@ public class GolemGameTests {
                 dirt += st.is(Items.DIRT) ? st.getCount() : 0;
             }
             helper.assertTrue(cobble > 0 && dirt > 0, "round robin sends both: cobblestone " + cobble + ", dirt " + dirt);
+            helper.assertTrue(history.size() >= 3, "multiple exports occurred, got " + history.size());
+            for (int i = 0; i < history.size() - 1; i++) {
+                helper.assertTrue(history.get(i) != history.get(i + 1), "items must strictly alternate: " + history);
+            }
             helper.succeed();
         });
     }
@@ -3869,8 +3889,14 @@ public class GolemGameTests {
             GolemNetwork n2 = net(helper, ORIGIN);
             helper.assertTrue(n2.insertItem(new ItemStack(Items.DIRT, 10), false).isEmpty(), "dirt fits");
             helper.assertTrue(count(a, Items.DIRT) == 10 && count(b, Items.DIRT) == 0, "after raising A above B, A gets the dirt");
-            // extract from the lowest-priority storage first
+            // Put stone into chest A as well so both hold the item (A has priority 10, B has priority 5)
+            a.setItem(1, new ItemStack(Items.STONE, 10));
+            // extract from the lowest-priority storage first (B at priority 5 is drained before A at priority 10)
             helper.assertTrue(n2.extractItem(new ItemStack(Items.STONE), 4, false).getCount() == 4 && count(b, Items.STONE) == 6, "extraction works");
+            helper.assertTrue(count(a, Items.STONE) == 10, "higher priority chest A was not touched while lowest-priority B had stock");
+            helper.assertTrue(n2.extractItem(new ItemStack(Items.STONE), 8, false).getCount() == 8
+                    && count(b, Items.STONE) == 0 && count(a, Items.STONE) == 8,
+                    "lowest-priority B is completely drained before A is drawn from");
             helper.succeed();
         });
     }
@@ -3934,6 +3960,9 @@ public class GolemGameTests {
         bus.menuData().set(2, 1);
         helper.runAfterDelay(80, () -> {
             helper.assertTrue(c.getItem(0).getCount() == 20 && c.getItem(1).isEmpty(), "the dirt comes in, the denied cobblestone stays");
+            GolemNetwork n = net(helper, BAY);
+            helper.assertTrue(n.itemCountOf(ItemKey.of(new ItemStack(Items.DIRT))) == 7, "dirt reached the network");
+            helper.assertTrue(n.itemCountOf(ItemKey.of(new ItemStack(Items.COBBLESTONE))) == 0, "denied cobblestone did not reach the network");
             helper.succeed();
         });
     }

@@ -20,6 +20,8 @@
   what the buses cost.
 - The co-processor stacks to 64.
 - The guide book explains all of this: the speeds, the one slot, how a bus paces itself, and the tools for server owners.
+- The game tests were reviewed: two duplicates went, tests that could not fail now can (each checked by breaking the mod on purpose),
+  and new ones cover cyclic patterns, a network cut in two, two calculators at once and power loss during a job (202 in all).
 
 ## 2.1.2 (26.1.2) — Sharp at a distance
 
