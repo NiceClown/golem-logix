@@ -54,7 +54,7 @@ public class DistillationTowerScreen extends GolemScreen<DistillationTowerMenu> 
         g.pose().scale(0.625f, 0.625f);
         g.item(COPROCESSOR, 0, 0);
         g.pose().popMatrix();
-        g.text(font, Component.translatable("gui.golem_logix.tower.coprocessors", menu.coprocessors()), x + 12, y + 34,
+        g.text(font, Component.translatable("gui.golem_logix.tower.coprocessors", menu.coprocessors(), com.golemlogix.upgrade.UpgradeSpec.DISTILLATION.maxSpeed()), x + 12, y + 34,
                 0xFFA89880, false);
         int status = menu.status();
         int color = status == 1 ? GolemGui.GREEN : status == 2 ? GolemGui.COPPER : GolemGui.RED;

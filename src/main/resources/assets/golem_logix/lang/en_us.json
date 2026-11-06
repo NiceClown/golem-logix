@@ -485,7 +485,7 @@
   "gui.golem_logix.tower.blood": "Blood: %s / %s mB",
   "gui.golem_logix.tower.rate": "Pace: %s mB a second",
   "gui.golem_logix.tower.source": "→ %s Source a second",
-  "gui.golem_logix.tower.coprocessors": "Co-processors: %s / 28",
+  "gui.golem_logix.tower.coprocessors": "Co-processors: %s / %s",
   "gui.golem_logix.tower.status.0": "No blood in the tank",
   "gui.golem_logix.tower.status.1": "Distilling",
   "gui.golem_logix.tower.status.2": "No jar with room beside it",

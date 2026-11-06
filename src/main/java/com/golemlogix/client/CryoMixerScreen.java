@@ -87,7 +87,7 @@ public class CryoMixerScreen extends GolemScreen<CryoMixerMenu> {
         g.pose().scale(0.625f, 0.625f);
         g.item(COPROCESSOR, 0, 0);
         g.pose().popMatrix();
-        fitted(g, Component.translatable("gui.golem_logix.tower.coprocessors", menu.coprocessors()), x + 12, y + 21, right - x - 12, 0xFFA89880);
+        fitted(g, Component.translatable("gui.golem_logix.tower.coprocessors", menu.coprocessors(), com.golemlogix.upgrade.UpgradeSpec.MIXER.maxSpeed()), x + 12, y + 21, right - x - 12, 0xFFA89880);
         int status = menu.status();
         int color = status == CryoMixerBlockEntity.WORKING ? GolemGui.GREEN
                 : status == CryoMixerBlockEntity.TRAY_FULL || status == CryoMixerBlockEntity.PAUSED ? GolemGui.COPPER : GolemGui.RED;
