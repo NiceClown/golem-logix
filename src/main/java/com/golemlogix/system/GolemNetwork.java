@@ -782,6 +782,17 @@ public final class GolemNetwork {
         return activeDevices.contains(new Node(level, pos));
     }
 
+    /** The joined jars on this network: towers touching the network pour into them from anywhere (see the tower). */
+    public List<com.golemlogix.blockentity.CryoJarBlockEntity> joinedJars() {
+        List<com.golemlogix.blockentity.CryoJarBlockEntity> out = new ArrayList<>();
+        for (SourceHelper.Supplier s : sources) {
+            if (s instanceof com.golemlogix.blockentity.CryoJarBlockEntity j && !j.isRemoved() && j.form() != com.golemlogix.blocks.JarForm.SINGLE) {
+                out.add(j);
+            }
+        }
+        return out;
+    }
+
     public List<SourceHelper.Supplier> sources() {
         return sources;
     }

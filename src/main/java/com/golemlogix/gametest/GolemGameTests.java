@@ -4653,6 +4653,66 @@ public class GolemGameTests {
 
     // ----------------------------------------------------------- cryo-distillation (Source without Ars Nouveau)
 
+    /** The temper lifts a tool to netherite's level for its own kind of block, and adds a level of Fortune. */
+    public static void temperLiftsTools(GameTestHelper helper) {
+        var reg = helper.getLevel().registryAccess();
+        var obsidian = Blocks.OBSIDIAN.defaultBlockState();
+        ItemStack wood = new ItemStack(Items.WOODEN_PICKAXE);
+        helper.assertTrue(!wood.isCorrectToolForDrops(obsidian), "a wooden pickaxe does not harvest obsidian");
+        ItemStack hand = com.golemlogix.blockentity.AnnihilationBusBlockEntity.temperedHand(wood, obsidian, reg);
+        helper.assertTrue(hand.isCorrectToolForDrops(obsidian), "tempered, it does");
+        helper.assertTrue(!wood.isEnchanted(), "the real tool stays as it was");
+        var fortune = reg.lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT).getOrThrow(net.minecraft.world.item.enchantment.Enchantments.FORTUNE);
+        helper.assertTrue(net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(fortune, hand) == 1, "with Fortune I");
+        ItemStack rich = new ItemStack(Items.IRON_PICKAXE);
+        rich.enchant(fortune, 3);
+        helper.assertTrue(net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(fortune,
+                com.golemlogix.blockentity.AnnihilationBusBlockEntity.temperedHand(rich, Blocks.STONE.defaultBlockState(), reg)) == 4, "III becomes IV");
+        helper.assertTrue(!com.golemlogix.blockentity.AnnihilationBusBlockEntity.temperLifts(new ItemStack(Items.WOODEN_SHOVEL), obsidian), "a shovel stays a shovel");
+        // worn and enchanted things are equipment whatever else they are
+        ItemStack worn = new ItemStack(Items.IRON_PICKAXE);
+        worn.setDamageValue(3);
+        helper.assertTrue(com.golemlogix.system.Gear.is(worn) && com.golemlogix.system.Gear.is(rich), "worn and enchanted tools count");
+        helper.succeed();
+    }
+
+    /** A tower touching the network pours into a Giga Jar anywhere on it, with the derrick's bonus; a lone jar there gets nothing. */
+    public static void towerFillsJarsThroughNetwork(GameTestHelper helper) {
+        buildArray(helper, 0, 0);
+        var level = helper.getLevel();
+        // a line of pipes from the corner bushing (4,1,6) to the west, a tower at its far end, jars along it
+        for (int x = 3; x >= -4; x--) {
+            put(helper, new BlockPos(x, 1, 6), ModBlocks.BASIC_SNOW_PIPE.get());
+        }
+        BlockPos jarAt = new BlockPos(1, 1, 7), lone = new BlockPos(3, 1, 5);
+        for (BlockPos p : List.of(jarAt, jarAt.east(), jarAt.south(), jarAt.east().south())) {
+            com.golemlogix.blocks.CryoJarBlock.place(level, helper.absolutePos(p), Direction.SOUTH, ModBlocks.CRYO_SOURCE_JAR.get());
+        }
+        com.golemlogix.blocks.CryoJarBlock.place(level, helper.absolutePos(lone), Direction.SOUTH, ModBlocks.CRYO_SOURCE_JAR.get());
+        BlockPos base = new BlockPos(-5, 1, 6);
+        com.golemlogix.blocks.DistillationTowerBlock.place(level, helper.absolutePos(base), Direction.SOUTH, ModBlocks.CRYO_DISTILLATION_TOWER.get());
+        var blood = net.minecraft.core.registries.BuiltInRegistries.FLUID.get(com.golemlogix.init.ModTags.CRYO_DISTILLABLE);
+        if (blood.isEmpty() || blood.get().size() == 0) {
+            helper.succeed();
+            return;
+        }
+        var fluid = blood.get().get(0).value();
+        helper.runAfterDelay(10, () -> {
+            var tower = helper.getBlockEntity(base, com.golemlogix.blockentity.DistillationTowerBlockEntity.class);
+            tower.input().fill(new net.neoforged.neoforge.fluids.FluidStack(fluid, 100), net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
+        });
+        helper.runAfterDelay(120, () -> {
+            var tower = helper.getBlockEntity(base, com.golemlogix.blockentity.DistillationTowerBlockEntity.class);
+            helper.assertTrue(tower.blood().isEmpty(), "the blood is distilled: " + tower.blood().getAmount());
+            var whole = helper.getBlockEntity(jarAt, com.golemlogix.blockentity.CryoJarBlockEntity.class);
+            int expect = (int) Math.floor(100 * com.golemlogix.config.GolemConfig.DISTILL_SOURCE_PER_MB.get() * (1 + com.golemlogix.config.GolemConfig.GIGA_SOURCE_BONUS.get() / 100.0));
+            int lost = 100; // what the core may have drunk meanwhile
+            helper.assertTrue(whole.available() > expect - lost && whole.available() <= expect, "the Giga Jar far away got it, with the bonus: " + whole.available() + " of " + expect);
+            helper.assertTrue(helper.getBlockEntity(lone, com.golemlogix.blockentity.CryoJarBlockEntity.class).available() == 0, "the lone jar on the network did not");
+            helper.succeed();
+        });
+    }
+
     /**
      * Cryo-Source Jar: a two-block supplier. Both halves touch the network, yet it is one supplier holding the Source in its lower
      * half; the network draws on it; breaking the top takes the whole jar.

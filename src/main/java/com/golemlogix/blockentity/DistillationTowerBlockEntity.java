@@ -4,6 +4,7 @@ import com.golemlogix.blocks.DistillationTowerBlock;
 import com.golemlogix.config.GolemConfig;
 import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.init.ModTags;
+import com.golemlogix.blockentity.CryoJarBlockEntity;
 import com.golemlogix.system.SourceHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -82,6 +83,8 @@ public class DistillationTowerBlockEntity extends BlockEntity {
     /** What the last batch ran into: 0 = no blood, 1 = working, 2 = no jar with room beside the tower (for the window). */
     private int status;
     private double carry;
+    /** The last batch had a Giga Jar's bonus (for the window). */
+    private boolean bonus;
     private boolean working;
     private long lastWork = -100;
     private boolean dirty;
@@ -151,7 +154,15 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         double perMb = GolemConfig.DISTILL_SOURCE_PER_MB.get();
         int budget = Math.max(1, rate() * PERIOD / 20);
         var cells = DistillationTowerBlock.cells(worldPosition);
-        int room = SourceHelper.fillAround(level, cells, Integer.MAX_VALUE, true);
+        var joined = networkJars(cells);
+        boolean pump = pumpBonus(cells, joined);
+        bonus = pump;
+        perMb *= pump ? 1 + GolemConfig.GIGA_SOURCE_BONUS.get() / 100.0 : 1;
+        long roomAll = SourceHelper.fillAround(level, cells, Integer.MAX_VALUE, true);
+        for (var jar : joined) {
+            roomAll += jar.fill(Integer.MAX_VALUE, true);
+        }
+        int room = (int) Math.min(roomAll, Integer.MAX_VALUE);
         if (room <= 0) {
             status = 2;
             return;
@@ -165,12 +176,45 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         double made = mb * perMb + carry;
         int give = (int) Math.floor(made + 1e-9);
         carry = made - give;
-        SourceHelper.fillAround(level, cells, give, false);
+        give -= SourceHelper.fillAround(level, cells, give, false);
+        for (var jar : joined) {
+            give -= jar.fill(give, false);
+        }
         lastWork = now;
         status = 1;
         if (now % 40 < PERIOD) {
             level.playSound(null, worldPosition.above(), SoundEvents.BREWING_STAND_BREW, SoundSource.BLOCKS, 0.35f, 0.6f);
         }
+    }
+
+    /** The joined jars of the network this tower touches, if any: the tower need not stand against them. An unpowered network counts, or it could never recover. */
+    private java.util.List<CryoJarBlockEntity> networkJars(java.util.Collection<BlockPos> cells) {
+        for (BlockPos cell : cells) {
+            for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+                BlockPos p = cell.relative(d);
+                if (!cells.contains(p) && level.isLoaded(p) && level.getBlockState(p).getBlock() instanceof com.golemlogix.system.GolemNode) {
+                    return com.golemlogix.system.GolemNetwork.get(level, p).joinedJars();
+                }
+            }
+        }
+        return java.util.List.of();
+    }
+
+    /** A Giga Jar is a derrick: one on the network, or right beside the tower, makes the tower yield more. */
+    private boolean pumpBonus(java.util.Collection<BlockPos> cells, java.util.List<CryoJarBlockEntity> joined) {
+        for (var jar : joined) {
+            if (jar.form() == com.golemlogix.blocks.JarForm.GIGA) {
+                return true;
+            }
+        }
+        for (BlockPos cell : cells) {
+            for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+                if (level.getBlockEntity(cell.relative(d)) instanceof CryoJarBlockEntity j && j.form() == com.golemlogix.blocks.JarForm.GIGA) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public com.golemlogix.upgrade.UpgradeContainer getUpgrades() {
@@ -196,7 +240,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
                 return switch (index) {
                     case 0 -> tank.getFluidAmount();
                     case 1 -> rate();
-                    case 2 -> (int) Math.round(rate() * GolemConfig.DISTILL_SOURCE_PER_MB.get() * 10);
+                    case 2 -> (int) Math.round(rate() * GolemConfig.DISTILL_SOURCE_PER_MB.get() * (bonus ? 1 + GolemConfig.GIGA_SOURCE_BONUS.get() / 100.0 : 1) * 10);
                     case 3 -> tank.isEmpty() ? 0 : status;
                     case 4 -> upgrades.count(com.golemlogix.upgrade.UpgradeType.SPEED);
                     case 5 -> capacity();

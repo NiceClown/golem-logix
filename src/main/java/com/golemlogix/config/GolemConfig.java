@@ -32,6 +32,7 @@ public final class GolemConfig {
     public static final ModConfigSpec.IntValue CRYO_JAR_CAPACITY;
     public static final ModConfigSpec.IntValue CRYO_JAR_GIGA_BONUS;
     public static final ModConfigSpec.IntValue CRYO_JAR_SUPER_BONUS;
+    public static final ModConfigSpec.IntValue GIGA_SOURCE_BONUS;
     public static final ModConfigSpec.IntValue DISTILL_RATE;
     public static final ModConfigSpec.DoubleValue DISTILL_SOURCE_PER_MB;
     public static final ModConfigSpec.IntValue DISTILL_COPROCESSOR_BONUS;
@@ -116,6 +117,8 @@ public final class GolemConfig {
                 .defineInRange("cryoJarGigaBonus", 10, 0, 1000);
         CRYO_JAR_SUPER_BONUS = b.comment("Extra Source nine jars joined into an Antigravity Reactor hold (percent of what the nine hold alone).")
                 .defineInRange("cryoJarSuperBonus", 20, 0, 1000);
+        GIGA_SOURCE_BONUS = b.comment("Extra Source towers make (percent) on a network with at least one Giga Jar, or right beside one.")
+                .defineInRange("gigaSourceBonus", 7, 0, 1000);
         DISTILL_RATE = b.comment("Blood (mB) a Cryo-Distillation Tower distils every second.")
                 .defineInRange("distillRate", 20, 1, 100000);
         DISTILL_COPROCESSOR_BONUS = b.comment("Extra blood (mB a second) each Compressed Co-Processor in the tower distils.")

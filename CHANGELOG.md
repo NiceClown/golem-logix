@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.1.4 (26.1.2) — Anywhere on the network
+
+- Giga Jars and Antigravity Reactors work through the network: a tower touching it pours into them wherever they stand.
+- A Giga Jar on the network, or beside a tower, gives towers 7% more Source (config gigaSourceBonus). One is enough.
+- Cryo-Source Jars have their own guide book entry.
+- The Plasma Temper also harvests at netherite's level and adds one level of Fortune to any tool.
+- Worn or enchanted tools that also hold a fluid now count as equipment on disks and get their mark.
+- The reactor's iron golems kneel under the ring and hold it on their shoulders, like atlantes. Dials and runes no longer flicker, and the snow
+  golems' hands no longer pass through their bodies.
+- The Cryo-Mixer's window shows its own limit of four co-processors.
+
 ## 2.1.3 (26.1.2) — No waiting at the door
 
 - The Golem Interface and the Pattern Provider hand what they are given to the network at once, however much it is, as AE2 does: a

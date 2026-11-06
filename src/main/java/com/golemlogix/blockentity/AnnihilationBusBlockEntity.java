@@ -317,7 +317,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         if (progress < 1f) {
             float speed = mineSpeed(with, front);
             float hardness = front.getDestroySpeed(level, target);
-            boolean right = !front.requiresCorrectToolForDrops() || with.isCorrectToolForDrops(front);
+            boolean right = harvests(with, front);
             progress += hardness <= 0 ? 1f : speed / hardness / (right ? 30f : 100f);
             setSwinging(true);
             level.destroyBlockProgress(fakeId(), target, progress >= 1f ? 9 : (int) (progress * 10f));
@@ -466,7 +466,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         float bestSpeed = -1f;
         for (var item : IRON_TOOLS) {
             ItemStack t = new ItemStack(item);
-            boolean right = !state.requiresCorrectToolForDrops() || t.isCorrectToolForDrops(state);
+            boolean right = harvests(t, state);
             float speed = right ? t.getDestroySpeed(state) : 0f;
             if (speed > bestSpeed) {
                 bestSpeed = speed;
@@ -481,11 +481,33 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         if (state.getDestroySpeed(level, target) < 0 || state.getBlock() instanceof net.minecraft.world.level.block.LiquidBlock) {
             return false;
         }
-        if (state.requiresCorrectToolForDrops() && !with.isCorrectToolForDrops(state)) {
+        if (!harvests(with, state)) {
             return false;
         }
         // the last point of durability is kept for the player - unless the slot is refilled: then the tool is used till it breaks
         return tempered() || refilling() || !(with.isDamageableItem() && with.getDamageValue() >= with.getMaxDamage() - 1);
+    }
+
+    private boolean harvests(ItemStack with, BlockState state) {
+        return !state.requiresCorrectToolForDrops() || with.isCorrectToolForDrops(state) || (tempered() && temperLifts(with, state));
+    }
+
+    /** The temper lifts any tool to netherite's level, for blocks of its own kind: a pickaxe does not start digging like a shovel. */
+    public static boolean temperLifts(ItemStack with, BlockState state) {
+        return with.getDestroySpeed(state) > 1f && !state.is(net.minecraft.tags.BlockTags.INCORRECT_FOR_NETHERITE_TOOL);
+    }
+
+    /** What the golem really swings with the temper: the same tool, harvesting at netherite's level, with one more level of Fortune. */
+    public static ItemStack temperedHand(ItemStack with, BlockState state, net.minecraft.core.HolderLookup.Provider registries) {
+        ItemStack hand = with.copy();
+        if (!with.isCorrectToolForDrops(state) && temperLifts(with, state)) {
+            var tool = new net.minecraft.world.item.component.Tool(java.util.List.of(net.minecraft.world.item.component.Tool.Rule.minesAndDrops(
+                    net.minecraft.core.HolderSet.direct(state.getBlock().builtInRegistryHolder()), with.getDestroySpeed(state))), 1f, 0, true);
+            hand.set(net.minecraft.core.component.DataComponents.TOOL, tool);
+        }
+        var fortune = registries.lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT).getOrThrow(net.minecraft.world.item.enchantment.Enchantments.FORTUNE);
+        net.minecraft.world.item.enchantment.EnchantmentHelper.updateEnchantments(hand, m -> m.set(fortune, m.getLevel(fortune) + 1));
+        return hand;
     }
 
     /** The Plasma Temper is in: the tool never wears. */
@@ -515,8 +537,10 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
     /** Left click done: the block breaks with the tool, its drops go into the network. False if they would not all fit. */
     private boolean breakBlock(ServerLevel level, GolemNetwork net, BlockPos pos, BlockPos target, Direction facing, BlockState state,
                                ItemStack with) {
-        boolean own = !tool.getItem(0).isEmpty();
-        ItemStack hand = own ? tool.getItem(0) : with.copy();
+        // tempered, the golem swings a stronger copy: the real tool stays as it is, which is also why it never wears
+        boolean temper = tempered();
+        boolean own = !tool.getItem(0).isEmpty() && !temper;
+        ItemStack hand = temper ? temperedHand(with, state, level.registryAccess()) : own ? tool.getItem(0) : with.copy();
         FakePlayer p = golem(level, pos, facing, hand);
         for (ItemStack drop : Block.getDrops(state, level, target, level.getBlockEntity(target), p, hand)) {
             if (!net.insertItem(drop, true).isEmpty()) {

@@ -215,6 +215,27 @@ A jar holds **10 000 Source**. Put it against any block of the network: a pipe d
 
 Past the fourth the tank grows too: every further four add **2000 mB**, up to 20 000 mB.
 
+The tower pours into **Cryo-Source Jars**. See that entry: they grow, and larger ones need not stand beside the tower.
+
+<!-- {"type": "crafting", "recipe": "golem_logix:cryo_distillation_tower"} -->
+
+Three blocks high: a rune plinth, a glass column with the coil, a brass head under snow. A Tabula Rasa from the Ara Vitae seals the plinth.
+
+<!-- {"type": "crafting", "recipe": "golem_logix:cryo_source_jar"} -->
+
+Two blocks high. Right-click it to see how much Source it holds; a comparator reads its level.
+
+### Cryo-Source Jars
+<!-- {"id": "src_jars", "icon": "golem_logix:cryo_source_jar", "x": 1, "y": -2, "parents": ["distillation"], "requires": "neovitae", "gold": true} -->
+
+#### Three sizes
+
+Source is kept in jars, and jars grow:
+
+- **Jar**: 10 000 Source. Stands against the tower, and against the network to feed it.
+- **Giga Jar**: 4 jars, 44 000 Source. A derrick; towers yield more.
+- **Antigravity Reactor**: 9 jars, 108 000 Source. The largest store.
+
 #### Joining jars
 
 Jars side by side on one level join by themselves, as soon as the square is complete:
@@ -228,13 +249,16 @@ A Giga Jar with five more jars around it becomes a reactor. To the network and t
 
 Break any jar and the whole comes apart: the jars left share its Source out, as far as each of them holds it. Whatever is left over is lost, so empty a full reactor before taking it down.
 
-<!-- {"type": "crafting", "recipe": "golem_logix:cryo_distillation_tower"} -->
 
-Three blocks high: a rune plinth, a glass column with the coil, a brass head under snow. A Tabula Rasa from the Ara Vitae seals the plinth.
+#### The Giga Jar's derrick
 
-<!-- {"type": "crafting", "recipe": "golem_logix:cryo_source_jar"} -->
+While at least one Giga Jar is on the network, or right beside the tower, towers make **7% more Source** from the same blood. One is enough, more add nothing, and a reactor does not count: keep one derrick working even when you have reactors.
 
-Two blocks high. Right-click it to see how much Source it holds; a comparator reads its level.
+#### Anywhere on the network
+
+A Giga Jar and a reactor need only touch the network. **A tower touching the network pours into them wherever they are**, through the pipes, so put them where your base looks best.
+
+A lone jar does not do this: a tower fills it only by standing against it.
 
 ## Golem Rituals
 <!-- {"id": "rituals", "icon": "golem_logix:flattened_iron_core", "color": "e0b04a"} -->
@@ -2424,6 +2448,8 @@ An upgrade for **Hewer's Annihilation Bus**: put it into its upgrade slots.
 The tool in the golem's slot then **never wears** - mining or clicking, a pickaxe, an axe or shears keep their durability, enchantments and all.
 
 Even a tool on its last point of durability goes back to work.
+
+It also lifts the tool: **it harvests at netherite's level**, whatever it is made of, and has **one more level of Fortune**. A wooden pickaxe mines obsidian, though still at a wooden pickaxe's speed.
 
 *A netherite pickaxe with Fortune, tempered once, digs for ever.*
 

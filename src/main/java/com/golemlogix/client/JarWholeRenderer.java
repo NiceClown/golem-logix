@@ -158,7 +158,7 @@ final class JarWholeRenderer {
             meshes = new Meshes(mark,
                     BerBuffers.bake((vc, pose) -> gigaStatic(vc, pose, true)),
                     BerBuffers.bake((vc, pose) -> gigaStatic(vc, pose, false)),
-                    BerBuffers.bake((vc, pose) -> runeBands(vc, pose, 32f, 2f, 5.4f, 0.74f)),
+                    BerBuffers.bake((vc, pose) -> runeBands(vc, pose, 32f, 2f, 5.4f, 0.5f)),
                     BerBuffers.bake((vc, pose) -> reactorStatic(vc, pose, true)),
                     BerBuffers.bake((vc, pose) -> reactorStatic(vc, pose, false)),
                     BerBuffers.bake(JarWholeRenderer::reactorRunes),
@@ -280,7 +280,7 @@ final class JarWholeRenderer {
             box(vc, p, 3.6f, 31.6f, 3f, 4.8f, 36.6f, 4.2f, COPPER, WHITE, light);
             box(vc, p, 2.8f, 31.6f, 2.2f, 5.6f, 32.2f, 5f, BRASS, DIM_BRASS, light);
             box(vc, p, 21.6f, 31.6f, 8f, 27.4f, 38f, 9f, FRAME, WHITE, light);
-            fitWall(vc, p, 22.2f, 32.6f, 26.8f, 37.2f, 7.96f, GAUGE, WHITE, light);
+            fitWall(vc, p, 22.2f, 32.6f, 26.8f, 37.2f, 7.7f, GAUGE, WHITE, light);
         }
     }
 
@@ -422,10 +422,10 @@ final class JarWholeRenderer {
         for (int side = 0; side < 4; side++) {
             pose.pushPose();
             pose.rotateAround(Axis.YP.rotationDegrees(side * 90f), 1.5f, 0f, 1.5f);
-            fitWall(vc, pose.last(), 13.4f, 15f, 34.6f, 25.6f, 0.46f, RUNES, WHITE, 0);
+            fitWall(vc, pose.last(), 13.4f, 15f, 34.6f, 25.6f, 0.25f, RUNES, WHITE, 0);
             pose.popPose();
         }
-        flatRunes(vc, pose.last(), 13f, 35f, TOP + 0.34f, WHITE, 0);
+        flatRunes(vc, pose.last(), 13f, 35f, TOP + 0.5f, WHITE, 0);
     }
 
     private static void reactor(PoseStack pose, MultiBufferSource buffers, Meshes meshes, ModelPart ironGolem, int light, float time, float fill, boolean on, boolean crew,
@@ -450,7 +450,7 @@ final class JarWholeRenderer {
         }
         // the toothed ring low over the well, that the iron golems walk round
         pose.pushPose();
-        pose.translate(cx / 16f, 39.6f / 16f, cz / 16f);
+        pose.translate(cx / 16f, 39f / 16f, cz / 16f);
         pose.mulPose(Axis.YP.rotationDegrees(spin * 0.5f));
         pose.mulPose(Axis.XP.rotationDegrees(90f));
         meshes.lowRing().draw(buffers, solid, pose.last(), light, 0);
@@ -513,10 +513,10 @@ final class JarWholeRenderer {
 
     private static void reactorCrew(PoseStack pose, MultiBufferSource buffers, ModelPart golem, int light, float time, float turn, boolean on,
                                     float top, float cx, float cz) {
-        // iron golems at two corners, facing the middle, their long arms on the toothed ring; they sway as if walking it round
+        // iron golems under the toothed ring like the atlantes of myth: one knee down, the ring across their shoulders, hands up to it
         for (int i = 0; i < 2; i++) {
-            float x = i == 0 ? 7f : 41f, z = i == 0 ? 7f : 41f;
-            ironGolem(pose, buffers, golem, x, top, z, (float) Math.toDegrees(Math.atan2(cx - x, cz - z)), 0.33f, time + i * 17f, on, light);
+            float x = i == 0 ? 11.2f : 36.8f, z = i == 0 ? 11.2f : 36.8f;
+            ironGolem(pose, buffers, golem, x, top, z, (float) Math.toDegrees(Math.atan2(x - cx, z - cz)), 0.36f, time + i * 17f, on, light);
         }
         // copper golems at the wheels
         float reach = on ? -1.15f + 0.12f * Mth.sin(turn * Mth.DEG_TO_RAD) : -0.9f;
@@ -533,7 +533,7 @@ final class JarWholeRenderer {
             float x = i == 0 ? 39f : 5f, z = i == 0 ? 4f : 39f;
             float yaw = (float) Math.toDegrees(Math.atan2(cx - x, cz - z));
             float k = throwPhase(time, i);
-            Vector3f right = new Vector3f(-3f, 12f + 8f * k, 3f + 3f * k);
+            Vector3f right = new Vector3f(SnowmanPuppet.REST_RIGHT).lerp(new Vector3f(-8f, 19f, 6f), k);
             SnowmanPuppet.Pose sp = new SnowmanPuppet.Pose(0.4f * k, 0f, 6f * Mth.sin(time * 0.02f + i), 4f, SnowmanPuppet.REST_LEFT, right);
             SnowmanPuppet.render(pose, buffers, light, new Vector3f(x / 16f, (top + 0.9f) / 16f, z / 16f), yaw, 0.42f, SnowmanPuppet.Head.PUMPKIN, sp, null);
         }
@@ -567,17 +567,21 @@ final class JarWholeRenderer {
                                   boolean on, int light) {
         ModelPart head = golem.getChild("head"), rightArm = golem.getChild("right_arm"), leftArm = golem.getChild("left_arm");
         ModelPart rightLeg = golem.getChild("right_leg"), leftLeg = golem.getChild("left_leg");
-        float strain = on ? 0.09f * Mth.sin(time * 0.09f) : 0f;
-        rightArm.xRot = -1.55f + strain;
-        leftArm.xRot = -1.55f - strain;
+        float strain = on ? 0.05f * Mth.sin(time * 0.05f) : 0f;
+        // the ring lies across the shoulders, the long arms stretched out along it, like a yoke
+        rightArm.xRot = 0f;
+        leftArm.xRot = 0f;
         rightArm.yRot = 0f;
         leftArm.yRot = 0f;
-        rightLeg.xRot = strain * 2f;
-        leftLeg.xRot = -strain * 2f;
-        head.xRot = 0.15f;
-        head.yRot = 0.12f * Mth.sin(time * 0.02f);
+        rightArm.zRot = 1.5f + strain;
+        leftArm.zRot = -1.5f - strain;
+        // one thigh forward, the other leg back on its knee; the whole golem sinks by what the legs no longer hold up
+        rightLeg.xRot = -1.45f;
+        leftLeg.xRot = 1.25f;
+        head.xRot = 0.55f + strain;
+        head.yRot = 0f;
         pose.pushPose();
-        pose.translate(x / 16f, y / 16f, z / 16f);
+        pose.translate(x / 16f, (y - 4.4f) / 16f, z / 16f);
         pose.mulPose(Axis.YP.rotationDegrees(yaw + 180f));
         pose.scale(-scale, -scale, scale);
         pose.translate(0f, -1.501f, 0f);
@@ -595,7 +599,7 @@ final class JarWholeRenderer {
             box(vc, p, 11.4f, 13f, 0.3f, 36.6f, 13.6f, 0.82f, BRASS, DIM_BRASS, light);
             box(vc, p, 11.4f, 27f, 0.3f, 36.6f, 27.6f, 0.82f, BRASS, DIM_BRASS, light);
             if (detail) {
-                fitWall(vc, p, 3f, 18f, 9f, 24f, 0.72f, GAUGE, WHITE, light);
+                fitWall(vc, p, 3f, 18f, 9f, 24f, 0.45f, GAUGE, WHITE, light);
                 box(vc, p, 4f, 2.4f, 0.2f, 44f, 4.6f, 0.8f, COPPER, WHITE, light);
                 for (float x : new float[]{6f, 16f, 32f, 42f}) {
                     box(vc, p, x - 0.8f, 1.8f, 0f, x + 0.8f, 5.2f, 0.9f, BRASS, DIM_BRASS, light);
@@ -678,8 +682,8 @@ final class JarWholeRenderer {
         for (int i = 0; i < segments; i += 2) {
             pose.pushPose();
             pose.mulPose(Axis.ZP.rotationDegrees(i * 360f / segments));
-            for (float z : new float[]{-faceZ / 2f - 0.02f, faceZ / 2f + 0.02f}) {
-                box(vc, pose.last(), -1.3f, radius - 0.7f, z - 0.02f, 1.3f, radius + 0.7f, z + 0.02f, RUNES, WHITE, 0);
+            for (float z : new float[]{-faceZ / 2f - 0.15f, faceZ / 2f + 0.15f}) {
+                box(vc, pose.last(), -1.3f, radius - 0.7f, z - 0.04f, 1.3f, radius + 0.7f, z + 0.04f, RUNES, WHITE, 0);
             }
             pose.popPose();
         }

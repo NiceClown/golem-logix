@@ -264,6 +264,8 @@ public final class GolemGameTestRegistry {
             new Test("autocraftmanyportionskeepthesavesmall", GolemGameTestsExtra::autocraftManyPortionsKeepTheSaveSmall, 1800, 0),
             new Test("idlemainframecoreslend", GolemGameTests::idleMainframeCoresLend, 200, 0),
             new Test("cryojarsjoin", GolemGameTests::cryoJarsJoin, 100, 0),
+            new Test("temperliftstools", GolemGameTests::temperLiftsTools, 40, 0),
+            new Test("towerfillsjarsthroughnetwork", GolemGameTests::towerFillsJarsThroughNetwork, 200, 0),
             new Test("gearondisks", GolemGameTestsExtra::gearOnDisks, 40, 0),
             new Test("failedorderswait", GolemGameTestsExtra::failedOrdersWait, 200, 0),
             new Test("terminalsendschanges", GolemGameTestsExtra::terminalSendsChanges, 40, 0),
