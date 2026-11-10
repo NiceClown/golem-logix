@@ -89,6 +89,25 @@ public final class DiskStorage {
 
     // ---------------------------------------------------------------- items
 
+    /** Sets the disk item's STORED counter from the store (server): old disks were counted by an older rule. */
+    public static boolean syncStored(ItemStack disk) {
+        if (!isDisk(disk)) {
+            return false;
+        }
+        DiskStore st = store();
+        DiskStore.Disk d = read(disk);
+        if (st == null || d == null) {
+            return false;
+        }
+        long stored = isFluidDisk(disk) ? d.storedFluids : d.storedItems;
+        Integer shown = disk.get(ModDataComponents.STORED.get());
+        if (shown == null || shown != (int) Math.min(stored, Integer.MAX_VALUE)) {
+            markStored(disk, d, stored);
+            return true;
+        }
+        return false;
+    }
+
     /** What is on an item disk (read only). */
     public static Map<ItemKey, Integer> items(ItemStack disk) {
         if (!isItemDisk(disk)) {

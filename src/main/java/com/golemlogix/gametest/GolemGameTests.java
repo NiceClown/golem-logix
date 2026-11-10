@@ -4676,6 +4676,50 @@ public class GolemGameTests {
         helper.succeed();
     }
 
+    /** A Giga Jar beside the tower and on its network is one jar: the tower takes blood only for the room it really has. */
+    public static void towerCountsAJarOnce(GameTestHelper helper) {
+        buildArray(helper, 0, 0);
+        var level = helper.getLevel();
+        for (int x = 3; x >= -2; x--) {
+            put(helper, new BlockPos(x, 1, 6), ModBlocks.BASIC_SNOW_PIPE.get());
+        }
+        // the square touches the pipe line on its north side and the tower on its west side; the pipe runs on to the tower
+        BlockPos jarAt = new BlockPos(-1, 1, 7);
+        for (BlockPos p : List.of(jarAt, jarAt.east(), jarAt.south(), jarAt.east().south())) {
+            com.golemlogix.blocks.CryoJarBlock.place(level, helper.absolutePos(p), Direction.SOUTH, ModBlocks.CRYO_SOURCE_JAR.get());
+        }
+        BlockPos base = new BlockPos(-2, 1, 7);
+        com.golemlogix.blocks.DistillationTowerBlock.place(level, helper.absolutePos(base), Direction.SOUTH, ModBlocks.CRYO_DISTILLATION_TOWER.get());
+        var blood = net.minecraft.core.registries.BuiltInRegistries.FLUID.get(com.golemlogix.init.ModTags.CRYO_DISTILLABLE);
+        if (blood.isEmpty() || blood.get().size() == 0) {
+            helper.succeed();
+            return;
+        }
+        var fluid = blood.get().get(0).value();
+        int[] room = new int[1];
+        helper.runAfterDelay(10, () -> {
+            var whole = helper.getBlockEntity(jarAt, com.golemlogix.blockentity.CryoJarBlockEntity.class);
+            helper.assertTrue(whole.form() == com.golemlogix.blocks.JarForm.GIGA, "the jars joined");
+            room[0] = 200;
+            whole.fill(whole.capacity() - room[0], false);
+            // fast enough that one batch could fill the room twice over
+            helper.getBlockEntity(base, com.golemlogix.blockentity.DistillationTowerBlockEntity.class).getUpgrades()
+                    .setItem(0, new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get(), 28));
+            helper.getBlockEntity(base, com.golemlogix.blockentity.DistillationTowerBlockEntity.class).input()
+                    .fill(new net.neoforged.neoforge.fluids.FluidStack(fluid, 1000), net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
+        });
+        helper.runAfterDelay(80, () -> {
+            var tower = helper.getBlockEntity(base, com.golemlogix.blockentity.DistillationTowerBlockEntity.class);
+            var whole = helper.getBlockEntity(jarAt, com.golemlogix.blockentity.CryoJarBlockEntity.class);
+            double perMb = com.golemlogix.config.GolemConfig.DISTILL_SOURCE_PER_MB.get() * (1 + com.golemlogix.config.GolemConfig.GIGA_SOURCE_BONUS.get() / 100.0);
+            // the core drinks a little meanwhile, which makes some more room: allow 15 Source for it, far less than the room
+            int used = 1000 - tower.blood().getAmount();
+            helper.assertTrue(used <= Math.ceil((room[0] + 15) / perMb) + 1, "blood was taken only for the room there was: " + used + " mB for " + room[0] + " Source of room");
+            helper.assertTrue(whole.available() >= whole.capacity() - 15, "and the jar filled up: " + whole.available() + " of " + whole.capacity());
+            helper.succeed();
+        });
+    }
+
     /** A tower touching the network pours into a Giga Jar anywhere on it, with the derrick's bonus; a lone jar there gets nothing. */
     public static void towerFillsJarsThroughNetwork(GameTestHelper helper) {
         buildArray(helper, 0, 0);
@@ -4706,8 +4750,10 @@ public class GolemGameTests {
             helper.assertTrue(tower.blood().isEmpty(), "the blood is distilled: " + tower.blood().getAmount());
             var whole = helper.getBlockEntity(jarAt, com.golemlogix.blockentity.CryoJarBlockEntity.class);
             int expect = (int) Math.floor(100 * com.golemlogix.config.GolemConfig.DISTILL_SOURCE_PER_MB.get() * (1 + com.golemlogix.config.GolemConfig.GIGA_SOURCE_BONUS.get() / 100.0));
-            int lost = 100; // what the core may have drunk meanwhile
-            helper.assertTrue(whole.available() > expect - lost && whole.available() <= expect, "the Giga Jar far away got it, with the bonus: " + whole.available() + " of " + expect);
+            // the core drinks some of it meanwhile, so the amount is checked loosely and the bonus on its own: the window's rate
+            helper.assertTrue(whole.available() > expect - 60 && whole.available() <= expect, "the Giga Jar far away got it: " + whole.available() + " of " + expect);
+            int shown = tower.menuData().get(2), plain = (int) Math.round(tower.rate() * com.golemlogix.config.GolemConfig.DISTILL_SOURCE_PER_MB.get() * 10);
+            helper.assertTrue(shown > plain, "with the derrick's bonus: " + shown / 10.0 + " Source a second, without it " + plain / 10.0);
             helper.assertTrue(helper.getBlockEntity(lone, com.golemlogix.blockentity.CryoJarBlockEntity.class).available() == 0, "the lone jar on the network did not");
             helper.succeed();
         });

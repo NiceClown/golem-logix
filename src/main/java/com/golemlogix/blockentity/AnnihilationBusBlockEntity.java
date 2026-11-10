@@ -492,19 +492,26 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         return !state.requiresCorrectToolForDrops() || with.isCorrectToolForDrops(state) || (tempered() && temperLifts(with, state));
     }
 
-    /** The temper lifts any tool to netherite's level, for blocks of its own kind: a pickaxe does not start digging like a shovel. */
+    /**
+     * The temper lifts any tool to netherite's level, for blocks of its own kind: a pickaxe does not start digging like a shovel. A
+     * tool from another mod that decides its harvests by itself, not by its tool rules, cannot be lifted: then it stays as it is.
+     */
     public static boolean temperLifts(ItemStack with, BlockState state) {
-        return with.getDestroySpeed(state) > 1f && !state.is(net.minecraft.tags.BlockTags.INCORRECT_FOR_NETHERITE_TOOL);
+        return with.getDestroySpeed(state) > 1f && !state.is(net.minecraft.tags.BlockTags.INCORRECT_FOR_NETHERITE_TOOL)
+                && lifted(with, state).isCorrectToolForDrops(state);
+    }
+
+    private static ItemStack lifted(ItemStack with, BlockState state) {
+        ItemStack hand = with.copy();
+        var tool = new net.minecraft.world.item.component.Tool(java.util.List.of(net.minecraft.world.item.component.Tool.Rule.minesAndDrops(
+                net.minecraft.core.HolderSet.direct(state.getBlock().builtInRegistryHolder()), with.getDestroySpeed(state))), 1f, 0, true);
+        hand.set(net.minecraft.core.component.DataComponents.TOOL, tool);
+        return hand;
     }
 
     /** What the golem really swings with the temper: the same tool, harvesting at netherite's level, with one more level of Fortune. */
     public static ItemStack temperedHand(ItemStack with, BlockState state, net.minecraft.core.HolderLookup.Provider registries) {
-        ItemStack hand = with.copy();
-        if (!with.isCorrectToolForDrops(state) && temperLifts(with, state)) {
-            var tool = new net.minecraft.world.item.component.Tool(java.util.List.of(net.minecraft.world.item.component.Tool.Rule.minesAndDrops(
-                    net.minecraft.core.HolderSet.direct(state.getBlock().builtInRegistryHolder()), with.getDestroySpeed(state))), 1f, 0, true);
-            hand.set(net.minecraft.core.component.DataComponents.TOOL, tool);
-        }
+        ItemStack hand = !with.isCorrectToolForDrops(state) && temperLifts(with, state) ? lifted(with, state) : with.copy();
         var fortune = registries.lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT).getOrThrow(net.minecraft.world.item.enchantment.Enchantments.FORTUNE);
         net.minecraft.world.item.enchantment.EnchantmentHelper.updateEnchantments(hand, m -> m.set(fortune, m.getLevel(fortune) + 1));
         return hand;
@@ -542,6 +549,11 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         boolean own = !tool.getItem(0).isEmpty() && !temper;
         ItemStack hand = temper ? temperedHand(with, state, level.registryAccess()) : own ? tool.getItem(0) : with.copy();
         FakePlayer p = golem(level, pos, facing, hand);
+        if (state.requiresCorrectToolForDrops() && !hand.isCorrectToolForDrops(state)) {
+            // the hand would break it and drop nothing: leave the block be
+            p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            return false;
+        }
         for (ItemStack drop : Block.getDrops(state, level, target, level.getBlockEntity(target), p, hand)) {
             if (!net.insertItem(drop, true).isEmpty()) {
                 p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);

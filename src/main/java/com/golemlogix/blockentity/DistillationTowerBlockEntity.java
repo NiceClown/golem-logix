@@ -147,15 +147,30 @@ public class DistillationTowerBlockEntity extends BlockEntity {
 
     /** One batch: as much blood as the rate allows, the tank holds and the jars around can take. */
     void distil(long now) {
+        var cells = DistillationTowerBlock.cells(worldPosition);
+        var onNetwork = networkJars(cells);
+        // the jars of the network the tower does not already reach by standing against them: each is counted once
+        var joined = farJars(cells, onNetwork);
+        // Source made earlier that found no room goes first, blood or no blood
+        if (carry >= 1) {
+            int owed = (int) Math.floor(carry + 1e-9);
+            int put = SourceHelper.fillAround(level, cells, owed, false);
+            for (var jar : joined) {
+                put += jar.fill(owed - put, false);
+            }
+            carry -= put;
+            if (carry >= 1) {
+                status = 2;
+                return;
+            }
+        }
         if (tank.isEmpty()) {
             status = 0;
             return;
         }
         double perMb = GolemConfig.DISTILL_SOURCE_PER_MB.get();
         int budget = Math.max(1, rate() * PERIOD / 20);
-        var cells = DistillationTowerBlock.cells(worldPosition);
-        var joined = networkJars(cells);
-        boolean pump = pumpBonus(cells, joined);
+        boolean pump = pumpBonus(cells, onNetwork);
         bonus = pump;
         perMb *= pump ? 1 + GolemConfig.GIGA_SOURCE_BONUS.get() / 100.0 : 1;
         long roomAll = SourceHelper.fillAround(level, cells, Integer.MAX_VALUE, true);
@@ -170,6 +185,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         int byRoom = (int) Math.floor((room - carry) / perMb + 1e-9);
         int mb = Math.min(Math.min(budget, tank.getFluidAmount()), Math.max(0, byRoom));
         if (mb <= 0) {
+            status = 2;
             return;
         }
         tank.drain(mb, IFluidHandler.FluidAction.EXECUTE);
@@ -180,6 +196,8 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         for (var jar : joined) {
             give -= jar.fill(give, false);
         }
+        // whatever found no room after all waits for the next batch instead of being lost
+        carry += Math.max(0, give);
         lastWork = now;
         status = 1;
         if (now % 40 < PERIOD) {
@@ -198,6 +216,34 @@ public class DistillationTowerBlockEntity extends BlockEntity {
             }
         }
         return java.util.List.of();
+    }
+
+    /** The jars of the network but not beside the tower, each whole once (fillAround already fills those beside it). */
+    private java.util.List<CryoJarBlockEntity> farJars(java.util.Collection<BlockPos> cells, java.util.List<CryoJarBlockEntity> onNetwork) {
+        if (onNetwork.isEmpty()) {
+            return onNetwork;
+        }
+        java.util.Set<Object> near = new java.util.HashSet<>();
+        for (BlockPos cell : cells) {
+            for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+                BlockPos p = cell.relative(d);
+                if (!cells.contains(p) && level.isLoaded(p)) {
+                    var be = level.getBlockEntity(p);
+                    if (be != null) {
+                        near.add(SourceHelper.owner(be));
+                    }
+                }
+            }
+        }
+        java.util.List<CryoJarBlockEntity> far = new java.util.ArrayList<>();
+        java.util.Set<Object> seen = new java.util.HashSet<>();
+        for (var jar : onNetwork) {
+            var owner = jar.owner();
+            if (owner != null && !near.contains(owner) && seen.add(owner)) {
+                far.add(owner);
+            }
+        }
+        return far;
     }
 
     /** A Giga Jar is a derrick: one on the network, or right beside the tower, makes the tower yield more. */

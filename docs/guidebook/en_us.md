@@ -203,7 +203,7 @@ The **Cryo-Distillation Tower** freezes the living warmth and chaos out of it. P
 
 Pour **Essentia Vitae** into any of the tower's three blocks: by pipes from an Ara Vitae, by network buses or by buckets. The tower holds **8000 mB**.
 
-Every second it distils **20 mB** of blood into **30 Source** and pours it into the **Cryo-Source Jars** (or Source Jars) standing **right against it**: a jar even one block away gets nothing. When the jars are full it waits.
+Every second it distils **20 mB** of blood into **30 Source** and pours it into the **Cryo-Source Jars** (or Source Jars) standing **right against it**: a lone jar even one block away gets nothing. A Giga Jar or a reactor also gets it from anywhere on the network the tower touches. When the jars are full it waits.
 
 Put the jars against the plinth, on the same level as it: then a pipe runs from the tower's head over to each jar and drops into its vent. Any side will do - the copper golem on the tower moves to a free one.
 
@@ -1215,8 +1215,8 @@ A 256k disk holds **64** such things. Disks of 1k and 4k always take **one**, ho
 
 #### What counts
 
-- Counts: what does not stack and differs from its plain self: damaged, enchanted, named, or full of its own data, like a filled shulker box.
-- Does not count: a new, unused sword or armour piece, however many; **buckets and tanks holding a fluid**; potions; enchanted books.
+- Counts: anything worn or enchanted, whatever it is, even a tool that holds a fluid or one that stacks; and what does not stack and differs from its plain self: named, or full of its own data, like a filled shulker box.
+- Does not count: a new, unused sword or armour piece, however many; **unworn buckets and tanks holding a fluid**; potions; enchanted books.
 
 A disk that holds more than this from an older world loses nothing. You can take from it, but nothing goes in until there is room.
 

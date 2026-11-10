@@ -488,7 +488,7 @@
   "gui.golem_logix.tower.coprocessors": "Co-processors: %s / %s",
   "gui.golem_logix.tower.status.0": "No blood in the tank",
   "gui.golem_logix.tower.status.1": "Distilling",
-  "gui.golem_logix.tower.status.2": "No jar with room beside it",
+  "gui.golem_logix.tower.status.2": "No jar with room beside it or on the network",
   "gui.golem_logix.tower.tank_tip": "Essentia Vitae goes in through pipes, buses or buckets, into any of the tower's three blocks",
   "jade.golem_logix.mainframe.cores": "Cores: %s of %s busy (calculators: %s)",
   "jade.golem_logix.mainframe.workers": "Steps per cycle per core: %s",

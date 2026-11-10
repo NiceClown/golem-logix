@@ -488,7 +488,7 @@
   "gui.golem_logix.tower.coprocessors": "Сопроцессоры: %s / %s",
   "gui.golem_logix.tower.status.0": "В баке нет крови",
   "gui.golem_logix.tower.status.1": "Идёт перегонка",
-  "gui.golem_logix.tower.status.2": "Рядом нет банки с местом",
+  "gui.golem_logix.tower.status.2": "Нет банки с местом ни рядом, ни в сети",
   "gui.golem_logix.tower.tank_tip": "Essentia Vitae заливается трубами, шинами или вёдрами в любой из трёх блоков башни",
   "jade.golem_logix.mainframe.cores": "Ядра: заняты %s из %s (калькуляторов: %s)",
   "jade.golem_logix.mainframe.workers": "Шагов за цикл на ядро: %s",
