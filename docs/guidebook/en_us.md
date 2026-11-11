@@ -1049,6 +1049,32 @@ Look at a block with Jade:
 
 - A device without a channel stays silent: the terminal does not open, the bus stands still.
 
+### Channel Counter
+<!-- {"id": "net_counter", "icon": "golem_logix:channel_counter", "x": 3, "y": 1, "parents": ["net_diagnose"]} -->
+
+<!-- {"type": "crafting", "recipe": "golem_logix:channel_counter"} -->
+
+Three nixie tubes on a walnut base. They show how many channels run **through the spot the counter is fixed to**. Handy for keeping an eye on the network - or just for the look of a control room.
+
+#### Where to fix it
+
+It reads the block it is fixed to and picks its own mount:
+- **on a block** (bushing, device, core) - a plain foot;
+- **on a horizontal pipe** - a brass saddle facing you;
+- **on the side** of a block or pipe - a small bracket shelf.
+
+It takes no channels, and pipes do not connect to it.
+
+#### Reading it
+
+The digits glow on **both sides** of the tubes, so it reads from the front and from behind.
+
+- &3cyan&r - there is room, &6amber&r - it is filling, &4red&r - (nearly) full;
+
+- leading zeros stay dark; with no core or no Source every tube goes out.
+
+**Right-click** switches to the **capacity** of that spot (in nixie orange) and back: 16 for a basic pipe or a device, 64 for a dense pipe.
+
 ### Pipe Plugs
 <!-- {"id": "net_plugs", "icon": "golem_logix:pipe_plug", "x": 2, "y": -1, "parents": ["net_pipes"]} -->
 

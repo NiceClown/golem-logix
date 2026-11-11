@@ -139,6 +139,11 @@ public class ModBlocks {
             () -> new com.golemlogix.blocks.CopperTankBlock(BlockBehaviour.Properties.of()),
             (block, props) -> new com.golemlogix.items.CopperTankItem(block, "tooltip.golem_logix.copper_tank", props.stacksTo(1)));
 
+    // nixie tubes with the network's channels
+    public static final DeferredBlock<com.golemlogix.blocks.ChannelCounterBlock> CHANNEL_COUNTER = registerBlock("channel_counter",
+            "tooltip.golem_logix.channel_counter",
+            () -> new com.golemlogix.blocks.ChannelCounterBlock(BlockBehaviour.Properties.of()));
+
     // World Interaction Buses
     public static final DeferredBlock<VacuumImportBusBlock> VACUUM_IMPORT_BUS = registerBlock("vacuum_import_bus",
             "tooltip.golem_logix.vacuum_import_bus",

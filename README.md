@@ -24,6 +24,8 @@ Everything comes with an illustrated, searchable **guide book** (Russian and Eng
 - **Disks** — item disks and cryo fluid disks, 1k to 256k; contents are stored on the server, the disk itself only carries an id.
 - **Frost pipes** — basic (16 channels) and dense (64 channels). Straight runs are smooth translucent tubes with brass bands, brass
   sleeves appear only where a pipe meets a device; a snowman with a pumpkin head and a crate runs through every connected pipe network.
+- **Channel Counter** — three nixie tubes showing how many channels run through the block it is fixed to (a pipe, a bushing, a
+  device), cyan to red as it fills; right-click switches to that block's capacity. It takes no channel of its own.
 - **Channels like AE2** — channels go from the core along the shortest routes, dense runs first; a device gets one only if every
   block on its route has room, and a device itself passes on as many as a basic pipe (16). Jade shows "Device Online", "Device
   Missing Channel" (and the full block that stopped it) and "X of Y Channels", with the numbers from the server. Pipe Plugs close
@@ -87,8 +89,8 @@ Put `golem_logix-<version>.jar` into the `mods` folder (client and server). On a
 ## Building from source
 
 ```
-gradlew build              # build/libs/golem_logix-1.21.1-2.0.8.jar (JAVA_HOME must point at JDK 21)
-gradlew runGameTestServer  # 113 game tests on a real server (add -PtestMods for Ars Nouveau, JEI, Jade, Curios; -Pcreate for
+gradlew build              # build/libs/golem_logix-1.21.1-2.1.4.jar (JAVA_HOME must point at JDK 21)
+gradlew runGameTestServer  # 230 game tests on a real server (add -PtestMods for Ars Nouveau, JEI, Jade, Curios; -Pcreate for
                            # Create; -Pvitae for Neo Vitae; -PnoBackport runs them without Copper Age Backport)
 ```
 
@@ -114,8 +116,8 @@ The defaults live in `data/golem_logix/recipe/saturator` and `data/golem_logix/r
 ## Translations
 
 English and Russian: every block, item and message, and the whole guide book. When you change player-facing text, update both
-`en_us` and `ru_ru` (the lang files and `assets/golem_logix/book/*.json`); the `bookDataIsValid` game test checks that both books
-have the same structure.
+`en_us` and `ru_ru` (the lang files and `docs/guidebook/*.md`, which the build turns into the game's JSON); the `bookDataIsValid`
+game test checks that both books have the same structure.
 
 ## Credits and license
 

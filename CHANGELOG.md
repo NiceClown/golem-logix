@@ -1,5 +1,30 @@
 # Changelog
 
+## 2.1.4 (1.21.1) — The mechanics of 2.0.11–2.1.4 come to 1.21.1
+
+The devices and fixes of the 26.1.2 line 2.0.11–2.1.4, with the look of the 1.21.1 blocks (the redrawn textures, Atlants, array,
+mainframe and pipes of 26.1.2 are not carried over). This build also brings the **Channel Counter**, which the 1.21.1 branch had not
+had before.
+
+- **New devices:** the **Copper Tank** (one fluid, 16 000 mB; keeps its fluid when broken, bucket mode, tanks joined in a crafting
+  grid), **Mason's Formation Bus**, **Hewer's Annihilation Bus** (with the secret **Plasma Temper**), the **Brass Stock Manometer**
+  (Warden) with its redstone bridges, the **Copper Order Ledger** (Stock Requester), the **Cryo-Diode**, the **Iron Security
+  Terminal** with the **Identity Punch Card**, and the **Channel Counter** (three nixie tubes showing the channels through the block
+  it is fixed to; right-click switches to that block's capacity).
+- **Buses:** order buttons (in order, round robin, at random), one slot window for filters with fuzzy tags, the Export Bus keeping an
+  amount, the Periscope as a full storage bus, deny lists, typed upgrade slots, up to 28 Compressed Co-Processors in one slot with
+  self-pacing, and the server tools (`busMaxMillisPerTick`, `craftMaxMillisPerTick`, `/golemlogix_buses`).
+- **Autocrafting:** orders of any size, idle calculators and mainframe cores helping, fluid results with the gateway's return tanks,
+  the planner settling each item once, waiting orders backing off, the Pattern Encoder's slot window, and the Interface and Pattern
+  Provider handing their intake to the network at once.
+- **Late game:** the Cryo-Distillation Tower takes 28 co-processors; its jars join into a **Giga Jar** and an **Antigravity Reactor**,
+  which work through the network with the derrick's bonus; equipment on disks takes 4 000 pieces, and older disks follow their
+  contents once the cabinet loads.
+- **Mechanical ASMR:** a typewriter-carriage ding when a calculator finishes a big job, and a blinking lamp on the Recipe Monitor
+  while a job is blocked (config `typewriterDing`).
+- **The guide book** is written in Markdown in `docs/guidebook` and built into the game's JSON, with articles for every new device.
+- 230 game tests on a real server.
+
 ## 2.0.10 (1.21.1) — Autocrafting finds the gateway at the machine
 
 The autocrafting fix and the gameplay changes of 2.0.9–2.0.10 of the 26.1.2 line. As with 2.0.8, the look of the blocks stays

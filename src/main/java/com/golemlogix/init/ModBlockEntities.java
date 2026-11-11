@@ -138,4 +138,8 @@ public class ModBlockEntities {
     public static final Supplier<BlockEntityType<com.golemlogix.blockentity.SecurityTerminalBlockEntity>> SECURITY_TERMINAL =
             BLOCK_ENTITY_TYPES.register("security_terminal", () ->
                     BlockEntityType.Builder.of(com.golemlogix.blockentity.SecurityTerminalBlockEntity::new, ModBlocks.SECURITY_TERMINAL.get()).build(null));
+
+    public static final Supplier<BlockEntityType<com.golemlogix.blockentity.ChannelCounterBlockEntity>> CHANNEL_COUNTER =
+            BLOCK_ENTITY_TYPES.register("channel_counter", () ->
+                    BlockEntityType.Builder.of(com.golemlogix.blockentity.ChannelCounterBlockEntity::new, ModBlocks.CHANNEL_COUNTER.get()).build(null));
 }

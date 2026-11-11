@@ -684,5 +684,7 @@
   "gui.golem_logix.requester.status.no_pattern": "Нет шаблона для крафта",
   "gui.golem_logix.requester.status.missing": "Не хватает ингредиентов",
   "gui.golem_logix.security.owner": "Владелец: %s",
-  "gui.golem_logix.security.card_owner": "Карта: %s"
+  "gui.golem_logix.security.card_owner": "Карта: %s",
+  "block.golem_logix.channel_counter": "Счётчик каналов",
+  "tooltip.golem_logix.channel_counter": "Газоразрядные лампы с числом каналов через трубу или узел, на котором он стоит или висит (бирюзовые, янтарные, красные по заполнению)."
 }

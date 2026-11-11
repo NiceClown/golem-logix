@@ -100,6 +100,7 @@ public class ModCreativeTabs {
                         output.accept(ModBlocks.RECIPE_MONITOR.get());
                         output.accept(ModBlocks.STOCK_MANOMETER.get());
                         output.accept(ModBlocks.COPPER_TANK.get());
+                        output.accept(ModBlocks.CHANNEL_COUNTER.get());
 
                         // Buses
                         output.accept(ModBlocks.VACUUM_IMPORT_BUS.get());

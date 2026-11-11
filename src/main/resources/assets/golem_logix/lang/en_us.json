@@ -684,5 +684,7 @@
   "gui.golem_logix.requester.status.no_pattern": "No crafting pattern available",
   "gui.golem_logix.requester.status.missing": "Missing ingredients",
   "gui.golem_logix.security.owner": "Owner: %s",
-  "gui.golem_logix.security.card_owner": "Card: %s"
+  "gui.golem_logix.security.card_owner": "Card: %s",
+  "block.golem_logix.channel_counter": "Channel Counter",
+  "tooltip.golem_logix.channel_counter": "Nixie tubes with the channels running through the pipe or node it stands on or hangs on (cyan, amber, red as it fills)."
 }

@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "G": { "item": "minecraft:glass_pane" },
+    "C": { "item": "minecraft:copper_ingot" },
+    "M": { "item": "golem_logix:flattened_copper_matrix" },
+    "P": { "tag": "minecraft:planks" }
+  },
+  "pattern": [
+    "GGG",
+    "CMC",
+    "PPP"
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:channel_counter"
+  }
+}
