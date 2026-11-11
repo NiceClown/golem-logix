@@ -233,6 +233,7 @@ public final class DevShots {
         mc.options.hideGui = true;
         mc.options.fov().set(70);
         mc.options.renderDistance().set(10);
+        placeWindowOutOfTheWay(mc);
         queueDir = Path.of(QUEUE);
         try {
             Files.createDirectories(queueDir);
@@ -240,6 +241,49 @@ public final class DevShots {
             GolemLogixMod.LOGGER.error("[DevShots] cannot create queue dir", e);
         }
         GolemLogixMod.LOGGER.info("[DevShots] active, queue = {}", queueDir);
+    }
+
+    /**
+     * The test window should not sit on the desk the user is working at: it goes to a second monitor if there is one, and off the
+     * screen otherwise. It is not minimised on purpose: a minimised window makes the swap block and the rig would stall.
+     * Set -Dgolemlogix.devshots.window=keep to leave the window where it is.
+     */
+    private static void placeWindowOutOfTheWay(Minecraft mc) {
+        if ("keep".equalsIgnoreCase(System.getProperty("golemlogix.devshots.window", ""))) {
+            return;
+        }
+        try {
+            long handle = org.lwjgl.glfw.GLFW.glfwGetCurrentContext();
+            if (handle == 0L) {
+                return;
+            }
+            long primary = org.lwjgl.glfw.GLFW.glfwGetPrimaryMonitor();
+            org.lwjgl.PointerBuffer monitors = org.lwjgl.glfw.GLFW.glfwGetMonitors();
+            for (int i = 0; i < monitors.limit(); i++) {
+                long monitor = monitors.get(i);
+                if (monitor == primary) {
+                    continue;
+                }
+                java.nio.IntBuffer px = org.lwjgl.system.MemoryUtil.memAllocInt(1);
+                java.nio.IntBuffer py = org.lwjgl.system.MemoryUtil.memAllocInt(1);
+                org.lwjgl.glfw.GLFW.glfwGetMonitorPos(monitor, px, py);
+                int x = px.get(0);
+                int y = py.get(0);
+                org.lwjgl.system.MemoryUtil.memFree(px);
+                org.lwjgl.system.MemoryUtil.memFree(py);
+                org.lwjgl.glfw.GLFW.glfwSetWindowPos(handle, x + 60, y + 60);
+                GolemLogixMod.LOGGER.info("[DevShots] the window moved to the second monitor at {},{}", x, y);
+                return;
+            }
+            // one monitor only: the window goes off the desk, the shots are taken from the framebuffer all the same
+            int[] width = new int[1];
+            int[] height = new int[1];
+            org.lwjgl.glfw.GLFW.glfwGetWindowSize(handle, width, height);
+            org.lwjgl.glfw.GLFW.glfwSetWindowPos(handle, -(width[0] + 240), 0);
+            GolemLogixMod.LOGGER.info("[DevShots] no second monitor: the window moved off the screen");
+        } catch (Throwable t) {
+            GolemLogixMod.LOGGER.warn("[DevShots] cannot move the window: {}", t.toString());
+        }
     }
 
     private static void createWorld(Minecraft mc) {
@@ -409,6 +453,28 @@ public final class DevShots {
 
     private interface ServerTask {
         void run(MinecraftServer server, ServerLevel level, ServerPlayer player) throws Exception;
+    }
+
+    private static double screenLeft(net.minecraft.client.gui.screens.Screen s) {
+        if (s instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> ac) return ac.getGuiLeft();
+        try {
+            var f = s.getClass().getDeclaredField("left");
+            f.setAccessible(true);
+            return f.getInt(s);
+        } catch (Exception e) {
+            return (s.width - 176) / 2.0;
+        }
+    }
+
+    private static double screenTop(net.minecraft.client.gui.screens.Screen s) {
+        if (s instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> ac) return ac.getGuiTop();
+        try {
+            var f = s.getClass().getDeclaredField("top");
+            f.setAccessible(true);
+            return f.getInt(s);
+        } catch (Exception e) {
+            return (s.height - 166) / 2.0;
+        }
     }
 
     private static Step parse(String line) {
@@ -609,11 +675,13 @@ public final class DevShots {
                 double ux = Double.parseDouble(t[1]), uy = Double.parseDouble(t[2]);
                 int steps = Integer.parseInt(t[3]);
                 return mc -> {
-                    if (!(mc.screen instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen)) {
-                        throw new IllegalStateException("no container screen: " + mc.screen);
+                    if (mc.screen == null) {
+                        throw new IllegalStateException("no open screen");
                     }
+                    double sx = screenLeft(mc.screen) + ux;
+                    double sy = screenTop(mc.screen) + uy;
                     for (int i = 0; i < Math.abs(steps); i++) {
-                        screen.mouseScrolled(screen.getGuiLeft() + ux, screen.getGuiTop() + uy, 0, steps > 0 ? -1 : 1);
+                        mc.screen.mouseScrolled(sx, sy, 0, steps > 0 ? -1 : 1);
                     }
                     return true;
                 };
@@ -623,13 +691,14 @@ public final class DevShots {
                 double ux = Double.parseDouble(t[1]), uy = Double.parseDouble(t[2]);
                 int button = Integer.parseInt(t[3]);
                 return mc -> {
-                    if (!(mc.screen instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen)) {
-                        throw new IllegalStateException("no container screen: " + mc.screen);
+                    if (mc.screen == null) {
+                        throw new IllegalStateException("no open screen");
                     }
-                    double x = screen.getGuiLeft() + ux, y = screen.getGuiTop() + uy;
+                    double x = screenLeft(mc.screen) + ux;
+                    double y = screenTop(mc.screen) + uy;
                     var click = new net.minecraft.client.input.MouseButtonEvent(x, y, new net.minecraft.client.input.MouseButtonInfo(button, 0));
-                    screen.mouseClicked(click, false);
-                    screen.mouseReleased(click);
+                    mc.screen.mouseClicked(click, false);
+                    mc.screen.mouseReleased(click);
                     return true;
                 };
             }
@@ -651,6 +720,44 @@ public final class DevShots {
                         }
                     }
                     throw new IllegalStateException("no button containing \"" + rest + "\" on " + mc.screen.getClass().getSimpleName());
+                };
+            }
+            case "screenclick": {
+                // screenclick <x> <y> <button> : a mouse click inside the open container screen, at window coordinates
+                double cx = Double.parseDouble(t[1]), cy = Double.parseDouble(t[2]);
+                int cb = Integer.parseInt(t[3]);
+                return mc -> {
+                    if (mc.screen == null) {
+                        throw new IllegalStateException("no open screen");
+                    }
+                    double sx = screenLeft(mc.screen) + cx;
+                    double sy = screenTop(mc.screen) + cy;
+                    var click = new net.minecraft.client.input.MouseButtonEvent(sx, sy,
+                            new net.minecraft.client.input.MouseButtonInfo(cb, 0));
+                    mc.screen.mouseClicked(click, false);
+                    mc.screen.mouseReleased(click);
+                    return true;
+                };
+            }
+            case "screenhover": {
+                // screenhover <x> <y> : mouse position relative to open window for tooltips
+                double cx = Double.parseDouble(t[1]), cy = Double.parseDouble(t[2]);
+                return mc -> {
+                    if (mc.screen == null) return true;
+                    double sx = screenLeft(mc.screen) + cx;
+                    double sy = screenTop(mc.screen) + cy;
+                    double scale = mc.getWindow().getGuiScale();
+                    try {
+                        var fx = net.minecraft.client.MouseHandler.class.getDeclaredField("xpos");
+                        var fy = net.minecraft.client.MouseHandler.class.getDeclaredField("ypos");
+                        fx.setAccessible(true);
+                        fy.setAccessible(true);
+                        fx.setDouble(mc.mouseHandler, sx * scale);
+                        fy.setDouble(mc.mouseHandler, sy * scale);
+                    } catch (ReflectiveOperationException e) {
+                        throw new IllegalStateException(e);
+                    }
+                    return true;
                 };
             }
             case "slotclick": {
@@ -1046,6 +1153,49 @@ public final class DevShots {
                 };
             case "filmwait":
                 return mc -> DevFilm.done();
+            case "craftbench": {
+                var bench = DevBench.craftBench(t, DevShots::log);
+                return bench::test;
+            }
+            case "stressfill": {
+                var at = new net.minecraft.core.BlockPos(Integer.parseInt(t[1]), Integer.parseInt(t[2]), Integer.parseInt(t[3]));
+                return mc -> {
+                    var server = mc.getSingleplayerServer();
+                    server.execute(() -> DevBench.stressFill(server.overworld(), at, DevShots::log));
+                    return true;
+                };
+            }
+            case "stressmore": {
+                int extra = Integer.parseInt(t[1]);
+                return mc -> {
+                    var server = mc.getSingleplayerServer();
+                    server.execute(() -> DevBench.stressMore(server.overworld(), extra, DevShots::log));
+                    return true;
+                };
+            }
+            case "churn": {
+                
+                return mc -> {
+                    DevBench.setChurn(t[1].equals("on"));
+                    DevBench.wide = t[1].equals("wide");
+                    return true;
+                };
+            }
+            case "stamp":
+                return mc -> {
+                    DevBench.stamp = System.nanoTime();
+                    return true;
+                };
+            case "termready": {
+                return DevBench.termReady(Integer.parseInt(t[1]), DevShots::log)::test;
+            }
+            case "termlatency": {
+                return DevBench.termLatency(Integer.parseInt(t[1]), DevShots::log)::test;
+            }
+            case "perf": {
+                var bench = DevBench.perf(t, DevShots::log);
+                return bench::test;
+            }
             case "quit":
                 return mc -> {
                     log("quit");
