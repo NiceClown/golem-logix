@@ -17,11 +17,11 @@
 `gradlew runGameTestServer` (собранная ветка, `D:\ai-121`):
 
 ```
-========= 230 GAME TESTS COMPLETE IN 9.294 s ======================
-All 230 required tests passed :)
+========= 234 GAME TESTS COMPLETE IN 8.820 s ======================
+All 234 required tests passed :)
 ```
 
-228 тестов черновика + 2 новых на Channel Counter.
+228 тестов черновика + 6 mutation/fault-injection тестов на Channel Counter (плотная труба, сторона муфты, вне сети, удалённая труба, двойное переключение).
 
 ## Что перенесено (2.0.11 → 2.1.4)
 
@@ -34,7 +34,7 @@ All 230 required tests passed :)
 - **2.1.2**: фиксы текстур/кванта, книга о мостах и Ledger.
 - **2.1.3**: Interface/Provider отдают сразу, шины до 28 сопроцессоров + pacing, server-инструменты и `/golemlogix_buses`, стопка 64, безлимитные заказы, помощь idle-калькуляторов, `OrderBackoff`, башня до 28, **Giga Jar / Antigravity Reactor**, снаряжение на дисках (4 000 шт., `not_gear`), терминалы шлют только изменения.
 - **2.1.4**: Giga Jar/реактор через сеть, бонус башни, Temper «netherite + Fortune», счётчики дисков.
-- **Дописано сейчас: Channel Counter** — блок, BlockEntity, рендер nixie-цифр (`NixieDigits` под 1.21.1, `RenderType.eyes`), 8 моделей, blockstate, item-модель, рецепт, лут, текстуры `nixie_wood/socket/mesh/glass`, подписи en_us/ru_ru, статья в гайдбуке (en/ru), регистрация блока/БЕ/рендера/вкладки креатива, 2 game-теста.
+- **Дописано сейчас: Channel Counter** — блок, BlockEntity, рендер nixie-цифр (`NixieDigits` под 1.21.1, `RenderType.eyes`), 8 моделей, blockstate, item-модель, рецепт, лут, текстуры `nixie_wood/socket/mesh/glass`, подписи en_us/ru_ru, статья в гайдбуке (en/ru), регистрация блока/БЕ/рендера/вкладки креатива, 6 mutation/fault-injection тестов.
 - Гайдбук на Markdown (`docs/guidebook/*.md` + `gradle/guidebook.gradle`).
 
 ## Что осталось (отличия от main)
