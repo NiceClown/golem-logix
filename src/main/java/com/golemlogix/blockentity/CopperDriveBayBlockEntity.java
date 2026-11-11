@@ -167,6 +167,22 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
         tag.putInt("Priority", priority);
     }
 
+    /** Server, once loaded: the disks' counters follow their contents (an older rule may have counted them otherwise). */
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        if (level != null && !level.isClientSide()) {
+            boolean changed = false;
+            for (int i = 0; i < container.getContainerSize(); i++) {
+                changed |= com.golemlogix.system.DiskStorage.syncStored(container.getItem(i));
+            }
+            if (changed) {
+                // the lights on the front show the counters: players nearby need the new ones
+                container.setChanged();
+            }
+        }
+    }
+
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);

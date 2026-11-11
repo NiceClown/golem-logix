@@ -25,7 +25,7 @@ public class DistillationTowerMenu extends GolemMenu {
     private final ContainerData data;
 
     public static DistillationTowerMenu fromNetwork(int id, Inventory inv, RegistryFriendlyByteBuf buf) {
-        return new DistillationTowerMenu(id, inv, new SimpleContainer(UpgradeSpec.DISTILLATION.slots()), new SimpleContainerData(5),
+        return new DistillationTowerMenu(id, inv, new SimpleContainer(UpgradeSpec.DISTILLATION.slots()), new SimpleContainerData(6),
                 ContainerLevelAccess.NULL);
     }
 
@@ -43,7 +43,7 @@ public class DistillationTowerMenu extends GolemMenu {
     }
 
     public int capacity() {
-        return DistillationTowerBlockEntity.TANK;
+        return Math.max(1, data.get(5));
     }
 
     /** mB of blood a second. */

@@ -58,13 +58,14 @@ public final class Fuzzy {
         return ghost.get(ModDataComponents.FUZZY_TAG.get());
     }
 
-    /** The ghost without its fuzzy tag: the item it stands for (exact matching, extraction templates, keys). */
+    /** The ghost without its fuzzy tag and its keep amount: the item it stands for (exact matching, extraction templates, keys). */
     public static ItemStack plain(ItemStack ghost) {
-        if (!ghost.has(ModDataComponents.FUZZY_TAG.get())) {
+        if (!ghost.has(ModDataComponents.FUZZY_TAG.get()) && !ghost.has(ModDataComponents.KEEP_AMOUNT.get())) {
             return ghost;
         }
         ItemStack copy = ghost.copy();
         copy.remove(ModDataComponents.FUZZY_TAG.get());
+        copy.remove(ModDataComponents.KEEP_AMOUNT.get());
         return copy;
     }
 

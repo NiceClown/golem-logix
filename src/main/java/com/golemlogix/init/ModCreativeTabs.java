@@ -33,6 +33,7 @@ public class ModCreativeTabs {
                         output.accept(ModItems.TORN_SNOW_MIND.get());
                         output.accept(ModItems.IMPLODED_WITHER_PLASMA.get());
                         output.accept(ModItems.INTERDIMENSIONAL_OCCULT_MATRIX.get());
+                        output.accept(ModItems.PLASMA_TEMPER.get());
 
                         // Multiblock & Core
                         output.accept(ModBlocks.ATLAS_CORE.get());
@@ -53,6 +54,7 @@ public class ModCreativeTabs {
                         // Pipes
                         output.accept(ModBlocks.BASIC_SNOW_PIPE.get());
                         output.accept(ModBlocks.DENSE_FROST_PIPE.get());
+                        output.accept(ModBlocks.CRYO_DIODE.get());
                         output.accept(ModBlocks.CRYO_SOURCE_TELEGRAPH.get());
                         output.accept(ModItems.AETHERIAL_LINKAGE.get());
                         output.accept(ModItems.AETHER_RESONANCE_CORE.get());
@@ -76,6 +78,8 @@ public class ModCreativeTabs {
                         // Terminals & Wireless
                         output.accept(ModBlocks.ANALOG_TERMINAL.get());
                         output.accept(ModBlocks.CRAFTING_TERMINAL.get());
+                        output.accept(ModBlocks.SECURITY_TERMINAL.get());
+                        output.accept(ModItems.IDENTITY_PUNCH_CARD.get());
                         output.accept(ModItems.PORTABLE_CHRONOMETER.get());
                         for (int tier = 1; tier <= 2; tier++) {
                             ItemStack upgraded = new ItemStack(ModItems.PORTABLE_CHRONOMETER.get());
@@ -89,13 +93,18 @@ public class ModCreativeTabs {
                         output.accept(ModBlocks.PATTERN_PROVIDER.get());
                         output.accept(ModBlocks.CARD_CATALOG.get());
                         output.accept(ModBlocks.SCHEMATIC_CONCENTRATOR.get());
+                        output.accept(ModBlocks.STOCK_REQUESTER.get());
                         output.accept(ModBlocks.CRYO_CALCULATOR.get());
                         output.accept(ModBlocks.CRYO_MAINFRAME.get());
                         output.accept(ModBlocks.COOLING_COPROCESSOR.get());
                         output.accept(ModBlocks.RECIPE_MONITOR.get());
+                        output.accept(ModBlocks.STOCK_MANOMETER.get());
+                        output.accept(ModBlocks.COPPER_TANK.get());
 
                         // Buses
                         output.accept(ModBlocks.VACUUM_IMPORT_BUS.get());
+                        output.accept(ModBlocks.FORMATION_BUS.get());
+                        output.accept(ModBlocks.ANNIHILATION_BUS.get());
                         output.accept(ModBlocks.INJECTOR_EXPORT_BUS.get());
                         output.accept(ModBlocks.PERISCOPE_STORAGE_BUS.get());
                         output.accept(ModBlocks.GOLEM_INTERFACE.get());

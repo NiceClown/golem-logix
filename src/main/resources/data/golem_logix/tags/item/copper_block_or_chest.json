@@ -1,0 +1,6 @@
+{
+  "values": [
+    "#c:storage_blocks/copper",
+    {"id": "#minecraft:copper_chests", "required": false}
+  ]
+}

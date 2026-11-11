@@ -17,6 +17,10 @@ public final class ModTags {
     public static final TagKey<net.minecraft.world.level.material.Fluid> CRYO_DISTILLABLE =
             TagKey.create(Registries.FLUID, ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "cryo_distillable"));
 
+    /** Things that never count as equipment on a disk, however individual they are (see system/Gear). */
+    public static final TagKey<net.minecraft.world.item.Item> NOT_GEAR =
+            TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "not_gear"));
+
     private ModTags() {
     }
 }

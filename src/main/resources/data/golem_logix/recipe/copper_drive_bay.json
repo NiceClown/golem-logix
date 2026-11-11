@@ -5,7 +5,7 @@
     "C": {"item": "minecraft:copper_ingot"},
     "G": {"item": "minecraft:glass"},
     "M": {"item": "golem_logix:flattened_copper_matrix"},
-    "B": {"item": "minecraft:copper_block"}
+    "B": {"tag": "golem_logix:copper_block_or_chest"}
   },
   "pattern": [
     "CGC",

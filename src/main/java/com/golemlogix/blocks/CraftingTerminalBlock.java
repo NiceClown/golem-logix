@@ -56,6 +56,12 @@ public class CraftingTerminalBlock extends HorizontalDirectionalBlock implements
                 sp.displayClientMessage(Component.translatable(err), true);
                 return InteractionResult.CONSUME;
             }
+            if (!net.hasPermission(player, com.golemlogix.security.SecurityPermission.INSERT)
+                    && !net.hasPermission(player, com.golemlogix.security.SecurityPermission.EXTRACT)
+                    && !net.hasPermission(player, com.golemlogix.security.SecurityPermission.CRAFT)) {
+                sp.displayClientMessage(Component.translatable("message.golem_logix.security_denied"), true);
+                return InteractionResult.CONSUME;
+            }
             sp.openMenu(new SimpleMenuProvider(
                             (id, inv, p) -> new TerminalMenu(id, inv, level, pos, pos, ModBlocks.CRAFTING_TERMINAL.get(), true, false, 0),
                             Component.translatable("gui.golem_logix.title.crafting_terminal")),

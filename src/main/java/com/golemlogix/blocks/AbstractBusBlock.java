@@ -65,7 +65,7 @@ public abstract class AbstractBusBlock extends DirectionalBlock implements Golem
     protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean moving) {
         super.neighborChanged(state, level, pos, block, fromPos, moving);
         if (level.getBlockEntity(pos) instanceof BusBlockEntity bus) {
-            bus.wake();
+            bus.nudge();
         }
     }
 
@@ -73,7 +73,7 @@ public abstract class AbstractBusBlock extends DirectionalBlock implements Golem
     @Override
     public void onNeighborChange(BlockState state, net.minecraft.world.level.LevelReader level, BlockPos pos, BlockPos neighbor) {
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof BusBlockEntity bus) {
-            bus.wake();
+            bus.nudge();
         }
     }
 
@@ -103,6 +103,11 @@ public abstract class AbstractBusBlock extends DirectionalBlock implements Golem
             return InteractionResult.SUCCESS;
         }
         if (player instanceof ServerPlayer sp && level.getBlockEntity(pos) instanceof BusBlockEntity bus) {
+            com.golemlogix.system.GolemNetwork net = com.golemlogix.system.GolemNetwork.scan(level, pos);
+            if (!net.hasPermission(player, com.golemlogix.security.SecurityPermission.BUILD)) {
+                sp.displayClientMessage(Component.translatable("message.golem_logix.security_denied"), true);
+                return InteractionResult.CONSUME;
+            }
             int kind = isExportBus() ? BusMenu.KIND_EXPORT : BusMenu.KIND_IMPORT;
             sp.openMenu(new SimpleMenuProvider(
                             (id, inv, p) -> new BusMenu(id, inv, bus.getFilters(), bus.getUpgrades(), kind, bus.menuData()),

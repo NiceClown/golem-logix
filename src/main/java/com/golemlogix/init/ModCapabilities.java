@@ -25,6 +25,8 @@ public final class ModCapabilities {
                 ModBlocks.SATURATOR_PART.get());
         // Pattern Provider: its return slots take what the machines hand back (into the network)
         event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ModBlockEntities.PATTERN_PROVIDER.get(), (be, side) -> be.automation());
+        // ...and its return tanks the fluids (a machine's fluid result for a job, or anything piped in)
+        event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ModBlockEntities.PATTERN_PROVIDER.get(), (be, side) -> be.fluidReturns());
         // Interface: handing out stock and taking into the network, from any side
         event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ModBlockEntities.INTERFACE.get(), (be, side) -> be.automation());
         event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ModBlockEntities.INTERFACE.get(), (be, side) -> be.fluids());
@@ -48,5 +50,9 @@ public final class ModCapabilities {
                     return mixer == null ? null : mixer.tray();
                 },
                 ModBlocks.CRYO_MIXER.get());
+        // Copper Tank: one tank from every side; as an item, the fluid it carries (buckets, the terminal, other mods' machines)
+        event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ModBlockEntities.COPPER_TANK.get(), (be, side) -> be.tank());
+        event.registerItem(Capabilities.FluidHandler.ITEM, (stack, ctx) -> new com.golemlogix.items.CopperTankItem.Contents(stack),
+                ModBlocks.COPPER_TANK.get().asItem());
     }
 }

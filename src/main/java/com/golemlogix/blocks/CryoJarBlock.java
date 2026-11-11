@@ -44,6 +44,8 @@ import org.jetbrains.annotations.Nullable;
 public class CryoJarBlock extends Block implements EntityBlock {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final EnumProperty<DoubleBlockHalf> HALF = BlockStateProperties.DOUBLE_BLOCK_HALF;
+    /** What this jar is part of; see JarMerge. */
+    public static final EnumProperty<JarForm> FORM = EnumProperty.create("form", JarForm.class);
 
     private static final VoxelShape LOWER_SHAPE = Shapes.or(Block.box(1, 0, 1, 15, 6, 15), Block.box(2, 6, 2, 14, 16, 14));
     private static final VoxelShape UPPER_SHAPE = Shapes.or(Block.box(2, 0, 2, 14, 7, 14), Block.box(1.5, 7, 1.5, 14.5, 14, 14.5),
@@ -51,22 +53,37 @@ public class CryoJarBlock extends Block implements EntityBlock {
 
     public CryoJarBlock(Properties properties) {
         super(properties.sound(SoundType.COPPER).strength(2.5f).noOcclusion().pushReaction(PushReaction.BLOCK));
-        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(HALF, DoubleBlockHalf.LOWER));
+        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(HALF, DoubleBlockHalf.LOWER).setValue(FORM, JarForm.SINGLE));
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING, HALF);
+        builder.add(FACING, HALF, FORM);
     }
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        if (state.getValue(FORM) != JarForm.SINGLE) {
+            return Shapes.block();
+        }
         return state.getValue(HALF) == DoubleBlockHalf.LOWER ? LOWER_SHAPE : UPPER_SHAPE;
     }
 
     @Override
     protected RenderShape getRenderShape(BlockState state) {
         return RenderShape.INVISIBLE;
+    }
+
+    // A joined jar fills its cell, for walking and clicking, but light goes through it just the same as through a lone one: joining
+    // and parting change nothing for the light, and no dark halo falls on the blocks around it.
+    @Override
+    protected boolean propagatesSkylightDown(BlockState state, BlockGetter level, BlockPos pos) {
+        return true;
+    }
+
+    @Override
+    protected float getShadeBrightness(BlockState state, BlockGetter level, BlockPos pos) {
+        return 1f;
     }
 
     /** The lower half (where the Source is kept) of the jar at pos. */
@@ -95,6 +112,35 @@ public class CryoJarBlock extends Block implements EntityBlock {
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
         level.setBlock(pos.above(), state.setValue(HALF, DoubleBlockHalf.UPPER), 3);
+    }
+
+    /** A whole jar has just been placed (its upper half comes last): it looks for jars to join, once its entity is there. */
+    @Override
+    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean movedByPiston) {
+        super.onPlace(state, level, pos, oldState, movedByPiston);
+        if (!level.isClientSide() && state.getValue(HALF) == DoubleBlockHalf.UPPER && !oldState.is(this)) {
+            level.scheduleTick(pos.below(), this, 1);
+        }
+    }
+
+    @Override
+    protected void tick(BlockState state, net.minecraft.server.level.ServerLevel level, BlockPos pos, net.minecraft.util.RandomSource random) {
+        if (state.getValue(HALF) == DoubleBlockHalf.LOWER) {
+            com.golemlogix.system.JarMerge.scan(level, pos);
+        }
+    }
+
+    /** A jar of a whole is being taken away: the whole comes apart. */
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+        if (!state.is(newState.getBlock())) {
+            if (level instanceof net.minecraft.server.level.ServerLevel server && state.getValue(HALF) == DoubleBlockHalf.LOWER
+                    && state.getValue(FORM) != JarForm.SINGLE && level.getBlockEntity(pos) instanceof CryoJarBlockEntity jar
+                    && jar.controller() != null) {
+                com.golemlogix.system.JarMerge.apart(server, jar.controller(), pos);
+            }
+        }
+        super.onRemove(state, level, pos, newState, movedByPiston);
     }
 
     /** One half without the other goes too. */

@@ -6,11 +6,14 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 /**
- * A machine's upgrade slots: one upgrade in each, the machine accepts only its own types and no more than the limit.
+ * A machine's upgrade slots: one upgrade in each (speed upgrades may share one, see UpgradeSpec), every slot for one kind (UpgradeSpec.typeAt; the window shows its ghost).
+ * Upgrades from an older save are put into their own slots on loading; one with no slot left (the Annihilation Bus took speed
+ * upgrades once) waits in strays until the machine drops it.
  */
 public class UpgradeContainer extends OwnedContainer {
     private final UpgradeSpec spec;
     private final Runnable onChange;
+    private final java.util.List<ItemStack> strays = new java.util.ArrayList<>();
 
     public UpgradeContainer(UpgradeSpec spec, BlockEntity owner, Runnable onChange) {
         super(spec.slots(), owner, s -> true);
@@ -29,7 +32,12 @@ public class UpgradeContainer extends OwnedContainer {
 
     @Override
     public int getMaxStackSize() {
-        return 1;
+        return spec.perSlot(UpgradeType.SPEED);
+    }
+
+    @Override
+    public int getMaxStackSize(ItemStack stack) {
+        return stack.getItem() instanceof UpgradeItem up ? spec.perSlot(up.type()) : 1;
     }
 
     /** Whether an upgrade can go into slot slot (considering what is already in the others). */
@@ -38,29 +46,70 @@ public class UpgradeContainer extends OwnedContainer {
         return accepts(spec, stack, this, slot);
     }
 
-    /** The shared check (the client copy of the menu uses it too). */
+    /** The shared check (the client copy of the menu uses it too): the slot is for this kind of upgrade. */
     public static boolean accepts(UpgradeSpec spec, ItemStack stack, net.minecraft.world.Container current, int slot) {
-        if (!(stack.getItem() instanceof UpgradeItem up)) {
-            return false;
-        }
-        int max = spec.max(up.type());
-        if (max <= 0) {
-            return false;
-        }
-        int have = 0;
-        for (int i = 0; i < current.getContainerSize(); i++) {
-            if (i != slot && current.getItem(i).getItem() instanceof UpgradeItem other && other.type() == up.type()) {
-                have++;
+        return stack.getItem() instanceof UpgradeItem up && spec.typeAt(slot) == up.type();
+    }
+
+    /** Loads every upgrade into a slot of its own kind, where it was if that slot is for it (saves from before slots had kinds). */
+    @Override
+    public void fromTag(net.minecraft.nbt.ListTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        clearContent();
+        java.util.List<ItemStack> rest = new java.util.ArrayList<>();
+        for (int i = 0; i < tag.size(); i++) {
+            net.minecraft.nbt.CompoundTag entry = tag.getCompound(i);
+            ItemStack stack = ItemStack.parse(registries, entry).orElse(ItemStack.EMPTY);
+            if (stack.isEmpty()) {
+                continue;
+            }
+            int slot = entry.contains("Slot", net.minecraft.nbt.Tag.TAG_ANY_NUMERIC) ? entry.getInt("Slot") : -1;
+            if (slot >= 0 && slot < getContainerSize() && getItem(slot).isEmpty() && accepts(spec, stack, this, slot)) {
+                setItem(slot, stack);
+            } else {
+                rest.add(stack);
             }
         }
-        return have < max;
+        for (ItemStack s : rest) {
+            // a save from when a bus had four speed slots: they come together in the one slot; what does not fit stays a stray
+            for (int i = 0; i < getContainerSize() && !s.isEmpty(); i++) {
+                if (!accepts(spec, s, this, i)) {
+                    continue;
+                }
+                ItemStack in = getItem(i);
+                int room = getMaxStackSize(s) - in.getCount();
+                if (room <= 0 || !in.isEmpty() && !ItemStack.isSameItemSameComponents(in, s)) {
+                    continue;
+                }
+                int n = Math.min(room, s.getCount());
+                if (in.isEmpty()) {
+                    setItem(i, s.copyWithCount(n));
+                } else {
+                    in.grow(n);
+                }
+                s.shrink(n);
+            }
+            if (!s.isEmpty()) {
+                strays.add(s);
+            }
+        }
+    }
+
+    /** Drops the upgrades that found no slot on loading, in front of the machine. */
+    public void dropStrays(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos) {
+        if (!strays.isEmpty()) {
+            for (ItemStack s : strays) {
+                net.minecraft.world.Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, s);
+            }
+            strays.clear();
+            setChanged();
+        }
     }
 
     public int count(UpgradeType type) {
         int n = 0;
         for (int i = 0; i < getContainerSize(); i++) {
             if (getItem(i).getItem() instanceof UpgradeItem up && up.type() == type) {
-                n++;
+                n += getItem(i).getCount();
             }
         }
         return Math.min(n, spec.max(type));

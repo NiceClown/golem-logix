@@ -26,8 +26,13 @@ public final class GolemConfig {
     public static final ModConfigSpec.IntValue BUS_ITEMS_PER_OPERATION;
     public static final ModConfigSpec.IntValue BUS_FLUID_PER_OPERATION;
     public static final ModConfigSpec.IntValue BUS_INTERVAL_TICKS;
+    public static final ModConfigSpec.IntValue BUS_MAX_MILLIS_PER_TICK;
+    public static final ModConfigSpec.IntValue CRAFT_MAX_MILLIS_PER_TICK;
     public static final ModConfigSpec.IntValue LOCAL_WIRELESS_RANGE;
     public static final ModConfigSpec.IntValue CRYO_JAR_CAPACITY;
+    public static final ModConfigSpec.IntValue CRYO_JAR_GIGA_BONUS;
+    public static final ModConfigSpec.IntValue CRYO_JAR_SUPER_BONUS;
+    public static final ModConfigSpec.IntValue GIGA_SOURCE_BONUS;
     public static final ModConfigSpec.IntValue DISTILL_RATE;
     public static final ModConfigSpec.DoubleValue DISTILL_SOURCE_PER_MB;
     public static final ModConfigSpec.IntValue DISTILL_COPROCESSOR_BONUS;
@@ -37,6 +42,8 @@ public final class GolemConfig {
     public static final ModConfigSpec.IntValue MIXER_ICE_WATER;
     public static final ModConfigSpec.IntValue MIXER_ICE_CRYO;
     public static final ModConfigSpec.IntValue MIXER_ICE_TICKS;
+    public static final ModConfigSpec.BooleanValue TYPEWRITER_DING;
+    public static final ModConfigSpec.BooleanValue MONITOR_BLOCKED_TICK;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -90,6 +97,12 @@ public final class GolemConfig {
                 .defineInRange("busFluidPerOperation", 1000, 1, 100000);
         BUS_INTERVAL_TICKS = b.comment("Ticks between bus operations.")
                 .defineInRange("busIntervalTicks", 8, 1, 200);
+        BUS_MAX_MILLIS_PER_TICK = b.comment("How long all buses together may work in one tick (milliseconds, of the 50 a tick has; 0: no limit).",
+                        "Over it, buses wait for the next tick and catch up afterwards. /golemlogix_buses shows what they take.")
+                .defineInRange("busMaxMillisPerTick", 10, 0, 50);
+        CRAFT_MAX_MILLIS_PER_TICK = b.comment("How long all autocrafting jobs together may work in one tick (milliseconds, of the 50 a tick has; 0: no limit).",
+                        "Over it, a job goes on in its next cycle.")
+                .defineInRange("craftMaxMillisPerTick", 10, 0, 50);
         b.pop();
 
         b.push("wireless");
@@ -100,6 +113,12 @@ public final class GolemConfig {
         b.push("distillation");
         CRYO_JAR_CAPACITY = b.comment("Source a Cryo-Source Jar holds.")
                 .defineInRange("cryoJarCapacity", 10000, 100, 10000000);
+        CRYO_JAR_GIGA_BONUS = b.comment("Extra Source four jars joined into a Giga Jar hold (percent of what the four hold alone).")
+                .defineInRange("cryoJarGigaBonus", 10, 0, 1000);
+        CRYO_JAR_SUPER_BONUS = b.comment("Extra Source nine jars joined into an Antigravity Reactor hold (percent of what the nine hold alone).")
+                .defineInRange("cryoJarSuperBonus", 20, 0, 1000);
+        GIGA_SOURCE_BONUS = b.comment("Extra Source towers make (percent) on a network with at least one Giga Jar, or right beside one.")
+                .defineInRange("gigaSourceBonus", 7, 0, 1000);
         DISTILL_RATE = b.comment("Blood (mB) a Cryo-Distillation Tower distils every second.")
                 .defineInRange("distillRate", 20, 1, 100000);
         DISTILL_COPROCESSOR_BONUS = b.comment("Extra blood (mB a second) each Compressed Co-Processor in the tower distils.")
@@ -123,6 +142,13 @@ public final class GolemConfig {
                 .defineInRange("iceCryo", 100, 0, 64000);
         MIXER_ICE_TICKS = b.comment("Cryo-Mixer, ice mode: ticks for one block of ice without Compressed Co-Processors.")
                 .defineInRange("iceTicks", 100, 1, 72000);
+        b.pop();
+
+        b.push("sound");
+        TYPEWRITER_DING = b.comment("Play a typewriter-carriage bell ding when a Cryo Calculator completes a job of >= 16 executions or an order placed by a player.")
+                .define("typewriterDing", true);
+        MONITOR_BLOCKED_TICK = b.comment("Recipe Monitor plays a soft tick while a crafting job is blocked.")
+                .define("monitorBlockedTick", true);
         b.pop();
 
         SPEC = b.build();

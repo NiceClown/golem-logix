@@ -129,9 +129,24 @@ public class PatternEncoderMenu extends GolemMenu {
         return super.fuzzyLine(slotId);
     }
 
+    /** The slot window: how many of a processing cell's item (1..99) or mB of its fluid; a crafting grid takes one each. */
+    public void setCount(int slot, int amount) {
+        if (slot < 0 || slot >= OUT_START + 3 || isCraftingMode()) {
+            return;
+        }
+        ItemStack s = container.getItem(slot);
+        if (s.isEmpty()) {
+            return;
+        }
+        container.setItem(slot, com.golemlogix.items.FluidGhostItem.is(s)
+                ? com.golemlogix.items.FluidGhostItem.withAmount(s, Math.max(1, amount)) : s.copyWithCount(Math.max(1, Math.min(99, amount))));
+        broadcastChanges();
+    }
+
     @Override
     public void setGhost(Player player, int slotId, ItemStack stack) {
-        if (com.golemlogix.items.FluidGhostItem.is(stack) && slotId >= OUT_START && slotId < OUT_START + 3) {
+        // a fluid is an output of a processing pattern only, never of a crafting table recipe
+        if (com.golemlogix.items.FluidGhostItem.is(stack) && slotId >= OUT_START && slotId < OUT_START + 3 && isCraftingMode()) {
             return;
         }
         super.setGhost(player, slotId, stack);
@@ -144,10 +159,9 @@ public class PatternEncoderMenu extends GolemMenu {
 
     @Override
     public void clicked(int slotId, int button, ClickType clickType, Player player) {
-        // fluids are only ingredients of processing patterns: never outputs and never in the crafting table grid
+        // fluids are inputs and outputs of processing patterns, never in the crafting table grid
         boolean fluid = com.golemlogix.items.FluidGhostItem.is(ghostFor(getCarried()));
-        if (fluid && clickType == ClickType.PICKUP && isGhost(slotId)
-                && ((slotId >= OUT_START && slotId < OUT_START + 3) || isCraftingMode())) {
+        if (fluid && clickType == ClickType.PICKUP && isGhost(slotId) && isCraftingMode()) {
             return;
         }
         if (handleGhostClick(slotId, button, clickType)) {
@@ -169,7 +183,7 @@ public class PatternEncoderMenu extends GolemMenu {
     }
 
     private void refreshCraftingResult() {
-        if (!isCraftingMode()) {
+        if (!isCraftingMode() || level.isClientSide()) {
             return;
         }
         updating = true;
@@ -299,7 +313,9 @@ public class PatternEncoderMenu extends GolemMenu {
                 }
                 for (int i = 0; i < Math.min(3, outputs.size()); i++) {
                     ItemStack out = outputs.get(i);
-                    if (!out.isEmpty() && !com.golemlogix.items.FluidGhostItem.is(out)) {
+                    if (com.golemlogix.items.FluidGhostItem.is(out)) {
+                        container.setItem(OUT_START + i, out.copyWithCount(1));
+                    } else if (!out.isEmpty()) {
                         container.setItem(OUT_START + i, out.copyWithCount(Math.max(1, Math.min(99, out.getCount()))));
                     }
                 }

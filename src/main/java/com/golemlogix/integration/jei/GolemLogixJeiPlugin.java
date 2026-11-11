@@ -122,9 +122,11 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         List<net.minecraft.world.item.crafting.RecipeHolder<net.minecraft.world.item.crafting.CraftingRecipe>> prism = new java.util.ArrayList<>();
         var level = net.minecraft.client.Minecraft.getInstance().level;
         if (level != null) {
-            level.getRecipeManager().byKey(ResourceLocation.fromNamespaceAndPath(com.golemlogix.GolemLogixMod.MOD_ID, "void_glass_prism"))
-                    .filter(h -> h.value() instanceof net.minecraft.world.item.crafting.CraftingRecipe)
-                    .ifPresent(h -> prism.add(cast(h)));
+            for (String id : new String[]{"void_glass_prism", "plasma_temper"}) {
+                level.getRecipeManager().byKey(ResourceLocation.fromNamespaceAndPath(com.golemlogix.GolemLogixMod.MOD_ID, id))
+                        .filter(h -> h.value() instanceof net.minecraft.world.item.crafting.CraftingRecipe)
+                        .ifPresent(h -> prism.add(cast(h)));
+            }
         }
         if (ClientSecrets.all()) {
             recipes.unhideRecipes(AnvilCrushCategory.TYPE, List.of(witherRitual()));
@@ -295,6 +297,8 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         registration.addGhostIngredientHandler(com.golemlogix.client.BusScreen.class, new GhostTargets<>());
         registration.addGhostIngredientHandler(com.golemlogix.client.InterfaceScreen.class, new GhostTargets<>());
         registration.addGhostIngredientHandler(com.golemlogix.client.PatternEncoderScreen.class, new GhostTargets<>());
+        registration.addGhostIngredientHandler(com.golemlogix.client.StockRequesterScreen.class, new GhostTargets<>());
+        registration.addGhostIngredientHandler(com.golemlogix.client.StockManometerScreen.class, new GhostTargets<>());
         // the upgrade column on the right and the settings buttons on the left of machine windows
         registration.addGenericGuiContainerHandler(GolemScreen.class, new IGuiContainerHandler<GolemScreen<?>>() {
             @Override
@@ -324,6 +328,8 @@ public class GolemLogixJeiPlugin implements IModPlugin {
     public void registerRecipeCatalysts(IRecipeCatalystRegistration registration) {
         registration.addRecipeCatalyst(new ItemStack(Blocks.ANVIL), AnvilCrushCategory.TYPE);
         registration.addRecipeCatalyst(new ItemStack(ModBlocks.MANA_SATURATOR.get()), ManaSaturatorCategory.TYPE);
+        // the Crafting Terminal crafts from the network (and takes JEI's "+"), so it stands among the crafting tables
+        registration.addRecipeCatalyst(new ItemStack(ModBlocks.CRAFTING_TERMINAL.get()), mezz.jei.api.constants.RecipeTypes.CRAFTING);
     }
 
     @Override

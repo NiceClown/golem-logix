@@ -26,6 +26,9 @@ public class GolemLogixClientEvents {
         event.registerBlockEntityRenderer(ModBlockEntities.CRYO_CALCULATOR.get(), CryoCalculatorRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.COOLING_COPROCESSOR.get(), CoolingCoprocessorRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.RECIPE_MONITOR.get(), RecipeMonitorRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.COPPER_TANK.get(), CopperTankRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.FORMATION_BUS.get(), FormationBusRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.ANNIHILATION_BUS.get(), AnnihilationBusRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.INTERFACE.get(), InterfaceRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.ATLANT_HEAD.get(), AtlantHeadRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.CRYO_MAINFRAME.get(), CryoMainframeRenderer::new);
@@ -36,6 +39,9 @@ public class GolemLogixClientEvents {
         event.registerBlockEntityRenderer(ModBlockEntities.CRYO_JAR.get(), CryoJarRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.DISTILLATION_TOWER.get(), DistillationTowerRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.CRYO_MIXER.get(), CryoMixerRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.STOCK_MANOMETER.get(), StockManometerRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.STOCK_REQUESTER.get(), StockRequesterRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.CRYO_DIODE.get(), CryoDiodeRenderer::new);
     }
 
     @SubscribeEvent
@@ -73,6 +79,7 @@ public class GolemLogixClientEvents {
         event.register(ModMenus.TERMINAL.get(), TerminalScreen::new);
         event.register(ModMenus.DRIVE_BAY.get(), DriveBayScreen::new);
         event.register(ModMenus.BUS.get(), BusScreen::new);
+        event.register(ModMenus.ANNIHILATION_BUS.get(), AnnihilationBusScreen::new);
         event.register(ModMenus.PATTERN_ENCODER.get(), PatternEncoderScreen::new);
         event.register(ModMenus.PATTERN_PROVIDER.get(), PatternProviderScreen::new);
         event.register(ModMenus.CALCULATOR.get(), CalculatorScreen::new);
@@ -84,6 +91,9 @@ public class GolemLogixClientEvents {
         event.register(ModMenus.CARD_CATALOG.get(), CardCatalogScreen::new);
         event.register(ModMenus.CONCENTRATOR.get(), ConcentratorScreen::new);
         event.register(ModMenus.TELEGRAPH.get(), TelegraphScreen::new);
+        event.register(ModMenus.STOCK_MANOMETER.get(), StockManometerScreen::new);
+        event.register(ModMenus.STOCK_REQUESTER.get(), StockRequesterScreen::new);
+        event.register(ModMenus.SECURITY_TERMINAL.get(), SecurityTerminalScreen::new);
     }
 
     /** Liquid Cryo-Source textures (tanks, basins, JEI, the planner). */

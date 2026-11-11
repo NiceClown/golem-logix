@@ -1,0 +1,147 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "golem_logix:block/dev_iron_band",
+    "band": "golem_logix:block/dev_iron_band",
+    "door": "golem_logix:block/dev_security_door",
+    "trim": "golem_logix:block/dev_brass_trim",
+    "brass": "golem_logix:block/dev_brass_filigree",
+    "screen": "golem_logix:block/dev_security_screen",
+    "combo": "golem_logix:block/dev_security_combo",
+    "slot": "golem_logix:block/dev_security_slot",
+    "iron": "golem_logix:block/dev_iron_sigil"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0],
+      "to": [16, 1.5, 16],
+      "faces": {
+        "north": {"texture": "#trim"},
+        "south": {"texture": "#trim"},
+        "east": {"texture": "#trim"},
+        "west": {"texture": "#trim"},
+        "up": {"texture": "#trim"},
+        "down": {"texture": "#trim"}
+      }
+    },
+    {
+      "from": [1, 1.5, 1],
+      "to": [15, 14.5, 15],
+      "faces": {
+        "south": {"texture": "#band"},
+        "east": {"texture": "#band"},
+        "west": {"texture": "#band"},
+        "north": {"texture": "#door"}
+      }
+    },
+    {
+      "from": [0, 14.5, 0],
+      "to": [16, 16, 16],
+      "faces": {
+        "north": {"texture": "#brass"},
+        "south": {"texture": "#brass"},
+        "east": {"texture": "#brass"},
+        "west": {"texture": "#brass"},
+        "up": {"texture": "#brass"},
+        "down": {"texture": "#brass"}
+      }
+    },
+    {
+      "from": [0, 1.5, 0],
+      "to": [1.5, 14.5, 1.5],
+      "faces": {
+        "north": {"texture": "#trim"},
+        "south": {"texture": "#trim"},
+        "east": {"texture": "#trim"},
+        "west": {"texture": "#trim"},
+        "up": {"texture": "#trim"},
+        "down": {"texture": "#trim"}
+      }
+    },
+    {
+      "from": [14.5, 1.5, 0],
+      "to": [16, 14.5, 1.5],
+      "faces": {
+        "north": {"texture": "#trim"},
+        "south": {"texture": "#trim"},
+        "east": {"texture": "#trim"},
+        "west": {"texture": "#trim"},
+        "up": {"texture": "#trim"},
+        "down": {"texture": "#trim"}
+      }
+    },
+    {
+      "from": [0, 1.5, 14.5],
+      "to": [1.5, 14.5, 16],
+      "faces": {
+        "north": {"texture": "#trim"},
+        "south": {"texture": "#trim"},
+        "east": {"texture": "#trim"},
+        "west": {"texture": "#trim"},
+        "up": {"texture": "#trim"},
+        "down": {"texture": "#trim"}
+      }
+    },
+    {
+      "from": [14.5, 1.5, 14.5],
+      "to": [16, 14.5, 16],
+      "faces": {
+        "north": {"texture": "#trim"},
+        "south": {"texture": "#trim"},
+        "east": {"texture": "#trim"},
+        "west": {"texture": "#trim"},
+        "up": {"texture": "#trim"},
+        "down": {"texture": "#trim"}
+      }
+    },
+    {
+      "from": [2.5, 8.5, 0.25],
+      "to": [8, 13, 1],
+      "faces": {
+        "north": {"texture": "#screen"},
+        "south": {"texture": "#trim"},
+        "east": {"texture": "#trim"},
+        "west": {"texture": "#trim"},
+        "up": {"texture": "#trim"},
+        "down": {"texture": "#trim"}
+      }
+    },
+    {
+      "from": [8.5, 2.5, 0],
+      "to": [13.5, 7.5, 1],
+      "faces": {
+        "north": {"texture": "#combo"},
+        "south": {"texture": "#trim"},
+        "east": {"texture": "#trim"},
+        "west": {"texture": "#trim"},
+        "up": {"texture": "#trim"},
+        "down": {"texture": "#trim"}
+      }
+    },
+    {
+      "from": [2.5, 3.5, 0.5],
+      "to": [7.5, 6.5, 1],
+      "faces": {
+        "north": {"texture": "#slot"},
+        "south": {"texture": "#trim"},
+        "east": {"texture": "#trim"},
+        "west": {"texture": "#trim"},
+        "up": {"texture": "#trim"},
+        "down": {"texture": "#trim"}
+      }
+    },
+    {
+      "from": [13.25, 9.5, 0.25],
+      "to": [14.5, 12.5, 1],
+      "faces": {
+        "north": {"texture": "#trim"},
+        "south": {"texture": "#trim"},
+        "east": {"texture": "#trim"},
+        "west": {"texture": "#trim"},
+        "up": {"texture": "#trim"},
+        "down": {"texture": "#trim"}
+      }
+    }
+  ]
+}

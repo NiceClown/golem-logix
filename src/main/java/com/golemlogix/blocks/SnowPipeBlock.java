@@ -231,7 +231,8 @@ public class SnowPipeBlock extends Block implements GolemNode, EntityBlock {
             return Link.DEVICE;
         }
         // Source jars are not nodes either, but the network draws Source from them through the pipe: it docks onto them
-        if (neighborState.getBlock() instanceof CryoJarBlock || neighborState.getBlock() instanceof CreativeSourceJarBlock) {
+        if (neighborState.getBlock() instanceof CryoJarBlock || neighborState.getBlock() instanceof CreativeSourceJarBlock
+                || neighborState.getBlock() instanceof CryoDiodeBlock) {
             return Link.DEVICE;
         }
         if (neighborState.getBlock() instanceof SnowPipeBlock other) {

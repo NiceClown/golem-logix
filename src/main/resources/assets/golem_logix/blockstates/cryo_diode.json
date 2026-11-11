@@ -1,0 +1,16 @@
+{
+  "multipart": [
+    {"when": {"facing": "north"}, "apply": {"model": "golem_logix:block/basic_snow_pipe_straight"}},
+    {"when": {"facing": "north"}, "apply": {"model": "golem_logix:block/cryo_diode"}},
+    {"when": {"facing": "east"}, "apply": {"model": "golem_logix:block/basic_snow_pipe_straight", "y": 90}},
+    {"when": {"facing": "east"}, "apply": {"model": "golem_logix:block/cryo_diode", "y": 90}},
+    {"when": {"facing": "south"}, "apply": {"model": "golem_logix:block/basic_snow_pipe_straight", "y": 180}},
+    {"when": {"facing": "south"}, "apply": {"model": "golem_logix:block/cryo_diode", "y": 180}},
+    {"when": {"facing": "west"}, "apply": {"model": "golem_logix:block/basic_snow_pipe_straight", "y": 270}},
+    {"when": {"facing": "west"}, "apply": {"model": "golem_logix:block/cryo_diode", "y": 270}},
+    {"when": {"facing": "up"}, "apply": {"model": "golem_logix:block/basic_snow_pipe_straight", "x": 270}},
+    {"when": {"facing": "up"}, "apply": {"model": "golem_logix:block/cryo_diode", "x": 270}},
+    {"when": {"facing": "down"}, "apply": {"model": "golem_logix:block/basic_snow_pipe_straight", "x": 90}},
+    {"when": {"facing": "down"}, "apply": {"model": "golem_logix:block/cryo_diode", "x": 90}}
+  ]
+}

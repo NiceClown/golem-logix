@@ -177,3 +177,6 @@ tasks.named('processResources', ProcessResources) {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
+
+// the guide book: Markdown sources in docs/guidebook, JSON built from them
+apply from: "gradle/guidebook.gradle"

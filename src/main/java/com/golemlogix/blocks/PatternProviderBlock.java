@@ -75,6 +75,11 @@ public class PatternProviderBlock extends Block implements GolemNode, EntityBloc
         if (level.isClientSide()) {
             return InteractionResult.SUCCESS;
         }
+        com.golemlogix.system.GolemNetwork net = com.golemlogix.system.GolemNetwork.scan(level, pos);
+        if (!net.hasPermission(player, com.golemlogix.security.SecurityPermission.BUILD)) {
+            player.displayClientMessage(Component.translatable("message.golem_logix.security_denied"), true);
+            return InteractionResult.CONSUME;
+        }
         if (level.getBlockEntity(pos) instanceof PatternProviderBlockEntity provider) {
             player.openMenu(new SimpleMenuProvider(
                     (id, inv, p) -> new PatternProviderMenu(id, inv, provider.getContainer(), provider.getReturns(), provider.getUpgrades(),

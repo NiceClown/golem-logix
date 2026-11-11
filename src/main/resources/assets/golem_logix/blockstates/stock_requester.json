@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": {"model": "golem_logix:block/stock_requester"},
+    "facing=east": {"model": "golem_logix:block/stock_requester", "y": 90},
+    "facing=south": {"model": "golem_logix:block/stock_requester", "y": 180},
+    "facing=west": {"model": "golem_logix:block/stock_requester", "y": 270}
+  }
+}

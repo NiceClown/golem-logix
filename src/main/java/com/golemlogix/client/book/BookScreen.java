@@ -64,6 +64,12 @@ public class BookScreen extends Screen {
     private static final int INK = 0xFF3B2A18;
     private static final int INK_GOLD = 0xFF8A5A0B;
     private static final int INK_DIM = 0xFF7A6446;
+    /** What the book's "&l" marks: a deep copper ink in place of Minecraft's bold, which smears dense (Cyrillic) letters together. */
+    private static final int INK_EMPHASIS = 0xFF8E2F12;
+    /** The CurseForge page the first-open message on this 1.21.1 build points to. */
+    private static final String FEEDBACK_URL = "https://www.curseforge.com/minecraft/mc-mods/golem-logix";
+    /** Kept in the reading progress file once the feedback message was shown (no entry has this id). */
+    private static final String FEEDBACK_SHOWN = "~backport_feedback";
 
     // ---------------------------------------------------------------- state
 
@@ -100,6 +106,7 @@ public class BookScreen extends Screen {
         this.zoom = new double[Math.max(1, book.categories.size())];
         java.util.Arrays.fill(this.zoom, 1.0);
         loadVisited();
+        greetOnce();
         for (int i = 0; i < book.categories.size(); i++) {
             centerMap(i);
         }
@@ -190,6 +197,21 @@ public class BookScreen extends Screen {
         }
     }
 
+    /** The first time the book is opened on this installation: one chat message asking for feedback on the 1.21.1 build. */
+    private void greetOnce() {
+        Minecraft mc = Minecraft.getInstance();
+        if (visited.contains(FEEDBACK_SHOWN) || mc.player == null) {
+            return;
+        }
+        Component link = Component.translatable("message.golem_logix.backport_feedback.link").withStyle(style -> style
+                .withColor(ChatFormatting.GOLD).withUnderlined(true)
+                .withClickEvent(new net.minecraft.network.chat.ClickEvent(net.minecraft.network.chat.ClickEvent.Action.OPEN_URL, FEEDBACK_URL))
+                .withHoverEvent(new net.minecraft.network.chat.HoverEvent(net.minecraft.network.chat.HoverEvent.Action.SHOW_TEXT,
+                        Component.literal(FEEDBACK_URL))));
+        mc.player.displayClientMessage(Component.translatable("message.golem_logix.backport_feedback", link), false);
+        markVisited(FEEDBACK_SHOWN);
+    }
+
     private BookModel.Category category() {
         BookModel.Category c = book.categories.get(Mth.clamp(categoryIndex, 0, book.categories.size() - 1));
         if (!c.visible() && !book.categories.isEmpty()) {
@@ -253,6 +275,7 @@ public class BookScreen extends Screen {
     /**
      * Text with "§" codes (the book uses "&") -> a component of pieces with their own styles. Wrapping such a component does not
      * lose or mix up the formatting (in a line with codes inside, bold text "leaked" past &r and the width was measured wrong).
+     * "&l" is drawn in the emphasis ink, not bold (see INK_EMPHASIS).
      */
     static net.minecraft.network.chat.MutableComponent styled(String s) {
         net.minecraft.network.chat.MutableComponent out = Component.empty();
@@ -266,7 +289,9 @@ public class BookScreen extends Screen {
                     seg.setLength(0);
                 }
                 ChatFormatting f = ChatFormatting.getByCode(Character.toLowerCase(s.charAt(++i)));
-                if (f != null) {
+                if (f == ChatFormatting.BOLD) {
+                    style = style.withColor(INK_EMPHASIS);
+                } else if (f != null) {
                     style = f == ChatFormatting.RESET ? net.minecraft.network.chat.Style.EMPTY : style.applyLegacyFormat(f);
                 }
                 continue;
@@ -291,7 +316,7 @@ public class BookScreen extends Screen {
             int color = INK;
             String lead = null;
             if (para.startsWith("# ")) {
-                para = "§l" + para.substring(2);
+                para = para.substring(2);
                 color = INK_GOLD;
                 y += 4;
             } else if (para.startsWith("• ") || para.startsWith("- ")) {
@@ -578,8 +603,8 @@ public class BookScreen extends Screen {
         BookModel.Category cat = category();
         int ax = 8, ay = 30, aw = W - 16, ah = H - 40;
         // header
-        g.drawString(font, "§l" + cat.title, 12, 10, GolemGui.BRASS_L, false);
-        g.drawString(font, cat.blurb, 12 + font.width("§l" + cat.title) + 8, 10, 0xFF9A8E78, false);
+        g.drawString(font, cat.title, 12, 10, GolemGui.BRASS_L, false);
+        g.drawString(font, cat.blurb, 12 + font.width(cat.title) + 8, 10, 0xFF9A8E78, false);
         // search field
         g.fill(W - 130, 6, W - 16, 22, 0xFF1A0F08);
         g.fill(W - 129, 7, W - 17, 21, 0xFF0B1620);
@@ -786,12 +811,11 @@ public class BookScreen extends Screen {
     }
 
     private int headingHeight(String title) {
-        return 7 + font.split(styled("\u00a7l" + title), PAGE_W - 12).size() * LINE_H + 4;
+        return 7 + font.split(styled(title), PAGE_W - 12).size() * LINE_H + 4;
     }
 
     private void heading(GuiGraphics g, String title, int x, int y) {
-        String t = "§l" + title;
-        List<FormattedCharSequence> lines = font.split(styled(t), PAGE_W - 12);
+        List<FormattedCharSequence> lines = font.split(styled(title), PAGE_W - 12);
         int yy = y + 7;
         for (FormattedCharSequence l : lines) {
             g.drawString(font, l, x + 6, yy, INK_GOLD, false);
@@ -1049,11 +1073,11 @@ public class BookScreen extends Screen {
         }
     }
 
-    /** Table cell text wrapped to the column width (the header in bold). */
+    /** Table cell text wrapped to the column width (the header in the emphasis ink). */
     private List<FormattedCharSequence> cellLines(String text, int width, boolean bold) {
         net.minecraft.network.chat.MutableComponent c = styled(text.replace('&', '§'));
         if (bold) {
-            c = Component.empty().withStyle(ChatFormatting.BOLD).append(c);
+            c = Component.empty().withStyle(s -> s.withColor(INK_EMPHASIS)).append(c);
         }
         return font.split(c, width);
     }
@@ -1125,7 +1149,7 @@ public class BookScreen extends Screen {
             int w = widths[Integer.parseInt(cell[2])] - 3;
             for (String word : cell[0].replace('&', '§').split("\\s+")) {
                 net.minecraft.network.chat.MutableComponent wc = styled(word);
-                int ww = cell[1].isEmpty() ? font.width(wc) : font.width(Component.empty().withStyle(ChatFormatting.BOLD).append(wc));
+                int ww = font.width(wc);
                 if (ww > w) {
                     out.add(id + " table word \"" + word + "\" (" + ww + " px) is wider than its column (" + w + " px)");
                 }

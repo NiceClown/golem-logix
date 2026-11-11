@@ -3,7 +3,7 @@
   "category": "misc",
   "key": {
     "A": { "item": "minecraft:amethyst_shard" },
-    "C": { "item": "minecraft:copper_block" },
+    "C": { "tag": "golem_logix:copper_block_or_chest" },
     "M": { "item": "golem_logix:flattened_copper_matrix" },
     "P": { "item": "golem_logix:dense_frost_pipe" },
     "R": { "item": "minecraft:lightning_rod" }

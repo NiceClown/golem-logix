@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "C": { "tag": "golem_logix:copper_block_or_chest" },
+    "B": { "item": "minecraft:book" },
+    "I": { "item": "minecraft:copper_ingot" },
+    "P": { "item": "golem_logix:copper_punch_card" },
+    "M": { "item": "golem_logix:flattened_copper_matrix" }
+  },
+  "pattern": [
+    "IBI",
+    "MPM",
+    "ICI"
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:stock_requester"
+  }
+}

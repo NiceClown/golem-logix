@@ -1,0 +1,130 @@
+// The guide book is written in Markdown (docs/guidebook/<lang>.md, one file per language) and turned into the JSON the game
+// reads (assets/golem_logix/book/<lang>.json) at build time. The format is described in docs/guidebook/README.md.
+
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+
+def guidebookSrc = file('docs/guidebook')
+def guidebookOut = layout.buildDirectory.dir('generated/guidebook')
+
+/** Markdown emphasis back to the book's codes: **bold** -> &l..&r, *italic* -> &o..&r. */
+def fromMd = { String m ->
+    m.replaceAll(/\*\*([^*]+)\*\*/, '&l$1&r').replaceAll(/\*([^*]+)\*/, '&o$1&r')
+}
+
+/** A table row "| a | b |" -> its cells ("\|" is a bar inside a cell). */
+def cells = { String line ->
+    String body = line.trim()
+    body = body.substring(1, body.endsWith('|') && !body.endsWith('\\|') ? body.length() - 1 : body.length())
+    body.split(/(?<!\\)\|/, -1).collect { fromMd(it.trim().replace('\\|', '|')) }
+}
+
+def parseBook = { File md ->
+    Map book = [categories: []]
+    Map category = null, entry = null, page = null
+    Map attrTarget = null
+    boolean inHeader = false
+    md.readLines('UTF-8').eachWithIndex { String raw, int n ->
+        String line = raw.trim()
+        def where = { "${md.name}:${n + 1}" }
+        if (line.startsWith('<!--') && !line.endsWith('-->')) {
+            inHeader = true
+            return
+        }
+        if (inHeader) {
+            inHeader = !line.endsWith('-->')
+            return
+        }
+        if (line.isEmpty()) {
+            return
+        }
+        if (line.startsWith('<!--')) {
+            String body = line.substring(4, line.length() - 3).trim()
+            if (!body.startsWith('{')) {
+                return
+            }
+            Map attrs = new JsonSlurper().parseText(body) as Map
+            if (attrTarget != null) {
+                attrTarget.putAll(attrs)
+                attrTarget = null
+            } else {
+                // a page without a title: its fields alone
+                if (entry == null) {
+                    throw new GradleException("${where()}: a page outside an entry")
+                }
+                page = [type: 'text'] + attrs
+                entry.pages << page
+            }
+            return
+        }
+        attrTarget = null
+        if (line.startsWith('##### ')) {
+            page.text = (page.text ?: []) + ['# ' + fromMd(line.substring(6))]
+        } else if (line.startsWith('#### ')) {
+            page = [type: 'text', title: line.substring(5)]
+            entry.pages << page
+            attrTarget = page
+        } else if (line.startsWith('### ')) {
+            entry = [title: line.substring(4), pages: []]
+            category.entries << entry
+            page = null
+            attrTarget = entry
+        } else if (line.startsWith('## ')) {
+            category = [title: line.substring(3), entries: []]
+            book.categories << category
+            entry = null
+            page = null
+            attrTarget = category
+        } else if (line.startsWith('# ')) {
+            book.title = line.substring(2)
+        } else if (line.startsWith('> ')) {
+            if (page != null) {
+                page.condition = fromMd(line.substring(2))
+            } else if (entry == null && category != null) {
+                category.blurb = fromMd(line.substring(2))
+            } else {
+                throw new GradleException("${where()}: a quote line belongs to a ritual page or right under a category")
+            }
+        } else if (line.startsWith('|')) {
+            if (line.replaceAll(/[|\-: ]/, '').isEmpty()) {
+                return
+            }
+            if (page.header == null) {
+                page.header = cells(line)
+                page.rows = []
+            } else {
+                page.rows << cells(line)
+            }
+        } else {
+            if (page == null) {
+                throw new GradleException("${where()}: text outside a page")
+            }
+            String para = line.startsWith('- ') ? '• ' + fromMd(line.substring(2)) : fromMd(line)
+            page.text = (page.text ?: []) + [para]
+        }
+    }
+    if (book.title == null) {
+        throw new GradleException("${md.name}: no book title (a '# ' line)")
+    }
+    // a page that only had a heading and fields keeps no empty text
+    book
+}
+
+tasks.register('generateGuidebook') {
+    group = 'build'
+    description = 'Turns the Markdown guide book (docs/guidebook) into the JSON the game reads.'
+    inputs.dir(guidebookSrc)
+    outputs.dir(guidebookOut)
+    doLast {
+        File dir = guidebookOut.get().dir('assets/golem_logix/book').asFile
+        project.delete(dir)
+        dir.mkdirs()
+        guidebookSrc.listFiles().findAll { it.name ==~ /[a-z]{2,3}_[a-z]{2,3}\.md/ }.each { File md ->
+            Map book = parseBook(md)
+            new File(dir, md.name.replace('.md', '.json')).setText(JsonOutput.prettyPrint(JsonOutput.toJson(book)), 'UTF-8')
+        }
+    }
+}
+
+sourceSets.main.resources.srcDir(guidebookOut)
+tasks.named('processResources') { dependsOn 'generateGuidebook' }

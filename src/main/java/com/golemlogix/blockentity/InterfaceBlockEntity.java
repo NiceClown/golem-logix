@@ -40,8 +40,6 @@ import java.util.Map;
  */
 public class InterfaceBlockEntity extends BlockEntity {
     public static final int SLOTS = 9;
-    private static final int[] AMOUNT_MULT = {1, 2, 4, 6, 8};
-    private static final double[] INTERVAL_MULT = {1.0, 0.75, 0.5, 0.25, 0.125};
     private static final int CRAFT_REQUEST_COOLDOWN = 40;
     private static final int SOUND_COOLDOWN = 12;
     /** Block event "the interface did some work" (parameter = number of speed upgrades): the client swings the metronomes and spins the turbines. */
@@ -191,7 +189,7 @@ public class InterfaceBlockEntity extends BlockEntity {
     }
 
     public int fluidPerOperation() {
-        return GolemConfig.BUS_FLUID_PER_OPERATION.get() * AMOUNT_MULT[upgrades.count(UpgradeType.SPEED)];
+        return com.golemlogix.upgrade.BusSpeed.fluid(upgrades.count(UpgradeType.SPEED));
     }
 
     /** Fluid stock: foreign and excess fluid goes to the network, the missing amount comes from it. Returns the mB moved. */
@@ -316,14 +314,16 @@ public class InterfaceBlockEntity extends BlockEntity {
         if (f.isEmpty()) {
             return 0;
         }
-        int amount = Math.min(f.getAmount(), GolemConfig.BUS_FLUID_PER_OPERATION.get() * AMOUNT_MULT[upgrades.count(UpgradeType.SPEED)]);
-        int stored = network.insertFluid(f.copyWithAmount(amount), false);
+        int stored = network.insertFluid(f.copy(), false);
         if (stored > 0) {
             tank.drain(stored, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
         }
         return stored;
     }
 
+    /** When the network took nothing (it is full or offline), how long before the intake tries again (ticks). */
+    private static final int INTAKE_RETRY = 5;
+    private long nextIntake = 0;
     private long lastSound = -1000;
     private long lastEvent = -1000;
     private long lastCraftRequest = -1000;
@@ -403,12 +403,11 @@ public class InterfaceBlockEntity extends BlockEntity {
     }
 
     public int interval() {
-        int n = upgrades.count(UpgradeType.SPEED);
-        return Math.max(1, (int) Math.round(GolemConfig.BUS_INTERVAL_TICKS.get() * INTERVAL_MULT[n]));
+        return com.golemlogix.upgrade.BusSpeed.interval(upgrades.count(UpgradeType.SPEED));
     }
 
     public int itemsPerOperation() {
-        return GolemConfig.BUS_ITEMS_PER_OPERATION.get() * AMOUNT_MULT[upgrades.count(UpgradeType.SPEED)];
+        return com.golemlogix.upgrade.BusSpeed.items(upgrades.count(UpgradeType.SPEED));
     }
 
     /** How many items to keep in slot i (at most a stack; none for a slot in "fluid" mode). */
@@ -431,18 +430,29 @@ public class InterfaceBlockEntity extends BlockEntity {
         if (hasRedstone) {
             be.redstone.observe(powered);
         }
-        if (Math.floorMod(level.getGameTime() + pos.asLong(), be.interval()) != 0) {
+        // what is put in goes to the network at once, whole; only keeping the stock goes by the interval and the portion
+        long time = level.getGameTime();
+        boolean intake = time >= be.nextIntake && be.hasIntake();
+        boolean stockDue = Math.floorMod(time + pos.asLong(), be.interval()) == 0;
+        if (!intake && !stockDue) {
             return;
         }
         GolemNetwork net = GolemNetwork.get(level, pos);
         if (!net.isOnline() || !net.isDeviceActive(pos) || !be.redstone.allows(hasRedstone, powered, false)) {
+            be.nextIntake = time + INTAKE_RETRY;
             return;
         }
-        int budget = be.itemsPerOperation();
-        int moved = be.flushInbox(net, budget);
-        moved += be.restock(level, net, Math.max(0, budget - moved));
-        moved += be.flushTank(net);
-        moved += be.restockFluids(net);
+        int moved = 0;
+        if (intake) {
+            moved = be.flushInbox(net, Integer.MAX_VALUE) + be.flushTank(net);
+            if (moved == 0) {
+                be.nextIntake = time + INTAKE_RETRY;
+            }
+        }
+        if (stockDue) {
+            moved += be.restock(level, net, be.itemsPerOperation());
+            moved += be.restockFluids(net);
+        }
         if (moved > 0) {
             be.redstone.allows(hasRedstone, powered, true);
             long now = level.getGameTime();
@@ -455,6 +465,10 @@ public class InterfaceBlockEntity extends BlockEntity {
                 level.playSound(null, pos, ModSounds.VACUUM_SUCTION.get(), SoundSource.BLOCKS, 0.18f, 1.2f);
             }
         }
+    }
+
+    private boolean hasIntake() {
+        return !inbox.isEmpty() || !tank.getFluid().isEmpty();
     }
 
     /** Input -> network: first what autocraft jobs are waiting for (even when storage is full), the rest goes to storage. */

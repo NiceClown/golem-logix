@@ -1,0 +1,144 @@
+package com.golemlogix.menu;
+
+import com.golemlogix.blockentity.StockManometerBlockEntity;
+import com.golemlogix.init.ModMenus;
+import com.golemlogix.items.UpgradeItem;
+import com.golemlogix.upgrade.UpgradeSpec;
+import com.golemlogix.upgrade.UpgradeType;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.world.Container;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.SimpleContainerData;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
+
+public class StockManometerMenu extends GolemMenu {
+    public static final int IMAGE_WIDTH = 176;
+    public static final int IMAGE_HEIGHT = 184;
+
+    private final Container filter;
+    private final ContainerData data;
+    private final BlockPos devicePos;
+
+    public static StockManometerMenu fromNetwork(int id, Inventory inv, RegistryFriendlyByteBuf buf) {
+        BlockPos pos = buf.readBlockPos();
+        return new StockManometerMenu(id, inv, new SimpleContainer(1),
+                new SimpleContainer(UpgradeSpec.MANOMETER.slots()), new SimpleContainerData(9), pos);
+    }
+
+    public StockManometerMenu(int id, Inventory inv, Container filter, Container upgrades, ContainerData data, BlockPos devicePos) {
+        super(ModMenus.STOCK_MANOMETER.get(), id);
+        this.filter = filter;
+        this.data = data;
+        this.devicePos = devicePos;
+
+        // Ghost filter slot
+        this.addSlot(new GhostSlot(filter, 0, 26, 26));
+        this.containerSlotCount = 1;
+
+        addUpgradeSlots(upgrades, UpgradeSpec.MANOMETER, IMAGE_WIDTH + 5, 8);
+        addPlayerSlots(inv, 8, IMAGE_HEIGHT - 82);
+        addDataSlots(data);
+    }
+
+    /** The mode side button: above the threshold -> below it -> proportional -> above. */
+    public static final int BUTTON_MODE = 40;
+    /** The bridge buttons, one per side in Direction order: auto -> always -> never -> auto. */
+    public static final int BUTTON_BRIDGE = 41;
+
+    @Override
+    public boolean clickMenuButton(Player player, int id) {
+        if (id == BUTTON_MODE) {
+            data.set(0, (getMode() + 1) % 3);
+            broadcastChanges();
+            return true;
+        }
+        if (id >= BUTTON_BRIDGE && id < BUTTON_BRIDGE + 6) {
+            data.set(StockManometerBlockEntity.SET_BRIDGE_NEXT, id - BUTTON_BRIDGE);
+            broadcastChanges();
+            return true;
+        }
+        return super.clickMenuButton(player, id);
+    }
+
+    public BlockPos getDevicePos() {
+        return devicePos;
+    }
+
+    public int getMode() {
+        return data.get(0);
+    }
+
+    public int getThreshold() {
+        return (data.get(1) & 0xFFFF) | (data.get(2) & 0xFFFF) << 16;
+    }
+
+    public int getHysteresis() {
+        return (data.get(3) & 0xFFFF) | (data.get(4) & 0xFFFF) << 16;
+    }
+
+    public int getSignal() {
+        return data.get(5);
+    }
+
+    public int getBridgeMode(net.minecraft.core.Direction side) {
+        return StockManometerBlockEntity.bridgeMode(data.get(8), side);
+    }
+
+    public long getStock() {
+        long low = data.get(6) & 0xFFFFL;
+        long high = data.get(7) & 0xFFFFL;
+        return (high << 16) | low;
+    }
+
+    /** Server side: the mode, where the signal switches on and where off again (0: at the same point). */
+    public void setConfig(int mode, int threshold, int hysteresis) {
+        data.set(0, mode);
+        data.set(com.golemlogix.blockentity.StockManometerBlockEntity.SET_THRESHOLD, threshold);
+        data.set(com.golemlogix.blockentity.StockManometerBlockEntity.SET_SECOND, hysteresis);
+        broadcastChanges();
+    }
+
+    public void setKeep(int slot, int amount) {
+        if (slot == 0) {
+            data.set(com.golemlogix.blockentity.StockManometerBlockEntity.SET_THRESHOLD, amount);
+            broadcastChanges();
+        }
+    }
+
+    @Override
+    public void clicked(int slotId, int button, ClickType clickType, Player player) {
+        if (handleGhostClick(slotId, button, clickType)) {
+            return;
+        }
+        super.clicked(slotId, button, clickType, player);
+    }
+
+    @Override
+    public ItemStack quickMoveStack(Player player, int index) {
+        ItemStack stack = this.slots.get(index).getItem();
+        boolean fromPlayer = index >= playerStart && index < playerEnd;
+        if (!fromPlayer || stack.getItem() instanceof UpgradeItem) {
+            return super.quickMoveStack(player, index);
+        }
+        if (!stack.isEmpty()) {
+            filter.setItem(0, stack.copyWithCount(1));
+        }
+        return ItemStack.EMPTY;
+    }
+
+    @Override
+    public boolean stillValid(Player player) {
+        return filter.stillValid(player);
+    }
+
+    @Override
+    public boolean fuzzyActive(int slotId) {
+        return slotId == 0 && itemGhost(0) && hasUpgrade(UpgradeType.FUZZY);
+    }
+}

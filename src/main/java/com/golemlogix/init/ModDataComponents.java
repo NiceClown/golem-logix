@@ -62,7 +62,36 @@ public class ModDataComponents {
             COMPONENTS.registerComponentType("telegraph_link", b -> b.persistent(com.golemlogix.items.TelegraphLinkCardItem.Link.CODEC)
                     .networkSynchronized(com.golemlogix.items.TelegraphLinkCardItem.Link.STREAM_CODEC));
 
+    /** On an Export Bus filter ghost: how much of it the container in front should hold (items, or mB for a fluid). */
+    public static final Supplier<DataComponentType<Integer>> KEEP_AMOUNT = COMPONENTS.registerComponentType(
+            "keep_amount", b -> b.persistent(Codec.intRange(1, Integer.MAX_VALUE)).networkSynchronized(ByteBufCodecs.VAR_INT));
+
+    /** The fluid in a Copper Tank (as an item; the block keeps it in its block entity). */
+    public static final Supplier<DataComponentType<net.neoforged.neoforge.fluids.SimpleFluidContent>> TANK_FLUID = COMPONENTS.registerComponentType(
+            "tank_fluid", b -> b.persistent(net.neoforged.neoforge.fluids.SimpleFluidContent.CODEC)
+                    .networkSynchronized(net.neoforged.neoforge.fluids.SimpleFluidContent.STREAM_CODEC));
+
+    /** How much a Copper Tank holds (mB) when tanks were joined in a crafting grid; without it, one tank's worth. */
+    public static final Supplier<DataComponentType<Integer>> TANK_CAPACITY = COMPONENTS.registerComponentType(
+            "tank_capacity", b -> b.persistent(Codec.intRange(1, Integer.MAX_VALUE)).networkSynchronized(ByteBufCodecs.VAR_INT));
+
+    /** A Copper Tank in bucket mode: a right-click scoops up or pours out a bucket's worth instead of placing the tank. */
+    public static final Supplier<DataComponentType<Boolean>> BUCKET_MODE = COMPONENTS.registerComponentType(
+            "bucket_mode", b -> b.persistent(Codec.BOOL).networkSynchronized(ByteBufCodecs.BOOL));
+
     /** The Chronometer was last powered by the Eternal Frost Resonator of its network (for the tooltip). */
     public static final Supplier<DataComponentType<Boolean>> RESONATOR_LINK = COMPONENTS.registerComponentType(
             "resonator_link", b -> b.persistent(Codec.BOOL).networkSynchronized(ByteBufCodecs.BOOL));
+
+    /** The bound player UUID of an Identity Punch Card. */
+    public static final Supplier<DataComponentType<UUID>> IDENTITY_OWNER_ID = COMPONENTS.registerComponentType(
+            "identity_owner_id", b -> b.persistent(UUIDUtil.CODEC).networkSynchronized(UUIDUtil.STREAM_CODEC));
+
+    /** The bound player name of an Identity Punch Card. */
+    public static final Supplier<DataComponentType<String>> IDENTITY_OWNER_NAME = COMPONENTS.registerComponentType(
+            "identity_owner_name", b -> b.persistent(Codec.STRING).networkSynchronized(ByteBufCodecs.STRING_UTF8));
+
+    /** Permissions bitmask of an Identity Punch Card (1: insert, 2: extract, 4: craft, 8: build). */
+    public static final Supplier<DataComponentType<Integer>> IDENTITY_PERMISSIONS = COMPONENTS.registerComponentType(
+            "identity_permissions", b -> b.persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT));
 }

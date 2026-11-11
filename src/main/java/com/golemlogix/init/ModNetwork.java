@@ -40,6 +40,10 @@ public class ModNetwork {
                 com.golemlogix.network.GhostSetPayload::handle);
         registrar.playToServer(com.golemlogix.network.InterfaceAmountPayload.TYPE, com.golemlogix.network.InterfaceAmountPayload.STREAM_CODEC,
                 com.golemlogix.network.InterfaceAmountPayload::handle);
+        registrar.playToServer(com.golemlogix.network.FilterSlotPayload.TYPE, com.golemlogix.network.FilterSlotPayload.STREAM_CODEC,
+                com.golemlogix.network.FilterSlotPayload::handle);
+        registrar.playToServer(com.golemlogix.network.FuzzyTagPayload.TYPE, com.golemlogix.network.FuzzyTagPayload.STREAM_CODEC,
+                com.golemlogix.network.FuzzyTagPayload::handle);
         registrar.playToServer(com.golemlogix.network.AnvilStrikePayload.TYPE, com.golemlogix.network.AnvilStrikePayload.STREAM_CODEC,
                 com.golemlogix.network.AnvilStrikePayload::handle);
         registrar.playToServer(com.golemlogix.network.OpenChronometerPayload.TYPE, com.golemlogix.network.OpenChronometerPayload.STREAM_CODEC,
@@ -48,5 +52,9 @@ public class ModNetwork {
                 com.golemlogix.network.FuzzyCyclePayload::handle);
         registrar.playToServer(com.golemlogix.network.MenuScrollPayload.TYPE, com.golemlogix.network.MenuScrollPayload.STREAM_CODEC,
                 com.golemlogix.network.MenuScrollPayload::handle);
+        registrar.playToServer(com.golemlogix.network.ManometerConfigPayload.TYPE, com.golemlogix.network.ManometerConfigPayload.STREAM_CODEC,
+                com.golemlogix.network.ManometerConfigPayload::handle);
+        registrar.playToServer(com.golemlogix.network.SecurityTogglePayload.TYPE, com.golemlogix.network.SecurityTogglePayload.STREAM_CODEC,
+                com.golemlogix.network.SecurityTogglePayload::handle);
     }
 }

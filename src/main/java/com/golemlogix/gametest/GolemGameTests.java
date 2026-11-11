@@ -65,26 +65,26 @@ import java.util.List;
 @GameTestHolder(GolemLogixMod.MOD_ID)
 @PrefixGameTestTemplate(false)
 public class GolemGameTests {
-    private static final String T = "empty";
+    static final String T = "empty";
 
-    private static final BlockPos ORIGIN = new BlockPos(5, 1, 5);
-    private static final BlockPos CORE = ORIGIN.offset(0, 3, 0);
-    private static final BlockPos JAR = ORIGIN.below();
-    private static final BlockPos BAY = new BlockPos(7, 1, 4);
-    private static final BlockPos CPU = new BlockPos(4, 1, 3);
-    private static final BlockPos PROV = new BlockPos(7, 1, 6);
-    private static final BlockPos TERM = new BlockPos(3, 1, 6);
-    private static final BlockPos BUS_IN = new BlockPos(3, 1, 4);
-    private static final BlockPos BUS_OUT = new BlockPos(6, 1, 3);
+    static final BlockPos ORIGIN = new BlockPos(5, 1, 5);
+    static final BlockPos CORE = ORIGIN.offset(0, 3, 0);
+    static final BlockPos JAR = ORIGIN.below();
+    static final BlockPos BAY = new BlockPos(7, 1, 4);
+    static final BlockPos CPU = new BlockPos(4, 1, 3);
+    static final BlockPos PROV = new BlockPos(7, 1, 6);
+    static final BlockPos TERM = new BlockPos(3, 1, 6);
+    static final BlockPos BUS_IN = new BlockPos(3, 1, 4);
+    static final BlockPos BUS_OUT = new BlockPos(6, 1, 3);
 
     // ------------------------------------------------------------ helpers
 
-    private static void put(GameTestHelper helper, BlockPos rel, Block block) {
+    static void put(GameTestHelper helper, BlockPos rel, Block block) {
         helper.setBlock(rel, block);
     }
 
     /** Builds the whole array; expanders/quantum = how many side cells to fill with expanders (up to 8). */
-    private static void buildArray(GameTestHelper helper, int expanders, int quantum) {
+    static void buildArray(GameTestHelper helper, int expanders, int quantum) {
         int slot = 0;
         for (int dy = 0; dy <= 3; dy++) {
             for (int dx = -1; dx <= 1; dx++) {
@@ -119,17 +119,17 @@ public class GolemGameTests {
         }
     }
 
-    private static void powered(GameTestHelper helper) {
+    static void powered(GameTestHelper helper) {
         put(helper, JAR, ModBlocks.CREATIVE_SOURCE_JAR.get());
     }
 
     /** A 2x2 cabinet: the main part at rel, facing south, the other parts to the right (east) and above. */
-    private static void putBay(GameTestHelper helper, BlockPos rel) {
+    static void putBay(GameTestHelper helper, BlockPos rel) {
         CopperDriveBayBlock.place(helper.getLevel(), helper.absolutePos(rel), Direction.SOUTH);
     }
 
     /** A full network: array + jar + cabinet with a 1k disk. */
-    private static BlockPos baseNetwork(GameTestHelper helper) {
+    static BlockPos baseNetwork(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         powered(helper);
         putBay(helper, BAY);
@@ -142,7 +142,7 @@ public class GolemGameTests {
      * A player for window and click checks: a NeoForge FakePlayer at the start of the test area. The GameTest "mock" player joins the player list, and mods
      * like Curios send it packets its connection does not accept; a FakePlayer silently swallows packets.
      */
-    private static ServerPlayer testPlayer(GameTestHelper helper) {
+    static ServerPlayer testPlayer(GameTestHelper helper) {
         var profile = new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "golem-logix-test");
         ServerPlayer player = net.neoforged.neoforge.common.util.FakePlayerFactory.get(helper.getLevel(), profile);
         BlockPos origin = helper.absolutePos(BlockPos.ZERO);
@@ -150,7 +150,7 @@ public class GolemGameTests {
         return player;
     }
 
-    private static GolemNetwork net(GameTestHelper helper, BlockPos rel) {
+    static GolemNetwork net(GameTestHelper helper, BlockPos rel) {
         return GolemNetwork.scan(helper.getLevel(), helper.absolutePos(rel));
     }
 
@@ -214,7 +214,7 @@ public class GolemGameTests {
     }
 
     /** The core alone on a Cable Bushing (no conduits, so no starter tower): 8 channels, all through the bushing under it. */
-    private static void loneCoreOnBushing(GameTestHelper helper) {
+    static void loneCoreOnBushing(GameTestHelper helper) {
         put(helper, ORIGIN.above(), ModBlocks.ATLAS_CORE.get());
         put(helper, ORIGIN, ModBlocks.CABLE_BUSHING.get());
     }
@@ -472,7 +472,7 @@ public class GolemGameTests {
      * a column of terminals above it and a full-height column on each side, so no terminal is more than a few devices from the pipe.
      * Returns the number of terminals.
      */
-    private static int comb(GameTestHelper helper, int x0, int z0, int dx, int dz, int len) {
+    static int comb(GameTestHelper helper, int x0, int z0, int dx, int dz, int len) {
         int count = 0;
         for (int i = 0; i < len; i++) {
             BlockPos p = new BlockPos(x0 + dx * i, 1, z0 + dz * i);
@@ -995,6 +995,18 @@ public class GolemGameTests {
         helper.assertTrue(menu.getCarried().isEmpty() && player.getInventory().isEmpty(), "nothing can be pulled out of a ghost slot");
         helper.assertTrue(be.getConfig().getItem(0).is(Items.IRON_INGOT) && be.amount(0) == 64, "stray clicks leave the slot alone");
         menu.setAmount(0, 6);
+        // the slot window's tag list: only a tag of the item itself, with a Fuzzy Card; the amount stays
+        var iron = com.golemlogix.system.Fuzzy.tagsOf(be.getConfig().getItem(0)).getFirst();
+        menu.setFuzzyTag(0, iron.location().toString());
+        helper.assertTrue(com.golemlogix.system.Fuzzy.tag(be.getConfig().getItem(0)) == null, "no tag without a Fuzzy Card");
+        be.getUpgrades().setItem(0, new ItemStack(ModItems.FUZZY_CARD.get()));
+        menu.setFuzzyTag(0, "minecraft:logs");
+        helper.assertTrue(com.golemlogix.system.Fuzzy.tag(be.getConfig().getItem(0)) == null, "a tag the item lacks is refused");
+        menu.setFuzzyTag(0, iron.location().toString());
+        helper.assertTrue(iron.equals(com.golemlogix.system.Fuzzy.tag(be.getConfig().getItem(0))) && be.amount(0) == 6, "the tag is picked, the amount kept");
+        menu.setFuzzyTag(0, "");
+        helper.assertTrue(com.golemlogix.system.Fuzzy.tag(be.getConfig().getItem(0)) == null, "\"any components\" clears the tag");
+        be.getUpgrades().setItem(0, ItemStack.EMPTY);
         // fluid from JEI: a bucket ghost, a bucket (1000 mB) by default, then in mB
         menu.setGhost(player, 1, new ItemStack(Items.WATER_BUCKET));
         helper.assertTrue(menu.isFluidSlot(1) && be.amount(1) == 1000, "fluid ghost keeps 1000 mB, got " + be.amount(1));
@@ -1075,7 +1087,7 @@ public class GolemGameTests {
     }
 
     /** A north-facing Cryo-Mainframe with the owner at ctl: glass, casings at the back and atlants on the sides. */
-    private static void buildMainframe(GameTestHelper helper, BlockPos ctl) {
+    static void buildMainframe(GameTestHelper helper, BlockPos ctl) {
         helper.setBlock(ctl, ModBlocks.CRYO_MAINFRAME.get().defaultBlockState()
                 .setValue(com.golemlogix.blocks.CryoMainframeBlock.FACING, Direction.NORTH));
         BlockPos abs = helper.absolutePos(ctl);
@@ -1178,13 +1190,13 @@ public class GolemGameTests {
         });
     }
 
-    private static Block statue(String prefix) {
+    static Block statue(String prefix) {
         return net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(
                 net.minecraft.resources.ResourceLocation.withDefaultNamespace(prefix + "copper_golem_statue"));
     }
 
     /** A north-facing Punch Card Catalog with the owner at ctl: shelves, copper at the back, pedestals and statues (the right one oxidized). */
-    private static void buildCatalog(GameTestHelper helper, BlockPos ctl) {
+    static void buildCatalog(GameTestHelper helper, BlockPos ctl) {
         helper.setBlock(ctl, ModBlocks.CARD_CATALOG.get().defaultBlockState()
                 .setValue(com.golemlogix.blocks.CardCatalogBlock.FACING, Direction.NORTH));
         BlockPos abs = helper.absolutePos(ctl);
@@ -1351,11 +1363,11 @@ public class GolemGameTests {
         });
     }
 
-    private static ItemStack card(PatternData data) {
+    static ItemStack card(PatternData data) {
         return com.golemlogix.items.CopperPunchCardItem.written(ModItems.COPPER_PUNCH_CARD.get(), data);
     }
 
-    private static PatternData craftingPattern(ItemStack output, ItemStack... slots) {
+    static PatternData craftingPattern(ItemStack output, ItemStack... slots) {
         List<ItemStack> grid = new ArrayList<>();
         for (int i = 0; i < 9; i++) {
             grid.add(i < slots.length ? slots[i] : ItemStack.EMPTY);
@@ -1784,13 +1796,13 @@ public class GolemGameTests {
         java.util.UUID itemId = itemDisk.get(ModDataComponents.DISK_ID.get());
         java.util.UUID fluidId = fluidDisk.get(ModDataComponents.DISK_ID.get());
         helper.assertTrue(itemId != null && fluidId != null && !itemId.equals(fluidId), "disks get unique ids");
-        helper.assertTrue(itemDisk.get(ModDataComponents.STORED.get()) == 501, "STORED mirrors the content");
+        helper.assertTrue(itemDisk.get(ModDataComponents.STORED.get()) == 4500, "STORED mirrors the content");
 
         DiskStore store = DiskStore.get(level.getServer());
         CompoundTag tag = store.save(new CompoundTag(), level.registryAccess());
         DiskStore loaded = DiskStore.load(tag, level.registryAccess());
         DiskStore.Disk a = loaded.getOrNull(itemId);
-        helper.assertTrue(a != null && a.storedItems == 501, "items survive the save");
+        helper.assertTrue(a != null && a.storedItems == 4500, "items survive the save");
         helper.assertTrue(a.items.get(ItemKey.of(new ItemStack(Items.COBBLESTONE))) == 500, "cobblestone count");
         helper.assertTrue(a.items.get(ItemKey.of(sword)) == 1, "damaged sword is a separate type");
         DiskStore.Disk f = loaded.getOrNull(fluidId);
@@ -1798,7 +1810,7 @@ public class GolemGameTests {
 
         ItemStack moved = itemDisk.copy();
         helper.assertTrue(DiskStorage.extractItem(moved, new ItemStack(Items.COBBLESTONE), 100, false) == 100, "extract via the copy");
-        helper.assertTrue(DiskStorage.storedItems(itemDisk) == 401, "copy and original share the same storage");
+        helper.assertTrue(DiskStorage.storedItems(itemDisk) == 4400, "copy and original share the same storage");
         helper.assertTrue(DiskStorage.extractItem(moved, new ItemStack(Items.COBBLESTONE), 1000, false) == 400, "rest of cobble");
         helper.assertTrue(DiskStorage.extractItem(moved, sword, 5, false) == 1, "sword back");
         helper.assertTrue(DiskStorage.storedItems(itemDisk) == 0 && moved.get(ModDataComponents.STORED.get()) == null,
@@ -1845,7 +1857,7 @@ public class GolemGameTests {
         });
     }
 
-    private static void checkRunner(GameTestHelper helper, List<BlockPos> pipes, int ticks) {
+    static void checkRunner(GameTestHelper helper, List<BlockPos> pipes, int ticks) {
         var level = helper.getLevel();
         net.minecraft.world.phys.Vec3 last = null;
         com.golemlogix.client.PipeRunners.Spot lastSpot = null;
@@ -2234,7 +2246,7 @@ public class GolemGameTests {
 
     // ------------------------------------------------------------- book
 
-    private static void checkItem(GameTestHelper helper, String spec, String where) {
+    static void checkItem(GameTestHelper helper, String spec, String where) {
         String id = spec.contains("*") ? spec.substring(0, spec.indexOf('*')) : spec;
         if (id.startsWith("fluid:")) {
             ResourceLocation fl = ResourceLocation.tryParse(id.substring(6));
@@ -2350,7 +2362,7 @@ public class GolemGameTests {
 
     // ------------------------------------------------- cabinet, bushing, saturator, terminal
 
-    private static BlockPos[] bayCells() {
+    static BlockPos[] bayCells() {
         return new BlockPos[]{BAY, BAY.east(), BAY.above(), BAY.east().above()};
     }
 
@@ -2559,7 +2571,7 @@ public class GolemGameTests {
     // ------------------------------------------------------------ Mana Saturator (3x3x2 multiblock)
 
     /** Places all machine blocks around the owner (controllerRel), front towards facing; the owner with the right FACING. */
-    private static void buildSaturator(GameTestHelper helper, BlockPos controllerRel, Direction facing) {
+    static void buildSaturator(GameTestHelper helper, BlockPos controllerRel, Direction facing) {
         var level = helper.getLevel();
         BlockPos at = helper.absolutePos(controllerRel);
         for (int i = 0; i < com.golemlogix.system.SaturatorStructure.CELLS; i++) {
@@ -2571,7 +2583,7 @@ public class GolemGameTests {
         }
     }
 
-    private static BlockPos satCell(GameTestHelper helper, BlockPos controllerRel, Direction facing, int index) {
+    static BlockPos satCell(GameTestHelper helper, BlockPos controllerRel, Direction facing, int index) {
         return com.golemlogix.system.SaturatorStructure.cellPos(helper.absolutePos(controllerRel), facing, index);
     }
 
@@ -2953,7 +2965,7 @@ public class GolemGameTests {
 
     /** A golem without AI with the given health and an anvil four blocks above it: it falls to the ground through the golem. */
     @SuppressWarnings("unchecked")
-    private static net.minecraft.world.entity.Mob ritual(GameTestHelper helper, net.minecraft.world.entity.EntityType<?> type, BlockPos at, float health) {
+    static net.minecraft.world.entity.Mob ritual(GameTestHelper helper, net.minecraft.world.entity.EntityType<?> type, BlockPos at, float health) {
         var golem = helper.spawnWithNoFreeWill((net.minecraft.world.entity.EntityType<net.minecraft.world.entity.Mob>) type, at);
         if (health > 0) {
             golem.setHealth(health);
@@ -2962,7 +2974,7 @@ public class GolemGameTests {
         return golem;
     }
 
-    private static void assertCrushed(GameTestHelper helper, net.minecraft.world.entity.Mob golem, BlockPos at, net.minecraft.world.item.Item plate) {
+    static void assertCrushed(GameTestHelper helper, net.minecraft.world.entity.Mob golem, BlockPos at, net.minecraft.world.item.Item plate) {
         helper.succeedWhen(() -> {
             helper.assertItemEntityPresent(plate, at, 2.0);
             helper.assertTrue(golem.isRemoved(), "the golem is flattened (removed)");
@@ -3117,7 +3129,7 @@ public class GolemGameTests {
 
     // ------------------------------------------------- Liquid Cryo-Source, fluid patterns, golem minds
 
-    private static FluidStack cryo(int mb) {
+    static FluidStack cryo(int mb) {
         return com.golemlogix.system.CryoSource.stack(mb);
     }
 
@@ -3289,7 +3301,7 @@ public class GolemGameTests {
         helper.succeed();
     }
 
-    private static void periscope(GameTestHelper helper, BlockPos at, Direction facing) {
+    static void periscope(GameTestHelper helper, BlockPos at, Direction facing) {
         helper.setBlock(at, ModBlocks.PERISCOPE_STORAGE_BUS.get().defaultBlockState()
                 .setValue(com.golemlogix.blocks.PeriscopeStorageBusBlock.FACING, facing));
     }
@@ -3343,13 +3355,19 @@ public class GolemGameTests {
             GolemNetwork n2 = net(helper, ORIGIN);
             helper.assertTrue(n2.insertItem(new ItemStack(Items.DIRT, 10), false).isEmpty(), "dirt fits");
             helper.assertTrue(count(a, Items.DIRT) == 10 && count(b, Items.DIRT) == 0, "after raising A above B, A gets the dirt");
-            // extract from the lowest-priority storage first
+            // Put stone into chest A as well so both hold the item (A has priority 10, B has priority 5)
+            a.setItem(1, new ItemStack(Items.STONE, 10));
+            // extract from the lowest-priority storage first (B at priority 5 is drained before A at priority 10)
             helper.assertTrue(n2.extractItem(new ItemStack(Items.STONE), 4, false).getCount() == 4 && count(b, Items.STONE) == 6, "extraction works");
+            helper.assertTrue(count(a, Items.STONE) == 10, "higher priority chest A was not touched while lowest-priority B had stock");
+            helper.assertTrue(n2.extractItem(new ItemStack(Items.STONE), 8, false).getCount() == 8
+                    && count(b, Items.STONE) == 0 && count(a, Items.STONE) == 8,
+                    "lowest-priority B is completely drained before A is drawn from");
             helper.succeed();
         });
     }
 
-    private static int count(net.minecraft.world.Container c, net.minecraft.world.item.Item item) {
+    static int count(net.minecraft.world.Container c, net.minecraft.world.item.Item item) {
         int n = 0;
         for (int i = 0; i < c.getContainerSize(); i++) {
             if (c.getItem(i).is(item)) {
@@ -3379,9 +3397,9 @@ public class GolemGameTests {
     }
     // ------------------------------------------------- autocrafting: chains and edge cases
 
-    private static final BlockPos MACHINE_OUT = new BlockPos(2, 1, 4);
+    static final BlockPos MACHINE_OUT = new BlockPos(2, 1, 4);
 
-    private static void autocraftRig(GameTestHelper helper) {
+    static void autocraftRig(GameTestHelper helper) {
         helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
         helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
         helper.setBlock(PROV.east(), Blocks.CHEST);              // "machine input"
@@ -3568,7 +3586,7 @@ public class GolemGameTests {
 
     // ------------------------------------------------- upgrades, redstone, waiting, precraft
 
-    private static int count(Container c) {
+    static int count(Container c) {
         int n = 0;
         for (int i = 0; i < c.getContainerSize(); i++) {
             n += c.getItem(i).getCount();
@@ -3616,42 +3634,71 @@ public class GolemGameTests {
         });
     }
 
-    /** Six upgrade slots: up to four speed upgrades, an Autocraft Module only on export, one module of each kind; speed upgrades are saved. */
+    /**
+     * A bus's upgrade slots, each for one kind: one for all its speed upgrades as a stack (four make 20 items a tick, 28 make 128), then
+     * an Autocraft Module only on export, one module of each other kind. A save from when speed upgrades had four slots still loads.
+     */
     @GameTest(template = T, timeoutTicks = 100)
     public static void busUpgradeSlots(GameTestHelper helper) {
         BlockPos at = new BlockPos(2, 1, 2);
         helper.setBlock(at, ModBlocks.VACUUM_IMPORT_BUS.get().defaultBlockState());
         BusBlockEntity in = (BusBlockEntity) helper.getBlockEntity(at);
         var up = in.getUpgrades();
-        helper.assertTrue(up.getContainerSize() == 6 && up.getMaxStackSize() == 1, "six single-item upgrade slots");
-        int baseInterval = in.interval();
-        int baseAmount = in.itemsPerOperation();
+        helper.assertTrue(up.getContainerSize() == 3, "three upgrade slots");
+        double base = (double) in.itemsPerOperation() / in.interval();
+        helper.assertTrue(base == 2.0, "2 items a tick with no upgrades, got " + base);
         ItemStack speed = new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get());
-        for (int i = 0; i < 4; i++) {
-            helper.assertTrue(up.canPlaceItem(i, speed), "speed upgrade " + (i + 1) + " fits");
-            up.setItem(i, speed.copy());
+        helper.assertTrue(up.canPlaceItem(0, speed), "speed upgrades go into the first slot");
+        helper.assertTrue(!up.canPlaceItem(1, speed), "and only there");
+        up.setItem(0, speed.copyWithCount(4));
+        helper.assertTrue(up.getItem(0).getCount() == 4, "the slot holds them as a stack");
+        double rate = (double) in.itemsPerOperation() / in.interval();
+        helper.assertTrue(rate == 20.0, "four upgrades make 20 items a tick, got " + rate);
+        helper.assertTrue(in.interval() == 5, "a sped-up bus works every 5 ticks, got " + in.interval());
+        double fluidRate = (double) in.fluidPerOperation() / in.interval();
+        helper.assertTrue(fluidRate == 2500.0, "and 2500 mB a tick, got " + fluidRate);
+        helper.assertTrue(!up.canPlaceItem(1, new ItemStack(ModItems.AUTOCRAFT_MODULE.get())), "the import bus takes no autocraft module");
+        helper.assertTrue(!up.canPlaceItem(1, new ItemStack(Items.DIAMOND)), "not an upgrade");
+        helper.assertTrue(up.canPlaceItem(1, new ItemStack(ModItems.REDSTONE_MODULE.get())), "a redstone module fits");
+        up.setItem(1, new ItemStack(ModItems.REDSTONE_MODULE.get()));
+        helper.assertTrue(!up.canPlaceItem(2, new ItemStack(ModItems.REDSTONE_MODULE.get())), "only one redstone module");
+        up.setItem(0, speed.copyWithCount(com.golemlogix.upgrade.UpgradeSpec.BUS_MAX_SPEED));
+        rate = (double) in.itemsPerOperation() / in.interval();
+        helper.assertTrue(rate == 128.0, "a full slot makes 128 items a tick, got " + rate);
+        up.setItem(0, speed.copyWithCount(4));
+
+        // a bus saved with four speed slots, then the redstone module after them
+        var oldRegistries = helper.getLevel().registryAccess();
+        var oldSave = new net.minecraft.nbt.ListTag();
+        ItemStack[] oldItems = {speed, speed, speed, speed, new ItemStack(ModItems.REDSTONE_MODULE.get())};
+        for (int i = 0; i < oldItems.length; i++) {
+            CompoundTag entry = new CompoundTag();
+            entry.putByte("Slot", (byte) i);
+            oldSave.add(oldItems[i].copy().save(oldRegistries, entry));
         }
-        helper.assertTrue(!up.canPlaceItem(4, speed), "a fifth speed upgrade is rejected");
-        helper.assertTrue(!up.canPlaceItem(4, new ItemStack(ModItems.AUTOCRAFT_MODULE.get())), "the import bus takes no autocraft module");
-        helper.assertTrue(!up.canPlaceItem(4, new ItemStack(Items.DIAMOND)), "not an upgrade");
-        helper.assertTrue(up.canPlaceItem(4, new ItemStack(ModItems.REDSTONE_MODULE.get())), "a redstone module fits");
-        up.setItem(4, new ItemStack(ModItems.REDSTONE_MODULE.get()));
-        helper.assertTrue(!up.canPlaceItem(5, new ItemStack(ModItems.REDSTONE_MODULE.get())), "only one redstone module");
-        helper.assertTrue(in.itemsPerOperation() == baseAmount * 8, "four upgrades move 8x as much, got " + in.itemsPerOperation());
-        helper.assertTrue(in.interval() < baseInterval && in.interval() >= 1, "four upgrades work more often: " + in.interval() + " < " + baseInterval);
+        BlockPos atOld = new BlockPos(8, 1, 2);
+        helper.setBlock(atOld, ModBlocks.VACUUM_IMPORT_BUS.get().defaultBlockState());
+        var oldUp = ((BusBlockEntity) helper.getBlockEntity(atOld)).getUpgrades();
+        oldUp.fromTag(oldSave, oldRegistries);
+        helper.assertTrue(oldUp.getItem(0).getCount() == 4 && oldUp.count(com.golemlogix.upgrade.UpgradeType.SPEED) == 4,
+                "four speed slots come together, got " + oldUp.getItem(0));
+        helper.assertTrue(oldUp.getItem(1).is(ModItems.REDSTONE_MODULE.get()), "the redstone module moves to its slot, got " + oldUp.getItem(1));
 
         BlockPos at2 = new BlockPos(4, 1, 2);
         helper.setBlock(at2, ModBlocks.INJECTOR_EXPORT_BUS.get().defaultBlockState());
         var up2 = ((BusBlockEntity) helper.getBlockEntity(at2)).getUpgrades();
-        helper.assertTrue(up2.canPlaceItem(0, new ItemStack(ModItems.AUTOCRAFT_MODULE.get())), "the export bus takes the autocraft module");
-        up2.setItem(0, new ItemStack(ModItems.AUTOCRAFT_MODULE.get()));
-        helper.assertTrue(!up2.canPlaceItem(1, new ItemStack(ModItems.AUTOCRAFT_MODULE.get())), "only one autocraft module");
+        helper.assertTrue(up2.getContainerSize() == 4, "four slots on the export bus");
+        helper.assertTrue(!up2.canPlaceItem(0, new ItemStack(ModItems.AUTOCRAFT_MODULE.get())), "a speed slot takes no autocraft module");
+        helper.assertTrue(up2.canPlaceItem(1, new ItemStack(ModItems.AUTOCRAFT_MODULE.get())), "the export bus takes the autocraft module");
+        up2.setItem(1, new ItemStack(ModItems.AUTOCRAFT_MODULE.get()));
+        helper.assertTrue(!up2.canPlaceItem(2, new ItemStack(ModItems.AUTOCRAFT_MODULE.get())), "only one autocraft module");
 
         BlockPos at3 = new BlockPos(6, 1, 2);
         helper.setBlock(at3, ModBlocks.PERISCOPE_STORAGE_BUS.get().defaultBlockState());
         var up3 = ((com.golemlogix.blockentity.PeriscopeBlockEntity) helper.getBlockEntity(at3)).getUpgrades();
-        helper.assertTrue(up3.getContainerSize() == 1 && !up3.canPlaceItem(0, speed)
-                && up3.canPlaceItem(0, new ItemStack(ModItems.REDSTONE_MODULE.get())), "the periscope takes only the redstone module");
+        helper.assertTrue(up3.getContainerSize() == 2 && !up3.canPlaceItem(0, speed)
+                && up3.canPlaceItem(0, new ItemStack(ModItems.REDSTONE_MODULE.get()))
+                && up3.canPlaceItem(1, new ItemStack(ModItems.FUZZY_CARD.get())), "the periscope takes the redstone module and a fuzzy card");
 
         var registries = helper.getLevel().registryAccess();
         CompoundTag saved = in.saveWithFullMetadata(registries);
@@ -3659,6 +3706,28 @@ public class GolemGameTests {
         fresh.loadWithComponents(saved, registries);
         helper.assertTrue(fresh.getUpgrades().count(com.golemlogix.upgrade.UpgradeType.SPEED) == 4
                 && fresh.getUpgrades().has(com.golemlogix.upgrade.UpgradeType.REDSTONE), "upgrades are saved with the bus");
+        // an old save with the modules anywhere: on loading every upgrade goes into a slot of its own kind
+        up.clearContent();
+        up.setItem(0, new ItemStack(ModItems.REDSTONE_MODULE.get()));
+        up.setItem(2, speed.copy());
+        CompoundTag old = in.saveWithFullMetadata(registries);
+        BusBlockEntity sorted = new BusBlockEntity(helper.absolutePos(at), helper.getBlockState(at));
+        sorted.loadWithComponents(old, registries);
+        var su = sorted.getUpgrades();
+        helper.assertTrue(su.getItem(0).is(ModItems.COMPRESSED_COPROCESSOR.get()) && su.getItem(1).is(ModItems.REDSTONE_MODULE.get())
+                && su.getItem(2).isEmpty(), "old upgrades are sorted into their slots: " + su.getItem(0) + ", " + su.getItem(1) + ", " + su.getItem(2));
+
+        // the window: a shift-click puts as many as fit into the one slot, and takes them all out again
+        up.clearContent();
+        ServerPlayer player = testPlayer(helper);
+        var menu = new com.golemlogix.menu.BusMenu(56, player.getInventory(), in.getFilters(), in.getUpgrades(),
+                com.golemlogix.menu.BusMenu.KIND_IMPORT, in.menuData());
+        player.getInventory().setItem(0, speed.copyWithCount(30));
+        menu.clicked(menu.slots.size() - 9, 0, net.minecraft.world.inventory.ClickType.QUICK_MOVE, player);
+        helper.assertTrue(up.getItem(0).getCount() == com.golemlogix.upgrade.UpgradeSpec.BUS_MAX_SPEED && player.getInventory().getItem(0).getCount() == 2,
+                "28 go in and 2 stay, slot " + up.getItem(0) + ", hand " + player.getInventory().getItem(0));
+        menu.clicked(menu.upgradeStart(), 0, net.minecraft.world.inventory.ClickType.QUICK_MOVE, player);
+        helper.assertTrue(up.getItem(0).isEmpty(), "and all come out, slot " + up.getItem(0));
         helper.succeed();
     }
 
@@ -3810,7 +3879,7 @@ public class GolemGameTests {
 
     // ------------------------------------------------- saturator: cooling and redstone
 
-    private static BlockHitResult hitTop(BlockPos abs) {
+    static BlockHitResult hitTop(BlockPos abs) {
         return new BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(abs).add(0, 0.5, 0), Direction.UP, abs, false);
     }
 
@@ -4012,18 +4081,24 @@ public class GolemGameTests {
         var top = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.BLOCK,
                 helper.absolutePos(base.above(2)), Direction.UP);
         helper.assertTrue(top != null, "the head takes fluids too");
-        // Compressed Co-Processors speed it up: up to four, nothing else goes into those slots
+        // Compressed Co-Processors speed it up, all in one slot, up to 28; nothing else goes in. From the fifth on, every four
+        // make the tank a little larger; four are what they always were
         var up = tower.getUpgrades();
         int baseRate = tower.rate();
+        int bonus = com.golemlogix.config.GolemConfig.DISTILL_COPROCESSOR_BONUS.get();
         ItemStack copro = new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get());
-        helper.assertTrue(up.getContainerSize() == 4 && !up.canPlaceItem(0, new ItemStack(ModItems.FUZZY_CARD.get())),
-                "four slots, co-processors only");
-        for (int i = 0; i < 4; i++) {
-            helper.assertTrue(up.canPlaceItem(i, copro), "co-processor " + (i + 1) + " fits");
-            up.setItem(i, copro.copy());
+        helper.assertTrue(up.getContainerSize() == 1 && !up.canPlaceItem(0, new ItemStack(ModItems.FUZZY_CARD.get())),
+                "one slot, co-processors only");
+        helper.assertTrue(up.canPlaceItem(0, copro), "a co-processor fits");
+        int tank = com.golemlogix.blockentity.DistillationTowerBlockEntity.TANK;
+        int perFour = com.golemlogix.blockentity.DistillationTowerBlockEntity.TANK_PER_FOUR;
+        for (int[] c : new int[][]{{1, 0}, {4, 0}, {5, 1}, {8, 1}, {9, 2}, {12, 2}, {13, 3}, {25, 6}, {28, 6}}) {
+            up.setItem(0, new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get(), c[0]));
+            helper.assertTrue(tower.rate() == baseRate + c[0] * bonus, c[0] + " co-processors distil " + tower.rate() + " mB a second");
+            helper.assertTrue(tower.capacity() == tank + c[1] * perFour, c[0] + " co-processors: a tank of " + tower.capacity());
         }
-        helper.assertTrue(tower.rate() == baseRate + 4 * com.golemlogix.config.GolemConfig.DISTILL_COPROCESSOR_BONUS.get(),
-                "four co-processors: " + baseRate + " -> " + tower.rate() + " mB a second");
+        up.setItem(0, new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get(), 4));
+        helper.assertTrue(tower.rate() == baseRate + 4 * bonus && tower.capacity() == tank, "four co-processors, as before");
         helper.assertTrue(top.fill(new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000), exec) == 0,
                 "water is no blood");
         net.minecraft.world.level.material.Fluid blood = net.minecraft.core.registries.BuiltInRegistries.FLUID

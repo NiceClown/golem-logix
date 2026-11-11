@@ -13,21 +13,49 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Planner: unfolds the punch card recipe tree for the wanted item
- * and lays it out as a linear list of steps (depth-first, a step is added after its dependencies,
- * topological order).
+ * Planner: lays the recipes the wanted items need out as a list of steps, each with how many times to run it.
+ * <p>
+ * The recipes form a graph where many paths lead to the same ingredient, so walking every path takes exponentially long as recipes
+ * get deeper. Instead every item is settled once: the graph is sorted so that an item comes after all that consume it, then in that
+ * order each item adds up what its consumers asked for and passes the demand on to its own ingredients. The time depends on the
+ * number of recipes involved, not on how deep they nest or how much is ordered, so a plan of a billion executions is as quick as one
+ * of ten. It runs on the server thread: nothing here may grow with the amount.
  */
 public final class CraftingPlanner {
-    public static final long MAX_EXECUTIONS = 200_000L;
-    private static final int MAX_DEPTH = 64;
+    /** Not a limit a job could ever meet: it keeps the arithmetic from overflowing. */
+    public static final long MAX_EXECUTIONS = 1L << 50;
+    /** Recipes nested deeper than this count as not craftable (it keeps the sort off the end of the stack). */
+    private static final int MAX_DEPTH = 1024;
+
+    /** An item in the graph: what is asked of it, and how it is made. */
+    private static final class Node {
+        final ItemKey key;
+        /** Null for an item nothing makes. */
+        PatternData pattern;
+        List<PatternData.Need> needs = List.of();
+        /** Per need, what to craft if it has to be crafted. */
+        List<Node> sources = List.of();
+        /** Ordered outright: made whatever the stock holds. */
+        long ordered;
+        /** Asked for by consumers: leftovers and stock come first. */
+        long demand;
+        long crafts;
+        boolean settled;
+
+        Node(ItemKey key) {
+            this.key = key;
+        }
+    }
 
     private final GolemNetwork net;
     private final Map<ItemKey, Long> stock = new HashMap<>();
     private final Map<ItemKey, Long> surplus = new HashMap<>();
     private final Map<ItemKey, Long> fromStorage = new LinkedHashMap<>();
     private final Map<ItemKey, Long> missing = new LinkedHashMap<>();
-    private final LinkedHashMap<PatternData, Long> steps = new LinkedHashMap<>();
-    private final Set<ItemKey> visiting = new HashSet<>();
+    private final Map<ItemKey, Node> nodes = new HashMap<>();
+    /** Every item after all that consume it, except along a cycle. */
+    private final List<Node> postOrder = new ArrayList<>();
+    private final Set<ItemKey> onPath = new HashSet<>();
     private long executions = 0;
 
     private CraftingPlanner(GolemNetwork net) {
@@ -54,106 +82,152 @@ public final class CraftingPlanner {
     /** A plan for several items at once (precrafting what is missing): shared stock and shared leftovers for all of them. */
     public static CraftingPlan plan(GolemNetwork net, Map<ItemKey, Long> targets) {
         CraftingPlanner p = new CraftingPlanner(net);
+        List<Map.Entry<ItemKey, Long>> wanted = new ArrayList<>();
         for (Map.Entry<ItemKey, Long> t : targets.entrySet()) {
             if (t.getValue() > 0) {
-                p.resolve(t.getKey(), t.getValue(), 0, false);
+                wanted.add(t);
+            }
+        }
+        // the last visited comes first when settling: backwards, so the first order is settled first
+        for (int i = wanted.size() - 1; i >= 0; i--) {
+            p.visit(wanted.get(i).getKey(), 0).ordered += wanted.get(i).getValue();
+        }
+        for (int i = p.postOrder.size() - 1; i >= 0; i--) {
+            p.settle(p.postOrder.get(i));
+        }
+        // steps in dependency order: what the following ones need comes first
+        LinkedHashMap<PatternData, Long> steps = new LinkedHashMap<>();
+        for (Node n : p.postOrder) {
+            if (n.crafts > 0) {
+                steps.merge(n.pattern, n.crafts, Long::sum);
             }
         }
         List<CraftingPlan.Step> list = new ArrayList<>();
-        for (Map.Entry<PatternData, Long> e : p.steps.entrySet()) {
+        for (Map.Entry<PatternData, Long> e : steps.entrySet()) {
             list.add(new CraftingPlan.Step(e.getKey(), e.getValue()));
         }
         return new CraftingPlan(new LinkedHashMap<>(targets), p.fromStorage, list, p.missing);
     }
 
-    /** useStock = false for the requested item: crafting always makes the ordered amount instead of taking it from stock. */
-    private void resolve(ItemKey key, long need, int depth, boolean useStock) {
-        if (need <= 0) {
-            return;
+    /** Depth-first over the recipes: an item is added to the post order after everything it is made from. */
+    private Node visit(ItemKey key, int depth) {
+        Node known = nodes.get(key);
+        if (known != null) {
+            return known;
         }
-
-        long fromSurplus = useStock ? Math.min(surplus.getOrDefault(key, 0L), need) : 0;
-        if (fromSurplus > 0) {
-            surplus.merge(key, -fromSurplus, Long::sum);
-            need -= fromSurplus;
-        }
-        long fromStock = useStock ? Math.min(stock.getOrDefault(key, 0L), need) : 0;
-        if (fromStock > 0) {
-            stock.merge(key, -fromStock, Long::sum);
-            fromStorage.merge(key, fromStock, Long::sum);
-            need -= fromStock;
-        }
-        if (need <= 0) {
-            return;
-        }
-
+        Node n = new Node(key);
+        nodes.put(key, n);
         GolemNetwork.PatternRef ref = net.patternIndex().get(key);
-        if (ref == null || visiting.contains(key) || depth > MAX_DEPTH) {
-            missing.merge(key, need, Long::sum);
-            return;
+        if (ref != null && depth <= MAX_DEPTH) {
+            onPath.add(key);
+            n.pattern = ref.data();
+            n.needs = ref.data().needs(net.level());
+            Node[] sources = new Node[n.needs.size()];
+            // backwards: of two ingredients the first is settled first, and may leave by-products for the second
+            for (int i = sources.length - 1; i >= 0; i--) {
+                sources[i] = visit(craftedFor(n.needs.get(i)), depth + 1);
+            }
+            n.sources = List.of(sources);
+            onPath.remove(key);
         }
+        postOrder.add(n);
+        return n;
+    }
 
-        PatternData pattern = ref.data();
-        int per = Math.max(1, pattern.outputCount(key));
-        long crafts = (need + per - 1) / per;
-        executions += crafts;
-        if (executions > MAX_EXECUTIONS) {
-            missing.merge(key, need, Long::sum);
+    /** What gets crafted for an input: the encoded item or, when a fuzzy input has no pattern for it, another one that will do. */
+    private ItemKey craftedFor(PatternData.Need in) {
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> alt = in.alternatives();
+        if (alt != null && net.patternIndex().get(in.key()) == null) {
+            for (ItemKey k : net.patternIndex().keySet()) {
+                if (!k.equals(in.key()) && !com.golemlogix.system.Ingredients.isFluid(k) && alt.test(k.stack()) && !onPath.contains(k)) {
+                    return k;
+                }
+            }
+        }
+        return in.key();
+    }
+
+    /** All of an item's consumers have spoken: leftovers and stock first, the rest is crafted, and its ingredients are asked for. */
+    private void settle(Node n) {
+        n.settled = true;
+        long need = n.demand;
+        need -= take(surplus, n.key, need, false);
+        need -= take(stock, n.key, need, true);
+        need += n.ordered;
+        if (need <= 0) {
             return;
         }
+        if (n.pattern == null) {
+            missing.merge(n.key, need, Long::sum);
+            return;
+        }
+        int per = Math.max(1, n.pattern.outputCount(n.key));
+        long crafts = (need + per - 1) / per;
+        if (crafts > MAX_EXECUTIONS - executions) {
+            missing.merge(n.key, need, Long::sum);
+            return;
+        }
+        executions += crafts;
+        n.crafts = crafts;
 
         // by-products and leftovers are available to the following consumers
-        for (Map.Entry<ItemKey, Integer> out : pattern.outputTotals().entrySet()) {
+        for (Map.Entry<ItemKey, Integer> out : n.pattern.outputTotals().entrySet()) {
             long produced = crafts * out.getValue();
-            if (out.getKey().equals(key)) {
+            if (out.getKey().equals(n.key)) {
                 produced -= need;
             }
             if (produced > 0) {
                 surplus.merge(out.getKey(), produced, Long::sum);
             }
         }
-
-        visiting.add(key);
-        for (PatternData.Need in : pattern.needs(net.level())) {
-            resolveInput(in, (long) in.amount() * crafts, depth + 1);
+        for (int i = 0; i < n.needs.size(); i++) {
+            PatternData.Need in = n.needs.get(i);
+            long wanted;
+            try {
+                wanted = Math.multiplyExact((long) in.amount(), crafts);
+            } catch (ArithmeticException tooMuch) {
+                missing.merge(n.sources.get(i).key, Long.MAX_VALUE, (a, b) -> Long.MAX_VALUE);
+                continue;
+            }
+            ask(in, n.sources.get(i), wanted);
         }
-        visiting.remove(key);
-
-        steps.merge(pattern, crafts, Long::sum);
     }
 
     /**
      * An input of a step. An exact one is the encoded item; a fuzzy one takes the encoded item from leftovers and stock first, then
      * the other items that may stand for it, and crafts the encoded item (or, without a pattern for it, another one that will do).
      */
-    private void resolveInput(PatternData.Need in, long need, int depth) {
-        java.util.function.Predicate<net.minecraft.world.item.ItemStack> alt = in.alternatives();
-        if (alt == null) {
-            resolve(in.key(), need, depth, true);
-            return;
-        }
+    private void ask(PatternData.Need in, Node source, long need) {
         long rest = need;
-        rest -= take(surplus, in.key(), rest, false);
-        rest -= take(stock, in.key(), rest, true);
-        for (ItemKey k : alternatives(surplus, alt, in.key())) {
-            rest -= take(surplus, k, rest, false);
-        }
-        for (ItemKey k : alternatives(stock, alt, in.key())) {
-            rest -= take(stock, k, rest, true);
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> alt = in.alternatives();
+        if (alt != null) {
+            rest -= take(surplus, in.key(), rest, false);
+            rest -= take(stock, in.key(), rest, true);
+            for (ItemKey k : alternatives(surplus, alt, in.key())) {
+                rest -= take(surplus, k, rest, false);
+            }
+            for (ItemKey k : alternatives(stock, alt, in.key())) {
+                rest -= take(stock, k, rest, true);
+            }
         }
         if (rest <= 0) {
             return;
         }
-        ItemKey craft = in.key();
-        if (net.patternIndex().get(craft) == null) {
-            for (ItemKey k : net.patternIndex().keySet()) {
-                if (!k.equals(in.key()) && !com.golemlogix.system.Ingredients.isFluid(k) && alt.test(k.stack()) && !visiting.contains(k)) {
-                    craft = k;
-                    break;
-                }
-            }
+        if (!source.settled) {
+            source.demand = saturatedAdd(source.demand, rest);
+            return;
         }
-        resolve(craft, rest, depth, true);
+        // around a cycle: this item was settled before this consumer spoke, so only what is on hand can serve it
+        rest -= take(surplus, source.key, rest, false);
+        rest -= take(stock, source.key, rest, true);
+        if (rest > 0) {
+            missing.merge(source.key, rest, CraftingPlanner::saturatedAdd);
+        }
+    }
+
+    private static long saturatedAdd(long a, long b) {
+        long sum = a + b;
+        return sum < 0 ? Long.MAX_VALUE : sum;
     }
 
     /** Takes up to want of key from leftovers or stock (stock also counts as taken from storage). Returns how many. */

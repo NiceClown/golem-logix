@@ -1,0 +1,3006 @@
+{
+  "values": [
+    "minecraft:redstone_wire",
+    "minecraft:repeater",
+    "minecraft:comparator",
+    "minecraft:redstone_lamp",
+    "minecraft:piston",
+    "minecraft:sticky_piston",
+    "minecraft:dispenser",
+    "minecraft:dropper",
+    "minecraft:note_block",
+    "minecraft:tnt",
+    "minecraft:hopper",
+    "minecraft:powered_rail",
+    "minecraft:activator_rail",
+    "minecraft:bell",
+    "minecraft:crafter",
+    "#minecraft:doors",
+    "#minecraft:trapdoors",
+    "#minecraft:fence_gates",
+    "minecraft:copper_bulb",
+    "minecraft:exposed_copper_bulb",
+    "minecraft:weathered_copper_bulb",
+    "minecraft:oxidized_copper_bulb",
+    "minecraft:waxed_copper_bulb",
+    "minecraft:waxed_exposed_copper_bulb",
+    "minecraft:waxed_weathered_copper_bulb",
+    "minecraft:waxed_oxidized_copper_bulb",
+    {
+      "id": "advanced_ae:adv_pattern_provider",
+      "required": false
+    },
+    {
+      "id": "advanced_ae:quantum_crafter",
+      "required": false
+    },
+    {
+      "id": "advanced_ae:small_adv_pattern_provider",
+      "required": false
+    },
+    {
+      "id": "ae2:io_port",
+      "required": false
+    },
+    {
+      "id": "ae2:pattern_provider",
+      "required": false
+    },
+    {
+      "id": "ae2:spatial_io_port",
+      "required": false
+    },
+    {
+      "id": "ae2:tiny_tnt",
+      "required": false
+    },
+    {
+      "id": "aether_ii:sentry_spawner",
+      "required": false
+    },
+    {
+      "id": "anima:bone_cage",
+      "required": false
+    },
+    {
+      "id": "anima:totem_of_breeding",
+      "required": false
+    },
+    {
+      "id": "anima:totem_of_forestry",
+      "required": false
+    },
+    {
+      "id": "anima:totem_of_gathering",
+      "required": false
+    },
+    {
+      "id": "anima:totem_of_harvesting",
+      "required": false
+    },
+    {
+      "id": "anima:totem_of_shepherding",
+      "required": false
+    },
+    {
+      "id": "animusnv:sanguine_dynamo",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_black_blockz_0",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_black_blockz_1",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_blue_blockz_0",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_blue_blockz_1",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_brown_blockz_0",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_brown_blockz_1",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_cyan_blockz_0",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_cyan_blockz_1",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_gray_blockz_0",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_gray_blockz_1",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_green_blockz_0",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_green_blockz_1",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_light_blue_blockz_0",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_light_blue_blockz_1",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_light_gray_blockz_0",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_light_gray_blockz_1",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_lime_blockz_0",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_lime_blockz_1",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_magenta_blockz_0",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_magenta_blockz_1",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_orange_blockz_0",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_orange_blockz_1",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_pink_blockz_0",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_pink_blockz_1",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_purple_blockz_0",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_purple_blockz_1",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_red_blockz_0",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_red_blockz_1",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_white_blockz_0",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_white_blockz_1",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_yellow_blockz_0",
+      "required": false
+    },
+    {
+      "id": "betterblockz:cyber_light_yellow_blockz_1",
+      "required": false
+    },
+    {
+      "id": "cabletiers:black_creative_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:black_elite_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:black_mega_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:black_ultra_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:blue_creative_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:blue_elite_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:blue_mega_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:blue_ultra_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:brown_creative_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:brown_elite_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:brown_mega_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:brown_ultra_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:creative_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:cyan_creative_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:cyan_elite_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:cyan_mega_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:cyan_ultra_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:elite_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:gray_creative_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:gray_elite_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:gray_mega_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:gray_ultra_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:green_creative_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:green_elite_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:green_mega_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:green_ultra_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:light_gray_creative_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:light_gray_elite_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:light_gray_mega_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:light_gray_ultra_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:lime_creative_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:lime_elite_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:lime_mega_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:lime_ultra_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:magenta_creative_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:magenta_elite_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:magenta_mega_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:magenta_ultra_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:mega_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:orange_creative_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:orange_elite_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:orange_mega_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:orange_ultra_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:pink_creative_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:pink_elite_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:pink_mega_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:pink_ultra_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:purple_creative_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:purple_elite_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:purple_mega_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:purple_ultra_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:red_creative_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:red_elite_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:red_mega_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:red_ultra_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:ultra_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:white_creative_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:white_elite_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:white_mega_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:white_ultra_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:yellow_creative_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:yellow_elite_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:yellow_mega_autocrafter",
+      "required": false
+    },
+    {
+      "id": "cabletiers:yellow_ultra_autocrafter",
+      "required": false
+    },
+    {
+      "id": "classicpipes:advanced_copper_fluid_pipe",
+      "required": false
+    },
+    {
+      "id": "classicpipes:advanced_copper_pipe",
+      "required": false
+    },
+    {
+      "id": "classicpipes:copper_fluid_pipe",
+      "required": false
+    },
+    {
+      "id": "classicpipes:copper_pipe",
+      "required": false
+    },
+    {
+      "id": "classicpipes:inverted_advanced_copper_fluid_pipe",
+      "required": false
+    },
+    {
+      "id": "classicpipes:inverted_advanced_copper_pipe",
+      "required": false
+    },
+    {
+      "id": "classicpipes:inverted_copper_fluid_pipe",
+      "required": false
+    },
+    {
+      "id": "classicpipes:inverted_copper_pipe",
+      "required": false
+    },
+    {
+      "id": "classicpipes:iron_fluid_pipe",
+      "required": false
+    },
+    {
+      "id": "classicpipes:iron_pipe",
+      "required": false
+    },
+    {
+      "id": "colossal_reactors:heating_coil_energy_off",
+      "required": false
+    },
+    {
+      "id": "colossal_reactors:heating_coil_energy_on",
+      "required": false
+    },
+    {
+      "id": "colossal_reactors:heating_coil_resource_off",
+      "required": false
+    },
+    {
+      "id": "colossal_reactors:heating_coil_resource_on",
+      "required": false
+    },
+    {
+      "id": "colossal_reactors:melter",
+      "required": false
+    },
+    {
+      "id": "colossal_reactors:redstone_port",
+      "required": false
+    },
+    {
+      "id": "colossal_reactors:turbine_redstone_port",
+      "required": false
+    },
+    {
+      "id": "decorz:cyber_light_black_panel",
+      "required": false
+    },
+    {
+      "id": "decorz:cyber_light_blue_panel",
+      "required": false
+    },
+    {
+      "id": "decorz:cyber_light_brown_panel",
+      "required": false
+    },
+    {
+      "id": "decorz:cyber_light_cyan_panel",
+      "required": false
+    },
+    {
+      "id": "decorz:cyber_light_gray_panel",
+      "required": false
+    },
+    {
+      "id": "decorz:cyber_light_green_panel",
+      "required": false
+    },
+    {
+      "id": "decorz:cyber_light_light_blue_panel",
+      "required": false
+    },
+    {
+      "id": "decorz:cyber_light_light_gray_panel",
+      "required": false
+    },
+    {
+      "id": "decorz:cyber_light_lime_panel",
+      "required": false
+    },
+    {
+      "id": "decorz:cyber_light_magenta_panel",
+      "required": false
+    },
+    {
+      "id": "decorz:cyber_light_orange_panel",
+      "required": false
+    },
+    {
+      "id": "decorz:cyber_light_pink_panel",
+      "required": false
+    },
+    {
+      "id": "decorz:cyber_light_purple_panel",
+      "required": false
+    },
+    {
+      "id": "decorz:cyber_light_red_panel",
+      "required": false
+    },
+    {
+      "id": "decorz:cyber_light_white_panel",
+      "required": false
+    },
+    {
+      "id": "decorz:cyber_light_yellow_panel",
+      "required": false
+    },
+    {
+      "id": "enderio:conduit",
+      "required": false
+    },
+    {
+      "id": "energizedpower:configurable_ehv_transformer",
+      "required": false
+    },
+    {
+      "id": "energizedpower:configurable_hv_transformer",
+      "required": false
+    },
+    {
+      "id": "energizedpower:configurable_lv_transformer",
+      "required": false
+    },
+    {
+      "id": "energizedpower:configurable_mv_transformer",
+      "required": false
+    },
+    {
+      "id": "energizedpower:configurable_uhv_transformer",
+      "required": false
+    },
+    {
+      "id": "energizedpower:ehv_transformer_1_to_n",
+      "required": false
+    },
+    {
+      "id": "energizedpower:ehv_transformer_3_to_3",
+      "required": false
+    },
+    {
+      "id": "energizedpower:ehv_transformer_n_to_1",
+      "required": false
+    },
+    {
+      "id": "energizedpower:express_item_conveyor_belt_loader",
+      "required": false
+    },
+    {
+      "id": "energizedpower:express_item_conveyor_belt_switch",
+      "required": false
+    },
+    {
+      "id": "energizedpower:fast_item_conveyor_belt_loader",
+      "required": false
+    },
+    {
+      "id": "energizedpower:fast_item_conveyor_belt_switch",
+      "required": false
+    },
+    {
+      "id": "energizedpower:hv_transformer_1_to_n",
+      "required": false
+    },
+    {
+      "id": "energizedpower:hv_transformer_3_to_3",
+      "required": false
+    },
+    {
+      "id": "energizedpower:hv_transformer_n_to_1",
+      "required": false
+    },
+    {
+      "id": "energizedpower:item_conveyor_belt_loader",
+      "required": false
+    },
+    {
+      "id": "energizedpower:item_conveyor_belt_switch",
+      "required": false
+    },
+    {
+      "id": "energizedpower:lv_transformer_1_to_n",
+      "required": false
+    },
+    {
+      "id": "energizedpower:lv_transformer_3_to_3",
+      "required": false
+    },
+    {
+      "id": "energizedpower:lv_transformer_n_to_1",
+      "required": false
+    },
+    {
+      "id": "energizedpower:teleporter",
+      "required": false
+    },
+    {
+      "id": "energizedpower:time_controller",
+      "required": false
+    },
+    {
+      "id": "energizedpower:transformer_1_to_n",
+      "required": false
+    },
+    {
+      "id": "energizedpower:transformer_3_to_3",
+      "required": false
+    },
+    {
+      "id": "energizedpower:transformer_n_to_1",
+      "required": false
+    },
+    {
+      "id": "energizedpower:turbo_item_conveyor_belt_loader",
+      "required": false
+    },
+    {
+      "id": "energizedpower:turbo_item_conveyor_belt_switch",
+      "required": false
+    },
+    {
+      "id": "energizedpower:uhv_transformer_1_to_n",
+      "required": false
+    },
+    {
+      "id": "energizedpower:uhv_transformer_3_to_3",
+      "required": false
+    },
+    {
+      "id": "energizedpower:uhv_transformer_n_to_1",
+      "required": false
+    },
+    {
+      "id": "energizedpower:weather_controller",
+      "required": false
+    },
+    {
+      "id": "evilcraft:lightning_bomb",
+      "required": false
+    },
+    {
+      "id": "extendedae:vacuum_interface",
+      "required": false
+    },
+    {
+      "id": "extrastorage:diamond_crafter",
+      "required": false
+    },
+    {
+      "id": "extrastorage:gold_crafter",
+      "required": false
+    },
+    {
+      "id": "extrastorage:iron_crafter",
+      "required": false
+    },
+    {
+      "id": "extrastorage:netherite_crafter",
+      "required": false
+    },
+    {
+      "id": "flopper:flopper",
+      "required": false
+    },
+    {
+      "id": "forcecraft:force_engine",
+      "required": false
+    },
+    {
+      "id": "forcecraft:force_infuser",
+      "required": false
+    },
+    {
+      "id": "framedblocks:framed_fence_gate",
+      "required": false
+    },
+    {
+      "id": "framedblocks:framed_gate",
+      "required": false
+    },
+    {
+      "id": "framedblocks:framed_iron_gate",
+      "required": false
+    },
+    {
+      "id": "framedblocks:framed_powered_rail_slope",
+      "required": false
+    },
+    {
+      "id": "ftbic:batch_feeder",
+      "required": false
+    },
+    {
+      "id": "ftbic:nuclear_reactor",
+      "required": false
+    },
+    {
+      "id": "ftbquests:detector",
+      "required": false
+    },
+    {
+      "id": "hephaestus:seared_faucet",
+      "required": false
+    },
+    {
+      "id": "horsepowered:generator",
+      "required": false
+    },
+    {
+      "id": "hostilenetworks:data_center",
+      "required": false
+    },
+    {
+      "id": "hostilenetworks:loot_fabricator",
+      "required": false
+    },
+    {
+      "id": "hostilenetworks:sim_chamber",
+      "required": false
+    },
+    {
+      "id": "integrateddynamics:energy_battery",
+      "required": false
+    },
+    {
+      "id": "integrateddynamics:energy_battery_creative",
+      "required": false
+    },
+    {
+      "id": "integrateddynamics:mechanical_drying_basin",
+      "required": false
+    },
+    {
+      "id": "integrateddynamics:mechanical_squeezer",
+      "required": false
+    },
+    {
+      "id": "integrateddynamics:squeezer",
+      "required": false
+    },
+    {
+      "id": "justdirethings:blockbreakert1",
+      "required": false
+    },
+    {
+      "id": "justdirethings:blockbreakert2",
+      "required": false
+    },
+    {
+      "id": "justdirethings:blockplacert1",
+      "required": false
+    },
+    {
+      "id": "justdirethings:blockplacert2",
+      "required": false
+    },
+    {
+      "id": "justdirethings:blockswappert1",
+      "required": false
+    },
+    {
+      "id": "justdirethings:blockswappert2",
+      "required": false
+    },
+    {
+      "id": "justdirethings:clickert1",
+      "required": false
+    },
+    {
+      "id": "justdirethings:clickert2",
+      "required": false
+    },
+    {
+      "id": "justdirethings:droppert1",
+      "required": false
+    },
+    {
+      "id": "justdirethings:droppert2",
+      "required": false
+    },
+    {
+      "id": "justdirethings:energytransmitter",
+      "required": false
+    },
+    {
+      "id": "justdirethings:experienceholder",
+      "required": false
+    },
+    {
+      "id": "justdirethings:fluidcollectort1",
+      "required": false
+    },
+    {
+      "id": "justdirethings:fluidcollectort2",
+      "required": false
+    },
+    {
+      "id": "justdirethings:fluidplacert1",
+      "required": false
+    },
+    {
+      "id": "justdirethings:fluidplacert2",
+      "required": false
+    },
+    {
+      "id": "justdirethings:generatorfluidt1",
+      "required": false
+    },
+    {
+      "id": "justdirethings:generatort1",
+      "required": false
+    },
+    {
+      "id": "justdirethings:inventory_holder",
+      "required": false
+    },
+    {
+      "id": "justdirethings:itemcollector",
+      "required": false
+    },
+    {
+      "id": "justdirethings:paradoxmachine",
+      "required": false
+    },
+    {
+      "id": "justdirethings:playeraccessor",
+      "required": false
+    },
+    {
+      "id": "laserbridges:laser_fence_source_block",
+      "required": false
+    },
+    {
+      "id": "laserbridges:laser_fence_source_fullblock",
+      "required": false
+    },
+    {
+      "id": "laserbridges:laser_source_block",
+      "required": false
+    },
+    {
+      "id": "laserbridges:laser_source_fullblock",
+      "required": false
+    },
+    {
+      "id": "mahoutsukai:fog_projector",
+      "required": false
+    },
+    {
+      "id": "mahoutsukai:mahoujin_alarm_barrier",
+      "required": false
+    },
+    {
+      "id": "mahoutsukai:mahoujin_displacement_barrier",
+      "required": false
+    },
+    {
+      "id": "mahoutsukai:mahoujin_drain_life_barrier",
+      "required": false
+    },
+    {
+      "id": "mahoutsukai:mahoujin_gravity_barrier",
+      "required": false
+    },
+    {
+      "id": "mahoutsukai:mahoujin_projector",
+      "required": false
+    },
+    {
+      "id": "mahoutsukai:mahoujin_tangible_barrier",
+      "required": false
+    },
+    {
+      "id": "mahoutsukai:mana_circuit",
+      "required": false
+    },
+    {
+      "id": "mahoutsukai:mana_circuit_magitech",
+      "required": false
+    },
+    {
+      "id": "malisisdoorsreborn:black_curtain",
+      "required": false
+    },
+    {
+      "id": "malisisdoorsreborn:blue_curtain",
+      "required": false
+    },
+    {
+      "id": "malisisdoorsreborn:brown_curtain",
+      "required": false
+    },
+    {
+      "id": "malisisdoorsreborn:cyan_curtain",
+      "required": false
+    },
+    {
+      "id": "malisisdoorsreborn:gray_curtain",
+      "required": false
+    },
+    {
+      "id": "malisisdoorsreborn:green_curtain",
+      "required": false
+    },
+    {
+      "id": "malisisdoorsreborn:light_blue_curtain",
+      "required": false
+    },
+    {
+      "id": "malisisdoorsreborn:light_gray_curtain",
+      "required": false
+    },
+    {
+      "id": "malisisdoorsreborn:lime_curtain",
+      "required": false
+    },
+    {
+      "id": "malisisdoorsreborn:magenta_curtain",
+      "required": false
+    },
+    {
+      "id": "malisisdoorsreborn:orange_curtain",
+      "required": false
+    },
+    {
+      "id": "malisisdoorsreborn:pink_curtain",
+      "required": false
+    },
+    {
+      "id": "malisisdoorsreborn:purple_curtain",
+      "required": false
+    },
+    {
+      "id": "malisisdoorsreborn:red_curtain",
+      "required": false
+    },
+    {
+      "id": "malisisdoorsreborn:rusty_hatch",
+      "required": false
+    },
+    {
+      "id": "malisisdoorsreborn:white_curtain",
+      "required": false
+    },
+    {
+      "id": "malisisdoorsreborn:yellow_curtain",
+      "required": false
+    },
+    {
+      "id": "malisisswitchesreborn:alarm_siren",
+      "required": false
+    },
+    {
+      "id": "malisisswitchesreborn:analog_angular_gauge",
+      "required": false
+    },
+    {
+      "id": "malisisswitchesreborn:analog_bar",
+      "required": false
+    },
+    {
+      "id": "malisisswitchesreborn:industrial_blinking_led_green",
+      "required": false
+    },
+    {
+      "id": "malisisswitchesreborn:industrial_blinking_led_orange",
+      "required": false
+    },
+    {
+      "id": "malisisswitchesreborn:industrial_blinking_led_red",
+      "required": false
+    },
+    {
+      "id": "malisisswitchesreborn:industrial_blinking_led_white",
+      "required": false
+    },
+    {
+      "id": "malisisswitchesreborn:industrial_blinking_led_yellow",
+      "required": false
+    },
+    {
+      "id": "malisisswitchesreborn:industrial_led_green",
+      "required": false
+    },
+    {
+      "id": "malisisswitchesreborn:industrial_led_orange",
+      "required": false
+    },
+    {
+      "id": "malisisswitchesreborn:industrial_led_red",
+      "required": false
+    },
+    {
+      "id": "malisisswitchesreborn:industrial_led_white",
+      "required": false
+    },
+    {
+      "id": "malisisswitchesreborn:industrial_led_yellow",
+      "required": false
+    },
+    {
+      "id": "malisisswitchesreborn:small_analog_voltmeter",
+      "required": false
+    },
+    {
+      "id": "malisisswitchesreborn:small_digital_gauge",
+      "required": false
+    },
+    {
+      "id": "mcwdoors:cherry_waffle_door",
+      "required": false
+    },
+    {
+      "id": "mcwlights:acacia_ceiling_fan_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:birch_ceiling_fan_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:black_ceiling_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:blue_ceiling_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:brown_ceiling_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:cherry_ceiling_fan_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:covered_garden_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:crimson_ceiling_fan_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:cyan_ceiling_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:dark_oak_ceiling_fan_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:garden_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:gray_ceiling_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:green_ceiling_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:jungle_ceiling_fan_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:light_blue_ceiling_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:light_blue_lamp",
+      "required": false
+    },
+    {
+      "id": "mcwlights:light_blue_paper_lamp",
+      "required": false
+    },
+    {
+      "id": "mcwlights:light_gray_ceiling_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:light_gray_lamp",
+      "required": false
+    },
+    {
+      "id": "mcwlights:light_gray_paper_lamp",
+      "required": false
+    },
+    {
+      "id": "mcwlights:lime_ceiling_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:magenta_ceiling_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:mangrove_ceiling_fan_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:oak_ceiling_fan_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:orange_ceiling_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:pale_oak_ceiling_fan_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:pink_ceiling_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:purple_ceiling_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:red_ceiling_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:round_garden_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:spruce_ceiling_fan_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:striped_garden_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:thin_garden_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:warped_ceiling_fan_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:white_ceiling_light",
+      "required": false
+    },
+    {
+      "id": "mcwlights:yellow_ceiling_light",
+      "required": false
+    },
+    {
+      "id": "mffs:biometric_identifier",
+      "required": false
+    },
+    {
+      "id": "mffs:coercion_deriver",
+      "required": false
+    },
+    {
+      "id": "mffs:fortron_capacitor",
+      "required": false
+    },
+    {
+      "id": "mffs:interdiction_matrix",
+      "required": false
+    },
+    {
+      "id": "mffs:projector",
+      "required": false
+    },
+    {
+      "id": "mobflowutilities:damage_pad",
+      "required": false
+    },
+    {
+      "id": "mobflowutilities:dark_dirt",
+      "required": false
+    },
+    {
+      "id": "mobflowutilities:fan",
+      "required": false
+    },
+    {
+      "id": "mobflowutilities:genesis_chamber",
+      "required": false
+    },
+    {
+      "id": "mobflowutilities:glimmer_lamp",
+      "required": false
+    },
+    {
+      "id": "morered:acacia_clutch",
+      "required": false
+    },
+    {
+      "id": "morered:birch_clutch",
+      "required": false
+    },
+    {
+      "id": "morered:cherry_clutch",
+      "required": false
+    },
+    {
+      "id": "morered:crimson_clutch",
+      "required": false
+    },
+    {
+      "id": "morered:dark_oak_clutch",
+      "required": false
+    },
+    {
+      "id": "morered:jungle_clutch",
+      "required": false
+    },
+    {
+      "id": "morered:mangrove_clutch",
+      "required": false
+    },
+    {
+      "id": "morered:oak_clutch",
+      "required": false
+    },
+    {
+      "id": "morered:osmosis_filter",
+      "required": false
+    },
+    {
+      "id": "morered:pale_oak_clutch",
+      "required": false
+    },
+    {
+      "id": "morered:spruce_clutch",
+      "required": false
+    },
+    {
+      "id": "morered:warped_clutch",
+      "required": false
+    },
+    {
+      "id": "mystianapiary:me_storage_interface",
+      "required": false
+    },
+    {
+      "id": "mysticalagriculture:awakening_altar",
+      "required": false
+    },
+    {
+      "id": "mysticalagriculture:harvester",
+      "required": false
+    },
+    {
+      "id": "mysticalagriculture:infusion_altar",
+      "required": false
+    },
+    {
+      "id": "mysticalagriculture:soulium_spawner",
+      "required": false
+    },
+    {
+      "id": "mysticalautomation:fertilizer",
+      "required": false
+    },
+    {
+      "id": "nautec:aquatic_catalyst",
+      "required": false
+    },
+    {
+      "id": "nautec:conduit_beacon",
+      "required": false
+    },
+    {
+      "id": "nautec:conduit_tap",
+      "required": false
+    },
+    {
+      "id": "nautec:gateway",
+      "required": false
+    },
+    {
+      "id": "neosync:shell_storage",
+      "required": false
+    },
+    {
+      "id": "neovitae:blood_battery",
+      "required": false
+    },
+    {
+      "id": "neovitae:blood_light",
+      "required": false
+    },
+    {
+      "id": "neovitae:demon_lantern",
+      "required": false
+    },
+    {
+      "id": "neovitae:input_routing_node",
+      "required": false
+    },
+    {
+      "id": "neovitae:master_ritual_stone",
+      "required": false
+    },
+    {
+      "id": "neovitae:master_routing_node",
+      "required": false
+    },
+    {
+      "id": "neovitae:omni_routing_node",
+      "required": false
+    },
+    {
+      "id": "neovitae:orb_filling_link",
+      "required": false
+    },
+    {
+      "id": "neovitae:output_routing_node",
+      "required": false
+    },
+    {
+      "id": "neovitae:sanguine_crafter",
+      "required": false
+    },
+    {
+      "id": "neovitae:spike_trap",
+      "required": false
+    },
+    {
+      "id": "neovitae:teleposer",
+      "required": false
+    },
+    {
+      "id": "neovitae:vas_maleficum",
+      "required": false
+    },
+    {
+      "id": "nodeworks:breaker",
+      "required": false
+    },
+    {
+      "id": "nodeworks:craft_requester",
+      "required": false
+    },
+    {
+      "id": "nodeworks:export_chest",
+      "required": false
+    },
+    {
+      "id": "nodeworks:import_chest",
+      "required": false
+    },
+    {
+      "id": "nodeworks:placer",
+      "required": false
+    },
+    {
+      "id": "nodeworks:terminal",
+      "required": false
+    },
+    {
+      "id": "nodeworks:user",
+      "required": false
+    },
+    {
+      "id": "occultism:copper_sacrificial_bowl",
+      "required": false
+    },
+    {
+      "id": "occultism:dark_copper_sacrificial_bowl",
+      "required": false
+    },
+    {
+      "id": "occultism:dark_golden_sacrificial_bowl",
+      "required": false
+    },
+    {
+      "id": "occultism:dark_iesnium_sacrificial_bowl",
+      "required": false
+    },
+    {
+      "id": "occultism:dark_sacrificial_bowl",
+      "required": false
+    },
+    {
+      "id": "occultism:dark_silver_sacrificial_bowl",
+      "required": false
+    },
+    {
+      "id": "occultism:dimensional_battlefield",
+      "required": false
+    },
+    {
+      "id": "occultism:dimensional_mineshaft",
+      "required": false
+    },
+    {
+      "id": "occultism:golden_sacrificial_bowl",
+      "required": false
+    },
+    {
+      "id": "occultism:iesnium_sacrificial_bowl",
+      "required": false
+    },
+    {
+      "id": "occultism:sacrificial_bowl",
+      "required": false
+    },
+    {
+      "id": "occultism:silver_sacrificial_bowl",
+      "required": false
+    },
+    {
+      "id": "oritech:accelerator_ring",
+      "required": false
+    },
+    {
+      "id": "oritech:addon_splicer",
+      "required": false
+    },
+    {
+      "id": "oritech:enderic_laser",
+      "required": false
+    },
+    {
+      "id": "oritech:hangar_door",
+      "required": false
+    },
+    {
+      "id": "oritech:industrial_door",
+      "required": false
+    },
+    {
+      "id": "oritech:large_storage",
+      "required": false
+    },
+    {
+      "id": "oritech:manhattan_module",
+      "required": false
+    },
+    {
+      "id": "oritech:nuclear_reactor_controller",
+      "required": false
+    },
+    {
+      "id": "oritech:portable_energy_storage",
+      "required": false
+    },
+    {
+      "id": "oritech:pump",
+      "required": false
+    },
+    {
+      "id": "oritech:spawner_controller",
+      "required": false
+    },
+    {
+      "id": "oritechthings:accelerator_magnetic_field",
+      "required": false
+    },
+    {
+      "id": "pipez:energy_pipe",
+      "required": false
+    },
+    {
+      "id": "pipez:fluid_pipe",
+      "required": false
+    },
+    {
+      "id": "pipez:gas_pipe",
+      "required": false
+    },
+    {
+      "id": "pipez:item_pipe",
+      "required": false
+    },
+    {
+      "id": "pipez:universal_pipe",
+      "required": false
+    },
+    {
+      "id": "productivemetalworks:foundry_tap",
+      "required": false
+    },
+    {
+      "id": "pylons:expulsion_pylon",
+      "required": false
+    },
+    {
+      "id": "pylons:harvester_pylon",
+      "required": false
+    },
+    {
+      "id": "pylons:infusion_pylon",
+      "required": false
+    },
+    {
+      "id": "pylons:interdiction_pylon",
+      "required": false
+    },
+    {
+      "id": "pylons:protection_pylon",
+      "required": false
+    },
+    {
+      "id": "quarryplus:placer_plus",
+      "required": false
+    },
+    {
+      "id": "quarryplus:remote_placer",
+      "required": false
+    },
+    {
+      "id": "railcraft:abandoned_activator_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:abandoned_booster_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:abandoned_gated_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:abandoned_launcher_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:abandoned_locking_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:abandoned_one_way_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:cart_dispenser",
+      "required": false
+    },
+    {
+      "id": "railcraft:electric_activator_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:electric_booster_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:electric_gated_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:electric_launcher_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:electric_locking_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:electric_one_way_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:elevator_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:feed_station",
+      "required": false
+    },
+    {
+      "id": "railcraft:force_track_emitter",
+      "required": false
+    },
+    {
+      "id": "railcraft:high_speed_activator_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:high_speed_booster_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:high_speed_electric_activator_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:high_speed_electric_booster_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:high_speed_electric_locking_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:high_speed_locking_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:iron_activator_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:iron_booster_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:iron_gated_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:iron_launcher_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:iron_locking_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:iron_one_way_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:reinforced_activator_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:reinforced_booster_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:reinforced_gated_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:reinforced_launcher_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:reinforced_locking_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:reinforced_one_way_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:routing_detector",
+      "required": false
+    },
+    {
+      "id": "railcraft:strap_iron_activator_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:strap_iron_booster_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:strap_iron_gated_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:strap_iron_launcher_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:strap_iron_locking_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:strap_iron_one_way_track",
+      "required": false
+    },
+    {
+      "id": "railcraft:switch_track_motor",
+      "required": false
+    },
+    {
+      "id": "railcraft:switch_track_router",
+      "required": false
+    },
+    {
+      "id": "railcraft:train_dispenser",
+      "required": false
+    },
+    {
+      "id": "rainshield:rain_shield",
+      "required": false
+    },
+    {
+      "id": "rangedpumps:pump",
+      "required": false
+    },
+    {
+      "id": "refinedstorage:autocrafter",
+      "required": false
+    },
+    {
+      "id": "refinedstorage:black_autocrafter",
+      "required": false
+    },
+    {
+      "id": "refinedstorage:blue_autocrafter",
+      "required": false
+    },
+    {
+      "id": "refinedstorage:brown_autocrafter",
+      "required": false
+    },
+    {
+      "id": "refinedstorage:creative_portable_grid",
+      "required": false
+    },
+    {
+      "id": "refinedstorage:cyan_autocrafter",
+      "required": false
+    },
+    {
+      "id": "refinedstorage:gray_autocrafter",
+      "required": false
+    },
+    {
+      "id": "refinedstorage:green_autocrafter",
+      "required": false
+    },
+    {
+      "id": "refinedstorage:light_gray_autocrafter",
+      "required": false
+    },
+    {
+      "id": "refinedstorage:lime_autocrafter",
+      "required": false
+    },
+    {
+      "id": "refinedstorage:magenta_autocrafter",
+      "required": false
+    },
+    {
+      "id": "refinedstorage:orange_autocrafter",
+      "required": false
+    },
+    {
+      "id": "refinedstorage:pink_autocrafter",
+      "required": false
+    },
+    {
+      "id": "refinedstorage:portable_grid",
+      "required": false
+    },
+    {
+      "id": "refinedstorage:purple_autocrafter",
+      "required": false
+    },
+    {
+      "id": "refinedstorage:red_autocrafter",
+      "required": false
+    },
+    {
+      "id": "refinedstorage:white_autocrafter",
+      "required": false
+    },
+    {
+      "id": "refinedstorage:yellow_autocrafter",
+      "required": false
+    },
+    {
+      "id": "refurbished_furniture:dark_toaster",
+      "required": false
+    },
+    {
+      "id": "refurbished_furniture:light_toaster",
+      "required": false
+    },
+    {
+      "id": "reliquary:pedestals/black_pedestal",
+      "required": false
+    },
+    {
+      "id": "reliquary:pedestals/blue_pedestal",
+      "required": false
+    },
+    {
+      "id": "reliquary:pedestals/brown_pedestal",
+      "required": false
+    },
+    {
+      "id": "reliquary:pedestals/cyan_pedestal",
+      "required": false
+    },
+    {
+      "id": "reliquary:pedestals/gray_pedestal",
+      "required": false
+    },
+    {
+      "id": "reliquary:pedestals/green_pedestal",
+      "required": false
+    },
+    {
+      "id": "reliquary:pedestals/light_blue_pedestal",
+      "required": false
+    },
+    {
+      "id": "reliquary:pedestals/light_gray_pedestal",
+      "required": false
+    },
+    {
+      "id": "reliquary:pedestals/lime_pedestal",
+      "required": false
+    },
+    {
+      "id": "reliquary:pedestals/magenta_pedestal",
+      "required": false
+    },
+    {
+      "id": "reliquary:pedestals/orange_pedestal",
+      "required": false
+    },
+    {
+      "id": "reliquary:pedestals/pink_pedestal",
+      "required": false
+    },
+    {
+      "id": "reliquary:pedestals/purple_pedestal",
+      "required": false
+    },
+    {
+      "id": "reliquary:pedestals/red_pedestal",
+      "required": false
+    },
+    {
+      "id": "reliquary:pedestals/white_pedestal",
+      "required": false
+    },
+    {
+      "id": "reliquary:pedestals/yellow_pedestal",
+      "required": false
+    },
+    {
+      "id": "replication:replicator",
+      "required": false
+    },
+    {
+      "id": "routers:distributor",
+      "required": false
+    },
+    {
+      "id": "routers:exporter",
+      "required": false
+    },
+    {
+      "id": "routers:importer",
+      "required": false
+    },
+    {
+      "id": "routers:importer_exporter",
+      "required": false
+    },
+    {
+      "id": "sfm:manager",
+      "required": false
+    },
+    {
+      "id": "silentgems:alexandrite_lamp",
+      "required": false
+    },
+    {
+      "id": "silentgems:alexandrite_lamp_inverted",
+      "required": false
+    },
+    {
+      "id": "silentgems:alexandrite_lamp_inverted_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:alexandrite_lamp_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:alexandrite_redstone_teleporter",
+      "required": false
+    },
+    {
+      "id": "silentgems:ammolite_lamp",
+      "required": false
+    },
+    {
+      "id": "silentgems:ammolite_lamp_inverted",
+      "required": false
+    },
+    {
+      "id": "silentgems:ammolite_lamp_inverted_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:ammolite_lamp_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:ammolite_redstone_teleporter",
+      "required": false
+    },
+    {
+      "id": "silentgems:aquamarine_lamp",
+      "required": false
+    },
+    {
+      "id": "silentgems:aquamarine_lamp_inverted",
+      "required": false
+    },
+    {
+      "id": "silentgems:aquamarine_lamp_inverted_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:aquamarine_lamp_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:aquamarine_redstone_teleporter",
+      "required": false
+    },
+    {
+      "id": "silentgems:black_diamond_lamp",
+      "required": false
+    },
+    {
+      "id": "silentgems:black_diamond_lamp_inverted",
+      "required": false
+    },
+    {
+      "id": "silentgems:black_diamond_lamp_inverted_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:black_diamond_lamp_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:black_diamond_redstone_teleporter",
+      "required": false
+    },
+    {
+      "id": "silentgems:carnelian_lamp",
+      "required": false
+    },
+    {
+      "id": "silentgems:carnelian_lamp_inverted",
+      "required": false
+    },
+    {
+      "id": "silentgems:carnelian_lamp_inverted_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:carnelian_lamp_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:carnelian_redstone_teleporter",
+      "required": false
+    },
+    {
+      "id": "silentgems:citrine_lamp",
+      "required": false
+    },
+    {
+      "id": "silentgems:citrine_lamp_inverted",
+      "required": false
+    },
+    {
+      "id": "silentgems:citrine_lamp_inverted_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:citrine_lamp_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:citrine_redstone_teleporter",
+      "required": false
+    },
+    {
+      "id": "silentgems:garnet_lamp",
+      "required": false
+    },
+    {
+      "id": "silentgems:garnet_lamp_inverted",
+      "required": false
+    },
+    {
+      "id": "silentgems:garnet_lamp_inverted_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:garnet_lamp_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:garnet_redstone_teleporter",
+      "required": false
+    },
+    {
+      "id": "silentgems:heliodor_lamp",
+      "required": false
+    },
+    {
+      "id": "silentgems:heliodor_lamp_inverted",
+      "required": false
+    },
+    {
+      "id": "silentgems:heliodor_lamp_inverted_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:heliodor_lamp_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:heliodor_redstone_teleporter",
+      "required": false
+    },
+    {
+      "id": "silentgems:iolite_lamp",
+      "required": false
+    },
+    {
+      "id": "silentgems:iolite_lamp_inverted",
+      "required": false
+    },
+    {
+      "id": "silentgems:iolite_lamp_inverted_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:iolite_lamp_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:iolite_redstone_teleporter",
+      "required": false
+    },
+    {
+      "id": "silentgems:kyanite_lamp",
+      "required": false
+    },
+    {
+      "id": "silentgems:kyanite_lamp_inverted",
+      "required": false
+    },
+    {
+      "id": "silentgems:kyanite_lamp_inverted_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:kyanite_lamp_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:kyanite_redstone_teleporter",
+      "required": false
+    },
+    {
+      "id": "silentgems:moldavite_lamp",
+      "required": false
+    },
+    {
+      "id": "silentgems:moldavite_lamp_inverted",
+      "required": false
+    },
+    {
+      "id": "silentgems:moldavite_lamp_inverted_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:moldavite_lamp_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:moldavite_redstone_teleporter",
+      "required": false
+    },
+    {
+      "id": "silentgems:opal_lamp",
+      "required": false
+    },
+    {
+      "id": "silentgems:opal_lamp_inverted",
+      "required": false
+    },
+    {
+      "id": "silentgems:opal_lamp_inverted_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:opal_lamp_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:opal_redstone_teleporter",
+      "required": false
+    },
+    {
+      "id": "silentgems:pearl_lamp",
+      "required": false
+    },
+    {
+      "id": "silentgems:pearl_lamp_inverted",
+      "required": false
+    },
+    {
+      "id": "silentgems:pearl_lamp_inverted_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:pearl_lamp_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:pearl_redstone_teleporter",
+      "required": false
+    },
+    {
+      "id": "silentgems:peridot_lamp",
+      "required": false
+    },
+    {
+      "id": "silentgems:peridot_lamp_inverted",
+      "required": false
+    },
+    {
+      "id": "silentgems:peridot_lamp_inverted_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:peridot_lamp_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:peridot_redstone_teleporter",
+      "required": false
+    },
+    {
+      "id": "silentgems:rose_quartz_lamp",
+      "required": false
+    },
+    {
+      "id": "silentgems:rose_quartz_lamp_inverted",
+      "required": false
+    },
+    {
+      "id": "silentgems:rose_quartz_lamp_inverted_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:rose_quartz_lamp_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:rose_quartz_redstone_teleporter",
+      "required": false
+    },
+    {
+      "id": "silentgems:ruby_lamp",
+      "required": false
+    },
+    {
+      "id": "silentgems:ruby_lamp_inverted",
+      "required": false
+    },
+    {
+      "id": "silentgems:ruby_lamp_inverted_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:ruby_lamp_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:ruby_redstone_teleporter",
+      "required": false
+    },
+    {
+      "id": "silentgems:sapphire_lamp",
+      "required": false
+    },
+    {
+      "id": "silentgems:sapphire_lamp_inverted",
+      "required": false
+    },
+    {
+      "id": "silentgems:sapphire_lamp_inverted_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:sapphire_lamp_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:sapphire_redstone_teleporter",
+      "required": false
+    },
+    {
+      "id": "silentgems:tanzanite_lamp",
+      "required": false
+    },
+    {
+      "id": "silentgems:tanzanite_lamp_inverted",
+      "required": false
+    },
+    {
+      "id": "silentgems:tanzanite_lamp_inverted_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:tanzanite_lamp_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:tanzanite_redstone_teleporter",
+      "required": false
+    },
+    {
+      "id": "silentgems:topaz_lamp",
+      "required": false
+    },
+    {
+      "id": "silentgems:topaz_lamp_inverted",
+      "required": false
+    },
+    {
+      "id": "silentgems:topaz_lamp_inverted_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:topaz_lamp_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:topaz_redstone_teleporter",
+      "required": false
+    },
+    {
+      "id": "silentgems:turquoise_lamp",
+      "required": false
+    },
+    {
+      "id": "silentgems:turquoise_lamp_inverted",
+      "required": false
+    },
+    {
+      "id": "silentgems:turquoise_lamp_inverted_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:turquoise_lamp_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:turquoise_redstone_teleporter",
+      "required": false
+    },
+    {
+      "id": "silentgems:white_diamond_lamp",
+      "required": false
+    },
+    {
+      "id": "silentgems:white_diamond_lamp_inverted",
+      "required": false
+    },
+    {
+      "id": "silentgems:white_diamond_lamp_inverted_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:white_diamond_lamp_on",
+      "required": false
+    },
+    {
+      "id": "silentgems:white_diamond_redstone_teleporter",
+      "required": false
+    },
+    {
+      "id": "simpleteleporters:teleporter",
+      "required": false
+    },
+    {
+      "id": "stellaris:blender",
+      "required": false
+    },
+    {
+      "id": "tesseract:tesseract",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:arcane_bore",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:barrier",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:centrifuge",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:condenser",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:eldritch_door",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:essentia_crystalizer",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:golem_fetter",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:item_grate",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:lamp_arcane",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:lamp_fertility",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:lamp_growth",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:levitator",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:node",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:node_stabilizer",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:node_stabilizer_advanced",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:node_transducer",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:pattern_crafter",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:paving_stone_barrier",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:potion_sprayer",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:spa",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:thaumatorium",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:tube_valve",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:vis_battery",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:vis_generator",
+      "required": false
+    },
+    {
+      "id": "thaumaturge:void_siphon",
+      "required": false
+    },
+    {
+      "id": "theurgy:caloric_flux_emitter",
+      "required": false
+    },
+    {
+      "id": "theurgy:digestion_vat",
+      "required": false
+    },
+    {
+      "id": "theurgy:fermentation_vat",
+      "required": false
+    },
+    {
+      "id": "theurgy:mercury_capacitor",
+      "required": false
+    },
+    {
+      "id": "theurgy:mercury_catalyst",
+      "required": false
+    },
+    {
+      "id": "trophymanager:trophy",
+      "required": false
+    },
+    {
+      "id": "utilitarian:magnet",
+      "required": false
+    },
+    {
+      "id": "utilitarian:redstone_clock",
+      "required": false
+    },
+    {
+      "id": "utilitarian:well_behaved_dropper",
+      "required": false
+    },
+    {
+      "id": "waystones:warp_plate",
+      "required": false
+    },
+    {
+      "id": "xycraft_machines:collector",
+      "required": false
+    },
+    {
+      "id": "xycraft_machines:extractor",
+      "required": false
+    },
+    {
+      "id": "xycraft_machines:fabricator",
+      "required": false
+    },
+    {
+      "id": "xycraft_machines:ignition_plate",
+      "required": false
+    },
+    {
+      "id": "xycraft_machines:illumination_field",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_cube_black",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_cube_blue",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_cube_brown",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_cube_cyan",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_cube_gray",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_cube_green",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_cube_light_blue",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_cube_light_gray",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_cube_lime",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_cube_magenta",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_cube_orange",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_cube_pink",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_cube_purple",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_cube_red",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_cube_white",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_cube_yellow",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_flush_black",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_flush_blue",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_flush_brown",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_flush_cyan",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_flush_gray",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_flush_green",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_flush_light_blue",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_flush_light_gray",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_flush_lime",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_flush_magenta",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_flush_orange",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_flush_pink",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_flush_purple",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_flush_red",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_flush_white",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_flush_yellow",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_lantern_black",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_lantern_blue",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_lantern_brown",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_lantern_cyan",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_lantern_gray",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_lantern_green",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_lantern_light_blue",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_lantern_light_gray",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_lantern_lime",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_lantern_magenta",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_lantern_orange",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_lantern_pink",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_lantern_purple",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_lantern_red",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_lantern_white",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_lantern_yellow",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pillar_black",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pillar_blue",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pillar_brown",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pillar_cyan",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pillar_gray",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pillar_green",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pillar_light_blue",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pillar_light_gray",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pillar_lime",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pillar_magenta",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pillar_orange",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pillar_pink",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pillar_purple",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pillar_red",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pillar_white",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pillar_yellow",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pole_black",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pole_blue",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pole_brown",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pole_cyan",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pole_gray",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pole_green",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pole_light_blue",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pole_light_gray",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pole_lime",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pole_magenta",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pole_orange",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pole_pink",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pole_purple",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pole_red",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pole_white",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_pole_yellow",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_black",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_blue",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_brown",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_cyan",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_gray",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_green",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_inverted_black",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_inverted_blue",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_inverted_brown",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_inverted_cyan",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_inverted_gray",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_inverted_green",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_inverted_light_blue",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_inverted_light_gray",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_inverted_lime",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_inverted_magenta",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_inverted_orange",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_inverted_pink",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_inverted_purple",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_inverted_red",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_inverted_white",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_inverted_yellow",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_light_blue",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_light_gray",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_lime",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_magenta",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_orange",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_pink",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_purple",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_red",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_white",
+      "required": false
+    },
+    {
+      "id": "xycraft_world:lamp_rgb_glowing_yellow",
+      "required": false
+    }
+  ]
+}

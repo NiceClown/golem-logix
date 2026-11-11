@@ -1,0 +1,332 @@
+package com.golemlogix.blockentity;
+
+import com.golemlogix.blocks.StockManometerBlock;
+import com.golemlogix.init.ModBlockEntities;
+import com.golemlogix.items.FluidGhostItem;
+import com.golemlogix.system.Fuzzy;
+import com.golemlogix.system.GolemNetwork;
+import com.golemlogix.system.Ingredients;
+import com.golemlogix.system.ItemKey;
+import com.golemlogix.upgrade.UpgradeContainer;
+import com.golemlogix.upgrade.UpgradeSpec;
+import com.golemlogix.upgrade.UpgradeType;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.world.Container;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.fluids.FluidStack;
+
+public class StockManometerBlockEntity extends BlockEntity {
+    /**
+     * Client: where the golem on the bridge of each side (Direction order) is - 0..1 on the way to the receiver with redstone dust,
+     * 1..2 back empty-handed, 0 waiting at the clock - and the game time they were last advanced.
+     */
+    public final float[] bridgePhase = new float[6];
+    public long bridgeTick;
+    /** A side's bridge: by what the block there looks like, always (while something stands there), never. */
+    public static final int BRIDGE_AUTO = 0, BRIDGE_ON = 1, BRIDGE_OFF = 2;
+    /** The modes of the six sides (Direction order), three to a digit: it fits one window data slot. */
+    private int bridgeModes = 0;
+
+    public static final int MODE_ABOVE = 0;
+    public static final int MODE_BELOW = 1;
+    public static final int MODE_ANALOG = 2;
+    /** menuData().set indices that take whole numbers (not window slots). */
+    public static final int SET_THRESHOLD = 10, SET_SECOND = 11, SET_BRIDGE_NEXT = 12;
+
+    private final OwnedContainer filter = new OwnedContainer(1, this, s -> true);
+    private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.MANOMETER, this);
+
+    private int mode = MODE_ABOVE;
+    private int threshold = 100;
+    private int hysteresis = 0;
+    private int signal = 0;
+    private long stockCount = 0;
+    private boolean craftRunning = false;
+
+    public StockManometerBlockEntity(BlockPos pos, BlockState state) {
+        super(ModBlockEntities.STOCK_MANOMETER.get(), pos, state);
+    }
+
+    public Container getFilter() {
+        return filter;
+    }
+
+    public UpgradeContainer getUpgrades() {
+        return upgrades;
+    }
+
+    public int getSignal() {
+        return signal;
+    }
+
+    public int getMode() {
+        return mode;
+    }
+
+    public void setMode(int mode) {
+        this.mode = Math.floorMod(mode, 3);
+        setChanged();
+    }
+
+    public int getThreshold() {
+        return threshold;
+    }
+
+    public void setThreshold(int threshold) {
+        this.threshold = Math.max(1, threshold);
+        setChanged();
+    }
+
+    public int getHysteresis() {
+        return hysteresis;
+    }
+
+    public void setHysteresis(int hysteresis) {
+        this.hysteresis = Math.max(0, hysteresis);
+        setChanged();
+    }
+
+    public long getStockCount() {
+        return stockCount;
+    }
+
+    private static final int[] POW3 = {1, 3, 9, 27, 81, 243};
+
+    public static int bridgeMode(int packed, Direction side) {
+        return packed / POW3[side.ordinal()] % 3;
+    }
+
+    public int getBridgeMode(Direction side) {
+        return bridgeMode(bridgeModes, side);
+    }
+
+    public void setBridgeMode(Direction side, int mode) {
+        bridgeModes += (Math.floorMod(mode, 3) - getBridgeMode(side)) * POW3[side.ordinal()];
+        setChanged();
+        if (level != null && !level.isClientSide()) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
+    }
+
+    /** Whether a bridge runs to that side now. */
+    public boolean hasBridge(Direction side) {
+        if (level == null) {
+            return false;
+        }
+        return switch (getBridgeMode(side)) {
+            case BRIDGE_ON -> !level.getBlockState(worldPosition.relative(side)).isAir();
+            case BRIDGE_OFF -> false;
+            default -> StockManometerBlock.isReceiver(level, worldPosition, side);
+        };
+    }
+
+    public Direction getFacing() {
+        return getBlockState().getValue(StockManometerBlock.FACING);
+    }
+
+    public static void serverTick(Level level, BlockPos pos, BlockState state, StockManometerBlockEntity be) {
+        if ((level.getGameTime() + pos.asLong()) % 10 != 0) {
+            return;
+        }
+        GolemNetwork net = GolemNetwork.get(level, pos);
+        boolean active = net.isOnline() && net.isDeviceActive(pos);
+        if (!active) {
+            be.updateSignal(level, pos, state, 0, 0, false);
+            return;
+        }
+
+        ItemStack ghost = be.filter.getItem(0);
+        if (ghost.isEmpty()) {
+            be.updateSignal(level, pos, state, 0, 0, false);
+            return;
+        }
+
+        boolean hasCraftingUpgrade = be.upgrades.count(UpgradeType.CRAFTING) > 0;
+        ItemStack plainGhost = Fuzzy.plain(ghost);
+        ItemKey key = ItemKey.of(plainGhost);
+
+        if (hasCraftingUpgrade) {
+            boolean running = net.busCraftPending(pos, key);
+            if (!running) {
+                for (com.golemlogix.crafting.CraftingCpu cpu : net.cpus()) {
+                    var job = cpu.isRemoved() ? null : cpu.getJob();
+                    if (job != null && !job.isDone() && job.targets().containsKey(key)) {
+                        running = true;
+                        break;
+                    }
+                }
+            }
+            int newSignal = running ? 15 : 0;
+            be.updateSignal(level, pos, state, newSignal, be.stockCount, running);
+            return;
+        }
+
+        long stock;
+        if (FluidGhostItem.is(plainGhost) || Ingredients.isFluid(key)) {
+            var fluid = FluidGhostItem.is(plainGhost) ? FluidGhostItem.fluid(plainGhost).getFluid() : Ingredients.fluid(key, 1).getFluid();
+            stock = net.fluidCountOf(new FluidStack(fluid, 1));
+        } else {
+            stock = net.itemCountOf(key);
+        }
+
+        int newSignal = be.computeSignal(stock);
+        be.updateSignal(level, pos, state, newSignal, stock, false);
+    }
+
+    /**
+     * threshold = where the signal switches ON, hysteresis = where it switches OFF again (0: at the same point). Above: on from
+     * the threshold, off at the second point or less (it lies below); Below: on at the threshold or less, off from the second
+     * point (it lies above); in between the signal holds - a farm runs from 500 up to 2 000, not on and off at 500.
+     */
+    private int computeSignal(long stock) {
+        int on = threshold, off = hysteresis;
+        if (mode == MODE_ABOVE) {
+            if (off > 0 && off < on) {
+                if (stock >= on) return 15;
+                if (stock <= off) return 0;
+                return signal;
+            }
+            return stock >= on ? 15 : 0;
+        } else if (mode == MODE_BELOW) {
+            if (off > on) {
+                if (stock <= on) return 15;
+                if (stock >= off) return 0;
+                return signal;
+            }
+            return stock <= on ? 15 : 0;
+        } else {
+            // Analog mode: 0..15 proportional to stock / threshold
+            double max = Math.max(1, (double) threshold);
+            return (int) Math.clamp(Math.round(15.0 * stock / max), 0, 15);
+        }
+    }
+
+    private void updateSignal(Level level, BlockPos pos, BlockState state, int newSignal, long newStock, boolean running) {
+        boolean signalChanged = this.signal != newSignal;
+        boolean stockChanged = this.stockCount != newStock || this.craftRunning != running;
+        this.signal = newSignal;
+        this.stockCount = newStock;
+        this.craftRunning = running;
+
+        if (signalChanged) {
+            level.setBlock(pos, state.setValue(StockManometerBlock.POWERED, newSignal > 0), 3);
+            level.updateNeighborsAt(pos, state.getBlock());
+            Direction attached = state.getValue(StockManometerBlock.FACING).getOpposite();
+            level.updateNeighborsAt(pos.relative(attached), state.getBlock());
+            setChanged();
+        }
+        if (signalChanged || stockChanged) {
+            level.sendBlockUpdated(pos, state, state, 3);
+        }
+    }
+
+    public ContainerData menuData() {
+        return new ContainerData() {
+            @Override
+            public int get(int index) {
+                // window data slots carry 16 bits: the numbers go in two halves each
+                return switch (index) {
+                    case 0 -> mode;
+                    case 1 -> threshold & 0xFFFF;
+                    case 2 -> threshold >>> 16;
+                    case 3 -> hysteresis & 0xFFFF;
+                    case 4 -> hysteresis >>> 16;
+                    case 5 -> signal;
+                    case 6 -> (int) (stockCount & 0xFFFF);
+                    case 7 -> (int) ((stockCount >> 16) & 0xFFFF);
+                    case 8 -> bridgeModes;
+                    default -> 0;
+                };
+            }
+
+            /** From the window (server side): 0 the mode, SET_THRESHOLD / SET_SECOND whole numbers. */
+            @Override
+            public void set(int index, int value) {
+                switch (index) {
+                    case 0 -> mode = Math.floorMod(value, 3);
+                    case SET_THRESHOLD -> threshold = Math.max(1, value);
+                    case SET_SECOND -> hysteresis = Math.max(0, value);
+                    case SET_BRIDGE_NEXT -> {
+                        Direction side = Direction.values()[Math.floorMod(value, 6)];
+                        setBridgeMode(side, getBridgeMode(side) + 1);
+                    }
+                    default -> {
+                        return;
+                    }
+                }
+                setChanged();
+            }
+
+            @Override
+            public int getCount() {
+                return 9;
+            }
+        };
+    }
+
+    @Override
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        tag.putInt("Mode", mode);
+        tag.putInt("Threshold", threshold);
+        tag.putInt("Hysteresis", hysteresis);
+        tag.putInt("Signal", signal);
+        tag.putLong("Stock", stockCount);
+        tag.put("Filter", filter.createTag(registries));
+        tag.put("Upgrades", upgrades.createTag(registries));
+        tag.putInt("Bridges", bridgeModes);
+    }
+
+    @Override
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        mode = tag.contains("Mode") ? tag.getInt("Mode") : MODE_ABOVE;
+        threshold = Math.max(1, tag.contains("Threshold") ? tag.getInt("Threshold") : 100);
+        hysteresis = tag.getInt("Hysteresis");
+        signal = tag.getInt("Signal");
+        stockCount = tag.getLong("Stock");
+        filter.fromTag(tag.getList("Filter", Tag.TAG_COMPOUND), registries);
+        upgrades.fromTag(tag.getList("Upgrades", Tag.TAG_COMPOUND), registries);
+        bridgeModes = tag.getInt("Bridges");
+    }
+
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        CompoundTag tag = super.getUpdateTag(registries);
+        tag.putInt("Signal", signal);
+        tag.putLong("Stock", stockCount);
+        tag.putInt("Threshold", threshold);
+        tag.putInt("Bridges", bridgeModes);
+        return tag;
+    }
+
+    /** The client takes only the synced keys (what the renderer shows); the rest keep their values. */
+    @Override
+    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
+        signal = tag.getInt("Signal");
+        stockCount = tag.getLong("Stock");
+        threshold = Math.max(1, tag.contains("Threshold") ? tag.getInt("Threshold") : 100);
+        bridgeModes = tag.getInt("Bridges");
+    }
+
+    @Override
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider registries) {
+        handleUpdateTag(pkt.getTag(), registries);
+    }
+
+    @Override
+    public ClientboundBlockEntityDataPacket getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+}

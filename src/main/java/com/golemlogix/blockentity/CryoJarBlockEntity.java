@@ -20,6 +20,9 @@ import org.jetbrains.annotations.Nullable;
  */
 public class CryoJarBlockEntity extends BlockEntity implements SourceHelper.Supplier {
     private int source;
+    /** Of a jar in a joined whole (see JarMerge): the lower half of the corner that holds its Source. */
+    @Nullable
+    private BlockPos controller;
     private boolean dirty;
     private long lastSync = -100;
     private int sentSource = -1;
@@ -37,17 +40,53 @@ public class CryoJarBlockEntity extends BlockEntity implements SourceHelper.Supp
         return !s.hasProperty(CryoJarBlock.HALF) || s.getValue(CryoJarBlock.HALF) == DoubleBlockHalf.LOWER;
     }
 
-    /** The lower half's entity, the one that keeps the Source (null while the jar is half broken). */
+    /** The entity that keeps the Source: of a jar, its lower half; of a joined whole, its corner (null while it is half broken). */
     @Nullable
     public CryoJarBlockEntity owner() {
-        if (isLower()) {
-            return this;
+        CryoJarBlockEntity lower = isLower() ? this
+                : level != null && level.getBlockEntity(worldPosition.below()) instanceof CryoJarBlockEntity j && j.isLower() ? j : null;
+        if (lower == null || lower.controller == null || lower.controller.equals(lower.worldPosition)) {
+            return lower;
         }
-        return level != null && level.getBlockEntity(worldPosition.below()) instanceof CryoJarBlockEntity j && j.isLower() ? j : null;
+        return level != null && level.isLoaded(lower.controller) && level.getBlockEntity(lower.controller) instanceof CryoJarBlockEntity c ? c : null;
+    }
+
+    @Nullable
+    public BlockPos controller() {
+        return controller;
+    }
+
+    public void setController(@Nullable BlockPos controller) {
+        this.controller = controller == null ? null : controller.immutable();
+        setChanged();
+    }
+
+    /** Whether this is the corner that holds a whole's Source and draws it. */
+    public boolean isController() {
+        return worldPosition.equals(controller);
+    }
+
+    public com.golemlogix.blocks.JarForm form() {
+        BlockState s = getBlockState();
+        return s.hasProperty(CryoJarBlock.FORM) ? s.getValue(CryoJarBlock.FORM) : com.golemlogix.blocks.JarForm.SINGLE;
     }
 
     public int capacity() {
-        return GolemConfig.CRYO_JAR_CAPACITY.get();
+        return com.golemlogix.system.JarMerge.capacity(form());
+    }
+
+    /** Joining and parting: all of this entity's own Source comes out. */
+    public int takeAll() {
+        int all = source;
+        source = 0;
+        changed();
+        return all;
+    }
+
+    /** Joining and parting: this entity's own Source is now this. */
+    public void putAll(int amount) {
+        source = amount;
+        changed();
     }
 
     @Override
@@ -125,6 +164,9 @@ public class CryoJarBlockEntity extends BlockEntity implements SourceHelper.Supp
         super.saveAdditional(tag, registries);
         if (isLower()) {
             tag.putInt("Source", source);
+            if (controller != null) {
+                tag.putLong("Controller", controller.asLong());
+            }
         }
     }
 
@@ -132,18 +174,23 @@ public class CryoJarBlockEntity extends BlockEntity implements SourceHelper.Supp
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         source = tag.getInt("Source");
+        controller = tag.contains("Controller") ? BlockPos.of(tag.getLong("Controller")) : null;
     }
 
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();
         tag.putInt("Source", source);
+        if (controller != null) {
+            tag.putLong("Controller", controller.asLong());
+        }
         return tag;
     }
 
     @Override
     public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
         clientSource = tag.getInt("Source");
+        controller = tag.contains("Controller") ? BlockPos.of(tag.getLong("Controller")) : null;
         if (fill == 0f && fillPrev == 0f) {
             // a jar seen for the first time shows its level at once, without filling up in front of the player
             fill = fillPrev = Math.min(1f, clientSource / (float) Math.max(1, capacity()));

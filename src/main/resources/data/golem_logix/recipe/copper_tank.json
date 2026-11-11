@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "G": { "tag": "c:glass_blocks" },
+    "C": { "tag": "golem_logix:copper_block_or_chest" }
+  },
+  "pattern": [
+    " G ",
+    "GCG",
+    " G "
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:copper_tank"
+  }
+}

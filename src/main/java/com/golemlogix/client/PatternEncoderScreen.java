@@ -44,4 +44,15 @@ public class PatternEncoderScreen extends GolemScreen<PatternEncoderMenu> {
             }
         }
     }
+
+    /** A middle-click on a pattern cell (nine inputs, three outputs) opens its window: how many items or mB, its tag. */
+    @Override
+    protected int filterSlots() {
+        return PatternEncoderMenu.OUT_START + 3;
+    }
+
+    @Override
+    protected FilterSlotScreen slotWindow(com.golemlogix.menu.GolemMenu gm, int slot) {
+        return FilterSlotScreen.count(this, gm, slot);
+    }
 }

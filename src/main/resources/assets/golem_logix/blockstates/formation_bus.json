@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "facing=north": {"model": "golem_logix:block/formation_bus"},
+    "facing=east": {"model": "golem_logix:block/formation_bus", "y": 90},
+    "facing=south": {"model": "golem_logix:block/formation_bus", "y": 180},
+    "facing=west": {"model": "golem_logix:block/formation_bus", "y": 270},
+    "facing=up": {"model": "golem_logix:block/formation_bus", "x": 270},
+    "facing=down": {"model": "golem_logix:block/formation_bus", "x": 90}
+  }
+}

@@ -103,6 +103,8 @@ public final class GolemNetwork {
     private final List<com.golemlogix.crafting.CraftingCpu> cpus = new ArrayList<>();
     private final List<SourceHelper.Supplier> sources = new ArrayList<>();
     private int resonators = 0;
+    @Nullable
+    private com.golemlogix.blockentity.SecurityTerminalBlockEntity security;
     /** Blocks next to the nodes that the network uses (Source jars, resonators, containers behind periscopes), with their block. */
     private final Map<Node, Block> peripherals = new HashMap<>();
     /** Telegraph links inside this network (each pair counted once): every one of them costs Source. */
@@ -127,6 +129,13 @@ public final class GolemNetwork {
 
     public static long storageEpoch() {
         return storageEpoch;
+    }
+
+    /** The storage epoch when this network's own contents last changed. */
+    private long networkEpoch;
+
+    public long networkEpoch() {
+        return networkEpoch;
     }
 
     /** A storage behind a periscope; on the server the periscope (owner) keeps its handlers cached. */
@@ -257,6 +266,7 @@ public final class GolemNetwork {
 
     /** The server stopped: nothing of its levels is kept. */
     public static void forgetAll() {
+        OrderBackoff.forget();
         SERVER_CACHE.clear();
         CHANGED.clear();
         serverVersion++;
@@ -390,6 +400,8 @@ public final class GolemNetwork {
             } else if (be instanceof com.golemlogix.blockentity.CryoMainframeBlockEntity mainframe) {
                 // mainframe cores are separate processors, but they share one channel (the owner block's)
                 cpus.addAll(mainframe.cores());
+            } else if (be instanceof com.golemlogix.blockentity.SecurityTerminalBlockEntity sec && security == null) {
+                security = sec;
             }
             if (state.getBlock() instanceof PeriscopeStorageBusBlock) {
                 Direction facing = state.getValue(PeriscopeStorageBusBlock.FACING);
@@ -462,7 +474,12 @@ public final class GolemNetwork {
                         peripherals.put(new Node(lvl, p), be.getBlockState().getBlock());
                         continue;
                     }
-                    SourceHelper.Supplier s = SourceHelper.asSupplier(be);
+                    SourceHelper.Supplier s;
+                    if (be instanceof com.golemlogix.blockentity.CryoDiodeBlockEntity diode) {
+                        s = diode.asSupplier(dir.getOpposite());
+                    } else {
+                        s = SourceHelper.asSupplier(be);
+                    }
                     if (s != null) {
                         sources.add(s);
                         peripherals.put(new Node(lvl, p), be.getBlockState().getBlock());
@@ -765,6 +782,17 @@ public final class GolemNetwork {
         return activeDevices.contains(new Node(level, pos));
     }
 
+    /** The joined jars on this network: towers touching the network pour into them from anywhere (see the tower). */
+    public List<com.golemlogix.blockentity.CryoJarBlockEntity> joinedJars() {
+        List<com.golemlogix.blockentity.CryoJarBlockEntity> out = new ArrayList<>();
+        for (SourceHelper.Supplier s : sources) {
+            if (s instanceof com.golemlogix.blockentity.CryoJarBlockEntity j && !j.isRemoved() && j.form() != com.golemlogix.blocks.JarForm.SINGLE) {
+                out.add(j);
+            }
+        }
+        return out;
+    }
+
     public List<SourceHelper.Supplier> sources() {
         return sources;
     }
@@ -826,6 +854,37 @@ public final class GolemNetwork {
         }
         if (devicePos != null && !isDeviceActive(devicePos)) {
             return "message.golem_logix.no_channels";
+        }
+        return null;
+    }
+
+    @Nullable
+    public com.golemlogix.blockentity.SecurityTerminalBlockEntity security() {
+        return security;
+    }
+
+    public boolean hasSecurityTerminal() {
+        return security != null && !security.isRemoved();
+    }
+
+    public boolean hasPermission(@Nullable net.minecraft.world.entity.player.Player player, com.golemlogix.security.SecurityPermission perm) {
+        if (!hasSecurityTerminal() || player == null) {
+            return true;
+        }
+        if (player.isCreative() && player.canUseGameMasterBlocks()) {
+            return true;
+        }
+        return security.hasPermission(player, perm);
+    }
+
+    @Nullable
+    public String accessError(@Nullable BlockPos devicePos, @Nullable net.minecraft.world.entity.player.Player player) {
+        String err = accessError(devicePos);
+        if (err != null) {
+            return err;
+        }
+        if (player != null && !hasPermission(player, com.golemlogix.security.SecurityPermission.BUILD)) {
+            return "message.golem_logix.security_denied";
         }
         return null;
     }
@@ -907,6 +966,23 @@ public final class GolemNetwork {
     /** The container skipTarget of the caller's level is the one behind this periscope. */
     private boolean skips(External ex, @Nullable BlockPos skipTarget) {
         return skipTarget != null && ex.level == level && ex.target.equals(skipTarget);
+    }
+
+    /** What the periscope's access mode and filter let the network do with this storage (no periscope entity: everything). */
+    private static boolean mayInsert(External ex, ItemStack s) {
+        return ex.owner() == null || ex.owner().mayInsert(s);
+    }
+
+    private static boolean mayExtract(External ex, ItemStack s) {
+        return ex.owner() == null || ex.owner().mayExtract(s);
+    }
+
+    private static boolean mayInsert(External ex, FluidStack f) {
+        return ex.owner() == null || ex.owner().mayInsert(f);
+    }
+
+    private static boolean mayExtract(External ex, FluidStack f) {
+        return ex.owner() == null || ex.owner().mayExtract(f);
     }
 
     /**
@@ -1003,12 +1079,25 @@ public final class GolemNetwork {
             }
             for (int i = 0; i < h.getSlots(); i++) {
                 ItemStack s = h.getStackInSlot(i);
-                if (!s.isEmpty()) {
+                if (!s.isEmpty() && mayExtract(ex, s)) {
                     all.merge(ItemKey.of(s), (long) s.getCount(), Long::sum);
                 }
             }
         }
         return all;
+    }
+
+    private Map<ItemKey, Long> sharedList;
+    private long sharedListTick = -1;
+
+    /** The list for the terminals: open windows of one tick share one reading of the network. Not to be changed. */
+    public Map<ItemKey, Long> listItemsShared() {
+        long now = level().getGameTime();
+        if (sharedList == null || sharedListTick != now) {
+            sharedList = listItems();
+            sharedListTick = now;
+        }
+        return sharedList;
     }
 
     public long itemCountOf(ItemKey key) {
@@ -1023,7 +1112,7 @@ public final class GolemNetwork {
             }
             for (int i = 0; i < h.getSlots(); i++) {
                 ItemStack s = h.getStackInSlot(i);
-                if (!s.isEmpty() && key.matches(s)) {
+                if (!s.isEmpty() && key.matches(s) && mayExtract(ex, s)) {
                     n += s.getCount();
                 }
             }
@@ -1084,11 +1173,18 @@ public final class GolemNetwork {
         List<Tier> tiers = tiers(true);
 
         if (simulate) {
-            long free = 0;
-            for (ItemStack disk : allDisks(false)) {
-                free += DiskStorage.capacity(disk) - DiskStorage.storedItems(disk);
+            if (Gear.is(remaining)) {
+                // equipment takes more of a disk, and small disks have a rule of their own: each disk answers for itself
+                for (ItemStack disk : allDisks(false)) {
+                    remaining.shrink(DiskStorage.insertItem(disk, remaining, true));
+                }
+            } else {
+                long free = 0;
+                for (ItemStack disk : allDisks(false)) {
+                    free += Math.max(0, DiskStorage.capacity(disk) - DiskStorage.storedItems(disk));
+                }
+                remaining.shrink((int) Math.min(free, remaining.getCount()));
             }
-            remaining.shrink((int) Math.min(free, remaining.getCount()));
         } else {
             Set<CopperDriveBayBlockEntity> touched = new HashSet<>();
             for (Tier tier : tiers) {
@@ -1115,7 +1211,7 @@ public final class GolemNetwork {
             }
             markBaysChanged(touched);
             if (remaining.getCount() != input.getCount()) {
-                storageEpoch++;
+                networkEpoch = ++storageEpoch;
             }
             return remaining;
         }
@@ -1138,7 +1234,7 @@ public final class GolemNetwork {
                 continue;
             }
             IItemHandler h = itemHandler(ex);
-            if (h == null) {
+            if (h == null || !mayInsert(ex, remaining)) {
                 continue;
             }
             for (int i = 0; i < h.getSlots() && !remaining.isEmpty(); i++) {
@@ -1191,7 +1287,7 @@ public final class GolemNetwork {
                 }
                 for (int i = 0; i < h.getSlots() && left > 0; i++) {
                     ItemStack s = h.getStackInSlot(i);
-                    if (!s.isEmpty() && ItemStack.isSameItemSameComponents(s, template)) {
+                    if (!s.isEmpty() && ItemStack.isSameItemSameComponents(s, template) && mayExtract(ex, s)) {
                         ItemStack got = h.extractItem(i, Math.min(left, s.getCount()), simulate);
                         left -= got.getCount();
                     }
@@ -1201,7 +1297,7 @@ public final class GolemNetwork {
         if (!simulate) {
             markBaysChanged(touched);
             if (left != amount) {
-                storageEpoch++;
+                networkEpoch = ++storageEpoch;
             }
         }
         int taken = amount - left;
@@ -1223,7 +1319,7 @@ public final class GolemNetwork {
             for (int i = 0; i < h.getTanks(); i++) {
                 FluidStack f = h.getFluidInTank(i);
                 // Liquid Cryo-Source in a tank behind a periscope is not network stock: the network makes its own from Source
-                if (!f.isEmpty() && !CryoSource.is(f)) {
+                if (!f.isEmpty() && !CryoSource.is(f) && mayExtract(ex, f)) {
                     mergeFluid(all, f);
                 }
             }
@@ -1291,7 +1387,7 @@ public final class GolemNetwork {
                     continue;
                 }
                 IFluidHandler h = fluidHandler(ex);
-                if (h == null) {
+                if (h == null || !mayInsert(ex, input)) {
                     continue;
                 }
                 int n = h.fill(input.copyWithAmount(left), simulate ? IFluidHandler.FluidAction.SIMULATE : IFluidHandler.FluidAction.EXECUTE);
@@ -1300,7 +1396,7 @@ public final class GolemNetwork {
         }
         markBaysChanged(touched);
         if (!simulate && left != input.getAmount()) {
-            storageEpoch++;
+            networkEpoch = ++storageEpoch;
         }
         return input.getAmount() - left;
     }
@@ -1341,7 +1437,7 @@ public final class GolemNetwork {
                     continue;
                 }
                 IFluidHandler h = fluidHandler(ex);
-                if (h == null) {
+                if (h == null || !mayExtract(ex, template)) {
                     continue;
                 }
                 FluidStack got = h.drain(template.copyWithAmount(left), simulate ? IFluidHandler.FluidAction.SIMULATE : IFluidHandler.FluidAction.EXECUTE);
@@ -1351,7 +1447,7 @@ public final class GolemNetwork {
         if (!simulate) {
             markBaysChanged(touched);
             if (left != amount) {
-                storageEpoch++;
+                networkEpoch = ++storageEpoch;
             }
         }
         int taken = amount - left;
@@ -1398,6 +1494,10 @@ public final class GolemNetwork {
             }
         }
         return n;
+    }
+
+    public long fluidCountOf(net.minecraft.world.level.material.Fluid fluid) {
+        return fluidCountOf(new FluidStack(fluid, 1));
     }
 
     /** Stock of an ingredient: items by count, fluid keys in mB. */
@@ -1496,6 +1596,24 @@ public final class GolemNetwork {
     }
 
     /**
+     * The job an idle processor should lend its steps to: of those that could use more, the one with the most left. Null when none
+     * could, or when autocrafting has used up this tick's time. Lending keeps nothing back: the processor stays free for a new order.
+     */
+    @Nullable
+    public com.golemlogix.crafting.CraftingJob jobWantingHelp() {
+        com.golemlogix.crafting.CraftingJob best = null;
+        long most = 0;
+        for (com.golemlogix.crafting.CraftingCpu c : cpus) {
+            com.golemlogix.crafting.CraftingJob job = c.isRemoved() ? null : c.getJob();
+            if (job != null && job.wantsHelp() && job.remainingExecutions() > most && c.acceptsHelp() && c.canRun(this)) {
+                best = job;
+                most = job.remainingExecutions();
+            }
+        }
+        return best != null && com.golemlogix.system.CraftLoad.nanosLeft(level()) > 0 ? best : null;
+    }
+
+    /**
      * Plans and starts autocrafting of several items at once on the first free Cryo-Calculator.
      * requester = the player who gets the "ready" notification; bus = the export bus that ordered the craft itself.
      */
@@ -1511,9 +1629,25 @@ public final class GolemNetwork {
                 return new StartResult(StartType.NO_PATTERN, null);
             }
         }
+        // a device's order: no plan without a free calculator, and none yet if it has just failed
+        long now = level().getGameTime();
+        if (bus != null) {
+            if (freeCpu() == null) {
+                return new StartResult(StartType.NO_CPU, null);
+            }
+            if (OrderBackoff.waiting(bus, targets.keySet(), now, networkEpoch)) {
+                return new StartResult(StartType.MISSING, null);
+            }
+        }
         CraftingPlan plan = CraftingPlanner.plan(this, targets);
         if (!plan.missing().isEmpty()) {
+            if (bus != null) {
+                OrderBackoff.failed(bus, targets.keySet(), now, networkEpoch);
+            }
             return new StartResult(StartType.MISSING, plan);
+        }
+        if (bus != null) {
+            OrderBackoff.succeeded(bus, targets.keySet());
         }
         if (plan.steps().isEmpty()) {
             return new StartResult(StartType.NO_PATTERN, plan);
@@ -1654,6 +1788,31 @@ public final class GolemNetwork {
 
     public ItemStack insertFromMachine(ItemStack stack) {
         return insertFromMachine(stack, null);
+    }
+
+    /** How many mB of this fluid the running jobs wait for from machines. */
+    public int machineWantsFluid(FluidStack fluid) {
+        return fluid.isEmpty() ? 0 : machineWants(Ingredients.fluidKey(fluid).stack());
+    }
+
+    /**
+     * A fluid from a machine (a gateway's return tanks, an import bus): first to the jobs waiting for it, the rest into storage.
+     * Returns the mB taken.
+     */
+    public int insertFluidFromMachine(FluidStack fluid, @Nullable BlockPos skipTarget) {
+        if (fluid.isEmpty()) {
+            return 0;
+        }
+        int taken = 0;
+        for (com.golemlogix.crafting.CraftingCpu cpu : cpus) {
+            if (taken >= fluid.getAmount()) {
+                break;
+            }
+            if (!cpu.isRemoved()) {
+                taken += cpu.absorbFluid(fluid.copyWithAmount(fluid.getAmount() - taken));
+            }
+        }
+        return taken >= fluid.getAmount() ? taken : taken + insertFluid(fluid.copyWithAmount(fluid.getAmount() - taken), false, skipTarget);
     }
 
     /** skipTarget = the container the items were just taken from (they are not put back into it). */

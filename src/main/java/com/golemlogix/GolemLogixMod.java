@@ -52,6 +52,23 @@ public class GolemLogixMod {
 
     @EventBusSubscriber(modid = MOD_ID)
     public static class GameEvents {
+        /** /golemlogix_buses: what the buses cost the server over the last few seconds. */
+        @SubscribeEvent
+        public static void onRegisterCommands(net.neoforged.neoforge.event.RegisterCommandsEvent event) {
+            event.getDispatcher().register(net.minecraft.commands.Commands.literal("golemlogix_buses")
+                    .requires(src -> src.hasPermission(net.minecraft.commands.Commands.LEVEL_GAMEMASTERS))
+                    .executes(ctx -> {
+                        ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.translatable("message.golem_logix.bus_load",
+                                com.golemlogix.system.BusLoad.opsPerSecond(),
+                                String.format(java.util.Locale.ROOT, "%.2f", com.golemlogix.system.BusLoad.millisPerTick()),
+                                String.format(java.util.Locale.ROOT, "%.1f", com.golemlogix.system.BusLoad.percentOfTick()),
+                                String.format(java.util.Locale.ROOT, "%.2f", com.golemlogix.system.BusLoad.worstMillis()),
+                                com.golemlogix.config.GolemConfig.BUS_MAX_MILLIS_PER_TICK.get(),
+                                com.golemlogix.system.BusLoad.deferredPerSecond()), false);
+                        return 1;
+                    }));
+        }
+
         @SubscribeEvent
         public static void onServerStopped(ServerStoppedEvent event) {
             GolemNetwork.forgetAll();
@@ -70,6 +87,56 @@ public class GolemLogixMod {
         public static void onLevelTick(LevelTickEvent.Post event) {
             if (!event.getLevel().isClientSide()) {
                 GolemNetwork.processChanges(event.getLevel());
+            }
+        }
+
+        /**
+         * A Security Terminal guards every block of its network in one place: a right-click on a network block (its window, a
+         * disk put into a drive bay, a card into a gateway...) needs the BUILD right; a terminal any of INSERT, EXTRACT or CRAFT
+         * (its window then checks each action). The Security Terminal itself checks its owner.
+         */
+        @SubscribeEvent
+        public static void onUseBlock(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock event) {
+            if (!(event.getLevel() instanceof Level level) || level.isClientSide()) {
+                return;
+            }
+            net.minecraft.core.BlockPos pos = event.getPos();
+            net.minecraft.world.level.block.Block block = level.getBlockState(pos).getBlock();
+            if (!(block instanceof com.golemlogix.system.GolemNode) || block instanceof com.golemlogix.blocks.SecurityTerminalBlock) {
+                return;
+            }
+            GolemNetwork gnet = GolemNetwork.get(level, pos);
+            if (!gnet.hasSecurityTerminal()) {
+                return;
+            }
+            var player = event.getEntity();
+            boolean allowed = block instanceof com.golemlogix.blocks.AnalogTerminalBlock || block instanceof com.golemlogix.blocks.CraftingTerminalBlock
+                    ? gnet.hasPermission(player, com.golemlogix.security.SecurityPermission.INSERT) || gnet.hasPermission(player, com.golemlogix.security.SecurityPermission.EXTRACT)
+                    || gnet.hasPermission(player, com.golemlogix.security.SecurityPermission.CRAFT)
+                    : gnet.hasPermission(player, com.golemlogix.security.SecurityPermission.BUILD);
+            if (!allowed) {
+                event.setCanceled(true);
+                event.setCancellationResult(net.minecraft.world.InteractionResult.FAIL);
+                if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
+                    sp.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.golem_logix.security_denied"), true);
+                }
+            }
+        }
+
+        @SubscribeEvent
+        public static void onBlockBreak(BlockEvent.BreakEvent event) {
+            if (event.getLevel() instanceof Level level && !level.isClientSide()) {
+                net.minecraft.core.BlockPos pos = event.getPos();
+                net.minecraft.world.level.block.state.BlockState state = event.getState();
+                if (state.getBlock() instanceof com.golemlogix.system.GolemNode) {
+                    GolemNetwork gnet = GolemNetwork.get(level, pos);
+                    if (gnet.hasSecurityTerminal() && !gnet.hasPermission(event.getPlayer(), com.golemlogix.security.SecurityPermission.BUILD)) {
+                        event.setCanceled(true);
+                        if (event.getPlayer() instanceof net.minecraft.server.level.ServerPlayer sp) {
+                            sp.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.golem_logix.security_denied"), true);
+                        }
+                    }
+                }
             }
         }
     }

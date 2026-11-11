@@ -158,13 +158,12 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
             }
         }
         if (up != null && menu instanceof GolemMenu gm && gm.upgradeSpec() != null) {
-            // empty upgrade slots: a translucent "projection" of what can go here (one per slot:
-            // speed upgrades up to the machine's limit first, then the autocraft module and the redstone module)
+            // empty upgrade slots: a translucent "projection" of the one kind of upgrade the slot takes
             List<ItemStack> hints = upgradeHints(gm.upgradeSpec());
             for (int i = gm.upgradeStart(); i < gm.upgradeEnd(); i++) {
                 Slot s = menu.slots.get(i);
                 int k = i - gm.upgradeStart();
-                if (!s.hasItem() && k < hints.size()) {
+                if (!s.hasItem() && k < hints.size() && !hints.get(k).isEmpty()) {
                     int x = leftPos + s.x, y = topPos + s.y;
                     g.renderItem(hints.get(k), x, y);
                     g.pose().pushPose();
@@ -177,20 +176,18 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
         renderOverlay(g, partialTick, mouseX, mouseY);
     }
 
-    /** Hints for the upgrade slots in order: what the machine accepts and how many of each. */
+    /** The ghost of each upgrade slot: the kind of upgrade it is for (the Plasma Temper's only once its secret is known). */
     private static List<ItemStack> upgradeHints(com.golemlogix.upgrade.UpgradeSpec spec) {
         List<ItemStack> out = new ArrayList<>();
-        for (int i = 0; i < spec.max(UpgradeType.SPEED); i++) {
-            out.add(new ItemStack(com.golemlogix.init.ModItems.COMPRESSED_COPROCESSOR.get()));
-        }
-        if (spec.max(UpgradeType.CRAFTING) > 0) {
-            out.add(new ItemStack(com.golemlogix.init.ModItems.AUTOCRAFT_MODULE.get()));
-        }
-        if (spec.max(UpgradeType.REDSTONE) > 0) {
-            out.add(new ItemStack(com.golemlogix.init.ModItems.REDSTONE_MODULE.get()));
-        }
-        if (spec.max(UpgradeType.FUZZY) > 0) {
-            out.add(new ItemStack(com.golemlogix.init.ModItems.FUZZY_CARD.get()));
+        for (int i = 0; i < spec.slots(); i++) {
+            UpgradeType t = spec.typeAt(i);
+            out.add(t == null ? ItemStack.EMPTY : new ItemStack(switch (t) {
+                case SPEED -> com.golemlogix.init.ModItems.COMPRESSED_COPROCESSOR.get();
+                case CRAFTING -> com.golemlogix.init.ModItems.AUTOCRAFT_MODULE.get();
+                case REDSTONE -> com.golemlogix.init.ModItems.REDSTONE_MODULE.get();
+                case FUZZY -> com.golemlogix.init.ModItems.FUZZY_CARD.get();
+                case TEMPER -> ClientSecrets.all() ? com.golemlogix.init.ModItems.PLASMA_TEMPER.get() : net.minecraft.world.item.Items.AIR;
+            }));
         }
         return out;
     }
@@ -210,6 +207,11 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
             return;
         }
         super.renderSlot(g, slot);
+        // the game shows no count for one item: a slot that holds many says so, so a lone upgrade does not look like the limit
+        if (menu instanceof com.golemlogix.menu.GolemMenu up && slot.getItem().getCount() == 1 && up.hasUpgradeSlots()
+                && slot.index >= up.upgradeStart() && slot.index < up.upgradeEnd() && slot.getMaxStackSize() > 1) {
+            g.renderItemDecorations(font, slot.getItem(), slot.x, slot.y, "1");
+        }
         // a fuzzy ghost: "#" with a tag chosen, "≈" for the same item with any components
         if (menu instanceof com.golemlogix.menu.GolemMenu gm && slot.hasItem() && gm.fuzzyActive(slot.index)) {
             String mark = com.golemlogix.system.Fuzzy.tag(slot.getItem()) != null ? "#" : "≈";
@@ -219,6 +221,45 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
             g.drawString(font, mark, 0, 0, GolemGui.CYAN, true);
             g.pose().popPose();
         }
+    }
+
+    /**
+     * The filter slot window of a bus: the screens of buses say which ghost slots are filters (a middle-click on a filled one opens
+     * FilterSlotScreen); -1 elsewhere.
+     */
+    protected int filterSlots() {
+        return -1;
+    }
+
+    /** Whether the bus window can set a keep amount in its slot windows (the Export Bus). */
+    protected boolean keepsAmounts() {
+        return false;
+    }
+
+    /** The ghost filter slot under the point (screen coordinates), or -1. */
+    protected int filterSlotAt(double x, double y) {
+        for (int i = 0; i < filterSlots() && i < menu.slots.size(); i++) {
+            var slot = menu.getSlot(i);
+            if (x >= leftPos + slot.x - 1 && x < leftPos + slot.x + 17 && y >= topPos + slot.y - 1 && y < topPos + slot.y + 17) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /** The window a middle-click on a filled ghost slot opens. */
+    protected FilterSlotScreen slotWindow(com.golemlogix.menu.GolemMenu gm, int slot) {
+        return new FilterSlotScreen(this, gm, slot, keepsAmounts());
+    }
+
+    /** A middle-click on a filled bus filter slot opens its settings window. True if it did. */
+    protected boolean slotWindowClick(double x, double y, int button) {
+        int i = button == 2 ? filterSlotAt(x, y) : -1;
+        if (i >= 0 && menu.getSlot(i).hasItem() && minecraft != null && menu instanceof com.golemlogix.menu.GolemMenu gm) {
+            minecraft.setScreen(slotWindow(gm, i));
+            return true;
+        }
+        return false;
     }
 
     /** A middle-click (or Ctrl+left-click) on a fuzzy ghost slot asks the server for its next tag. True if it was such a click. */
@@ -234,7 +275,7 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        return fuzzyClick(button) || super.mouseClicked(mouseX, mouseY, button);
+        return slotWindowClick(mouseX, mouseY, button) || fuzzyClick(button) || super.mouseClicked(mouseX, mouseY, button);
     }
 
     /** The item tooltip of a fuzzy ghost slot says what it takes, and how to change it. */
@@ -247,8 +288,13 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
                 lines = new java.util.ArrayList<>(lines);
                 lines.add(line);
                 if (gm.canCycleFuzzy(hoveredSlot.index)) {
-                    lines.add(Component.translatable("tooltip.golem_logix.fuzzy.hint").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+                    lines.add(Component.translatable(hoveredSlot.index < filterSlots() ? "tooltip.golem_logix.fuzzy.hint_bus"
+                            : "tooltip.golem_logix.fuzzy.hint").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
                 }
+            }
+            if (hoveredSlot.index < filterSlots() && !gm.canCycleFuzzy(hoveredSlot.index)) {
+                lines = new java.util.ArrayList<>(lines);
+                lines.add(Component.translatable("tooltip.golem_logix.slot_window_hint").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
             }
         }
         return lines;

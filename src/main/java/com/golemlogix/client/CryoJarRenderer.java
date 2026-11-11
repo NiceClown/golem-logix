@@ -53,13 +53,21 @@ public class CryoJarRenderer implements BlockEntityRenderer<CryoJarBlockEntity> 
         return ResourceLocation.withDefaultNamespace("block/" + name);
     }
 
+    private final net.minecraft.client.model.geom.ModelPart ironGolem;
+
     public CryoJarRenderer(BlockEntityRendererProvider.Context context) {
+        ironGolem = context.bakeLayer(net.minecraft.client.model.geom.ModelLayers.IRON_GOLEM);
     }
 
     @Override
     public AABB getRenderBoundingBox(CryoJarBlockEntity be) {
         BlockPos p = be.getBlockPos();
-        return new AABB(p.getX() - 0.5, p.getY(), p.getZ() - 0.5, p.getX() + 1.5, p.getY() + 2.2, p.getZ() + 1.5);
+        // a joined whole is drawn from its corner, derrick and rings included
+        return switch (be.form()) {
+            case SINGLE -> new AABB(p.getX() - 0.5, p.getY(), p.getZ() - 0.5, p.getX() + 1.5, p.getY() + 2.2, p.getZ() + 1.5);
+            case GIGA -> new AABB(p.getX() - 0.5, p.getY(), p.getZ() - 0.5, p.getX() + 2.5, p.getY() + 4.2, p.getZ() + 2.5);
+            case SUPER -> new AABB(p.getX() - 0.5, p.getY(), p.getZ() - 0.5, p.getX() + 3.5, p.getY() + 5.5, p.getZ() + 3.5);
+        };
     }
 
     @Override
@@ -67,6 +75,12 @@ public class CryoJarRenderer implements BlockEntityRenderer<CryoJarBlockEntity> 
         Level level = be.getLevel();
         BlockState state = be.getBlockState();
         if (level == null || !state.hasProperty(CryoJarBlock.FACING) || state.getValue(CryoJarBlock.HALF) != DoubleBlockHalf.LOWER) {
+            return;
+        }
+        if (be.form() != com.golemlogix.blocks.JarForm.SINGLE) {
+            if (be.isController()) {
+                JarWholeRenderer.render(be, ironGolem, partialTick, pose, buffers);
+            }
             return;
         }
         BlockPos pos = be.getBlockPos();
@@ -134,6 +148,39 @@ public class CryoJarRenderer implements BlockEntityRenderer<CryoJarBlockEntity> 
         }
         box(tv, p, 3.0f, 8.5f, 3.0f, 13.0f, 21.5f, 13.0f, GLASS, 0x90E8F8FF, light);
         pose.popPose();
+    }
+
+    /**
+     * Brass sockets where network pipes dock onto a jar of a joined whole: on the sides of both halves and on the cap. Pixels in the
+     * world's own frame of the lower half (Y 0..32). Returns whether a pipe docks from above. (A lone jar keeps its old look without them.)
+     */
+    static boolean sockets(VertexConsumer vc, PoseStack.Pose p, Level level, BlockPos pos, int light) {
+        boolean above = false;
+        for (int half = 0; half < 2; half++) {
+            for (Direction d : Direction.values()) {
+                if (d == Direction.DOWN || (d == Direction.UP && half == 0)) {
+                    continue;
+                }
+                BlockState n = level.getBlockState(pos.above(half).relative(d));
+                if (!(n.getBlock() instanceof com.golemlogix.blocks.SnowPipeBlock)
+                        || n.getValue(com.golemlogix.blocks.SnowPipeBlock.LINKS.get(d.getOpposite())) != com.golemlogix.blocks.SnowPipeBlock.Link.DEVICE) {
+                    continue;
+                }
+                if (d == Direction.UP) {
+                    above = true;
+                    box(vc, p, 4.4f, 29.4f, 4.4f, 11.6f, 32f, 11.6f, BRASS, 0xFFE8C878, light);
+                    continue;
+                }
+                // from the block's face 3 px in (to the glass), around the pipe's axis at the middle of the half
+                float y = half * 16 + 8, a0 = d.getAxisDirection() == Direction.AxisDirection.POSITIVE ? 13f : 0f, a1 = a0 + 3f;
+                if (d.getAxis() == Direction.Axis.X) {
+                    box(vc, p, a0, y - 3.6f, 4.4f, a1, y + 3.6f, 11.6f, BRASS, 0xFFE8C878, light);
+                } else {
+                    box(vc, p, 4.4f, y - 3.6f, a0, 11.6f, y + 3.6f, a1, BRASS, 0xFFE8C878, light);
+                }
+            }
+        }
+        return above;
     }
 
     /** Degrees the valve wheel has turned: a quarter turn every few seconds while the jar holds Source, otherwise still. */

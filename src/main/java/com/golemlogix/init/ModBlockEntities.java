@@ -80,6 +80,18 @@ public class ModBlockEntities {
             BLOCK_ENTITY_TYPES.register("recipe_monitor", () ->
                     BlockEntityType.Builder.of(RecipeMonitorBlockEntity::new, ModBlocks.RECIPE_MONITOR.get()).build(null));
 
+    public static final Supplier<BlockEntityType<com.golemlogix.blockentity.CopperTankBlockEntity>> COPPER_TANK =
+            BLOCK_ENTITY_TYPES.register("copper_tank", () ->
+                    BlockEntityType.Builder.of(com.golemlogix.blockentity.CopperTankBlockEntity::new, ModBlocks.COPPER_TANK.get()).build(null));
+
+    public static final Supplier<BlockEntityType<com.golemlogix.blockentity.FormationBusBlockEntity>> FORMATION_BUS =
+            BLOCK_ENTITY_TYPES.register("formation_bus", () ->
+                    BlockEntityType.Builder.of(com.golemlogix.blockentity.FormationBusBlockEntity::new, ModBlocks.FORMATION_BUS.get()).build(null));
+
+    public static final Supplier<BlockEntityType<com.golemlogix.blockentity.AnnihilationBusBlockEntity>> ANNIHILATION_BUS =
+            BLOCK_ENTITY_TYPES.register("annihilation_bus", () ->
+                    BlockEntityType.Builder.of(com.golemlogix.blockentity.AnnihilationBusBlockEntity::new, ModBlocks.ANNIHILATION_BUS.get()).build(null));
+
     public static final Supplier<BlockEntityType<PipeBlockEntity>> SNOW_PIPE =
             BLOCK_ENTITY_TYPES.register("snow_pipe", () ->
                     BlockEntityType.Builder.of(PipeBlockEntity::new,
@@ -110,4 +122,20 @@ public class ModBlockEntities {
             BLOCK_ENTITY_TYPES.register("bus", () ->
                     BlockEntityType.Builder.of(BusBlockEntity::new,
                             ModBlocks.VACUUM_IMPORT_BUS.get(), ModBlocks.INJECTOR_EXPORT_BUS.get()).build(null));
+
+    public static final Supplier<BlockEntityType<com.golemlogix.blockentity.StockManometerBlockEntity>> STOCK_MANOMETER =
+            BLOCK_ENTITY_TYPES.register("stock_manometer", () ->
+                    BlockEntityType.Builder.of(com.golemlogix.blockentity.StockManometerBlockEntity::new, ModBlocks.STOCK_MANOMETER.get()).build(null));
+
+    public static final Supplier<BlockEntityType<com.golemlogix.blockentity.StockRequesterBlockEntity>> STOCK_REQUESTER =
+            BLOCK_ENTITY_TYPES.register("stock_requester", () ->
+                    BlockEntityType.Builder.of(com.golemlogix.blockentity.StockRequesterBlockEntity::new, ModBlocks.STOCK_REQUESTER.get()).build(null));
+
+    public static final Supplier<BlockEntityType<com.golemlogix.blockentity.CryoDiodeBlockEntity>> CRYO_DIODE =
+            BLOCK_ENTITY_TYPES.register("cryo_diode", () ->
+                    BlockEntityType.Builder.of(com.golemlogix.blockentity.CryoDiodeBlockEntity::new, ModBlocks.CRYO_DIODE.get()).build(null));
+
+    public static final Supplier<BlockEntityType<com.golemlogix.blockentity.SecurityTerminalBlockEntity>> SECURITY_TERMINAL =
+            BLOCK_ENTITY_TYPES.register("security_terminal", () ->
+                    BlockEntityType.Builder.of(com.golemlogix.blockentity.SecurityTerminalBlockEntity::new, ModBlocks.SECURITY_TERMINAL.get()).build(null));
 }

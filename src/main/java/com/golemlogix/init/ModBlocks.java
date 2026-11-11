@@ -57,13 +57,16 @@ public class ModBlocks {
             () -> new CableBushingBlock(BlockBehaviour.Properties.of()));
 
     // Snow Cryo Pipes (16 & 64 Channels)
+    /** A working pipe's soft glow (block light): the frost inside shines a little, as the lit model's faces do. */
+    private static final int PIPE_GLOW = 6;
+
     public static final DeferredBlock<SnowPipeBlock> BASIC_SNOW_PIPE = registerBlock("basic_snow_pipe",
             "tooltip.golem_logix.basic_snow_pipe",
-            () -> new SnowPipeBlock(16, false, BlockBehaviour.Properties.of()));
+            () -> new SnowPipeBlock(16, false, BlockBehaviour.Properties.of().lightLevel(s -> s.getValue(com.golemlogix.blocks.GolemProperties.ACTIVE) ? PIPE_GLOW : 0)));
 
     public static final DeferredBlock<SnowPipeBlock> DENSE_FROST_PIPE = registerBlock("dense_frost_pipe",
             "tooltip.golem_logix.dense_frost_pipe",
-            () -> new SnowPipeBlock(64, true, BlockBehaviour.Properties.of()));
+            () -> new SnowPipeBlock(64, true, BlockBehaviour.Properties.of().lightLevel(s -> s.getValue(com.golemlogix.blocks.GolemProperties.ACTIVE) ? PIPE_GLOW : 0)));
 
     // Storage Cabinets
     public static final DeferredBlock<CopperDriveBayBlock> COPPER_DRIVE_BAY = registerBlock("copper_drive_bay",
@@ -123,6 +126,19 @@ public class ModBlocks {
             "tooltip.golem_logix.recipe_monitor",
             () -> new RecipeMonitorBlock(BlockBehaviour.Properties.of()));
 
+    // golems working the block in front: a copper golem sets blocks down, an iron golem breaks or clicks them
+    public static final DeferredBlock<com.golemlogix.blocks.FormationBusBlock> FORMATION_BUS = registerBlock("formation_bus",
+            "tooltip.golem_logix.formation_bus",
+            () -> new com.golemlogix.blocks.FormationBusBlock(BlockBehaviour.Properties.of().noOcclusion()));
+    public static final DeferredBlock<com.golemlogix.blocks.AnnihilationBusBlock> ANNIHILATION_BUS = registerBlock("annihilation_bus",
+            "tooltip.golem_logix.annihilation_bus",
+            () -> new com.golemlogix.blocks.AnnihilationBusBlock(BlockBehaviour.Properties.of().noOcclusion()));
+
+    // a copper chest in glass: a fluid tank that keeps its fluid as an item, a bucket mode, joined in a crafting grid
+    public static final DeferredBlock<com.golemlogix.blocks.CopperTankBlock> COPPER_TANK = registerBlock("copper_tank",
+            () -> new com.golemlogix.blocks.CopperTankBlock(BlockBehaviour.Properties.of()),
+            (block, props) -> new com.golemlogix.items.CopperTankItem(block, "tooltip.golem_logix.copper_tank", props.stacksTo(1)));
+
     // World Interaction Buses
     public static final DeferredBlock<VacuumImportBusBlock> VACUUM_IMPORT_BUS = registerBlock("vacuum_import_bus",
             "tooltip.golem_logix.vacuum_import_bus",
@@ -162,9 +178,31 @@ public class ModBlocks {
             "tooltip.golem_logix.cryo_mixer",
             () -> new com.golemlogix.blocks.CryoMixerBlock(BlockBehaviour.Properties.of()));
 
+    public static final DeferredBlock<com.golemlogix.blocks.StockManometerBlock> STOCK_MANOMETER = registerBlock("stock_manometer",
+            "tooltip.golem_logix.stock_manometer",
+            () -> new com.golemlogix.blocks.StockManometerBlock(BlockBehaviour.Properties.of()));
+
+    public static final DeferredBlock<com.golemlogix.blocks.StockRequesterBlock> STOCK_REQUESTER = registerBlock("stock_requester",
+            "tooltip.golem_logix.stock_requester",
+            () -> new com.golemlogix.blocks.StockRequesterBlock(BlockBehaviour.Properties.of()));
+
+    public static final DeferredBlock<com.golemlogix.blocks.CryoDiodeBlock> CRYO_DIODE = registerBlock("cryo_diode",
+            "tooltip.golem_logix.cryo_diode",
+            () -> new com.golemlogix.blocks.CryoDiodeBlock(BlockBehaviour.Properties.of()));
+
+    public static final DeferredBlock<com.golemlogix.blocks.SecurityTerminalBlock> SECURITY_TERMINAL = registerBlock("security_terminal",
+            "tooltip.golem_logix.security_terminal",
+            () -> new com.golemlogix.blocks.SecurityTerminalBlock(BlockBehaviour.Properties.of()));
+
     private static <T extends Block> DeferredBlock<T> registerBlock(String name, String tooltipKey, Supplier<T> blockSupplier) {
+        return registerBlock(name, blockSupplier, (block, props) -> new ModBlockItem(block, tooltipKey, props));
+    }
+
+    /** A block with an item of its own kind. */
+    private static <T extends Block> DeferredBlock<T> registerBlock(String name, Supplier<T> blockSupplier,
+                                                                    java.util.function.BiFunction<T, Item.Properties, ? extends Item> item) {
         DeferredBlock<T> block = BLOCKS.register(name, blockSupplier);
-        ModItems.ITEMS.register(name, () -> new ModBlockItem(block.get(), tooltipKey, new Item.Properties()));
+        ModItems.ITEMS.register(name, () -> item.apply(block.get(), new Item.Properties()));
         return block;
     }
 }

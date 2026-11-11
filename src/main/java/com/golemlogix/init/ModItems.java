@@ -57,6 +57,9 @@ public class ModItems {
     public static final DeferredItem<CopperPunchCardItem> COPPER_PUNCH_CARD = ITEMS.register("copper_punch_card",
             () -> new CopperPunchCardItem(new Item.Properties()));
 
+    public static final DeferredItem<com.golemlogix.items.IdentityPunchCardItem> IDENTITY_PUNCH_CARD = ITEMS.register("identity_punch_card",
+            () -> new com.golemlogix.items.IdentityPunchCardItem(new Item.Properties()));
+
     /** Pipe Plug: closes a side of a pipe so neighbouring lines do not merge. */
     public static final DeferredItem<PipePlugItem> PIPE_PLUG = ITEMS.register("pipe_plug",
             () -> new PipePlugItem(new Item.Properties().stacksTo(64)));
@@ -81,7 +84,7 @@ public class ModItems {
     // Machine upgrades
     public static final DeferredItem<UpgradeItem> COMPRESSED_COPROCESSOR = ITEMS.register("compressed_coprocessor",
             () -> new UpgradeItem(com.golemlogix.upgrade.UpgradeType.SPEED, "tooltip.golem_logix.compressed_coprocessor",
-                    new Item.Properties().stacksTo(16)));
+                    new Item.Properties().stacksTo(64)));
     /** The Co-Processor on Create's assembly line (the transitional item of its sequenced assembly recipe). */
     public static final DeferredItem<com.golemlogix.items.IncompleteAssemblyItem> INCOMPLETE_COMPRESSED_COPROCESSOR =
             ITEMS.register("incomplete_compressed_coprocessor", () -> new com.golemlogix.items.IncompleteAssemblyItem(new Item.Properties()));
@@ -93,6 +96,11 @@ public class ModItems {
     public static final DeferredItem<UpgradeItem> REDSTONE_MODULE = ITEMS.register("redstone_module",
             () -> new UpgradeItem(com.golemlogix.upgrade.UpgradeType.REDSTONE, "tooltip.golem_logix.redstone_module",
                     new Item.Properties().stacksTo(16)));
+    /** Plasma Temper (secret, from the Wither's plasma): the Annihilation Bus's golem never wears its tool. */
+    public static final DeferredItem<UpgradeItem> PLASMA_TEMPER = ITEMS.register("plasma_temper",
+            () -> new UpgradeItem(com.golemlogix.upgrade.UpgradeType.TEMPER, "tooltip.golem_logix.plasma_temper",
+                    new Item.Properties().stacksTo(16)));
+
     /** Fuzzy Card: the filters of a bus or an interface match fuzzily (any components, or a tag chosen on the filter). */
     public static final DeferredItem<UpgradeItem> FUZZY_CARD = ITEMS.register("fuzzy_card",
             () -> new UpgradeItem(com.golemlogix.upgrade.UpgradeType.FUZZY, "tooltip.golem_logix.fuzzy_card",

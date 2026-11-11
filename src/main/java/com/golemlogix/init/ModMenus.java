@@ -21,6 +21,9 @@ public class ModMenus {
     public static final Supplier<MenuType<BusMenu>> BUS =
             MENUS.register("bus", () -> IMenuTypeExtension.create(BusMenu::fromNetwork));
 
+    public static final Supplier<MenuType<AnnihilationBusMenu>> ANNIHILATION_BUS =
+            MENUS.register("annihilation_bus", () -> IMenuTypeExtension.create((id, inv, buf) -> AnnihilationBusMenu.client(id, inv)));
+
     public static final Supplier<MenuType<PatternEncoderMenu>> PATTERN_ENCODER =
             MENUS.register("pattern_encoder", () -> IMenuTypeExtension.create(PatternEncoderMenu::fromNetwork));
 
@@ -53,4 +56,13 @@ public class ModMenus {
 
     public static final Supplier<MenuType<RecipeMonitorMenu>> RECIPE_MONITOR =
             MENUS.register("recipe_monitor", () -> IMenuTypeExtension.create(RecipeMonitorMenu::fromNetwork));
+
+    public static final Supplier<MenuType<StockManometerMenu>> STOCK_MANOMETER =
+            MENUS.register("stock_manometer", () -> IMenuTypeExtension.create(StockManometerMenu::fromNetwork));
+
+    public static final Supplier<MenuType<StockRequesterMenu>> STOCK_REQUESTER =
+            MENUS.register("stock_requester", () -> IMenuTypeExtension.create(StockRequesterMenu::fromNetwork));
+
+    public static final Supplier<MenuType<SecurityTerminalMenu>> SECURITY_TERMINAL =
+            MENUS.register("security_terminal", () -> IMenuTypeExtension.create(SecurityTerminalMenu::fromNetwork));
 }

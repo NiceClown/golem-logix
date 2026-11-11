@@ -56,6 +56,12 @@ public class AnalogTerminalBlock extends HorizontalDirectionalBlock implements G
                 sp.displayClientMessage(Component.translatable(err), true);
                 return InteractionResult.CONSUME;
             }
+            if (!net.hasPermission(player, com.golemlogix.security.SecurityPermission.INSERT)
+                    && !net.hasPermission(player, com.golemlogix.security.SecurityPermission.EXTRACT)
+                    && !net.hasPermission(player, com.golemlogix.security.SecurityPermission.CRAFT)) {
+                sp.displayClientMessage(Component.translatable("message.golem_logix.security_denied"), true);
+                return InteractionResult.CONSUME;
+            }
             BlockPos anchor = pos;
             sp.openMenu(new SimpleMenuProvider(
                             (id, inv, p) -> new TerminalMenu(id, inv, level, anchor, pos, ModBlocks.ANALOG_TERMINAL.get(), false, false, 0),

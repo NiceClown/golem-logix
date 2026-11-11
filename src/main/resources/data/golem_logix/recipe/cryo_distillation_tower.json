@@ -10,7 +10,7 @@
   "key": {
     "I": { "item": "minecraft:snow_block" },
     "F": { "item": "golem_logix:flattened_iron_core" },
-    "C": { "tag": "c:storage_blocks/copper" },
+    "C": { "tag": "golem_logix:copper_block_or_chest" },
     "G": { "tag": "c:glass_blocks" },
     "B": { "item": "minecraft:bricks" },
     "T": { "item": "neovitae:tabula_rasa" }

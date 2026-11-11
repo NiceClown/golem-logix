@@ -4,6 +4,7 @@ import com.golemlogix.blocks.DistillationTowerBlock;
 import com.golemlogix.config.GolemConfig;
 import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.init.ModTags;
+import com.golemlogix.blockentity.CryoJarBlockEntity;
 import com.golemlogix.system.SourceHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -26,7 +27,9 @@ import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
  * batch. From outside the tank only takes blood: nothing pumps it back out.
  */
 public class DistillationTowerBlockEntity extends BlockEntity {
+    /** The tank with up to four co-processors. Every further four, from the fifth on, make it a little larger. */
     public static final int TANK = 8000;
+    public static final int TANK_PER_FOUR = 2000;
     private static final int PERIOD = 10;
 
     private final FluidTank tank = new FluidTank(TANK, fs -> fs.is(ModTags.CRYO_DISTILLABLE)) {
@@ -49,7 +52,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
 
         @Override
         public int getTankCapacity(int t) {
-            return TANK;
+            return capacity();
         }
 
         @Override
@@ -59,7 +62,10 @@ public class DistillationTowerBlockEntity extends BlockEntity {
 
         @Override
         public int fill(FluidStack resource, FluidAction action) {
-            return tank.fill(resource, action);
+            // with co-processors taken out the tank can hold more than it may: nothing more goes in until it has come down
+            int cap = capacity();
+            tank.setCapacity(cap);
+            return tank.getFluidAmount() >= cap ? 0 : tank.fill(resource, action);
         }
 
         @Override
@@ -77,6 +83,8 @@ public class DistillationTowerBlockEntity extends BlockEntity {
     /** What the last batch ran into: 0 = no blood, 1 = working, 2 = no jar with room beside the tower (for the window). */
     private int status;
     private double carry;
+    /** The last batch had a Giga Jar's bonus (for the window). */
+    private boolean bonus;
     private boolean working;
     private long lastWork = -100;
     private boolean dirty;
@@ -85,6 +93,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
     private boolean clientWorkingSent;
     // client
     private int clientBlood;
+    private int clientCapacity = TANK;
     private boolean clientWorking;
     /** Client: how hard it works 0..1 (spins up and down smoothly), the blood level 0..1, the coil phase. */
     public float work, workPrev, blood, bloodPrev, phase, phasePrev;
@@ -119,7 +128,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         if (dirty && now - lastSync >= 10) {
             dirty = false;
             int amount = tank.getFluidAmount();
-            if (sentBlood < 0 || Math.abs(amount - sentBlood) >= TANK / 50 || (amount == 0) != (sentBlood == 0) || working != clientWorkingSent) {
+            if (sentBlood < 0 || Math.abs(amount - sentBlood) >= capacity() / 50 || (amount == 0) != (sentBlood == 0) || working != clientWorkingSent) {
                 sentBlood = amount;
                 clientWorkingSent = working;
                 lastSync = now;
@@ -130,14 +139,37 @@ public class DistillationTowerBlockEntity extends BlockEntity {
 
     /** One batch: as much blood as the rate allows, the tank holds and the jars around can take. */
     void distil(long now) {
+        var cells = DistillationTowerBlock.cells(worldPosition);
+        var onNetwork = networkJars(cells);
+        // the jars of the network the tower does not already reach by standing against them: each is counted once
+        var joined = farJars(cells, onNetwork);
+        // Source made earlier that found no room goes first, blood or no blood
+        if (carry >= 1) {
+            int owed = (int) Math.floor(carry + 1e-9);
+            int put = SourceHelper.fillAround(level, cells, owed, false);
+            for (var jar : joined) {
+                put += jar.fill(owed - put, false);
+            }
+            carry -= put;
+            if (carry >= 1) {
+                status = 2;
+                return;
+            }
+        }
         if (tank.isEmpty()) {
             status = 0;
             return;
         }
         double perMb = GolemConfig.DISTILL_SOURCE_PER_MB.get();
         int budget = Math.max(1, rate() * PERIOD / 20);
-        var cells = DistillationTowerBlock.cells(worldPosition);
-        int room = SourceHelper.fillAround(level, cells, Integer.MAX_VALUE, true);
+        boolean pump = pumpBonus(cells, onNetwork);
+        bonus = pump;
+        perMb *= pump ? 1 + GolemConfig.GIGA_SOURCE_BONUS.get() / 100.0 : 1;
+        long roomAll = SourceHelper.fillAround(level, cells, Integer.MAX_VALUE, true);
+        for (var jar : joined) {
+            roomAll += jar.fill(Integer.MAX_VALUE, true);
+        }
+        int room = (int) Math.min(roomAll, Integer.MAX_VALUE);
         if (room <= 0) {
             status = 2;
             return;
@@ -145,13 +177,19 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         int byRoom = (int) Math.floor((room - carry) / perMb + 1e-9);
         int mb = Math.min(Math.min(budget, tank.getFluidAmount()), Math.max(0, byRoom));
         if (mb <= 0) {
+            status = 2;
             return;
         }
         tank.drain(mb, IFluidHandler.FluidAction.EXECUTE);
         double made = mb * perMb + carry;
         int give = (int) Math.floor(made + 1e-9);
         carry = made - give;
-        SourceHelper.fillAround(level, cells, give, false);
+        give -= SourceHelper.fillAround(level, cells, give, false);
+        for (var jar : joined) {
+            give -= jar.fill(give, false);
+        }
+        // whatever found no room after all waits for the next batch instead of being lost
+        carry += Math.max(0, give);
         lastWork = now;
         status = 1;
         if (now % 40 < PERIOD) {
@@ -159,8 +197,72 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         }
     }
 
+    /** The joined jars of the network this tower touches, if any: the tower need not stand against them. An unpowered network counts, or it could never recover. */
+    private java.util.List<CryoJarBlockEntity> networkJars(java.util.Collection<BlockPos> cells) {
+        for (BlockPos cell : cells) {
+            for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+                BlockPos p = cell.relative(d);
+                if (!cells.contains(p) && level.isLoaded(p) && level.getBlockState(p).getBlock() instanceof com.golemlogix.system.GolemNode) {
+                    return com.golemlogix.system.GolemNetwork.get(level, p).joinedJars();
+                }
+            }
+        }
+        return java.util.List.of();
+    }
+
+    /** The jars of the network but not beside the tower, each whole once (fillAround already fills those beside it). */
+    private java.util.List<CryoJarBlockEntity> farJars(java.util.Collection<BlockPos> cells, java.util.List<CryoJarBlockEntity> onNetwork) {
+        if (onNetwork.isEmpty()) {
+            return onNetwork;
+        }
+        java.util.Set<Object> near = new java.util.HashSet<>();
+        for (BlockPos cell : cells) {
+            for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+                BlockPos p = cell.relative(d);
+                if (!cells.contains(p) && level.isLoaded(p)) {
+                    var be = level.getBlockEntity(p);
+                    if (be != null) {
+                        near.add(SourceHelper.owner(be));
+                    }
+                }
+            }
+        }
+        java.util.List<CryoJarBlockEntity> far = new java.util.ArrayList<>();
+        java.util.Set<Object> seen = new java.util.HashSet<>();
+        for (var jar : onNetwork) {
+            var owner = jar.owner();
+            if (owner != null && !near.contains(owner) && seen.add(owner)) {
+                far.add(owner);
+            }
+        }
+        return far;
+    }
+
+    /** A Giga Jar is a derrick: one on the network, or right beside the tower, makes the tower yield more. */
+    private boolean pumpBonus(java.util.Collection<BlockPos> cells, java.util.List<CryoJarBlockEntity> joined) {
+        for (var jar : joined) {
+            if (jar.form() == com.golemlogix.blocks.JarForm.GIGA) {
+                return true;
+            }
+        }
+        for (BlockPos cell : cells) {
+            for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+                if (level.getBlockEntity(cell.relative(d)) instanceof CryoJarBlockEntity j && j.form() == com.golemlogix.blocks.JarForm.GIGA) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public com.golemlogix.upgrade.UpgradeContainer getUpgrades() {
         return upgrades;
+    }
+
+    /** How much blood the tank holds: larger with every four co-processors past the first four. */
+    public int capacity() {
+        int coprocessors = upgrades.count(com.golemlogix.upgrade.UpgradeType.SPEED);
+        return TANK + TANK_PER_FOUR * (Math.max(0, coprocessors - 1) / 4);
     }
 
     /** Blood a second: the base rate and the co-processors' share. */
@@ -168,7 +270,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         return GolemConfig.DISTILL_RATE.get() + GolemConfig.DISTILL_COPROCESSOR_BONUS.get() * upgrades.count(com.golemlogix.upgrade.UpgradeType.SPEED);
     }
 
-    /** The window's numbers: blood mB, mB a second, Source a second x10, status, co-processors. */
+    /** The window's numbers: blood mB, mB a second, Source a second x10, status, co-processors, the tank's size. */
     public net.minecraft.world.inventory.ContainerData menuData() {
         return new net.minecraft.world.inventory.ContainerData() {
             @Override
@@ -176,9 +278,10 @@ public class DistillationTowerBlockEntity extends BlockEntity {
                 return switch (index) {
                     case 0 -> tank.getFluidAmount();
                     case 1 -> rate();
-                    case 2 -> (int) Math.round(rate() * GolemConfig.DISTILL_SOURCE_PER_MB.get() * 10);
+                    case 2 -> (int) Math.round(rate() * GolemConfig.DISTILL_SOURCE_PER_MB.get() * (bonus ? 1 + GolemConfig.GIGA_SOURCE_BONUS.get() / 100.0 : 1) * 10);
                     case 3 -> tank.isEmpty() ? 0 : status;
                     case 4 -> upgrades.count(com.golemlogix.upgrade.UpgradeType.SPEED);
+                    case 5 -> capacity();
                     default -> 0;
                 };
             }
@@ -189,7 +292,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
 
             @Override
             public int getCount() {
-                return 5;
+                return 6;
             }
         };
     }
@@ -203,7 +306,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
     public Component statusLine() {
         FluidStack f = tank.getFluid();
         Component name = f.isEmpty() ? Component.translatable("block.golem_logix.cryo_distillation_tower.empty") : f.getHoverName();
-        return Component.translatable("message.golem_logix.distillation_tower", name, tank.getFluidAmount(), TANK);
+        return Component.translatable("message.golem_logix.distillation_tower", name, tank.getFluidAmount(), capacity());
     }
 
     public void clientTick() {
@@ -211,7 +314,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         bloodPrev = blood;
         phasePrev = phase;
         work += ((clientWorking ? 1f : 0f) - work) * (clientWorking ? 0.06f : 0.03f);
-        blood += (clientBlood / (float) TANK - blood) * 0.1f;
+        blood += (clientBlood / (float) Math.max(1, clientCapacity) - blood) * 0.1f;
         phase += 0.02f + 0.18f * work;
         if (clientWorking && level.random.nextInt(4) == 0) {
             // frost breathing out of the louvres, a wisp of steam from the outlet
@@ -239,12 +342,14 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         tank.readFromNBT(registries, tag.getCompound("Tank"));
         carry = tag.getDouble("Carry");
         upgrades.fromTag(tag.getList("Upgrades", net.minecraft.nbt.Tag.TAG_COMPOUND), registries);
+        tank.setCapacity(capacity());
     }
 
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();
         tag.putInt("Blood", tank.getFluidAmount());
+        tag.putInt("Capacity", capacity());
         tag.putBoolean("Working", working);
         return tag;
     }
@@ -252,6 +357,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
     @Override
     public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
         clientBlood = tag.getInt("Blood");
+        clientCapacity = tag.contains("Capacity") ? tag.getInt("Capacity") : TANK;
         clientWorking = tag.getBoolean("Working");
     }
 
