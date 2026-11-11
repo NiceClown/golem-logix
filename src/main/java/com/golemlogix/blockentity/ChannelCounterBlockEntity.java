@@ -48,7 +48,7 @@ public class ChannelCounterBlockEntity extends BlockEntity {
         setChanged();
         if (level != null) {
             level.playSound(null, worldPosition, SoundEvents.COMPARATOR_CLICK, SoundSource.BLOCKS, 0.4f, showCapacity ? 1.3f : 0.9f);
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 2);
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
     }
 
@@ -72,7 +72,8 @@ public class ChannelCounterBlockEntity extends BlockEntity {
             online = on;
             used = u;
             capacity = c;
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 2);
+            setChanged();
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
     }
 
