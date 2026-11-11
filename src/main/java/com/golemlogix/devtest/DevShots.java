@@ -234,6 +234,7 @@ public final class DevShots {
         mc.options.hideGui = true;
         mc.options.fov().set(70);
         mc.options.renderDistance().set(10);
+        placeWindowOutOfTheWay(mc);
         queueDir = Path.of(QUEUE);
         try {
             Files.createDirectories(queueDir);
@@ -241,6 +242,49 @@ public final class DevShots {
             GolemLogixMod.LOGGER.error("[DevShots] cannot create queue dir", e);
         }
         GolemLogixMod.LOGGER.info("[DevShots] active, queue = {}", queueDir);
+    }
+
+    /**
+     * The test window should not sit on the desk the user is working at: it goes to a second monitor if there is one, and off the
+     * screen otherwise. It is not minimised on purpose: a minimised window makes the swap block and the rig would stall.
+     * Set -Dgolemlogix.devshots.window=keep to leave the window where it is.
+     */
+    private static void placeWindowOutOfTheWay(Minecraft mc) {
+        if ("keep".equalsIgnoreCase(System.getProperty("golemlogix.devshots.window", ""))) {
+            return;
+        }
+        try {
+            long handle = org.lwjgl.glfw.GLFW.glfwGetCurrentContext();
+            if (handle == 0L) {
+                return;
+            }
+            long primary = org.lwjgl.glfw.GLFW.glfwGetPrimaryMonitor();
+            org.lwjgl.PointerBuffer monitors = org.lwjgl.glfw.GLFW.glfwGetMonitors();
+            for (int i = 0; i < monitors.limit(); i++) {
+                long monitor = monitors.get(i);
+                if (monitor == primary) {
+                    continue;
+                }
+                java.nio.IntBuffer px = org.lwjgl.system.MemoryUtil.memAllocInt(1);
+                java.nio.IntBuffer py = org.lwjgl.system.MemoryUtil.memAllocInt(1);
+                org.lwjgl.glfw.GLFW.glfwGetMonitorPos(monitor, px, py);
+                int x = px.get(0);
+                int y = py.get(0);
+                org.lwjgl.system.MemoryUtil.memFree(px);
+                org.lwjgl.system.MemoryUtil.memFree(py);
+                org.lwjgl.glfw.GLFW.glfwSetWindowPos(handle, x + 60, y + 60);
+                GolemLogixMod.LOGGER.info("[DevShots] the window moved to the second monitor at {},{}", x, y);
+                return;
+            }
+            // one monitor only: the window goes off the desk, the shots are taken from the framebuffer all the same
+            int[] width = new int[1];
+            int[] height = new int[1];
+            org.lwjgl.glfw.GLFW.glfwGetWindowSize(handle, width, height);
+            org.lwjgl.glfw.GLFW.glfwSetWindowPos(handle, -(width[0] + 240), 0);
+            GolemLogixMod.LOGGER.info("[DevShots] no second monitor: the window moved off the screen");
+        } catch (Throwable t) {
+            GolemLogixMod.LOGGER.warn("[DevShots] cannot move the window: {}", t.toString());
+        }
     }
 
     private static void createWorld(Minecraft mc) {
