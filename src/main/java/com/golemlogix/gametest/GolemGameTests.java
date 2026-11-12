@@ -862,6 +862,31 @@ public class GolemGameTests {
         });
     }
 
+    /**
+     * With the temper, the bus strikes with a blessed sword: the mob dies, and the sword in the slot stays plain and unworn - the
+     * blessings were only on the copy the golem swung.
+     */
+    public static void annihilationBusWithTemper(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        BlockPos bus = BUS_OUT, front = BUS_OUT.north();
+        helper.setBlock(bus, ModBlocks.ANNIHILATION_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.NORTH));
+        helper.setBlock(front, Blocks.AIR);
+        var be = helper.getBlockEntity(bus, com.golemlogix.blockentity.AnnihilationBusBlockEntity.class);
+        be.menuData().set(1, com.golemlogix.blockentity.AnnihilationBusBlockEntity.ATTACK);
+        be.getTool().setItem(0, new ItemStack(Items.DIAMOND_SWORD));
+        be.getUpgrades().setItem(com.golemlogix.upgrade.UpgradeSpec.ANNIHILATION_BUS.slotOf(com.golemlogix.upgrade.UpgradeType.TEMPER),
+                new ItemStack(ModItems.PLASMA_TEMPER.get()));
+        helper.setBlock(front.below(), Blocks.STONE);
+        var pig = helper.spawnWithNoFreeWill(net.minecraft.world.entity.EntityType.PIG, front);
+        helper.runAfterDelay(80, () -> {
+            helper.assertTrue(!pig.isAlive(), "the pig is dead: health " + pig.getHealth() + ", last strike " + be.lastUse());
+            ItemStack sword = be.getTool().getItem(0);
+            helper.assertTrue(!sword.isEnchanted(), "the sword in the slot stays plain: " + sword);
+            helper.assertTrue(sword.getDamageValue() == 0, "and it does not wear: " + sword.getDamageValue());
+            helper.succeed();
+        });
+    }
+
     /** Hewer's Annihilation Bus on right click with shears: it carves the pumpkin in front and the seeds go into the network. */
     public static void annihilationBusClicks(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
@@ -4653,7 +4678,7 @@ public class GolemGameTests {
 
     // ----------------------------------------------------------- cryo-distillation (Source without Ars Nouveau)
 
-    /** The temper lifts a tool to netherite's level for its own kind of block, and adds a level of Fortune. */
+    /** The temper lifts a tool to netherite's level for its own kind of block, and adds a level of Fortune and one of Looting. */
     public static void temperLiftsTools(GameTestHelper helper) {
         var reg = helper.getLevel().registryAccess();
         var obsidian = Blocks.OBSIDIAN.defaultBlockState();
@@ -4663,7 +4688,26 @@ public class GolemGameTests {
         helper.assertTrue(hand.isCorrectToolForDrops(obsidian), "tempered, it does");
         helper.assertTrue(!wood.isEnchanted(), "the real tool stays as it was");
         var fortune = reg.lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT).getOrThrow(net.minecraft.world.item.enchantment.Enchantments.FORTUNE);
+        var looting = reg.lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT).getOrThrow(net.minecraft.world.item.enchantment.Enchantments.LOOTING);
+        var silkTouch = reg.lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT).getOrThrow(net.minecraft.world.item.enchantment.Enchantments.SILK_TOUCH);
         helper.assertTrue(net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(fortune, hand) == 1, "with Fortune I");
+        helper.assertTrue(net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(looting, hand) == 1, "and with Looting I");
+        // any item gets the blessings, whatever it is for: a sword is no tool and still comes out of the bus blessed
+        ItemStack sword = com.golemlogix.blockentity.AnnihilationBusBlockEntity.temperedHand(new ItemStack(Items.IRON_SWORD),
+                Blocks.STONE.defaultBlockState(), reg);
+        helper.assertTrue(net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(fortune, sword) == 1
+                && net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(looting, sword) == 1,
+                "a sword comes out with Fortune I and Looting I too");
+        // Looting and Silk Touch cannot live together: a tool that keeps the block keeps Silk Touch and does not get Looting
+        ItemStack silk = new ItemStack(Items.IRON_PICKAXE);
+        silk.enchant(silkTouch, 1);
+        ItemStack silkHand = com.golemlogix.blockentity.AnnihilationBusBlockEntity.temperedHand(silk, Blocks.STONE.defaultBlockState(), reg);
+        helper.assertTrue(net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(silkTouch, silkHand) == 1,
+                "Silk Touch stays");
+        helper.assertTrue(net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(looting, silkHand) == 0,
+                "and Looting does not come with it");
+        helper.assertTrue(net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(fortune, silkHand) == 1,
+                "but Fortune does");
         ItemStack rich = new ItemStack(Items.IRON_PICKAXE);
         rich.enchant(fortune, 3);
         helper.assertTrue(net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(fortune,

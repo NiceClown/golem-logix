@@ -2449,7 +2449,11 @@ The tool in the golem's slot then **never wears** - mining or clicking, a pickax
 
 Even a tool on its last point of durability goes back to work.
 
-It also lifts the tool: **it harvests at netherite's level**, whatever it is made of, and has **one more level of Fortune**. A wooden pickaxe mines obsidian, though still at a wooden pickaxe's speed.
+It also lifts the tool: **it harvests at netherite's level**, whatever it is made of, and has **one more level of Fortune and one more level of Looting**. A wooden pickaxe mines obsidian, though still at a wooden pickaxe's speed.
+
+**Whatever lies in the slot is blessed, whatever it is for**: a sword that kills drops more, a pickaxe that digs drops more, and a weapon of another mod is treated the same way - the bus needs no list of weapons.
+
+*Silk Touch and Looting cannot live on one item: a tool that keeps the block keeps Silk Touch and does not get Looting.*
 
 *A netherite pickaxe with Fortune, tempered once, digs for ever.*
 

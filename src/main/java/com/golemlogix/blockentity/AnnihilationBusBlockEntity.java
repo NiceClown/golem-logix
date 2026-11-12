@@ -509,11 +509,32 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         return hand;
     }
 
-    /** What the golem really swings with the temper: the same tool, harvesting at netherite's level, with one more level of Fortune. */
+    /** What the golem really swings with the temper: the same tool, harvesting at netherite's level, with the temper's blessings. */
     public static ItemStack temperedHand(ItemStack with, BlockState state, net.minecraft.core.HolderLookup.Provider registries) {
         ItemStack hand = !with.isCorrectToolForDrops(state) && temperLifts(with, state) ? lifted(with, state) : with.copy();
-        var fortune = registries.lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT).getOrThrow(net.minecraft.world.item.enchantment.Enchantments.FORTUNE);
-        net.minecraft.world.item.enchantment.EnchantmentHelper.updateEnchantments(hand, m -> m.set(fortune, m.getLevel(fortune) + 1));
+        return blessed(hand, registries);
+    }
+
+    /**
+     * The temper's blessings on whatever the golem holds: one more level of Fortune and one of Looting. Every item gets them, whatever
+     * it is for: a sword that kills and drops more, a pickaxe that digs and drops more, a weapon of another mod that only the bus
+     * knows. Nothing here asks what the item is.
+     */
+    public static ItemStack blessed(ItemStack hand, net.minecraft.core.HolderLookup.Provider registries) {
+        var fortune = registries.lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT)
+                .getOrThrow(net.minecraft.world.item.enchantment.Enchantments.FORTUNE);
+        var looting = registries.lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT)
+                .getOrThrow(net.minecraft.world.item.enchantment.Enchantments.LOOTING);
+        var silkTouch = registries.lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT)
+                .getOrThrow(net.minecraft.world.item.enchantment.Enchantments.SILK_TOUCH);
+        // Looting and Silk Touch cannot live on one item: a tool that must keep the block does not get it
+        boolean keepsBlock = net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(silkTouch, hand) > 0;
+        net.minecraft.world.item.enchantment.EnchantmentHelper.updateEnchantments(hand, m -> {
+            m.set(fortune, m.getLevel(fortune) + 1);
+            if (!keepsBlock) {
+                m.set(looting, m.getLevel(looting) + 1);
+            }
+        });
         return hand;
     }
 
@@ -660,7 +681,10 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         }
         boolean own = !tool.getItem(0).isEmpty();
         ItemStack before = own ? tool.getItem(0).copy() : new ItemStack(Items.IRON_SWORD);
-        FakePlayer p = golem(level, pos, facing, before.copy());
+        // the temper's blessings are on the copy the golem swings, so the mobs it kills drop more; the slot keeps the plain item
+        ItemStack plain = before.copy();
+        ItemStack hand = tempered() ? blessed(before, level.registryAccess()) : before.copy();
+        FakePlayer p = golem(level, pos, facing, hand);
         // a FakePlayer never ticks: neither does the weapon's damage reach its attributes nor does its swing wind up by itself
         List<Runnable> undo = new java.util.ArrayList<>();
         p.getMainHandItem().forEachModifier(net.minecraft.world.entity.EquipmentSlot.MAINHAND, (attribute, modifier) -> {
@@ -684,7 +708,10 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
             undo.forEach(Runnable::run);
         }
         if (own) {
-            tool.setItem(0, unworn(before, p.getMainHandItem().copy()));
+            // with the temper the slot keeps the plain item: the blessings were only on the copy the golem swung, and the tool
+            // does not wear; without it the sword comes back worn, as it should
+            ItemStack after = tempered() ? plain : p.getMainHandItem().copy();
+            tool.setItem(0, unworn(plain, after));
         }
         p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
         p.setShiftKeyDown(false);

@@ -7,8 +7,11 @@
 - Cryo-Source Jars have their own guide book entry.
 - A tower no longer counts a jar twice when it stands beside the tower and on its network too (blood was drained for room that was not
   there), and Source that finds no room waits for the next batch instead of being lost.
-- The Plasma Temper also harvests at netherite's level and adds one level of Fortune to any tool. A tool from another mod that it cannot
-  lift stays as it is, and the golem never breaks a block its hand would get nothing from.
+- The Plasma Temper also harvests at netherite's level and adds one level of Fortune and one level of Looting to whatever the golem
+  holds, whatever it is for: a sword that kills drops more, a pickaxe that digs drops more, and a weapon of another mod is treated the
+  same way - the bus keeps no list of weapons. A tool from another mod that it cannot lift stays as it is, and the golem never breaks a
+  block its hand would get nothing from. Silk Touch and Looting cannot live on one item: a tool that keeps the block keeps Silk Touch
+  and does not get Looting.
 - Disk counters from older worlds follow their contents once the cabinet loads.
 - Worn or enchanted tools that also hold a fluid now count as equipment on disks and get their mark.
 - The reactor's iron golems kneel under the ring and hold it on their shoulders, like atlantes. Dials and runes no longer flicker, and the snow
