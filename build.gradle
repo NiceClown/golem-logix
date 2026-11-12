@@ -112,11 +112,16 @@ dependencies {
         runtimeOnly 'maven.modrinth:backport-copper-age:ZyjDScTQ'  // 1.21.1-0.1.5.1-pre neoforge
     }
 
-    // testing with the real mods in dev runs: gradle -PtestMods runClient / runDevShots / runGameTestServer
-    // (Source from Ars Nouveau jars, JEI, Jade). They do not go into the release jar.
+    // Ars Nouveau (Source from its jars): on in dev and test runs by default, so the Source integration is really exercised.
+    // gradle -PnoArs runs the same tests without it.
+    if (!project.hasProperty('noArs')) {
+        runtimeOnly 'maven.modrinth:ars-nouveau:ALmdjtiq'          // 5.13.5
+        runtimeOnly 'maven.modrinth:geckolib:Grwn5rUB'             // 4.9.3 neoforge, required by Ars Nouveau
+        runtimeOnly 'maven.modrinth:curios:yohfFbgD'               // 9.5.1+1.21.1, mandatory for Ars Nouveau
+    }
+    // testing with the rest of the real mods in dev runs: gradle -PtestMods runClient / runDevShots / runGameTestServer
+    // (JEI, Jade, Curios). They do not go into the release jar.
     if (project.hasProperty('testMods')) {
-        runtimeOnly 'maven.modrinth:ars-nouveau:yWDnir1o'          // 5.13.3
-        runtimeOnly 'maven.modrinth:geckolib:Grwn5rUB'             // 4.9.3 neoforge
         runtimeOnly 'maven.modrinth:curios:yohfFbgD'               // 9.5.1+1.21.1
         runtimeOnly 'mezz.jei:jei-1.21.1-neoforge:19.44.0.403'
         runtimeOnly 'maven.modrinth:jade:15.10.6+neoforge'
