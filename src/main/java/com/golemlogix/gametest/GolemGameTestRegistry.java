@@ -252,6 +252,11 @@ public final class GolemGameTestRegistry {
             new Test("asmrrecipemonitorblockedtickandclientsync", GolemGameTestsExtra::asmrRecipeMonitorBlockedTickAndClientSync, 100, 0),
             // New Autocrafting & Network Tests
             new Test("autocraftcyclicpatternsdonothang", GolemGameTestsExtra::autocraftCyclicPatternsDoNotHang, 100, 0),
+            new Test("autocraftselfcycle", GolemGameTestsExtra::autocraftSelfCycle, 60, 0),
+            new Test("autocraftthreecycle", GolemGameTestsExtra::autocraftThreeCycle, 60, 0),
+            new Test("autocraftfuzzycyclesteps", GolemGameTestsExtra::autocraftFuzzyCycleStepsOver, 60, 0),
+            new Test("pipeloopjoinsonce", GolemGameTestsExtra::pipeLoopJoinsOnce, 120, 0),
+            new Test("newdevicesindeadnetwork", GolemGameTestsExtra::newDevicesInDeadNetwork, 120, 0),
             new Test("networksplitwhentrunkiscut", GolemGameTestsExtra::networkSplitWhenTrunkIsCut, 200, 0),
             new Test("autocrafttwocalculatorsatonce", GolemGameTestsExtra::autocraftTwoCalculatorsAtOnce, 200, 0),
             new Test("autocraftsurvivespowerloss", GolemGameTestsExtra::autocraftSurvivesPowerLoss, 200, 0),

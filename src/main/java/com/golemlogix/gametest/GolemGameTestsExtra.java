@@ -2040,6 +2040,111 @@ public final class GolemGameTestsExtra {
         });
     }
 
+    /** A recipe that needs itself: the planner does not hang, reports the item missing, and starts no job. */
+    public static void autocraftSelfCycle(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+        provider.getContainer().setItem(0, card(new PatternData(false,
+                List.of(new ItemStack(Items.IRON_INGOT)), List.of(new ItemStack(Items.IRON_INGOT)))));
+        helper.runAfterDelay(5, () -> {
+            ItemKey iron = ItemKey.of(new ItemStack(Items.IRON_INGOT));
+            CraftingPlan plan = CraftingPlanner.plan(net(helper, bay), iron, 1);
+            helper.assertTrue(!plan.missing().isEmpty(), "a recipe that needs itself cannot be made: " + plan.missing());
+            helper.assertTrue(net(helper, bay).startCrafting(iron, 1).type() != GolemNetwork.StartType.STARTED, "and no job starts");
+            helper.succeed();
+        });
+    }
+
+    /** Three recipes in a ring (iron - gold - diamond - iron): no stack overflow, nothing crafted out of thin air. */
+    public static void autocraftThreeCycle(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+        provider.getContainer().setItem(0, card(new PatternData(false,
+                List.of(new ItemStack(Items.GOLD_INGOT)), List.of(new ItemStack(Items.IRON_INGOT)))));
+        provider.getContainer().setItem(1, card(new PatternData(false,
+                List.of(new ItemStack(Items.DIAMOND)), List.of(new ItemStack(Items.GOLD_INGOT)))));
+        provider.getContainer().setItem(2, card(new PatternData(false,
+                List.of(new ItemStack(Items.IRON_INGOT)), List.of(new ItemStack(Items.DIAMOND)))));
+        helper.runAfterDelay(5, () -> {
+            ItemKey iron = ItemKey.of(new ItemStack(Items.IRON_INGOT));
+            CraftingPlan plan = CraftingPlanner.plan(net(helper, bay), iron, 1);
+            helper.assertTrue(!plan.missing().isEmpty(), "a ring of recipes cannot be made: " + plan.missing());
+            helper.succeed();
+        });
+    }
+
+    /**
+     * A fuzzy input whose only pattern stands on an item of the same path (oak from birch, "any log"): the planner steps over the
+     * alternative instead of walking into itself, and reports the birch as missing rather than crafting the oak out of itself.
+     */
+    public static void autocraftFuzzyCycleStepsOver(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+        provider.getContainer().setItem(0, card(new PatternData(false,
+                List.of(new ItemStack(Items.BIRCH_LOG)), List.of(new ItemStack(Items.OAK_LOG)), List.of("#minecraft:logs"))));
+        helper.runAfterDelay(5, () -> {
+            ItemKey oak = ItemKey.of(new ItemStack(Items.OAK_LOG));
+            CraftingPlan plan = CraftingPlanner.plan(net(helper, bay), oak, 1);
+            ItemKey birch = ItemKey.of(new ItemStack(Items.BIRCH_LOG));
+            helper.assertTrue(plan.missing().containsKey(birch), "the birch is missing: " + plan.missing());
+            helper.assertTrue(!plan.missing().containsKey(oak), "and the oak is not asked of itself: " + plan.missing());
+            helper.succeed();
+        });
+    }
+
+    /**
+     * Every device of the newer ones in a network with no Source at all: nothing throws, the network stays offline, and the devices
+     * stand by - the counter is dark, the requester holds no order, the manometer gives no signal.
+     */
+    public static void newDevicesInDeadNetwork(GameTestHelper helper) {
+        // the array without its core: the network is offline whatever the config says about Source
+        buildArray(helper, 0, 0);
+        put(helper, GolemGameTests.CORE, Blocks.AIR);
+        put(helper, new BlockPos(2, 1, -1), ModBlocks.BASIC_SNOW_PIPE.get());
+        put(helper, new BlockPos(2, 2, -1), ModBlocks.CHANNEL_COUNTER.get());
+        put(helper, new BlockPos(4, 1, -1), ModBlocks.STOCK_MANOMETER.get());
+        put(helper, new BlockPos(6, 1, -1), ModBlocks.STOCK_REQUESTER.get());
+        put(helper, new BlockPos(8, 1, -1), ModBlocks.CRYO_DIODE.get());
+        put(helper, new BlockPos(10, 1, -1), ModBlocks.SECURITY_TERMINAL.get());
+        put(helper, new BlockPos(12, 1, -1), ModBlocks.COPPER_TANK.get());
+        put(helper, new BlockPos(14, 1, -1), ModBlocks.FORMATION_BUS.get());
+        // four jars in a square are a Giga Jar, and they too wait for Source
+        for (BlockPos p : new BlockPos[]{new BlockPos(16, 1, -1), new BlockPos(17, 1, -1), new BlockPos(16, 1, 0), new BlockPos(17, 1, 0)}) {
+            put(helper, p, ModBlocks.CRYO_SOURCE_JAR.get());
+        }
+        helper.runAfterDelay(40, () -> {
+            GolemNetwork n = net(helper, GolemGameTests.ORIGIN);
+            helper.assertTrue(!n.isOnline(), "the network has no Source");
+            var counter = helper.getBlockEntity(new BlockPos(2, 2, -1), com.golemlogix.blockentity.ChannelCounterBlockEntity.class);
+            helper.assertTrue(counter != null && !counter.online(), "the counter is dark");
+            helper.assertTrue(n.channelsUsed() == 0, "nothing is allocated: " + n.channelsUsed());
+            helper.succeed();
+        });
+    }
+
+    /** A pipe loop around the array: the network takes the loop in one pass, the devices on it are active, nothing hangs. */
+    public static void pipeLoopJoinsOnce(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        // out of the corner bushing (4,1,4), around the array, back into the corner bushing (4,1,6)
+        for (BlockPos p : new BlockPos[]{new BlockPos(3, 1, 4), new BlockPos(3, 1, 5), new BlockPos(3, 1, 6), new BlockPos(4, 1, 6)}) {
+            put(helper, p, ModBlocks.BASIC_SNOW_PIPE.get());
+        }
+        put(helper, new BlockPos(2, 1, 5), ModBlocks.ANALOG_TERMINAL.get());
+        helper.runAfterDelay(20, () -> {
+            GolemNetwork n = net(helper, GolemGameTests.ORIGIN);
+            helper.assertTrue(n.isOnline(), "the loop did not break the network");
+            helper.assertTrue(n.deviceCount() >= 1, "the terminal on the loop is in the network: " + n.deviceCount());
+            helper.assertTrue(n.isDeviceActive(helper.absolutePos(new BlockPos(2, 1, 5))), "and it has a channel");
+            helper.succeed();
+        });
+    }
+
     /** Removing a pipe splits the network into two: storage and devices leave the first, and reconnecting rejoins them. */
     public static void networkSplitWhenTrunkIsCut(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);

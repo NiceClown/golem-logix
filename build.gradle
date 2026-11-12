@@ -100,10 +100,11 @@ dependencies {
         runtimeOnly 'maven.modrinth:jade:Pr1h4azo'
         runtimeOnly 'maven.modrinth:curios:dRnRThvD'
     }
-    // Neo Vitae (Essentia Vitae for the Cryo-Distillation Tower): gradle -Pvitae ...
-    if (project.hasProperty('vitae')) {
-        runtimeOnly 'maven.modrinth:neovitae:1oCGcXly'             // 26.1.2-1.1.44
-        runtimeOnly 'maven.modrinth:modonomicon:aFWelvHM'          // 26.1.2-2.17.1, required by Neo Vitae
+    // Neo Vitae (Essentia Vitae for the Cryo-Distillation Tower): on in dev and test runs by default, so the integration is
+    // really exercised. gradle -PnoVitae runs the same tests without it (and -Pvitae is accepted for the old habit).
+    if (!project.hasProperty('noVitae')) {
+        runtimeOnly 'maven.modrinth:neovitae:nNG1ZJad'             // 26.1.2-1.1.53
+        runtimeOnly 'maven.modrinth:modonomicon:PA41YCS1'          // 26.1.2-2.20.1, required by Neo Vitae
         runtimeOnly 'maven.modrinth:geckolib:xfVfPcoC'             // 5.5.2, required by Neo Vitae
         if (!project.hasProperty('testMods')) {
             runtimeOnly 'mezz.jei:jei-26.1.2-neoforge:29.47.0.111'
