@@ -289,7 +289,11 @@ public final class GolemGameTestRegistry {
             new Test("providerfeedsanothersidewhenoneisfull", GolemGameTestsExtra::providerFeedsAnotherSideWhenOneIsFull, 400, 0),
             new Test("busthroughputmatchesupgrades", GolemGameTestsExtra::busThroughputMatchesUpgrades, 340, 0),
             new Test("stockrequesterkeepsfluid", GolemGameTestsExtra::stockRequesterKeepsFluid, 320, 0),
-            new Test("networkkeepscontentsacrossdiskmove", GolemGameTestsExtra::networkKeepsContentsAcrossDiskMove, 200, 0)
+            new Test("networkkeepscontentsacrossdiskmove", GolemGameTestsExtra::networkKeepsContentsAcrossDiskMove, 200, 0),
+            new Test("allnewdevicesoffline", GolemGameTestsExtra::allNewerDevicesOffline, 120, 0),
+            new Test("manasaturatorunformeddoesnothing", GolemGameTestsExtra::manaSaturatorUnformedDoesNothing, 60, 0),
+            new Test("cryomixerwithoutsource", GolemGameTestsExtra::cryoMixerWithoutSourceDoesNothing, 60, 0),
+            new Test("distillationtowerwithoutblood", GolemGameTestsExtra::distillationTowerWithoutBloodDoesNothing, 60, 0)
     );
 
     private GolemGameTestRegistry() {

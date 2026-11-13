@@ -2911,6 +2911,87 @@ public final class GolemGameTestsExtra {
     }
 
     /**
+     * Every newer device in a network with no core at all: nothing throws, the network stays offline, devices stand by -
+     * the counter is dark, the requester holds no order, the manometer gives no signal.
+     */
+    public static void allNewerDevicesOffline(GameTestHelper helper) {
+        GolemGameTests.buildArray(helper, 0, 0);
+        GolemGameTests.put(helper, GolemGameTests.CORE, Blocks.AIR);
+        GolemGameTests.put(helper, new BlockPos(2, 1, -1), ModBlocks.BASIC_SNOW_PIPE.get());
+        GolemGameTests.put(helper, new BlockPos(2, 2, -1), ModBlocks.CHANNEL_COUNTER.get());
+        GolemGameTests.put(helper, new BlockPos(4, 1, -1), ModBlocks.STOCK_MANOMETER.get());
+        GolemGameTests.put(helper, new BlockPos(6, 1, -1), ModBlocks.STOCK_REQUESTER.get());
+        GolemGameTests.put(helper, new BlockPos(8, 1, -1), ModBlocks.CRYO_DIODE.get());
+        GolemGameTests.put(helper, new BlockPos(10, 1, -1), ModBlocks.SECURITY_TERMINAL.get());
+        GolemGameTests.put(helper, new BlockPos(12, 1, -1), ModBlocks.COPPER_TANK.get());
+        GolemGameTests.put(helper, new BlockPos(14, 1, -1), ModBlocks.FORMATION_BUS.get());
+        for (BlockPos p : new BlockPos[]{new BlockPos(16, 1, -1), new BlockPos(17, 1, -1), new BlockPos(16, 1, 0), new BlockPos(17, 1, 0)}) {
+            GolemGameTests.put(helper, p, ModBlocks.CRYO_SOURCE_JAR.get());
+        }
+        helper.runAfterDelay(40, () -> {
+            GolemNetwork n = net(helper, GolemGameTests.ORIGIN);
+            helper.assertTrue(!n.isOnline(), "the network has no core");
+            var counter = helper.getBlockEntity(new BlockPos(2, 2, -1), com.golemlogix.blockentity.ChannelCounterBlockEntity.class);
+            helper.assertTrue(counter != null && !counter.online(), "the counter is dark");
+            helper.assertTrue(n.channelsUsed() == 0, "nothing is allocated: " + n.channelsUsed());
+            helper.succeed();
+        });
+    }
+
+    /**
+     * Mana Saturator unformed: multi-block not built, the block entity does nothing - no crafting, no light.
+     */
+    public static void manaSaturatorUnformedDoesNothing(GameTestHelper helper) {
+        BlockPos origin = GolemGameTests.ORIGIN;
+        // Place individual saturator parts but do not form the multi-block
+        GolemGameTests.put(helper, origin.offset(0, 0, 0), ModBlocks.MANA_SATURATOR.get());
+        helper.runAfterDelay(40, () -> {
+            var sat = helper.getBlockEntity(origin, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
+            helper.assertTrue(sat != null, "saturator block entity exists");
+            helper.assertFalse(sat.getBlockState().getValue(com.golemlogix.blocks.ManaSaturatorBlock.FORMED), "saturator is not formed");
+            helper.assertFalse(sat.isCrafting(), "unformed saturator does not craft");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * Cryo-Mixer without Source: the machine is online but makes nothing - no ice, no snow.
+     */
+    public static void cryoMixerWithoutSourceDoesNothing(GameTestHelper helper) {
+        BlockPos bay = GolemGameTests.baseNetwork(helper);
+        // Remove the creative source jar so the network has no Source
+        GolemGameTests.put(helper, GolemGameTests.JAR, Blocks.AIR);
+        helper.runAfterDelay(20, () -> {
+            GolemNetwork n = net(helper, bay);
+            helper.assertTrue(!n.isOnline(), "network offline without Source");
+            GolemGameTests.put(helper, new BlockPos(2, 1, -1), ModBlocks.CRYO_MIXER.get());
+            helper.runAfterDelay(20, () -> {
+                var mixer = helper.getBlockEntity(new BlockPos(2, 1, -1), com.golemlogix.blockentity.CryoMixerBlockEntity.class);
+                helper.assertTrue(mixer != null, "mixer exists");
+                helper.assertTrue(mixer.water().isEmpty() && mixer.cryo().isEmpty(), "mixer without Source has empty flasks");
+                helper.assertTrue(mixer.getOutput().getItem(0).isEmpty(), "mixer tray stays empty");
+                helper.succeed();
+            });
+        });
+    }
+
+    /**
+     * Cryo-Distillation Tower without blood: the tower is online but makes no Source.
+     */
+    public static void distillationTowerWithoutBloodDoesNothing(GameTestHelper helper) {
+        BlockPos bay = GolemGameTests.baseNetwork(helper);
+        helper.runAfterDelay(20, () -> {
+            GolemGameTests.put(helper, new BlockPos(2, 1, -1), ModBlocks.CRYO_DISTILLATION_TOWER.get());
+            helper.runAfterDelay(20, () -> {
+                var tower = helper.getBlockEntity(new BlockPos(2, 1, -1), com.golemlogix.blockentity.DistillationTowerBlockEntity.class);
+                helper.assertTrue(tower != null, "tower exists");
+                helper.assertTrue(tower.blood().isEmpty(), "tower without blood has no blood");
+                helper.succeed();
+            });
+        });
+    }
+
+    /**
      * 9. Pattern Provider with machines on two sides: with all sides allowed, what does not fit one goes to the other;
      * with a chosen output side only that one is fed, and once a full machine has room the work resumes.
      * Blocking mode: the next portion waits for the result of the previous one.
