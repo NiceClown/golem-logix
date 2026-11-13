@@ -218,22 +218,24 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         }
         // torso: adjoins the cabinet wall (X <= -16), belt and shoulder plates
         float breathe = 0.25f * Mth.sin(time * 0.05f + k * 2f);
-        mbox(vc, pose, right, -26, 12, 2.5f, -16f, 26 + breathe, 13.5f, ATLANT_BODY, white, light);
-        mbox(vc, pose, right, -26.5f, 11.5f, 2, -16f, 13.5f, 14, ATLANT_BELT, white, light);
+        mbox(vc, pose, right, -26, 12, 2.5f, -15.9f, 26 + breathe, 13.5f, ATLANT_BODY, white, light);
+        mbox(vc, pose, right, -26.5f, 11.5f, 2, -15.9f, 13.5f, 14, ATLANT_BELT, white, light);
         mbox(vc, pose, right, -29, 22 + breathe, 1.5f, -24.5f, 27 + breathe, 14.5f, ATLANT_BELT, white, light);
-        mbox(vc, pose, right, -26.5f, 25.5f + breathe, 2.5f, -16f, 27.5f + breathe, 13.5f, ATLANT_BELT, white, light);
-        // outer arm: shoulder -> elbow at the front corner -> palm on the front post
+        // the shoulder plate overhangs the torso by 0.1 so its faces never lie in the torso's planes (no z-fighting)
+        mbox(vc, pose, right, -26.5f, 25.5f + breathe, 2.4f, -15.9f, 27.5f + breathe, 13.6f, ATLANT_BELT, white, light);
+        // outer arm: from the back of the shoulder, down and forward to the elbow, then up to the palm on the
+        // front post - a checkmark, not a horseshoe round the corner
         float grip = spin > 0.01f ? 0.4f * Mth.sin(time * 0.3f + k) : 0f;
-        Vector3f shoulder = mv(right, -27.5f, 24.5f + breathe, 6), elbow = mv(right, -28.5f, 16f, -1.5f),
-                hand = mv(right, -17.5f, 17.5f + grip, -1.8f);
+        Vector3f shoulder = mv(right, -27.5f, 24.5f + breathe, 13f), elbow = mv(right, -29f, 15f, 2f),
+                hand = mv(right, -17.5f, 21f + grip, -1.8f);
         limb(vc, pose, shoulder, elbow, 4.2f, ATLANT_LIMB, light);
         limb(vc, pose, elbow, hand, 3.6f, ATLANT_LIMB, light);
-        mbox(vc, pose, right, -18.5f, 15.5f + grip, -3.0f, -16.0f, 20 + grip, -0.6f, ATLANT_BELT, white, light);
-        // inner arm: raised, the palm rests on the roof cornice at the corner
-        Vector3f s2 = mv(right, -22, 26 + breathe, 12), e2 = mv(right, -23.5f, 33.5f, 11), h2 = mv(right, -16.8f, 37.2f, 8);
+        mbox(vc, pose, right, -18.7f, 18.8f + grip, -3.2f, -15.9f, 23.2f + grip, -0.4f, ATLANT_BELT, white, light);
+        // inner arm: from the back, down to the elbow, then up to the palm on the roof crest - a checkmark too
+        Vector3f s2 = mv(right, -22, 26 + breathe, 13.5f), e2 = mv(right, -24.5f, 20f, 16.5f), h2 = mv(right, -16.8f, 37.2f, 8);
         limb(vc, pose, s2, e2, 3.8f, ATLANT_LIMB, light);
         limb(vc, pose, e2, h2, 3.4f, ATLANT_LIMB, light);
-        mbox(vc, pose, right, -18.0f, 36.8f, 5.6f, -16.0f, 38.2f, 10.4f, ATLANT_BELT, white, light);
+        mbox(vc, pose, right, -18.2f, 36.6f, 5.4f, -15.9f, 38.4f, 10.6f, ATLANT_BELT, white, light);
         // head at the top corner: the atlant head model (bigger), turns to the player
         float yaw = be.headsPrev[k][0] + Mth.wrapDegrees(be.heads[k][0] - be.headsPrev[k][0]) * pt;
         float pitch = Mth.lerp(pt, be.headsPrev[k][1], be.heads[k][1]);
