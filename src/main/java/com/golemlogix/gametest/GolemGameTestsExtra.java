@@ -2244,6 +2244,31 @@ public final class GolemGameTestsExtra {
         });
     }
 
+    /**
+     * A Source jar taken out and put back: the network follows at once. The remembered network used to keep the old picture for
+     * seconds, because a block of the same kind put back where its kind stood looked like no change at all.
+     */
+    public static void sourceJarPutBackIsSeenAtOnce(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, bay);
+            if (!com.golemlogix.system.SourceHelper.sourceRequired()) {
+                helper.assertTrue(n.isOnline(), "without the Source mods the network needs no Source");
+                helper.succeed();
+                return;
+            }
+            helper.setBlock(JAR, Blocks.AIR);
+            helper.runAfterDelay(30, () -> {
+                helper.assertTrue(!net(helper, bay).isOnline(), "offline without the jar");
+                powered(helper);
+                helper.runAfterDelay(25, () -> {
+                    helper.assertTrue(net(helper, bay).isOnline(), "online again at once");
+                    helper.succeed();
+                });
+            });
+        });
+    }
+
     /** Source runs out during a job; job does not lose items, and finishes once power returns. */
     public static void autocraftSurvivesPowerLoss(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);

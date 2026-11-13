@@ -294,6 +294,15 @@ public final class GolemNetwork {
         if (was == now) {
             return;
         }
+        // the map keeps what really stands there now: without it a block of the same kind put back where its kind stood before
+        // (a jar taken out and set again, a pipe rebuilt) looks like no change at all and the networks stay stale for seconds
+        if (cache != null) {
+            if (now == null) {
+                cache.known.remove(pos);
+            } else {
+                cache.known.put(pos, now);
+            }
+        }
         serverVersion++;
         CHANGED.computeIfAbsent(level, l -> new HashSet<>()).add(pos.immutable());
     }
