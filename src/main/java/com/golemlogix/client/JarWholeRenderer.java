@@ -568,19 +568,11 @@ final class JarWholeRenderer {
         ModelPart head = golem.getChild("head"), rightArm = golem.getChild("right_arm"), leftArm = golem.getChild("left_arm");
         ModelPart rightLeg = golem.getChild("right_leg"), leftLeg = golem.getChild("left_leg");
         float strain = on ? 0.05f * Mth.sin(time * 0.05f) : 0f;
-        // the ring lies across the shoulders; the long arms hang from the back of the shoulders down and out to
-        // it - a checkmark (V) rather than a horseshoe. The arms sit a touch inward and back, so their inner
-        // faces stay inside the body (the body's green vine texture used to show through them)
-        rightArm.xRot = 0f;
-        leftArm.xRot = 0f;
-        rightArm.yRot = 0f;
-        leftArm.yRot = 0f;
-        rightArm.zRot = 1.05f + strain;
-        leftArm.zRot = -1.05f - strain;
-        rightArm.x = 0.05f;
-        leftArm.x = -0.05f;
-        rightArm.z = 1.5f;
-        leftArm.z = 1.5f;
+        // the ring lies across the shoulders; each arm is pinned by its own shoulder to the upper back and reaches
+        // up, out and back along the curve of the ring (a V / checkmark), instead of swinging around the spine's
+        // (0, -7, 0) pivot into mid-air above the head
+        poseArm(rightArm, -11f, -9.2f, -6.2f, 1.6f, 0.42f, 0f, 1.74f + strain);
+        poseArm(leftArm, 11f, 9.2f, -6.2f, 1.6f, 0.42f, 0f, -1.74f - strain);
         // one thigh forward, the other leg back on its knee; the whole golem sinks by what the legs no longer hold up
         rightLeg.xRot = -1.45f;
         leftLeg.xRot = 1.25f;
@@ -593,6 +585,20 @@ final class JarWholeRenderer {
         pose.translate(0f, -1.501f, 0f);
         golem.render(pose, buffers.getBuffer(RenderTypes.entityCutout(GOLEM)), light, OverlayTexture.NO_OVERLAY);
         pose.popPose();
+    }
+
+    /**
+     * Rotates an iron golem's arm around its own shoulder (local {@code (boxX, 0, 0)}) and places that shoulder at
+     * {@code (sx, sy, sz)} in the model's root coordinates.
+     */
+    private static void poseArm(ModelPart arm, float boxX, float sx, float sy, float sz, float xRot, float yRot, float zRot) {
+        arm.xRot = xRot;
+        arm.yRot = yRot;
+        arm.zRot = zRot;
+        Vector3f off = new org.joml.Quaternionf().rotationZYX(zRot, yRot, xRot).transform(new Vector3f(boxX, 0f, 0f));
+        arm.x = sx - off.x;
+        arm.y = sy - off.y;
+        arm.z = sz - off.z;
     }
 
     /** What does not move on the reactor's four sides: a dark recess for the runes, a gauge, and a copper pipe on brackets. */
