@@ -138,4 +138,57 @@ public class GolemGameTestsCycles {
             helper.succeed();
         });
     }
+
+    /** Mana Saturator not assembled: the block exists but does not craft anything. */
+    @GameTest(template = T, timeoutTicks = 120)
+    public static void manaSaturatorUnformedDoesNothing(GameTestHelper helper) {
+        GolemGameTests.buildArray(helper, 0, 0);
+        helper.setBlock(new BlockPos(2, 1, -1), ModBlocks.MANA_SATURATOR.get());
+        helper.runAfterDelay(40, () -> {
+            var sat = (com.golemlogix.blockentity.ManaSaturatorBlockEntity) helper.getBlockEntity(new BlockPos(2, 1, -1));
+            helper.assertTrue(sat != null, "saturator block entity exists");
+            helper.assertFalse(sat.getBlockState().getValue(com.golemlogix.blocks.ManaSaturatorBlock.FORMED), "saturator is not formed");
+            helper.assertFalse(sat.isCrafting(), "unformed saturator does not craft");
+            helper.succeed();
+        });
+    }
+
+    /** Cryo-Mixer without Source: flasks stay empty and nothing is made. */
+    @GameTest(template = T, timeoutTicks = 120)
+    public static void cryoMixerWithoutSourceDoesNothing(GameTestHelper helper) {
+        BlockPos bay = GolemGameTests.baseNetwork(helper);
+        GolemGameTests.put(helper, GolemGameTests.JAR, Blocks.AIR);
+        helper.runAfterDelay(20, () -> {
+            GolemNetwork n = GolemGameTests.net(helper, bay);
+            if (!com.golemlogix.system.SourceHelper.sourceRequired()) {
+                helper.assertTrue(n.isOnline(), "without Ars Nouveau the network needs no Source");
+                helper.succeed();
+                return;
+            }
+            helper.assertTrue(!n.isOnline(), "network offline without Source");
+            GolemGameTests.put(helper, new BlockPos(2, 1, -1), ModBlocks.CRYO_MIXER.get());
+            helper.runAfterDelay(20, () -> {
+                var mixer = (com.golemlogix.blockentity.CryoMixerBlockEntity) helper.getBlockEntity(new BlockPos(2, 1, -1));
+                helper.assertTrue(mixer != null, "mixer exists");
+                helper.assertTrue(mixer.water().isEmpty() && mixer.cryo().isEmpty(), "mixer flasks empty without Source");
+                helper.assertTrue(mixer.getOutput().getItem(0).isEmpty(), "mixer tray stays empty");
+                helper.succeed();
+            });
+        });
+    }
+
+    /** Cryo-Distillation Tower without blood: the tower is online but makes no Source. */
+    @GameTest(template = T, timeoutTicks = 120)
+    public static void distillationTowerWithoutBloodDoesNothing(GameTestHelper helper) {
+        BlockPos bay = GolemGameTests.baseNetwork(helper);
+        helper.runAfterDelay(20, () -> {
+            GolemGameTests.put(helper, new BlockPos(2, 1, -1), ModBlocks.CRYO_DISTILLATION_TOWER.get());
+            helper.runAfterDelay(20, () -> {
+                var tower = (com.golemlogix.blockentity.DistillationTowerBlockEntity) helper.getBlockEntity(new BlockPos(2, 1, -1));
+                helper.assertTrue(tower != null, "tower exists");
+                helper.assertTrue(tower.blood().isEmpty(), "tower without blood has no blood");
+                helper.succeed();
+            });
+        });
+    }
 }
