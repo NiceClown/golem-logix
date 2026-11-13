@@ -568,13 +568,19 @@ final class JarWholeRenderer {
         ModelPart head = golem.getChild("head"), rightArm = golem.getChild("right_arm"), leftArm = golem.getChild("left_arm");
         ModelPart rightLeg = golem.getChild("right_leg"), leftLeg = golem.getChild("left_leg");
         float strain = on ? 0.05f * Mth.sin(time * 0.05f) : 0f;
-        // the ring lies across the shoulders, the long arms stretched out along it, like a yoke
+        // the ring lies across the shoulders; the long arms hang from the back of the shoulders down and out to
+        // it - a checkmark (V) rather than a horseshoe. The arms sit a touch inward and back, so their inner
+        // faces stay inside the body (the body's green vine texture used to show through them)
         rightArm.xRot = 0f;
         leftArm.xRot = 0f;
         rightArm.yRot = 0f;
         leftArm.yRot = 0f;
-        rightArm.zRot = 1.5f + strain;
-        leftArm.zRot = -1.5f - strain;
+        rightArm.zRot = 1.05f + strain;
+        leftArm.zRot = -1.05f - strain;
+        rightArm.x = 0.05f;
+        leftArm.x = -0.05f;
+        rightArm.z = 1.5f;
+        leftArm.z = 1.5f;
         // one thigh forward, the other leg back on its knee; the whole golem sinks by what the legs no longer hold up
         rightLeg.xRot = -1.45f;
         leftLeg.xRot = 1.25f;
