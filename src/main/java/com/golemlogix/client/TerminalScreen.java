@@ -753,6 +753,9 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         }
 
         if (button == 0 && menu.getCarried().isEmpty() && overGearMark(mouseX, mouseY)) {
+            // the terminal is closed first (as Escape would): left open behind the book, the server kept the menu and a wireless
+            // terminal's charge running, and the inventory ignored clicks afterwards because the client still had the terminal's menu
+            minecraft.player.closeContainer();
             minecraft.setScreen(com.golemlogix.client.book.BookScreen.openAt("st_gear"));
             return true;
         }

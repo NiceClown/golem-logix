@@ -1,6 +1,8 @@
 package com.golemlogix.system;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -14,7 +16,7 @@ import java.util.Set;
 public final class OrderBackoff {
     private static final int FIRST = 20, MAX = 600, AFTER_CHANGE = 40, PRUNE_AT = 4096;
 
-    private record Order(BlockPos device, Set<ItemKey> targets) {
+    private record Order(ResourceKey<Level> dimension, BlockPos device, Set<ItemKey> targets) {
     }
 
     private static final class Wait {
@@ -29,8 +31,8 @@ public final class OrderBackoff {
     }
 
     /** Whether this order must not be planned yet. */
-    public static boolean waiting(BlockPos device, Set<ItemKey> targets, long now, long epoch) {
-        Wait w = WAITS.get(new Order(device, targets));
+    public static boolean waiting(ResourceKey<Level> dimension, BlockPos device, Set<ItemKey> targets, long now, long epoch) {
+        Wait w = WAITS.get(new Order(dimension, device, targets));
         if (w == null) {
             return false;
         }
@@ -38,11 +40,11 @@ public final class OrderBackoff {
         return now >= w.failedAt && now - w.failedAt < pause;
     }
 
-    public static void failed(BlockPos device, Set<ItemKey> targets, long now, long epoch) {
+    public static void failed(ResourceKey<Level> dimension, BlockPos device, Set<ItemKey> targets, long now, long epoch) {
         if (WAITS.size() >= PRUNE_AT) {
             WAITS.values().removeIf(w -> now - w.failedAt > 2L * MAX || now < w.failedAt);
         }
-        Order order = new Order(device.immutable(), Set.copyOf(targets));
+        Order order = new Order(dimension, device.immutable(), Set.copyOf(targets));
         Wait w = WAITS.get(order);
         if (w == null) {
             w = new Wait();
@@ -54,9 +56,9 @@ public final class OrderBackoff {
         w.epoch = epoch;
     }
 
-    public static void succeeded(BlockPos device, Set<ItemKey> targets) {
+    public static void succeeded(ResourceKey<Level> dimension, BlockPos device, Set<ItemKey> targets) {
         if (!WAITS.isEmpty()) {
-            WAITS.remove(new Order(device, targets));
+            WAITS.remove(new Order(dimension, device, targets));
         }
     }
 

@@ -195,14 +195,14 @@ public class StockManometerBlockEntity extends BlockEntity {
             if (off > 0 && off < on) {
                 if (stock >= on) return 15;
                 if (stock <= off) return 0;
-                return signal;
+                return signal > 0 ? 15 : 0;   // holds on or off (a level left over from analog mode is not a state)
             }
             return stock >= on ? 15 : 0;
         } else if (mode == MODE_BELOW) {
             if (off > on) {
                 if (stock <= on) return 15;
                 if (stock >= off) return 0;
-                return signal;
+                return signal > 0 ? 15 : 0;
             }
             return stock <= on ? 15 : 0;
         } else {

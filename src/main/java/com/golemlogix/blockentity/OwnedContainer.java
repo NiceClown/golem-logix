@@ -26,6 +26,11 @@ public class OwnedContainer extends SimpleContainer {
         this.filter = filter;
     }
 
+    /** The block entity the container belongs to. */
+    public BlockEntity owner() {
+        return owner;
+    }
+
     @Override
     public void setChanged() {
         super.setChanged();

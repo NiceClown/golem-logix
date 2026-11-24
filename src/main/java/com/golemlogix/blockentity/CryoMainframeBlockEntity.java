@@ -350,18 +350,14 @@ public class CryoMainframeBlockEntity extends BlockEntity {
             return;
         }
         double x = worldPosition.getX() + 0.5, y = worldPosition.getY() + 0.5, z = worldPosition.getZ() + 0.5;
+        // the jobs' items go back to the network first, as on a cancel; only what does not fit drops (see CryoCalculatorBlockEntity)
+        GolemNetwork refundTo = level.isClientSide() ? null : GolemNetwork.aroundRemoved(level, worldPosition);
         for (Core c : cores) {
             if (c.job == null) {
                 continue;
             }
-            for (var e : c.job.inventory().entrySet()) {
-                // fluids of the job cannot drop as items: they are spilled
-                long n = com.golemlogix.system.Ingredients.isFluid(e.getKey()) ? 0 : e.getValue();
-                while (n > 0) {
-                    int chunk = (int) Math.min(n, e.getKey().stack().getMaxStackSize());
-                    Containers.dropItemStack(level, x, y, z, e.getKey().toStack(chunk));
-                    n -= chunk;
-                }
+            for (ItemStack s : c.job.refundAll(refundTo)) {
+                Containers.dropItemStack(level, x, y, z, s);
             }
             c.job = null;
         }

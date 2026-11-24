@@ -150,7 +150,7 @@ public class StockManometerRenderer implements BlockEntityRenderer<StockManomete
                 fx = -fx;
                 fz = -fz;
             }
-            float time = now + partialTick + i * 13f;
+            float time = (now % 72000L) + partialTick + i * 13f;
             CopperGolemPuppet.render(pose, buffers, light, at, new org.joml.Vector3f(fx, 0f, fz), new org.joml.Vector3f(0f, 1f, 0f), TINY_SCALE,
                     new CopperGolemPuppet.Anim(moving ? time * 0.45f : time * 0.1f, moving, carrying, 0f), 0, carrying ? hands -> {
                         hands.scale(0.6f, 0.6f, 0.6f);

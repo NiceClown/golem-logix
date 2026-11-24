@@ -432,13 +432,21 @@ public class InterfaceBlockEntity extends BlockEntity {
         }
         // what is put in goes to the network at once, whole; only keeping the stock goes by the interval and the portion
         long time = level.getGameTime();
-        boolean intake = time >= be.nextIntake && be.hasIntake();
+        boolean pulseMode = hasRedstone && be.redstone.mode() == com.golemlogix.upgrade.RedstoneMode.PULSE;
         boolean stockDue = Math.floorMod(time + pos.asLong(), be.interval()) == 0;
+        // in pulse mode a pulse runs both intake and restocking together, so neither eats the pulse from the other
+        boolean intake = ((pulseMode && stockDue) || time >= be.nextIntake) && be.hasIntake();
+        if (pulseMode && intake) {
+            stockDue = true;
+        }
         if (!intake && !stockDue) {
             return;
         }
+        if (!be.redstone.allows(hasRedstone, powered, false)) {
+            return;
+        }
         GolemNetwork net = GolemNetwork.get(level, pos);
-        if (!net.isOnline() || !net.isDeviceActive(pos) || !be.redstone.allows(hasRedstone, powered, false)) {
+        if (!net.isOnline() || !net.isDeviceActive(pos)) {
             be.nextIntake = time + INTAKE_RETRY;
             return;
         }

@@ -41,7 +41,7 @@ wait 10
 hook give minecraft:cobblestone 1 0
 use 5 -60 -2
 wait 30
-slotclick 36 0
+slotclick 39 0
 slotclick 4 0
 wait 10
 hook buscheck 5 -60 -2 4 minecraft:cobblestone

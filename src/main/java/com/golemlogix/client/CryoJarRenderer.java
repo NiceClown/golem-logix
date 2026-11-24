@@ -65,9 +65,19 @@ public class CryoJarRenderer implements BlockEntityRenderer<CryoJarBlockEntity> 
         // a joined whole is drawn from its corner, derrick and rings included
         return switch (be.form()) {
             case SINGLE -> new AABB(p.getX() - 0.5, p.getY(), p.getZ() - 0.5, p.getX() + 1.5, p.getY() + 2.2, p.getZ() + 1.5);
-            case GIGA -> new AABB(p.getX() - 0.5, p.getY(), p.getZ() - 0.5, p.getX() + 2.5, p.getY() + 4.2, p.getZ() + 2.5);
-            case SUPER -> new AABB(p.getX() - 0.5, p.getY(), p.getZ() - 0.5, p.getX() + 3.5, p.getY() + 5.5, p.getZ() + 3.5);
+            case GIGA -> new AABB(p.getX() - 0.5, p.getY(), p.getZ() - 0.5, p.getX() + 2.5, p.getY() + 4.5, p.getZ() + 2.5);
+            case SUPER -> new AABB(p.getX() - 0.5, p.getY(), p.getZ() - 0.5, p.getX() + 3.5, p.getY() + 6.0, p.getZ() + 3.5);
         };
+    }
+
+    /**
+     * A whole is drawn by its corner alone (the jar blocks are invisible), so the corner's section must not decide: when it was out of
+     * view (the corner in the next chunk, or below the frame while you look up at the rings) the whole reactor vanished. The box above
+     * still culls it.
+     */
+    @Override
+    public boolean shouldRenderOffScreen(CryoJarBlockEntity be) {
+        return true;
     }
 
     @Override

@@ -75,6 +75,17 @@ public class GolemLogixMod {
             com.golemlogix.system.TelegraphLinks.clear();
         }
 
+        /** After /reload the golem_logix:not_gear tag may have changed: keep disk used-space counters in step with it. */
+        @SubscribeEvent
+        public static void onTagsReloaded(net.neoforged.neoforge.event.TagsUpdatedEvent event) {
+            if (event.getUpdateCause() == net.neoforged.neoforge.event.TagsUpdatedEvent.UpdateCause.SERVER_DATA_LOAD) {
+                var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+                if (server != null && server.overworld() != null) {
+                    com.golemlogix.system.DiskStore.get(server).recount();
+                }
+            }
+        }
+
         /** A block was placed, broken or replaced: if it was a network node, the networks around it are recomputed (see GolemNetwork). */
         @SubscribeEvent
         public static void onNeighborNotify(BlockEvent.NeighborNotifyEvent event) {

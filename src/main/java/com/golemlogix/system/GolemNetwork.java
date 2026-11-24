@@ -131,10 +131,36 @@ public final class GolemNetwork {
         return storageEpoch;
     }
 
-    /** The storage epoch when this network's own contents last changed. */
+    /** The storage epoch when this network's own contents last changed; shared across dimensions by the core's position. */
+    private static final Map<net.minecraft.core.GlobalPos, Long> EPOCHS = new HashMap<>();
     private long networkEpoch;
 
+    @Nullable
+    private net.minecraft.core.GlobalPos anchor() {
+        return !level.isClientSide() && coreLevel != null && corePos != null
+                ? net.minecraft.core.GlobalPos.of(coreLevel.dimension(), corePos) : null;
+    }
+
+    private void bumpEpoch() {
+        long e = ++storageEpoch;
+        this.networkEpoch = e;
+        var a = anchor();
+        if (a != null) {
+            if (EPOCHS.size() > 65536) {
+                EPOCHS.clear();
+            }
+            EPOCHS.put(a, e);
+        }
+    }
+
     public long networkEpoch() {
+        var a = anchor();
+        if (a != null) {
+            Long e = EPOCHS.get(a);
+            if (e != null) {
+                return e;
+            }
+        }
         return networkEpoch;
     }
 
@@ -199,12 +225,43 @@ public final class GolemNetwork {
         if (e != null && e.version == versionFor(level) && now - e.time < CACHE_TTL && now >= e.time) {
             return e.network;
         }
-        return remember(level, scan(level, start), now);
+        return remember(level, inherit(level, e, scan(level, start)), now);
     }
 
     /** Walks the network now and remembers it for all its nodes. */
     public static GolemNetwork refresh(Level level, BlockPos start) {
-        return remember(level, scan(level, start), level.getGameTime());
+        return remember(level, inherit(level, cacheOf(level).byPos.get(start), scan(level, start)), level.getGameTime());
+    }
+
+    /**
+     * The working network a block that is being removed belonged to, walked from its neighbours: when a block entity's removal runs,
+     * the block itself is already gone from the level, so a walk from its own position finds nothing. Null if no neighbour is on one.
+     */
+    @Nullable
+    public static GolemNetwork aroundRemoved(Level level, BlockPos pos) {
+        for (Direction d : Direction.values()) {
+            GolemNetwork net = scan(level, pos.relative(d));
+            if (net.isOnline()) {
+                return net;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * A new walk of a network keeps the contents epoch of the walk before it: waiting orders compare it with the epoch they failed
+     * at, and a new object starting from 0 every 5 seconds made a changed network look unchanged (orders waited the full 30 seconds)
+     * and the other way round. After a change of nodes (a disk or a storage may have come or gone) the contents count as changed.
+     */
+    private static GolemNetwork inherit(Level level, @Nullable CacheEntry before, GolemNetwork fresh) {
+        if (before != null && !level.isClientSide()) {
+            if (before.version == versionFor(level)) {
+                fresh.networkEpoch = before.network.networkEpoch();
+            } else {
+                fresh.bumpEpoch();
+            }
+        }
+        return fresh;
     }
 
     private static GolemNetwork remember(Level level, GolemNetwork net, long now) {
@@ -267,6 +324,8 @@ public final class GolemNetwork {
     /** The server stopped: nothing of its levels is kept. */
     public static void forgetAll() {
         OrderBackoff.forget();
+        BusLoad.forget();
+        EPOCHS.clear();
         SERVER_CACHE.clear();
         CHANGED.clear();
         serverVersion++;
@@ -300,7 +359,7 @@ public final class GolemNetwork {
             if (now == null) {
                 cache.known.remove(pos);
             } else {
-                cache.known.put(pos, now);
+                cache.known.put(pos.immutable(), now);
             }
         }
         serverVersion++;
@@ -1098,13 +1157,15 @@ public final class GolemNetwork {
 
     private Map<ItemKey, Long> sharedList;
     private long sharedListTick = -1;
+    private long sharedListEpoch = -1;
 
     /** The list for the terminals: open windows of one tick share one reading of the network. Not to be changed. */
     public Map<ItemKey, Long> listItemsShared() {
-        long now = level().getGameTime();
-        if (sharedList == null || sharedListTick != now) {
+        long now = level().getServer() != null ? level().getServer().getTickCount() : level().getGameTime();
+        if (sharedList == null || sharedListTick != now || sharedListEpoch != storageEpoch) {
             sharedList = listItems();
             sharedListTick = now;
+            sharedListEpoch = storageEpoch;
         }
         return sharedList;
     }
@@ -1220,7 +1281,7 @@ public final class GolemNetwork {
             }
             markBaysChanged(touched);
             if (remaining.getCount() != input.getCount()) {
-                networkEpoch = ++storageEpoch;
+                bumpEpoch();
             }
             return remaining;
         }
@@ -1306,7 +1367,7 @@ public final class GolemNetwork {
         if (!simulate) {
             markBaysChanged(touched);
             if (left != amount) {
-                networkEpoch = ++storageEpoch;
+                bumpEpoch();
             }
         }
         int taken = amount - left;
@@ -1405,7 +1466,7 @@ public final class GolemNetwork {
         }
         markBaysChanged(touched);
         if (!simulate && left != input.getAmount()) {
-            networkEpoch = ++storageEpoch;
+            bumpEpoch();
         }
         return input.getAmount() - left;
     }
@@ -1456,7 +1517,7 @@ public final class GolemNetwork {
         if (!simulate) {
             markBaysChanged(touched);
             if (left != amount) {
-                networkEpoch = ++storageEpoch;
+                bumpEpoch();
             }
         }
         int taken = amount - left;
@@ -1640,23 +1701,24 @@ public final class GolemNetwork {
         }
         // a device's order: no plan without a free calculator, and none yet if it has just failed
         long now = level().getGameTime();
+        var dim = level().dimension();
         if (bus != null) {
             if (freeCpu() == null) {
                 return new StartResult(StartType.NO_CPU, null);
             }
-            if (OrderBackoff.waiting(bus, targets.keySet(), now, networkEpoch)) {
+            if (OrderBackoff.waiting(dim, bus, targets.keySet(), now, networkEpoch())) {
                 return new StartResult(StartType.MISSING, null);
             }
         }
         CraftingPlan plan = CraftingPlanner.plan(this, targets);
         if (!plan.missing().isEmpty()) {
             if (bus != null) {
-                OrderBackoff.failed(bus, targets.keySet(), now, networkEpoch);
+                OrderBackoff.failed(dim, bus, targets.keySet(), now, networkEpoch());
             }
             return new StartResult(StartType.MISSING, plan);
         }
         if (bus != null) {
-            OrderBackoff.succeeded(bus, targets.keySet());
+            OrderBackoff.succeeded(dim, bus, targets.keySet());
         }
         if (plan.steps().isEmpty()) {
             return new StartResult(StartType.NO_PATTERN, plan);

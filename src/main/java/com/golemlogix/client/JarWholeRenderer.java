@@ -83,7 +83,7 @@ final class JarWholeRenderer {
         // the glowing Source lights the machine around it, however dark the night
         int light = be.clientSource() > 0 ? LightTexture.pack(Math.max(LightTexture.block(around), SOURCE_GLOW), LightTexture.sky(around)) : around;
         float fill = Math.min(1f, Mth.lerp(partialTick, be.fillPrev, be.fill));
-        float time = level.getGameTime() + partialTick;
+        float time = (level.getGameTime() % 72000L) + partialTick;
         boolean charged = be.clientSource() > 0;
         Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
         double distance = cam.distanceToSqr(pos.getX() + width / 2.0, pos.getY() + 2.0, pos.getZ() + width / 2.0);
@@ -144,10 +144,11 @@ final class JarWholeRenderer {
 
     // ------------------------------------------------------------------------------------------------ the Giga Jar
 
-    /** What is built once: per machine a near and a far version, the glowing runes apart (their colour pulses), and the rings. */
+    /** What is built once: per machine a near and a far version, the glowing runes apart (their colour pulses), the rings and the unit spheres. */
     private record Meshes(net.minecraft.client.renderer.texture.TextureAtlasSprite atlasMark, Baked gigaNear, Baked gigaFar, Baked gigaRunes,
                           Baked reactorNear, Baked reactorFar, Baked reactorRunes, Baked collar, Baked lowRing,
-                          Baked outerRing, Baked outerRunes, Baked levelRing, Baked levelRingFar, Baked innerRing) {
+                          Baked outerRing, Baked outerRunes, Baked levelRing, Baked levelRingFar, Baked innerRing,
+                          Baked ballCryo, Baked ballIce) {
     }
 
     private static Meshes meshes;
@@ -185,7 +186,9 @@ final class JarWholeRenderer {
                         }
                     }),
                     Baked.bake((vc, pose) -> ring(vc, pose, 16.4f, 1.7f, 2f, 16, BRASS, LIGHT_BRASS, 0)),
-                    Baked.bake((vc, pose) -> ring(vc, pose, 13.4f, 1f, 1.2f, 24, COPPER, WHITE, 0)));
+                    Baked.bake((vc, pose) -> ring(vc, pose, 13.4f, 1f, 1.2f, 24, COPPER, WHITE, 0)),
+                    Baked.bake((vc, pose) -> ball(vc, pose.last(), 1f, CRYO, WHITE, 0)),
+                    Baked.bake((vc, pose) -> ball(vc, pose.last(), 1f, ICE, WHITE, 0)));
         }
         return meshes;
     }
@@ -515,12 +518,12 @@ final class JarWholeRenderer {
         }
 
         // the Source, floating: larger the fuller it is, turning; drops rise around it
-        VertexConsumer ballBuffer = buffers.getBuffer(solid);
         pose.pushPose();
         pose.translate(cx / 16f, (cy + 0.8f * Mth.sin(time * 0.03f)) / 16f, cz / 16f);
         pose.mulPose(Axis.YP.rotationDegrees(time * 0.6f));
         float radius = on ? 4f + 7.4f * (float) Math.cbrt(fill) : 3f;
-        ball(ballBuffer, pose.last(), radius, on ? CRYO : ICE, WHITE, on ? LightTexture.FULL_BRIGHT : light);
+        pose.scale(radius, radius, radius);
+        (on ? meshes.ballCryo() : meshes.ballIce()).draw(buffers, solid, pose.last(), on ? LightTexture.FULL_BRIGHT : light, 0);
         pose.popPose();
         if (on) {
             VertexConsumer tv = buffers.getBuffer(clearType(shaderPackActive()));

@@ -10,6 +10,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
  * Upgrades from an older save are put into their own slots on loading; one with no slot left (the Annihilation Bus took speed
  * upgrades once) waits in strays until the machine drops it.
  */
+@net.neoforged.fml.common.EventBusSubscriber(modid = com.golemlogix.GolemLogixMod.MOD_ID)
 public class UpgradeContainer extends OwnedContainer {
     private final UpgradeSpec spec;
     private final Runnable onChange;
@@ -55,6 +56,7 @@ public class UpgradeContainer extends OwnedContainer {
     @Override
     public void fromTag(net.minecraft.nbt.ListTag tag, net.minecraft.core.HolderLookup.Provider registries) {
         clearContent();
+        strays.clear();
         java.util.List<ItemStack> rest = new java.util.ArrayList<>();
         for (int i = 0; i < tag.size(); i++) {
             net.minecraft.nbt.CompoundTag entry = tag.getCompound(i);
@@ -92,6 +94,53 @@ public class UpgradeContainer extends OwnedContainer {
                 strays.add(s);
             }
         }
+        if (!strays.isEmpty()) {
+            PENDING.add(this);
+        }
+    }
+
+    /** The slots, and the strays after them without a slot: a stray is kept by a save until it can be dropped, never lost. */
+    @Override
+    public net.minecraft.nbt.ListTag createTag(net.minecraft.core.HolderLookup.Provider registries) {
+        net.minecraft.nbt.ListTag list = super.createTag(registries);
+        for (ItemStack s : strays) {
+            net.minecraft.nbt.CompoundTag entry = new net.minecraft.nbt.CompoundTag();
+            entry.putByte("Slot", (byte) -1);
+            list.add(s.save(registries, entry));
+        }
+        return list;
+    }
+
+    /**
+     * Containers that loaded strays: on the next server tick they are dropped in front of their machine, whatever the machine is
+     * (only the Annihilation Bus used to drop them; a bus or tower from an old save lost what did not fit its one speed slot).
+     */
+    private static final java.util.Set<UpgradeContainer> PENDING = java.util.Collections.synchronizedSet(java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>()));
+
+    @net.neoforged.bus.api.SubscribeEvent
+    public static void onServerTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+        if (PENDING.isEmpty()) {
+            return;
+        }
+        java.util.List<UpgradeContainer> now;
+        synchronized (PENDING) {
+            now = java.util.List.copyOf(PENDING);
+        }
+        for (UpgradeContainer c : now) {
+            BlockEntity owner = c.owner();
+            if (owner.getLevel() == null && !owner.isRemoved()) {
+                continue;   // not placed in a level yet
+            }
+            PENDING.remove(c);
+            if (!owner.isRemoved() && owner.getLevel() instanceof net.minecraft.server.level.ServerLevel level) {
+                c.dropStrays(level, owner.getBlockPos());
+            }
+        }
+    }
+
+    /** Strays still waiting to be dropped (tests). */
+    public int strayCount() {
+        return strays.size();
     }
 
     /** Drops the upgrades that found no slot on loading, in front of the machine. */

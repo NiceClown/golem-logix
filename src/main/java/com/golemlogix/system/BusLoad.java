@@ -30,7 +30,10 @@ public final class BusLoad {
         windowWorst = Math.max(windowWorst, spentThisTick);
         tick = now;
         spentThisTick = 0;
-        if (now - windowStart >= WINDOW_TICKS) {
+        if (now < windowStart) {
+            windowOps = windowNanos = windowDeferred = windowWorst = 0;
+            windowStart = now;
+        } else if (now - windowStart >= WINDOW_TICKS) {
             lastOps = windowOps;
             lastNanos = windowNanos;
             lastDeferred = windowDeferred;
@@ -51,10 +54,20 @@ public final class BusLoad {
         windowDeferred++;
     }
 
-    public static void ran(long nanos) {
+    public static void ran(Level level, long nanos) {
+        roll(level);
         spentThisTick += nanos;
         windowOps++;
         windowNanos += nanos;
+    }
+
+    /** The server stopped: clear the previous world's window so the next one does not show stale figures. */
+    public static void forget() {
+        tick = -1;
+        spentThisTick = 0;
+        windowStart = 0;
+        windowOps = windowNanos = windowDeferred = windowWorst = 0;
+        lastOps = lastNanos = lastDeferred = lastWorst = 0;
     }
 
     /** Operations a second over the last few seconds. */

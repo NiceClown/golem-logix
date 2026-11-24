@@ -103,10 +103,12 @@ public final class JarMerge {
 
     private static void join(ServerLevel level, BlockPos corner, JarForm into) {
         List<BlockPos> cells = cells(corner, into.width());
-        // a Giga Jar among them comes apart first, also the jars of it that stay outside this square
+        // a Giga Jar among them comes apart first, also the jars of it that stay outside this square; the jars inside the square
+        // take their share without the one-jar cap, since it goes straight into the reactor (a full Giga Jar lost Source here)
+        java.util.Set<BlockPos> inside = new java.util.HashSet<>(cells);
         for (BlockPos cell : cells) {
             if (level.getBlockEntity(cell) instanceof CryoJarBlockEntity jar && jar.controller() != null) {
-                apart(level, jar.controller(), null);
+                apart(level, jar.controller(), null, inside);
             }
         }
         long total = 0;
@@ -129,6 +131,11 @@ public final class JarMerge {
      * to join. removed: the jar being broken, if one is (it has no share: a jar in the hand holds nothing).
      */
     public static void apart(ServerLevel level, BlockPos corner, @Nullable BlockPos removed) {
+        apart(level, corner, removed, java.util.Set.of());
+    }
+
+    /** absorbed: jars that join a larger whole right after this, so they take any Source the jars outside it cannot hold. */
+    private static void apart(ServerLevel level, BlockPos corner, @Nullable BlockPos removed, java.util.Set<BlockPos> absorbed) {
         if (!(level.getBlockEntity(corner) instanceof CryoJarBlockEntity whole)) {
             return;
         }
@@ -146,11 +153,24 @@ public final class JarMerge {
         int each = stay.isEmpty() ? 0 : total / stay.size();
         int extra = stay.isEmpty() ? 0 : total % stay.size();
         int one = capacity(JarForm.SINGLE);
+        int[] share = new int[stay.size()];
+        int left = total;
+        for (int i = 0; i < stay.size(); i++) {
+            share[i] = Math.min(one, each + (i < extra ? 1 : 0));
+            left -= share[i];
+        }
+        // what the capped shares leave goes to a jar that is about to be absorbed (its whole holds it), else it is lost as before
+        for (int i = 0; i < stay.size() && left > 0; i++) {
+            if (absorbed.contains(stay.get(i))) {
+                share[i] += left;
+                left = 0;
+            }
+        }
         for (int i = 0; i < stay.size(); i++) {
             BlockPos cell = stay.get(i);
             CryoJarBlockEntity jar = (CryoJarBlockEntity) level.getBlockEntity(cell);
             jar.setController(null);
-            jar.putAll(Math.min(one, each + (i < extra ? 1 : 0)));
+            jar.putAll(share[i]);
             setForm(level, cell, JarForm.SINGLE);
             level.scheduleTick(cell, level.getBlockState(cell).getBlock(), 1);
         }

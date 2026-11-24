@@ -1,5 +1,32 @@
 # Changelog
 
+## 2.1.5 (1.21.1) — Reliability, autocrafting, performance & Plasma Temper parity
+
+The bugfixes, performance optimizations, and guidebook polish of the 2.1.5 release backported to Minecraft 1.21.1 (NeoForge 21.1):
+
+- **Autocrafting planner & CPU fixes:**
+  - Processing catalysts returned by a recipe now reserve a single upfront seed instead of one per crafted batch (`CraftingPlanner`).
+  - Fixed transitive sub-step dependency tracking so a child step can never consume a future parent step's byproduct.
+  - Reject bus and player crafting orders with `NO_CPU` immediately before planning/reserving when all Cryo-Calculators are busy.
+  - Breaking an active Cryo-Calculator or Cryo-Mainframe now refunds reserved job items and fluids back to the network before dropping any overflow.
+- **Cross-dimension & network state:**
+  - Share `networkEpoch` across dimensions by the Atlas Core's global position (`GlobalPos`) so cross-dimension Cryo-Source Telegraph outposts see storage changes and backoff resets immediately.
+  - Key `OrderBackoff` per dimension (`ResourceKey<Level>`) so identical coordinates across dimensions never collide.
+  - Clear static caches (`BusLoad`, `EPOCHS`) cleanly on server stop / disconnect.
+- **Device & UI fixes:**
+  - Growing a full Giga Jar into an Antigravity Reactor now preserves all accumulated Source without loss; Cryo-Jars guard against removed owners and notify comparators across all cells of a multiblock jar.
+  - **Plasma Temper:** grants `+1 Looting` alongside `+1 Fortune` on the swung copy (preserving `Silk Touch` mutual exclusion and keeping the stored weapon plain and unworn).
+  - **Stock Manometer:** holds clean `0` or `15` signals across `ABOVE` hysteresis bands instead of retaining stale analog redstone levels.
+  - **Golem Interface:** runs both inbox intake and stock refill together during redstone `PULSE` ticks.
+  - **Order Ledger (Stock Requester):** syncs offline status resets to clients.
+  - **Cryo-Distillation Tower:** clarified status tooltip when adjacent Cryo-Source Jars are full.
+  - **Menus & upgrades:** prevent `GolemMenu` shift-clicking from targeting `GhostSlot`s, persist and auto-drop legacy `UpgradeContainer` stray stacks on block entity tick, and close the terminal container before opening the guide book.
+- **Performance optimizations & world upgrades:**
+  - Track disk gear item counts in `O(1)` (`DiskStore.Disk.gearItems`) and automatically recount legacy disks on `/reload` (`TagsUpdatedEvent`).
+  - Cache unit-sphere meshes in block entity renderers (`JarWholeRenderer`, `StockManometerRenderer`, `StockRequesterRenderer`), wrap long-running animation time, and raise off-screen render bounds for Giga Jars and Antigravity Reactors.
+  - Track bus rolling tick budget without per-bus linear scans (`BusLoad.ran`).
+- **Guide book & tests:** fixed guidebook widow-line pagination issues (`bookaudit` reports 0 problems in both `en_us` and `ru_ru`), synced documentation, and added 11 regression GameTests (253 total).
+
 ## 2.1.4 (1.21.1) — The mechanics of 2.0.11–2.1.4 come to 1.21.1
 
 The devices and fixes of the 26.1.2 line 2.0.11–2.1.4, with the look of the 1.21.1 blocks (the redrawn textures, Atlants, array,

@@ -153,20 +153,16 @@ public final class DiskStorage {
         }
         d.items.merge(ItemKey.of(stack), n, Integer::sum);
         d.storedItems += (long) n * cost;
+        if (cost > 1) {
+            d.gearItems += n;
+        }
         markStored(disk, d, d.storedItems);
         st.setDirty();
         return n;
     }
 
     private static boolean holdsGear(@Nullable DiskStore.Disk d) {
-        if (d != null) {
-            for (ItemKey k : d.items.keySet()) {
-                if (Gear.is(k.stack())) {
-                    return true;
-                }
-            }
-        }
-        return false;
+        return d != null && d.gearItems > 0;
     }
 
     /** Takes items from the disk. Returns how many were actually taken. */
@@ -191,7 +187,11 @@ public final class DiskStorage {
             } else {
                 d.items.put(key, have - take);
             }
-            d.storedItems = Math.max(0, d.storedItems - (long) take * Gear.cost(template));
+            int cost = Gear.cost(template);
+            d.storedItems = Math.max(0, d.storedItems - (long) take * cost);
+            if (cost > 1) {
+                d.gearItems = Math.max(0, d.gearItems - take);
+            }
             markStored(disk, d, d.storedItems);
             st.setDirty();
         }

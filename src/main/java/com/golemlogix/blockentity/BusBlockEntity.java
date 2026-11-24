@@ -284,7 +284,7 @@ public class BusBlockEntity extends BlockEntity {
         } else {
             be.doImport(level, pos, net, target, items, fluids);
         }
-        com.golemlogix.system.BusLoad.ran(System.nanoTime() - started);
+        com.golemlogix.system.BusLoad.ran(level, System.nanoTime() - started);
         be.lastRun = now;
         if (be.moved == 0) {
             // nothing to do: sleep for the interval doubled with every idle operation

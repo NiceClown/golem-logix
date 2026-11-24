@@ -218,15 +218,11 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         if (job == null) {
             return;
         }
-        for (var e : job.inventory().entrySet()) {
-            // fluids of the job cannot drop as items: they are spilled
-            long n = com.golemlogix.system.Ingredients.isFluid(e.getKey()) ? 0 : e.getValue();
-            while (n > 0) {
-                int chunk = (int) Math.min(n, e.getKey().stack().getMaxStackSize());
-                Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5,
-                        worldPosition.getZ() + 0.5, e.getKey().toStack(chunk));
-                n -= chunk;
-            }
+        // the job's items go back to the network first, as on a cancel, and only what does not fit drops: orders of any size can hold
+        // millions of reserved items, and dropping them all as item entities froze the server
+        GolemNetwork net = level.isClientSide() ? null : GolemNetwork.aroundRemoved(level, worldPosition);
+        for (ItemStack s : job.refundAll(net)) {
+            Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, s);
         }
         job = null;
     }
