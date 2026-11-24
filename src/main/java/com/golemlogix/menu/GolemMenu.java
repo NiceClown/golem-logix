@@ -202,6 +202,81 @@ public abstract class GolemMenu extends AbstractContainerMenu {
         playerEnd = this.slots.size();
     }
 
+    /**
+     * The game's merge pass tops up any slot holding the same item without asking mayPlace, so a shift-click poured real items into
+     * a ghost filter showing that item (an upgrade shift-clicked into a bus with a ghost of it: what did not fit the upgrade slot was
+     * gone). Ghost slots are left out of the move, the rest is the game's own.
+     */
+    @Override
+    protected boolean moveItemStackTo(ItemStack stack, int startSlot, int endSlot, boolean backwards) {
+        boolean ghosts = false;
+        for (int i = Math.max(0, startSlot); i < endSlot && i < this.slots.size(); i++) {
+            if (this.slots.get(i) instanceof GhostSlot) {
+                ghosts = true;
+                break;
+            }
+        }
+        if (!ghosts) {
+            return super.moveItemStackTo(stack, startSlot, endSlot, backwards);
+        }
+        // runs of real slots between the ghosts, in the same order the game walks them
+        boolean changed = false;
+        java.util.List<int[]> runs = new java.util.ArrayList<>();
+        int runStart = -1;
+        for (int i = startSlot; i <= endSlot; i++) {
+            boolean real = i < endSlot && !(this.slots.get(i) instanceof GhostSlot);
+            if (real && runStart < 0) {
+                runStart = i;
+            } else if (!real && runStart >= 0) {
+                runs.add(new int[]{runStart, i});
+                runStart = -1;
+            }
+        }
+        if (backwards) {
+            java.util.Collections.reverse(runs);
+        }
+        // first top up stacks in every run, then fill an empty slot (as the game does over the whole range)
+        for (int[] r : runs) {
+            if (stack.isEmpty()) {
+                break;
+            }
+            changed |= mergeOnly(stack, r[0], r[1], backwards);
+        }
+        for (int[] r : runs) {
+            if (stack.isEmpty()) {
+                break;
+            }
+            if (super.moveItemStackTo(stack, r[0], r[1], backwards)) {
+                changed = true;
+                break;
+            }
+        }
+        return changed;
+    }
+
+    /** The game's merge pass alone, over real slots only. */
+    private boolean mergeOnly(ItemStack stack, int start, int end, boolean backwards) {
+        if (!stack.isStackable()) {
+            return false;
+        }
+        boolean changed = false;
+        for (int k = 0; k < end - start && !stack.isEmpty(); k++) {
+            Slot slot = this.slots.get(backwards ? end - 1 - k : start + k);
+            ItemStack target = slot.getItem();
+            if (!target.isEmpty() && ItemStack.isSameItemSameComponents(stack, target)) {
+                int max = slot.getMaxStackSize(target);
+                int move = Math.min(stack.getCount(), max - target.getCount());
+                if (move > 0) {
+                    target.grow(move);
+                    stack.shrink(move);
+                    slot.setChanged();
+                    changed = true;
+                }
+            }
+        }
+        return changed;
+    }
+
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
         Slot slot = this.slots.get(index);

@@ -57,13 +57,15 @@ public final class NbtBridge {
     }
 
     /** A tank's fluid as a compound (empty for an empty tank). */
-    public static CompoundTag saveTank(net.neoforged.neoforge.fluids.capability.templates.FluidTank tank, HolderLookup.Provider registries) {
-        return tank.isEmpty() ? new CompoundTag() : (CompoundTag) saveFluid(tank.getFluid(), registries);
+    public static CompoundTag saveTank(net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler tank, HolderLookup.Provider registries) {
+        net.neoforged.neoforge.fluids.FluidStack f = Transfers.getFluid(tank, 0);
+        return f.isEmpty() ? new CompoundTag() : (CompoundTag) saveFluid(f, registries);
     }
 
-    public static void loadTank(net.neoforged.neoforge.fluids.capability.templates.FluidTank tank, HolderLookup.Provider registries, CompoundTag tag) {
-        tank.setFluid(tag.isEmpty() ? net.neoforged.neoforge.fluids.FluidStack.EMPTY
-                : loadFluid(registries, tag).orElse(net.neoforged.neoforge.fluids.FluidStack.EMPTY));
+    public static void loadTank(net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler tank, HolderLookup.Provider registries, CompoundTag tag) {
+        net.neoforged.neoforge.fluids.FluidStack f = tag.isEmpty() ? net.neoforged.neoforge.fluids.FluidStack.EMPTY
+                : loadFluid(registries, tag).orElse(net.neoforged.neoforge.fluids.FluidStack.EMPTY);
+        tank.set(0, net.neoforged.neoforge.transfer.fluid.FluidResource.of(f), f.getAmount());
     }
 
     /** Registries for encoding items and fluids while saving. */

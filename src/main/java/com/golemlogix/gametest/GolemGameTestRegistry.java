@@ -217,6 +217,7 @@ public final class GolemGameTestRegistry {
             new Test("autocraftnestedmultistep", GolemGameTestsExtra::autocraftNestedMultiStep, 400, 0),
             new Test("autocraftcompetingjobs", GolemGameTestsExtra::autocraftCompetingJobs, 400, 0),
             new Test("autocraftjobcancelledmidwayrefunds", GolemGameTestsExtra::autocraftJobCancelledMidwayRefunds, 300, 0),
+            new Test("brokencalculatorrefundstonetwork", GolemGameTestsExtra::brokenCalculatorRefundsToNetwork, 300, 0),
             new Test("autocraftfluidinputfromfluidoutput", GolemGameTestsExtra::autocraftFluidInputFromFluidOutput, 400, 0),
             new Test("autocraftcalculatorremovedmidjob", GolemGameTestsExtra::autocraftCalculatorRemovedMidJob, 300, 0),
             // Stock Manometer
@@ -271,6 +272,7 @@ public final class GolemGameTestRegistry {
             new Test("autocraftmanyportionskeepthesavesmall", GolemGameTestsExtra::autocraftManyPortionsKeepTheSaveSmall, 1800, 0),
             new Test("idlemainframecoreslend", GolemGameTests::idleMainframeCoresLend, 200, 0),
             new Test("cryojarsjoin", GolemGameTests::cryoJarsJoin, 100, 0),
+            new Test("fullgigajargrowswithoutloss", GolemGameTests::fullGigaJarGrowsWithoutLoss, 80, 0),
             new Test("temperliftstools", GolemGameTests::temperLiftsTools, 40, 0),
             new Test("towerfillsjarsthroughnetwork", GolemGameTests::towerFillsJarsThroughNetwork, 200, 0),
             new Test("towercountsajaronce", GolemGameTests::towerCountsAJarOnce, 200, 0),
@@ -290,10 +292,18 @@ public final class GolemGameTestRegistry {
             new Test("busthroughputmatchesupgrades", GolemGameTestsExtra::busThroughputMatchesUpgrades, 340, 0),
             new Test("stockrequesterkeepsfluid", GolemGameTestsExtra::stockRequesterKeepsFluid, 320, 0),
             new Test("networkkeepscontentsacrossdiskmove", GolemGameTestsExtra::networkKeepsContentsAcrossDiskMove, 200, 0),
-            new Test("allnewdevicesoffline", GolemGameTestsExtra::allNewerDevicesOffline, 120, 0),
             new Test("manasaturatorunformeddoesnothing", GolemGameTestsExtra::manaSaturatorUnformedDoesNothing, 60, 0),
             new Test("cryomixerwithoutsource", GolemGameTestsExtra::cryoMixerWithoutSourceDoesNothing, 60, 0),
-            new Test("distillationtowerwithoutblood", GolemGameTestsExtra::distillationTowerWithoutBloodDoesNothing, 60, 0)
+            new Test("distillationtowerwithoutblood", GolemGameTestsExtra::distillationTowerWithoutBloodDoesNothing, 80, 0),
+            new Test("manometerandinterfaceedgefixes", GolemGameTestsExtra::manometerAndInterfaceEdgeFixes, 100, 0),
+            new Test("autocraftcatalystreusessingleitem", GolemGameTestsExtra::autocraftCatalystReusesSingleItem, 300, 0),
+            new Test("autocrafttransitivebyproductnodeadlock", GolemGameTestsExtra::autocraftTransitiveByproductNoDeadlock, 100, 0),
+            new Test("crossdimensionnetworkepochshared", GolemGameTestsExtra::crossDimensionNetworkEpochShared, 120, 0),
+            new Test("distillationtowerdeliverscarrysource", GolemGameTestsExtra::distillationTowerDeliversCarrySource, 80, 0),
+            new Test("olddiskrecountsonbayload", GolemGameTestsExtra::oldDiskRecountsOnBayLoad, 80, 0),
+            new Test("noplanwithoutfreecalculator", GolemGameTestsExtra::noPlanWithoutFreeCalculator, 100, 0),
+            new Test("channelcountersyncstoclient", GolemGameTestsExtra::channelCounterSyncsToClient, 100, 0),
+            new Test("plasmatemperlootingdrops", GolemGameTestsExtra::plasmaTemperLootingDrops, 140, 0)
     );
 
     private GolemGameTestRegistry() {

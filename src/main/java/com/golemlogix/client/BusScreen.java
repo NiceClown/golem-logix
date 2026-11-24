@@ -81,7 +81,7 @@ public class BusScreen extends GolemScreen<BusMenu> {
         int keep = menu.isExport() && slot.index < com.golemlogix.blockentity.BusBlockEntity.FILTER_SLOTS ? menu.keepAt(slot.index) : 0;
         if (keep > 0) {
             boolean fluid = com.golemlogix.items.FluidGhostItem.is(slot.getItem())
-                    || net.neoforged.neoforge.fluids.FluidUtil.getFluidContained(slot.getItem()).filter(f -> !f.isEmpty()).isPresent();
+                    || !com.golemlogix.system.Transfers.fluidOf(slot.getItem()).isEmpty();
             String text = fluid ? InterfaceSlotScreen.bucketText(keep) : keep >= 10_000 ? keep / 1000 + "k" : Integer.toString(keep);
             g.itemDecorations(font, slot.getItem(), slot.x, slot.y, text);
         }

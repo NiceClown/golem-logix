@@ -48,7 +48,8 @@ public class CryoJarBlockEntity extends BlockEntity implements SourceHelper.Supp
         if (lower == null || lower.controller == null || lower.controller.equals(lower.worldPosition)) {
             return lower;
         }
-        return level != null && level.isLoaded(lower.controller) && level.getBlockEntity(lower.controller) instanceof CryoJarBlockEntity c ? c : null;
+        return level != null && level.isLoaded(lower.controller) && level.getBlockEntity(lower.controller) instanceof CryoJarBlockEntity c
+                && !c.isRemoved() ? c : null;
     }
 
     @Nullable
@@ -97,13 +98,13 @@ public class CryoJarBlockEntity extends BlockEntity implements SourceHelper.Supp
     @Override
     public int available() {
         CryoJarBlockEntity o = owner();
-        return o == null ? 0 : Math.min(o.source, capacity());
+        return o == null || o.isRemoved() ? 0 : Math.min(o.source, capacity());
     }
 
     @Override
     public int drain(int amount) {
         CryoJarBlockEntity o = owner();
-        if (o == null || amount <= 0) {
+        if (o == null || o.isRemoved() || amount <= 0) {
             return 0;
         }
         int take = Math.min(amount, o.source);
@@ -117,7 +118,7 @@ public class CryoJarBlockEntity extends BlockEntity implements SourceHelper.Supp
     /** Pours Source in; returns how much went in (simulate: only how much would). */
     public int fill(int amount, boolean simulate) {
         CryoJarBlockEntity o = owner();
-        if (o == null || amount <= 0) {
+        if (o == null || o.isRemoved() || amount <= 0) {
             return 0;
         }
         int add = Math.max(0, Math.min(amount, capacity() - o.source));
@@ -144,6 +145,21 @@ public class CryoJarBlockEntity extends BlockEntity implements SourceHelper.Supp
                 lastSync = now;
                 level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
                 level.updateNeighbourForOutputSignal(worldPosition, getBlockState().getBlock());
+                if (level.isLoaded(worldPosition.above())) {
+                    level.updateNeighbourForOutputSignal(worldPosition.above(), getBlockState().getBlock());
+                }
+                // every jar (and upper half) of a whole shows the shared level to comparators, but only this corner changes
+                com.golemlogix.blocks.JarForm f = form();
+                if (f != com.golemlogix.blocks.JarForm.SINGLE && isController()) {
+                    for (BlockPos cell : com.golemlogix.system.JarMerge.cells(worldPosition, f.width())) {
+                        if (!cell.equals(worldPosition) && level.isLoaded(cell)) {
+                            level.updateNeighbourForOutputSignal(cell, getBlockState().getBlock());
+                            if (level.isLoaded(cell.above())) {
+                                level.updateNeighbourForOutputSignal(cell.above(), getBlockState().getBlock());
+                            }
+                        }
+                    }
+                }
             }
         }
     }

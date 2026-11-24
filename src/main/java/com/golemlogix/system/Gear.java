@@ -25,7 +25,7 @@ public final class Gear {
             return true;
         }
         return stack.getMaxStackSize() == 1 && !stack.getComponentsPatch().isEmpty() && !stack.has(DataComponents.POTION_CONTENTS)
-                && net.neoforged.neoforge.fluids.FluidUtil.getFluidContained(stack).isEmpty();
+                && Transfers.fluidOf(stack).isEmpty();
     }
 
     /** The pieces of a disk one of these takes. */

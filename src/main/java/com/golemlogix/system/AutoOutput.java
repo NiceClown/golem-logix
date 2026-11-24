@@ -5,8 +5,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -43,11 +44,11 @@ public final class AutoOutput {
                     if (provider != (pass == 0)) {
                         continue;
                     }
-                    IItemHandler handler = LegacyResources.items(level, target, dir.getOpposite());
+                    ResourceHandler<ItemResource> handler = level.getCapability(Capabilities.Item.BLOCK, target, dir.getOpposite());
                     if (handler == null) {
                         continue;
                     }
-                    rest = ItemHandlerHelper.insertItem(handler, rest, false);
+                    rest = Transfers.insertItem(handler, rest, false, false);
                     if (rest.isEmpty()) {
                         return ItemStack.EMPTY;
                     }

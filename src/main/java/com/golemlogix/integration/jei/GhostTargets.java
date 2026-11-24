@@ -3,13 +3,13 @@ package com.golemlogix.integration.jei;
 import com.golemlogix.client.GolemScreen;
 import com.golemlogix.menu.GolemMenu;
 import com.golemlogix.network.GhostSetPayload;
+import com.golemlogix.system.Transfers;
 import mezz.jei.api.gui.handlers.IGhostIngredientHandler;
 import mezz.jei.api.ingredients.ITypedIngredient;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidUtil;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
@@ -60,7 +60,7 @@ public final class GhostTargets<T extends GolemScreen<?>> implements IGhostIngre
         }
         if (ingredient instanceof FluidStack f && !f.isEmpty()) {
             int mb = com.golemlogix.system.CryoSource.is(f) ? GolemMenu.FLUID_GHOST_STEP : 1000;
-            ItemStack bucket = encoder ? ItemStack.EMPTY : FluidUtil.getFilledBucket(f.copyWithAmount(1000));
+            ItemStack bucket = encoder ? ItemStack.EMPTY : Transfers.filledBucket(f);
             return bucket.isEmpty() ? com.golemlogix.items.FluidGhostItem.of(f.copyWithAmount(mb)) : bucket;
         }
         return ItemStack.EMPTY;

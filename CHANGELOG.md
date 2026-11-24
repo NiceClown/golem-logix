@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.1.5 (26.1.2) — Optimization, Transfer API & Reliability
+
+- **Autocrafting planner fixes:** returned catalysts now reserve a single upfront seed instead of one per iteration, and transitive sub-steps never consume a parent step's future byproduct.
+- **Cross-dimension network synchronization:** shared `networkEpoch` across dimensions via the Atlas Core's global position so cross-dimension Telegraph outposts see storage changes and order-backoff resets immediately.
+- **Golem & multiblock fixes:**
+  - Refined the Antigravity Reactor iron golems' shoulder/arm pose (pinned to the upper back along the ring as a V without floating or z-fighting).
+  - Breaking a running Cryo-Calculator or Cryo-Mainframe now refunds reserved job items and fluids to the network before dropping any overflow.
+  - Fixed merging a full Giga Jar into an Antigravity Reactor so stored Source is never lost; Cryo-Jars update comparators across all cells and guard against removed owners.
+- **Device & UI fixes:**
+  - Fixed `GolemMenu` shift-clicking upgrades into ghost filter slots; persisted and dropped stray items from upgraded containers on chunk/world load.
+  - `TerminalScreen` now closes its container before opening the guide book.
+  - Fixed Stock Manometer hysteresis switches keeping stale analog redstone levels instead of `0`/`15`, Order Ledger syncing offline resets to clients, and the Golem Interface running intake and restock together in redstone pulse mode.
+  - Keyed `OrderBackoff` per dimension (`ResourceKey<Level>`) so identical coordinates across dimensions never collide.
+- **NeoForge 26.1 Transfer API & performance optimizations:**
+  - Completed migration to NeoForge 26.1's native Transfer API (`ResourceHandler`, `Transaction`, `FluidUtil`), removing legacy `IItemHandler`/`IFluidHandler` adapters (`LegacyResources`) while keeping full world save compatibility and zero deprecation warnings.
+  - Added O(1) disk gear-item tracking with tag-reload recounting (`/reload`), cached unit spheres with wrapped animation time in `JarWholeRenderer`, `StockRequesterRenderer`, and `StockManometerRenderer`, raised off-screen render bounds on `CryoJarRenderer` for Giga Jars and Antigravity Reactors, and server-stop / client-logout cleanup of static caches (`BusLoad`, `StaleLight`, `OrderBackoff`).
+  - Tightened guide book pagination across English and Russian entries to eliminate widow-line layout warnings (`0` issues in `bookaudit`).
+  - Expanded automated server GameTests to 251 (covering catalyst reuse, transitive byproducts, cross-dimension epochs, Distillation Tower carry delivery, old-disk recount on cabinet load, busy-calculator rejection, Channel Counter sync, and Plasma Temper Looting drops).
+
 ## 2.1.4 (26.1.2) — Anywhere on the network
 
 - Giga Jars and Antigravity Reactors work through the network: a tower touching it pours into them wherever they stand.

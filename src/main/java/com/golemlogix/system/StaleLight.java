@@ -40,6 +40,10 @@ public final class StaleLight {
         }
         long now = level.getGameTime();
         CLIENT_CHECKS.entrySet().removeIf(e -> {
+            // if the world's clock jumped back (another world or time set), drop stale entries rather than waiting forever
+            if (e.getValue() - now > CLIENT_DELAY_TICKS * 2L) {
+                return true;
+            }
             if (now < e.getValue()) {
                 return false;
             }
@@ -48,5 +52,10 @@ public final class StaleLight {
             }
             return true;
         });
+    }
+
+    /** Client left a world: drop any queued light checks from it. */
+    public static void forgetClient() {
+        CLIENT_CHECKS.clear();
     }
 }

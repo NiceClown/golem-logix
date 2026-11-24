@@ -59,7 +59,7 @@ public class StockRequesterMenu extends GolemMenu {
     /** A filled container (or a fluid ghost) can be kept either way. */
     public static boolean fluidSwitchable(ItemStack ghost) {
         return com.golemlogix.items.FluidGhostItem.is(ghost)
-                || net.neoforged.neoforge.fluids.FluidUtil.getFluidContained(ghost).filter(f -> !f.isEmpty()).isPresent();
+                || !com.golemlogix.system.Transfers.fluidOf(ghost).isEmpty();
     }
 
     /** Bucket -> its fluid (the amount in buckets becomes mB) and back (a fluid without a bucket stays a fluid). */
@@ -75,7 +75,7 @@ public class StockRequesterMenu extends GolemMenu {
             out = bucket;
             keep = keep <= 0 ? 0 : Math.max(1, keep / 1000);
         } else {
-            var fluid = net.neoforged.neoforge.fluids.FluidUtil.getFluidContained(ghost).orElse(net.neoforged.neoforge.fluids.FluidStack.EMPTY);
+            var fluid = com.golemlogix.system.Transfers.fluidOf(ghost);
             if (fluid.isEmpty()) {
                 return ghost;
             }

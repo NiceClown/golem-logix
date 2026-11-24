@@ -5,6 +5,7 @@ import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.init.ModSounds;
 import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.ItemKey;
+import com.golemlogix.system.Transfers;
 import com.golemlogix.upgrade.RedstoneControl;
 import com.golemlogix.upgrade.RedstoneMode;
 import com.golemlogix.upgrade.UpgradeContainer;
@@ -23,7 +24,13 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.transfer.CombinedResourceHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.item.VanillaContainerWrapper;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -60,79 +67,59 @@ public class InterfaceBlockEntity extends BlockEntity {
     private final OwnedContainer inbox = new OwnedContainer(SLOTS, this, s -> true);
     private final UpgradeContainer upgrades;
     private final RedstoneControl redstone = new RedstoneControl();
-    private final Automation automation = new Automation();
     /** Fluid input tank: what pipes or buckets poured into the interface goes to the network. */
     public static final int TANK = 16000;
-    private final net.neoforged.neoforge.fluids.capability.templates.FluidTank tank =
-            new net.neoforged.neoforge.fluids.capability.templates.FluidTank(TANK) {
-                @Override
-                protected void onContentsChanged() {
-                    setChanged();
-                }
-            };
-    private final FluidIntake fluidIntake = new FluidIntake();
-
-    public net.neoforged.neoforge.fluids.capability.IFluidHandler fluids() {
-        return fluidIntake;
-    }
-
-    /** What pipes and other mods see (NeoForge resource handlers over the handlers above). */
-    private net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource> itemResources;
-    private net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource> fluidResources;
-
-    public net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource> itemResources() {
-        if (itemResources == null) {
-            itemResources = com.golemlogix.system.LegacyResources.offerItems(automation, () -> {
-                ItemStack[] copy = new ItemStack[SLOTS * 2];
-                for (int i = 0; i < SLOTS; i++) {
-                    copy[i] = stock.getItem(i).copy();
-                    copy[SLOTS + i] = inbox.getItem(i).copy();
-                }
-                return copy;
-            }, copy -> {
-                for (int i = 0; i < SLOTS; i++) {
-                    stock.setItem(i, copy[i]);
-                    inbox.setItem(i, copy[SLOTS + i]);
-                }
-            });
+    private final FluidStacksResourceHandler tank = new FluidStacksResourceHandler(1, TANK) {
+        @Override
+        protected void onContentsChanged(int index, FluidStack previousContents) {
+            setChanged();
         }
-        return itemResources;
-    }
-
-    public net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource> fluidResources() {
-        if (fluidResources == null) {
-            fluidResources = com.golemlogix.system.LegacyResources.offerFluids(fluidIntake, () -> {
-                net.neoforged.neoforge.fluids.FluidStack[] copy = new net.neoforged.neoforge.fluids.FluidStack[SLOTS + 1];
-                copy[0] = tank.getFluid().copy();
-                for (int i = 0; i < SLOTS; i++) {
-                    copy[i + 1] = fluidStock[i].copy();
-                }
-                return copy;
-            }, copy -> {
-                tank.setFluid(copy[0]);
-                for (int i = 0; i < SLOTS; i++) {
-                    fluidStock[i] = copy[i + 1];
-                }
-                setChanged();
-            });
-        }
-        return fluidResources;
-    }
-
-    public net.neoforged.neoforge.fluids.FluidStack tankFluid() {
-        return tank.getFluid();
-    }
-
-    // ------------------------------------------------------------------ fluids in stock
+    };
     /** One bucket in a config slot = this many mB in stock. */
     public static final int MB_PER_BUCKET = 1000;
-    /** Fluid stock per config slot (in "fluid" mode). */
-    private final net.neoforged.neoforge.fluids.FluidStack[] fluidStock = new net.neoforged.neoforge.fluids.FluidStack[SLOTS];
+    /** No more fluid than this is kept in one slot (256 buckets). */
+    public static final int MAX_FLUID = 256_000;
+    /**
+     * How much to keep per slot: items ("item" mode) or mB ("fluid" mode); set in the slot settings window.
+     * 0 = not set (worlds of older versions): the count in the config slot is used, in buckets for fluids.
+     */
+    private final int[] amount = new int[SLOTS];
+    /** Fluid stock per config slot (in "fluid" mode): pipes and buckets can drain from here. */
+    private final FluidStacksResourceHandler fluidStock = new FluidStacksResourceHandler(SLOTS, MAX_FLUID) {
+        @Override
+        protected int getCapacity(int index, FluidResource resource) {
+            return Math.max(wantedFluid(index), getAmountAsInt(index));
+        }
+
+        @Override
+        protected void onContentsChanged(int index, FluidStack previousContents) {
+            setChanged();
+        }
+    };
     /** Slot modes: bit i = 1 keeps the items themselves (buckets), 0 keeps the fluid from the container (default). */
     private int itemModeMask = 0;
 
-    {
-        java.util.Arrays.fill(fluidStock, net.neoforged.neoforge.fluids.FluidStack.EMPTY);
+    /**
+     * What pipes and other mods see: slots 0..8 are output (extract only), 9..17 are input (insert only, any items);
+     * fluids: tank 0 is input (insert only, goes to the network), tanks 1..9 are stock per slot (extract only).
+     */
+    private final ResourceHandler<ItemResource> itemResources = new CombinedResourceHandler<>(
+            Transfers.extractOnly(VanillaContainerWrapper.of(stock)),
+            Transfers.insertOnly(VanillaContainerWrapper.of(inbox)));
+    private final ResourceHandler<FluidResource> fluidResources = new CombinedResourceHandler<>(
+            Transfers.insertOnly(tank),
+            Transfers.extractOnly(fluidStock));
+
+    public ResourceHandler<ItemResource> itemResources() {
+        return itemResources;
+    }
+
+    public ResourceHandler<FluidResource> fluidResources() {
+        return fluidResources;
+    }
+
+    public FluidStack tankFluid() {
+        return Transfers.getFluid(tank, 0);
     }
 
     public boolean itemMode(int i) {
@@ -147,16 +134,12 @@ public class InterfaceBlockEntity extends BlockEntity {
     }
 
     /** Fluid of the container (or fluid ghost) in a config slot (empty if it is neither). */
-    public static net.neoforged.neoforge.fluids.FluidStack containedFluid(ItemStack cfg) {
+    public static FluidStack containedFluid(ItemStack cfg) {
         if (cfg.isEmpty()) {
-            return net.neoforged.neoforge.fluids.FluidStack.EMPTY;
+            return FluidStack.EMPTY;
         }
         var ghost = com.golemlogix.items.FluidGhostItem.fluid(cfg);
-        if (!ghost.isEmpty()) {
-            return ghost;
-        }
-        return net.neoforged.neoforge.fluids.FluidUtil.getFluidContained(cfg).filter(f -> !f.isEmpty())
-                .orElse(net.neoforged.neoforge.fluids.FluidStack.EMPTY);
+        return ghost.isEmpty() ? Transfers.fluidOf(cfg) : ghost;
     }
 
     /** The slot keeps fluid: the config holds a fluid ghost, or a container with fluid and the mode is not "item". */
@@ -165,17 +148,9 @@ public class InterfaceBlockEntity extends BlockEntity {
         return com.golemlogix.items.FluidGhostItem.is(cfg) || (!itemMode(i) && !containedFluid(cfg).isEmpty());
     }
 
-    public net.neoforged.neoforge.fluids.FluidStack fluidStock(int i) {
-        return fluidStock[i];
+    public FluidStack fluidStock(int i) {
+        return Transfers.getFluid(fluidStock, i);
     }
-
-    /** No more fluid than this is kept in one slot (256 buckets). */
-    public static final int MAX_FLUID = 256_000;
-    /**
-     * How much to keep per slot: items ("item" mode) or mB ("fluid" mode); set in the slot settings window.
-     * 0 = not set (worlds of older versions): the count in the config slot is used, in buckets for fluids.
-     */
-    private final int[] amount = new int[SLOTS];
 
     /** The set amount of a slot (items or mB) depending on the mode. */
     public int amount(int i) {
@@ -239,10 +214,10 @@ public class InterfaceBlockEntity extends BlockEntity {
     private int restockFluids(GolemNetwork network) {
         int moved = 0, budget = fluidPerOperation();
         for (int i = 0; i < SLOTS; i++) {
-            var have = fluidStock[i];
-            var want = isFluidSlot(i) ? containedFluid(config.getItem(i)) : net.neoforged.neoforge.fluids.FluidStack.EMPTY;
+            FluidStack have = fluidStock(i);
+            FluidStack want = isFluidSlot(i) ? containedFluid(config.getItem(i)) : FluidStack.EMPTY;
             if (!have.isEmpty()) {
-                int excess = want.isEmpty() || !net.neoforged.neoforge.fluids.FluidStack.isSameFluidSameComponents(want, have)
+                int excess = want.isEmpty() || !FluidStack.isSameFluidSameComponents(want, have)
                         ? have.getAmount() : have.getAmount() - wantedFluid(i);
                 if (excess > 0) {
                     int back = network.insertFluid(have.copyWithAmount(excess), false);
@@ -250,116 +225,44 @@ public class InterfaceBlockEntity extends BlockEntity {
                         // Liquid Cryo-Source cannot be stored: the excess goes back into the aether
                         back = excess;
                     }
-                    have.shrink(back);
-                    if (have.isEmpty()) {
-                        fluidStock[i] = net.neoforged.neoforge.fluids.FluidStack.EMPTY;
+                    if (back > 0) {
+                        int rem = Math.max(0, have.getAmount() - back);
+                        fluidStock.set(i, rem == 0 ? FluidResource.EMPTY : FluidResource.of(have), rem);
+                        moved += back;
                     }
-                    moved += back;
-                    setChanged();
                 }
             }
             if (want.isEmpty() || budget - moved <= 0) {
                 continue;
             }
-            have = fluidStock[i];
-            if (!have.isEmpty() && !net.neoforged.neoforge.fluids.FluidStack.isSameFluidSameComponents(want, have)) {
+            have = fluidStock(i);
+            if (!have.isEmpty() && !FluidStack.isSameFluidSameComponents(want, have)) {
                 continue;
             }
             int need = wantedFluid(i) - have.getAmount();
             if (need <= 0) {
                 continue;
             }
-            var got = network.extractFluid(want, Math.min(need, budget - moved), false);
+            FluidStack got = network.extractFluid(want, Math.min(need, budget - moved), false);
             if (got.isEmpty()) {
                 continue;
             }
-            if (have.isEmpty()) {
-                fluidStock[i] = got.copy();
-            } else {
-                have.grow(got.getAmount());
-            }
+            fluidStock.set(i, FluidResource.of(got), have.getAmount() + got.getAmount());
             moved += got.getAmount();
-            setChanged();
         }
         return moved;
     }
 
-    /**
-     * Fluids from any side: tank 0 is input (fill only, goes to the network), tanks 1..9 are stock per slot (drain only).
-     */
-    private final class FluidIntake implements net.neoforged.neoforge.fluids.capability.IFluidHandler {
-        @Override
-        public int getTanks() {
-            return 1 + SLOTS;
-        }
-
-        @Override
-        public net.neoforged.neoforge.fluids.FluidStack getFluidInTank(int t) {
-            return t == 0 ? tank.getFluid() : fluidStock[t - 1];
-        }
-
-        @Override
-        public int getTankCapacity(int t) {
-            return t == 0 ? TANK : Math.max(wantedFluid(t - 1), fluidStock[t - 1].getAmount());
-        }
-
-        @Override
-        public boolean isFluidValid(int t, net.neoforged.neoforge.fluids.FluidStack stack) {
-            return t == 0;
-        }
-
-        @Override
-        public int fill(net.neoforged.neoforge.fluids.FluidStack resource, FluidAction action) {
-            return tank.fill(resource, action);
-        }
-
-        @Override
-        public net.neoforged.neoforge.fluids.FluidStack drain(net.neoforged.neoforge.fluids.FluidStack resource, FluidAction action) {
-            for (int i = 0; i < SLOTS; i++) {
-                if (net.neoforged.neoforge.fluids.FluidStack.isSameFluidSameComponents(fluidStock[i], resource)) {
-                    return drainSlot(i, resource.getAmount(), action);
-                }
-            }
-            return net.neoforged.neoforge.fluids.FluidStack.EMPTY;
-        }
-
-        @Override
-        public net.neoforged.neoforge.fluids.FluidStack drain(int maxDrain, FluidAction action) {
-            for (int i = 0; i < SLOTS; i++) {
-                if (!fluidStock[i].isEmpty()) {
-                    return drainSlot(i, maxDrain, action);
-                }
-            }
-            return net.neoforged.neoforge.fluids.FluidStack.EMPTY;
-        }
-
-        private net.neoforged.neoforge.fluids.FluidStack drainSlot(int i, int max, FluidAction action) {
-            var have = fluidStock[i];
-            int n = Math.min(max, have.getAmount());
-            if (n <= 0) {
-                return net.neoforged.neoforge.fluids.FluidStack.EMPTY;
-            }
-            var out = have.copyWithAmount(n);
-            if (action.execute()) {
-                have.shrink(n);
-                if (have.isEmpty()) {
-                    fluidStock[i] = net.neoforged.neoforge.fluids.FluidStack.EMPTY;
-                }
-                setChanged();
-            }
-            return out;
-        }
-    }
-
     /** Tank -> network (as much as fits), returns the mB moved. */
     private int flushTank(GolemNetwork network) {
-        var f = tank.getFluid();
+        FluidStack f = tankFluid();
         if (f.isEmpty()) {
             return 0;
         }
         int stored = network.insertFluid(f.copy(), false);
         if (stored > 0) {
-            tank.drain(stored, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
+            int left = Math.max(0, f.getAmount() - stored);
+            tank.set(0, left == 0 ? FluidResource.EMPTY : tank.getResource(0), left);
         }
         return stored;
     }
@@ -396,10 +299,6 @@ public class InterfaceBlockEntity extends BlockEntity {
         return upgrades;
     }
 
-    public IItemHandler automation() {
-        return automation;
-    }
-
     /**
      * Window data: 0 = redstone mode, 1 = slot modes (bits), 2..10 = fluid stock (tens of mB), 11..19 and 20..28 =
      * set amounts of the slots (low and high 15 bits: window data goes over the network as shorts).
@@ -418,7 +317,7 @@ public class InterfaceBlockEntity extends BlockEntity {
                     return itemModeMask;
                 }
                 if (index < DATA_AMOUNT_LO) {
-                    return Math.min(32767, fluidStock[index - DATA_FLUID].getAmount() / 10);
+                    return Math.min(32767, fluidStock.getAmountAsInt(index - DATA_FLUID) / 10);
                 }
                 if (index < DATA_AMOUNT_HI) {
                     return amount(index - DATA_AMOUNT_LO) & 0x7FFF;
@@ -475,13 +374,21 @@ public class InterfaceBlockEntity extends BlockEntity {
         }
         // what is put in goes to the network at once, whole; only keeping the stock goes by the interval and the portion
         long time = level.getGameTime();
-        boolean intake = time >= be.nextIntake && be.hasIntake();
+        boolean pulseMode = hasRedstone && be.redstone.mode() == com.golemlogix.upgrade.RedstoneMode.PULSE;
         boolean stockDue = Math.floorMod(time + pos.asLong(), be.interval()) == 0;
+        // in pulse mode a pulse runs both intake and restocking together, so neither eats the pulse from the other
+        boolean intake = ((pulseMode && stockDue) || time >= be.nextIntake) && be.hasIntake();
+        if (pulseMode && intake) {
+            stockDue = true;
+        }
         if (!intake && !stockDue) {
             return;
         }
+        if (!be.redstone.allows(hasRedstone, powered, false)) {
+            return;
+        }
         GolemNetwork net = GolemNetwork.get(level, pos);
-        if (!net.isOnline() || !net.isDeviceActive(pos) || !be.redstone.allows(hasRedstone, powered, false)) {
+        if (!net.isOnline() || !net.isDeviceActive(pos)) {
             be.nextIntake = time + INTAKE_RETRY;
             return;
         }
@@ -511,7 +418,7 @@ public class InterfaceBlockEntity extends BlockEntity {
     }
 
     private boolean hasIntake() {
-        return !inbox.isEmpty() || !tank.getFluid().isEmpty();
+        return !inbox.isEmpty() || tank.getAmountAsInt(0) > 0;
     }
 
     /** Input -> network: first what autocraft jobs are waiting for (even when storage is full), the rest goes to storage. */
@@ -691,8 +598,9 @@ public class InterfaceBlockEntity extends BlockEntity {
         tag.put("Tank", com.golemlogix.system.NbtBridge.saveTank(tank, registries));
         net.minecraft.nbt.ListTag fl = new net.minecraft.nbt.ListTag();
         for (int i = 0; i < SLOTS; i++) {
-            if (!fluidStock[i].isEmpty()) {
-                CompoundTag e = (CompoundTag) com.golemlogix.system.NbtBridge.saveFluid(fluidStock[i], registries);
+            FluidStack fs = fluidStock(i);
+            if (!fs.isEmpty()) {
+                CompoundTag e = (CompoundTag) com.golemlogix.system.NbtBridge.saveFluid(fs, registries);
                 e.putByte("Slot", (byte) i);
                 fl.add(e);
             }
@@ -709,13 +617,16 @@ public class InterfaceBlockEntity extends BlockEntity {
         inbox.fromTag(tag.getListOrEmpty("Inbox"), registries);
         upgrades.fromTag(tag.getListOrEmpty("Upgrades"), registries);
         com.golemlogix.system.NbtBridge.loadTank(tank, registries, tag.getCompoundOrEmpty("Tank"));
-        java.util.Arrays.fill(fluidStock, net.neoforged.neoforge.fluids.FluidStack.EMPTY);
+        for (int i = 0; i < SLOTS; i++) {
+            fluidStock.set(i, FluidResource.EMPTY, 0);
+        }
         net.minecraft.nbt.ListTag fl = tag.getListOrEmpty("FluidStock");
         for (int k = 0; k < fl.size(); k++) {
             CompoundTag e = fl.getCompoundOrEmpty(k);
             int i = e.getByteOr("Slot", (byte) 0);
             if (i >= 0 && i < SLOTS) {
-                fluidStock[i] = com.golemlogix.system.NbtBridge.loadFluid(registries, e).orElse(net.neoforged.neoforge.fluids.FluidStack.EMPTY);
+                FluidStack fs = com.golemlogix.system.NbtBridge.loadFluid(registries, e).orElse(FluidStack.EMPTY);
+                fluidStock.set(i, FluidResource.of(fs), fs.getAmount());
             }
         }
         itemModeMask = tag.getIntOr("ItemModes", 0);
@@ -731,79 +642,6 @@ public class InterfaceBlockEntity extends BlockEntity {
             }
         }
         redstone.load(tag);
-    }
-
-    // ------------------------------------------------------------ automation
-
-    /**
-     * Automation access from any side: slots 0..8 are output (take only), 9..17 are input (insert only, any
-     * items). Taking from the input is not allowed, otherwise a hopper under the interface would pull back what was put in.
-     */
-    private final class Automation implements IItemHandler {
-        @Override
-        public int getSlots() {
-            return SLOTS * 2;
-        }
-
-        @Override
-        public ItemStack getStackInSlot(int slot) {
-            return slot < SLOTS ? stock.getItem(slot) : inbox.getItem(slot - SLOTS);
-        }
-
-        @Override
-        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-            if (slot < SLOTS || stack.isEmpty()) {
-                return stack;
-            }
-            int i = slot - SLOTS;
-            ItemStack cur = inbox.getItem(i);
-            if (!cur.isEmpty() && !ItemStack.isSameItemSameComponents(cur, stack)) {
-                return stack;
-            }
-            int limit = Math.min(stack.getMaxStackSize(), 64);
-            int room = limit - cur.getCount();
-            if (room <= 0) {
-                return stack;
-            }
-            int n = Math.min(room, stack.getCount());
-            if (!simulate) {
-                if (cur.isEmpty()) {
-                    inbox.setItem(i, stack.copyWithCount(n));
-                } else {
-                    cur.grow(n);
-                    inbox.setChanged();
-                }
-            }
-            return n == stack.getCount() ? ItemStack.EMPTY : stack.copyWithCount(stack.getCount() - n);
-        }
-
-        @Override
-        public ItemStack extractItem(int slot, int amount, boolean simulate) {
-            if (slot >= SLOTS || amount <= 0) {
-                return ItemStack.EMPTY;
-            }
-            ItemStack cur = stock.getItem(slot);
-            if (cur.isEmpty()) {
-                return ItemStack.EMPTY;
-            }
-            int n = Math.min(amount, cur.getCount());
-            if (simulate) {
-                return cur.copyWithCount(n);
-            }
-            ItemStack out = cur.split(n);
-            stock.setChanged();
-            return out;
-        }
-
-        @Override
-        public int getSlotLimit(int slot) {
-            return 64;
-        }
-
-        @Override
-        public boolean isItemValid(int slot, ItemStack stack) {
-            return slot >= SLOTS;
-        }
     }
 
     // ---- 1.21.6+: the game's ValueInput/ValueOutput over the CompoundTag code above

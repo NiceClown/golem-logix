@@ -6,8 +6,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.neoforged.neoforge.capabilities.BlockCapability;
 import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
 import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.BooleanSupplier;
@@ -19,7 +20,6 @@ import java.util.function.BooleanSupplier;
  * "Any side" (periscopes) falls back to the unsided handler and then to every side in turn, as the plain lookups did; those
  * extra caches are made only when the first ones find nothing.
  */
-@SuppressWarnings("removal")
 public final class TargetCaps {
     private final ServerLevel level;
     private final BlockPos pos;
@@ -27,12 +27,12 @@ public final class TargetCaps {
     private final Direction side;
     private final BooleanSupplier valid;
     private final Runnable onChange;
-    private final BlockCapabilityCache<net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource>, @Nullable Direction> items;
-    private final BlockCapabilityCache<net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource>, @Nullable Direction> fluids;
+    private final BlockCapabilityCache<ResourceHandler<ItemResource>, @Nullable Direction> items;
+    private final BlockCapabilityCache<ResourceHandler<FluidResource>, @Nullable Direction> fluids;
     @Nullable
-    private BlockCapabilityCache<net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource>, @Nullable Direction>[] itemsAny;
+    private BlockCapabilityCache<ResourceHandler<ItemResource>, @Nullable Direction>[] itemsAny;
     @Nullable
-    private BlockCapabilityCache<net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource>, @Nullable Direction>[] fluidsAny;
+    private BlockCapabilityCache<ResourceHandler<FluidResource>, @Nullable Direction>[] fluidsAny;
 
     private TargetCaps(ServerLevel level, BlockPos pos, @Nullable Direction side, BooleanSupplier valid, Runnable onChange) {
         this.level = level;
@@ -59,39 +59,39 @@ public final class TargetCaps {
     }
 
     @Nullable
-    public IItemHandler items() {
-        return LegacyResources.items(items.getCapability());
+    public ResourceHandler<ItemResource> items() {
+        return items.getCapability();
     }
 
     @Nullable
-    public IFluidHandler fluids() {
-        return LegacyResources.fluids(fluids.getCapability());
+    public ResourceHandler<FluidResource> fluids() {
+        return fluids.getCapability();
     }
 
     /** The item handler on this side, or else the unsided one, or else the one on any side. */
     @Nullable
-    public IItemHandler itemsAnySide() {
+    public ResourceHandler<ItemResource> itemsAnySide() {
         var h = items.getCapability();
         if (h != null) {
-            return LegacyResources.items(h);
+            return h;
         }
         if (itemsAny == null) {
             itemsAny = anyCaches(Capabilities.Item.BLOCK);
         }
-        return LegacyResources.items(first(itemsAny));
+        return first(itemsAny);
     }
 
     /** The fluid handler on this side, or else the unsided one, or else the one on any side. */
     @Nullable
-    public IFluidHandler fluidsAnySide() {
+    public ResourceHandler<FluidResource> fluidsAnySide() {
         var h = fluids.getCapability();
         if (h != null) {
-            return LegacyResources.fluids(h);
+            return h;
         }
         if (fluidsAny == null) {
             fluidsAny = anyCaches(Capabilities.Fluid.BLOCK);
         }
-        return LegacyResources.fluids(first(fluidsAny));
+        return first(fluidsAny);
     }
 
     /** Caches for the unsided handler and for each of the six sides, in that order. */

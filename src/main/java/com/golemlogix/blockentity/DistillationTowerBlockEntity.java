@@ -6,6 +6,7 @@ import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.init.ModTags;
 import com.golemlogix.blockentity.CryoJarBlockEntity;
 import com.golemlogix.system.SourceHelper;
+import com.golemlogix.system.Transfers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.particles.ParticleTypes;
@@ -18,8 +19,9 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
 
 /**
  * The tower's work: blood from the tank is distilled into Source (GolemConfig: so many mB a second, so much Source per mB) as long
@@ -32,50 +34,21 @@ public class DistillationTowerBlockEntity extends BlockEntity {
     public static final int TANK_PER_FOUR = 2000;
     private static final int PERIOD = 10;
 
-    private final FluidTank tank = new FluidTank(TANK, fs -> fs.is(ModTags.CRYO_DISTILLABLE)) {
+    private final FluidStacksResourceHandler tank = new FluidStacksResourceHandler(1, TANK) {
         @Override
-        protected void onContentsChanged() {
-            changed();
-        }
-    };
-    /** What pipes and buckets see: filling only. */
-    private final IFluidHandler input = new IFluidHandler() {
-        @Override
-        public int getTanks() {
-            return 1;
+        public boolean isValid(int index, FluidResource resource) {
+            return resource.toStack(1).is(ModTags.CRYO_DISTILLABLE);
         }
 
         @Override
-        public FluidStack getFluidInTank(int t) {
-            return tank.getFluid();
-        }
-
-        @Override
-        public int getTankCapacity(int t) {
-            return capacity();
-        }
-
-        @Override
-        public boolean isFluidValid(int t, FluidStack stack) {
-            return tank.isFluidValid(stack);
-        }
-
-        @Override
-        public int fill(FluidStack resource, FluidAction action) {
+        protected int getCapacity(int index, FluidResource resource) {
             // with co-processors taken out the tank can hold more than it may: nothing more goes in until it has come down
-            int cap = capacity();
-            tank.setCapacity(cap);
-            return tank.getFluidAmount() >= cap ? 0 : tank.fill(resource, action);
+            return DistillationTowerBlockEntity.this.capacity();
         }
 
         @Override
-        public FluidStack drain(FluidStack resource, FluidAction action) {
-            return FluidStack.EMPTY;
-        }
-
-        @Override
-        public FluidStack drain(int maxDrain, FluidAction action) {
-            return FluidStack.EMPTY;
+        protected void onContentsChanged(int index, FluidStack previousContents) {
+            changed();
         }
     };
     private final com.golemlogix.upgrade.UpgradeContainer upgrades =
@@ -102,20 +75,15 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         super(ModBlockEntities.DISTILLATION_TOWER.get(), pos, state);
     }
 
-    public IFluidHandler input() {
-        return input;
-    }
-
     /** What pipes and other mods see: the tank (filling only) as a NeoForge resource handler. */
-    private final net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource> inputResources =
-            com.golemlogix.system.LegacyResources.offerFluids(input, () -> tank.getFluid().copy(), tank::setFluid);
+    private final ResourceHandler<FluidResource> inputResources = Transfers.insertOnly(tank);
 
-    public net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource> inputResources() {
+    public ResourceHandler<FluidResource> inputResources() {
         return inputResources;
     }
 
     public FluidStack blood() {
-        return tank.getFluid();
+        return Transfers.getFluid(tank, 0);
     }
 
     private void changed() {
@@ -135,7 +103,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         }
         if (dirty && now - lastSync >= 10) {
             dirty = false;
-            int amount = tank.getFluidAmount();
+            int amount = tank.getAmountAsInt(0);
             if (sentBlood < 0 || Math.abs(amount - sentBlood) >= capacity() / 50 || (amount == 0) != (sentBlood == 0) || working != clientWorkingSent) {
                 sentBlood = amount;
                 clientWorkingSent = working;
@@ -164,7 +132,8 @@ public class DistillationTowerBlockEntity extends BlockEntity {
                 return;
             }
         }
-        if (tank.isEmpty()) {
+        int haveBlood = tank.getAmountAsInt(0);
+        if (haveBlood <= 0) {
             status = 0;
             return;
         }
@@ -183,12 +152,13 @@ public class DistillationTowerBlockEntity extends BlockEntity {
             return;
         }
         int byRoom = (int) Math.floor((room - carry) / perMb + 1e-9);
-        int mb = Math.min(Math.min(budget, tank.getFluidAmount()), Math.max(0, byRoom));
+        int mb = Math.min(Math.min(budget, haveBlood), Math.max(0, byRoom));
         if (mb <= 0) {
             status = 2;
             return;
         }
-        tank.drain(mb, IFluidHandler.FluidAction.EXECUTE);
+        int left = haveBlood - mb;
+        tank.set(0, left <= 0 ? FluidResource.EMPTY : tank.getResource(0), left);
         double made = mb * perMb + carry;
         int give = (int) Math.floor(made + 1e-9);
         carry = made - give;
@@ -284,10 +254,10 @@ public class DistillationTowerBlockEntity extends BlockEntity {
             @Override
             public int get(int index) {
                 return switch (index) {
-                    case 0 -> tank.getFluidAmount();
+                    case 0 -> tank.getAmountAsInt(0);
                     case 1 -> rate();
                     case 2 -> (int) Math.round(rate() * GolemConfig.DISTILL_SOURCE_PER_MB.get() * (bonus ? 1 + GolemConfig.GIGA_SOURCE_BONUS.get() / 100.0 : 1) * 10);
-                    case 3 -> tank.isEmpty() ? 0 : status;
+                    case 3 -> tank.getAmountAsInt(0) <= 0 ? 0 : status;
                     case 4 -> upgrades.count(com.golemlogix.upgrade.UpgradeType.SPEED);
                     case 5 -> capacity();
                     default -> 0;
@@ -312,9 +282,9 @@ public class DistillationTowerBlockEntity extends BlockEntity {
     }
 
     public Component statusLine() {
-        FluidStack f = tank.getFluid();
+        FluidStack f = blood();
         Component name = f.isEmpty() ? Component.translatable("block.golem_logix.cryo_distillation_tower.empty") : f.getHoverName();
-        return Component.translatable("message.golem_logix.distillation_tower", name, tank.getFluidAmount(), capacity());
+        return Component.translatable("message.golem_logix.distillation_tower", name, tank.getAmountAsInt(0), capacity());
     }
 
     public void clientTick() {
@@ -346,13 +316,12 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         com.golemlogix.system.NbtBridge.loadTank(tank, registries, tag.getCompoundOrEmpty("Tank"));
         carry = tag.getDoubleOr("Carry", 0);
         upgrades.fromTag(tag.getListOrEmpty("Upgrades"), registries);
-        tank.setCapacity(capacity());
     }
 
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();
-        tag.putInt("Blood", tank.getFluidAmount());
+        tag.putInt("Blood", tank.getAmountAsInt(0));
         tag.putInt("Capacity", capacity());
         tag.putBoolean("Working", working);
         return tag;

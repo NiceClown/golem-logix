@@ -24,6 +24,7 @@ import com.golemlogix.system.DiskStorage;
 import com.golemlogix.system.DiskStore;
 import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.ItemKey;
+import com.golemlogix.system.Transfers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
@@ -47,7 +48,14 @@ import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.phys.BlockHitResult;
+import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.access.ItemAccess;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -1516,9 +1524,12 @@ public class GolemGameTests {
         var iface = helper.getBlockEntity(BUS_OUT, com.golemlogix.blockentity.InterfaceBlockEntity.class);
         var provider = helper.getBlockEntity(BUS_IN, PatternProviderBlockEntity.class);
         helper.runAfterDelay(30, () -> {
-            var handler = iface.automation();
-            helper.assertTrue(handler.insertItem(9, new ItemStack(Items.IRON_INGOT, 64), false).isEmpty(), "intake takes a stack");
-            helper.assertTrue(handler.insertItem(10, new ItemStack(Items.IRON_INGOT, 64), false).isEmpty(), "and another");
+            var handler = iface.itemResources();
+            try (Transaction tx = Transaction.openRoot()) {
+                helper.assertTrue(handler.insert(9, ItemResource.of(Items.IRON_INGOT), 64, tx) == 64, "intake takes a stack");
+                helper.assertTrue(handler.insert(10, ItemResource.of(Items.IRON_INGOT), 64, tx) == 64, "and another");
+                tx.commit();
+            }
             provider.getReturns().setItem(0, new ItemStack(Items.GOLD_INGOT, 64));
             helper.runAfterDelay(2, () -> {
                 GolemNetwork n = net(helper, bay);
@@ -1538,19 +1549,28 @@ public class GolemGameTests {
         be.getConfig().setItem(0, new ItemStack(Items.IRON_INGOT, 10));
         helper.runAfterDelay(2, () -> net(helper, bay).insertItem(new ItemStack(Items.IRON_INGOT, 32), false));
         // automation (like a hopper or another mod's pipe) sees the interface from any side
-        var handler = com.golemlogix.system.LegacyResources.items(helper.getLevel(), helper.absolutePos(BUS_OUT), Direction.UP);
+        var handler = helper.getLevel().getCapability(Capabilities.Item.BLOCK, helper.absolutePos(BUS_OUT), Direction.UP);
         helper.assertTrue(handler != null, "interface exposes an item handler");
-        helper.assertTrue(handler.insertItem(0, new ItemStack(Items.DIRT), true).getCount() == 1, "stock slots refuse insertion");
-        helper.assertTrue(handler.insertItem(9, new ItemStack(Items.GOLD_INGOT, 5), false).isEmpty(), "intake accepts anything");
+        try (Transaction tx = Transaction.openRoot()) {
+            helper.assertTrue(handler.insert(0, ItemResource.of(Items.DIRT), 1, tx) == 0, "stock slots refuse insertion");
+        }
+        try (Transaction tx = Transaction.openRoot()) {
+            helper.assertTrue(handler.insert(9, ItemResource.of(Items.GOLD_INGOT), 5, tx) == 5, "intake accepts anything");
+            tx.commit();
+        }
         helper.runAfterDelay(100, () -> {
             GolemNetwork n = net(helper, bay);
             helper.assertTrue(be.getStock().getItem(0).getCount() == 10, "keeps 10 iron in stock, has " + be.getStock().getItem(0));
             helper.assertTrue(n.itemCountOf(ItemKey.of(new ItemStack(Items.IRON_INGOT))) == 22, "22 iron left in network");
             helper.assertTrue(n.itemCountOf(ItemKey.of(new ItemStack(Items.GOLD_INGOT))) == 5, "intake went into the network");
             helper.assertTrue(be.getInbox().isEmpty(), "intake is empty");
-            helper.assertTrue(handler.extractItem(9, 1, true).isEmpty(), "intake cannot be pulled back out");
-            ItemStack taken = handler.extractItem(0, 4, false);
-            helper.assertTrue(taken.getCount() == 4, "automation takes from stock");
+            try (Transaction tx = Transaction.openRoot()) {
+                helper.assertTrue(handler.extract(9, ItemResource.of(Items.GOLD_INGOT), 1, tx) == 0, "intake cannot be pulled back out");
+            }
+            try (Transaction tx = Transaction.openRoot()) {
+                helper.assertTrue(handler.extract(0, ItemResource.of(Items.IRON_INGOT), 4, tx) == 4, "automation takes from stock");
+                tx.commit();
+            }
             // keep fewer: the excess goes back to the network
             be.getConfig().setItem(0, new ItemStack(Items.IRON_INGOT, 2));
             helper.runAfterDelay(40, () -> {
@@ -2344,11 +2364,11 @@ public class GolemGameTests {
         CopperDriveBayBlockEntity drive = helper.getBlockEntity(bay, CopperDriveBayBlockEntity.class);
         drive.getContainer().setItem(1, new ItemStack(ModItems.FLUID_DISK_4K.get()));
         helper.setBlock(BUS_OUT, ModBlocks.GOLEM_INTERFACE.get().defaultBlockState());
-        var fluids = com.golemlogix.system.LegacyResources.fluids(helper.getLevel(), helper.absolutePos(BUS_OUT), Direction.WEST);
+        var fluids = helper.getLevel().getCapability(Capabilities.Fluid.BLOCK, helper.absolutePos(BUS_OUT), Direction.WEST);
         helper.assertTrue(fluids != null, "interface exposes a fluid handler");
-        helper.assertTrue(fluids.fill(new FluidStack(Fluids.WATER, 2500), net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE) == 2500,
+        helper.assertTrue(Transfers.insertFluid(fluids, new FluidStack(Fluids.WATER, 2500), false) == 2500,
                 "interface takes 2500 mB");
-        helper.assertTrue(fluids.drain(100, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE).isEmpty(), "cannot be drained back");
+        helper.assertTrue(Transfers.extractAnyFluid(fluids, 100, false).isEmpty(), "cannot be drained back");
         helper.runAfterDelay(120, () -> {
             GolemNetwork n = net(helper, bay);
             FluidStack got = n.extractFluid(new FluidStack(Fluids.WATER, 1), 4000, true);
@@ -2376,8 +2396,8 @@ public class GolemGameTests {
             helper.assertTrue(be.fluidStock(0).getAmount() == 3000, "keeps 3000 mB of water, has " + be.fluidStock(0).getAmount());
             helper.assertTrue(be.getStock().getItem(0).isEmpty(), "fluid slot keeps no buckets");
             helper.assertTrue(be.getStock().getItem(1).is(Items.WATER_BUCKET), "item-mode slot keeps the bucket itself");
-            var fluids = com.golemlogix.system.LegacyResources.fluids(helper.getLevel(), helper.absolutePos(BUS_OUT), Direction.UP);
-            FluidStack out = fluids.drain(1500, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
+            var fluids = helper.getLevel().getCapability(Capabilities.Fluid.BLOCK, helper.absolutePos(BUS_OUT), Direction.UP);
+            FluidStack out = Transfers.extractAnyFluid(fluids, 1500, false);
             helper.assertTrue(out.getAmount() == 1500 && out.is(Fluids.WATER), "pipes drain the stocked water, got " + out.getAmount());
             helper.succeed();
         });
@@ -2399,14 +2419,15 @@ public class GolemGameTests {
         // a Mekanism portable tank filled with sulfuric acid through its own item container
         ItemStack tank = new ItemStack(items.getValue(net.minecraft.resources.Identifier.parse("mekanism:basic_fluid_tank")));
         var acid = fluidsReg.getValue(net.minecraft.resources.Identifier.parse("mekanism:sulfuric_acid"));
-        var tankCap = net.neoforged.neoforge.fluids.FluidUtil.getFluidHandler(tank).orElse(null);
+        var tankAccess = ItemAccess.forStack(tank);
+        var tankCap = tankAccess.getCapability(Capabilities.Fluid.ITEM);
         helper.assertTrue(tankCap != null, "Mekanism tank item exposes a fluid handler");
         // Mekanism fills an item tank with at most a bucket at a time, so in portions
         int filled = 0;
         for (int k = 0; k < 8 && filled < 4000; k++) {
-            filled += tankCap.fill(new FluidStack(acid, 4000 - filled), net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
+            filled += Transfers.insertFluid(tankCap, new FluidStack(acid, 4000 - filled), false);
         }
-        ItemStack filledTank = tankCap.getContainer();
+        ItemStack filledTank = tankAccess.getResource().toStack(tankAccess.getAmount());
         helper.assertTrue(filled == 4000, "tank item took 4000 mB of acid, took " + filled);
 
         var brine = com.golemlogix.blockentity.InterfaceBlockEntity.containedFluid(brineBucket);
@@ -2434,8 +2455,8 @@ public class GolemGameTests {
             helper.assertTrue(be.fluidStock(1).getAmount() == 1000, "1 bucket of heavy water kept, has " + be.fluidStock(1).getAmount());
             // one item in a slot = 1000 mB, even though the tank holds more
             helper.assertTrue(be.fluidStock(2).getAmount() == 1000 && be.fluidStock(2).is(acid), "acid by the tank kept, has " + be.fluidStock(2).getAmount());
-            var cap = com.golemlogix.system.LegacyResources.fluids(helper.getLevel(), helper.absolutePos(BUS_OUT), Direction.NORTH);
-            FluidStack out = cap.drain(brine.copyWithAmount(700), net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
+            var cap = helper.getLevel().getCapability(Capabilities.Fluid.BLOCK, helper.absolutePos(BUS_OUT), Direction.NORTH);
+            FluidStack out = Transfers.extractFluid(cap, brine.copyWithAmount(700), false);
             helper.assertTrue(out.getAmount() == 700, "pipes drain Mekanism brine, got " + out.getAmount());
             helper.succeed();
         });
@@ -3550,12 +3571,25 @@ public class GolemGameTests {
         BlockPos side = com.golemlogix.system.SaturatorStructure.cellPos(helper.absolutePos(ctl), Direction.NORTH,
                 com.golemlogix.system.SaturatorStructure.index(2, 1, 1));
         helper.runAfterDelay(30, () -> {
-            var h = com.golemlogix.system.LegacyResources.items(level, side, null);
-            helper.assertTrue(h.insertItem(0, new ItemStack(Items.AMETHYST_SHARD, 3), false).isEmpty(), "three shards queue on the left deck");
+            var h = level.getCapability(Capabilities.Item.BLOCK, side, null);
+            try (Transaction tx = Transaction.openRoot()) {
+                helper.assertTrue(h.insert(0, ItemResource.of(Items.AMETHYST_SHARD), 3, tx) == 3, "three shards queue on the left deck");
+                tx.commit();
+            }
         });
         helper.runAfterDelay(330, () -> {
-            var h = com.golemlogix.system.LegacyResources.items(level, side, null);
-            ItemStack out = h.extractItem(1, 64, false);
+            var h = level.getCapability(Capabilities.Item.BLOCK, side, null);
+            ItemResource res = h.getResource(1);
+            int got = 0;
+            if (!res.isEmpty()) {
+                try (Transaction tx = Transaction.openRoot()) {
+                    got = h.extract(1, res, 64, tx);
+                    if (got > 0) {
+                        tx.commit();
+                    }
+                }
+            }
+            ItemStack out = res.isEmpty() || got <= 0 ? ItemStack.EMPTY : res.toStack(got);
             helper.assertTrue(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(out.getItem()).toString().equals("ars_nouveau:source_gem")
                             && out.getCount() == 3,
                     "three Source Gems come out, got " + out);
@@ -3571,19 +3605,28 @@ public class GolemGameTests {
         BlockPos side = com.golemlogix.system.SaturatorStructure.cellPos(helper.absolutePos(ctl), Direction.NORTH,
                 com.golemlogix.system.SaturatorStructure.index(2, 1, 1));
         helper.runAfterDelay(30, () -> {
-            var h = com.golemlogix.system.LegacyResources.items(helper.getLevel(), side, null);
+            var h = helper.getLevel().getCapability(Capabilities.Item.BLOCK, side, null);
             helper.assertTrue(h != null, "a saturator part exposes the anvil to automation");
-            helper.assertTrue(h.insertItem(0, new ItemStack(Items.DIRT), false).getCount() == 1, "dirt is rejected");
-            helper.assertTrue(h.insertItem(1, new ItemStack(Items.IRON_BLOCK), false).getCount() == 1, "the output deck takes nothing");
-            helper.assertTrue(h.insertItem(0, new ItemStack(Items.IRON_BLOCK, 3), false).isEmpty(), "three iron blocks queue on the left deck");
-            helper.assertTrue(h.extractItem(0, 64, false).isEmpty(), "the blank cannot be pulled back out");
+            try (Transaction tx = Transaction.openRoot()) {
+                helper.assertTrue(h.insert(0, ItemResource.of(Items.DIRT), 1, tx) == 0, "dirt is rejected");
+                helper.assertTrue(h.insert(1, ItemResource.of(Items.IRON_BLOCK), 1, tx) == 0, "the output deck takes nothing");
+                helper.assertTrue(h.insert(0, ItemResource.of(Items.IRON_BLOCK), 3, tx) == 3, "three iron blocks queue on the left deck");
+                helper.assertTrue(h.extract(0, ItemResource.of(Items.IRON_BLOCK), 64, tx) == 0, "the blank cannot be pulled back out");
+                tx.commit();
+            }
         });
         helper.runAfterDelay(400, () -> {
-            var h = com.golemlogix.system.LegacyResources.items(helper.getLevel(), side, null);
-            ItemStack out = h.extractItem(1, 64, false);
+            var h = helper.getLevel().getCapability(Capabilities.Item.BLOCK, side, null);
+            int got;
+            try (Transaction tx = Transaction.openRoot()) {
+                got = h.extract(1, ItemResource.of(ModItems.FLATTENED_IRON_CORE.get()), 64, tx);
+                if (got > 0) {
+                    tx.commit();
+                }
+            }
             // conveyor: the bringer brings the next blank while the smith forges, so all three are done in that time
-            helper.assertTrue(out.is(ModItems.FLATTENED_IRON_CORE.get()) && out.getCount() == 6, "six flattened cores come out, got " + out);
-            helper.assertTrue(h.getStackInSlot(0).isEmpty(), "the queue is used up");
+            helper.assertTrue(got == 6, "six flattened cores come out, got " + got);
+            helper.assertTrue(h.getAmountAsInt(0) == 0, "the queue is used up");
             helper.succeed();
         });
     }
@@ -3714,24 +3757,19 @@ public class GolemGameTests {
     /** Test "tank": Magnetite has no fluid capacity, so we provide it through a capability bound to the tank position. */
     @net.neoforged.fml.common.EventBusSubscriber(modid = GolemLogixMod.MOD_ID)
     public static final class TestCaps {
-        static final java.util.Map<BlockPos, net.neoforged.neoforge.fluids.capability.templates.FluidTank> TANKS = new java.util.HashMap<>();
+        static final java.util.Map<BlockPos, FluidStacksResourceHandler> TANKS = new java.util.HashMap<>();
 
-        static net.neoforged.neoforge.fluids.capability.templates.FluidTank tank(BlockPos abs) {
-            return TANKS.computeIfAbsent(abs.immutable(), p -> new net.neoforged.neoforge.fluids.capability.templates.FluidTank(10000));
+        static FluidStacksResourceHandler tank(BlockPos abs) {
+            return TANKS.computeIfAbsent(abs.immutable(), p -> new FluidStacksResourceHandler(1, 10000));
         }
 
         @net.neoforged.bus.api.SubscribeEvent
         public static void register(net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent event) {
-            event.registerBlock(net.neoforged.neoforge.capabilities.Capabilities.Fluid.BLOCK,
-                    (level, pos, state, be, side) -> resources(tank(pos)), Blocks.LODESTONE);
+            event.registerBlock(Capabilities.Fluid.BLOCK,
+                    (level, pos, state, be, side) -> tank(pos), Blocks.LODESTONE);
             // a "machine" with items and fluids for fluid patterns: a barrel gets a tank too
-            event.registerBlock(net.neoforged.neoforge.capabilities.Capabilities.Fluid.BLOCK,
-                    (level, pos, state, be, side) -> resources(tank(pos)), Blocks.BARREL);
-        }
-
-        static net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource> resources(
-                net.neoforged.neoforge.fluids.capability.templates.FluidTank tank) {
-            return com.golemlogix.system.LegacyResources.offerFluids(tank, () -> tank.getFluid().copy(), tank::setFluid);
+            event.registerBlock(Capabilities.Fluid.BLOCK,
+                    (level, pos, state, be, side) -> tank(pos), Blocks.BARREL);
         }
     }
 
@@ -3752,7 +3790,7 @@ public class GolemGameTests {
             helper.assertTrue(com.golemlogix.system.CryoSource.is(got) && got.getAmount() == 750, "750 mB pumped out, got " + got.getAmount());
             helper.assertTrue(n.insertFluid(cryo(500), false) == 0, "cryo-source is never stored");
             helper.assertTrue(n.listFluids().stream().noneMatch(com.golemlogix.system.CryoSource::is), "and never listed");
-            helper.assertTrue(net.neoforged.neoforge.fluids.FluidUtil.getFilledBucket(cryo(1000)).isEmpty(), "it has no bucket");
+            helper.assertTrue(Transfers.filledBucket(cryo(1000)).isEmpty(), "it has no bucket");
             helper.succeed();
         });
     }
@@ -3777,12 +3815,12 @@ public class GolemGameTests {
         BlockPos tankRel = BUS_OUT.north();
         helper.setBlock(tankRel, Blocks.LODESTONE);
         var tank = TestCaps.tank(helper.absolutePos(tankRel));
-        tank.setFluid(FluidStack.EMPTY);
+        tank.set(0, FluidResource.EMPTY, 0);
         var bus = helper.getBlockEntity(BUS_OUT, com.golemlogix.blockentity.BusBlockEntity.class);
         bus.getFilters().setItem(0, com.golemlogix.items.FluidGhostItem.of(cryo(250)));
         helper.runAfterDelay(80, () -> {
-            helper.assertTrue(com.golemlogix.system.CryoSource.is(tank.getFluid()) && tank.getFluidAmount() >= 1000,
-                    "the tank fills with cryo-source, has " + tank.getFluidAmount());
+            helper.assertTrue(com.golemlogix.system.CryoSource.is(Transfers.getFluid(tank, 0)) && tank.getAmountAsInt(0) >= 1000,
+                    "the tank fills with cryo-source, has " + tank.getAmountAsInt(0));
             helper.succeed();
         });
     }
@@ -3797,8 +3835,8 @@ public class GolemGameTests {
             helper.assertTrue(be.isFluidSlot(0) && be.amount(0) == 750, "slot 0 keeps 750 mB");
             helper.assertTrue(com.golemlogix.system.CryoSource.is(be.fluidStock(0)) && be.fluidStock(0).getAmount() == 750,
                     "750 mB of cryo-source in stock, has " + be.fluidStock(0).getAmount());
-            var fluids = com.golemlogix.system.LegacyResources.fluids(helper.getLevel(), helper.absolutePos(BUS_OUT), Direction.UP);
-            FluidStack out = fluids.drain(500, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
+            var fluids = helper.getLevel().getCapability(Capabilities.Fluid.BLOCK, helper.absolutePos(BUS_OUT), Direction.UP);
+            FluidStack out = Transfers.extractAnyFluid(fluids, 500, false);
             helper.assertTrue(com.golemlogix.system.CryoSource.is(out) && out.getAmount() == 500, "pipes drain it, got " + out.getAmount());
             helper.succeed();
         });
@@ -3815,7 +3853,7 @@ public class GolemGameTests {
         BlockPos machine = PROV.east();
         helper.setBlock(machine, Blocks.BARREL);
         var tank = TestCaps.tank(helper.absolutePos(machine));
-        tank.setFluid(FluidStack.EMPTY);
+        tank.set(0, FluidResource.EMPTY, 0);
         Container machineInv = ((Container) helper.getBlockEntity(machine, net.minecraft.world.level.block.entity.BlockEntity.class));
         PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
         provider.getContainer().setItem(0, card(new PatternData(false,
@@ -3838,10 +3876,10 @@ public class GolemGameTests {
                 blocks += machineInv.getItem(i).is(Items.COPPER_BLOCK) ? machineInv.getItem(i).getCount() : 0;
             }
             helper.assertTrue(blocks == 2, "the machine gets 2 copper blocks, got " + blocks);
-            helper.assertTrue(com.golemlogix.system.CryoSource.is(tank.getFluid()) && tank.getFluidAmount() == 500,
-                    "and 500 mB of cryo-source, got " + tank.getFluidAmount());
+            helper.assertTrue(com.golemlogix.system.CryoSource.is(Transfers.getFluid(tank, 0)) && tank.getAmountAsInt(0) == 500,
+                    "and 500 mB of cryo-source, got " + tank.getAmountAsInt(0));
             machineInv.clearContent();
-            tank.setFluid(FluidStack.EMPTY);
+            tank.set(0, FluidResource.EMPTY, 0);
             ItemStack rest = net(helper, bay).insertFromMachine(new ItemStack(ModItems.TORN_COPPER_MIND.get(), 2));
             helper.assertTrue(rest.isEmpty(), "the job absorbs the torn minds");
         });
@@ -3913,7 +3951,7 @@ public class GolemGameTests {
         periscope(helper, new BlockPos(7, 1, 6), Direction.EAST);
         helper.setBlock(tankRel, Blocks.LODESTONE);
         var tank = TestCaps.tank(helper.absolutePos(tankRel));
-        tank.setFluid(new FluidStack(Fluids.WATER, 4000));
+        tank.set(0, FluidResource.of(Fluids.WATER), 4000);
         helper.runAfterDelay(20, () -> {
             GolemNetwork n = net(helper, ORIGIN);
             helper.assertTrue(n.isOnline(), "powered");
@@ -3925,9 +3963,9 @@ public class GolemGameTests {
             }
             helper.assertTrue(water == 4000, "periscope must list the tank's 4000 mB of water, got " + water);
             helper.assertTrue(n.insertFluid(new FluidStack(Fluids.WATER, 500), false) == 500, "500 mB must be poured into the tank");
-            helper.assertTrue(tank.getFluidAmount() == 4500, "tank now holds 4500, got " + tank.getFluidAmount());
+            helper.assertTrue(tank.getAmountAsInt(0) == 4500, "tank now holds 4500, got " + tank.getAmountAsInt(0));
             FluidStack got = n.extractFluid(new FluidStack(Fluids.WATER, 1), 1500, false);
-            helper.assertTrue(got.getAmount() == 1500 && tank.getFluidAmount() == 3000, "extracted 1500 from the tank");
+            helper.assertTrue(got.getAmount() == 1500 && tank.getAmountAsInt(0) == 3000, "extracted 1500 from the tank");
             helper.succeed();
         });
     }
@@ -4372,6 +4410,21 @@ public class GolemGameTests {
         var su = sorted.getUpgrades();
         helper.assertTrue(su.getItem(0).is(ModItems.COMPRESSED_COPROCESSOR.get()) && su.getItem(1).is(ModItems.REDSTONE_MODULE.get())
                 && su.getItem(2).isEmpty(), "old upgrades are sorted into their slots: " + su.getItem(0) + ", " + su.getItem(1) + ", " + su.getItem(2));
+        // an old save whose second speed stack differs (renamed in an anvil) cannot share the one slot: it waits as a stray, a save
+        // keeps it (it used to be lost on the next save for every machine but the Annihilation Bus), and it is dropped later
+        up.clearContent();
+        up.setItem(0, speed.copyWithCount(3));
+        ItemStack named = speed.copyWithCount(2);
+        named.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, net.minecraft.network.chat.Component.literal("renamed"));
+        up.setItem(2, named);
+        CompoundTag mixed = in.saveWithFullMetadata(registries);
+        BusBlockEntity once = new BusBlockEntity(helper.absolutePos(at), helper.getBlockState(at));
+        once.loadWithComponents(net.minecraft.world.level.storage.TagValueInput.create(net.minecraft.util.ProblemReporter.DISCARDING, registries, mixed));
+        helper.assertTrue(once.getUpgrades().getItem(0).getCount() == 3 && once.getUpgrades().strayCount() == 1, "the renamed one is a stray");
+        CompoundTag again = once.saveWithFullMetadata(registries);
+        BusBlockEntity twice = new BusBlockEntity(helper.absolutePos(at), helper.getBlockState(at));
+        twice.loadWithComponents(net.minecraft.world.level.storage.TagValueInput.create(net.minecraft.util.ProblemReporter.DISCARDING, registries, again));
+        helper.assertTrue(twice.getUpgrades().strayCount() == 1, "a save keeps the stray: " + twice.getUpgrades().strayCount());
 
         // the window: a shift-click puts as many as fit into the one slot, and takes them all out again
         up.clearContent();
@@ -4384,6 +4437,19 @@ public class GolemGameTests {
                 "28 go in and 2 stay, slot " + up.getItem(0) + ", hand " + player.getInventory().getItem(0));
         menu.clicked(menu.upgradeStart(), 0, net.minecraft.world.inventory.ContainerInput.QUICK_MOVE, player);
         helper.assertTrue(up.getItem(0).isEmpty(), "and all come out, slot " + up.getItem(0));
+        // a ghost of the same upgrade in a filter (to move co-processors through the bus) takes nothing real: the game's merge pass
+        // used to top the ghost up and the items that did not fit the upgrade slot were gone
+        in.getFilters().setItem(0, speed.copyWithCount(1));
+        player.getInventory().setItem(0, speed.copyWithCount(64));
+        menu.clicked(menu.slots.size() - 9, 0, net.minecraft.world.inventory.ContainerInput.QUICK_MOVE, player);
+        int inHand = 0;
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            if (player.getInventory().getItem(i).is(ModItems.COMPRESSED_COPROCESSOR.get())) {
+                inHand += player.getInventory().getItem(i).getCount();
+            }
+        }
+        helper.assertTrue(up.getItem(0).getCount() + inHand == 64 && in.getFilters().getItem(0).getCount() == 1,
+                "no co-processor goes into the ghost: slot " + up.getItem(0) + ", inventory " + inHand + ", ghost " + in.getFilters().getItem(0));
         helper.succeed();
     }
 
@@ -4749,8 +4815,9 @@ public class GolemGameTests {
             // fast enough that one batch could fill the room twice over
             helper.getBlockEntity(base, com.golemlogix.blockentity.DistillationTowerBlockEntity.class).getUpgrades()
                     .setItem(0, new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get(), 28));
-            helper.getBlockEntity(base, com.golemlogix.blockentity.DistillationTowerBlockEntity.class).input()
-                    .fill(new net.neoforged.neoforge.fluids.FluidStack(fluid, 1000), net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
+            Transfers.insertFluid(
+                    helper.getBlockEntity(base, com.golemlogix.blockentity.DistillationTowerBlockEntity.class).inputResources(),
+                    new FluidStack(fluid, 1000), false);
         });
         helper.runAfterDelay(80, () -> {
             var tower = helper.getBlockEntity(base, com.golemlogix.blockentity.DistillationTowerBlockEntity.class);
@@ -4787,7 +4854,7 @@ public class GolemGameTests {
         var fluid = blood.get().get(0).value();
         helper.runAfterDelay(10, () -> {
             var tower = helper.getBlockEntity(base, com.golemlogix.blockentity.DistillationTowerBlockEntity.class);
-            tower.input().fill(new net.neoforged.neoforge.fluids.FluidStack(fluid, 100), net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
+            Transfers.insertFluid(tower.inputResources(), new FluidStack(fluid, 100), false);
         });
         helper.runAfterDelay(120, () -> {
             var tower = helper.getBlockEntity(base, com.golemlogix.blockentity.DistillationTowerBlockEntity.class);
@@ -4962,6 +5029,50 @@ public class GolemGameTests {
         });
     }
 
+    /**
+     * A full Giga Jar grown into a reactor keeps all of its Source (the jars used to be cut to one jar's size each on the way, 4,000
+     * of 44,000 lost). A comparator against a jar that is not the corner follows the level of the whole.
+     */
+    public static void fullGigaJarGrowsWithoutLoss(GameTestHelper helper) {
+        var level = helper.getLevel();
+        Block jarBlock = ModBlocks.CRYO_SOURCE_JAR.get();
+        java.util.function.Function<BlockPos, com.golemlogix.blockentity.CryoJarBlockEntity> jar =
+                p -> helper.getBlockEntity(p, com.golemlogix.blockentity.CryoJarBlockEntity.class);
+        java.util.function.Consumer<BlockPos> put = p -> com.golemlogix.blocks.CryoJarBlock.place(level, helper.absolutePos(p), Direction.SOUTH, jarBlock);
+        BlockPos c = new BlockPos(1, 1, 1);
+        for (BlockPos p : List.of(c, c.east(), c.south(), c.east().south())) {
+            put.accept(p);
+        }
+        helper.runAfterDelay(4, () -> {
+            // a comparator north of c.east(), which is not the corner, reading it (its input is the block it faces)
+            helper.setBlock(c.east().north().below(), Blocks.STONE);
+            helper.setBlock(c.east().north(), Blocks.COMPARATOR.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.ComparatorBlock.FACING, Direction.SOUTH));
+            var whole = jar.apply(c);
+            helper.assertTrue(whole.form() == com.golemlogix.blocks.JarForm.GIGA, "the four joined");
+        });
+        helper.runAfterDelay(8, () -> {
+            var whole = jar.apply(c);
+            whole.fill(Integer.MAX_VALUE, false);
+            helper.assertTrue(whole.available() == whole.capacity(), "the Giga Jar is full: " + whole.available());
+        });
+        helper.runAfterDelay(30, () -> {
+            var cmp = helper.getBlockEntity(c.east().north(), net.minecraft.world.level.block.entity.ComparatorBlockEntity.class);
+            helper.assertTrue(cmp.getOutputSignal() == 15, "a comparator at a jar that is not the corner sees the full whole: " + cmp.getOutputSignal());
+            // grow to nine: the Giga Jar is inside the square
+            for (BlockPos p : List.of(c.east(2), c.east(2).south(), c.south(2), c.east().south(2), c.east(2).south(2))) {
+                put.accept(p);
+            }
+        });
+        helper.runAfterDelay(36, () -> {
+            var whole = jar.apply(c);
+            int giga = com.golemlogix.system.JarMerge.capacity(com.golemlogix.blocks.JarForm.GIGA);
+            helper.assertTrue(whole.form() == com.golemlogix.blocks.JarForm.SUPER, "the nine are a reactor");
+            helper.assertTrue(whole.available() == giga, "the reactor took all of the Giga Jar: " + whole.available() + " of " + giga);
+            helper.succeed();
+        });
+    }
+
     /** A reactor on the network is one supplier, however many of its blocks touch it, and the network draws on it through any jar. */
     public static void joinedJarFeedsNetwork(GameTestHelper helper) {
         buildArray(helper, 0, 0);
@@ -5001,8 +5112,7 @@ public class GolemGameTests {
         com.golemlogix.blocks.CryoJarBlock.place(level, helper.absolutePos(jarPos), Direction.SOUTH, ModBlocks.CRYO_SOURCE_JAR.get());
         var tower = helper.getBlockEntity(base, com.golemlogix.blockentity.DistillationTowerBlockEntity.class);
         var jar = helper.getBlockEntity(jarPos, com.golemlogix.blockentity.CryoJarBlockEntity.class);
-        var exec = net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE;
-        var top = com.golemlogix.system.LegacyResources.fluids(level, helper.absolutePos(base.above(2)), Direction.UP);
+        var top = level.getCapability(Capabilities.Fluid.BLOCK, helper.absolutePos(base.above(2)), Direction.UP);
         helper.assertTrue(top != null, "the head takes fluids too");
         // Compressed Co-Processors speed it up, all in one slot, up to 28; nothing else goes in. From the fifth on, every four
         // make the tank a little larger; four are what they always were
@@ -5022,7 +5132,7 @@ public class GolemGameTests {
         }
         up.setItem(0, new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get(), 4));
         helper.assertTrue(tower.rate() == baseRate + 4 * bonus && tower.capacity() == tank, "four co-processors, as before");
-        helper.assertTrue(top.fill(new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000), exec) == 0,
+        helper.assertTrue(Transfers.insertFluid(top, new FluidStack(Fluids.WATER, 1000), false) == 0,
                 "water is no blood");
         net.minecraft.world.level.material.Fluid blood = net.minecraft.core.registries.BuiltInRegistries.FLUID
                 .get(com.golemlogix.init.ModTags.CRYO_DISTILLABLE)
@@ -5035,8 +5145,8 @@ public class GolemGameTests {
                     "with Neo Vitae the network needs Source");
         }
         if (blood != null) {
-            helper.assertTrue(top.fill(new net.neoforged.neoforge.fluids.FluidStack(blood, 1000), exec) == 1000, "blood goes in");
-            helper.assertTrue(top.drain(500, exec).isEmpty(), "and does not come back out");
+            helper.assertTrue(Transfers.insertFluid(top, new FluidStack(blood, 1000), false) == 1000, "blood goes in");
+            helper.assertTrue(Transfers.extractAnyFluid(top, 500, false).isEmpty(), "and does not come back out");
         }
         net.minecraft.world.level.material.Fluid poured = blood;
         helper.runAfterDelay(70, () -> {
@@ -5060,20 +5170,22 @@ public class GolemGameTests {
         BlockPos base = new BlockPos(3, 1, 3);
         com.golemlogix.blocks.CryoMixerBlock.place(level, helper.absolutePos(base), Direction.SOUTH, ModBlocks.CRYO_MIXER.get());
         var mixer = helper.getBlockEntity(base, com.golemlogix.blockentity.CryoMixerBlockEntity.class);
-        var exec = net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE;
-        var bottom = com.golemlogix.system.LegacyResources.fluids(level, helper.absolutePos(base), Direction.NORTH);
-        var top = com.golemlogix.system.LegacyResources.fluids(level, helper.absolutePos(base.above()), Direction.UP);
-        var tray = com.golemlogix.system.LegacyResources.items(level, helper.absolutePos(base), Direction.NORTH);
+        var bottom = level.getCapability(Capabilities.Fluid.BLOCK, helper.absolutePos(base), Direction.NORTH);
+        var top = level.getCapability(Capabilities.Fluid.BLOCK, helper.absolutePos(base.above()), Direction.UP);
+        var tray = level.getCapability(Capabilities.Item.BLOCK, helper.absolutePos(base), Direction.NORTH);
         helper.assertTrue(bottom != null && top != null && tray != null, "both blocks take fluids, the tray is reachable");
-        helper.assertTrue(bottom.fill(new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.WATER, 8000), exec) == 8000,
+        helper.assertTrue(Transfers.insertFluid(bottom, new FluidStack(Fluids.WATER, 8000), false) == 8000,
                 "water goes in below");
-        helper.assertTrue(top.fill(new net.neoforged.neoforge.fluids.FluidStack(com.golemlogix.init.ModFluids.CRYO_SOURCE.get(), 1000), exec) == 1000,
+        helper.assertTrue(Transfers.insertFluid(top, new FluidStack(com.golemlogix.init.ModFluids.CRYO_SOURCE.get(), 1000), false) == 1000,
                 "Liquid Cryo-Source goes in on top");
         helper.assertTrue(mixer.water().getAmount() == 8000 && mixer.cryo().getAmount() == 1000, "each into its own flask");
-        helper.assertTrue(top.fill(new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.LAVA, 1000), exec) == 0,
+        helper.assertTrue(Transfers.insertFluid(top, new FluidStack(Fluids.LAVA, 1000), false) == 0,
                 "lava is neither");
-        helper.assertTrue(top.drain(500, exec).isEmpty() && bottom.drain(500, exec).isEmpty(), "nothing flows back out");
-        helper.assertTrue(tray.insertItem(0, new ItemStack(Items.SNOW_BLOCK), true).getCount() == 1, "nothing goes into the tray");
+        helper.assertTrue(Transfers.extractAnyFluid(top, 500, false).isEmpty() && Transfers.extractAnyFluid(bottom, 500, false).isEmpty(),
+                "nothing flows back out");
+        try (Transaction tx = Transaction.openRoot()) {
+            helper.assertTrue(tray.insert(0, ItemResource.of(Items.SNOW_BLOCK), 1, tx) == 0, "nothing goes into the tray");
+        }
         var snow = com.golemlogix.blockentity.CryoMixerBlockEntity.Mode.SNOW;
         var ice = com.golemlogix.blockentity.CryoMixerBlockEntity.Mode.ICE;
         helper.assertTrue(snow.ticks() < ice.ticks() && snow.output().is(Items.SNOW_BLOCK) && ice.output().is(Items.ICE),
@@ -5097,7 +5209,14 @@ public class GolemGameTests {
                 helper.assertTrue(mixer.status() == com.golemlogix.blockentity.CryoMixerBlockEntity.TRAY_FULL
                         && mixer.getOutput().getItem(0).is(Items.SNOW_BLOCK), "ice waits while snow lies in the tray");
                 int waterLeft = mixer.water().getAmount(), cryoLeft = mixer.cryo().getAmount();
-                helper.assertTrue(tray.extractItem(0, 64, false).getCount() == n && mixer.getOutput().getItem(0).isEmpty(),
+                int took;
+                try (Transaction tx = Transaction.openRoot()) {
+                    took = tray.extract(0, ItemResource.of(Items.SNOW_BLOCK), 64, tx);
+                    if (took > 0) {
+                        tx.commit();
+                    }
+                }
+                helper.assertTrue(took == n && mixer.getOutput().getItem(0).isEmpty(),
                         "an Import Bus takes the snow");
                 int slow = (int) Math.ceil(ice.ticks() / 5.0);
                 helper.runAfterDelay(slow + 2, () -> {
@@ -5132,10 +5251,13 @@ public class GolemGameTests {
                 List.of(new ItemStack(Items.RAW_IRON)), List.of(new ItemStack(Items.IRON_INGOT)))));
         ItemKey ingot = ItemKey.of(new ItemStack(Items.IRON_INGOT));
         helper.runAfterDelay(5, () -> {
-            var handler = com.golemlogix.system.LegacyResources.items(helper.getLevel(), helper.absolutePos(PROV), Direction.UP);
-            helper.assertTrue(handler != null && handler.getSlots() == PatternProviderBlockEntity.RETURN_SLOTS, "only the return slots are reachable");
-            helper.assertTrue(handler.insertItem(0, new ItemStack(Items.IRON_INGOT, 5), false).isEmpty(), "a machine hands back five ingots");
-            helper.assertTrue(handler.extractItem(0, 64, false).isEmpty(), "nothing can be pulled back out");
+            var handler = helper.getLevel().getCapability(Capabilities.Item.BLOCK, helper.absolutePos(PROV), Direction.UP);
+            helper.assertTrue(handler != null && handler.size() == PatternProviderBlockEntity.RETURN_SLOTS, "only the return slots are reachable");
+            helper.assertTrue(Transfers.insertItem(handler, new ItemStack(Items.IRON_INGOT, 5), false, false).isEmpty(),
+                    "a machine hands back five ingots");
+            try (Transaction tx = Transaction.openRoot()) {
+                helper.assertTrue(handler.extract(0, ItemResource.of(Items.IRON_INGOT), 64, tx) == 0, "nothing can be pulled back out");
+            }
         });
         helper.runAfterDelay(30, () -> {
             helper.assertTrue(net(helper, bay).itemCountOf(ingot) == 5, "the ingots went into the network, got " + net(helper, bay).itemCountOf(ingot));
@@ -5155,9 +5277,8 @@ public class GolemGameTests {
         helper.setBlock(prov, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
         var mixer = helper.getBlockEntity(base, com.golemlogix.blockentity.CryoMixerBlockEntity.class);
         helper.assertTrue(mixer.autoOutput(), "auto-output is on by default");
-        var exec = net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE;
-        mixer.input().fill(new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.WATER, 8000), exec);
-        mixer.input().fill(new net.neoforged.neoforge.fluids.FluidStack(com.golemlogix.init.ModFluids.CRYO_SOURCE.get(), 1000), exec);
+        Transfers.insertFluid(mixer.fluidResources(), new FluidStack(Fluids.WATER, 8000), false);
+        Transfers.insertFluid(mixer.fluidResources(), new FluidStack(com.golemlogix.init.ModFluids.CRYO_SOURCE.get(), 1000), false);
         for (int i = 0; i < 4; i++) {
             mixer.getUpgrades().setItem(i, new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get()));
         }

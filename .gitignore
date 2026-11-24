@@ -44,3 +44,8 @@
 .classpath
 .project
 .settings/
+# local scratch (analysis scripts, crops, an old build of the mod)
+/analyze*.py
+/crop_*.png
+/libs/
+/release_notes_*.md

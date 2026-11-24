@@ -5,6 +5,7 @@ import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.init.ModSounds;
 import com.golemlogix.system.AtlasStructure;
 import com.golemlogix.system.GolemNetwork;
+import com.golemlogix.system.Transfers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -17,8 +18,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidType;
-import net.neoforged.neoforge.fluids.FluidUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -110,7 +109,7 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         }
         List<ItemStack> fluids = new ArrayList<>();
         for (FluidStack f : net.listFluids()) {
-            ItemStack bucket = f.isEmpty() ? ItemStack.EMPTY : FluidUtil.getFilledBucket(f.copyWithAmount(FluidType.BUCKET_VOLUME));
+            ItemStack bucket = Transfers.filledBucket(f);
             if (!bucket.isEmpty() && fluids.size() < CARGO_FLUIDS) {
                 fluids.add(bucket);
             }

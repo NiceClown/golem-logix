@@ -82,7 +82,7 @@ final class JarWholeRenderer {
         // the glowing Source lights the machine around it, however dark the night
         int light = be.clientSource() > 0 ? LightCoordsUtil.pack(Math.max(LightCoordsUtil.block(around), SOURCE_GLOW), LightCoordsUtil.sky(around)) : around;
         float fill = Math.min(1f, Mth.lerp(partialTick, be.fillPrev, be.fill));
-        float time = level.getGameTime() + partialTick;
+        float time = (level.getGameTime() % 72000L) + partialTick;
         boolean charged = be.clientSource() > 0;
         Vec3 cam = com.golemlogix.client.render.LegacyBer.camera();
         double distance = cam.distanceToSqr(pos.getX() + width / 2.0, pos.getY() + 2.0, pos.getZ() + width / 2.0);
@@ -143,10 +143,11 @@ final class JarWholeRenderer {
 
     // ------------------------------------------------------------------------------------------------ the Giga Jar
 
-    /** What is built once: per machine a near and a far version, the glowing runes apart (their colour pulses), and the rings. */
+    /** What is built once: per machine a near and a far version, the glowing runes apart (their colour pulses), the rings and the unit spheres. */
     private record Meshes(net.minecraft.client.renderer.texture.TextureAtlasSprite atlasMark, BerBuffers.Baked gigaNear, BerBuffers.Baked gigaFar, BerBuffers.Baked gigaRunes,
                           BerBuffers.Baked reactorNear, BerBuffers.Baked reactorFar, BerBuffers.Baked reactorRunes, BerBuffers.Baked collar, BerBuffers.Baked lowRing,
-                          BerBuffers.Baked outerRing, BerBuffers.Baked outerRunes, BerBuffers.Baked levelRing, BerBuffers.Baked levelRingFar, BerBuffers.Baked innerRing) {
+                          BerBuffers.Baked outerRing, BerBuffers.Baked outerRunes, BerBuffers.Baked levelRing, BerBuffers.Baked levelRingFar, BerBuffers.Baked innerRing,
+                          BerBuffers.Baked ballCryo, BerBuffers.Baked ballIce) {
     }
 
     private static Meshes meshes;
@@ -184,7 +185,9 @@ final class JarWholeRenderer {
                         }
                     }),
                     BerBuffers.bake((vc, pose) -> ring(vc, pose, 16.4f, 1.7f, 2f, 16, BRASS, LIGHT_BRASS, 0)),
-                    BerBuffers.bake((vc, pose) -> ring(vc, pose, 13.4f, 1f, 1.2f, 24, COPPER, WHITE, 0)));
+                    BerBuffers.bake((vc, pose) -> ring(vc, pose, 13.4f, 1f, 1.2f, 24, COPPER, WHITE, 0)),
+                    BerBuffers.bake((vc, pose) -> ball(vc, pose.last(), 1f, CRYO, WHITE, 0)),
+                    BerBuffers.bake((vc, pose) -> ball(vc, pose.last(), 1f, ICE, WHITE, 0)));
         }
         return meshes;
     }
@@ -488,12 +491,12 @@ final class JarWholeRenderer {
         }
 
         // the Source, floating: larger the fuller it is, turning; drops rise around it
-        VertexConsumer ballBuffer = buffers.getBuffer(solid);
         pose.pushPose();
         pose.translate(cx / 16f, (cy + 0.8f * Mth.sin(time * 0.03f)) / 16f, cz / 16f);
         pose.mulPose(Axis.YP.rotationDegrees(time * 0.6f));
         float radius = on ? 4f + 7.4f * (float) Math.cbrt(fill) : 3f;
-        ball(ballBuffer, pose.last(), radius, on ? CRYO : ICE, WHITE, on ? LightCoordsUtil.FULL_BRIGHT : light);
+        pose.scale(radius, radius, radius);
+        (on ? meshes.ballCryo() : meshes.ballIce()).draw(buffers, solid, pose.last(), on ? LightCoordsUtil.FULL_BRIGHT : light, 0);
         pose.popPose();
         if (on) {
             VertexConsumer tv = buffers.getBuffer(clearType(com.golemlogix.client.render.GlowTypes.shaderPackActive()));

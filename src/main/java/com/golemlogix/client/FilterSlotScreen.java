@@ -74,7 +74,7 @@ public class FilterSlotScreen extends Screen {
             picker.place(left + 8, top + tagY(), W - 16);
         }
         ItemStack f = filter();
-        fluid = FluidGhostItem.is(f) || net.neoforged.neoforge.fluids.FluidUtil.getFluidContained(f).filter(x -> !x.isEmpty()).isPresent();
+        fluid = FluidGhostItem.is(f) || !com.golemlogix.system.Transfers.fluidOf(f).isEmpty();
         if (keep) {
             amount = new EditBox(font, left + 62, top + 50, 58, 12, Component.empty());
             amount.setBordered(false);

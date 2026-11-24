@@ -22,6 +22,14 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.TransferPreconditions;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.transaction.SnapshotJournal;
+import net.neoforged.neoforge.transfer.transaction.TransactionContext;
+
+import java.util.Objects;
 
 /**
  * Mana Saturator, a conveyor of three places: the left back deck (queue of blanks), the anvil (the iron golem forges) and
@@ -139,78 +147,107 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         return outDeck;
     }
 
+    private final SnapshotJournal<ItemStack[]> deckJournal = new SnapshotJournal<>() {
+        @Override
+        protected ItemStack[] createSnapshot() {
+            return new ItemStack[]{inDeck.copy(), outDeck.copy()};
+        }
+
+        @Override
+        protected void revertToSnapshot(ItemStack[] snapshot) {
+            inDeck = snapshot[0];
+            outDeck = snapshot[1];
+        }
+
+        @Override
+        protected void onRootCommit(ItemStack[] originalState) {
+            changed();
+        }
+    };
+
     /**
      * For buses, hoppers and pattern providers: slot 0 is the left deck (insert blanks only, up to DECK_MAX of one
      * kind), slot 1 is the right deck (take finished items only).
      */
-    private final net.neoforged.neoforge.items.IItemHandler automation = new net.neoforged.neoforge.items.IItemHandler() {
+    private final ResourceHandler<ItemResource> automationResources = new ResourceHandler<>() {
         @Override
-        public int getSlots() {
+        public int size() {
             return 2;
         }
 
         @Override
-        public ItemStack getStackInSlot(int slot) {
-            return slot == 0 ? inDeck : outDeck;
+        public ItemResource getResource(int index) {
+            Objects.checkIndex(index, 2);
+            return ItemResource.of(index == 0 ? inDeck : outDeck);
         }
 
         @Override
-        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-            if (slot != 0 || stack.isEmpty() || !isInput(level, stack) || !formed()) {
-                return stack;
-            }
-            int room = roomInDeck(stack);
-            if (room <= 0) {
-                return stack;
-            }
-            int n = Math.min(room, stack.getCount());
-            if (!simulate) {
-                addToDeck(stack.copyWithCount(n));
-            }
-            return stack.copyWithCount(stack.getCount() - n);
+        public long getAmountAsLong(int index) {
+            Objects.checkIndex(index, 2);
+            return (index == 0 ? inDeck : outDeck).getCount();
         }
 
         @Override
-        public ItemStack extractItem(int slot, int amount, boolean simulate) {
-            if (slot != 1 || amount <= 0 || outDeck.isEmpty()) {
-                return ItemStack.EMPTY;
+        public long getCapacityAsLong(int index, ItemResource resource) {
+            Objects.checkIndex(index, 2);
+            if (index == 0) {
+                return DECK_MAX;
+            }
+            return resource.isEmpty() ? 64 : Math.min(64, resource.getMaxStackSize());
+        }
+
+        @Override
+        public boolean isValid(int index, ItemResource resource) {
+            Objects.checkIndex(index, 2);
+            return index == 0 && !resource.isEmpty() && isInput(level, resource.toStack(1));
+        }
+
+        @Override
+        public int insert(int index, ItemResource resource, int amount, TransactionContext tx) {
+            Objects.checkIndex(index, 2);
+            TransferPreconditions.checkNonEmptyNonNegative(resource, amount);
+            if (index != 0 || amount <= 0 || !formed()) {
+                return 0;
+            }
+            ItemStack probe = resource.toStack(1);
+            if (!isInput(level, probe)) {
+                return 0;
+            }
+            int room = roomInDeck(probe);
+            int n = Math.min(room, amount);
+            if (n <= 0) {
+                return 0;
+            }
+            deckJournal.updateSnapshots(tx);
+            if (inDeck.isEmpty()) {
+                inDeck = resource.toStack(n);
+            } else {
+                inDeck.grow(n);
+            }
+            return n;
+        }
+
+        @Override
+        public int extract(int index, ItemResource resource, int amount, TransactionContext tx) {
+            Objects.checkIndex(index, 2);
+            TransferPreconditions.checkNonEmptyNonNegative(resource, amount);
+            if (index != 1 || amount <= 0 || outDeck.isEmpty() || !resource.matches(outDeck)) {
+                return 0;
             }
             int n = Math.min(amount, outDeck.getCount());
-            ItemStack out = outDeck.copyWithCount(n);
-            if (!simulate) {
-                outDeck.shrink(n);
-                if (outDeck.isEmpty()) {
-                    outDeck = ItemStack.EMPTY;
-                }
-                changed();
+            if (n <= 0) {
+                return 0;
             }
-            return out;
-        }
-
-        @Override
-        public int getSlotLimit(int slot) {
-            return slot == 0 ? DECK_MAX : 64;
-        }
-
-        @Override
-        public boolean isItemValid(int slot, ItemStack stack) {
-            return slot == 0 && isInput(level, stack);
+            deckJournal.updateSnapshots(tx);
+            outDeck.shrink(n);
+            if (outDeck.isEmpty()) {
+                outDeck = ItemStack.EMPTY;
+            }
+            return n;
         }
     };
 
-    public net.neoforged.neoforge.items.IItemHandler automation() {
-        return automation;
-    }
-
-    /** What pipes and other mods see: the decks as a NeoForge resource handler. */
-    private final net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource> automationResources =
-            com.golemlogix.system.LegacyResources.offerItems(automation, () -> new ItemStack[]{inDeck.copy(), outDeck.copy()}, s -> {
-                inDeck = s[0];
-                outDeck = s[1];
-                changed();
-            });
-
-    public net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource> automationResources() {
+    public ResourceHandler<ItemResource> automationResources() {
         return automationResources;
     }
 

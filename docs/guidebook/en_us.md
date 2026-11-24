@@ -1215,16 +1215,16 @@ A 256k disk holds **64** such things. Disks of 1k and 4k always take **one**, ho
 
 #### What counts
 
-- Counts: anything worn or enchanted, whatever it is, even a tool that holds a fluid or one that stacks; and what does not stack and differs from its plain self: named, or full of its own data, like a filled shulker box.
-- Does not count: a new, unused sword or armour piece, however many; **unworn buckets and tanks holding a fluid**; potions; enchanted books.
+- Counts: anything worn or enchanted (including fluid-holding or stackable tools), and any non-stackable item differing from plain (named items, filled shulker boxes).
+- Does not count: new unused tools or armour, **unworn buckets and fluid tanks**, potions, enchanted books.
 
-A disk that holds more than this from an older world loses nothing. You can take from it, but nothing goes in until there is room.
+Older worlds' fuller disks lose nothing: you can still extract, just not insert until there is room.
 
 ##### Why it is so
 
-A network slows down with the number of different kinds it must go through, not the number of items. A mob farm can pour in tens of thousands of different swords, and that can bring a server down.
+Network speed depends on distinct item kinds, not counts. Mob farms dumping thousands of unique damaged swords could overload a server.
 
-Keep equipment you want to keep in a chest behind a **Periscope**, and destroy what you do not want before it reaches the network.
+Keep valued gear in a chest behind a **Periscope**, and void junk before it enters the network.
 
 ### Cryo Fluid Disks
 <!-- {"id": "st_fluid", "icon": "golem_logix:fluid_disk_16k", "x": 1, "y": -1, "parents": ["st_disks"]} -->
@@ -1373,14 +1373,14 @@ Take a blank card and **right-click**: your name is punched into it. Give it to 
 
 #### Rights
 
-Pick a card in the terminal's window and switch the icons under it:
+Pick a card and toggle its permissions:
 
-- **hopper** - put into the network;
-- **dropper** - take out of it (and fill the crafting grid from it);
+- **hopper** - insert into the network;
+- **dropper** - extract & fill grids;
 - **crafting table** - order autocrafting;
-- **pickaxe** - build: open and break the network's blocks - drive bays, buses, gateways, calculators.
+- **pickaxe** - build & break blocks.
 
-*Server operators in creative mode walk past the Gatekeeper.*
+*Creative operators bypass the Gatekeeper.*
 
 ### Fluids in the terminal
 <!-- {"id": "st_fluids_ui", "icon": "minecraft:bucket", "x": 3, "y": -1, "parents": ["st_terminal", "st_fluid"]} -->
@@ -1677,11 +1677,11 @@ A bus works only as often as it has to, and that costs it no speed: it moves as 
 
 #### For server owners
 
-The command **/golemlogix_buses** shows how many operations the buses make and how much of each tick they take.
+**/golemlogix_buses** shows bus operations per second and tick time used.
 
-The config setting **busMaxMillisPerTick** (10 by default, of the 50 ms a tick has; 0 for no limit) caps that: over it, buses wait for the next tick and catch up afterwards.
+**busMaxMillisPerTick** (default 10 ms per 50 ms tick; 0 disables) defers excess bus work to the next tick, catching up later.
 
-Autocrafting has its own, **craftMaxMillisPerTick** (10 by default): however many calculators work, over it a job goes on in its next cycle.
+**craftMaxMillisPerTick** (default 10 ms) similarly caps autocrafting work per tick.
 
 <!-- {"type": "crafting", "recipe": "golem_logix:autocraft_module"} -->
 
@@ -1728,9 +1728,9 @@ The module decides when the machine may work. While it sits in an upgrade slot a
 #### A needle on the stock
 <!-- {"type": "crafting", "recipe": "golem_logix:stock_manometer"} -->
 
-As a boiler's gauge shows the steam pressure, this one shows **how much of one thing the network holds** - and gives a redstone signal when the needle crosses a mark. Takes 1 channel.
+Shows **the stock of one item or fluid** and emits redstone when it crosses a mark. Takes 1 channel.
 
-Put an item or a fluid into its cell (a bucket, or drag it from JEI) - the Warden watches it.
+Put an item, bucket, or JEI ingredient into its cell to watch it.
 
 #### When to switch on
 
@@ -2190,10 +2190,10 @@ A desk where the Storekeeper keeps a ledger: what the stores must hold and how m
 #### Keeping the ledger
 
 - Put an item into a cell or drag it from JEI.
-- **Middle-click** (the mouse wheel) a cell: how many to keep. An empty cell or 0 orders nothing.
-- A bucket in a cell keeps **buckets**; a button in the same window switches it to **the fluid itself** - then it counts in mB.
+- **Middle-click** (scroll wheel) to set the target stock; 0 or empty disables.
+- A bucket tracks **buckets**; click the fluid toggle button in the window to count in mB instead.
 
-The Storekeeper orders a little at a time - up to a stack of items or 16 buckets of fluid - and never two orders for one thing at once.
+Orders up to 64 items or 16 buckets at a time, never two for the same target.
 
 #### Marks in a cell's corner
 
@@ -2443,19 +2443,17 @@ The Wither's plasma does not let things fade. Sealed in a brass bezel on a tempe
 
 #### The tool that never wears
 
-An upgrade for **Hewer's Annihilation Bus**: put it into its upgrade slots.
+Put this upgrade into **Hewer's Annihilation Bus**.
 
-The tool in the golem's slot then **never wears** - mining or clicking, a pickaxe, an axe or shears keep their durability, enchantments and all.
+The held tool **never wears**: mining or clicking keeps durability and enchantments intact, even at 1 durability remaining.
 
-Even a tool on its last point of durability goes back to work.
+It also upgrades any held tool to **netherite harvest tier** with **+1 Fortune and +1 Looting** (wooden tools still mine slowly).
 
-It also lifts the tool: **it harvests at netherite's level**, whatever it is made of, and has **one more level of Fortune and one more level of Looting**. A wooden pickaxe mines obsidian, though still at a wooden pickaxe's speed.
+**Any item in the slot benefits**: swords loot more, picks mine more, and modded weapons work identically without a weapon list.
 
-**Whatever lies in the slot is blessed, whatever it is for**: a sword that kills drops more, a pickaxe that digs drops more, and a weapon of another mod is treated the same way - the bus needs no list of weapons.
+*Silk Touch and Looting stay mutually exclusive: Silk Touch tools do not gain Looting.*
 
-*Silk Touch and Looting cannot live on one item: a tool that keeps the block keeps Silk Touch and does not get Looting.*
-
-*A netherite pickaxe with Fortune, tempered once, digs for ever.*
+*A Fortune netherite pickaxe, tempered once, digs forever.*
 
 ### Interdimensional Occult Matrix
 <!-- {"id": "matrix", "icon": "golem_logix:interdimensional_occult_matrix", "x": 2, "y": 0, "parents": ["wither", "saturator"], "secret": "full"} -->

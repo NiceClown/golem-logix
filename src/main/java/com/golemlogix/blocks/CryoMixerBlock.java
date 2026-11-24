@@ -34,7 +34,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.neoforged.neoforge.fluids.FluidUtil;
+import net.neoforged.neoforge.transfer.fluid.FluidUtil;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -139,8 +139,8 @@ public class CryoMixerBlock extends Block implements RemovalAware, EntityBlock {
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
                                           InteractionHand hand, BlockHitResult hit) {
-        if (FluidUtil.getFluidHandler(stack).isPresent()) {
-            return FluidUtil.interactWithFluidHandler(player, hand, level, pos, hit.getDirection())
+        if (com.golemlogix.system.Transfers.hasFluidHandler(stack)) {
+            return FluidUtil.interactWithFluidHandler(player, hand, level, pos, hit.getDirection(), null)
                     ? InteractionResult.SUCCESS : InteractionResult.CONSUME;
         }
         return InteractionResult.TRY_WITH_EMPTY_HAND;

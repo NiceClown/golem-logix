@@ -3,6 +3,7 @@ package com.golemlogix.blockentity;
 import com.golemlogix.config.GolemConfig;
 import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.system.CryoSource;
+import com.golemlogix.system.Transfers;
 import com.golemlogix.upgrade.RedstoneControl;
 import com.golemlogix.upgrade.RedstoneMode;
 import com.golemlogix.upgrade.UpgradeContainer;
@@ -21,9 +22,12 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
-import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.transfer.CombinedResourceHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.item.VanillaContainerWrapper;
 
 /**
  * The Cryo-Mixer's work: water and Liquid Cryo-Source from its two flasks freeze into snow blocks (the fast mode) or ice (the slow
@@ -62,100 +66,30 @@ public class CryoMixerBlockEntity extends BlockEntity {
     /** What the mixer is doing (for the window): working, or what it waits for. */
     public static final int WORKING = 1, NO_WATER = 2, NO_CRYO = 3, TRAY_FULL = 4, PAUSED = 5;
 
-    private final FluidTank water = new FluidTank(WATER_TANK, fs -> fs.getFluid().isSame(Fluids.WATER)) {
+    private final FluidStacksResourceHandler water = new FluidStacksResourceHandler(1, WATER_TANK) {
         @Override
-        protected void onContentsChanged() {
+        public boolean isValid(int index, FluidResource resource) {
+            return resource.is(Fluids.WATER);
+        }
+
+        @Override
+        protected void onContentsChanged(int index, FluidStack previousContents) {
             changed();
         }
     };
-    private final FluidTank cryo = new FluidTank(CRYO_TANK, CryoSource::is) {
+    private final FluidStacksResourceHandler cryo = new FluidStacksResourceHandler(1, CRYO_TANK) {
         @Override
-        protected void onContentsChanged() {
+        public boolean isValid(int index, FluidResource resource) {
+            return CryoSource.is(resource.toStack(1));
+        }
+
+        @Override
+        protected void onContentsChanged(int index, FluidStack previousContents) {
             changed();
-        }
-    };
-    /** What pipes, buses and buckets see: two tanks that only take, each its own fluid. */
-    private final IFluidHandler input = new IFluidHandler() {
-        @Override
-        public int getTanks() {
-            return 2;
-        }
-
-        @Override
-        public FluidStack getFluidInTank(int t) {
-            return t == 0 ? water.getFluid() : cryo.getFluid();
-        }
-
-        @Override
-        public int getTankCapacity(int t) {
-            return t == 0 ? WATER_TANK : CRYO_TANK;
-        }
-
-        @Override
-        public boolean isFluidValid(int t, FluidStack stack) {
-            return (t == 0 ? water : cryo).isFluidValid(stack);
-        }
-
-        @Override
-        public int fill(FluidStack resource, FluidAction action) {
-            if (water.isFluidValid(resource)) {
-                return water.fill(resource, action);
-            }
-            return cryo.isFluidValid(resource) ? cryo.fill(resource, action) : 0;
-        }
-
-        @Override
-        public FluidStack drain(FluidStack resource, FluidAction action) {
-            return FluidStack.EMPTY;
-        }
-
-        @Override
-        public FluidStack drain(int maxDrain, FluidAction action) {
-            return FluidStack.EMPTY;
         }
     };
     /** The tray: one stack of snow or ice, nothing goes in from outside. */
     private final OwnedContainer output = new OwnedContainer(1, this, s -> false);
-    private final IItemHandler tray = new IItemHandler() {
-        @Override
-        public int getSlots() {
-            return 1;
-        }
-
-        @Override
-        public ItemStack getStackInSlot(int slot) {
-            return output.getItem(0);
-        }
-
-        @Override
-        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-            return stack;
-        }
-
-        @Override
-        public ItemStack extractItem(int slot, int amount, boolean simulate) {
-            ItemStack in = output.getItem(0);
-            if (in.isEmpty() || amount <= 0) {
-                return ItemStack.EMPTY;
-            }
-            int n = Math.min(amount, in.getCount());
-            ItemStack out = in.copyWithCount(n);
-            if (!simulate) {
-                output.removeItem(0, n);
-            }
-            return out;
-        }
-
-        @Override
-        public int getSlotLimit(int slot) {
-            return 64;
-        }
-
-        @Override
-        public boolean isItemValid(int slot, ItemStack stack) {
-            return false;
-        }
-    };
     private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.MIXER, this);
     private final RedstoneControl redstone = new RedstoneControl();
     private Mode mode = Mode.SNOW;
@@ -179,35 +113,32 @@ public class CryoMixerBlockEntity extends BlockEntity {
         super(ModBlockEntities.CRYO_MIXER.get(), pos, state);
     }
 
-    private final net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource> fluidResources =
-            com.golemlogix.system.LegacyResources.offerFluids(input, () -> new FluidStack[]{water.getFluid().copy(), cryo.getFluid().copy()},
-                    s -> {
-                        water.setFluid(s[0]);
-                        cryo.setFluid(s[1]);
-                    });
-    private final net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource> itemResources =
-            com.golemlogix.system.LegacyResources.offerItems(tray, () -> output.getItem(0).copy(), s -> output.setItem(0, s));
+    private final ResourceHandler<FluidResource> fluidResources =
+            Transfers.insertOnly(new CombinedResourceHandler<>(water, cryo));
+    private final ResourceHandler<ItemResource> itemResources =
+            Transfers.extractOnly(VanillaContainerWrapper.of(output));
 
     /** The flasks for pipes and other mods (filling only). */
-    public net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource> fluidResources() {
+    public ResourceHandler<FluidResource> fluidResources() {
         return fluidResources;
     }
 
     /** The tray for buses and other mods (taking only). */
-    public net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource> itemResources() {
+    public ResourceHandler<ItemResource> itemResources() {
         return itemResources;
     }
 
-    public IFluidHandler input() {
-        return input;
-    }
-
     public FluidStack water() {
-        return water.getFluid();
+        return Transfers.getFluid(water, 0);
     }
 
     public FluidStack cryo() {
-        return cryo.getFluid();
+        return Transfers.getFluid(cryo, 0);
+    }
+
+    private static void consume(FluidStacksResourceHandler tank, int mb) {
+        int left = Math.max(0, tank.getAmountAsInt(0) - mb);
+        tank.set(0, left == 0 ? FluidResource.EMPTY : tank.getResource(0), left);
     }
 
     public OwnedContainer getOutput() {
@@ -271,7 +202,7 @@ public class CryoMixerBlockEntity extends BlockEntity {
         }
         if (dirty && now - lastSync >= 10) {
             dirty = false;
-            String state = (water.getFluidAmount() * 20 / WATER_TANK) + "/" + (cryo.getFluidAmount() * 20 / CRYO_TANK) + "/"
+            String state = (water.getAmountAsInt(0) * 20 / WATER_TANK) + "/" + (cryo.getAmountAsInt(0) * 20 / CRYO_TANK) + "/"
                     + Math.min(3, output.getItem(0).getCount()) + "/" + output.getItem(0).getItem() + "/" + working + "/" + mode;
             if (!state.equals(sent)) {
                 sent = state;
@@ -288,11 +219,11 @@ public class CryoMixerBlockEntity extends BlockEntity {
             status = TRAY_FULL;
             return;
         }
-        if (water.getFluidAmount() < mode.water()) {
+        if (water.getAmountAsInt(0) < mode.water()) {
             status = NO_WATER;
             return;
         }
-        if (cryo.getFluidAmount() < mode.cryo()) {
+        if (cryo.getAmountAsInt(0) < mode.cryo()) {
             status = NO_CRYO;
             return;
         }
@@ -310,8 +241,8 @@ public class CryoMixerBlockEntity extends BlockEntity {
             return;
         }
         progress = 0;
-        water.drain(mode.water(), IFluidHandler.FluidAction.EXECUTE);
-        cryo.drain(mode.cryo(), IFluidHandler.FluidAction.EXECUTE);
+        consume(water, mode.water());
+        consume(cryo, mode.cryo());
         if (tray.isEmpty()) {
             output.setItem(0, made);
         } else {
@@ -329,8 +260,8 @@ public class CryoMixerBlockEntity extends BlockEntity {
             @Override
             public int get(int index) {
                 return switch (index) {
-                    case 0 -> water.getFluidAmount();
-                    case 1 -> cryo.getFluidAmount();
+                    case 0 -> water.getAmountAsInt(0);
+                    case 1 -> cryo.getAmountAsInt(0);
                     case 2 -> progress;
                     case 3 -> ticksPerBlock();
                     case 4 -> mode.ordinal();
@@ -423,8 +354,8 @@ public class CryoMixerBlockEntity extends BlockEntity {
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();
-        tag.putInt("Water", water.getFluidAmount() * 20 / WATER_TANK);
-        tag.putInt("Cryo", cryo.getFluidAmount() * 20 / CRYO_TANK);
+        tag.putInt("Water", water.getAmountAsInt(0) * 20 / WATER_TANK);
+        tag.putInt("Cryo", cryo.getAmountAsInt(0) * 20 / CRYO_TANK);
         ItemStack t = output.getItem(0);
         tag.putInt("Tray", t.isEmpty() ? 0 : Math.min(3, t.getCount()) * (t.is(Items.ICE) ? -1 : 1));
         tag.putBoolean("Working", working);

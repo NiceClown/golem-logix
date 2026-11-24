@@ -4,6 +4,8 @@ import com.golemlogix.data.PatternData;
 import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.init.ModDataComponents;
 import com.golemlogix.system.GolemNode;
+import com.golemlogix.system.NbtBridge;
+import com.golemlogix.system.Transfers;
 import com.golemlogix.upgrade.RedstoneControl;
 import com.golemlogix.upgrade.RedstoneMode;
 import com.golemlogix.upgrade.UpgradeContainer;
@@ -20,8 +22,13 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.item.VanillaContainerWrapper;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -54,67 +61,36 @@ public class PatternProviderBlockEntity extends BlockEntity {
         }
     };
     private final OwnedContainer returns = new OwnedContainer(RETURN_SLOTS, this, s -> true);
-    private final net.neoforged.neoforge.fluids.FluidStack[] returnFluids = {net.neoforged.neoforge.fluids.FluidStack.EMPTY, net.neoforged.neoforge.fluids.FluidStack.EMPTY, net.neoforged.neoforge.fluids.FluidStack.EMPTY};
     /** The return tanks from any side: anything goes in (but Liquid Cryo-Source, which is never stored), nothing comes out. */
-    private final net.neoforged.neoforge.fluids.capability.IFluidHandler fluidReturns = new net.neoforged.neoforge.fluids.capability.IFluidHandler() {
+    private final FluidStacksResourceHandler returnFluids = new FluidStacksResourceHandler(RETURN_TANKS, RETURN_TANK_MB) {
         @Override
-        public int getTanks() {
-            return RETURN_TANKS;
+        public boolean isValid(int index, FluidResource resource) {
+            return !com.golemlogix.system.CryoSource.is(resource.toStack(1));
         }
 
         @Override
-        public net.neoforged.neoforge.fluids.FluidStack getFluidInTank(int tank) {
-            return returnFluids[tank];
-        }
-
-        @Override
-        public int getTankCapacity(int tank) {
-            return RETURN_TANK_MB;
-        }
-
-        @Override
-        public boolean isFluidValid(int tank, net.neoforged.neoforge.fluids.FluidStack stack) {
-            return !com.golemlogix.system.CryoSource.is(stack);
-        }
-
-        @Override
-        public int fill(net.neoforged.neoforge.fluids.FluidStack resource, FluidAction action) {
-            if (resource.isEmpty() || com.golemlogix.system.CryoSource.is(resource)) {
-                return 0;
-            }
-            int to = -1;
-            for (int i = 0; i < RETURN_TANKS && to < 0; i++) {
-                if (net.neoforged.neoforge.fluids.FluidStack.isSameFluidSameComponents(returnFluids[i], resource)) {
-                    to = i;
+        public int insert(FluidResource resource, int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext tx) {
+            net.neoforged.neoforge.transfer.TransferPreconditions.checkNonEmptyNonNegative(resource, amount);
+            int inserted = 0;
+            // stack into a tank already holding this fluid first, then into empty tanks
+            for (int pass = 0; pass < 2 && inserted < amount; pass++) {
+                for (int i = 0; i < size() && inserted < amount; i++) {
+                    if ((pass == 0) == (getAmountAsInt(i) > 0 && getResource(i).equals(resource))) {
+                        inserted += insert(i, resource, amount - inserted, tx);
+                    }
                 }
             }
-            for (int i = 0; i < RETURN_TANKS && to < 0; i++) {
-                if (returnFluids[i].isEmpty()) {
-                    to = i;
-                }
-            }
-            if (to < 0) {
-                return 0;
-            }
-            int n = Math.min(resource.getAmount(), RETURN_TANK_MB - returnFluids[to].getAmount());
-            if (n > 0 && action.execute()) {
-                returnFluids[to] = resource.copyWithAmount(returnFluids[to].getAmount() + n);
-                setChanged();
-            }
-            return n;
+            return inserted;
         }
 
         @Override
-        public net.neoforged.neoforge.fluids.FluidStack drain(net.neoforged.neoforge.fluids.FluidStack resource, FluidAction action) {
-            return net.neoforged.neoforge.fluids.FluidStack.EMPTY;
-        }
-
-        @Override
-        public net.neoforged.neoforge.fluids.FluidStack drain(int maxDrain, FluidAction action) {
-            return net.neoforged.neoforge.fluids.FluidStack.EMPTY;
+        protected void onContentsChanged(int index, FluidStack previousContents) {
+            setChanged();
         }
     };
-    private net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource> fluidResources;
+    private final ResourceHandler<ItemResource> itemResources =
+            Transfers.insertOnly(VanillaContainerWrapper.of(returns));
+    private final ResourceHandler<FluidResource> fluidResources = Transfers.insertOnly(returnFluids);
     private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.REDSTONE_ONLY, this);
     private final RedstoneControl redstone = new RedstoneControl();
 
@@ -138,99 +114,18 @@ public class PatternProviderBlockEntity extends BlockEntity {
         return returns;
     }
 
-    /**
-     * Automation access from any side: only the return slots, and only to put in (anything; it goes into the network). The
-     * punch cards are not reachable, and nothing can be taken back out, otherwise a hopper under the provider would pull it.
-     */
-    private final IItemHandler automation = new IItemHandler() {
-        @Override
-        public int getSlots() {
-            return RETURN_SLOTS;
-        }
-
-        @Override
-        public ItemStack getStackInSlot(int slot) {
-            return returns.getItem(slot);
-        }
-
-        @Override
-        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-            if (stack.isEmpty()) {
-                return stack;
-            }
-            ItemStack cur = returns.getItem(slot);
-            if (!cur.isEmpty() && !ItemStack.isSameItemSameComponents(cur, stack)) {
-                return stack;
-            }
-            int room = Math.min(stack.getMaxStackSize(), 64) - cur.getCount();
-            if (room <= 0) {
-                return stack;
-            }
-            int n = Math.min(room, stack.getCount());
-            if (!simulate) {
-                if (cur.isEmpty()) {
-                    returns.setItem(slot, stack.copyWithCount(n));
-                } else {
-                    cur.grow(n);
-                    returns.setChanged();
-                }
-            }
-            return n == stack.getCount() ? ItemStack.EMPTY : stack.copyWithCount(stack.getCount() - n);
-        }
-
-        @Override
-        public ItemStack extractItem(int slot, int amount, boolean simulate) {
-            return ItemStack.EMPTY;
-        }
-
-        @Override
-        public int getSlotLimit(int slot) {
-            return 64;
-        }
-
-        @Override
-        public boolean isItemValid(int slot, ItemStack stack) {
-            return true;
-        }
-    };
-
-    private final net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource> itemResources =
-            com.golemlogix.system.LegacyResources.offerItems(automation, () -> {
-                ItemStack[] copy = new ItemStack[RETURN_SLOTS];
-                for (int i = 0; i < RETURN_SLOTS; i++) {
-                    copy[i] = returns.getItem(i).copy();
-                }
-                return copy;
-            }, copy -> {
-                for (int i = 0; i < RETURN_SLOTS; i++) {
-                    returns.setItem(i, copy[i]);
-                }
-            });
-
     /** The return tanks for pipes and machines that push out fluids. */
-    public net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource> fluidResources() {
-        if (fluidResources == null) {
-            fluidResources = com.golemlogix.system.LegacyResources.offerFluids(fluidReturns, () -> {
-                net.neoforged.neoforge.fluids.FluidStack[] copy = new net.neoforged.neoforge.fluids.FluidStack[RETURN_TANKS];
-                for (int i = 0; i < RETURN_TANKS; i++) {
-                    copy[i] = returnFluids[i].copy();
-                }
-                return copy;
-            }, copy -> {
-                System.arraycopy(copy, 0, returnFluids, 0, RETURN_TANKS);
-                setChanged();
-            });
-        }
+    public ResourceHandler<FluidResource> fluidResources() {
         return fluidResources;
     }
 
     /** What the return tanks hold now (the window shows it). */
-    public net.neoforged.neoforge.fluids.FluidStack returnFluid(int i) {
-        return returnFluids[i];
+    public FluidStack returnFluid(int i) {
+        return Transfers.getFluid(returnFluids, i);
     }
 
     /** The return slots for pipes, hoppers and the machines' auto-output. */
-    public net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource> itemResources() {
+    public ResourceHandler<ItemResource> itemResources() {
         return itemResources;
     }
 
@@ -318,7 +213,7 @@ public class PatternProviderBlockEntity extends BlockEntity {
             any = !returns.getItem(i).isEmpty();
         }
         for (int i = 0; i < RETURN_TANKS && !any; i++) {
-            any = !returnFluids[i].isEmpty();
+            any = returnFluids.getAmountAsInt(i) > 0;
         }
         if (!any) {
             return true;
@@ -340,12 +235,12 @@ public class PatternProviderBlockEntity extends BlockEntity {
             }
         }
         for (int i = 0; i < RETURN_TANKS; i++) {
-            net.neoforged.neoforge.fluids.FluidStack f = returnFluids[i];
+            FluidStack f = returnFluid(i);
             if (!f.isEmpty()) {
                 int n = net.insertFluidFromMachine(f.copy(), null);
                 if (n > 0) {
-                    returnFluids[i] = f.copyWithAmount(Math.max(0, f.getAmount() - n));
-                    setChanged();
+                    int left = Math.max(0, f.getAmount() - n);
+                    returnFluids.set(i, left == 0 ? FluidResource.EMPTY : FluidResource.of(f), left);
                     moved = true;
                 }
             }
@@ -386,8 +281,8 @@ public class PatternProviderBlockEntity extends BlockEntity {
             if (block instanceof GolemNode && !(block instanceof com.golemlogix.blocks.SaturatorPartBlock)) {
                 continue;
             }
-            if (com.golemlogix.system.LegacyResources.items(level, target, dir.getOpposite()) != null
-                    || com.golemlogix.system.LegacyResources.fluids(level, target, dir.getOpposite()) != null) {
+            if (level.getCapability(Capabilities.Item.BLOCK, target, dir.getOpposite()) != null
+                    || level.getCapability(Capabilities.Fluid.BLOCK, target, dir.getOpposite()) != null) {
                 return true;
             }
         }
@@ -409,12 +304,12 @@ public class PatternProviderBlockEntity extends BlockEntity {
             return null;
         }
         List<ItemStack> inputs = new ArrayList<>();
-        List<net.neoforged.neoforge.fluids.FluidStack> fluids = new ArrayList<>();
+        List<FluidStack> fluids = new ArrayList<>();
         for (ItemStack s : stacks) {
             if (s.isEmpty()) {
                 continue;
             }
-            net.neoforged.neoforge.fluids.FluidStack f = com.golemlogix.items.FluidGhostItem.fluid(s);
+            FluidStack f = com.golemlogix.items.FluidGhostItem.fluid(s);
             if (f.isEmpty()) {
                 inputs.add(s);
             } else {
@@ -433,49 +328,44 @@ public class PatternProviderBlockEntity extends BlockEntity {
             if (block == null || (block instanceof GolemNode && !(block instanceof com.golemlogix.blocks.SaturatorPartBlock))) {
                 continue;
             }
-            // items and fluids go into the same machine side, and only if it takes all of them
-            IItemHandler handler = inputs.isEmpty() ? null : com.golemlogix.system.LegacyResources.items(level, target, dir.getOpposite());
-            if (!inputs.isEmpty() && (handler == null || !canAcceptAll(handler, inputs))) {
+            // items and fluids go into the same machine side atomically in one transaction: only if it takes all of them
+            ResourceHandler<ItemResource> handler = inputs.isEmpty() ? null : level.getCapability(Capabilities.Item.BLOCK, target, dir.getOpposite());
+            if (!inputs.isEmpty() && handler == null) {
                 continue;
             }
-            net.neoforged.neoforge.fluids.capability.IFluidHandler tanks = fluids.isEmpty() ? null
-                    : com.golemlogix.system.LegacyResources.fluids(level, target, dir.getOpposite());
-            if (!fluids.isEmpty() && (tanks == null || !canAcceptFluids(tanks, fluids))) {
+            ResourceHandler<FluidResource> tanks = fluids.isEmpty() ? null : level.getCapability(Capabilities.Fluid.BLOCK, target, dir.getOpposite());
+            if (!fluids.isEmpty() && tanks == null) {
                 continue;
             }
-            List<ItemStack> rejected = new ArrayList<>();
-            for (ItemStack in : inputs) {
-                ItemStack rest = ItemHandlerHelper.insertItem(handler, in.copy(), false);
-                if (!rest.isEmpty()) {
-                    rejected.add(rest);
+            try (Transaction tx = Transaction.openRoot()) {
+                boolean ok = true;
+                for (ItemStack in : inputs) {
+                    if (handler.insert(ItemResource.of(in), in.getCount(), tx) < in.getCount()) {
+                        ok = false;
+                        break;
+                    }
+                }
+                if (ok) {
+                    for (FluidStack f : fluids) {
+                        if (tanks.insert(FluidResource.of(f), f.getAmount(), tx) < f.getAmount()) {
+                            ok = false;
+                            break;
+                        }
+                    }
+                }
+                if (ok) {
+                    tx.commit();
+                    lastDirection = (lastDirection + 1 + k) % dirs.length;
+                    return List.of();
                 }
             }
-            for (net.neoforged.neoforge.fluids.FluidStack f : fluids) {
-                int filled = tanks.fill(f.copy(), net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
-                if (filled < f.getAmount()) {
-                    rejected.add(com.golemlogix.items.FluidGhostItem.of(f.copyWithAmount(f.getAmount() - filled)));
-                }
-            }
-            lastDirection = (lastDirection + 1 + k) % dirs.length;
-            return rejected;
         }
         return null;
     }
 
-    /** Every fluid fits whole (each checked on its own by simulation). */
-    private static boolean canAcceptFluids(net.neoforged.neoforge.fluids.capability.IFluidHandler tanks,
-                                           List<net.neoforged.neoforge.fluids.FluidStack> fluids) {
-        for (net.neoforged.neoforge.fluids.FluidStack f : fluids) {
-            if (tanks.fill(f.copy(), net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.SIMULATE) < f.getAmount()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static void mergeFluid(List<net.neoforged.neoforge.fluids.FluidStack> list, net.neoforged.neoforge.fluids.FluidStack f) {
+    private static void mergeFluid(List<FluidStack> list, FluidStack f) {
         for (int i = 0; i < list.size(); i++) {
-            if (net.neoforged.neoforge.fluids.FluidStack.isSameFluidSameComponents(list.get(i), f)) {
+            if (FluidStack.isSameFluidSameComponents(list.get(i), f)) {
                 list.set(i, list.get(i).copyWithAmount(list.get(i).getAmount() + f.getAmount()));
                 return;
             }
@@ -483,25 +373,14 @@ public class PatternProviderBlockEntity extends BlockEntity {
         list.add(f.copy());
     }
 
-    /** All ingredients will fit (each checked on its own, then a joint check on the real slots). */
-    private static boolean canAcceptAll(IItemHandler handler, List<ItemStack> inputs) {
-        // check every item by simulation; to be safe, identical ones are summed
-        for (ItemStack in : inputs) {
-            ItemStack rest = ItemHandlerHelper.insertItem(handler, in.copy(), true);
-            if (!rest.isEmpty()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     protected void saveTag(CompoundTag tag, HolderLookup.Provider registries) {
         tag.put("Patterns", container.createTag(registries));
         tag.put("Returns", returns.createTag(registries));
         net.minecraft.nbt.ListTag fl = new net.minecraft.nbt.ListTag();
         for (int i = 0; i < RETURN_TANKS; i++) {
-            if (!returnFluids[i].isEmpty()) {
-                CompoundTag e = (CompoundTag) com.golemlogix.system.NbtBridge.saveFluid(returnFluids[i], registries);
+            FluidStack f = returnFluid(i);
+            if (!f.isEmpty()) {
+                CompoundTag e = (CompoundTag) NbtBridge.saveFluid(f, registries);
                 e.putByte("Slot", (byte) i);
                 fl.add(e);
             }
@@ -515,13 +394,16 @@ public class PatternProviderBlockEntity extends BlockEntity {
     protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
         container.fromTag(tag.getListOrEmpty("Patterns"), registries);
         returns.fromTag(tag.getListOrEmpty("Returns"), registries);
-        java.util.Arrays.fill(returnFluids, net.neoforged.neoforge.fluids.FluidStack.EMPTY);
+        for (int i = 0; i < RETURN_TANKS; i++) {
+            returnFluids.set(i, FluidResource.EMPTY, 0);
+        }
         net.minecraft.nbt.ListTag fl = tag.getListOrEmpty("ReturnFluids");
         for (int k = 0; k < fl.size(); k++) {
             CompoundTag e = fl.getCompoundOrEmpty(k);
             int i = e.getByteOr("Slot", (byte) 0);
             if (i >= 0 && i < RETURN_TANKS) {
-                returnFluids[i] = com.golemlogix.system.NbtBridge.loadFluid(registries, e).orElse(net.neoforged.neoforge.fluids.FluidStack.EMPTY);
+                FluidStack f = NbtBridge.loadFluid(registries, e).orElse(FluidStack.EMPTY);
+                returnFluids.set(i, FluidResource.of(f), f.getAmount());
             }
         }
         upgrades.fromTag(tag.getListOrEmpty("Upgrades"), registries);

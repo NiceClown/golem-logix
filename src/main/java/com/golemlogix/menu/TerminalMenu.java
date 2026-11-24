@@ -37,9 +37,12 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidUtil;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.fluids.capability.IFluidHandlerItem;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
+import net.neoforged.neoforge.transfer.access.ItemAccess;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.resource.ResourceStack;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
@@ -377,31 +380,22 @@ public class TerminalMenu extends GolemMenu {
 
     // ------------------------------------------------------------------ fluids
 
-    private void giveContainer(ServerPlayer sp, IFluidHandlerItem handler, ItemStack original) {
-        ItemStack result = handler.getContainer();
-        if (original.getCount() <= 1) {
-            setCarried(result);
-        } else {
-            original.shrink(1);
-            setCarried(original);
-            if (!result.isEmpty()) {
-                sp.getInventory().placeItemBackInInventory(result);
-            }
-        }
-    }
-
     private void fluidFillCarried(GolemNetwork net, ServerPlayer sp, FluidStack fluid) {
         ItemStack carried = getCarried();
         // Liquid Cryo-Source is pumped out by automation only, never into buckets or other containers by hand
         if (carried.isEmpty() || fluid.isEmpty() || com.golemlogix.system.CryoSource.is(fluid)) {
             return;
         }
-        ItemStack single = carried.copyWithCount(1);
-        IFluidHandlerItem handler = FluidUtil.getFluidHandler(single).orElse(null);
+        ItemAccess access = ItemAccess.forPlayerCursor(sp, this).oneByOne();
+        ResourceHandler<FluidResource> handler = access.getCapability(Capabilities.Fluid.ITEM);
         if (handler == null) {
             return;
         }
-        int fits = handler.fill(fluid.copyWithAmount(Math.max(1, fluid.getAmount())), IFluidHandler.FluidAction.SIMULATE);
+        FluidResource res = FluidResource.of(fluid);
+        int fits;
+        try (Transaction simTx = Transaction.openRoot()) {
+            fits = handler.insert(res, Math.max(1, fluid.getAmount()), simTx);
+        }
         if (fits <= 0) {
             return;
         }
@@ -409,11 +403,16 @@ public class TerminalMenu extends GolemMenu {
         if (extracted.isEmpty()) {
             return;
         }
-        int filled = handler.fill(extracted, IFluidHandler.FluidAction.EXECUTE);
+        int filled;
+        try (Transaction tx = Transaction.openRoot()) {
+            filled = handler.insert(FluidResource.of(extracted), extracted.getAmount(), tx);
+            if (filled > 0) {
+                tx.commit();
+            }
+        }
         if (filled < extracted.getAmount()) {
             net.insertFluid(extracted.copyWithAmount(extracted.getAmount() - filled), false);
         }
-        giveContainer(sp, handler, carried);
     }
 
     private void fluidDrainCarried(GolemNetwork net, ServerPlayer sp) {
@@ -421,26 +420,30 @@ public class TerminalMenu extends GolemMenu {
         if (carried.isEmpty()) {
             return;
         }
-        ItemStack single = carried.copyWithCount(1);
-        IFluidHandlerItem handler = FluidUtil.getFluidHandler(single).orElse(null);
+        ItemAccess access = ItemAccess.forPlayerCursor(sp, this).oneByOne();
+        ResourceHandler<FluidResource> handler = access.getCapability(Capabilities.Fluid.ITEM);
         if (handler == null) {
             return;
         }
-        FluidStack sim = handler.drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.SIMULATE);
-        if (sim.isEmpty()) {
+        ResourceStack<FluidResource> sim;
+        try (Transaction simTx = Transaction.openRoot()) {
+            sim = ResourceHandlerUtil.extractFirst(handler, r -> !r.isEmpty(), Integer.MAX_VALUE, simTx);
+        }
+        if (sim == null || sim.isEmpty()) {
             return;
         }
-        int accepted = net.insertFluid(sim, true);
+        int accepted = net.insertFluid(sim.resource().toStack(sim.amount()), true);
         if (accepted <= 0) {
             sp.sendOverlayMessage(Component.translatable("message.golem_logix.fluid.no_room"));
             return;
         }
-        FluidStack drained = handler.drain(sim.copyWithAmount(accepted), IFluidHandler.FluidAction.EXECUTE);
-        if (drained.isEmpty()) {
-            return;
+        try (Transaction tx = Transaction.openRoot()) {
+            int got = handler.extract(sim.resource(), accepted, tx);
+            if (got > 0) {
+                tx.commit();
+                net.insertFluid(sim.resource().toStack(got), false);
+            }
         }
-        net.insertFluid(drained, false);
-        giveContainer(sp, handler, carried);
     }
 
     // ------------------------------------------------------------------ crafting grid

@@ -22,8 +22,6 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.fluids.capability.IFluidHandlerItem;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.lwjgl.glfw.GLFW;
 
@@ -739,6 +737,9 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         }
 
         if (button == 0 && menu.getCarried().isEmpty() && overGearMark(mouseX, mouseY)) {
+            // the terminal is closed first (as Escape would): left open behind the book, the server kept the menu and a wireless
+            // terminal's charge running, and the inventory ignored clicks afterwards because the client still had the terminal's menu
+            minecraft.player.closeContainer();
             minecraft.setScreen(com.golemlogix.client.book.BookScreen.openAt("st_gear"));
             return true;
         }
@@ -759,12 +760,12 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         int idx = hoveredIndex(mouseX, mouseY);
         Row row = idx >= 0 ? rows.get(idx) : null;
 
-        IFluidHandlerItem handler = carried.isEmpty() ? null : net.neoforged.neoforge.fluids.FluidUtil.getFluidHandler(carried.copyWithCount(1)).orElse(null);
-        boolean fullContainer = handler != null && !handler.drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.SIMULATE).isEmpty();
+        boolean hasFluidHandler = !carried.isEmpty() && com.golemlogix.system.Transfers.hasFluidHandler(carried);
+        boolean fullContainer = hasFluidHandler && !com.golemlogix.system.Transfers.fluidOf(carried).isEmpty();
 
         if (viewMode == ViewMode.FLUIDS) {
             // in the fluid list any click with a container: a full one empties into the network, an empty one takes the selected fluid
-            if (handler == null) {
+            if (!hasFluidHandler) {
                 return true;
             }
             if (fullContainer) {
@@ -776,7 +777,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         }
 
         if (!carried.isEmpty()) {
-            if (row != null && row.isFluid() && handler != null) {
+            if (row != null && row.isFluid() && hasFluidHandler) {
                 // a click with a container on a fluid row in the combined list
                 if (fullContainer) {
                     send(Action.FLUID_DRAIN_CARRIED, ItemStack.EMPTY, FluidStack.EMPTY);

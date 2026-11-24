@@ -9,7 +9,6 @@ import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 
 /** Automation access to the mod's blocks. Mana Saturator: an item onto the anvil and the finished plates through any part of the machine. */
-@SuppressWarnings("removal")
 @EventBusSubscriber(modid = GolemLogixMod.MOD_ID)
 public final class ModCapabilities {
     private ModCapabilities() {

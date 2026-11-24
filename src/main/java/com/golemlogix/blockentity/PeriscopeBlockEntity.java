@@ -60,7 +60,7 @@ public class PeriscopeBlockEntity extends BlockEntity {
 
     private static net.neoforged.neoforge.fluids.FluidStack fluidOf(net.minecraft.world.item.ItemStack ghost) {
         net.neoforged.neoforge.fluids.FluidStack f = com.golemlogix.items.FluidGhostItem.fluid(ghost);
-        return f.isEmpty() ? net.neoforged.neoforge.fluids.FluidUtil.getFluidContained(ghost).orElse(net.neoforged.neoforge.fluids.FluidStack.EMPTY) : f;
+        return f.isEmpty() ? com.golemlogix.system.Transfers.fluidOf(ghost) : f;
     }
 
     /** The item passes the filter: an allow list lets only what it names through, a deny list everything else; no item in it, all. */

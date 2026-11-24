@@ -7,6 +7,7 @@ import com.golemlogix.init.ModSounds;
 import com.golemlogix.menu.Priority;
 import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.ItemKey;
+import com.golemlogix.system.Transfers;
 import com.golemlogix.upgrade.RedstoneControl;
 import com.golemlogix.upgrade.RedstoneMode;
 import com.golemlogix.upgrade.UpgradeContainer;
@@ -26,12 +27,11 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.DirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidUtil;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -259,8 +259,8 @@ public class BusBlockEntity extends BlockEntity {
         }
         be.caps = com.golemlogix.system.TargetCaps.of(be.caps, (net.minecraft.server.level.ServerLevel) level, target, facing.getOpposite(),
                 () -> !be.isRemoved(), be::wake);
-        IItemHandler items = be.caps.items();
-        IFluidHandler fluids = be.caps.fluids();
+        ResourceHandler<ItemResource> items = be.caps.items();
+        ResourceHandler<FluidResource> fluids = be.caps.fluids();
         if (items == null && fluids == null) {
             return;
         }
@@ -284,7 +284,7 @@ public class BusBlockEntity extends BlockEntity {
         } else {
             be.doImport(level, pos, net, target, items, fluids);
         }
-        com.golemlogix.system.BusLoad.ran(System.nanoTime() - started);
+        com.golemlogix.system.BusLoad.ran(level, System.nanoTime() - started);
         be.lastRun = now;
         if (be.moved == 0) {
             // nothing to do: sleep for the interval doubled with every idle operation
@@ -325,7 +325,8 @@ public class BusBlockEntity extends BlockEntity {
         if (!ghost.isEmpty()) {
             return Optional.of(ghost);
         }
-        return FluidUtil.getFluidContained(filter).filter(f -> !f.isEmpty());
+        FluidStack f = Transfers.fluidOf(filter);
+        return f.isEmpty() ? Optional.empty() : Optional.of(f);
     }
 
     private List<ItemStack> itemFilters() {
@@ -366,22 +367,32 @@ public class BusBlockEntity extends BlockEntity {
 
     // ---------------------------------------------------------------- import
 
-    private void doImport(Level level, BlockPos pos, GolemNetwork net, BlockPos target, IItemHandler items, IFluidHandler fluids) {
+    private void doImport(Level level, BlockPos pos, GolemNetwork net, BlockPos target,
+                          ResourceHandler<ItemResource> items, ResourceHandler<FluidResource> fluids) {
         List<ItemStack> itemFilters = itemFilters();
         List<FluidStack> fluidFilters = fluidFilters();
         boolean noFilters = itemFilters.isEmpty() && fluidFilters.isEmpty();
 
         if (items != null && (denyList || noFilters || !itemFilters.isEmpty())) {
             int budget = opItems;
-            for (int i = 0; i < items.getSlots() && budget > 0; i++) {
-                ItemStack inSlot = items.getStackInSlot(i);
-                if (inSlot.isEmpty() || !passes(inSlot, itemFilters, noFilters, fuzzy(), denyList)) {
+            for (int i = 0; i < items.size() && budget > 0; i++) {
+                ItemResource r = items.getResource(i);
+                int amt = items.getAmountAsInt(i);
+                if (r.isEmpty() || amt <= 0) {
                     continue;
                 }
-                ItemStack sim = items.extractItem(i, Math.min(budget, inSlot.getCount()), true);
-                if (sim.isEmpty()) {
+                ItemStack inSlot = r.toStack(Math.min(budget, amt));
+                if (!passes(inSlot, itemFilters, noFilters, fuzzy(), denyList)) {
                     continue;
                 }
+                int simGot;
+                try (Transaction simTx = Transaction.openRoot()) {
+                    simGot = items.extract(i, r, inSlot.getCount(), simTx);
+                }
+                if (simGot <= 0) {
+                    continue;
+                }
+                ItemStack sim = r.toStack(simGot);
                 // what an autocraft job is waiting for is accepted even when storage is full (otherwise the job would hang);
                 // items are never put back into the same container (if a periscope connects it)
                 int wanted = Math.min(sim.getCount(), net.machineWants(sim));
@@ -390,51 +401,71 @@ public class BusBlockEntity extends BlockEntity {
                 if (accepted <= 0) {
                     continue;
                 }
-                ItemStack real = items.extractItem(i, accepted, false);
-                if (real.isEmpty()) {
+                int got;
+                try (Transaction tx = Transaction.openRoot()) {
+                    got = items.extract(i, r, accepted, tx);
+                    if (got > 0) {
+                        tx.commit();
+                    }
+                }
+                if (got <= 0) {
                     continue;
                 }
+                ItemStack real = r.toStack(got);
                 ItemStack leftover = net.insertFromMachine(real, target);
                 int stored = real.getCount() - leftover.getCount();
                 if (!leftover.isEmpty()) {
-                    ItemStack back = ItemHandlerHelper.insertItemStacked(items, leftover, false);
+                    ItemStack back = Transfers.insertItem(items, leftover, true, false);
                     if (!back.isEmpty()) {
                         Block.popResource(level, pos, back);
                     }
                 }
-                budget -= real.getCount();
+                budget -= got;
                 moved += stored;
             }
         }
 
         if (fluids != null && (denyList || noFilters || !fluidFilters.isEmpty())) {
             int budget = opFluid;
-            for (int i = 0; i < fluids.getTanks() && budget > 0; i++) {
-                FluidStack f = fluids.getFluidInTank(i);
-                if (f.isEmpty()) {
+            for (int i = 0; i < fluids.size() && budget > 0; i++) {
+                FluidResource r = fluids.getResource(i);
+                int amt = fluids.getAmountAsInt(i);
+                if (r.isEmpty() || amt <= 0) {
                     continue;
                 }
+                FluidStack f = r.toStack(Math.min(budget, amt));
                 if (!noFilters && fluidFilters.stream().anyMatch(ff -> FluidStack.isSameFluidSameComponents(ff, f)) == denyList) {
                     continue;
                 }
-                FluidStack sim = fluids.drain(f.copyWithAmount(Math.min(budget, f.getAmount())), IFluidHandler.FluidAction.SIMULATE);
-                if (sim.isEmpty()) {
+                int simGot;
+                try (Transaction simTx = Transaction.openRoot()) {
+                    simGot = fluids.extract(i, r, f.getAmount(), simTx);
+                }
+                if (simGot <= 0) {
                     continue;
                 }
+                FluidStack sim = r.toStack(simGot);
                 int wanted = Math.min(sim.getAmount(), net.machineWantsFluid(sim));
                 int accepted = wanted + net.insertFluid(sim.copyWithAmount(sim.getAmount() - wanted), true, target);
                 if (accepted <= 0) {
                     continue;
                 }
-                FluidStack real = fluids.drain(sim.copyWithAmount(accepted), IFluidHandler.FluidAction.EXECUTE);
-                if (real.isEmpty()) {
+                int got;
+                try (Transaction tx = Transaction.openRoot()) {
+                    got = fluids.extract(i, r, accepted, tx);
+                    if (got > 0) {
+                        tx.commit();
+                    }
+                }
+                if (got <= 0) {
                     continue;
                 }
+                FluidStack real = r.toStack(got);
                 int stored = net.insertFluidFromMachine(real, target);
-                if (stored < real.getAmount()) {
-                    fluids.fill(real.copyWithAmount(real.getAmount() - stored), IFluidHandler.FluidAction.EXECUTE);
+                if (stored < got) {
+                    Transfers.insertFluid(fluids, r.toStack(got - stored), false);
                 }
-                budget -= real.getAmount();
+                budget -= got;
                 moved += stored;
                 fluidMoved += stored;
             }
@@ -461,7 +492,8 @@ public class BusBlockEntity extends BlockEntity {
 
     // ---------------------------------------------------------------- export
 
-    private void doExport(Level level, GolemNetwork net, BlockPos target, IItemHandler items, IFluidHandler fluids) {
+    private void doExport(Level level, GolemNetwork net, BlockPos target,
+                          ResourceHandler<ItemResource> items, ResourceHandler<FluidResource> fluids) {
         int itemBudget = opItems;
         int fluidBudget = opFluid;
         Map<ItemKey, Long> toCraft = new LinkedHashMap<>();
@@ -484,10 +516,11 @@ public class BusBlockEntity extends BlockEntity {
                 int cap = itemBudget;
                 if (keep > 0) {
                     int have = 0;
-                    for (int s = 0; s < items.getSlots(); s++) {
-                        ItemStack in = items.getStackInSlot(s);
-                        if (com.golemlogix.system.Fuzzy.matches(filter, in, fuzzy)) {
-                            have += in.getCount();
+                    for (int s = 0; s < items.size(); s++) {
+                        ItemResource r = items.getResource(s);
+                        int amt = items.getAmountAsInt(s);
+                        if (!r.isEmpty() && amt > 0 && com.golemlogix.system.Fuzzy.matches(filter, r.toStack(1), fuzzy)) {
+                            have += amt;
                         }
                     }
                     cap = Math.min(cap, keep - have);
@@ -517,7 +550,7 @@ public class BusBlockEntity extends BlockEntity {
                         }
                         nothingInNetwork = false;
                         // top up stacks already started first (like a hopper), then empty slots
-                        ItemStack restSim = ItemHandlerHelper.insertItemStacked(items, sim, true);
+                        ItemStack restSim = Transfers.insertItem(items, sim, true, true);
                         int accepted = sim.getCount() - restSim.getCount();
                         if (accepted <= 0) {
                             stop = true;
@@ -527,7 +560,7 @@ public class BusBlockEntity extends BlockEntity {
                         if (real.isEmpty()) {
                             break;
                         }
-                        ItemStack rest = ItemHandlerHelper.insertItemStacked(items, real, false);
+                        ItemStack rest = Transfers.insertItem(items, real, true, false);
                         if (!rest.isEmpty()) {
                             net.insertItem(rest, false, target);
                         }
@@ -551,7 +584,7 @@ public class BusBlockEntity extends BlockEntity {
                 if (nothingInNetwork && upgrades.has(UpgradeType.CRAFTING)) {
                     ItemKey key = ItemKey.of(want);
                     // order only if the container accepts this item at all
-                    if (ItemHandlerHelper.insertItemStacked(items, want, true).isEmpty() && net.canCraft(key)
+                    if (Transfers.insertItem(items, want, true, true).isEmpty() && net.canCraft(key)
                             && !net.busCraftPending(worldPosition, key)) {
                         toCraft.put(key, (long) Math.min(perStack, Math.min(itemsPerOperation(), cap)));
                     }
@@ -573,10 +606,11 @@ public class BusBlockEntity extends BlockEntity {
                 int keep = com.golemlogix.menu.BusMenu.keep(ghost);
                 if (keep > 0) {
                     int have = 0;
-                    for (int t = 0; t < fluids.getTanks(); t++) {
-                        FluidStack in = fluids.getFluidInTank(t);
-                        if (FluidStack.isSameFluidSameComponents(in, filter)) {
-                            have += in.getAmount();
+                    for (int t = 0; t < fluids.size(); t++) {
+                        FluidResource r = fluids.getResource(t);
+                        int amt = fluids.getAmountAsInt(t);
+                        if (!r.isEmpty() && amt > 0 && r.matches(filter)) {
+                            have += amt;
                         }
                     }
                     cap = Math.min(cap, keep - have);
@@ -588,7 +622,7 @@ public class BusBlockEntity extends BlockEntity {
                 if (sim.isEmpty()) {
                     continue;
                 }
-                int accepted = fluids.fill(sim, IFluidHandler.FluidAction.SIMULATE);
+                int accepted = Transfers.insertFluid(fluids, sim, true);
                 if (accepted <= 0) {
                     continue;
                 }
@@ -596,7 +630,7 @@ public class BusBlockEntity extends BlockEntity {
                 if (real.isEmpty()) {
                     continue;
                 }
-                int filled = fluids.fill(real, IFluidHandler.FluidAction.EXECUTE);
+                int filled = Transfers.insertFluid(fluids, real, false);
                 if (filled < real.getAmount()) {
                     net.insertFluid(real.copyWithAmount(real.getAmount() - filled), false, target);
                 }

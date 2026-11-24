@@ -33,6 +33,8 @@ public class DiskStore extends SavedData {
         public final List<FluidStack> fluids = new ArrayList<>();
         public long storedItems;
         public long storedFluids;
+        /** Distinct equipment pieces on this disk: lets small disks check for equipment in O(1). */
+        public int gearItems;
 
         public boolean isEmpty() {
             return items.isEmpty() && fluids.isEmpty();
@@ -88,6 +90,24 @@ public class DiskStore extends SavedData {
         disks.remove(id);
     }
 
+    /** Recomputes used space and equipment counts after a /reload, in case the golem_logix:not_gear tag changed. */
+    public void recount() {
+        for (Disk disk : disks.values()) {
+            long sum = 0;
+            int gear = 0;
+            for (Map.Entry<ItemKey, Integer> e : disk.items.entrySet()) {
+                int c = e.getValue();
+                int cost = Gear.cost(e.getKey().stack());
+                sum += (long) c * cost;
+                if (cost > 1) {
+                    gear += c;
+                }
+            }
+            disk.storedItems = sum;
+            disk.gearItems = gear;
+        }
+    }
+
     // ------------------------------------------------------------------ NBT
 
     public static DiskStore load(CompoundTag tag, HolderLookup.Provider provider) {
@@ -108,7 +128,11 @@ public class DiskStore extends SavedData {
                 int count = it.getIntOr("Count", 0);
                 if (!stack.isEmpty() && count > 0) {
                     disk.items.put(ItemKey.of(stack), count);
-                    disk.storedItems += (long) count * Gear.cost(stack);
+                    int cost = Gear.cost(stack);
+                    disk.storedItems += (long) count * cost;
+                    if (cost > 1) {
+                        disk.gearItems += count;
+                    }
                 }
             }
             ListTag fluids = t.getListOrEmpty("Fluids");

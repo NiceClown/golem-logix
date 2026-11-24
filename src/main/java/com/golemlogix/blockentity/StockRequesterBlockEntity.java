@@ -71,7 +71,16 @@ public class StockRequesterBlockEntity extends BlockEntity {
         GolemNetwork net = GolemNetwork.get(level, pos);
         boolean active = net.isOnline() && net.isDeviceActive(pos);
         if (!active) {
-            for (int i = 0; i < FILTER_SLOTS; i++) be.status[i] = STATUS_OK;
+            // the clerk is drawn from the client's copy: without an update the poppy stayed red after the network went down
+            boolean reset = false;
+            for (int i = 0; i < FILTER_SLOTS; i++) {
+                reset |= be.status[i] != STATUS_OK;
+                be.status[i] = STATUS_OK;
+            }
+            if (reset) {
+                be.setChanged();
+                level.sendBlockUpdated(pos, state, state, 3);
+            }
             return;
         }
 

@@ -63,10 +63,10 @@ public class InterfaceBlock extends Block implements com.golemlogix.blocks.Remov
     protected InteractionResult useItemOn(net.minecraft.world.item.ItemStack stack, BlockState state, Level level,
                                                                    BlockPos pos, Player player, net.minecraft.world.InteractionHand hand,
                                                                    BlockHitResult hit) {
-        if (net.neoforged.neoforge.fluids.FluidUtil.getFluidContained(stack).isPresent()
+        if (!com.golemlogix.system.Transfers.fluidOf(stack).isEmpty()
                 && level.getBlockEntity(pos) instanceof InterfaceBlockEntity be) {
             if (!level.isClientSide()) {
-                net.neoforged.neoforge.fluids.FluidUtil.interactWithFluidHandler(player, hand, be.fluids());
+                net.neoforged.neoforge.transfer.fluid.FluidUtil.interactWithFluidHandler(player, hand, pos, be.fluidResources(), null);
             }
             return net.minecraft.world.InteractionResult.SUCCESS;
         }

@@ -23,6 +23,11 @@ public class GolemLogixClientEvents {
         }
     }
 
+    @SubscribeEvent
+    public static void onClientLogout(net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent.LoggingOut event) {
+        com.golemlogix.system.StaleLight.forgetClient();
+    }
+
 
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {

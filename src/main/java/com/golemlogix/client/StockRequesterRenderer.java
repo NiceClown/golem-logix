@@ -49,7 +49,7 @@ public class StockRequesterRenderer extends com.golemlogix.client.render.LegacyB
             missing |= st == StockRequesterBlockEntity.STATUS_MISSING_INGREDIENTS;
             noPattern |= st == StockRequesterBlockEntity.STATUS_NO_PATTERN;
         }
-        float time = be.getLevel().getGameTime() + partialTick;
+        float time = (be.getLevel().getGameTime() % 72000L) + partialTick;
         float seed = (be.getBlockPos().hashCode() & 255) * 0.37f;
         int every = writing ? PAGE_EVERY / 2 : PAGE_EVERY;
         float inTurn = (time + seed * 7) % every;
