@@ -2,24 +2,27 @@
   "parent": "minecraft:block/block",
   "ambientocclusion": false,
   "textures": {
-    "particle": "golem_logix:block/bus_plate",
+    "particle": "golem_logix:block/bus_iron",
     "plate": "golem_logix:block/bus_plate",
+    "iron": "golem_logix:block/bus_iron",
+    "copper": "golem_logix:block/bus_copper",
+    "bronze": "golem_logix:block/bus_bronze",
     "socket": "golem_logix:block/bus_socket",
     "su": "golem_logix:block/pipe_glass_u",
     "sv": "golem_logix:block/pipe_glass_v",
     "sd": "golem_logix:block/pipe_glass_d",
-    "band": "golem_logix:block/pipe_band"
+    "band": "golem_logix:block/bus_iron"
   },
   "elements": [
     {
       "from": [6.4, 8.8, 3.5999999999999996],
       "to": [9.6, 12, 4.8],
       "faces": {
-        "east": {"texture": "#plate"},
-        "west": {"texture": "#plate"},
-        "up": {"texture": "#plate"},
-        "down": {"texture": "#plate"},
-        "south": {"texture": "#plate"},
+        "east": {"texture": "#iron"},
+        "west": {"texture": "#iron"},
+        "up": {"texture": "#iron"},
+        "down": {"texture": "#iron"},
+        "south": {"texture": "#iron"},
         "north": {"uv": [0, 0, 16, 16], "texture": "#socket"}
       }
     }

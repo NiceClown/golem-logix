@@ -27,6 +27,7 @@ public final class StandaloneModels {
     private static final Map<Identifier, StandaloneModelKey<QuadCollection>> KEYS = new LinkedHashMap<>();
 
     public static final Identifier FIN = add("block/cooling_coprocessor_fin");
+    public static final Identifier DIODE_WHEEL = add("block/cryo_diode_wheel");
     public static final Identifier TURBINE = add("block/golem_interface_turbine");
     public static final Identifier PENDULUM = add("block/golem_interface_pendulum");
     public static final Identifier ATLANT_HEAD = add("block/atlas_atlant_head");

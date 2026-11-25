@@ -18,6 +18,7 @@
     "nglass": "golem_logix:block/nixie_glass",
     "wheel": "golem_logix:block/pipe_wheel",
     "flange": "golem_logix:block/pipe_flange",
+    "cap_iron": "golem_logix:block/pipe_cap_iron",
     "hub": "golem_logix:block/pipe_dense_hub",
     "plug": "golem_logix:block/pipe_plug",
     "dock": "golem_logix:block/pipe_dock",
@@ -33,44 +34,44 @@
       "from": [0.19999999999999996, 3.8, 0],
       "to": [15.8, 12.200000000000001, 1.1],
       "faces": {
-        "east": {"uv": [0, 0, 16, 16], "texture": "#flange"},
-        "west": {"uv": [0, 0, 16, 16], "texture": "#flange"}
+        "east": {"uv": [0, 0, 16, 16], "texture": "#cap_iron"},
+        "west": {"uv": [0, 0, 16, 16], "texture": "#cap_iron"}
       }
     },
     {
       "from": [3.8, 0.19999999999999996, 0],
       "to": [12.200000000000001, 15.8, 1.1],
       "faces": {
-        "up": {"uv": [0, 0, 16, 16], "texture": "#flange"},
-        "down": {"uv": [0, 0, 16, 16], "texture": "#flange"}
+        "up": {"uv": [0, 0, 16, 16], "texture": "#cap_iron"},
+        "down": {"uv": [0, 0, 16, 16], "texture": "#cap_iron"}
       }
     },
     {
       "from": [0.19999999999999996, 3.8, -0.02],
       "to": [15.8, 12.200000000000001, 0],
       "faces": {
-        "north": {"uv": [0, 3.692307692307692, 16, 12.307692307692308], "texture": "#flange"}
+        "north": {"uv": [0, 3.692307692307692, 16, 12.307692307692308], "texture": "#cap_iron"}
       }
     },
     {
       "from": [3.8, 0.19999999999999996, -0.01],
       "to": [12.200000000000001, 15.8, 0],
       "faces": {
-        "north": {"uv": [3.692307692307692, 0, 12.307692307692308, 16], "texture": "#flange"}
+        "north": {"uv": [3.692307692307692, 0, 12.307692307692308, 16], "texture": "#cap_iron"}
       }
     },
     {
       "from": [0.19999999999999996, 3.8, 1.1],
       "to": [15.8, 12.200000000000001, 1.12],
       "faces": {
-        "south": {"uv": [0, 3.692307692307692, 16, 12.307692307692308], "texture": "#flange"}
+        "south": {"uv": [0, 3.692307692307692, 16, 12.307692307692308], "texture": "#cap_iron"}
       }
     },
     {
       "from": [3.8, 0.19999999999999996, 1.1],
       "to": [12.200000000000001, 15.8, 1.11],
       "faces": {
-        "south": {"uv": [3.692307692307692, 0, 12.307692307692308, 16], "texture": "#flange"}
+        "south": {"uv": [3.692307692307692, 0, 12.307692307692308, 16], "texture": "#cap_iron"}
       }
     },
     {
@@ -78,10 +79,10 @@
       "to": [15.645584412271571, 14.372792206135784, 1.08],
       "rotation": {"origin": [13.1, 13.1, 0.55], "axis": "z", "angle": -45},
       "faces": {
-        "up": {"texture": "#flange"},
-        "down": {"texture": "#flange"},
-        "north": {"texture": "#flange"},
-        "south": {"texture": "#flange"}
+        "up": {"texture": "#cap_iron"},
+        "down": {"texture": "#cap_iron"},
+        "north": {"texture": "#cap_iron"},
+        "south": {"texture": "#cap_iron"}
       }
     },
     {
@@ -89,10 +90,10 @@
       "to": [5.445584412271572, 14.372792206135784, 1.08],
       "rotation": {"origin": [2.9, 13.1, 0.55], "axis": "z", "angle": 45},
       "faces": {
-        "up": {"texture": "#flange"},
-        "down": {"texture": "#flange"},
-        "north": {"texture": "#flange"},
-        "south": {"texture": "#flange"}
+        "up": {"texture": "#cap_iron"},
+        "down": {"texture": "#cap_iron"},
+        "north": {"texture": "#cap_iron"},
+        "south": {"texture": "#cap_iron"}
       }
     },
     {
@@ -100,10 +101,10 @@
       "to": [15.645584412271571, 4.172792206135785, 1.08],
       "rotation": {"origin": [13.1, 2.9, 0.55], "axis": "z", "angle": 45},
       "faces": {
-        "up": {"texture": "#flange"},
-        "down": {"texture": "#flange"},
-        "north": {"texture": "#flange"},
-        "south": {"texture": "#flange"}
+        "up": {"texture": "#cap_iron"},
+        "down": {"texture": "#cap_iron"},
+        "north": {"texture": "#cap_iron"},
+        "south": {"texture": "#cap_iron"}
       }
     },
     {
@@ -111,10 +112,10 @@
       "to": [5.445584412271572, 4.172792206135785, 1.08],
       "rotation": {"origin": [2.9, 2.9, 0.55], "axis": "z", "angle": -45},
       "faces": {
-        "up": {"texture": "#flange"},
-        "down": {"texture": "#flange"},
-        "north": {"texture": "#flange"},
-        "south": {"texture": "#flange"}
+        "up": {"texture": "#cap_iron"},
+        "down": {"texture": "#cap_iron"},
+        "north": {"texture": "#cap_iron"},
+        "south": {"texture": "#cap_iron"}
       }
     },
     {

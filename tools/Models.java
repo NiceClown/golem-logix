@@ -308,14 +308,16 @@ public class Models {
      * clear of its raised hands). Baked with the casing, the dress costs no renderer and never fights its neighbours' faces.
      */
     static void casingParts() throws Exception {
+        String[][] colTex = {{"side", "atlas_casing"}, {"top", "atlas_casing_top"}, {"ice", "atlas_ice_column"}, {"cap", "brass_plate"}};
         String[][] tex = {{"side", "atlas_casing"}, {"top", "atlas_casing_top"}, {"ice", "atlas_ice_column"}, {"cap", "brass_plate"},
-                {"brass", "brass_plate"}, {"wood", "minecraft:block/spruce_planks"}, {"icicle", "minecraft:block/packed_ice"}};
+                {"brass", "brass_plate"}, {"wood", "minecraft:block/spruce_planks"}, {"icicle", "minecraft:block/packed_ice"},
+                {"rim_cu", "atlas_rim_copper"}, {"rim_fe", "atlas_rim_iron"}, {"rim_br", "atlas_rim_wheel"}};
         java.util.function.Supplier<El> plate = () -> e(0, 0, 0, 16, 16, 16).only("#side", "north", "south", "east", "west", "down")
                 .face("up", "#top").cull();
-        model("atlas_casing_column_low", false, "atlas_casing", tex, plate.get(),
+        model("atlas_casing_column_low", false, "atlas_casing", colTex, plate.get(),
                 e(3, 0, -3, 13, 2, 0).only("#cap", "north", "east", "west", "up", "down"),
                 e(4.5, 2, -2.25, 11.5, 16, 0).only("#ice", "north", "east", "west").glow(15));
-        model("atlas_casing_column_high", false, "atlas_casing", tex, plate.get(),
+        model("atlas_casing_column_high", false, "atlas_casing", colTex, plate.get(),
                 e(4.5, 0, -2.25, 11.5, 14, 0).only("#ice", "north", "east", "west").glow(15),
                 e(3, 14, -3, 13, 16, 0).only("#cap", "north", "east", "west", "up", "down"));
         // the rail along the north edge, from x0 to x1 (posts at the given x), standing on the crown
@@ -330,6 +332,7 @@ public class Models {
         };
         List<El> edge = new ArrayList<>(List.of(plate.get()));
         edge.addAll(railNorth.apply(new double[]{0, 16}, new double[]{1, 7, 13}));
+        addValveParapet(edge, true);
         model("atlas_casing_top_edge", false, "atlas_casing", tex, edge.toArray(new El[0]));
         List<El> corner = new ArrayList<>(List.of(plate.get()));
         corner.addAll(railNorth.apply(new double[]{0, 16}, new double[]{1, 7, 13}));
@@ -338,6 +341,12 @@ public class Models {
         corner.add(e(0.25, 16, 13, 2.25, 21, 15).only("#brass", "north", "south", "east", "west"));
         corner.add(e(0.75, 18, 1.75, 1.75, 19, 16).only("#brass", "east", "west", "up", "down", "south"));
         corner.add(e(0, 21, 2.5, 2.5, 22.5, 16).only("#wood", "east", "west", "up", "down", "south"));
+        // 3D riveted copper parapet, bolted cast-iron valve housing well, and antique-brass handwheel on both outer faces + NW corner join cap
+        addValveParapet(corner, true);
+        addValveParapet(corner, false);
+        corner.add(e(-0.9, 13.5, -0.9, 0.0, 16.0, 0.0).only("#rim_cu", "north", "west", "up", "down"));
+        corner.add(e(-0.7, 0.0, -0.7, 0.0, 1.5, 0.0).only("#rim_cu", "north", "west", "down"));
+        corner.add(e(-0.7, 1.5, -0.7, 0.0, 13.5, 0.0).only("#rim_cu", "north", "west"));
         // icicles under both outer edges, outside the Atlant's hands (4.5..11.5 on either axis)
         double[][] icicles = {{1, 0, 3, 2, 4, 6}, {12.5, 0, 14, 1.5, 3, 4.5}, {0, 3, 1.5, 4.5, 2.5, 4}, {0, 12, 1.5, 13.5, 3.5, 5}};
         for (double[] i : icicles) {
@@ -360,6 +369,206 @@ public class Models {
         write(RES.resolve("blockstates/atlas_casing.json"), sb.append(String.join(",\n", lines)).append("\n  }\n}\n").toString());
     }
 
+    /**
+     * Adds the 3D upper parapet relief on either the north outer face (north=true, protruding z <= 0) or west outer face
+     * (north=false, protruding x <= 0): frost-lined copper cornice with icicles, base sill, flanking pilasters, bolted
+     * cast-iron valve well, and protruding 3D antique-brass spoked handwheel. All inner faces touching plate (z=0/x=0) are omitted.
+     */
+    private static void addValveParapet(List<El> l, boolean north) {
+        class P {
+            El box(double u0, double y0, double d0, double u1, double y1, double d1, String tex, String... dirs) {
+                El el = north ? e(u0, y0, -d1, u1, y1, -d0) : e(-d1, y0, u0, -d0, y1, u1);
+                for (String dir : dirs) {
+                    String mapped = north ? dir : switch (dir) {
+                        case "north" -> "west";
+                        case "south" -> "east";
+                        case "west" -> "north";
+                        case "east" -> "south";
+                        default -> dir;
+                    };
+                    el.only(tex, mapped);
+                }
+                return el;
+            }
+        }
+        P p = new P();
+        // Upper frost-lined copper cornice + 2 small frost icicles tucked under it
+        l.add(p.box(0.0, 13.5, 0.0, 16.0, 16.0, 0.9, "#rim_cu", "north", "up", "down", "east", "west"));
+        l.add(p.box(2.75, 12.0, 0.4, 3.5, 13.5, 0.85, "#icicle", "north", "south", "east", "west", "down"));
+        l.add(p.box(12.5, 12.25, 0.4, 13.25, 13.5, 0.85, "#icicle", "north", "south", "east", "west", "down"));
+        // Lower copper sill & flanking vertical riveted pilasters (disjoint in Y from cornice & sill)
+        l.add(p.box(0.0, 0.0, 0.0, 16.0, 1.5, 0.7, "#rim_cu", "north", "up", "down", "east", "west"));
+        l.add(p.box(0.0, 1.5, 0.0, 1.75, 13.5, 0.7, "#rim_cu", "north", "east", "west"));
+        l.add(p.box(14.25, 1.5, 0.0, 16.0, 13.5, 0.7, "#rim_cu", "north", "east", "west"));
+
+        // Sculpted chamfered cast-iron circular/octagonal valve housing well (u 3.5..12.5, y 2.75..11.25, center 8,7)
+        l.add(p.box(4.5, 3.5, 0.0, 11.5, 10.5, 0.35, "#rim_fe", "north"));
+        l.add(p.box(5.0, 10.25, 0.0, 11.0, 11.25, 0.85, "#rim_fe", "north", "up", "down", "east", "west"));
+        l.add(p.box(5.0, 2.75, 0.0, 11.0, 3.75, 0.85, "#rim_fe", "north", "up", "down", "east", "west"));
+        l.add(p.box(3.5, 4.25, 0.0, 4.5, 9.75, 0.85, "#rim_fe", "north", "up", "down", "east", "west"));
+        l.add(p.box(11.5, 4.25, 0.0, 12.5, 9.75, 0.85, "#rim_fe", "north", "up", "down", "east", "west"));
+        // 4 stepped octagonal iron corner chamfers + tiny bolt studs (inset depth so zero coplanar faces)
+        for (double[] c : new double[][]{{4.0, 9.75}, {11.0, 9.75}, {4.0, 3.25}, {11.0, 3.25}}) {
+            l.add(p.box(c[0], c[1], 0.0, c[0] + 1.0, c[1] + 1.0, 0.78, "#rim_fe", "north", "up", "down", "east", "west"));
+            l.add(p.box(c[0] + 0.15, c[1] + 0.15, 0.78, c[0] + 0.85, c[1] + 0.85, 0.96, "#rim_fe", "north", "up", "down", "east", "west"));
+        }
+
+        // Protruding 3D antique-bronze spoked handwheel (compact circular silhouette centered at 8,7, depth 0.95..1.7)
+        l.add(p.box(6.0, 9.3, 0.95, 10.0, 10.1, 1.7, "#rim_br", "north", "south", "up", "down", "east", "west"));
+        l.add(p.box(6.0, 3.9, 0.95, 10.0, 4.7, 1.7, "#rim_br", "north", "south", "up", "down", "east", "west"));
+        l.add(p.box(4.9, 5.0, 0.95, 5.7, 9.0, 1.7, "#rim_br", "north", "south", "up", "down", "east", "west"));
+        l.add(p.box(10.3, 5.0, 0.95, 11.1, 9.0, 1.7, "#rim_br", "north", "south", "up", "down", "east", "west"));
+        // 4 octagonal wheel rim corner links (inset depth 1.0..1.65)
+        for (double[] cr : new double[][]{{5.25, 8.75}, {9.85, 8.75}, {5.25, 4.35}, {9.85, 4.35}}) {
+            l.add(p.box(cr[0], cr[1], 1.0, cr[0] + 0.9, cr[1] + 0.9, 1.65, "#rim_br", "north", "south", "up", "down", "east", "west"));
+        }
+        // 4 spokes cleanly meeting central hub (7.1..8.9, 6.1..7.9)
+        l.add(p.box(5.7, 6.65, 1.1, 7.1, 7.35, 1.55, "#rim_br", "north", "south", "up", "down"));
+        l.add(p.box(8.9, 6.65, 1.1, 10.3, 7.35, 1.55, "#rim_br", "north", "south", "up", "down"));
+        l.add(p.box(7.65, 4.7, 1.1, 8.35, 6.1, 1.55, "#rim_br", "north", "south", "east", "west"));
+        l.add(p.box(7.65, 7.9, 1.1, 8.35, 9.3, 1.55, "#rim_br", "north", "south", "east", "west"));
+        // Central antique-brass hub & protruding cast-iron spindle nut
+        l.add(p.box(7.1, 6.1, 0.35, 8.9, 7.9, 1.75, "#rim_br", "north", "up", "down", "east", "west"));
+        l.add(p.box(7.45, 6.45, 1.75, 8.55, 7.55, 2.0, "#rim_fe", "north", "up", "down", "east", "west"));
+    }
+
+    /** 3D Cable Bushing: recessed copper chassis, bolted SLATE_IRON corner frame, and 6 flush antique-brass pipe socket collars. */
+    private static void cableBushingModel() throws Exception {
+        String[][] t = {
+                {"copper", "atlas_rim_copper"}, {"iron", "atlas_rim_iron"},
+                {"brass", "atlas_rim_wheel"}, {"core", "bushing_core"}
+        };
+        List<El> l = new ArrayList<>();
+        // Recessed weathered copper body
+        l.add(e(0.75, 0.75, 0.75, 15.25, 15.25, 15.25).all("#copper"));
+        // 8 bolted SLATE_IRON corner blocks (0.2..2.2 & 13.8..15.8)
+        for (double cx : new double[]{0.2, 13.8}) {
+            for (double cy : new double[]{0.2, 13.8}) {
+                for (double cz : new double[]{0.2, 13.8}) {
+                    l.add(e(cx, cy, cz, cx + 2.0, cy + 2.0, cz + 2.0).all("#iron"));
+                }
+            }
+        }
+        // 12 SLATE_IRON perimeter bars inset slightly (0.3..1.75 & 14.25..15.7) so zero coplanar faces with corners
+        for (double a : new double[]{0.3, 14.25}) {
+            for (double b : new double[]{0.3, 14.25}) {
+                l.add(e(2.2, a, b, 13.8, a + 1.45, b + 1.45).only("#iron", "north", "south", "up", "down"));
+                l.add(e(a, 2.2, b, a + 1.45, 13.8, b + 1.45).only("#iron", "north", "south", "east", "west"));
+                l.add(e(a, b, 2.2, a + 1.45, b + 1.45, 13.8).only("#iron", "east", "west", "up", "down"));
+            }
+        }
+        // 6 symmetrical protruding antique-brass pipe socket flanges (flush 0.0 / 16.0) + glowing socket bore (#core)
+        for (String dir : new String[]{"north", "south", "west", "east", "down", "up"}) {
+            boolean min = dir.equals("north") || dir.equals("west") || dir.equals("down");
+            double d0 = min ? 0.0 : 15.15, d1 = min ? 0.85 : 16.0;
+            double cd0 = min ? 0.45 : 15.2, cd1 = min ? 0.8 : 15.55;
+            if (dir.equals("north") || dir.equals("south")) {
+                l.add(e(4.25, 10.25, d0, 11.75, 11.75, d1).only("#brass", dir, "east", "west", "up", "down"));
+                l.add(e(4.25, 4.25, d0, 11.75, 5.75, d1).only("#brass", dir, "east", "west", "up", "down"));
+                l.add(e(4.25, 5.75, d0, 5.75, 10.25, d1).only("#brass", dir, "east", "west"));
+                l.add(e(10.25, 5.75, d0, 11.75, 10.25, d1).only("#brass", dir, "east", "west"));
+                l.add(e(5.75, 5.75, cd0, 10.25, 10.25, cd1).face(dir, "#core", 0, 0, 16, 16).glow(13));
+            } else if (dir.equals("west") || dir.equals("east")) {
+                l.add(e(d0, 10.25, 4.25, d1, 11.75, 11.75).only("#brass", dir, "north", "south", "up", "down"));
+                l.add(e(d0, 4.25, 4.25, d1, 5.75, 11.75).only("#brass", dir, "north", "south", "up", "down"));
+                l.add(e(d0, 5.75, 4.25, d1, 10.25, 5.75).only("#brass", dir, "north", "south"));
+                l.add(e(d0, 5.75, 10.25, d1, 10.25, 11.75).only("#brass", dir, "north", "south"));
+                l.add(e(cd0, 5.75, 5.75, cd1, 10.25, 10.25).face(dir, "#core", 0, 0, 16, 16).glow(13));
+            } else {
+                l.add(e(4.25, d0, 10.25, 11.75, d1, 11.75).only("#brass", dir, "north", "south", "east", "west"));
+                l.add(e(4.25, d0, 4.25, 11.75, d1, 5.75).only("#brass", dir, "north", "south", "east", "west"));
+                l.add(e(4.25, d0, 5.75, 5.75, d1, 10.25).only("#brass", dir, "east", "west"));
+                l.add(e(10.25, d0, 5.75, 11.75, d1, 10.25).only("#brass", dir, "east", "west"));
+                l.add(e(5.75, cd0, 5.75, 10.25, cd1, 10.25).face(dir, "#core", 0, 0, 16, 16).glow(13));
+            }
+        }
+        model("cable_bushing", false, "atlas_rim_copper", t, l.toArray(new El[0]));
+    }
+
+    /** 3D Atlas Conduit capsule: glowing faceted ice core inside bolted copper stanchions, slate clamp boots & brass hoops. */
+    private static void atlasConduitModel() throws Exception {
+        String[][] t = {
+                {"copper", "atlas_rim_copper"}, {"iron", "atlas_rim_iron"},
+                {"brass", "atlas_rim_wheel"}, {"ice", "conduit_ice"}
+        };
+        List<El> l = new ArrayList<>();
+        // Central seamless vertical ice pillar (y=0..16)
+        l.add(e(3.75, 0.0, 3.75, 12.25, 16.0, 12.25).all("#ice").glow(12));
+        // Inner SLATE_IRON top & bottom sealing collars (staggered slightly inside y=0/16 so zero coplanar faces with ice up/down)
+        l.add(e(3.25, 0.15, 3.25, 12.75, 1.4, 12.75).only("#iron", "north", "south", "east", "west", "up", "down"));
+        l.add(e(3.25, 14.6, 3.25, 12.75, 15.85, 12.75).only("#iron", "north", "south", "east", "west", "up", "down"));
+        // 4 corner vertical stacks: bolted SLATE_IRON clamp boots + copper shaft spans between clamps (zero Y overlap)
+        for (double cx : new double[]{0.0, 13.0}) {
+            for (double cz : new double[]{0.0, 13.0}) {
+                for (double cy : new double[]{0.0, 7.0, 14.0}) {
+                    l.add(e(cx, cy, cz, cx + 3.0, cy + 2.0, cz + 3.0).all("#iron"));
+                }
+                double sx = cx == 0.0 ? 0.35 : 13.15;
+                double sz = cz == 0.0 ? 0.35 : 13.15;
+                l.add(e(sx, 2.0, sz, sx + 2.5, 7.0, sz + 2.5).only("#copper", "north", "south", "east", "west"));
+                l.add(e(sx, 9.0, sz, sx + 2.5, 14.0, sz + 2.5).only("#copper", "north", "south", "east", "west"));
+            }
+        }
+        // 3 horizontal warm antique-brass clamp hoops spanning strictly between corner clamps (x/z 3.0..13.0)
+        for (double hy : new double[]{0.25, 7.25, 14.25}) {
+            l.add(e(3.0, hy, 0.65, 13.0, hy + 1.5, 2.65).only("#brass", "north", "south", "up", "down"));
+            l.add(e(3.0, hy, 13.35, 13.0, hy + 1.5, 15.35).only("#brass", "north", "south", "up", "down"));
+            l.add(e(0.65, hy, 3.0, 2.65, hy + 1.5, 13.0).only("#brass", "east", "west", "up", "down"));
+            l.add(e(13.35, hy, 3.0, 15.35, hy + 1.5, 13.0).only("#brass", "east", "west", "up", "down"));
+        }
+        model("atlas_conduit", false, "atlas_rim_copper", t, l.toArray(new El[0]));
+    }
+
+    /** 3D Atlas Core: sculpted runic crucible + openwork lantern cage raising the cyan beacon visibly above the 22.5px rail. */
+    private static void atlasCoreModel() throws Exception {
+        String[][] t = {
+                {"casing", "atlas_casing"}, {"rune", "atlas_core"}, {"copper", "atlas_rim_copper"},
+                {"iron", "atlas_rim_iron"}, {"brass", "atlas_rim_wheel"}, {"crystal", "core_crystal"}
+        };
+        List<El> l = new ArrayList<>();
+        // Anchoring plate & recessed glowing runic crucible core
+        l.add(e(0.0, 0.0, 0.0, 16.0, 3.0, 16.0).all("#casing"));
+        l.add(e(2.0, 3.0, 2.0, 14.0, 10.0, 14.0).only("#rune", "north", "south", "east", "west", "up").glow(10));
+        // 4 corner copper buttresses + SLATE_IRON crucible capitals
+        for (double cx : new double[]{0.5, 12.75}) {
+            for (double cz : new double[]{0.5, 12.75}) {
+                l.add(e(cx, 3.0, cz, cx + 2.75, 10.25, cz + 2.75).only("#copper", "north", "south", "east", "west"));
+                double kx = cx == 0.5 ? 0.4 : 12.65;
+                double kz = cz == 0.5 ? 0.4 : 12.65;
+                l.add(e(kx, 10.25, kz, kx + 2.95, 11.5, kz + 2.95).all("#iron"));
+            }
+        }
+        // Stepped warm brass crucible bridge bars spanning cleanly between capitals (3.35..12.65)
+        l.add(e(3.35, 10.0, 1.25, 12.65, 11.25, 2.75).only("#brass", "north", "south", "up", "down"));
+        l.add(e(3.35, 10.0, 13.25, 12.65, 11.25, 14.75).only("#brass", "north", "south", "up", "down"));
+        l.add(e(1.25, 10.0, 3.35, 2.75, 11.25, 12.65).only("#brass", "east", "west", "up", "down"));
+        l.add(e(13.25, 10.0, 3.35, 14.75, 11.25, 12.65).only("#brass", "east", "west", "up", "down"));
+        // Central SLATE_IRON crystal plinth
+        l.add(e(4.5, 10.0, 4.5, 11.5, 13.0, 11.5).only("#iron", "north", "south", "east", "west", "up"));
+        // Raised multi-tiered glowing frost-cyan crystal beacon (peaks y=27 above 22.5px balcony rail)
+        l.add(e(5.25, 13.0, 5.25, 10.75, 16.5, 10.75).only("#crystal", "north", "south", "east", "west").glow(15));
+        l.add(e(4.5, 16.5, 4.5, 11.5, 22.5, 11.5).all("#crystal").glow(15));
+        l.add(e(5.25, 22.5, 5.25, 10.75, 25.0, 10.75).only("#crystal", "north", "south", "east", "west", "up").glow(15));
+        l.add(e(6.5, 25.0, 6.5, 9.5, 27.0, 9.5).only("#crystal", "north", "south", "east", "west", "up").glow(15));
+        // Openwork antique-brass lantern cage struts (r <= 0.42 so orbiting golems at ORBIT_RADIUS=0.62 clear cleanly)
+        for (double lx : new double[]{3.25, 11.85}) {
+            for (double lz : new double[]{3.25, 11.85}) {
+                l.add(e(lx, 11.5, lz, lx + 0.9, 21.5, lz + 0.9).only("#brass", "north", "south", "east", "west"));
+            }
+        }
+        // Hollow upper brass lantern halo ring (y=21.5..22.4, clearing 4.5..11.5 crystal) + 4 SLATE_IRON finials
+        l.add(e(3.0, 21.5, 3.0, 13.0, 22.4, 4.25).all("#brass"));
+        l.add(e(3.0, 21.5, 11.75, 13.0, 22.4, 13.0).all("#brass"));
+        l.add(e(3.0, 21.5, 4.25, 4.25, 22.4, 11.75).only("#brass", "east", "west", "up", "down"));
+        l.add(e(11.75, 21.5, 4.25, 13.0, 22.4, 11.75).only("#brass", "east", "west", "up", "down"));
+        for (double fx : new double[]{3.05, 11.95}) {
+            for (double fz : new double[]{3.05, 11.95}) {
+                l.add(e(fx, 22.4, fz, fx + 1.0, 23.5, fz + 1.0).only("#iron", "north", "south", "east", "west", "up"));
+            }
+        }
+        model("atlas_core", false, "atlas_core", t, l.toArray(new El[0]));
+    }
+
     static void generate() throws Exception {
         // ============================================================ multiblock
         write(RES.resolve("models/block/atlas_casing.json"),
@@ -368,7 +577,11 @@ public class Models {
         casingParts();
         item("atlas_casing", "atlas_casing");
 
-        cube("atlas_conduit", "atlas_conduit");
+        cableBushingModel();
+        single("cable_bushing", "cable_bushing");
+        item("cable_bushing", "cable_bushing");
+
+        atlasConduitModel();
         single("atlas_conduit", "atlas_conduit");
         item("atlas_conduit", "atlas_conduit");
 
@@ -379,19 +592,7 @@ public class Models {
         single("quantum_channel_expander", "quantum_channel_expander");
         item("quantum_channel_expander", "quantum_channel_expander");
 
-        cube("cable_bushing", "cable_bushing");
-        single("cable_bushing", "cable_bushing");
-        item("cable_bushing", "cable_bushing");
-
-        // Core: a rune pedestal, brass clamps and a crystal sticking out above the ring
-        model("atlas_core", false, "atlas_core",
-                new String[][]{{"rune", "atlas_core"}, {"casing", "atlas_casing"}, {"brass", "brass_plate"}, {"crystal", "core_crystal"}},
-                e(0, 0, 0, 16, 3, 16).all("#casing"),
-                e(1, 3, 1, 15, 9, 15).all("#rune"),
-                e(1, 9, 1, 3.5, 13, 3.5).all("#brass"), e(12.5, 9, 1, 15, 13, 3.5).all("#brass"),
-                e(1, 9, 12.5, 3.5, 13, 15).all("#brass"), e(12.5, 9, 12.5, 15, 13, 15).all("#brass"),
-                e(5, 9, 5, 11, 19, 11).all("#crystal").glow(15),
-                e(6, 19, 6, 10, 22, 10).all("#crystal").glow(15));
+        atlasCoreModel();
         single("atlas_core", "atlas_core");
         item("atlas_core", "atlas_core");
         // Atlant: a caryatid in the iron golem's manner (tools/Atlant.java draws it), a broad torso on short legs, the arms

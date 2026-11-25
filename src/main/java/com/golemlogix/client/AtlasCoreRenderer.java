@@ -23,9 +23,9 @@ import org.joml.Vector3f;
  */
 public class AtlasCoreRenderer extends com.golemlogix.client.render.LegacyBer<AtlasCoreBlockEntity> {
     private static final int ORBITS = 3;
-    /** Orbit centre: the crystal sticking out above the ring (in block fractions). */
-    private static final float CENTER_Y = 0.95f;
-    private static final float ORBIT_RADIUS = 0.58f;
+    /** Orbit centre: the crystal sticking out above the ring and openwork lantern cage (in block fractions). */
+    private static final float CENTER_Y = 1.28f;
+    private static final float ORBIT_RADIUS = 0.62f;
     private static final float ORBIT_GOLEM_SCALE = 0.17f;
 
     // top face: a ring through the centres of the eight Casings (the core in the middle), height = top of the Casings
@@ -96,13 +96,13 @@ public class AtlasCoreRenderer extends com.golemlogix.client.render.LegacyBer<At
             float u = Mth.lerp(k, a[0], b[0]), v = Mth.lerp(k, a[1], b[1]);
             int alpha = (int) (200 + 55 * Mth.sin(time * 0.15f + face));
             int color = (Mth.clamp(alpha, 0, 255) << 24) | 0xFFFFFF;
-            // origin (glyph centre), "right" and "up" in the face plane, outward normal
-            float e = 0.004f;
+            // origin (glyph centre), "right" and "up" in the face plane, outward normal (sides clear the 3D parapet wheels)
+            float e = 0.004f, es = 0.135f;
             switch (face) {
-                case 0 -> quad(vc, p, new Vector3f(u, v, -1 - e), new Vector3f(-1, 0, 0), new Vector3f(0, 1, 0), color);
-                case 1 -> quad(vc, p, new Vector3f(u, v, 2 + e), new Vector3f(1, 0, 0), new Vector3f(0, 1, 0), color);
-                case 2 -> quad(vc, p, new Vector3f(-1 - e, v, u), new Vector3f(0, 0, 1), new Vector3f(0, 1, 0), color);
-                case 3 -> quad(vc, p, new Vector3f(2 + e, v, u), new Vector3f(0, 0, -1), new Vector3f(0, 1, 0), color);
+                case 0 -> quad(vc, p, new Vector3f(u, v, -1 - es), new Vector3f(-1, 0, 0), new Vector3f(0, 1, 0), color);
+                case 1 -> quad(vc, p, new Vector3f(u, v, 2 + es), new Vector3f(1, 0, 0), new Vector3f(0, 1, 0), color);
+                case 2 -> quad(vc, p, new Vector3f(-1 - es, v, u), new Vector3f(0, 0, 1), new Vector3f(0, 1, 0), color);
+                case 3 -> quad(vc, p, new Vector3f(2 + es, v, u), new Vector3f(0, 0, -1), new Vector3f(0, 1, 0), color);
                 default -> quad(vc, p, new Vector3f(u, 1 + e, v), new Vector3f(1, 0, 0), new Vector3f(0, 0, -1), color);
             }
         }

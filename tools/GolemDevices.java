@@ -200,17 +200,15 @@ public final class GolemDevices {
     }
 
     static Paint manometerNeedle() {
-        // 16x16 entity texture: needle pointing straight UP (0 deg = 12 o'clock), pivot at (8, 8)
+        // 16x16 entity texture: crisp crimson pointer pointing straight UP (0 deg = 12 o'clock), pivot at (8, 8)
         Paint p = new Paint(16, 16, 2);
-        p.disc(8.0, 8.0, 1.8, at(BRASS, 3.0));
-        p.disc(8.0, 8.0, 1.2, at(BRASS, 5.2));
-        p.disc(8.0, 8.0, 0.6, at(IRON, 1.5));
-
-        // Needle blade pointing up to y = 1.5
-        double[] xs = {7.3, 8.0, 8.7, 8.4, 7.6};
-        double[] ys = {8.0, 1.5, 8.0, 9.5, 9.5};
-        p.poly(xs, ys, at(IRON, 1.8));
-        p.line(8.0, 2.0, 8.0, 7.5, 0.45, 0xFFE03020); // Bright red needle highlight line
+        double[] xs = {7.0, 8.0, 9.0, 8.6, 7.4};
+        double[] ys = {8.2, 1.4, 8.2, 10.2, 10.2};
+        p.poly(xs, ys, 0xFF9E1A14);
+        p.line(8.0, 1.8, 8.0, 8.0, 0.7, 0xFFE03020);
+        p.disc(8.0, 8.0, 2.0, at(BRASS, 2.0));
+        p.disc(8.0, 8.0, 1.4, at(BRASS, 4.0));
+        p.disc(8.0, 8.0, 0.7, at(IRON, 0.8));
         return p;
     }
 

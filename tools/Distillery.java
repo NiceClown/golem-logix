@@ -5,7 +5,7 @@
  * glowing from blood red to ice cyan.
  */
 final class Distillery {
-    static final int[] BRASS = Paint.BRASS, IRON = Paint.IRON, CYAN = Paint.CYAN, VIOLET = Paint.VIOLET, COPPER = Paint.COPPER;
+    static final int[] BRASS = Paint.AGED_BRASS, IRON = Paint.IRON, CYAN = Paint.CYAN, VIOLET = Paint.VIOLET, COPPER = Paint.COPPER;
     static final int[] BRICK = {0x1a0c0c, 0x2c1414, 0x40201c, 0x562c26, 0x6e3a30, 0x8a4c3e, 0xa86252};
 
     private Distillery() {

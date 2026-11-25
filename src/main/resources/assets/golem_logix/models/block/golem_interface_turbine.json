@@ -9,8 +9,10 @@
     "side3": "golem_logix:block/interface_side_3",
     "top": "golem_logix:block/interface_top",
     "bottom": "golem_logix:block/interface_bottom",
+    "iron": "golem_logix:block/interface_iron",
+    "copper": "golem_logix:block/interface_copper",
     "brass": "golem_logix:block/interface_brass",
-    "ice": "golem_logix:block/sat_ice",
+    "core": "golem_logix:block/interface_core",
     "metronome": "golem_logix:block/interface_metronome",
     "turbine": "golem_logix:block/interface_turbine",
     "rod": "golem_logix:block/cab_dark"

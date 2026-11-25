@@ -20,7 +20,12 @@ public class FormationBusBlock extends GolemPlaneBlock {
     public static final MapCodec<FormationBusBlock> CODEC = simpleCodec(FormationBusBlock::new);
 
     public FormationBusBlock(Properties properties) {
-        super(properties);
+        super(properties.noOcclusion());
+    }
+
+    @Override
+    protected boolean propagatesSkylightDown(BlockState state) {
+        return true;
     }
 
     @Override

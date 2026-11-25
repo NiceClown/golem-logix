@@ -1,19 +1,16 @@
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 /**
- * Golem Interface (from the concept: a copper-bronze cube with little drawers, gauges, gears and frost). A brass frame along the edges,
- * sunk bronze panels, on EACH of the six sides a square brass inlet funnel (a network socket and an item
- * input) with a dark funnel, next to it a flat relief metronome; the turbines in the funnels and the metronome pendulums are drawn by
- * {@code InterfaceRenderer}
- * (they spin and swing while the interface works; the tempo follows the number of speed upgrades).
+ * Wave 1 (P0) redesign of Golem Interface:
+ * Dark espresso walnut core panels, forged cast-iron frame rails & octagonal iris-shutter bezels, riveted weathered-copper
+ * corner armor brackets, glowing cyan central apertures behind spinning hollow-center copper iris blades, and antique-bronze
+ * clockwork metronomes (preserving InterfaceRenderer alignment 100%).
  */
 final class Interface {
     static final int K = Forge2.K;
-    static final int[] BRASS = Paint.BRASS, BRONZE = Paint.BRONZE, IRON = Paint.IRON, CYAN = Paint.CYAN, VIOLET = Paint.VIOLET,
-            FROST = Paint.FROST, COPPER = Paint.COPPER, CREAM = Paint.CREAM;
-    static final int RED = Paint.argb(255, 0xb02020);
+    static final int[] BRASS = Paint.BRASS, BRONZE = Paint.BRONZE, IRON = Paint.IRON, SLATE = Paint.SLATE_IRON,
+            CYAN = Paint.CYAN, VIOLET = Paint.VIOLET, FROST = Paint.FROST, COPPER = Atlant.COPPER, CREAM = Paint.CREAM;
 
     static int at(int[] r, double i) {
         return Paint.at(r, i);
@@ -28,127 +25,159 @@ final class Interface {
     }
 
     // ============================================================================================ textures
-    /** A dark funnel in the middle of a face: rings going deep and a teal network sheen at the bottom. */
-    static void funnel(Paint p, double cx, double cy, double r) {
+
+    /** Deep deepslate-steel recess well behind the spinning iris blades, with a luminous cyan core aperture. */
+    static void funnelWell(Paint p, double cx, double cy, double r) {
         p.discFn(cx, cy, r, (u, v) -> {
             double d = Math.hypot(u - cx, v - cy) / r;
             double rings = 0.5 + 0.5 * Math.cos(d * 18);
-            return Paint.ramp(IRON, 0.04 + 0.22 * d + 0.06 * rings);
+            return Paint.ramp(SLATE, 0.15 + 0.35 * d + 0.05 * rings);
         });
-        p.ring(cx, cy, r - 0.35, r, at(BRASS, 1.4));
-        p.disc(cx, cy, r * 0.28, at(CYAN, 2.2));
-        p.glowRect(cx - r * 0.2, cy - r * 0.2, cx + r * 0.2, cy + r * 0.2, r * 0.35, at(CYAN, 4.2), 90);
+        p.ring(cx, cy, r - 0.35, r, at(SLATE, 4.2));
+        p.disc(cx, cy, r * 0.45, at(CYAN, 4.6));
+        p.disc(cx, cy, r * 0.25, at(CYAN, 6.0));
     }
 
-    /** A little brass card drawer with a bracket handle and a plate. */
-    static void drawer(Paint p, double x0, double y0, double x1, double y1, long seed) {
-        p.slab(x0, y0, x1, y1, BRASS, 3.0, 1);
-        p.slab(x0 + 0.35, y0 + 0.35, x1 - 0.35, y1 - 0.35, BRASS, 2.4, 1);
-        double cx = (x0 + x1) / 2;
-        p.rect(cx - 0.9, y0 + 0.6, cx + 0.9, y0 + 1.1, rgb(0xE6DCB8));
-        p.rect(cx - 0.6, y0 + 0.75, cx + 0.3, y0 + 0.85, argb(160, 0x3a2a18));
-        p.rect(cx - 1.1, y1 - 1.0, cx + 1.1, y1 - 0.75, at(BRASS, 5.4));
-        p.rect(cx - 1.1, y1 - 0.75, cx - 0.85, y1 - 0.45, at(BRASS, 4.0));
-        p.rect(cx + 0.85, y1 - 0.75, cx + 1.1, y1 - 0.45, at(BRASS, 4.0));
+    /** Forged deepslate-gray steel frame rails & octagonal iris-shutter bezel metal. */
+    static Paint ironTex() {
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, SLATE, 2.6, 1);
+        p.grain(0, 0, 16, 16, 0.06, 7051);
+        p.frame(0, 0, 16, 16, 0.5, at(SLATE, 1.0));
+        for (double x = 2.0; x < 16; x += 4.0) {
+            p.rivet(x, 8.0, 0.35, SLATE);
+        }
+        return p;
     }
 
-    /** A side panel (16x16; the area 1..15 between the frame edges is visible). */
+    /** Weathered riveted copper armor brackets for all 8 corners. */
+    static Paint copperTex() {
+        Paint p = new Paint(16, 16, K);
+        for (int j = 0; j < p.h; j++) {
+            for (int i = 0; i < p.w; i++) {
+                double n = Atlant.noise(i, j, 10, 7061);
+                int idx = Math.max(1, Math.min(6, 2 + (int) Math.round(n * 3.5)));
+                p.px(i, j, rgb(COPPER[idx]));
+            }
+        }
+        p.frame(0, 0, 16, 16, 0.5, rgb(COPPER[0]));
+        p.rect(0.5, 0.5, 15.5, 1.0, rgb(COPPER[6]));
+        p.rect(0.5, 0.5, 1.0, 15.5, rgb(COPPER[6]));
+        for (double[] c : new double[][]{{2.2, 2.2}, {13.8, 2.2}, {2.2, 13.8}, {13.8, 13.8}}) {
+            p.rect(c[0] - 0.5, c[1] - 0.5, c[0] + 0.5, c[1] + 0.5, rgb(COPPER[0]));
+            p.rect(c[0] - 0.5, c[1] - 0.5, c[0], c[1], rgb(COPPER[7]));
+        }
+        p.px(2, 2, rgb(Atlant.PATINA[0]));
+        p.px(p.w - 3, p.h - 3, rgb(Atlant.PATINA[1]));
+        return p;
+    }
+
+    /** Warm workshop walnut core planking. */
+    static void walnutCore(Paint p, long seed) {
+        int[] tones = {0x321f12, 0x3e2716, 0x4b301b, 0x583a21, 0x674629};
+        for (int j = 0; j < p.h; j++) {
+            for (int i = 0; i < p.w; i++) {
+                double v = (j + 0.5) / K;
+                int plank = (int) (v / 3.5);
+                double t = Atlant.hash(plank, i / 5, (int) seed) * 0.5 + Atlant.noise(i, j, 6, (int) seed + 1) * 0.5;
+                p.px(i, j, rgb(tones[(int) Math.min(4, t * 5)]));
+            }
+        }
+        for (double y = 3.5; y < 16; y += 3.5) {
+            p.rect(0, y - 0.35, 16, y, rgb(0x22140b));
+        }
+    }
+
+    /** Side panel (16x16; area 1..15 visible inside frame): warm workshop walnut, recessed metronome niche, funnel well. */
     static Paint side(long seed) {
         Paint p = new Paint(16, 16, K);
-        Forge2.beam(p, 0, 0, 16, 16, 2.7, true, seed);
-        p.slab(1.4, 1.4, 14.6, 14.6, BRONZE, 2.3, 1);
-        p.grain(1.4, 1.4, 14.6, 14.6, 0.05, seed + 1);
-        // patina along the seams, as in the concept
-        Random r = new Random(seed + 2);
-        for (int i = 0; i < 9; i++) {
-            double x = 1.5 + r.nextDouble() * 13, y = 1.5 + r.nextDouble() * 13;
-            p.tint(x, y, x + 0.6 + r.nextDouble() * 1.4, y + 0.3 + r.nextDouble() * 0.6, argb(90, 0x3fae9a));
+        walnutCore(p, seed);
+        p.frame(1.0, 1.0, 15.0, 15.0, 0.5, at(SLATE, 1.2));
+        // Deepslate-steel & bronze metronome housing trim at left (matches metA / MET_B0..B1)
+        p.slab(1.6, 4.3, 4.1, 11.7, BRONZE, 2.2, 1);
+        p.slab(1.9, 4.6, 3.8, 11.4, SLATE, 1.4, 1);
+        // Subtle steel corner trim studs
+        for (double[] c : new double[][]{{1.9, 1.9}, {14.1, 1.9}, {1.9, 14.1}, {14.1, 14.1}}) {
+            p.rivet(c[0], c[1], 0.3, SLATE);
         }
-        // a row of gauges on top (the needles come alive: an animated texture)
-        p.slab(4.0, 1.6, 12.0, 3.9, BRASS, 2.8, 1);
-        for (int i = 0; i < 3; i++) {
-            p.gauge(5.4 + i * 2.6, 2.75, 1.0, 50 + i * 37 + seed % 17, RED);
-        }
-        // card drawers at the bottom corners and runes on the sides
-        drawer(p, 1.8, 11.6, 4.6, 14.2, seed + 3);
-        drawer(p, 11.4, 11.6, 14.2, 14.2, seed + 4);
-        // on the left a niche for the flat metronome (the model places its relief), on the right a column of runes
-        p.slab(1.6, 4.2, 4.1, 11.6, BRASS, 2.6, 1);
-        p.slab(1.9, 4.5, 3.8, 11.3, IRON, 0.7, 1);
-        for (int i = 0; i < 3; i++) {
-            p.rune(13.0, 4.6 + i * 2.2, 1.6, (int) seed + i * 3 + 7, at(CYAN, 5.0), at(CYAN, 2.4));
-        }
-        // the funnel under the inlet
-        funnel(p, 8, 8, 3.2);
-        for (double[] c : new double[][]{{1.8, 1.8}, {14.2, 1.8}, {1.8, 10.8}, {14.2, 10.8}}) {
-            p.rivet(c[0], c[1], 0.3, BRASS);
-        }
-        p.frostLine(1.4, 14.6, 1.4, 0.5, seed + 5);
-        p.icicle(6.2, 1.4, 0.9, 0.4);
-        p.icicle(10.4, 1.4, 1.2, 0.4);
+        funnelWell(p, 8, 8, 3.2);
         return p;
     }
 
-    /** Roof and bottom: a bronze deck, vent grates, a funnel, frost. */
+    /** Top and bottom panels: warm walnut deck, subtle vent louvers, central funnel well. */
     static Paint top(boolean bottom) {
         Paint p = new Paint(16, 16, K);
-        Forge2.beam(p, 0, 0, 16, 16, 2.6, true, bottom ? 7101 : 7102);
-        p.slab(1.4, 1.4, 14.6, 14.6, BRONZE, 2.1, 1);
-        Terminals.vent(p, 6.0, 1.9, 10.0, 3.6, 3);
-        Terminals.vent(p, 6.0, 12.4, 10.0, 14.1, 3);
-        funnel(p, 8, 8, 3.2);
-        for (int i = 0; i < 2; i++) {
-            p.rune(2.4 + i * 9.6, 7.2, 1.6, 12 + i * 9, at(VIOLET, 5.2), at(VIOLET, 2.6));
-        }
-        if (!bottom) {
-            p.frostLine(1.4, 14.6, 1.4, 0.8, 7103);
-            p.frostLine(1.4, 14.6, 13.8, 0.6, 7104);
-        }
+        walnutCore(p, bottom ? 7101 : 7102);
+        p.frame(1.0, 1.0, 15.0, 15.0, 0.5, at(SLATE, 1.2));
+        Terminals.vent(p, 5.8, 1.8, 10.2, 3.3, 3);
+        Terminals.vent(p, 5.8, 12.7, 10.2, 14.2, 3);
+        funnelWell(p, 8, 8, 3.2);
         return p;
     }
 
-    /** Brass of the frame and inlets: a lengthwise grain, rivets. */
+    /** Warm antique brass accent for pendulum bob, metronome escutcheon & hub trim. */
     static Paint brass() {
         Paint p = new Paint(16, 16, K);
         p.slab(0, 0, 16, 16, BRASS, 3.0, 1);
-        p.streaks(0.3, 0.3, 15.7, 15.7, 0.07, 7111, true);
+        p.streaks(0.3, 0.3, 15.7, 15.7, 0.06, 7111, true);
         p.grain(0, 0, 16, 16, 0.04, 7112);
-        for (double x = 2; x < 16; x += 4) {
-            p.rivet(x, 8, 0.45, BRASS);
-        }
+        p.frame(0, 0, 16, 16, 0.5, at(BRASS, 2.0));
         return p;
     }
 
-    /** Turbine blades of the funnel (transparent outside the circle; the renderer spins it). */
+    /** Saturated luminous frost-cyan aperture core crystal behind every turbine. */
+    static Paint coreGlow() {
+        Paint p = new Paint(16, 16, K);
+        p.rect(0, 0, 16, 16, at(CYAN, 3.8));
+        p.disc(8, 8, 5.5, at(CYAN, 4.8));
+        p.disc(7.2, 7.2, 2.5, at(CYAN, 5.5));
+        return p;
+    }
+
+    /**
+     * Bold curved copper iris-shutter blades with dark-iron edge shadow and a HOLLOW glowing center aperture (r < 0.95 transparent)
+     * so the luminous cyan core behind it shines right through the spinning rotor!
+     */
     static Paint turbine() {
         Paint p = new Paint(8, 8, 8);
-        for (int b = 0; b < 7; b++) {
-            double a0 = b * 2 * Math.PI / 7;
-            for (double rr = 0.7; rr < 3.6; rr += 0.06) {
-                double a = a0 + rr * 0.42;
-                p.disc(4 + Math.cos(a) * rr, 4 + Math.sin(a) * rr, 0.26 + rr * 0.07,
-                        Paint.ramp(COPPER, 0.3 + 0.45 * (rr / 3.6) + 0.1 * Math.sin(a * 2)));
+        for (int b = 0; b < 8; b++) {
+            double a0 = b * 2 * Math.PI / 8;
+            for (double rr = 1.05; rr < 3.65; rr += 0.05) {
+                double a = a0 + rr * 0.48;
+                double cx = 4 + Math.cos(a) * rr, cy = 4 + Math.sin(a) * rr;
+                double w = 0.32 + rr * 0.09;
+                p.disc(cx, cy, w, at(SLATE, 0.7));
             }
         }
-        p.disc(4, 4, 0.95, at(BRASS, 1.4));
-        p.sphere(4, 4, 0.85, BRASS, 0.35, 1.0);
-        p.disc(4, 4, 0.3, at(CYAN, 5.0));
-        p.glowRect(3.9, 3.9, 4.1, 4.1, 0.5, at(CYAN, 4.4), 120);
+        for (int b = 0; b < 8; b++) {
+            double a0 = b * 2 * Math.PI / 8;
+            for (double rr = 1.05; rr < 3.65; rr += 0.05) {
+                double a = a0 + rr * 0.48;
+                double cx = 4 + Math.cos(a) * rr, cy = 4 + Math.sin(a) * rr;
+                double w = 0.32 + rr * 0.09;
+                double shade = 0.25 + 0.55 * (rr / 3.65) + 0.12 * Math.sin(a * 2);
+                int idx = Math.max(1, Math.min(7, (int) Math.round(shade * 7)));
+                p.disc(cx - Math.sin(a) * 0.06, cy + Math.cos(a) * 0.06, w * 0.78, rgb(COPPER[idx]));
+            }
+        }
+        // Hollow bronze collar around open center aperture (clear center r < 0.92!)
+        p.ring(4, 4, 0.92, 1.38, at(SLATE, 1.4));
+        p.ring(4, 4, 1.02, 1.28, at(BRASS, 3.5));
         return p;
     }
 
-    /** Metronome body: mahogany, a brass scale with marks, a rune on a plate. */
+    /** Warm workshop walnut & antique-bronze metronome scale body. */
     static Paint metronome() {
         Paint p = new Paint(16, 16, K);
-        p.fill(0, 0, 16, 16, (u, v) -> Paint.mix(rgb(0x4a1c10), rgb(0x7a3420), 0.5 + 0.3 * Math.sin(u * 2.1 + v * 0.3)));
-        p.grain(0, 0, 16, 16, 0.08, 7121);
-        p.rect(6.6, 1.0, 9.4, 13.0, at(BRASS, 3.6));
+        p.fill(0, 0, 16, 16, (u, v) -> Paint.mix(rgb(0x321f12), rgb(0x583a21), 0.5 + 0.25 * Math.sin(u * 1.9 + v * 0.3)));
+        p.grain(0, 0, 16, 16, 0.06, 7121);
+        p.rect(6.5, 1.0, 9.5, 13.0, at(BRASS, 3.0));
         for (int i = 0; i < 9; i++) {
             double y = 1.6 + i * 1.3;
-            p.rect(6.9, y, i % 2 == 0 ? 8.8 : 8.0, y + 0.3, at(IRON, 0.6));
+            p.rect(6.9, y, i % 2 == 0 ? 8.8 : 8.0, y + 0.3, at(CREAM, 4.5));
         }
-        p.slab(4.5, 13.4, 11.5, 15.4, BRASS, 3.2, 1);
-        p.rune(7.2, 13.6, 1.6, 4, at(VIOLET, 5.4), 0);
+        p.slab(4.5, 13.4, 11.5, 15.4, SLATE, 2.4, 1);
+        p.rune(7.2, 13.6, 1.6, 4, at(CYAN, 4.8), 0);
         return p;
     }
 
@@ -159,6 +188,9 @@ final class Interface {
         }
         top(false).save(Forge2.tex("interface_top"));
         top(true).save(Forge2.tex("interface_bottom"));
+        ironTex().save(Forge2.tex("interface_iron"));
+        copperTex().save(Forge2.tex("interface_copper"));
+        coreGlow().save(Forge2.tex("interface_core"));
         brass().save(Forge2.tex("interface_brass"));
         turbine().save(Forge2.tex("interface_turbine"));
         metronome().save(Forge2.tex("interface_metronome"));
@@ -185,63 +217,85 @@ final class Interface {
 
     static final String[] DIRS = {"north", "south", "east", "west", "up", "down"};
 
+    static String opposite(String d) {
+        return switch (d) {
+            case "north" -> "south";
+            case "south" -> "north";
+            case "east" -> "west";
+            case "west" -> "east";
+            case "up" -> "down";
+            default -> "up";
+        };
+    }
+
     static List<Models.El> body() {
         List<Models.El> l = new ArrayList<>();
-        // sunk panels (core 1..15)
+        // Sunk dark walnut panels (core 1..15)
         l.add(Models.e(1, 1, 1, 15, 15, 15).face("north", "#side0").face("east", "#side1").face("south", "#side2")
                 .face("west", "#side3").face("up", "#top").face("down", "#bottom"));
-        // brass frame: edges along X at full length, along Y and Z between them (no coinciding faces in the corners)
-        double t = 1.5;
-        for (double a : new double[]{0, 16 - t}) {
-            for (double b : new double[]{0, 16 - t}) {
-                l.add(Models.e(0, a, b, 16, a + t, b + t).all("#brass"));
-                l.add(Models.e(a, t, b, a + t, 16 - t, b + t).all("#brass"));
-                l.add(Models.e(a, b, t, a + t, b + t, 16 - t).all("#brass"));
-            }
-        }
-        // inlet funnels on all six sides: a square brass frame with bevels and bolts in the corners
+
+        // Glowing cyan core aperture backing inside all 6 turbine wells (depth 0.94..0.98 behind turbine depth 0.55)
         for (String d : DIRS) {
-            l.add(onFace(d, 4.0, 4.0, 12.0, 5.2, 0, 1).all("#brass"));
-            l.add(onFace(d, 4.0, 10.8, 12.0, 12.0, 0, 1).all("#brass"));
-            l.add(onFace(d, 4.0, 5.2, 5.2, 10.8, 0, 1).all("#brass"));
-            l.add(onFace(d, 10.8, 5.2, 12.0, 10.8, 0, 1).all("#brass"));
-            // the inner cuff is a little deeper: the funnel narrows towards the hole
-            l.add(onFace(d, 5.2, 5.2, 10.8, 5.8, 0.4, 1).all("#brass"));
-            l.add(onFace(d, 5.2, 10.2, 10.8, 10.8, 0.4, 1).all("#brass"));
-            l.add(onFace(d, 5.2, 5.8, 5.8, 10.2, 0.4, 1).all("#brass"));
-            l.add(onFace(d, 10.2, 5.8, 10.8, 10.2, 0.4, 1).all("#brass"));
+            l.add(onFace(d, 6.6, 6.6, 9.4, 9.4, 0.94, 0.98).only("#core", d).glow(14));
         }
-        // icicles under the top edges
-        for (double[] ic : new double[][]{{3.2, 1.0}, {6.8, 1.6}, {11.6, 1.2}}) {
-            for (String d : new String[]{"north", "south", "east", "west"}) {
-                l.add(onFace(d, ic[0], 14.5 - ic[1], ic[0] + 0.5, 14.5, 0.3, 0.8).all("#ice"));
+
+        // 8 Riveted weathered-copper corner armor caps (0..2.75 & 13.25..16.0)
+        for (double x : new double[]{0.0, 13.25}) {
+            for (double y : new double[]{0.0, 13.25}) {
+                for (double z : new double[]{0.0, 13.25}) {
+                    l.add(Models.e(x, y, z, x + 2.75, y + 2.75, z + 2.75).all("#copper"));
+                }
             }
         }
-        // metronomes lying flat on the four side faces: a low relief (0.5) next to the funnel, within the block
+        // Stepped copper corner collar lips (2.75..3.4 & 12.6..13.25) wrapping the 12 edges
+        for (double[] span : new double[][]{{2.75, 3.4}, {12.6, 13.25}}) {
+            for (double a : new double[]{0.05, 14.45}) {
+                for (double b : new double[]{0.05, 14.45}) {
+                    l.add(Models.e(span[0], a, b, span[1], a + 1.5, b + 1.5).all("#copper"));
+                    l.add(Models.e(a, span[0], b, a + 1.5, span[1], b + 1.5).all("#copper"));
+                    l.add(Models.e(a, b, span[0], a + 1.5, b + 1.5, span[1]).all("#copper"));
+                }
+            }
+        }
+        // 12 Forged dark cast-iron frame rails running cleanly between copper corner collars (3.4..12.6)
+        for (double a : new double[]{0.15, 14.6}) {
+            for (double b : new double[]{0.15, 14.6}) {
+                l.add(Models.e(3.4, a, b, 12.6, a + 1.25, b + 1.25).only("#iron", "up", "down", "north", "south"));
+                l.add(Models.e(a, 3.4, b, a + 1.25, 12.6, b + 1.25).only("#iron", "east", "west", "north", "south"));
+                l.add(Models.e(a, b, 3.4, a + 1.25, b + 1.25, 12.6).only("#iron", "east", "west", "up", "down"));
+            }
+        }
+
+        // Sculpted octagonal dark cast-iron iris-shutter bezels on all 6 faces (outer 4.2..11.8, opening 5.2..10.8)
+        for (String d : DIRS) {
+            l.add(onFace(d, 5.6, 4.2, 10.4, 5.2, 0.0, 1.0).only("#iron", d, "up", "down", "east", "west", "north", "south"));
+            l.add(onFace(d, 5.6, 10.8, 10.4, 11.8, 0.0, 1.0).only("#iron", d, "up", "down", "east", "west", "north", "south"));
+            l.add(onFace(d, 4.2, 5.6, 5.2, 10.4, 0.0, 1.0).only("#iron", d, "up", "down", "east", "west", "north", "south"));
+            l.add(onFace(d, 10.8, 5.6, 11.8, 10.4, 0.0, 1.0).only("#iron", d, "up", "down", "east", "west", "north", "south"));
+            // Strip the inward face against the core (depth 1.0) on chamfer links to avoid any coplanar overlap
+            for (double[] cr : new double[][]{{4.6, 4.6}, {10.4, 4.6}, {4.6, 10.4}, {10.4, 10.4}}) {
+                Models.El ch = onFace(d, cr[0], cr[1], cr[0] + 1.0, cr[1] + 1.0, 0.1, 0.98).all("#iron");
+                ch.faces.remove(opposite(d));
+                l.add(ch);
+            }
+        }
+
+        // Metronomes on the 4 side faces (coordinates 100% preserved for InterfaceRenderer)
         for (String d : new String[]{"north", "south", "east", "west"}) {
             metronome(l, d);
         }
         return l;
     }
 
-    /** The middle of the metronome on the face (coordinate a) and its bottom/top (b). The renderer draws the pendulum with its axis at (MET_A, MET_PIVOT). */
     static final double MET_A = 2.85, MET_B0 = 4.6, MET_PIVOT = 5.2, MET_B1 = 11.6;
 
-    /**
-     * A flat metronome on a face: a brass base, a body of four steps narrowing upwards and a brass finial; the front
-     * faces of the steps take their strip of a shared picture, so the scale with marks spans the full height.
-     */
-    /**
-     * Where the metronome is on face d (coordinate a): where the face texture has the niche (u = 2.85). For the north and east faces
-     * the unwrap is mirrored (u = 16 - a), so the metronome stands at the other edge, always to the left of the funnel as the viewer sees it.
-     */
     static double metA(String d) {
         return d.equals("north") || d.equals("east") ? 16 - MET_A : MET_A;
     }
 
     static void metronome(List<Models.El> l, String d) {
         double MET_A = metA(d);
-        l.add(onFace(d, MET_A - 1.1, MET_B0, MET_A + 1.1, MET_PIVOT, 0.5, 1).all("#brass"));
+        l.add(onFace(d, MET_A - 1.1, MET_B0, MET_A + 1.1, MET_PIVOT, 0.5, 1).all("#iron"));
         double[] half = {1.0, 0.85, 0.7, 0.55};
         double h = (MET_B1 - MET_PIVOT) / half.length;
         for (int i = 0; i < half.length; i++) {
@@ -254,32 +308,32 @@ final class Interface {
 
     static String[][] tex() {
         return new String[][]{{"side0", "interface_side_0"}, {"side1", "interface_side_1"}, {"side2", "interface_side_2"},
-                {"side3", "interface_side_3"}, {"top", "interface_top"}, {"bottom", "interface_bottom"}, {"brass", "interface_brass"},
-                {"ice", "sat_ice"}, {"metronome", "interface_metronome"}, {"turbine", "interface_turbine"}, {"rod", "cab_dark"}};
+                {"side3", "interface_side_3"}, {"top", "interface_top"}, {"bottom", "interface_bottom"},
+                {"iron", "interface_iron"}, {"copper", "interface_copper"}, {"brass", "interface_brass"},
+                {"core", "interface_core"}, {"metronome", "interface_metronome"}, {"turbine", "interface_turbine"}, {"rod", "cab_dark"}};
     }
 
     static void models() throws Exception {
         List<Models.El> body = body();
         Models.checkCoplanar("golem_interface", body.toArray(new Models.El[0]));
-        Models.model("golem_interface", false, "interface_brass", tex(), body.toArray(new Models.El[0]));
+        Models.model("golem_interface", false, "interface_iron", tex(), body.toArray(new Models.El[0]));
         Forge2.write(Forge2.RES.resolve("blockstates/golem_interface.json"),
                 "{\n  \"variants\": {\n    \"\": {\"model\": \"" + Forge2.NS + "golem_interface\"}\n  }\n}\n");
-        // the turbine "facing north" in the funnel (centre 8, 8, depth 0.55) and the metronome pendulum (the axis at the model origin)
+        // The turbine "facing north" inside the iris collar (centre 8, 8, depth 0.55) and the metronome pendulum (pivot at model origin)
         Models.model("golem_interface_turbine", false, "interface_turbine", tex(),
                 Models.e(5.3, 5.3, 0.55, 10.7, 10.7, 0.55).face("north", "#turbine", 0, 0, 16, 16));
-        // the pendulum is flat (thickness 0.1): it swings in the face plane in front of the metronome body
-        Models.model("golem_interface_pendulum", false, "interface_brass", tex(),
+        Models.model("golem_interface_pendulum", false, "interface_copper", tex(),
                 Models.e(7.85, 0, 7.95, 8.15, 5.2, 8.05).all("#rod"),
-                Models.e(7.5, 3.2, 7.93, 8.5, 4.0, 8.07).all("#brass"),
+                Models.e(7.5, 3.2, 7.93, 8.5, 4.0, 8.07).all("#copper"),
                 Models.e(7.6, -0.3, 7.91, 8.4, 0.3, 8.09).all("#brass"));
-        // item: the body and fixed turbines on all sides
+        // Item: body + fixed turbines on all 6 sides
         List<Models.El> item = body();
         for (String d : DIRS) {
             Models.El tb = onFace(d, 5.3, 5.3, 10.7, 10.7, 0.55, 0.55);
             tb.faces.put(d, Models.El.face("#turbine", new double[]{0, 0, 16, 16}));
             item.add(tb);
         }
-        Models.model("golem_interface_item", true, "interface_brass", tex(), item.toArray(new Models.El[0]));
+        Models.model("golem_interface_item", true, "interface_iron", tex(), item.toArray(new Models.El[0]));
         Models.item("golem_interface", "golem_interface_item");
         Forge2.addDisplay("golem_interface_item", 225, 0.625);
     }

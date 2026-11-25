@@ -26,7 +26,7 @@ final class AtlasArt {
         }
     }
 
-    /** A brass frame of width bw (units): a light outer edge on top and left, a sunk inner edge (shadow top-left). */
+    /** A brass frame of width bw (units): light bevel on top/left, shadow on bottom/right (preserved for untouched tiles). */
     static void brassFrame(Paint p, double x0, double y0, double x1, double y1, double bw) {
         p.rect(x0, y0, x1, y1, rgb(Paint.BRASS[4]));
         p.rect(x0, y0, x1, y0 + 0.5, rgb(Paint.BRASS[6]));
@@ -37,6 +37,19 @@ final class AtlasArt {
         p.rect(x0 + bw - 0.5, y0 + bw - 0.5, x0 + bw, y1 - bw + 0.5, rgb(Paint.BRASS[2]));
         p.rect(x0 + bw - 0.5, y1 - bw, x1 - bw + 0.5, y1 - bw + 0.5, rgb(Paint.BRASS[6]));
         p.rect(x1 - bw, y0 + bw - 0.5, x1 - bw + 0.5, y1 - bw + 0.5, rgb(Paint.BRASS[5]));
+    }
+
+    /** Muted antique-brass frame for refined Atlas Casing. */
+    static void antiqueFrame(Paint p, double x0, double y0, double x1, double y1, double bw) {
+        p.rect(x0, y0, x1, y1, rgb(Paint.BRASS[3]));
+        p.rect(x0, y0, x1, y0 + 0.5, rgb(Paint.BRASS[5]));
+        p.rect(x0, y0, x0 + 0.5, y1, rgb(Paint.BRASS[4]));
+        p.rect(x0, y1 - 0.5, x1, y1, rgb(Paint.BRASS[1]));
+        p.rect(x1 - 0.5, y0, x1, y1, rgb(Paint.BRASS[2]));
+        p.rect(x0 + bw - 0.5, y0 + bw - 0.5, x1 - bw + 0.5, y0 + bw, rgb(Paint.BRASS[1]));
+        p.rect(x0 + bw - 0.5, y0 + bw - 0.5, x0 + bw, y1 - bw + 0.5, rgb(Paint.BRASS[1]));
+        p.rect(x0 + bw - 0.5, y1 - bw, x1 - bw + 0.5, y1 - bw + 0.5, rgb(Paint.BRASS[5]));
+        p.rect(x1 - bw, y0 + bw - 0.5, x1 - bw + 0.5, y1 - bw + 0.5, rgb(Paint.BRASS[4]));
     }
 
     /** The cold inlays: hoarfrost creeping in from the corners and rare flecks of patina, never a fill. */
@@ -95,24 +108,81 @@ final class AtlasArt {
         }
     }
 
-    /** The side of a casing: a copper rune plate sunk in a brass frame, a rune row and a ring of runes, filigree, frost in a corner. */
+    /** The side of a casing: a beveled riveted copper armor plate in an antique-brass frame, recessed inner panel & clean medallion. */
     static Paint casing() {
         Paint p = new Paint(16, 16, K);
-        brassFrame(p, 0, 0, 16, 16, 1.5);
+        antiqueFrame(p, 0, 0, 16, 16, 1.5);
         copper(p, 1.5, 1.5, 14.5, 14.5, 11, 0);
+
+        // Beveled recessed inner armor panel replacing the flat circle-cross sticker
+        copper(p, 3.5, 3.5, 12.5, 12.5, 19, -0.6);
+        p.rect(3.5, 3.5, 12.5, 4.0, rgb(COPPER[0]));
+        p.rect(3.5, 3.5, 4.0, 12.5, rgb(COPPER[0]));
+        p.rect(3.5, 12.0, 12.5, 12.5, rgb(COPPER[6]));
+        p.rect(12.0, 3.5, 12.5, 12.5, rgb(COPPER[6]));
 
         int groove = rgb(Atlant.COPPER[0]);
         int inlay = rgb(Paint.CYAN[4]);
-        int brassDark = rgb(Paint.BRASS[3]);
-        int brassHi = rgb(Paint.BRASS[6]);
+        int brassDark = rgb(Paint.BRASS[2]);
+        int brassHi = rgb(Paint.BRASS[5]);
 
         Carve.filigree(p, 2.0, 2.0, 14.0, 14.0, 1.5, brassDark, brassHi);
-        Carve.runeRow(p, 3.4, 12.6, 2.15, 0.72, 0x51A7, groove, inlay);
-        Carve.runeRing(p, 8.0, 8.0, 5.05, 0.72, 6, 0x2C9E, groove, inlay);
+        Carve.runeRow(p, 3.8, 12.2, 2.2, 0.65, 0x51A7, groove, inlay);
+        Carve.runeRow(p, 3.8, 12.2, 13.0, 0.65, 0x39E2, groove, inlay);
 
-        rune(p, 8, 8, 4.5);
-        cold(p, 12, 2.4);
+        // Smooth beveled cast-bronze/antique-brass central medallion with glowing cyan rune jewel
+        p.disc(8, 8, 2.4, rgb(COPPER[0]));
+        p.ring(8, 8, 1.8, 2.4, rgb(Paint.BRASS[3]));
+        p.disc(8, 8, 1.6, rgb(Paint.SLATE_IRON[1]));
+        p.glowRect(7.4, 7.4, 8.6, 8.6, 0.01, rgb(0x28b8b6), 255);
+        p.glowRect(7.7, 7.7, 8.3, 8.3, 0.01, rgb(0x96f2ee), 255);
+
+        cold(p, 12, 2.0);
         rivets(p, 0.5, 1);
+        return p;
+    }
+
+    /** Clean weathered riveted copper cornice & pilaster texture (no cut-in-half rune strips when UV-mapped onto thin sills/posts). */
+    static Paint rimCopper() {
+        Paint p = new Paint(16, 16, K);
+        copper(p, 0, 0, 16, 16, 101, 0.1);
+        // Clean rolled copper plate bevels and riveted corner studs
+        p.frame(0, 0, 16, 16, 0.5, rgb(COPPER[1]));
+        p.rect(0.5, 0.5, 15.5, 1.0, rgb(COPPER[7]));
+        p.rect(0.5, 7.5, 15.5, 8.0, rgb(COPPER[1]));
+        p.rect(0.5, 8.0, 15.5, 8.5, rgb(COPPER[6]));
+        // Subtle oxidation flecks at top/bottom corners (no random scattered white dots)
+        p.px(2, 2, rgb(Atlant.PATINA[1]));
+        p.px(p.w - 3, 2, rgb(Atlant.PATINA[1]));
+        for (double x : new double[]{2.0, 7.5, 13.0}) {
+            p.rect(x, 2.0, x + 0.8, 2.8, rgb(COPPER[0]));
+            p.rect(x, 2.0, x + 0.4, 2.4, rgb(COPPER[7]));
+            p.rect(x, 13.0, x + 0.8, 13.8, rgb(COPPER[0]));
+            p.rect(x, 13.0, x + 0.4, 13.4, rgb(COPPER[7]));
+        }
+        return p;
+    }
+
+    /** Readable deepslate-gray forged steel housing well with bolts. */
+    static Paint rimIron() {
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, Paint.SLATE_IRON, 2.6, 1);
+        p.grain(0, 0, 16, 16, 0.05, 111);
+        p.frame(0, 0, 16, 16, 0.5, rgb(Paint.SLATE_IRON[1]));
+        p.disc(8, 8, 5.4, rgb(Paint.SLATE_IRON[1]));
+        p.ring(8, 8, 5.4, 6.4, rgb(Paint.SLATE_IRON[5]));
+        for (double[] r : new double[][]{{1.5, 1.5}, {13.5, 1.5}, {1.5, 13.5}, {13.5, 13.5}}) {
+            p.rivet(r[0] + 0.5, r[1] + 0.5, 0.4, Paint.SLATE_IRON);
+        }
+        return p;
+    }
+
+    /** Warm antique bronze-brass for the 3D parapet valve handwheels. */
+    static Paint rimWheel() {
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, Paint.BRASS, 3.1, 1);
+        p.streaks(0.5, 0.5, 15.5, 15.5, 0.05, 117, true);
+        p.frame(0, 0, 16, 16, 0.5, rgb(Paint.BRASS[2]));
         return p;
     }
 
@@ -283,10 +353,70 @@ final class AtlasArt {
         return p;
     }
 
+    /** Carved deepslate-steel arcane pedestal plate for Atlas Core crucible (no pitch-black ink). */
+    static Paint coreRune() {
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, Paint.SLATE_IRON, 2.5, 1);
+        p.grain(0, 0, 16, 16, 0.05, 701);
+        p.frame(0, 0, 16, 16, 0.5, rgb(Paint.SLATE_IRON[1]));
+        p.frame(1.5, 1.5, 14.5, 14.5, 0.5, rgb(Paint.SLATE_IRON[0]));
+        Carve.filigree(p, 1.5, 1.5, 14.5, 14.5, 2.2, rgb(Paint.BRASS[3]), rgb(Paint.BRASS[5]));
+        Carve.runeRow(p, 3.0, 13.0, 2.2, 0.8, 709, rgb(Paint.SLATE_IRON[1]), rgb(Paint.CYAN[4]));
+        Carve.runeRow(p, 3.0, 13.0, 12.6, 0.8, 713, rgb(Paint.SLATE_IRON[1]), rgb(Paint.CYAN[4]));
+        p.disc(8, 8, 2.8, rgb(Paint.SLATE_IRON[0]));
+        p.ring(8, 8, 2.8, 3.5, rgb(Paint.BRASS[3]));
+        p.rune(6.8, 5.7, 4.6, 45, rgb(Paint.CYAN[5]), rgb(Paint.CYAN[3]));
+        p.glowRect(7.2, 7.2, 8.8, 8.8, 0.3, rgb(Paint.CYAN[5]), 160);
+        return p;
+    }
+
+    /** Crisp faceted frost-cyan beacon crystal for Atlas Core. */
+    static Paint coreCrystal() {
+        Paint p = new Paint(16, 16, K);
+        for (int j = 0; j < p.h; j++) {
+            for (int i = 0; i < p.w; i++) {
+                double d = Math.hypot((i + 0.5) / K - 8.0, (j + 0.5) / K - 8.0) / 11.3;
+                p.px(i, j, rgb(Paint.CYAN[d < 0.25 ? 6 : d < 0.65 ? 5 : 4]));
+            }
+        }
+        p.line(1, 1, 15, 15, 0.8, rgb(0xf0ffff));
+        p.line(15, 1, 1, 15, 0.8, rgb(Paint.CYAN[5]));
+        p.frame(0, 0, 16, 16, 0.75, rgb(Paint.CYAN[2]));
+        return p;
+    }
+
+    /** Recessed deepslate-steel socket bore with glowing frost-cyan channel core for Cable Bushing ports. */
+    static Paint bushingCore() {
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, Paint.SLATE_IRON, 1.4, 1);
+        p.disc(8, 8, 5.4, rgb(Paint.SLATE_IRON[0]));
+        p.ring(8, 8, 5.4, 6.2, rgb(Paint.SLATE_IRON[4]));
+        p.glowRect(6.2, 6.2, 9.8, 9.8, 0.6, rgb(Paint.CYAN[3]), 180);
+        p.rect(6.5, 6.5, 9.5, 9.5, rgb(Paint.CYAN[4]));
+        p.rect(7.25, 7.25, 8.75, 8.75, rgb(0xe8ffff));
+        return p;
+    }
+
+    /** Glowing faceted packed-ice core column texture for Atlas Conduit. */
+    static Paint conduitIce() {
+        Paint p = new Paint(16, 16, K);
+        ice(p, 0, 0, 16, 16, 29);
+        p.glowRect(6.25, 0, 9.75, 16, 0.4, rgb(Paint.CYAN[4]), 140);
+        p.rect(7.0, 0, 9.0, 16, rgb(0xdcf6ff));
+        return p;
+    }
+
     static void textures() throws Exception {
         shelfFloor().save(Forge2.tex("mainframe_floor"));
         casing().save(Forge2.tex("atlas_casing"));
         casingTop().save(Forge2.tex("atlas_casing_top"));
+        rimCopper().save(Forge2.tex("atlas_rim_copper"));
+        rimIron().save(Forge2.tex("atlas_rim_iron"));
+        rimWheel().save(Forge2.tex("atlas_rim_wheel"));
+        coreRune().save(Forge2.tex("atlas_core"));
+        coreCrystal().save(Forge2.tex("core_crystal"));
+        bushingCore().save(Forge2.tex("bushing_core"));
+        conduitIce().save(Forge2.tex("conduit_ice"));
         conduit().save(Forge2.tex("atlas_conduit"));
         bushing().save(Forge2.tex("cable_bushing"));
         column().save(Forge2.tex("atlas_ice_column"));

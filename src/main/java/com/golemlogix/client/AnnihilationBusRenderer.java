@@ -27,8 +27,8 @@ import net.minecraft.world.level.block.DirectionalBlock;
 public class AnnihilationBusRenderer extends com.golemlogix.client.render.LegacyBer<AnnihilationBusBlockEntity> {
     private static final Identifier GOLEM = Identifier.withDefaultNamespace("textures/entity/iron_golem/iron_golem.png");
     private static final Identifier BELT = Identifier.fromNamespaceAndPath(com.golemlogix.GolemLogixMod.MOD_ID, "textures/entity/plasma_belt.png");
-    /** About 10 pixels tall, on the niche floor (y 2), in the middle of its depth (z 0..5). */
-    private static final float SCALE = 0.235f, FLOOR = 2f, GOLEM_Z = 2.9f;
+    /** About 10 pixels tall, on the niche floor (y 2), centered inside the armored hood (z 1.5..6.0) behind the blast shield. */
+    private static final float SCALE = 0.235f, FLOOR = 2f, GOLEM_Z = 3.6f;
     private final ModelPart golem;
 
     public AnnihilationBusRenderer(BlockEntityRendererProvider.Context context) {

@@ -187,12 +187,12 @@ final class DevicesV3 {
         return p;
     }
 
-    /** Plain brass for trims and posts: a soft vertical gradient and an edge line. */
+    /** Aged antique brass for trims and posts: a soft vertical gradient and an edge line. */
     static Paint brassTrim(int seed) {
         Paint p = new Paint(16, 16, K);
-        fill(p, Paint.BRASS, 3, 5, seed);
-        p.frame(0, 0, 16, 16, 0.5, rgb(Paint.BRASS[2]));
-        p.rect(0.5, 0.5, 15.5, 1, rgb(Paint.BRASS[6]));
+        fill(p, Paint.AGED_BRASS, 2, 4, seed);
+        p.frame(0, 0, 16, 16, 0.5, rgb(Paint.AGED_BRASS[1]));
+        p.rect(0.5, 0.5, 15.5, 1, rgb(Paint.AGED_BRASS[5]));
         return p;
     }
 
@@ -252,26 +252,79 @@ final class DevicesV3 {
 
     // ------------------------------------------------------------------ manometer
 
-    /** The dial: brass bezel, a cream face with a ring of runes for numbers, ticks and a red zone (the needle is the renderer's). */
+    /** High-contrast circular warm parchment dial face in an antique-brass inner rim (needle is rendered by BER). */
     static Paint dial() {
         Paint p = new Paint(16, 16, K);
-        fill(p, Paint.BRASS, 2, 4, 2161);
-        p.disc(8, 8, 8, rgb(Paint.BRASS[2]));
-        p.disc(8, 8, 7.4, rgb(Paint.BRASS[5]));
-        p.ring(8, 8, 6.9, 7.4, rgb(Paint.BRASS[6]));
+        p.rect(0, 0, 16, 16, rgb(Paint.SLATE_IRON[1]));
+        p.disc(8, 8, 7.8, rgb(Paint.BRASS[2]));
+        p.disc(8, 8, 7.1, rgb(Paint.BRASS[4]));
         p.disc(8, 8, 6.4, rgb(Paint.CREAM[5]));
-        p.ring(8, 8, 6, 6.4, rgb(Paint.CREAM[2]));
+        p.ring(8, 8, 5.9, 6.4, rgb(Paint.CREAM[2]));
         for (int k = 0; k <= 10; k++) {
             double a = Math.toRadians(135 + k * 27);
-            p.line(8 + Math.cos(a) * 4.6, 8 + Math.sin(a) * 4.6, 8 + Math.cos(a) * 5.8, 8 + Math.sin(a) * 5.8, k % 5 == 0 ? 0.7 : 0.45,
-                    rgb(k >= 9 ? 0xb02818 : 0x2a2420));
+            double r0 = k % 5 == 0 ? 4.1 : 4.6;
+            int col = k >= 8 ? rgb(0xb8241a) : rgb(0x221c18);
+            p.line(8 + Math.cos(a) * r0, 8 + Math.sin(a) * r0, 8 + Math.cos(a) * 5.8, 8 + Math.sin(a) * 5.8,
+                    k % 5 == 0 ? 0.7 : 0.45, col);
         }
-        for (int k = 0; k < 6; k++) {
-            double a = Math.toRadians(150 + k * 48);
-            p.disc(8 + Math.cos(a) * 3.4, 8 + Math.sin(a) * 3.4, 0.35, rgb(Paint.BRASS[2]));
+        p.rect(6.2, 10.6, 9.8, 11.2, rgb(Paint.BRASS[2]));
+        p.disc(8, 8, 1.0, rgb(Paint.SLATE_IRON[0]));
+        return p;
+    }
+
+    /** Deepslate-gray forged steel pressure manifold texture for Stock Manometer. */
+    static Paint manoIron() {
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, Paint.SLATE_IRON, 2.6, 1);
+        p.grain(0, 0, 16, 16, 0.06, 2111);
+        p.frame(0, 0, 16, 16, 0.5, rgb(Paint.SLATE_IRON[1]));
+        p.frame(1.5, 1.5, 14.5, 14.5, 0.5, rgb(Paint.SLATE_IRON[4]));
+        for (double[] r : new double[][]{{1.5, 1.5}, {13.5, 1.5}, {1.5, 13.5}, {13.5, 13.5}}) {
+            rivet(p, r[0], r[1], Paint.SLATE_IRON);
         }
-        p.rect(6, 10.5, 10, 11, rgb(Paint.BRASS[3]));
-        p.disc(8, 8, 0.9, rgb(Paint.BRASS[1]));
+        return p;
+    }
+
+    /** Weathered riveted copper for Stock Manometer top cap & flank bridge ports. */
+    static Paint manoCopper() {
+        Paint p = new Paint(16, 16, K);
+        fill(p, Atlant.COPPER, 1, 5, 2121);
+        p.frame(0, 0, 16, 16, 0.5, rgb(Atlant.COPPER[0]));
+        p.rect(0.5, 0.5, 15.5, 1.0, rgb(Atlant.COPPER[6]));
+        p.rect(1.0, 7.5, 15.0, 8.0, rgb(Atlant.COPPER[1]));
+        p.rect(1.0, 8.0, 15.0, 8.5, rgb(Atlant.COPPER[5]));
+        for (double[] r : new double[][]{{1.5, 1.5}, {13.5, 1.5}, {1.5, 13.5}, {13.5, 13.5}}) {
+            p.rect(r[0], r[1], r[0] + 1, r[1] + 1, rgb(Atlant.COPPER[0]));
+            p.rect(r[0], r[1], r[0] + 0.5, r[1] + 0.5, rgb(Atlant.COPPER[6]));
+        }
+        p.px(2, 3, rgb(Atlant.PATINA[0]));
+        p.px(p.w - 3, p.h - 4, rgb(Atlant.PATINA[1]));
+        return p;
+    }
+
+    /** Warm antique bronze-brass for Stock Manometer notched dial bezel. */
+    static Paint manoBrass() {
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, Paint.BRASS, 2.9, 1);
+        p.streaks(0.5, 0.5, 15.5, 15.5, 0.06, 2131, true);
+        p.frame(0, 0, 16, 16, 0.5, rgb(Paint.BRASS[1]));
+        p.frame(0.5, 0.5, 15.5, 15.5, 0.5, rgb(Paint.BRASS[4]));
+        return p;
+    }
+
+    /** Vertical luminous cyan cryo sight-tube texture with crisp highlight streak. */
+    static Paint manoTube() {
+        Paint p = new Paint(16, 16, K);
+        for (int j = 0; j < p.h; j++) {
+            for (int i = 0; i < p.w; i++) {
+                double u = (i + 0.5) / K;
+                double e = Math.abs(u - 8.0) / 8.0;
+                int c = e > 0.72 ? Paint.CYAN[2] : e < 0.25 ? Paint.CYAN[5] : Paint.CYAN[4];
+                p.px(i, j, rgb(c));
+            }
+        }
+        p.rect(4.5, 0.5, 6.0, 15.5, rgb(Paint.CYAN[6]));
+        p.frame(0, 0, 16, 16, 0.5, rgb(Paint.CYAN[1]));
         return p;
     }
 
@@ -354,139 +407,157 @@ final class DevicesV3 {
 
     // ------------------------------------------------------------------ diode
 
-    /** Frost swirling inside the pipe (animated): snow motes spiralling along the flow over a cold glow. */
-    static Paint frost() {
+    /** Deepslate-gray forged steel with bolted bezel highlights for Cryo-Diode end flanges, window trim, and stem. */
+    static Paint diodeIron() {
         Paint p = new Paint(16, 16, K);
-        p.animFrames = 16;
-        p.frameTime = 2;
-        p.interpolate = false;
-        for (int j = 0; j < p.h; j++) {
-            for (int i = 0; i < p.w; i++) {
-                p.px(i, j, argb(0x70, Paint.FROST[2 + (int) Math.round(Atlant.noise(i, j, 8, 4401) * 2)]));
-            }
-        }
-        p.animate(0, 0, 16, 16, (q, t) -> {
-            for (int k = 0; k < 14; k++) {
-                double y = (Atlant.hash(k, 3, 4402) * 16 - t * 16 + 32) % 16;
-                double x = 8 + Math.sin((y / 16 + Atlant.hash(k, 4, 4402)) * Math.PI * 2) * 5.5;
-                q.rect(x, y, x + 0.5 + (k % 3 == 0 ? 0.5 : 0), y + 0.5, argb(0xe0, k % 4 == 0 ? Paint.CYAN[5] : 0xffffff));
-            }
-        });
+        p.slab(0, 0, 16, 16, Paint.SLATE_IRON, 2.7, 1);
+        p.grain(0, 0, 16, 16, 0.06, 4410);
+        p.frame(0, 0, 16, 16, 0.5, rgb(Paint.SLATE_IRON[1]));
+        p.frame(1.5, 1.5, 14.5, 14.5, 0.5, rgb(Paint.SLATE_IRON[5]));
         return p;
     }
 
-    /** The valve body: filigreed brass with a teal arrow towards the outlet; dir 0 = right, 1 = left, 2 = up (in the texture). */
-    /**
-     * The valve's side: a dark bronze plate in a brass bevel with an arrow in the manner of Ars Nouveau, cut in and inlaid in teal -
-     * a stem swaying like a whiplash from a curl at its tail, two barbs sweeping back from the point into curls of their own, a
-     * bead behind the point. dir: 0 points right, 1 left, 2 up.
-     */
-    static Paint valve(int dir) {
-        Paint p = brassFiligree(5520);
-        p.rect(2.4, 2.4, 13.6, 13.6, rgb(Paint.BRONZE[1]));
-        p.rect(3.4, 3.4, 12.6, 12.6, rgb(Paint.BRONZE[2]));
-        p.frame(2.4, 2.4, 13.6, 13.6, 0.5, rgb(Paint.BRASS[3]));
-        p.rect(2.4, 2.4, 13.6, 2.7, rgb(Paint.BRASS[5]));
-        p.rect(2.4, 2.4, 2.7, 13.6, rgb(Paint.BRASS[5]));
-        List<double[]> stem = new ArrayList<>(), barbA = new ArrayList<>(), barbB = new ArrayList<>();
-        for (double t = 0; t <= 1.001; t += 0.05) {
-            stem.add(new double[]{4.5 + 7.6 * t, 8 + 1.5 * Math.sin(t * Math.PI * 2) * (1 - t)});
-            // quadratic curves from the point back, ending in a turn inward
-            double u = 1 - t;
-            double x = u * u * 12.6 + 2 * u * t * 11.2 + t * t * 8.6;
-            double y = u * u * 8 + 2 * u * t * 6.6 + t * t * 4.6;
-            barbA.add(new double[]{x, y});
-            barbB.add(new double[]{x, 16 - y});
-        }
-        for (int pass = 0; pass < 3; pass++) {
-            int c = rgb(pass == 0 ? Paint.BRONZE[0] : pass == 1 ? Paint.CYAN[3] : Paint.CYAN[5]);
-            double extra = pass == 0 ? 0.5 : pass == 1 ? 0 : -0.45;
-            curve(p, stem, 0.85 + extra, c, dir);
-            curve(p, barbA, 0.75 + extra, c, dir);
-            curve(p, barbB, 0.75 + extra, c, dir);
-            for (double[] k : new double[][]{{4.6, 8, 1.0, 1}, {8.6, 4.6, 0.75, 1}, {8.6, 11.4, 0.75, 1}, {10.5, 8, 0.8, 0}}) {
-                double[] m = turned(k[0], k[1], dir);
-                if (k[3] > 0) {
-                    p.ring(m[0], m[1], Math.max(0.1, k[2] - 0.45 - extra / 2), k[2] + extra / 2, c);
-                } else {
-                    p.disc(m[0], m[1], k[2] + extra / 2, c);
-                }
-            }
-        }
-        return p;
-    }
-
-    private static double[] turned(double x, double y, int dir) {
-        return dir == 1 ? new double[]{16 - x, y} : dir == 2 ? new double[]{y, 16 - x} : new double[]{x, y};
-    }
-
-    private static void curve(Paint p, List<double[]> pts, double w, int c, int dir) {
-        for (int i = 0; i + 1 < pts.size(); i++) {
-            double[] a = turned(pts.get(i)[0], pts.get(i)[1], dir), b = turned(pts.get(i + 1)[0], pts.get(i + 1)[1], dir);
-            p.line(a[0], a[1], b[0], b[1], w, c);
-        }
-    }
-
-    /** The five-handled wheel (an entity texture for the renderer): a brass rim, five spokes with knobs, a teal-capped hub. */
-    static Paint wheel5() {
+    /** Weathered riveted copper with crisp panel bevels for Cryo-Diode central valve housing. */
+    static Paint diodeCopper() {
         Paint p = new Paint(16, 16, K);
-        p.ring(8, 8, 5.2, 6.4, rgb(Paint.BRASS[4]));
-        p.ring(8, 8, 5.9, 6.4, rgb(Paint.BRASS[6]));
-        p.ring(8, 8, 5.2, 5.5, rgb(Paint.BRASS[2]));
-        for (int k = 0; k < 5; k++) {
-            double a = Math.PI * 2 * k / 5 - Math.PI / 2;
-            p.line(8, 8, 8 + Math.cos(a) * 5.6, 8 + Math.sin(a) * 5.6, 1.1, rgb(Paint.BRASS[3]));
-            p.line(8, 8, 8 + Math.cos(a) * 5.6, 8 + Math.sin(a) * 5.6, 0.4, rgb(Paint.BRASS[5]));
-            p.disc(8 + Math.cos(a) * 7.0, 8 + Math.sin(a) * 7.0, 0.95, rgb(Paint.BRASS[5]));
-            p.disc(8 + Math.cos(a) * 7.0, 8 + Math.sin(a) * 7.0, 0.45, rgb(Paint.BRASS[6]));
-        }
-        p.disc(8, 8, 1.9, rgb(Paint.BRASS[2]));
-        p.disc(8, 8, 1.2, rgb(Paint.CYAN[4]));
-        p.disc(7.6, 7.6, 0.4, rgb(Paint.CYAN[6]));
-        return p;
-    }
-
-    /** The handwheel: a brass rim, four spokes and a hub on transparency (cutout). */
-    static Paint wheel() {
-        Paint p = new Paint(16, 16, K);
-        p.ring(8, 8, 6.2, 7.6, rgb(Paint.BRASS[4]));
-        p.ring(8, 8, 7.1, 7.6, rgb(Paint.BRASS[6]));
-        for (int k = 0; k < 4; k++) {
-            double a = Math.PI / 2 * k + Math.PI / 4;
-            p.line(8, 8, 8 + Math.cos(a) * 6.5, 8 + Math.sin(a) * 6.5, 1, rgb(Paint.BRASS[3]));
-        }
-        p.disc(8, 8, 1.6, rgb(Paint.BRASS[2]));
-        p.disc(8, 8, 0.7, rgb(Paint.CYAN[4]));
-        return p;
-    }
-
-    /** A copper flange ring with rivets; its middle (radius hole, in texture units) left open for the glass behind. */
-    static Paint flange(double hole) {
-        Paint p = new Paint(16, 16, K);
-        fill(p, Atlant.COPPER, 3, 6, 6620);
+        fill(p, Atlant.COPPER, 1, 5, 4420);
         p.frame(0, 0, 16, 16, 0.5, rgb(Atlant.COPPER[0]));
+        p.rect(0.5, 0.5, 15.5, 1.0, rgb(Atlant.COPPER[6]));
+        p.rect(0.5, 7.5, 15.5, 8.0, rgb(Atlant.COPPER[1]));
+        p.rect(0.5, 8.0, 15.5, 8.5, rgb(Atlant.COPPER[5]));
         for (double[] r : new double[][]{{1.5, 1.5}, {13.5, 1.5}, {1.5, 13.5}, {13.5, 13.5}}) {
-            rivet(p, r[0], r[1], Paint.BRASS);
+            p.rect(r[0], r[1], r[0] + 1, r[1] + 1, rgb(Atlant.COPPER[0]));
+            p.rect(r[0], r[1], r[0] + 0.5, r[1] + 0.5, rgb(Atlant.COPPER[6]));
         }
-        p.ring(8, 8, hole, hole + 0.6, rgb(Paint.BRASS[4]));
+        p.px(2, 2, rgb(Atlant.PATINA[1]));
+        p.px(p.w - 3, p.h - 3, rgb(Atlant.PATINA[0]));
+        return p;
+    }
+
+    /** Warm antique brass for Cryo-Diode bonnet gland nut & handwheel center hub. */
+    static Paint diodeBrass() {
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, Paint.BRASS, 3.0, 1);
+        p.streaks(0.5, 0.5, 15.5, 15.5, 0.06, 4430, true);
+        p.frame(0, 0, 16, 16, 0.5, rgb(Paint.BRASS[2]));
+        return p;
+    }
+
+    /** Translucent frosted ice sight-glass for Cryo-Diode side windows (clear interior so 3D arrow shines through). */
+    static Paint diodeGlass() {
+        Paint p = new Paint(16, 16, K);
         for (int j = 0; j < p.h; j++) {
             for (int i = 0; i < p.w; i++) {
-                double x = (i + 0.5) / K - 8, y = (j + 0.5) / K - 8;
-                if (x * x + y * y < hole * hole) {
-                    p.px(i, j, 0);
+                double u = (i + 0.5) / K, v = (j + 0.5) / K;
+                double d = Math.min(Math.min(u, 16 - u), Math.min(v, 16 - v));
+                if (d < 1.2) {
+                    p.px(i, j, argb(0xb5, Paint.FROST[4]));
+                } else {
+                    p.px(i, j, argb(0x52, Paint.FROST[2]));
                 }
             }
         }
+        p.line(2.5, 12.5, 5.5, 9.5, 0.5, argb(0xc0, 0xffffff));
+        p.line(10.5, 5.0, 13.5, 2.0, 0.5, argb(0xb0, 0xffffff));
+        return p;
+    }
+
+    /** Luminous frost-cyan directional chevron crystal texture for Cryo-Diode core. */
+    static Paint diodeArrow() {
+        Paint p = new Paint(16, 16, K);
+        fill(p, Paint.CYAN, 2, 5, 4440);
+        p.frame(0, 0, 16, 16, 1.0, rgb(Paint.CYAN[2]));
+        p.frame(1.0, 1.0, 15.0, 15.0, 1.0, rgb(Paint.CYAN[5]));
+        p.rect(2.0, 2.0, 14.0, 14.0, rgb(Paint.CYAN[4]));
+        p.rect(3.5, 3.5, 10.0, 10.0, rgb(Paint.CYAN[6]));
+        p.rect(5.5, 5.5, 8.0, 8.0, rgb(0xe8ffff));
         return p;
     }
 
     // ------------------------------------------------------------------ security terminal
 
-    /** The vault door: the iron sigil plate in a gold frame. */
-    static Paint door() {
-        Paint p = ironSigil(8810);
-        p.frame(0, 0, 16, 16, 1, rgb(Paint.BRASS[4]));
+    /** Warm workshop walnut planking matching Order Ledger & Pattern Encoder. */
+    static Paint secWood() {
+        Paint p = new Paint(16, 16, K);
+        int[] tones = {0x321f12, 0x3e2716, 0x4b301b, 0x583a21, 0x674629};
+        for (int j = 0; j < p.h; j++) {
+            for (int i = 0; i < p.w; i++) {
+                double v = (j + 0.5) / K;
+                int plank = (int) (v / 4);
+                double t = Atlant.hash(plank, i / 5, 8801) * 0.5 + Atlant.noise(i, j, 6, 8802) * 0.5;
+                p.px(i, j, rgb(tones[(int) Math.min(4, t * 5)]));
+            }
+        }
+        for (double y = 4; y < 16; y += 4) {
+            p.rect(0, y - 0.5, 16, y, rgb(0x22140b));
+        }
+        return p;
+    }
+
+    /** Forged deepslate-gray steel with crisp bevel & rivets for Security Terminal plinth, pilasters & cornice. */
+    static Paint secIron() {
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, Paint.SLATE_IRON, 2.6, 1);
+        p.grain(0, 0, 16, 16, 0.06, 8811);
+        p.frame(0, 0, 16, 16, 0.5, rgb(Paint.SLATE_IRON[1]));
+        p.frame(1.0, 1.0, 15.0, 15.0, 0.5, rgb(Paint.SLATE_IRON[4]));
+        for (double[] r : new double[][]{{1.5, 1.5}, {13.5, 1.5}, {1.5, 13.5}, {13.5, 13.5}}) {
+            rivet(p, r[0], r[1], Paint.SLATE_IRON);
+        }
+        return p;
+    }
+
+    /** Warm antique brass for Security Terminal CRT hood & punch-card reader shelf. */
+    static Paint secBrass() {
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, Paint.BRASS, 3.0, 1);
+        p.streaks(0.5, 0.5, 15.5, 15.5, 0.06, 8821, true);
         p.frame(0, 0, 16, 16, 0.5, rgb(Paint.BRASS[2]));
+        return p;
+    }
+
+    /** Sculpted antique-brass vault keyhole escutcheon plate for Security Terminal sides. */
+    static Paint secKeyhole() {
+        Paint p = secBrass();
+        p.slab(1.5, 1.5, 14.5, 14.5, Paint.BRASS, 2.3, 1);
+        p.frame(1.5, 1.5, 14.5, 14.5, 0.5, rgb(Paint.BRASS[1]));
+        p.frame(2.0, 2.0, 14.0, 14.0, 0.5, rgb(Paint.BRASS[5]));
+        for (double[] r : new double[][]{{2.5, 2.5}, {12.5, 2.5}, {2.5, 12.5}, {12.5, 12.5}}) {
+            rivet(p, r[0], r[1], Paint.BRASS);
+        }
+        // Keyhole cutout silhouette with crisp inner shadow & highlight bevel rim
+        p.disc(8.0, 6.2, 2.75, rgb(Paint.BRASS[5]));
+        p.disc(8.0, 6.2, 2.35, rgb(Paint.SLATE_IRON[0]));
+        double[] xsOut = {6.2, 9.8, 10.7, 5.3};
+        double[] ysOut = {7.0, 7.0, 13.0, 13.0};
+        p.poly(xsOut, ysOut, rgb(Paint.BRASS[5]));
+        double[] xsMid = {6.45, 9.55, 10.4, 5.6};
+        double[] ysMid = {7.0, 7.0, 12.8, 12.8};
+        p.poly(xsMid, ysMid, rgb(Paint.SLATE_IRON[0]));
+        p.disc(8.0, 6.2, 2.05, rgb(0x16181d));
+        double[] xs = {6.7, 9.3, 10.0, 6.0};
+        double[] ys = {7.0, 7.0, 12.4, 12.4};
+        p.poly(xs, ys, rgb(0x16181d));
+        return p;
+    }
+
+    /** Deepslate-gray steel back panel with cooling louvers and centered Frost Pipe socket. */
+    static Paint secBack() {
+        Paint p = secIron();
+        Terminals.vent(p, 3.0, 2.0, 13.0, 7.0, 4);
+        p.slab(5.0, 8.5, 11.0, 14.0, Paint.BRASS, 3.0, 1);
+        p.disc(8.0, 11.25, 1.9, rgb(0x16181d));
+        p.ring(8.0, 11.25, 1.9, 2.4, rgb(Paint.BRASS[5]));
+        return p;
+    }
+
+    /** Glowing status indicator jewel face (red or green). */
+    static Paint secLed(boolean red) {
+        Paint p = new Paint(16, 16, K);
+        p.rect(0, 0, 16, 16, rgb(red ? 0x64100c : 0x0c4e1c));
+        p.frame(0, 0, 16, 16, 1.5, rgb(Paint.IRON[0]));
+        p.rect(2.5, 2.5, 13.5, 13.5, rgb(red ? 0xe03224 : 0x38d868));
+        p.rect(3.5, 3.5, 7.0, 7.0, rgb(red ? 0xff9a8a : 0xaaffbf));
         return p;
     }
 
@@ -496,56 +567,26 @@ final class DevicesV3 {
         p.animFrames = 20;
         p.frameTime = 2;
         p.interpolate = false;
-        p.rect(0, 0, 16, 16, rgb(0x061a0c));
-        p.ring(8, 8, 6.4, 6.9, rgb(0x1f7a3a));
-        p.ring(8, 8, 3.7, 4.1, rgb(0x14522a));
-        p.line(8, 1.5, 8, 14.5, 0.35, rgb(0x14522a));
-        p.line(1.5, 8, 14.5, 8, 0.35, rgb(0x14522a));
+        p.rect(0, 0, 16, 16, rgb(0x031208));
+        p.ring(8, 8, 6.2, 6.8, rgb(0x1f7a3a));
+        p.ring(8, 8, 3.5, 4.0, rgb(0x14522a));
+        p.line(8, 1.5, 8, 14.5, 0.4, rgb(0x14522a));
+        p.line(1.5, 8, 14.5, 8, 0.4, rgb(0x14522a));
         p.animate(0, 0, 16, 16, (q, t) -> {
             double a = t * Math.PI * 2;
             for (int k = 0; k < 4; k++) {
                 double b = a - k * 0.18;
-                q.line(8, 8, 8 + Math.cos(b) * 6.4, 8 + Math.sin(b) * 6.4, 0.6, rgb(k == 0 ? 0x8cff9e : k == 1 ? 0x46d266 : 0x1f9a3f));
+                q.line(8, 8, 8 + Math.cos(b) * 6.3, 8 + Math.sin(b) * 6.3, 0.65,
+                        rgb(k == 0 ? 0x8cff9e : k == 1 ? 0x46d266 : 0x1f9a3f));
             }
             double[][] blips = {{11, 5, 0.1}, {5, 10.5, 0.55}, {10, 11, 0.8}};
             for (double[] b : blips) {
                 double since = (t - b[2] + 1) % 1;
                 if (since < 0.35) {
-                    q.disc(b[0], b[1], 0.7, rgb(since < 0.12 ? 0xd4ffd8 : 0x46d266));
+                    q.disc(b[0], b[1], 0.75, rgb(since < 0.12 ? 0xd4ffd8 : 0x46d266));
                 }
             }
         });
-        return p;
-    }
-
-    /** The combination dial: a brass knob with a ring of ticks and a pointer notch. */
-    static Paint combo() {
-        Paint p = new Paint(16, 16, K);
-        p.rect(0, 0, 16, 16, rgb(Paint.IRON[2]));
-        p.disc(8, 8, 7.6, rgb(Paint.BRASS[2]));
-        p.disc(8, 8, 7, rgb(Paint.BRASS[4]));
-        for (int k = 0; k < 20; k++) {
-            double a = Math.PI * 2 * k / 20;
-            p.line(8 + Math.cos(a) * 5.4, 8 + Math.sin(a) * 5.4, 8 + Math.cos(a) * 6.6, 8 + Math.sin(a) * 6.6, k % 5 == 0 ? 0.7 : 0.4,
-                    rgb(Paint.BRASS[1]));
-        }
-        p.disc(8, 8, 4.4, rgb(Paint.BRASS[5]));
-        p.disc(8, 8, 3.4, rgb(Paint.BRASS[3]));
-        p.rect(7.6, 0.6, 8.4, 2.6, rgb(0xb02818));
-        p.disc(7, 7, 1, rgb(Paint.BRASS[6]));
-        return p;
-    }
-
-    /** The card slot: a brass plate with a black slit and a copper punch card's corner sticking out. */
-    static Paint slot() {
-        Paint p = new Paint(16, 16, K);
-        p.rect(0, 0, 16, 16, rgb(Paint.BRASS[4]));
-        p.frame(0, 0, 16, 16, 1, rgb(Paint.BRASS[2]));
-        p.rect(2, 6.5, 14, 9.5, rgb(0x0a0806));
-        p.rect(5, 4, 11, 7.5, rgb(Atlant.COPPER[5]));
-        for (double x = 5.5; x < 11; x += 1.5) {
-            p.rect(x, 4.75, x + 0.5, 5.25, rgb(Atlant.COPPER[0]));
-        }
         return p;
     }
 
@@ -556,28 +597,45 @@ final class DevicesV3 {
     }
 
     static void models() throws Exception {
-        // ---- Brass Stock Manometer (facing6, front north, the back on the block it hangs on): built like our buses - an octagonal
-        // flange on the wall, a copper body in brass bands - but its head is a big octagonal clock: the dial in a raised bezel, a
-        // pocket-watch crown with a crystal on top. The dial face is the plane z = 5.48 (the needle is the renderer's).
-        String[][] mt = {{"copper", "dev_copper_rune"}, {"brass", "dev_brass_filigree"}, {"trim", "dev_brass_trim"},
-                {"dial", "dev_manometer_dial"}, {"crystal", "dev_crystal"}};
+        // ---- 1. Stock Manometer (facing6, front north, back on z=16; preserves BER bridges & miniature redstone golems)
+        String[][] mt = {{"iron", "dev_mano_iron"}, {"copper", "dev_mano_copper"}, {"brass", "dev_mano_brass"},
+                {"dial", "dev_manometer_dial"}, {"tube", "dev_mano_tube"}};
         List<Models.El> m = new ArrayList<>();
-        Buses.oct(m, 2, 2, 14.5, 14, 14, 16, 2.6, "trim", "trim", "trim", "brass", "trim");
-        Buses.oct(m, 4.5, 4.5, 8.5, 11.5, 11.5, 14.5, 1.6, "copper", "copper", "trim", null, null);
-        Pipes.ring(m, 4.1, 11.9, 11.2, 12, 1.75, "trim", 0.6);
-        Buses.oct(m, 1.5, 1.5, 5.5, 14.5, 14.5, 8.5, 3.8, "trim", "brass", "trim", "dial", "brass");
+        // Bolted dark cast-iron rear wall flange (z=14.5..16.0) + 4 brass corner bolt studs
+        m.add(e(1.5, 1.5, 14.5, 14.5, 14.5, 16.0).all("#iron"));
+        for (double[] b : new double[][]{{2.25, 2.25}, {12.75, 2.25}, {2.25, 12.75}, {12.75, 12.75}}) {
+            m.add(e(b[0], b[1], 14.1, b[0] + 1.0, b[1] + 1.0, 14.5).only("#brass", "north", "up", "down", "east", "west"));
+        }
+        // Dark cast-iron pressure manifold core + bolted lower baseplate + riveted copper top cap + side bridge ports
+        m.add(e(2.75, 2.5, 5.75, 13.25, 12.5, 14.5).all("#iron"));
+        m.add(e(2.0, 1.0, 4.75, 14.0, 2.5, 15.0).all("#iron"));
+        for (double bx : new double[]{2.1, 13.3}) {
+            m.add(e(bx, 2.5, 4.9, bx + 0.6, 2.9, 5.5).only("#brass", "north", "south", "east", "west", "up"));
+            m.add(e(bx, 2.5, 13.8, bx + 0.6, 2.9, 14.4).only("#brass", "north", "south", "east", "west", "up"));
+        }
+        m.add(e(2.5, 12.5, 5.5, 13.5, 13.5, 14.75).all("#copper"));
+        m.add(e(1.8, 6.75, 7.5, 2.75, 9.25, 10.5).all("#copper"));
+        m.add(e(13.25, 6.75, 7.5, 14.2, 9.25, 10.5).all("#copper"));
+        // Deeply recessed antique-brass octagonal bezel (3.75..5.75) + inner sides + knurled teeth + recessed dial face at z=4.9
         int bezel = m.size();
-        Pipes.ring(m, 1.1, 14.9, 4.7, 5.5, 3.95, "trim", 0.9);
-        // the ring's four straight pieces get their inner sides too: from an angle the world showed through the bezel
+        Pipes.ring(m, 2.25, 13.75, 3.75, 5.75, 3.1, "brass", 1.05);
         String[] inner = {"down", "up", "east", "west"};
         for (int k = 0; k < 4; k++) {
-            m.get(bezel + k).face(inner[k], "#trim");
+            m.get(bezel + k).face(inner[k], "#iron");
         }
-        m.add(e(7.25, 14.5, 6.25, 8.75, 15.25, 7.75).all("#trim"));
-        m.add(e(6.5, 15.25, 5.5, 9.5, 16, 8.5).all("#trim").face("up", "#crystal").glow(10));
-        Models.model("stock_manometer", true, "dev_brass_filigree", mt, m.toArray(new Models.El[0]));
+        m.add(e(7.25, 13.75, 4.0, 8.75, 14.1, 5.25).only("#brass", "north", "south", "east", "west", "up"));
+        m.add(e(7.25, 1.9, 4.0, 8.75, 2.25, 5.25).only("#brass", "north", "south", "east", "west", "down"));
+        m.add(e(1.9, 7.25, 4.0, 2.25, 8.75, 5.25).only("#brass", "north", "south", "west", "up", "down"));
+        m.add(e(13.75, 7.25, 4.0, 14.1, 8.75, 5.25).only("#brass", "north", "south", "east", "up", "down"));
+        m.add(e(3.2, 3.2, 4.9, 12.8, 12.8, 5.73).only("#iron", "east", "west", "up", "down").face("north", "#dial", 0, 0, 16, 16));
+        // Top vertical glowing cyan cryo sight-tube
+        m.add(e(6.0, 13.5, 8.0, 10.0, 14.5, 12.0).only("#iron", "north", "south", "east", "west", "up"));
+        m.add(e(6.75, 14.5, 8.75, 9.25, 16.25, 11.25).only("#tube", "north", "south", "east", "west").glow(14));
+        m.add(e(6.5, 16.25, 8.5, 9.5, 16.75, 11.5).all("#iron"));
+        Models.model("stock_manometer", false, "dev_mano_iron", mt, m.toArray(new Models.El[0]));
+        GolemBuses.cutout("stock_manometer");
 
-        // ---- Copper Order Ledger (horizontal, front north): cabinet, lectern sloping down to the front, inkwell, quill
+        // ---- Copper Order Ledger (horizontal, front north): UNTOUCHED BENCHMARK ----
         String[][] lt = {{"copper", "dev_copper_rune"}, {"walnut", "dev_walnut_inlay"}, {"drawers", "dev_ledger_drawers"},
                 {"trim", "dev_brass_trim"}, {"book", "dev_ledger_book"}, {"quill", "dev_ledger_quill"}, {"iron", "dev_iron_sigil"}};
         List<Models.El> l = new ArrayList<>();
@@ -594,50 +652,136 @@ final class DevicesV3 {
         l.add(e(13, 12.5, 14.25, 13.5, 18, 14.75).all("#quill").rot("z", 22.5, 13.25, 13, 14.5));
         Models.model("stock_requester", false, "dev_copper_rune", lt, l.toArray(new Models.El[0]));
 
-        // ---- Cryo-Diode (facing6 = the outlet; drawn north): the pipe's own straight glass section (the blockstate applies it) with
-        // a brass valve on it - copper bands at both ends, the body with arrows to the outlet, a bonnet and a stem; the five-handled
-        // wheel on the stem is the renderer's (it turns while Source flows)
-        String[][] dt = {{"brass", "dev_brass_filigree"}, {"trim", "dev_brass_trim"}, {"copper", "dev_copper_rune"},
-                {"valve_r", "dev_diode_valve_r"}, {"valve_l", "dev_diode_valve_l"}, {"valve_u", "dev_diode_valve_u"}};
+        // ---- 2. Cryo-Diode (facing6 = outlet north; self-contained pipe stubs + bolted iron flanges + copper chamber + glowing 3D chevron + 3D wheel)
+        String[][] dt = {{"iron", "dev_diode_iron"}, {"copper", "dev_diode_copper"}, {"brass", "dev_diode_brass"},
+                {"fglass", "dev_diode_glass"}, {"arrow", "dev_diode_arrow"}, {"pipe_u", "pipe_glass_u"}, {"pipe_v", "pipe_glass_v"},
+                {"pipe_d", "pipe_glass_d"}, {"clamp", "pipe_clamp"}, {"wheel", "pipe_wheel"}};
         List<Models.El> d = new ArrayList<>();
-        d.add(e(3.5, 3.5, 5, 12.5, 12.5, 11).all("#trim").face("east", "#valve_r").face("west", "#valve_l").face("up", "#valve_u")
-                .face("down", "#brass"));
-        d.add(e(3, 3, 4.25, 13, 13, 5).all("#copper"));
-        d.add(e(3, 3, 11, 13, 13, 11.75).all("#copper"));
-        d.add(e(5.5, 12.5, 5.5, 10.5, 13.5, 10.5).all("#trim"));
-        // the stem runs up through the wheel's hub to a cap, so the wheel sits on its axle
-        d.add(e(7.25, 13.5, 7.25, 8.75, 15.9, 8.75).all("#trim"));
-        d.add(e(6.75, 15.9, 6.75, 9.25, 16, 9.25).all("#copper"));
-        Models.model("cryo_diode", true, "dev_brass_filigree", dt, d.toArray(new Models.El[0]));
-        // the blockstate: the pipe's straight section along the facing, the valve turned the same way
-        String[] fac = {"north", "east", "south", "west", "up", "down"};
-        String[] rot = {"", ", \"y\": 90", ", \"y\": 180", ", \"y\": 270", ", \"x\": 270", ", \"x\": 90"};
-        StringBuilder bs = new StringBuilder("{\n  \"multipart\": [\n");
-        for (int k = 0; k < 6; k++) {
-            bs.append("    {\"when\": {\"facing\": \"").append(fac[k]).append("\"}, \"apply\": {\"model\": \"golem_logix:block/basic_snow_pipe_straight\"")
-                    .append(rot[k]).append("}},\n");
-            bs.append("    {\"when\": {\"facing\": \"").append(fac[k]).append("\"}, \"apply\": {\"model\": \"golem_logix:block/cryo_diode\"")
-                    .append(rot[k]).append("}}").append(k < 5 ? ",\n" : "\n");
-        }
-        java.nio.file.Files.writeString(Forge2.RES.resolve("blockstates/cryo_diode.json"), bs.append("  ]\n}\n").toString());
+        // Inlet & outlet pipe stubs with copper clamps (stopping cleanly at z=2.05 / z=13.95)
+        Pipes.tube(d, 4.0, 12.0, 0.0, 2.05, 1.3, "pipe_u", "pipe_v", "pipe_d");
+        Pipes.ring(d, 3.4, 12.6, 0.06, 1.0, 1.6, "clamp", 0.65);
+        Pipes.tube(d, 4.0, 12.0, 13.95, 16.0, 1.3, "pipe_u", "pipe_v", "pipe_d");
+        Pipes.ring(d, 3.4, 12.6, 15.0, 15.94, 1.6, "clamp", 0.65);
 
-        // ---- Iron Security Terminal (horizontal, front north)
-        String[][] st = {{"band", "dev_iron_band"}, {"door", "dev_security_door"}, {"trim", "dev_brass_trim"}, {"brass", "dev_brass_filigree"},
-                {"screen", "dev_security_screen"}, {"combo", "dev_security_combo"}, {"slot", "dev_security_slot"}, {"iron", "dev_iron_sigil"}};
+        // Heavy bolted dark cast-iron octagonal flanges (z=2.05..4.0 & z=12.0..13.95) + solid inner seal cores
+        Pipes.ring(d, 2.25, 13.75, 2.05, 4.0, 2.75, "iron", 1.75);
+        d.add(e(4.25, 4.25, 2.5, 11.75, 11.75, 4.0).all("#iron"));
+        Pipes.ring(d, 2.25, 13.75, 12.0, 13.95, 2.75, "iron", 1.75);
+        d.add(e(4.25, 4.25, 12.0, 11.75, 11.75, 13.5).all("#iron"));
+        for (double[] b : new double[][]{{7.6, 2.6}, {7.6, 12.6}, {2.6, 7.6}, {12.6, 7.6},
+                {3.75, 3.75}, {11.45, 3.75}, {3.75, 11.45}, {11.45, 11.45}}) {
+            d.add(e(b[0], b[1], 1.7, b[0] + 0.8, b[1] + 0.8, 2.05).only("#iron", "north", "up", "down", "east", "west"));
+            d.add(e(b[0], b[1], 13.95, b[0] + 0.8, b[1] + 0.8, 14.3).only("#iron", "south", "up", "down", "east", "west"));
+        }
+
+        // Framed riveted copper valve chamber (z=4.0..12.0, x/y 3.25..12.75)
+        d.add(e(3.25, 11.25, 4.0, 12.75, 12.75, 12.0).all("#copper"));
+        d.add(e(3.25, 3.25, 4.0, 12.75, 4.75, 12.0).all("#copper"));
+        for (double cx : new double[]{3.25, 11.25}) {
+            for (double cz : new double[]{4.0, 10.75}) {
+                d.add(e(cx, 4.75, cz, cx + 1.5, 11.25, cz + 1.25).only("#copper", "north", "south", "east", "west"));
+            }
+        }
+        // Inner dark cast-iron seal walls & window sills
+        d.add(e(4.75, 4.75, 4.2, 11.25, 11.25, 4.9).only("#iron", "south", "east", "west"));
+        d.add(e(4.75, 4.75, 11.1, 11.25, 11.25, 11.8).only("#iron", "north", "east", "west"));
+        for (boolean west : new boolean[]{true, false}) {
+            double x0 = west ? 3.5 : 11.75, x1 = west ? 4.25 : 12.5;
+            d.add(e(x0, 4.75, 5.25, x1, 5.25, 10.75).all("#iron"));
+            d.add(e(x0, 10.75, 5.25, x1, 11.25, 10.75).all("#iron"));
+        }
+        // Single-layer frosted sight-glass panes on east & west windows (zero double-translucent glitches)
+        d.add(e(3.8, 5.25, 5.25, 3.9, 10.75, 10.75).only("#fglass", "west"));
+        d.add(e(12.1, 5.25, 5.25, 12.2, 10.75, 10.75).only("#fglass", "east"));
+
+        // 3D glowing cyan directional chevron arrow pointing NORTH (-Z) inside chamber
+        d.add(e(5.1, 7.25, 7.8, 10.9, 8.75, 10.6).all("#arrow").glow(14));
+        d.add(e(5.1, 5.75, 6.8, 10.9, 10.25, 7.8).all("#arrow").glow(14));
+        d.add(e(5.1, 6.5, 6.0, 10.9, 9.5, 6.8).all("#arrow").glow(14));
+        d.add(e(5.1, 7.25, 5.2, 10.9, 8.75, 6.0).all("#arrow").glow(14));
+
+        // Top bonnet, brass gland nut & iron axle stem (y=12.75..16.0)
+        d.add(e(5.25, 12.75, 5.25, 10.75, 13.5, 10.75).only("#iron", "north", "south", "east", "west", "up"));
+        for (double bx : new double[]{5.5, 9.75}) {
+            for (double bz : new double[]{5.5, 9.75}) {
+                d.add(e(bx, 13.5, bz, bx + 0.75, 13.8, bz + 0.75).only("#brass", "north", "south", "east", "west", "up"));
+            }
+        }
+        d.add(e(6.25, 13.5, 6.25, 9.75, 14.5, 9.75).only("#brass", "north", "south", "east", "west", "up"));
+        d.add(e(7.25, 14.5, 7.25, 8.75, 15.65, 8.75).only("#iron", "north", "south", "east", "west"));
+        d.add(e(6.9, 15.65, 6.9, 9.1, 16.0, 9.1).all("#brass"));
+
+        Models.model("cryo_diode", true, "dev_diode_copper", dt, d.toArray(new Models.El[0]));
+        Models.facing6("cryo_diode", "cryo_diode");
+
+        // 3D Crimson-Iron & Antique-Brass Handwheel (standalone BER model + combined item model)
+        List<Models.El> wheel = new ArrayList<>();
+        double ap = 4.6, rt = 0.95, edge = 2 * ap * Math.tan(Math.PI / 8) + 0.1;
+        double wy0 = 14.6, wy1 = 15.6;
+        for (int k = 0; k < 4; k++) {
+            double[] sx = {0, 0, -1, 1}, sz = {-1, 1, 0, 0};
+            double cx = 8 + sx[k] * (ap - rt / 2), cz = 8 + sz[k] * (ap - rt / 2);
+            double hx = sx[k] == 0 ? edge / 2 : rt / 2, hz = sz[k] == 0 ? edge / 2 : rt / 2;
+            wheel.add(e(cx - hx, wy0, cz - hz, cx + hx, wy1, cz + hz).all("#wheel"));
+            double ang = Math.PI / 4 + k * Math.PI / 2, dx = 8 + Math.cos(ang) * (ap - rt / 2), dz = 8 + Math.sin(ang) * (ap - rt / 2);
+            wheel.add(e(dx - edge / 2, wy0 + 0.03, dz - rt / 2, dx + edge / 2, wy1 - 0.03, dz + rt / 2).all("#wheel")
+                    .rot("y", k % 2 == 0 ? 45 : -45, dx, wy0, dz));
+        }
+        // 4 spokes cleanly outside hub (6.75..9.25) and inside rim
+        wheel.add(e(4.2, 14.8, 7.55, 6.75, 15.4, 8.45).only("#wheel", "up", "down", "north", "south"));
+        wheel.add(e(9.25, 14.8, 7.55, 11.8, 15.4, 8.45).only("#wheel", "up", "down", "north", "south"));
+        wheel.add(e(7.55, 14.8, 4.2, 8.45, 15.4, 6.75).only("#wheel", "up", "down", "east", "west"));
+        wheel.add(e(7.55, 14.8, 9.25, 8.45, 15.4, 11.8).only("#wheel", "up", "down", "east", "west"));
+        wheel.add(e(6.75, 14.55, 6.75, 9.25, 15.65, 9.25).all("#brass"));
+        Models.model("cryo_diode_wheel", false, "pipe_wheel",
+                new String[][]{{"wheel", "pipe_wheel"}, {"brass", "dev_diode_brass"}}, wheel.toArray(new Models.El[0]));
+        List<Models.El> dItem = new ArrayList<>(d);
+        dItem.addAll(wheel);
+        Models.model("cryo_diode_item", true, "dev_diode_copper", dt, dItem.toArray(new Models.El[0]));
+        Models.item("cryo_diode", "cryo_diode_item");
+
+        // ---- 3. Security Terminal (horizontal, front north: walnut & cast-iron vault console matching Order Ledger)
+        String[][] st = {{"wood", "dev_sec_wood"}, {"iron", "dev_sec_iron"}, {"brass", "dev_sec_brass"}, {"copper", "dev_diode_copper"},
+                {"screen", "dev_security_screen"}, {"keyhole", "dev_sec_keyhole"}, {"back", "dev_sec_back"},
+                {"led_r", "dev_sec_led_r"}, {"led_g", "dev_sec_led_g"}};
         List<Models.El> s = new ArrayList<>();
-        s.add(e(0, 0, 0, 16, 1.5, 16).all("#trim"));
-        s.add(e(1, 1.5, 1, 15, 14.5, 15).only("#band", "south", "east", "west").face("north", "#door"));
-        s.add(e(0, 14.5, 0, 16, 16, 16).all("#brass"));
-        for (double[] c : new double[][]{{0, 0}, {14.5, 0}, {0, 14.5}, {14.5, 14.5}}) {
-            s.add(e(c[0], 1.5, c[1], c[0] + 1.5, 14.5, c[1] + 1.5).all("#trim"));
+        // Dark cast-iron plinth & stepped cornice roof
+        s.add(e(0.5, 0.0, 0.5, 15.5, 1.5, 15.5).all("#iron"));
+        s.add(e(0.75, 13.5, 0.75, 15.25, 14.3, 15.25).all("#iron"));
+        s.add(e(0.25, 14.3, 0.25, 15.75, 15.2, 15.75).all("#iron"));
+        s.add(e(1.25, 15.2, 1.25, 14.75, 16.0, 14.75).all("#iron"));
+        // 4 heavy cast-iron corner pilasters
+        for (double[] c : new double[][]{{0.75, 0.75}, {13.75, 0.75}, {0.75, 13.75}, {13.75, 13.75}}) {
+            s.add(e(c[0], 1.5, c[1], c[0] + 1.5, 13.5, c[1] + 1.5).only("#iron", "north", "south", "east", "west"));
         }
-        s.add(e(2.5, 8.5, 0.25, 8, 13, 1).all("#trim").face("north", "#screen"));
-        s.add(e(8.5, 2.5, 0, 13.5, 7.5, 1).all("#trim").face("north", "#combo"));
-        s.add(e(2.5, 3.5, 0.5, 7.5, 6.5, 1).all("#trim").face("north", "#slot"));
-        s.add(e(13.25, 9.5, 0.25, 14.5, 12.5, 1).all("#trim"));
-        Models.model("security_terminal", false, "dev_iron_band", st, s.toArray(new Models.El[0]));
+        // Dark espresso walnut cabinet body strictly inside pilasters
+        s.add(e(1.75, 1.5, 1.75, 14.25, 13.5, 14.25).only("#wood", "north", "east", "west").face("south", "#back"));
+        // Deeply recessed animated CRT radar screen + protruding antique-brass glare hood & bezel
+        s.add(e(4.5, 6.25, 1.4, 11.5, 12.25, 1.75).only("#iron", "south", "east", "west").face("north", "#screen", 0, 0, 16, 16).glow(10));
+        s.add(e(4.0, 12.25, 0.25, 12.0, 13.0, 1.75).only("#brass", "north", "east", "west", "up", "down"));
+        s.add(e(5.25, 13.0, 0.45, 10.75, 13.45, 1.75).only("#brass", "north", "east", "west", "up"));
+        s.add(e(4.25, 5.5, 0.85, 11.75, 6.25, 1.75).only("#brass", "north", "east", "west", "up", "down"));
+        s.add(e(3.5, 9.0, 0.45, 4.5, 12.25, 1.75).only("#brass", "north", "east", "west", "up", "down"));
+        s.add(e(11.5, 9.0, 0.45, 12.5, 12.25, 1.75).only("#brass", "north", "east", "west", "up", "down"));
+        s.add(e(3.75, 6.25, 0.85, 4.5, 9.0, 1.75).only("#brass", "north", "east", "west", "down"));
+        s.add(e(11.5, 6.25, 0.85, 12.25, 9.0, 1.75).only("#brass", "north", "east", "west", "down"));
+        // Protruding antique-brass punch-card reader tray, dark slot slit & protruding copper punch card tab
+        s.add(e(3.0, 3.25, 1.15, 10.25, 4.75, 1.75).only("#brass", "north", "east", "west", "up"));
+        s.add(e(3.75, 3.6, 1.05, 9.5, 4.1, 1.15).only("#iron", "north", "east", "west", "up", "down"));
+        s.add(e(5.0, 3.65, 0.35, 8.5, 4.0, 1.05).only("#copper", "north", "east", "west", "up", "down"));
+        s.add(e(3.25, 2.25, 0.2, 10.0, 3.25, 1.75).only("#brass", "north", "east", "west", "up", "down"));
+        // Status indicator jewel pod (crimson & emerald lights)
+        s.add(e(11.0, 2.25, 1.05, 13.0, 5.0, 1.75).only("#iron", "north", "east", "west", "up", "down"));
+        s.add(e(11.5, 3.7, 0.8, 12.5, 4.55, 1.05).only("#led_r", "north", "east", "west", "up", "down").glow(12));
+        s.add(e(11.5, 2.6, 0.8, 12.5, 3.45, 1.05).only("#led_g", "north", "east", "west", "up", "down").glow(12));
+        // Side antique-brass vault keyhole escutcheon plates
+        s.add(e(1.2, 4.0, 4.25, 1.75, 11.5, 11.75).only("#brass", "north", "south", "west", "up", "down"));
+        s.add(e(1.05, 4.75, 5.0, 1.2, 10.75, 11.0).only("#brass", "north", "south", "up", "down").face("west", "#keyhole", 0, 0, 16, 16));
+        s.add(e(14.25, 4.0, 4.25, 14.8, 11.5, 11.75).only("#brass", "north", "south", "east", "up", "down"));
+        s.add(e(14.8, 4.75, 5.0, 14.95, 10.75, 11.0).only("#brass", "north", "south", "up", "down").face("east", "#keyhole", 0, 0, 16, 16));
+        Models.model("security_terminal", false, "dev_sec_wood", st, s.toArray(new Models.El[0]));
 
-        for (String n : new String[]{"stock_manometer", "stock_requester", "cryo_diode", "security_terminal"}) {
+        for (String n : new String[]{"stock_manometer", "stock_requester", "security_terminal"}) {
             Models.item(n, n);
         }
     }
@@ -650,27 +794,36 @@ final class DevicesV3 {
         walnutInlay(7105).save(tex("dev_walnut_inlay"));
         brassTrim(7106).save(tex("dev_brass_trim"));
         glass().save(tex("dev_glass"));
+
         dial().save(tex("dev_manometer_dial"));
+        manoIron().save(tex("dev_mano_iron"));
+        manoCopper().save(tex("dev_mano_copper"));
+        manoBrass().save(tex("dev_mano_brass"));
+        manoTube().save(tex("dev_mano_tube"));
         crystal().save(tex("dev_crystal"));
         copperPlain().save(entityTex("dev_copper_plain"));
+
         drawers().save(tex("dev_ledger_drawers"));
         book().save(tex("dev_ledger_book"));
         quill().save(tex("dev_ledger_quill"));
         flowerStem().save(entityTex("dev_ledger_flower_stem"));
         flowerPetals().save(entityTex("dev_ledger_flower_petals"));
         page().save(entityTex("dev_ledger_page"));
-        frost().save(tex("dev_diode_frost"));
-        valve(0).save(tex("dev_diode_valve_r"));
-        valve(1).save(tex("dev_diode_valve_l"));
-        valve(2).save(tex("dev_diode_valve_u"));
-        wheel().save(tex("dev_diode_wheel"));
-        wheel5().save(entityTex("dev_diode_wheel5"));
-        flange(5.8).save(tex("dev_diode_inlet"));
-        flange(7.1).save(tex("dev_diode_outlet"));
-        door().save(tex("dev_security_door"));
+
+        diodeIron().save(tex("dev_diode_iron"));
+        diodeCopper().save(tex("dev_diode_copper"));
+        diodeBrass().save(tex("dev_diode_brass"));
+        diodeGlass().save(tex("dev_diode_glass"));
+        diodeArrow().save(tex("dev_diode_arrow"));
+
+        secWood().save(tex("dev_sec_wood"));
+        secIron().save(tex("dev_sec_iron"));
+        secBrass().save(tex("dev_sec_brass"));
+        secKeyhole().save(tex("dev_sec_keyhole"));
+        secBack().save(tex("dev_sec_back"));
+        secLed(true).save(tex("dev_sec_led_r"));
+        secLed(false).save(tex("dev_sec_led_g"));
         screen().save(tex("dev_security_screen"));
-        combo().save(tex("dev_security_combo"));
-        slot().save(tex("dev_security_slot"));
         models();
     }
 }

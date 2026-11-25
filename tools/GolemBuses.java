@@ -5,12 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The Copper Tank, the Formation Bus and the Annihilation Bus (after the concept art: vanilla pixels with Create-like brass and
- * riveted copper). The tank: a copper chest's base and lid with teal patina in the seams, riveted copper posts with brass caps,
- * clear glass with a few highlights, a brass pressure gauge. The Formation Bus: riveted copper panels in a brass frame with rune
- * inlays, a brass mouth low on the front (the golem is the renderer's). The Annihilation Bus: dark iron plates with a brass band,
- * a brass-framed niche in the front with a plank back wall (the iron golem is the renderer's). Both buses have glass windows in
- * their side walls beside the golem, so it is seen at work even with a block right in front (translucent).
+ * Wave 1 (P0) redesign of Copper Tank, Mason's Formation Bus and Hewer's Annihilation Bus:
+ * crisp 32x32 pixel clusters (K=2) with riveted copper, dark forged cast iron, walnut wood, and muted antique brass.
  */
 final class GolemBuses {
     static final int K = Forge2.K;
@@ -22,268 +18,279 @@ final class GolemBuses {
         return 0xff000000 | c;
     }
 
-    static int copper(int i, int j, int seed) {
-        double t = Atlant.noise(i, j, 14, seed + 1);
-        int tone = 4 + (int) Math.round(t * 2 - 0.4);
-        if (Atlant.hash(i / 5, j, seed) > 0.94) {
-            tone++;
-        }
-        return rgb(Atlant.COPPER[Math.max(3, Math.min(7, tone))]);
+    static int at(int[] r, double idx) {
+        return Paint.at(r, idx);
     }
 
-    /** Copper planks laid along, clean joints with a thin line of teal patina in the upright seams. */
+    static int copperTone(int i, int j, int seed) {
+        double t = Atlant.noise(i, j, 12, seed + 1);
+        int tone = 3 + (int) Math.round(t * 2.2 - 0.3);
+        if (Atlant.hash(i / 4, j / 2, seed) > 0.94) {
+            tone++;
+        }
+        return rgb(Atlant.COPPER[Math.max(1, Math.min(6, tone))]);
+    }
+
+    static void copperRivet(Paint p, double x, double y) {
+        p.rect(x, y, x + 1, y + 1, rgb(Atlant.COPPER[0]));
+        p.rect(x, y, x + 0.5, y + 0.5, rgb(Atlant.COPPER[6]));
+    }
+
+    static void ironRivet(Paint p, double x, double y) {
+        p.rect(x, y, x + 1, y + 1, rgb(Paint.SLATE_IRON[0]));
+        p.rect(x, y, x + 0.5, y + 0.5, rgb(Paint.SLATE_IRON[5]));
+    }
+
+    static void antiqueBrassRivet(Paint p, double x, double y) {
+        p.rect(x, y, x + 1, y + 1, rgb(Paint.BRASS[1]));
+        p.rect(x, y, x + 0.5, y + 0.5, rgb(Paint.BRASS[4]));
+    }
+
+    // ========================================================================= Copper Tank textures
+
+    /** Weathered riveted copper & dark-bronze boiler drum with subtle patina only at panel seams. */
     static Paint tankCopper() {
         Paint p = new Paint(16, 16, K);
         for (int j = 0; j < p.h; j++) {
             for (int i = 0; i < p.w; i++) {
-                p.px(i, j, copper(i, j, 811));
+                p.px(i, j, copperTone(i, j, 811));
             }
         }
+        // Horizontal rolled boiler seams (bevel light/shadow)
         for (double y : new double[]{0, 8}) {
             p.rect(0, y, 16, y + 0.5, rgb(Atlant.COPPER[1]));
-            p.rect(0, y + 0.5, 16, y + 1, rgb(Atlant.COPPER[7]));
+            p.rect(0, y + 0.5, 16, y + 1.0, rgb(Atlant.COPPER[5]));
         }
+        p.rect(0, 15.0, 16, 15.5, rgb(Atlant.COPPER[1]));
+        p.rect(0, 15.5, 16, 16.0, rgb(Atlant.COPPER[0]));
+        // Subtle vertical seams with muted dark bronze bevels and occasional patina flecks
         for (double x : new double[]{4, 12}) {
-            p.rect(x, 0, x + 0.5, 16, rgb(Atlant.PATINA[2]));
-            p.rect(x + 0.5, 0, x + 1, 16, rgb(Atlant.PATINA[4]));
+            p.rect(x, 0, x + 0.5, 16, rgb(Atlant.COPPER[1]));
+            p.rect(x + 0.5, 0, x + 1.0, 16, rgb(Atlant.COPPER[4]));
+            p.rect(x + 0.5, 1.5, x + 1.0, 2.5, rgb(Atlant.PATINA[0]));
+            p.rect(x + 0.5, 9.5, x + 1.0, 10.5, rgb(Atlant.PATINA[1]));
         }
-        Carve.runeRow(p, 0.8, 15.2, 2.5, 1.15, 811, rgb(Atlant.COPPER[0]), rgb(Paint.CYAN[4]));
-        Carve.rune(p, 7.3, 10.6, 1.25, 812, rgb(Atlant.COPPER[0]));
+        for (double x : new double[]{1.5, 5.5, 9.5, 13.5}) {
+            antiqueBrassRivet(p, x, 2.0);
+            antiqueBrassRivet(p, x, 10.0);
+        }
         return p;
     }
 
-
-    /** The lid's top: one copper plate, a ring of rivets, frost at the rim. */
+    /** Riveted octagonal copper/bronze boiler hatch plate with corner bolts & faint patina flecks. */
     static Paint tankLid() {
         Paint p = new Paint(16, 16, K);
         for (int j = 0; j < p.h; j++) {
             for (int i = 0; i < p.w; i++) {
-                p.px(i, j, copper(i, j, 821));
+                int c = copperTone(i, j, 821);
+                if (Atlant.hash(i / 2, j / 2, 823) > 0.965) {
+                    c = rgb(Atlant.PATINA[1]);
+                }
+                p.px(i, j, c);
+            }
+        }
+        p.frame(0, 0, 16, 16, 0.5, rgb(Atlant.COPPER[0]));
+        p.frame(0.5, 0.5, 15.5, 15.5, 0.5, rgb(Atlant.COPPER[6]));
+        p.frame(2.5, 2.5, 13.5, 13.5, 0.5, rgb(Atlant.COPPER[1]));
+        p.slab(4.5, 4.5, 11.5, 11.5, Atlant.COPPER, 3.0, 1);
+        for (double[] r : new double[][]{{1.5, 1.5}, {13.5, 1.5}, {1.5, 13.5}, {13.5, 13.5}}) {
+            ironRivet(p, r[0], r[1]);
+        }
+        return p;
+    }
+
+    /** Deepslate-gray forged steel tie-rod & mounting lug metal. */
+    static Paint tankIron() {
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, Paint.SLATE_IRON, 2.6, 1);
+        p.grain(0, 0, 16, 16, 0.06, 831);
+        p.frame(0, 0, 16, 16, 0.5, rgb(Paint.SLATE_IRON[1]));
+        for (double y = 2.5; y < 14; y += 5) {
+            ironRivet(p, 2.5, y);
+            ironRivet(p, 12.5, y);
+        }
+        return p;
+    }
+
+    /** Warm antique brass for gauge bezel & side sight-ring collars. */
+    static Paint tankBrass() {
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, Paint.BRASS, 2.9, 1);
+        p.streaks(0.5, 0.5, 15.5, 15.5, 0.06, 835, true);
+        p.frame(0, 0, 16, 16, 0.5, rgb(Paint.BRASS[2]));
+        return p;
+    }
+
+    /** Cutout-safe (binary alpha) boiler glass: crisp frosted-azure rim, frost corner flecks, diagonal specular glints. */
+    static Paint tankGlass() {
+        Paint p = new Paint(16, 16, K);
+        p.frame(0, 0, 16, 16, 0.5, rgb(0x7ac4d8));
+        p.frame(0.5, 0.5, 15.5, 15.5, 0.5, rgb(0x286478));
+        p.line(2.5, 13.0, 5.5, 10.0, 0.5, rgb(0xf2fbff));
+        p.line(3.5, 13.5, 5.0, 12.0, 0.5, rgb(0xd0f0f8));
+        p.line(10.5, 4.5, 13.0, 2.0, 0.5, rgb(0xf2fbff));
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4 - i; j++) {
+                if (Atlant.hash(i, j, 841) > 0.55) {
+                    p.px(p.w - 2 - i, j + 1, rgb(Paint.FROST[4]));
+                    p.px(i + 1, p.h - 2 - j, rgb(Paint.FROST[3]));
+                }
+            }
+        }
+        return p;
+    }
+
+    /** High-contrast warm parchment dial face for tank pressure gauge (recessed behind brass bezel). */
+    static Paint tankGauge() {
+        Paint p = new Paint(16, 16, K);
+        p.rect(0, 0, 16, 16, rgb(Paint.SLATE_IRON[1]));
+        p.disc(8, 8, 7.6, rgb(Paint.BRASS[2]));
+        p.disc(8, 8, 6.8, rgb(Paint.CREAM[5]));
+        p.ring(8, 8, 6.3, 6.8, rgb(Paint.CREAM[2]));
+        for (int k = 0; k <= 8; k++) {
+            double a = Math.toRadians(150 + k * 30);
+            int c = k >= 6 ? rgb(0xb8241a) : rgb(0x221c18);
+            p.line(8 + Math.cos(a) * 4.4, 8 + Math.sin(a) * 4.4, 8 + Math.cos(a) * 5.8, 8 + Math.sin(a) * 5.8, 0.65, c);
+        }
+        p.disc(8, 8, 1.1, rgb(Paint.SLATE_IRON[0]));
+        return p;
+    }
+
+    // ========================================================================= Formation Bus textures
+
+    /** Deepslate-gray forged steel for Mason's Formation Bus gantry legs & chassis. */
+    static Paint formIron() {
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, Paint.SLATE_IRON, 2.6, 1);
+        p.grain(0, 0, 16, 16, 0.06, 851);
+        p.frame(0, 0, 16, 16, 0.5, rgb(Paint.SLATE_IRON[1]));
+        p.frame(1.5, 1.5, 14.5, 14.5, 0.5, rgb(Paint.SLATE_IRON[4]));
+        for (double[] r : new double[][]{{1.5, 1.5}, {13.5, 1.5}, {1.5, 13.5}, {13.5, 13.5}}) {
+            ironRivet(p, r[0], r[1]);
+        }
+        return p;
+    }
+
+    /** Weathered riveted copper with subtle patina seam accents for Formation Bus lintel & bulkhead. */
+    static Paint formCopper() {
+        Paint p = new Paint(16, 16, K);
+        for (int j = 0; j < p.h; j++) {
+            for (int i = 0; i < p.w; i++) {
+                int c = copperTone(i, j, 855);
+                if (Atlant.hash(i, j, 856) > 0.975) {
+                    c = rgb(Atlant.PATINA[0]);
+                } else if (Atlant.hash(i / 2, j / 2, 857) > 0.94) {
+                    c = rgb(Atlant.COPPER[2]);
+                }
+                p.px(i, j, c);
             }
         }
         p.frame(0, 0, 16, 16, 0.5, rgb(Atlant.COPPER[1]));
-        p.frame(0.5, 0.5, 15.5, 15.5, 0.5, rgb(Atlant.COPPER[7]));
-        for (double x = 2.5; x < 14; x += 3.5) {
-            for (double y : new double[]{2.5, 13}) {
-                rivet(p, x, y);
-                rivet(p, y, x);
-            }
-        }
-        for (int i = 0; i < p.w; i++) {
-            if (Atlant.hash(i, 0, 822) > 0.5) {
-                p.px(i, 0, rgb(Paint.FROST[5]));
-            }
-        }
-        Carve.runeRing(p, 8, 8, 5.0, 0.8, 8, 821, rgb(Atlant.COPPER[0]), rgb(Paint.CYAN[4]));
-        Carve.sigil(p, 8, 8, 3.0, rgb(Atlant.COPPER[0]), rgb(Paint.CYAN[5]));
-        return p;
-    }
-
-
-    static void rivet(Paint p, double x, double y) {
-        p.rect(x, y, x + 1, y + 1, rgb(Atlant.COPPER[0]));
-        p.rect(x, y, x + 0.5, y + 0.5, rgb(Atlant.COPPER[8]));
-    }
-
-    static void brassRivet(Paint p, double x, double y) {
-        p.rect(x, y, x + 1, y + 1, rgb(Paint.BRASS[2]));
-        p.rect(x, y, x + 0.5, y + 0.5, rgb(Paint.BRASS[6]));
-    }
-
-    /** A post: copper running up, a column of brass rivets every 3 pixels in every 4-pixel column (so any slice of it has some). */
-    static Paint tankPost() {
-        Paint p = new Paint(16, 16, K);
-        for (int j = 0; j < p.h; j++) {
-            for (int i = 0; i < p.w; i++) {
-                double t = Atlant.noise(i, j, 10, 832);
-                p.px(i, j, rgb(Atlant.COPPER[4 + (int) Math.round(t * 2 - 0.4)]));
-            }
-        }
-        for (double x = 0; x < 16; x += 4) {
-            p.rect(x, 0, x + 0.5, 16, rgb(Atlant.COPPER[1]));
-            for (double y = 1.5; y < 16; y += 3) {
-                brassRivet(p, x + 1.75, y);
-            }
-        }
-        for (double x = 0; x < 16; x += 4) {
-            for (double y = 3.0; y < 15.5; y += 3.0) {
-                Carve.rune(p, x + 0.95, y - 0.4, 0.6, 832, rgb(Atlant.COPPER[0]));
-            }
-        }
-        return p;
-    }
-
-
-    /** Clear glass: transparent but for a light rim, two highlight streaks and a speck of frost in a corner (cutout). */
-    static Paint tankGlass() {
-        Paint p = new Paint(16, 16, K);
-        p.frame(0, 0, 16, 16, 0.5, rgb(0xcfe2ea));
-        p.line(3, 13, 6, 10, 0.5, rgb(0xffffff));
-        p.line(4, 14, 5.5, 12.5, 0.5, rgb(0xffffff));
-        p.line(11, 4, 13, 2, 0.5, rgb(0xf2fbff));
-        for (int i = 0; i < 6; i++) {
-            for (int j = 0; j < 6 - i; j++) {
-                if (Atlant.hash(i, j, 841) > 0.45) {
-                    p.px(p.w - 1 - i, j, rgb(Paint.FROST[4 + (int) (Atlant.hash(i, j, 842) * 3)]));
-                }
-            }
-        }
-        return p;
-    }
-
-    /** The buses' side windows: pale smoky glass, a faint rim and two highlight streaks (translucent). */
-    static Paint busGlass() {
-        Paint p = new Paint(16, 16, K);
-        for (int j = 0; j < p.h; j++) {
-            for (int i = 0; i < p.w; i++) {
-                p.px(i, j, (0x46 << 24) | 0xbcd6dc);
-            }
-        }
-        for (int i = 0; i < p.w; i++) {
-            for (int j : new int[]{0, p.h - 1}) {
-                p.px(i, j, (0x90 << 24) | 0xd8e8ec);
-                p.px(j, i, (0x90 << 24) | 0xd8e8ec);
-            }
-        }
-        for (int k = 0; k < 7; k++) {
-            p.px(3 + k, 12 - k, (0xa0 << 24) | 0xffffff);
-            if (k < 4) {
-                p.px(3 + k, 14 - k, (0x80 << 24) | 0xffffff);
-            }
-        }
-        return p;
-    }
-
-    /** The gauge's face: a brass bezel, a cream dial with ticks and a red zone near full (the needle is drawn by the renderer). */
-    static Paint tankGauge() {
-        Paint p = new Paint(16, 16, K);
-        p.disc(8, 8, 8, rgb(Paint.BRASS[3]));
-        p.disc(8, 8, 7, rgb(Paint.BRASS[5]));
-        p.disc(8, 8, 5.8, rgb(Paint.CREAM[5]));
-        for (int k = 0; k <= 8; k++) {
-            double a = Math.toRadians(150 + k * 30);
-            p.line(8 + Math.cos(a) * 4.4, 8 + Math.sin(a) * 4.4, 8 + Math.cos(a) * 5.4, 8 + Math.sin(a) * 5.4, 0.6, rgb(0x2a2420));
-        }
-        for (int k = 7; k <= 8; k++) {
-            double a = Math.toRadians(150 + k * 30);
-            p.line(8 + Math.cos(a) * 4.4, 8 + Math.sin(a) * 4.4, 8 + Math.cos(a) * 5.4, 8 + Math.sin(a) * 5.4, 0.8, rgb(0xc8281e));
-        }
-        p.disc(8, 8, 1, rgb(0x2a2420));
-        return p;
-    }
-
-    /** A riveted copper panel in a brass frame, rune inlays in the frame (the Formation Bus), with or without the mouth. */
-    static Paint formation(boolean front) {
-        Paint p = new Paint(16, 16, K);
-        for (int j = 0; j < p.h; j++) {
-            for (int i = 0; i < p.w; i++) {
-                p.px(i, j, copper(i, j, front ? 851 : 852));
-            }
-        }
-        // four bevelled plates: light on the top and left edges, dark on the bottom and right, seams between them
-        for (double[] q : new double[][]{{2, 2, 8, 8}, {8, 2, 14, 8}, {2, 8, 8, 14}, {8, 8, 14, 14}}) {
-            p.rect(q[0], q[1], q[2], q[1] + 0.5, rgb(Atlant.COPPER[7]));
-            p.rect(q[0], q[1], q[0] + 0.5, q[3], rgb(Atlant.COPPER[7]));
-            p.rect(q[0], q[3] - 0.5, q[2], q[3], rgb(Atlant.COPPER[2]));
-            p.rect(q[2] - 0.5, q[1], q[2], q[3], rgb(Atlant.COPPER[2]));
-        }
-        // a small patina diamond where the seams cross
-        p.rect(7.5, 7, 8.5, 9, rgb(Atlant.PATINA[3]));
-        p.rect(7, 7.5, 9, 8.5, rgb(Atlant.PATINA[3]));
-        p.rect(7.5, 7.5, 8.5, 8.5, rgb(Atlant.PATINA[5]));
-        // the brass frame with dark bolts at the corners and rune inlays along it
-        p.frame(0, 0, 16, 16, 2, rgb(Paint.BRASS[4]));
-        p.frame(0, 0, 16, 16, 0.5, rgb(Paint.BRASS[2]));
-        p.frame(1.5, 1.5, 14.5, 14.5, 0.5, rgb(Paint.BRASS[6]));
-        for (double[] c : new double[][]{{0.5, 0.5}, {14, 0.5}, {0.5, 14}, {14, 14}}) {
-            p.rect(c[0], c[1], c[0] + 1.5, c[1] + 1.5, rgb(0x23252b));
-            p.rect(c[0] + 0.25, c[1] + 0.25, c[0] + 0.75, c[1] + 0.75, rgb(0x5d6573));
-        }
-        for (double x = 3; x < 13; x += 2.5) {
-            p.rect(x, 0.75, x + 1, 1.25, rgb(Paint.CYAN[3]));
-            p.rect(x + 0.5, 14.75, x + 1.5, 15.25, rgb(Paint.CYAN[3]));
-        }
-        for (double y = 3; y < 13; y += 2.5) {
-            p.rect(0.75, y, 1.25, y + 1, rgb(Paint.CYAN[3]));
-            p.rect(14.75, y + 0.5, 15.25, y + 1.5, rgb(Paint.CYAN[3]));
-        }
-        for (double[] r : new double[][]{{3, 3}, {12, 3}, {3, 12}, {12, 12}}) {
-            rivet(p, r[0], r[1]);
-        }
-        if (front) {
-            // the mouth (model y 2..7 -> v 9..14): dark inside, the brass lip is a model of its own
-            p.rect(4, 9, 12, 14, rgb(0x120c0a));
-            p.rect(4, 9, 12, 9.5, rgb(0x2a1a14));
-        }
-        return p;
-    }
-
-    /** The alcove the Formation Bus's golem grows out of: darkened copper, upright seams, a rivet in each corner. */
-    static Paint alcove() {
-        Paint p = new Paint(16, 16, K);
-        for (int j = 0; j < p.h; j++) {
-            for (int i = 0; i < p.w; i++) {
-                double t = Atlant.noise(i, j, 12, 881);
-                p.px(i, j, rgb(Atlant.COPPER[1 + (int) Math.round(t)]));
-            }
-        }
-        for (double x : new double[]{4, 12}) {
-            p.rect(x, 0, x + 0.5, 16, rgb(Atlant.COPPER[0]));
-        }
+        p.rect(0.5, 7.5, 15.5, 8.0, rgb(Atlant.COPPER[1]));
+        p.rect(0.5, 8.0, 15.5, 8.5, rgb(Atlant.COPPER[6]));
         for (double[] r : new double[][]{{1.5, 1.5}, {13.5, 1.5}, {1.5, 13.5}, {13.5, 13.5}}) {
-            p.rect(r[0], r[1], r[0] + 1, r[1] + 1, rgb(Atlant.COPPER[5]));
+            copperRivet(p, r[0], r[1]);
         }
         return p;
     }
 
-    /** Dark iron plates with a brass band across and bolted corners (the Annihilation Bus). */
-    static Paint annihilation() {
+    /** Warm walnut/spruce workbench plank grain. */
+    static Paint formWood() {
         Paint p = new Paint(16, 16, K);
-        for (int j = 0; j < p.h; j++) {
-            for (int i = 0; i < p.w; i++) {
-                double t = Atlant.noise(i, j, 12, 862);
-                p.px(i, j, rgb(Paint.IRON[3 + (int) Math.round(t * 1.4 - 0.2)]));
-            }
-        }
-        p.frame(0, 0, 16, 16, 0.5, rgb(Paint.IRON[1]));
-        // two plates above and below the band, each with a light top edge
-        p.rect(0.5, 0.5, 15.5, 1, rgb(Paint.IRON[5]));
-        p.rect(0.5, 9, 15.5, 9.5, rgb(Paint.IRON[5]));
-        p.rect(0.5, 6.5, 15.5, 7, rgb(Paint.IRON[2]));
-        p.rect(0.5, 15, 15.5, 15.5, rgb(Paint.IRON[2]));
-        p.rect(0, 7, 16, 9, rgb(Paint.BRASS[4]));
-        p.rect(0, 7, 16, 7.5, rgb(Paint.BRASS[6]));
-        p.rect(0, 8.5, 16, 9, rgb(Paint.BRASS[2]));
-        for (double x = 1.5; x < 16; x += 4.5) {
-            p.rect(x, 7.5, x + 1, 8.5, rgb(0x23252b));
-        }
-        // carving: a rune row on the upper plate, a sigil on the lower one
-        Carve.runeRow(p, 3.4, 12.6, 2.6, 0.9, 863, rgb(Paint.IRON[1]), rgb(Paint.CYAN[4]));
-        Carve.sigil(p, 8, 12.2, 2.1, rgb(Paint.IRON[1]), rgb(Paint.CYAN[5]));
-        for (double[] c : new double[][]{{1.5, 2}, {13.5, 2}, {1.5, 12.5}, {13.5, 12.5}}) {
-            p.rect(c[0], c[1], c[0] + 1, c[1] + 1, rgb(Paint.IRON[1]));
-            p.rect(c[0], c[1], c[0] + 0.5, c[1] + 0.5, rgb(Atlant.PATINA[4]));
+        p.slab(0, 0, 16, 16, Paint.BRONZE, 2.2, 1);
+        p.streaks(0.5, 0.5, 15.5, 15.5, 0.09, 860, true);
+        p.grain(0, 0, 16, 16, 0.04, 861);
+        for (double y : new double[]{4, 8, 12}) {
+            p.rect(0, y, 16, y + 0.5, rgb(Paint.BRONZE[0]));
+            p.rect(0, y + 0.5, 16, y + 1.0, rgb(Paint.BRONZE[3]));
         }
         return p;
     }
 
-    /** The niche's back wall: dark planks, a lantern-warm streak from above. */
-    static Paint niche() {
+    /** Warm antique brass for gantry stanchions & hoist trolley. */
+    static Paint formBrass() {
         Paint p = new Paint(16, 16, K);
-        int[] tones = {0x2a1a10, 0x34200f, 0x3e2814, 0x482f18};
+        p.slab(0, 0, 16, 16, Paint.BRASS, 2.9, 1);
+        p.streaks(0.5, 0.5, 15.5, 15.5, 0.06, 864, true);
+        p.frame(0, 0, 16, 16, 0.5, rgb(Paint.BRASS[2]));
+        for (double[] r : new double[][]{{1.5, 1.5}, {13.5, 1.5}, {1.5, 13.5}, {13.5, 13.5}}) {
+            antiqueBrassRivet(p, r[0], r[1]);
+        }
+        return p;
+    }
+
+    // ========================================================================= Annihilation Bus textures
+
+    /** Deepslate-gray forged steel with bolted plate seams for Hewer's Annihilation Bus hood & jaw-guard. */
+    static Paint anniIron() {
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, Paint.SLATE_IRON, 2.7, 1);
+        p.grain(0, 0, 16, 16, 0.07, 870);
+        p.frame(0, 0, 16, 16, 0.5, rgb(Paint.SLATE_IRON[1]));
+        p.rect(0.5, 0.5, 15.5, 1.0, rgb(Paint.SLATE_IRON[5]));
+        p.rect(0.5, 7.5, 15.5, 8.0, rgb(Paint.SLATE_IRON[0]));
+        p.rect(0.5, 8.0, 15.5, 8.5, rgb(Paint.SLATE_IRON[4]));
+        for (double[] r : new double[][]{{1.5, 2.0}, {13.5, 2.0}, {1.5, 13.0}, {13.5, 13.0}}) {
+            ironRivet(p, r[0], r[1]);
+        }
+        return p;
+    }
+
+    /** Weathered oxidized copper/bronze with subtle verdigris patina & rivets for the bastion hull. */
+    static Paint anniCopper() {
+        Paint p = new Paint(16, 16, K);
         for (int j = 0; j < p.h; j++) {
             for (int i = 0; i < p.w; i++) {
-                double u = (i + 0.5) / K;
-                int plank = (int) (u / 4);
-                double t = Atlant.hash(plank, j / 3, 871) * 0.6 + Atlant.noise(i, j, 6, 872) * 0.4;
-                p.px(i, j, rgb(tones[(int) Math.min(3, t * 4)]));
-                if (u % 4 < 0.5) {
-                    p.px(i, j, rgb(0x170e08));
+                double n = Atlant.noise((i / 2) * 2, (j / 2) * 2, 6, 875);
+                int c;
+                if (n > 0.80) {
+                    c = rgb(Atlant.PATINA[0 + (int) Math.min(1, (n - 0.80) * 6)]);
+                } else {
+                    c = rgb(Atlant.COPPER[Math.max(1, Math.min(5, 2 + (int) Math.round((n - 0.1) * 4)))]);
                 }
+                p.px(i, j, c);
             }
+        }
+        p.frame(0, 0, 16, 16, 0.5, rgb(Atlant.COPPER[0]));
+        p.rect(0.5, 7.5, 15.5, 8.0, rgb(Atlant.COPPER[0]));
+        for (double[] r : new double[][]{{2.0, 2.0}, {13.0, 2.0}, {2.0, 13.0}, {13.0, 13.0}}) {
+            copperRivet(p, r[0], r[1]);
         }
         return p;
     }
+
+    /** Warm antique brass for Annihilation Bus collar rib & side coil brackets. */
+    static Paint anniBrass() {
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, Paint.BRASS, 2.9, 1);
+        p.grain(0, 0, 16, 16, 0.05, 878);
+        p.frame(0, 0, 16, 16, 0.5, rgb(Paint.BRASS[2]));
+        antiqueBrassRivet(p, 2.0, 7.5);
+        antiqueBrassRivet(p, 13.0, 7.5);
+        return p;
+    }
+
+    /** Glowing violet/cyan Plasma Temper coil crystal for Annihilation Bus side mount. */
+    static Paint anniCoil() {
+        Paint p = new Paint(16, 16, K);
+        for (int j = 0; j < p.h; j++) {
+            for (int i = 0; i < p.w; i++) {
+                int cx = i / 2;
+                int cy = j / 2;
+                double band = ((cx + cy * 2) % 6) / 5.0;
+                int c = cx >= 6 && cx <= 9 ? Paint.CYAN[4]
+                        : cx == 5 || cx == 10 ? Paint.VIOLET[5]
+                        : band > 0.5 ? Paint.VIOLET[4] : Paint.VIOLET[2];
+                p.px(i, j, rgb(c));
+            }
+        }
+        p.rect(7.5, 0, 8.5, 16, rgb(Paint.CYAN[5]));
+        p.rect(0, 0, 16, 1.0, rgb(Paint.VIOLET[1]));
+        p.rect(0, 15.0, 16, 16, rgb(Paint.VIOLET[1]));
+        return p;
+    }
+
+    // ========================================================================= Plasma Temper & Belt (UNTOUCHED)
 
     /**
      * The Plasma Temper (item): a steel bar in temper colours from straw to blue along its length, and in its middle a bead of the
@@ -344,72 +351,174 @@ final class GolemBuses {
                 StandardCharsets.UTF_8);
     }
 
+    /** Adds an octagonal prism aligned vertically (along Y) built from 3 non-overlapping axis-aligned slices (zero coplanar faces). */
+    static void addOctVertical(List<Models.El> l, double lo, double hi, double y0, double y1, double cut, String sideTex, String capTex) {
+        l.add(Models.e(lo + cut, y0, lo, hi - cut, y1, hi).all("#" + sideTex).face("up", "#" + capTex).face("down", "#" + capTex));
+        l.add(Models.e(lo, y0, lo + cut, lo + cut, y1, hi - cut).all("#" + sideTex).face("up", "#" + capTex).face("down", "#" + capTex));
+        l.add(Models.e(hi - cut, y0, lo + cut, hi, y1, hi - cut).all("#" + sideTex).face("up", "#" + capTex).face("down", "#" + capTex));
+    }
+
     static void models() throws Exception {
-        // ---- the tank (inside: base top at 4, lid underside at 13)
-        String[][] tt = {{"copper", "tank_copper"}, {"lid", "tank_lid"}, {"post", "tank_post"}, {"glass", "tank_glass"},
-                {"brass", "sat_brass"}, {"bolt", "pipe_bolt"}, {"gauge", "tank_gauge"}};
+        // ---- 1. Copper Tank (octagonal riveted boiler, external dark cast-iron corner tie-rods, cutout glass, centered front gauge)
+        String[][] tt = {{"copper", "tank_copper"}, {"lid", "tank_lid"}, {"iron", "tank_iron"}, {"brass", "tank_brass"},
+                {"glass", "tank_glass"}, {"gauge", "tank_gauge"}};
         List<Models.El> t = new ArrayList<>();
-        t.add(Models.e(0, 0, 0, 16, 4, 16).only("#copper", "north", "south", "east", "west").face("down", "#lid").face("up", "#lid"));
-        t.add(Models.e(0.5, 13, 0.5, 15.5, 16, 15.5).only("#copper", "north", "south", "east", "west").face("up", "#lid").face("down", "#lid"));
-        t.add(Models.e(7, 10.5, -0.5, 9, 14, 0.5).all("#copper"));
-        for (double[] c : new double[][]{{0.5, 0.5}, {13, 0.5}, {0.5, 13}, {13, 13}}) {
-            t.add(Models.e(c[0], 4, c[1], c[0] + 2.5, 13, c[1] + 2.5).only("#post", "north", "south", "east", "west"));
-            for (double y : new double[]{4, 11.6}) {
-                t.add(Models.e(c[0] - 0.25, y, c[1] - 0.25, c[0] + 2.75, y + 1.4, c[1] + 2.75).all("#brass"));
-            }
+        // Bottom stepped octagonal base (y=0..3.5)
+        addOctVertical(t, 1.5, 14.5, 0.0, 1.0, 1.0, "iron", "lid");
+        addOctVertical(t, 1.25, 14.75, 1.0, 3.0, 1.25, "copper", "lid");
+        addOctVertical(t, 1.75, 14.25, 3.0, 3.5, 1.0, "iron", "lid");
+
+        // Top stepped octagonal cap (y=12.5..16.0)
+        addOctVertical(t, 1.75, 14.25, 12.5, 13.0, 1.0, "iron", "lid");
+        addOctVertical(t, 1.25, 14.75, 13.0, 15.0, 1.25, "copper", "lid");
+        addOctVertical(t, 2.25, 13.75, 15.0, 16.0, 1.25, "copper", "lid");
+
+        // 4 external dark cast-iron corner tie-rods + bolted upper/lower mounting lugs & hex nuts
+        for (double[] c : new double[][]{{1.1, 1.1}, {13.7, 1.1}, {1.1, 13.7}, {13.7, 13.7}}) {
+            double rx0 = c[0], rz0 = c[1];
+            double mx0 = rx0 < 8 ? 1.0 : 13.2, mz0 = rz0 < 8 ? 1.0 : 13.2;
+            // Lower hex nut + bolted lug + rod + upper lug + hex nut (strictly non-overlapping Y intervals)
+            t.add(Models.e(rx0, 1.4, rz0, rx0 + 1.2, 2.0, rz0 + 1.2).all("#brass"));
+            t.add(Models.e(mx0, 2.0, mz0, mx0 + 1.8, 3.75, mz0 + 1.8).all("#iron"));
+            t.add(Models.e(rx0, 3.75, rz0, rx0 + 1.2, 12.25, rz0 + 1.2).all("#iron"));
+            t.add(Models.e(mx0, 12.25, mz0, mx0 + 1.8, 14.0, mz0 + 1.8).all("#iron"));
+            t.add(Models.e(rx0, 14.0, rz0, rx0 + 1.2, 14.6, rz0 + 1.2).all("#brass"));
         }
-        t.add(Models.e(3, 4, 1.5, 13, 13, 1.5).only("#glass", "north", "south"));
-        t.add(Models.e(3, 4, 14.5, 13, 13, 14.5).only("#glass", "north", "south"));
-        t.add(Models.e(1.5, 4, 3, 1.5, 13, 13).only("#glass", "east", "west"));
-        t.add(Models.e(14.5, 4, 3, 14.5, 13, 13).only("#glass", "east", "west"));
-        // the gauge on the front-right post, on a short brass stem
-        t.add(Models.e(13.9, 8, -0.4, 14.6, 8.7, 0.25).all("#brass"));
-        t.add(Models.e(12.6, 6.6, -1.2, 15.9, 9.9, -0.4).all("#brass").face("north", "#gauge", 0, 0, 16, 16));
+
+        // Thin bronze/iron corner seal posts framing the 4 cutout glass panes (x/z 2.0..14.0, y=3.5..12.5)
+        for (double[] s : new double[][]{{2.0, 2.0}, {13.0, 2.0}, {2.0, 13.0}, {13.0, 13.0}}) {
+            t.add(Models.e(s[0], 3.5, s[1], s[0] + 1.0, 12.5, s[1] + 1.0).only("#iron", "north", "south", "east", "west"));
+        }
+        t.add(Models.e(3.0, 3.5, 2.0, 13.0, 12.5, 2.0).only("#glass", "north", "south"));
+        t.add(Models.e(3.0, 3.5, 14.0, 13.0, 12.5, 14.0).only("#glass", "north", "south"));
+        t.add(Models.e(2.0, 3.5, 3.0, 2.0, 12.5, 13.0).only("#glass", "east", "west"));
+        t.add(Models.e(14.0, 3.5, 3.0, 14.0, 12.5, 13.0).only("#glass", "east", "west"));
+
+        // Integrated centered front & rear pressure gauges (north & south faces, centered at 8,8)
+        t.add(Models.e(5.75, 5.75, 1.4, 10.25, 10.25, 2.2).only("#iron", "south", "east", "west", "up", "down"));
+        t.add(Models.e(5.75, 9.45, 0.9, 10.25, 10.25, 1.4).all("#brass"));
+        t.add(Models.e(5.75, 5.75, 0.9, 10.25, 6.55, 1.4).all("#brass"));
+        t.add(Models.e(5.75, 6.55, 0.9, 6.55, 9.45, 1.4).all("#brass"));
+        t.add(Models.e(9.45, 6.55, 0.9, 10.25, 9.45, 1.4).all("#brass"));
+        t.add(Models.e(6.55, 6.55, 1.35, 9.45, 9.45, 1.4).face("north", "#gauge", 0, 0, 16, 16));
+
+        t.add(Models.e(5.75, 5.75, 13.8, 10.25, 10.25, 14.6).only("#iron", "north", "east", "west", "up", "down"));
+        t.add(Models.e(5.75, 9.45, 14.6, 10.25, 10.25, 15.1).all("#brass"));
+        t.add(Models.e(5.75, 5.75, 14.6, 10.25, 6.55, 15.1).all("#brass"));
+        t.add(Models.e(5.75, 6.55, 14.6, 6.55, 9.45, 15.1).all("#brass"));
+        t.add(Models.e(9.45, 6.55, 14.6, 10.25, 9.45, 15.1).all("#brass"));
+        t.add(Models.e(6.55, 6.55, 14.6, 9.45, 9.45, 14.65).face("south", "#gauge", 0, 0, 16, 16));
+
         Models.model("copper_tank", false, "tank_copper", tt, t.toArray(new Models.El[0]));
         cutout("copper_tank");
 
-        // ---- the Formation Bus: the casing round the golem's alcove, the brass sill it rises from, the brass lip of the mouth; the
-        // alcove is 5 deep and the side walls beside it (y 8.5..15, z 0..5) are glass windows
-        String[][] ft = {{"side", "formation_side"}, {"front", "formation_front"}, {"brass", "sat_brass"}, {"alcove", "formation_alcove"},
-                {"glass", "bus_glass"}};
+        // ---- 2. Mason's Formation Bus (open cast-iron & riveted copper gantry, walnut workbench, overhead hoist crane)
+        String[][] ft = {{"iron", "form_iron"}, {"copper", "form_copper"}, {"wood", "form_wood"}, {"brass", "form_brass"}};
         List<Models.El> f = new ArrayList<>();
-        f.add(Models.e(0, 0, 0, 16, 8.5, 16).only("#side", "south", "east", "west", "down").face("north", "#front").face("up", "#side"));
-        for (boolean left : new boolean[]{true, false}) {
-            double x0 = left ? 0 : 12.5, x1 = left ? 3.5 : 16;
-            String out = left ? "west" : "east", in = left ? "east" : "west";
-            f.add(Models.e(x0, 8.5, 0, x1, 15, 5).only("#glass", out, in).face("north", "#front"));
-            f.add(Models.e(x0, 15, 0, x1, 16, 5).only("#side", out, "up", "down").face("north", "#front"));
-            f.add(Models.e(x0, 8.5, 5, x1, 16, 16).only("#side", "south", out, "up").face("north", "#alcove"));
+        // Antique-brass front corner stanchions + lower walnut shelf (z=0.5..2.5)
+        f.add(Models.e(0.5, 0.0, 0.5, 2.75, 4.5, 2.5).all("#brass"));
+        f.add(Models.e(13.25, 0.0, 0.5, 15.5, 4.5, 2.5).all("#brass"));
+        f.add(Models.e(2.75, 1.0, 1.0, 13.25, 2.0, 2.5).all("#wood"));
+
+        // Lower cast-iron base chassis (z=2.5..15.5) + golem plinth platform (z=5.0..7.75)
+        f.add(Models.e(0.5, 0.0, 2.5, 15.5, 2.0, 15.5).all("#iron"));
+        f.add(Models.e(4.0, 2.0, 5.0, 12.0, 3.2, 7.75).all("#iron"));
+
+        // Mason's walnut workbench counter (z=1.0..5.0, cleanly in front of golem at z=6.3)
+        f.add(Models.e(2.75, 3.5, 1.0, 13.25, 4.75, 5.0).all("#wood"));
+
+        // Open stepped cast-iron gantry A-frame legs (front z=2.5..4.5, rear z=11.5..13.5)
+        f.add(Models.e(0.5, 2.0, 2.5, 2.5, 13.5, 4.5).only("#iron", "north", "south", "east", "west"));
+        f.add(Models.e(13.5, 2.0, 2.5, 15.5, 13.5, 4.5).only("#iron", "north", "south", "east", "west"));
+        f.add(Models.e(0.5, 2.0, 11.5, 2.5, 13.5, 13.5).only("#iron", "north", "south", "east", "west"));
+        f.add(Models.e(13.5, 2.0, 11.5, 15.5, 13.5, 13.5).only("#iron", "north", "south", "east", "west"));
+
+        // Side lower & upper gantry rails (inset x so zero coplanar faces with legs)
+        for (double[] lr : new double[][]{{0.75, 2.25}, {13.75, 15.25}}) {
+            f.add(Models.e(lr[0], 2.0, 4.5, lr[1], 3.5, 11.5).only("#iron", "east", "west", "up"));
+            f.add(Models.e(lr[0], 12.0, 4.5, lr[1], 13.5, 11.5).only("#iron", "east", "west", "up", "down"));
         }
-        f.add(Models.e(3.5, 15, 0, 12.5, 16, 16).only("#side", "south", "up").face("north", "#front").face("down", "#alcove"));
-        f.add(Models.e(3.5, 8.5, 5, 12.5, 15, 16).only("#side", "south").face("north", "#alcove"));
-        f.add(Models.e(3.5, 8.5, -0.75, 12.5, 9.25, 5).only("#brass", "north", "up", "east", "west"));
-        f.add(Models.e(3, 1, -1.5, 13, 2, 0).all("#brass"));
-        f.add(Models.e(3, 7, -1.5, 13, 8, 0).all("#brass"));
-        f.add(Models.e(3, 2, -1.5, 4, 7, 0).only("#brass", "north", "east", "west"));
-        f.add(Models.e(12, 2, -1.5, 13, 7, 0).only("#brass", "north", "east", "west"));
-        Models.model("formation_bus", false, "formation_side", ft, f.toArray(new Models.El[0]));
-        renderType("formation_bus", "translucent");
+
+        // Stepped top arch shoulders & rear iron tie-bar
+        f.add(Models.e(0.5, 13.5, 4.0, 2.5, 15.5, 12.0).all("#iron"));
+        f.add(Models.e(13.5, 13.5, 4.0, 15.5, 15.5, 12.0).all("#iron"));
+        f.add(Models.e(2.5, 14.0, 11.0, 13.5, 15.5, 12.5).only("#iron", "north", "south", "up", "down"));
+
+        // Riveted copper arch lintel & inner jambs
+        f.add(Models.e(2.5, 11.5, 2.5, 13.5, 13.5, 4.5).all("#copper"));
+        f.add(Models.e(2.5, 4.5, 3.0, 3.5, 11.5, 4.5).only("#copper", "north", "south", "east", "west"));
+        f.add(Models.e(12.5, 4.5, 3.0, 13.5, 11.5, 4.5).only("#copper", "north", "south", "east", "west"));
+
+        // Rear riveted copper network bulkhead + flush network socket plate at z=16 + delivery chute (z=7.75..11.5)
+        f.add(Models.e(2.5, 2.0, 11.5, 13.5, 11.5, 15.5).all("#copper"));
+        f.add(Models.e(2.5, 11.5, 12.5, 13.5, 13.5, 15.5).all("#iron"));
+        f.add(Models.e(4.5, 4.5, 15.5, 11.5, 11.5, 16.0).only("#iron", "south", "east", "west", "up", "down"));
+        f.add(Models.e(4.25, 2.0, 7.75, 11.75, 4.25, 11.5).only("#wood", "up", "north", "east", "west"));
+        f.add(Models.e(3.5, 2.0, 7.75, 4.25, 5.75, 11.5).all("#copper"));
+        f.add(Models.e(11.75, 2.0, 7.75, 12.5, 5.75, 11.5).all("#copper"));
+
+        // Overhead antique-brass hoist crane
+        f.add(Models.e(2.5, 14.0, 6.75, 13.5, 15.25, 8.75).only("#brass", "north", "south", "up", "down"));
+        f.add(Models.e(6.75, 12.75, 7.0, 9.25, 14.0, 8.5).only("#brass", "north", "south", "east", "west", "down"));
+        f.add(Models.e(7.5, 11.8, 7.5, 8.5, 12.75, 8.5).only("#iron", "north", "south", "east", "west", "down"));
+
+        Models.model("formation_bus", false, "form_copper", ft, f.toArray(new Models.El[0]));
+        cutout("formation_bus");
         Models.facing6("formation_bus", "formation_bus");
         Models.item("formation_bus", "formation_bus");
 
-        // ---- the Annihilation Bus: the casing round a brass-framed niche (x 2..14, y 2..14, z 0..5)
-        // its side walls beside the niche (y 2..14, z 0..5) are glass windows
-        String[][] at = {{"side", "annihilation_side"}, {"brass", "sat_brass"}, {"niche", "annihilation_niche"}, {"glass", "bus_glass"}};
+        // ---- 3. Hewer's Annihilation Bus (armored iron hood, bolted angled blast-shield, oxidized bronze bastion & Plasma coil)
+        String[][] at = {{"iron", "anni_iron"}, {"copper", "anni_copper"}, {"brass", "anni_brass"}, {"coil", "anni_coil"}};
         List<Models.El> a = new ArrayList<>();
-        for (boolean left : new boolean[]{true, false}) {
-            double x0 = left ? 0 : 14, x1 = left ? 2 : 16;
-            String out = left ? "west" : "east", in = left ? "east" : "west";
-            a.add(Models.e(x0, 2, 0, x1, 14, 5).only("#glass", out, in).face("north", "#brass"));
-            a.add(Models.e(x0, 0, 0, x1, 2, 5).only("#side", out, "up", "down").face("north", "#brass"));
-            a.add(Models.e(x0, 14, 0, x1, 16, 5).only("#side", out, "up", "down").face("north", "#brass"));
-            a.add(Models.e(x0, 0, 5, x1, 16, 16).only("#side", "south", out, "up", "down").face("north", "#niche"));
+        // Armored base chassis: front lower slab under niche (y=0..1.5, z=1.5..6.0) + recessed floor (y=1.5..2.0, z=2.0..6.0) + main base (z=6.0..15.5)
+        a.add(Models.e(1.0, 0.0, 1.5, 15.0, 1.5, 6.0).all("#iron"));
+        a.add(Models.e(2.5, 1.5, 2.0, 13.5, 2.0, 6.0).only("#iron", "up", "north"));
+        a.add(Models.e(1.0, 0.0, 6.0, 15.0, 2.0, 15.5).all("#iron"));
+
+        // Armored dark cast-iron arched front hood (z=1.5..5.5) framing the golem cleanly
+        a.add(Models.e(1.25, 1.5, 1.5, 2.75, 11.8, 5.5).only("#iron", "north", "south", "east", "west", "up"));
+        a.add(Models.e(13.25, 1.5, 1.5, 14.75, 11.8, 5.5).only("#iron", "north", "south", "east", "west", "up"));
+        a.add(Models.e(2.25, 11.8, 1.5, 13.75, 13.25, 5.5).all("#iron"));
+        a.add(Models.e(3.75, 13.25, 2.0, 12.25, 14.5, 5.5).all("#iron"));
+        a.add(Models.e(2.75, 2.0, 5.5, 13.25, 11.8, 6.0).only("#iron", "north"));
+
+        // Raised antique-brass structural collar rib (z=5.5..7.0)
+        a.add(Models.e(1.0, 2.0, 5.5, 2.25, 12.0, 7.0).all("#brass"));
+        a.add(Models.e(13.75, 2.0, 5.5, 15.0, 12.0, 7.0).all("#brass"));
+        a.add(Models.e(2.0, 12.0, 5.5, 3.25, 14.0, 7.0).all("#brass"));
+        a.add(Models.e(12.75, 12.0, 5.5, 14.0, 14.0, 7.0).all("#brass"));
+        a.add(Models.e(3.25, 14.0, 5.5, 12.75, 15.5, 7.0).all("#brass"));
+
+        // Stepped arched oxidized-copper/bronze rear bastion hull (z=7.0..15.5) + flush pipe docking pad at z=16
+        a.add(Models.e(1.5, 2.0, 7.0, 14.5, 12.0, 15.5).all("#copper").face("north", "#iron"));
+        a.add(Models.e(2.75, 12.0, 7.0, 13.25, 14.0, 15.0).all("#copper"));
+        a.add(Models.e(4.5, 14.0, 7.0, 11.5, 15.25, 14.5).all("#copper"));
+        a.add(Models.e(4.5, 4.5, 15.5, 11.5, 11.5, 16.0).only("#iron", "south", "east", "west", "up", "down"));
+
+        // Stepped cast-iron jaw-guard apron + protruding vertical jaw teeth (lower max y <= 3.6, teeth y <= 4.1)
+        a.add(Models.e(2.25, 1.55, 1.0, 13.75, 3.55, 1.65).only("#iron", "north", "south", "up", "down"));
+        a.add(Models.e(2.5, 0.85, 0.45, 13.5, 2.55, 1.0).all("#iron"));
+        for (double rx : new double[]{3.25, 6.0, 9.0, 11.75}) {
+            a.add(Models.e(rx, 1.15, 0.15, rx + 1.0, 2.55, 0.45).all("#iron"));
+            a.add(Models.e(rx, 2.55, 0.25, rx + 1.0, 4.05, 1.0).all("#iron"));
         }
-        a.add(Models.e(2, 0, 0, 14, 2, 16).only("#side", "south", "down").face("north", "#brass").face("up", "#niche"));
-        a.add(Models.e(2, 14, 0, 14, 16, 16).only("#side", "south", "up").face("north", "#brass").face("down", "#niche"));
-        a.add(Models.e(2, 2, 5, 14, 14, 16).only("#side", "south").face("north", "#niche"));
-        Models.model("annihilation_bus", false, "annihilation_side", at, a.toArray(new Models.El[0]));
-        renderType("annihilation_bus", "translucent");
+        // Hinge bosses attaching blast-shield cleanly to cheeks (y=1.55 so never coplanar with base top y=1.5)
+        a.add(Models.e(1.0, 1.55, 1.25, 2.25, 3.75, 3.25).only("#iron", "north", "south", "west", "up", "down"));
+        a.add(Models.e(13.75, 1.55, 1.25, 15.0, 3.75, 3.25).only("#iron", "north", "south", "east", "up", "down"));
+
+        // Side Plasma Temper coil mounts (east & west, z=9.0..13.0)
+        for (boolean west : new boolean[]{true, false}) {
+            double bx0 = west ? 0.5 : 14.5, bx1 = west ? 1.5 : 15.5;
+            double cx0 = west ? 0.6 : 14.5, cx1 = west ? 1.5 : 15.4;
+            String out = west ? "west" : "east";
+            a.add(Models.e(bx0, 4.0, 9.0, bx1, 5.0, 13.0).only("#brass", "north", "south", "up", "down", out));
+            a.add(Models.e(bx0, 10.25, 9.0, bx1, 11.25, 13.0).only("#brass", "north", "south", "up", "down", out));
+            a.add(Models.e(cx0, 5.0, 10.25, cx1, 10.25, 11.75).only("#coil", "north", "south", out).glow(12));
+            a.add(Models.e(cx0, 5.0, 9.1, cx1, 10.25, 9.6).only("#iron", "north", "south", out));
+        }
+
+        Models.model("annihilation_bus", false, "anni_copper", at, a.toArray(new Models.El[0]));
+        cutout("annihilation_bus");
         Models.facing6("annihilation_bus", "annihilation_bus");
         Models.item("annihilation_bus", "annihilation_bus");
     }
@@ -417,15 +526,21 @@ final class GolemBuses {
     static void all() throws Exception {
         tankCopper().save(Forge2.tex("tank_copper"));
         tankLid().save(Forge2.tex("tank_lid"));
-        tankPost().save(Forge2.tex("tank_post"));
+        tankIron().save(Forge2.tex("tank_iron"));
+        tankBrass().save(Forge2.tex("tank_brass"));
         tankGlass().save(Forge2.tex("tank_glass"));
         tankGauge().save(Forge2.tex("tank_gauge"));
-        formation(false).save(Forge2.tex("formation_side"));
-        formation(true).save(Forge2.tex("formation_front"));
-        alcove().save(Forge2.tex("formation_alcove"));
-        annihilation().save(Forge2.tex("annihilation_side"));
-        niche().save(Forge2.tex("annihilation_niche"));
-        busGlass().save(Forge2.tex("bus_glass"));
+
+        formIron().save(Forge2.tex("form_iron"));
+        formCopper().save(Forge2.tex("form_copper"));
+        formWood().save(Forge2.tex("form_wood"));
+        formBrass().save(Forge2.tex("form_brass"));
+
+        anniIron().save(Forge2.tex("anni_iron"));
+        anniCopper().save(Forge2.tex("anni_copper"));
+        anniBrass().save(Forge2.tex("anni_brass"));
+        anniCoil().save(Forge2.tex("anni_coil"));
+
         temper().save(Forge2.RES.resolve("textures/item/plasma_temper.png").toFile());
         belt().save(Forge2.RES.resolve("textures/entity/plasma_belt.png").toFile());
         models();

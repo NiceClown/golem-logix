@@ -104,11 +104,12 @@ public class CryoMainframeRenderer extends com.golemlogix.client.render.LegacyBe
         box(vc, p, -16, 2, 2, -14, 30, 32, BRONZE, white, light);
         box(vc, p, 30, 2, 2, 32, 30, 32, BRONZE, white, light);
         box(vc, p, -16, 30, 0, 32, 32, 32, BRONZE, white, light);
-        // brass front frame and ribs
-        box(vc, p, -16, 2, -0.5f, -14, 30, 2, BRASS, white, light);
-        box(vc, p, 30, 2, -0.5f, 32, 30, 2, BRASS, white, light);
-        box(vc, p, -16, 28, -0.5f, 32, 30, 2, BRASS, white, light);
-        box(vc, p, -16, 2, -0.5f, 32, 3, 2, BRASS, white, light);
+        // aged-brass outer front frame and ribs (slightly deeper tint than door frames for hierarchy)
+        int frameTint = 0xFFE4D4BA;
+        box(vc, p, -16, 2, -0.5f, -14, 30, 2, BRASS, frameTint, light);
+        box(vc, p, 30, 2, -0.5f, 32, 30, 2, BRASS, frameTint, light);
+        box(vc, p, -16, 28, -0.5f, 32, 30, 2, BRASS, frameTint, light);
+        box(vc, p, -16, 2, -0.5f, 32, 3, 2, BRASS, frameTint, light);
         for (float x : new float[]{-16.3f, 31.3f}) {
             box(vc, p, x, 0, 30.7f, x + 1f, 32.3f, 32.3f, BRASS, white, light);
         }

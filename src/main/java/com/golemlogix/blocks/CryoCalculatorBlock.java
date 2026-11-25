@@ -27,7 +27,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public class CryoCalculatorBlock extends Block implements com.golemlogix.blocks.RemovalAware, GolemNode, EntityBlock {
     public CryoCalculatorBlock(Properties properties) {
-        super(properties.sound(SoundType.AMETHYST).strength(3.5f).lightLevel(state -> 4).requiresCorrectToolForDrops());
+        super(properties.sound(SoundType.AMETHYST).strength(3.5f).lightLevel(state -> 4).requiresCorrectToolForDrops().noOcclusion());
         this.registerDefaultState(this.stateDefinition.any().setValue(GolemProperties.ACTIVE, false));
     }
 

@@ -132,7 +132,7 @@ final class Nixie {
         return p;
     }
 
-    /** The socket: dark bakelite with a copper ring. */
+    /** The socket: dark bakelite with a copper ring (used by pipe heat lamps). */
     static Paint socket() {
         Paint p = new Paint(16, 16, K);
         p.fill(0, 0, 16, 16, (u, v) -> rgb(((int) u + (int) v) % 5 == 0 ? 0x7a5634 : 0x634426));
@@ -141,9 +141,74 @@ final class Nixie {
         return p;
     }
 
+    // ------------------------------------------------------------------ Wave 3 Channel Counter textures
+
+    /** Deep workshop walnut matching Order Ledger & Security Terminal (separate from pipe heat lamps). */
+    static Paint counterWood() {
+        Paint p = new Paint(16, 16, K);
+        int[] tones = {0x321f12, 0x3e2716, 0x4b301b, 0x583a21, 0x674629};
+        for (int j = 0; j < p.h; j++) {
+            for (int i = 0; i < p.w; i++) {
+                double v = (j + 0.5) / K;
+                int plank = (int) (v / 4);
+                double t = Atlant.hash(plank, i / 5, 511) * 0.5 + Atlant.noise(i, j, 6, 512) * 0.5;
+                p.px(i, j, rgb(tones[(int) Math.min(4, t * 5)]));
+            }
+        }
+        for (double y = 4; y < 16; y += 4) {
+            p.rect(0, y - 0.5, 16, y, rgb(0x22140b));
+        }
+        return p;
+    }
+
+    /** Forged deepslate-iron straps, saddles, wall plate, and struts for Channel Counter mounts. */
+    static Paint counterIron() {
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, Paint.SLATE_IRON, 2.6, 1);
+        p.grain(0, 0, 16, 16, 0.06, 521);
+        p.frame(0, 0, 16, 16, 0.5, Paint.rgb(Paint.SLATE_IRON[1]));
+        p.frame(1.5, 1.5, 14.5, 14.5, 0.5, Paint.rgb(Paint.SLATE_IRON[4]));
+        return p;
+    }
+
+    /** Weathered riveted copper deck, tube base collars, and side shelf trim. */
+    static Paint counterCopper() {
+        Paint p = new Paint(16, 16, K);
+        for (int j = 0; j < p.h; j++) {
+            for (int i = 0; i < p.w; i++) {
+                double n = Atlant.hash(i / 2, j / 2, 531) * 0.45 + Atlant.noise(i, j, 10, 532) * 0.55;
+                p.px(i, j, rgb(Atlant.COPPER[Math.max(0, Math.min(4, (int) Math.round(n * 4)))]));
+            }
+        }
+        p.frame(0, 0, 16, 16, 0.5, rgb(Atlant.COPPER[0]));
+        p.rect(0.5, 0.5, 15.5, 1.0, rgb(Atlant.COPPER[5]));
+        return p;
+    }
+
+    /** Warm antique brass accent rivets & mounting bolts. */
+    static Paint counterBrass() {
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, Paint.BRASS, 2.8, 1);
+        p.streaks(0.5, 0.5, 15.5, 15.5, 0.06, 541, true);
+        p.frame(0, 0, 16, 16, 0.5, Paint.rgb(Paint.BRASS[2]));
+        return p;
+    }
+
+    /** Dark bakelite/slate nixie tube collar with antique brass rim & copper base ring. */
+    static Paint counterSocket() {
+        Paint p = new Paint(16, 16, K);
+        p.fill(0, 0, 16, 16, (u, v) -> {
+            double t = Atlant.hash((int) (u * K) / 2, (int) (v * K) / 2, 551);
+            return Paint.rgb(Paint.SLATE_IRON[t > 0.5 ? 1 : 0]);
+        });
+        p.rect(0, 0, 16, 2.0, Paint.rgb(Paint.BRASS[4]));
+        p.rect(0, 14.0, 16, 16, rgb(Atlant.COPPER[4]));
+        return p;
+    }
+
     /**
-     * One tube standing at (x0, y0, z0) - its front to the north - w wide, h high, d deep: the socket, the mesh plate (the digit is
-     * drawn just in front of it, at the depth the renderer is told), the glass envelope and its dome.
+     * One tube standing at (x0, y0, z0) - its front to the north - w wide, h high, d deep: stepped copper collar +
+     * dark slate-bakelite socket, mesh plate, glass envelope and dome.
      */
     /** Where a side-mounted counter sits (pixels, ChannelCounterBlock.Mount's offsets): back against the wall, the deck's height
      * on a block, a basic pipe and a dense pipe. */
@@ -152,89 +217,82 @@ final class Nixie {
 
     static void tube(List<Models.El> l, double x0, double y0, double z0, double w, double h, double d) {
         double zm = z0 + d / 2;
-        l.add(Models.e(x0 + 0.2, y0, z0 + 0.2, x0 + w - 0.2, y0 + 0.8, z0 + d - 0.2).only("#socket", "north", "south", "east", "west", "up"));
+        l.add(Models.e(x0 + 0.1, y0, z0 + 0.1, x0 + w - 0.1, y0 + 0.35, z0 + d - 0.1).only("#copper", "north", "south", "east", "west", "up"));
+        l.add(Models.e(x0 + 0.25, y0 + 0.35, z0 + 0.25, x0 + w - 0.25, y0 + 0.8, z0 + d - 0.25).only("#socket", "north", "south", "east", "west", "up"));
         l.add(Models.e(x0 + 0.3, y0 + 1.2, zm - 0.05, x0 + w - 0.3, y0 + h - 0.6, zm + 0.05).only("#mesh", "north", "south"));
         l.add(Models.e(x0, y0 + 0.8, z0, x0 + w, y0 + h, z0 + d).only("#glass", "north", "south", "east", "west", "up"));
         l.add(Models.e(x0 + 0.5, y0 + h, z0 + 0.5, x0 + w - 0.5, y0 + h + 0.6, z0 + d - 0.5).only("#glass", "north", "south", "east", "west", "up"));
     }
 
-    /** The counter itself (facing north) moved by dy, dz pixels: a walnut base with a brass edge and three small tubes on it. */
+    /** The counter itself (facing north) moved by dy, dz pixels: forged iron rim, walnut base, copper deck with brass rivets. */
     static List<Models.El> counterBody(double dy, double dz) {
         List<Models.El> l = new ArrayList<>();
-        l.add(Models.e(3.5, dy, 6 + dz, 12.5, dy + 1.6, 10 + dz).all("#wood"));
-        l.add(Models.e(3.5, dy + 1.6, 6 + dz, 12.5, dy + 1.9, 10 + dz).only("#brass", "north", "south", "east", "west", "up"));
+        l.add(Models.e(3.5, dy, 6 + dz, 12.5, dy + 0.45, 10 + dz).all("#iron"));
+        l.add(Models.e(3.5, dy + 0.45, 6 + dz, 12.5, dy + 1.6, 10 + dz).only("#wood", "north", "south", "east", "west"));
+        l.add(Models.e(3.5, dy + 1.6, 6 + dz, 12.5, dy + 1.9, 10 + dz).only("#copper", "north", "south", "east", "west", "up"));
+        for (double rx : new double[]{3.75, 11.95}) {
+            for (double rz : new double[]{6.25 + dz, 9.45 + dz}) {
+                l.add(Models.e(rx, dy + 1.9, rz, rx + 0.3, dy + 2.05, rz + 0.3).only("#brass", "north", "south", "east", "west", "up"));
+            }
+        }
         for (double cx : new double[]{5.55, 8.0, 10.45}) {
             tube(l, cx - 1.1, dy + 1.9, 6.7 + dz, 2.2, 6.6, 2.6);
         }
         return l;
     }
 
-    /**
-     * The Channel Counter (facing north; the digits are lit on both sides of the meshes), one model for each way it is fixed (the
-     * offsets of the counter are ChannelCounterBlock.Mount's): a plain foot on a block; astride a horizontal pipe running along x,
-     * two brass straps round the tube's top (clear of the pipe's own clamps) with bolts and stems up to the base; on the side of a
-     * block or of a pipe behind it (south) a small shelf like the golem's on the Cryo-Distillation Tower - a dark deck with a brass
-     * lip, a wall plate with two bolts against the block or the tube's flat face, two brass struts under the deck.
-     */
     static void counterModels() throws Exception {
-        String[][] tex = {{"wood", "nixie_wood"}, {"brass", "sat_brass"}, {"socket", "nixie_socket"}, {"mesh", "nixie_mesh"},
-                {"glass", "nixie_glass"}, {"bolt", "pipe_bolt"}, {"dark", "sat_dark"}};
+        String[][] tex = {{"wood", "counter_wood"}, {"iron", "counter_iron"}, {"copper", "counter_copper"},
+                {"brass", "counter_brass"}, {"socket", "counter_socket"}, {"mesh", "nixie_mesh"}, {"glass", "nixie_glass"}};
         String[] mounts = {"floor", "pipe_basic", "pipe_dense", "side_block", "side_basic", "side_dense", "hub_basic", "hub_dense"};
         for (String m : mounts) {
             List<Models.El> l;
             switch (m) {
                 case "pipe_basic", "pipe_dense" -> {
                     l = counterBody(0, 0);
-                    // the tube below spans 4..12 (basic) or 2..14 (dense) of its cell: the straps hug it a hair off its faces,
-                    // between the pipe's clamps (at the joints and at the middle)
                     double lo = m.equals("pipe_dense") ? 2 : 4;
                     double z0 = lo - 0.65, z1 = 16 - z0, top = 0.05 - lo;
                     for (double x : new double[]{3.6, 11.0}) {
-                        l.add(Models.e(x, top, z0, x + 1.4, top + 0.6, z1).all("#brass"));
-                        l.add(Models.e(x, -8, z0, x + 1.4, top, z0 + 0.6).only("#brass", "north", "south", "east", "west", "down"));
-                        l.add(Models.e(x, -8, z1 - 0.6, x + 1.4, top, z1).only("#brass", "north", "south", "east", "west", "down"));
-                        l.add(Models.e(x + 0.4, -6.2, z0 - 0.3, x + 1.0, -5.6, z0).all("#bolt"));
-                        l.add(Models.e(x + 0.4, -6.2, z1, x + 1.0, -5.6, z1 + 0.3).all("#bolt"));
-                        l.add(Models.e(x + 0.4, top + 0.6, 7.3, x + 1.0, 0, 8.7).only("#brass", "north", "south", "east", "west"));
+                        l.add(Models.e(x, top, z0, x + 1.4, top + 0.6, z1).all("#iron"));
+                        l.add(Models.e(x, -8, z0, x + 1.4, top, z0 + 0.6).only("#iron", "north", "south", "east", "west", "down"));
+                        l.add(Models.e(x, -8, z1 - 0.6, x + 1.4, top, z1).only("#iron", "north", "south", "east", "west", "down"));
+                        l.add(Models.e(x + 0.4, -6.2, z0 - 0.3, x + 1.0, -5.6, z0).all("#brass"));
+                        l.add(Models.e(x + 0.4, -6.2, z1, x + 1.0, -5.6, z1 + 0.3).all("#brass"));
+                        l.add(Models.e(x + 0.4, top + 0.6, 7.3, x + 1.0, 0, 8.7).only("#copper", "north", "south", "east", "west"));
                     }
                 }
                 case "hub_basic", "hub_dense" -> {
-                    // on a pipe's junction box (a pipe next to a network block is a cube lo..hi of its cell): the counter sits down on
-                    // the box's top, on two brass saddles across it that hook over its front and back edges (the top itself is glass)
                     double lo = m.equals("hub_dense") ? 2 : 4, hi = 16 - lo, dy = hi - 16;
                     l = counterBody(dy, 0);
                     for (double x : new double[]{4.6, 10.2}) {
-                        l.add(Models.e(x, dy - 0.4, lo - 0.5, x + 1.2, dy, hi + 0.5).all("#brass"));
-                        l.add(Models.e(x, dy - 1.6, lo - 0.5, x + 1.2, dy - 0.4, lo).only("#brass", "north", "south", "east", "west", "down"));
-                        l.add(Models.e(x, dy - 1.6, hi, x + 1.2, dy - 0.4, hi + 0.5).only("#brass", "north", "south", "east", "west", "down"));
-                        l.add(Models.e(x + 0.3, dy - 1.2, lo - 0.8, x + 0.9, dy - 0.6, lo - 0.5).all("#bolt"));
-                        l.add(Models.e(x + 0.3, dy - 1.2, hi + 0.5, x + 0.9, dy - 0.6, hi + 0.8).all("#bolt"));
+                        l.add(Models.e(x, dy - 0.4, lo - 0.5, x + 1.2, dy, hi + 0.5).all("#iron"));
+                        l.add(Models.e(x, dy - 1.6, lo - 0.5, x + 1.2, dy - 0.4, lo).only("#iron", "north", "south", "east", "west", "down"));
+                        l.add(Models.e(x, dy - 1.6, hi, x + 1.2, dy - 0.4, hi + 0.5).only("#iron", "north", "south", "east", "west", "down"));
+                        l.add(Models.e(x + 0.3, dy - 1.2, lo - 0.8, x + 0.9, dy - 0.6, lo - 0.5).all("#brass"));
+                        l.add(Models.e(x + 0.3, dy - 1.2, hi + 0.5, x + 0.9, dy - 0.6, hi + 0.8).all("#brass"));
                     }
                 }
                 case "side_block", "side_basic", "side_dense" -> {
-                    // the wall: the block's face at z 16, or the pipe's tube at 20 (basic) or 18 (dense), whose flat face spans
-                    // y 4..12 (basic) or 2..14 (dense), its flat face 5.3..10.7 or 4.2..11.8 - the plate hangs from it down the chamfer
                     double wall = m.equals("side_block") ? 16 : m.equals("side_basic") ? 20 : 18;
                     double deck = m.equals("side_block") ? SIDE_DY[0] : m.equals("side_basic") ? SIDE_DY[1] : SIDE_DY[2];
                     double plate0 = m.equals("side_block") ? -2.4 : m.equals("side_basic") ? 4.3 : 2.3, pz = wall - 0.6;
                     l = counterBody(deck, SIDE_DZ);
                     double front = 6 + SIDE_DZ - 0.6;
-                    l.add(Models.e(3.0, deck - 0.6, front, 13.0, deck, pz).only("#dark", "up", "down", "east", "west"));
-                    l.add(Models.e(2.8, deck - 0.8, front - 0.2, 13.2, deck + 0.2, front + 0.5).all("#brass"));
-                    l.add(Models.e(3.2, plate0, pz, 12.8, deck + 0.6, wall).only("#brass", "north", "east", "west", "up", "down"));
+                    l.add(Models.e(3.0, deck - 0.6, front, 13.0, deck, pz).only("#iron", "up", "down", "east", "west"));
+                    l.add(Models.e(2.8, deck - 0.8, front - 0.2, 13.2, deck + 0.2, front + 0.5).all("#copper"));
+                    l.add(Models.e(3.2, plate0, pz, 12.8, deck + 0.6, wall).only("#iron", "north", "east", "west", "up", "down"));
                     for (double x : new double[]{5.0, 10.4}) {
-                        l.add(Models.e(x, plate0 + 0.7, pz - 0.3, x + 0.6, plate0 + 1.3, pz).all("#bolt"));
+                        l.add(Models.e(x, plate0 + 0.7, pz - 0.3, x + 0.6, plate0 + 1.3, pz).all("#brass"));
                     }
-                    // the struts: from the foot of the plate up to the deck's underside at 22.5 degrees
                     double foot = plate0 + 0.6, len = (deck - 0.6 - foot) / Math.sin(Math.toRadians(22.5));
                     for (double x : new double[]{3.4, 12.0}) {
-                        l.add(Models.e(x, foot - 0.3, pz - len, x + 0.6, foot + 0.3, pz).only("#brass", "up", "down", "east", "west", "north")
+                        l.add(Models.e(x, foot - 0.3, pz - len, x + 0.6, foot + 0.3, pz).only("#iron", "up", "down", "east", "west", "north")
                                 .rot("x", 22.5, x + 0.3, foot, pz));
                     }
                 }
                 default -> l = counterBody(0, 0);
             }
-            Models.model("channel_counter_" + m, true, "nixie_wood", tex, l.toArray(new Models.El[0]));
+            Models.model("channel_counter_" + m, true, "counter_wood", tex, l.toArray(new Models.El[0]));
         }
         String[][] facings = {{"north", ""}, {"east", ", \"y\": 90"}, {"south", ", \"y\": 180"}, {"west", ", \"y\": 270"}};
         List<String> lines = new ArrayList<>();
@@ -256,6 +314,11 @@ final class Nixie {
         glass().save(Forge2.tex("nixie_glass"));
         walnut().save(Forge2.tex("nixie_wood"));
         socket().save(Forge2.tex("nixie_socket"));
+        counterWood().save(Forge2.tex("counter_wood"));
+        counterIron().save(Forge2.tex("counter_iron"));
+        counterCopper().save(Forge2.tex("counter_copper"));
+        counterBrass().save(Forge2.tex("counter_brass"));
+        counterSocket().save(Forge2.tex("counter_socket"));
         counterModels();
     }
 }

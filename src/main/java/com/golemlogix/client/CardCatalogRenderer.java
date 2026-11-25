@@ -44,8 +44,8 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
  * columns X -32..-16 and 32..48 of the front row.
  */
 public class CardCatalogRenderer extends com.golemlogix.client.render.LegacyBer<CardCatalogBlockEntity> {
-    private static final Identifier RUST = tex("resonator_body"), BRASS = tex("sat_brass"),
-            DARK = tex("sat_dark"), PLATE = tex("brass_plate"), DRAWER = tex("catalog_drawer"), DRUM = tex("catalog_drum"),
+    private static final Identifier RUST = tex("resonator_body"), BRASS = tex("sat_brass"), BRONZE = tex("sat_bronze"),
+            DARK = tex("sat_dark"), DRAWER = tex("catalog_drawer"), DRUM = tex("catalog_drum"),
             SCREEN = tex("catalog_screen"), PANEL = tex("cryo_panel"), FROST_PIPE = tex("resonator_pipe"), ICE = tex("sat_ice"),
             CARD = tex("encoder_cards"), VINE = Identifier.withDefaultNamespace("block/vine"),
             PIPE = Identifier.withDefaultNamespace("block/copper_block");
@@ -123,11 +123,11 @@ public class CardCatalogRenderer extends com.golemlogix.client.render.LegacyBer<
         box(vc, p, -16, 2, 1.5f, -14, 30, 32, RUST, white, light);
         box(vc, p, 30, 2, 1.5f, 32, 30, 32, RUST, white, light);
         box(vc, p, -16, 30, 0, 32, 32, 32, RUST, white, light);
-        // brass front frame, middle posts and the dark niche behind the drawers
-        box(vc, p, -16, 2, -0.5f, -14, 30, 1.5f, BRASS, white, light);
-        box(vc, p, 30, 2, -0.5f, 32, 30, 1.5f, BRASS, white, light);
-        box(vc, p, -14, 28.6f, -0.5f, 30, 30, 1.5f, BRASS, white, light);
-        box(vc, p, -14, 2, -0.5f, 30, 3.2f, 1.5f, BRASS, white, light);
+        // dark bronze outer front frame, aged-brass inner mullions and dark niche behind drawers
+        box(vc, p, -16, 2, -0.5f, -14, 30, 1.5f, BRONZE, white, light);
+        box(vc, p, 30, 2, -0.5f, 32, 30, 1.5f, BRONZE, white, light);
+        box(vc, p, -14, 28.6f, -0.5f, 30, 30, 1.5f, BRONZE, white, light);
+        box(vc, p, -14, 2, -0.5f, 30, 3.2f, 1.5f, BRONZE, white, light);
         box(vc, p, 1.9f, 3.2f, -0.3f, 3.2f, 28.6f, 1.5f, BRASS, white, light);
         box(vc, p, 12.8f, 3.2f, -0.3f, 14.1f, 28.6f, 1.5f, BRASS, white, light);
         // Solid blind back wall right behind the drawers (fully closes the see-through gap to the wall)
@@ -151,9 +151,9 @@ public class CardCatalogRenderer extends com.golemlogix.client.render.LegacyBer<
             drawer(vc, p, drawerX(i), drawerY(i), out, i < filled, i, light);
         }
 
-        // middle: brass plate, porthole screen, fill gauge, card slot and levers
-        box(vc, p, 3.2f, 3.2f, 0.3f, 12.8f, 28.6f, 1.6f, PLATE, white, light);
-        box(vc, p, 3.6f, 16.4f, -0.4f, 12.4f, 27.6f, 0.3f, BRASS, 0xFFC8A060, light);
+        // middle: bronze console backing, aged-brass CRT frame, porthole screen, fill gauge, card slot and levers
+        box(vc, p, 3.2f, 3.2f, 0.3f, 12.8f, 28.6f, 1.6f, BRONZE, white, light);
+        box(vc, p, 3.6f, 16.4f, -0.4f, 12.4f, 27.6f, 0.3f, BRASS, 0xFFE8D8BC, light);
         fitWall(vc, p, 3.4f, 17.1f, 12.6f, 26.9f, -0.5f, SCREEN, white, LightCoordsUtil.FULL_BRIGHT);
         box(vc, p, 4.2f, 14.2f, -0.4f, 11.8f, 15.6f, 0.3f, DARK, white, light);
         float fx = 4.6f + 6.8f * fill;
@@ -183,8 +183,8 @@ public class CardCatalogRenderer extends com.golemlogix.client.render.LegacyBer<
         box(vc, p, -15.6f, 32, 24.4f, 23, 35, 27.4f, FROST_PIPE, white, light);
         box(vc, p, 28.6f, 2, 30.4f, 31.6f, 30, 33.4f, FROST_PIPE, white, light);
         for (float y : new float[]{8f, 18f, 26f}) {
-            box(vc, p, -15.9f, y, 30.1f, -12.3f, y + 1.2f, 33.7f, BRASS, 0xFFC8A060, light);
-            box(vc, p, 28.3f, y + 2f, 30.1f, 31.9f, y + 3.2f, 33.7f, BRASS, 0xFFC8A060, light);
+            box(vc, p, -15.9f, y, 30.1f, -12.3f, y + 1.2f, 33.7f, BRASS, 0xFFE8D8BC, light);
+            box(vc, p, 28.3f, y + 2f, 30.1f, 31.9f, y + 3.2f, 33.7f, BRASS, 0xFFE8D8BC, light);
         }
         for (float[] ic : new float[][]{{-10.5f, 2.2f}, {-3f, 1.4f}, {6.5f, 2.6f}, {17f, 1.6f}}) {
             box(vc, p, ic[0], 32 - ic[1], 25.4f, ic[0] + 0.6f, 32, 26f, ICE, white, light);
@@ -249,13 +249,13 @@ public class CardCatalogRenderer extends com.golemlogix.client.render.LegacyBer<
         fitWall(vc, p, x, y, x + w, y + h, z - 0.42f, DRAWER, white, light);
     }
 
-    /** Roof: a brass box with four letter drums (they turn like a counter), a gear on the side, a steaming pipe at the back. */
+    /** Roof: a bronze-and-aged-brass box with four letter drums (they turn like a counter), a gear on the side, a steaming pipe at the back. */
     private static void roof(PoseStack pose, VertexConsumer vc, int light, float time, float drums, float open) {
         PoseStack.Pose p = pose.last();
         int white = 0xFFFFFFFF;
-        box(vc, p, -13, 32, 0.6f, 29, 33.2f, 11, BRASS, white, light);
+        box(vc, p, -13, 32, 0.6f, 29, 33.2f, 11, BRONZE, white, light);
         box(vc, p, -13, 33.2f, 9.6f, 29, 40, 11, RUST, white, light);
-        box(vc, p, -13, 39.2f, 0.6f, 29, 40.2f, 11, BRASS, white, light);
+        box(vc, p, -13, 39.2f, 0.6f, 29, 40.2f, 11, BRONZE, white, light);
         for (float x : new float[]{-13f, -3.6f, 6.2f, 15.6f, 27.6f}) {
             box(vc, p, x, 33.2f, 1.2f, x + 1.4f, 39.2f, 9.6f, BRASS, white, light);
         }
@@ -304,7 +304,7 @@ public class CardCatalogRenderer extends com.golemlogix.client.render.LegacyBer<
         // Pedestal: a full 16x16 block outside the cabinet
         float px0 = right ? 32f : -32f, px1 = right ? 48f : -16f;
         box(vc, pose.last(), px0, 0, 0.5f, px1, 6, 15.5f, PEDESTAL[Math.max(0, Math.min(3, ox))], 0xFFFFFFFF, light);
-        box(vc, pose.last(), px0 - 0.4f, 5.6f, 0.1f, px1 + 0.4f, 6.4f, 15.9f, BRASS, 0xFFFFFFFF, light);
+        box(vc, pose.last(), px0 - 0.4f, 5.6f, 0.1f, px1 + 0.4f, 6.4f, 15.9f, BRASS, 0xFFF2E6D0, light);
         // frosted pipe from the pedestal into the side
         float a0 = right ? 30f : -18f, a1 = right ? 34f : -14f;
         box(vc, pose.last(), a0, 2.2f, 11, a1, 4.8f, 13.6f, FROST_PIPE, 0xFFFFFFFF, light);
@@ -337,16 +337,16 @@ public class CardCatalogRenderer extends com.golemlogix.client.render.LegacyBer<
     }
 
     private static void renderDrawerDividers(VertexConsumer vc, PoseStack.Pose p, int light) {
-        int white = 0xFFFFFFFF;
+        int dividerTint = 0xFFE4D2B4;
         // Vertical crossbars and side strips of the left section (X: -14.0 .. 1.9)
-        box(vc, p, -14.0f, 3.2f, 0.2f, -13.6f, 28.6f, 0.7f, BRASS, white, light);
-        box(vc, p, -6.2f, 3.2f, 0.2f, -5.8f, 28.6f, 0.7f, BRASS, white, light);
-        box(vc, p, 1.6f, 3.2f, 0.2f, 1.9f, 28.6f, 0.7f, BRASS, white, light);
+        box(vc, p, -14.0f, 3.2f, 0.2f, -13.6f, 28.6f, 0.7f, BRASS, dividerTint, light);
+        box(vc, p, -6.2f, 3.2f, 0.2f, -5.8f, 28.6f, 0.7f, BRASS, dividerTint, light);
+        box(vc, p, 1.6f, 3.2f, 0.2f, 1.9f, 28.6f, 0.7f, BRASS, dividerTint, light);
 
         // Vertical crossbars and side strips of the right section (X: 14.1 .. 30.0)
-        box(vc, p, 14.1f, 3.2f, 0.2f, 14.4f, 28.6f, 0.7f, BRASS, white, light);
-        box(vc, p, 21.8f, 3.2f, 0.2f, 22.2f, 28.6f, 0.7f, BRASS, white, light);
-        box(vc, p, 29.6f, 3.2f, 0.2f, 30.0f, 28.6f, 0.7f, BRASS, white, light);
+        box(vc, p, 14.1f, 3.2f, 0.2f, 14.4f, 28.6f, 0.7f, BRASS, dividerTint, light);
+        box(vc, p, 21.8f, 3.2f, 0.2f, 22.2f, 28.6f, 0.7f, BRASS, dividerTint, light);
+        box(vc, p, 29.6f, 3.2f, 0.2f, 30.0f, 28.6f, 0.7f, BRASS, dividerTint, light);
 
         // Horizontal shelves between the drawer rows
         float[][] shelves = {
@@ -358,8 +358,8 @@ public class CardCatalogRenderer extends com.golemlogix.client.render.LegacyBer<
                 {27.68f, 28.6f}  // above the top row
         };
         for (float[] sh : shelves) {
-            box(vc, p, -14.0f, sh[0], 0.2f, 1.9f, sh[1], 0.7f, BRASS, white, light);
-            box(vc, p, 14.1f, sh[0], 0.2f, 30.0f, sh[1], 0.7f, BRASS, white, light);
+            box(vc, p, -14.0f, sh[0], 0.2f, 1.9f, sh[1], 0.7f, BRASS, dividerTint, light);
+            box(vc, p, 14.1f, sh[0], 0.2f, 30.0f, sh[1], 0.7f, BRASS, dividerTint, light);
         }
     }
 }

@@ -150,21 +150,31 @@ final class Pipes {
         return p;
     }
 
-    /** The bolt: a dark iron hex head with a light corner. */
+    /** The bolt: an aged-brass hex head with a light corner. */
     static Paint bolt() {
         Paint p = new Paint(16, 16, K);
-        p.fill(0, 0, 16, 16, (u, v) -> at(BRASS, 3.4 + ((int) (u / 2) + (int) (v / 2)) % 2 * 0.5));
+        p.fill(0, 0, 16, 16, (u, v) -> at(Paint.AGED_BRASS, 3.0 + ((int) (u / 2) + (int) (v / 2)) % 2 * 0.45));
         for (int k = 0; k < 16; k += 4) {
-            p.rect(k, k, k + 1, k + 1, at(BRASS, 5.6));
+            p.rect(k, k, k + 1, k + 1, at(Paint.AGED_BRASS, 4.8));
         }
         return p;
     }
 
-    /** The flange at a device: brass, a fine grain, a dark groove round the inside. */
+    /** The flange at a device: aged antique brass with a fine grain. */
     static Paint flange() {
         Paint p = new Paint(16, 16, K);
-        p.slab(0, 0, 16, 16, BRASS, 2.9, 1);
+        p.slab(0, 0, 16, 16, Paint.AGED_BRASS, 2.8, 1);
         p.streaks(0.3, 0.3, 15.7, 15.7, 0.07, 421, false);
+        return p;
+    }
+
+    /** Forged deepslate-iron device mounting flange used on pipe caps at buses and terminals. */
+    static Paint capIron() {
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, Paint.SLATE_IRON, 2.7, 1);
+        p.grain(0, 0, 16, 16, 0.06, 429);
+        p.frame(0, 0, 16, 16, 0.5, at(Paint.SLATE_IRON, 1.0));
+        p.frame(1.5, 1.5, 14.5, 14.5, 0.5, at(Paint.SLATE_IRON, 4.0));
         return p;
     }
 
@@ -233,14 +243,14 @@ final class Pipes {
             double a = Math.atan2(v - 8, u - 8);
             double shine = 0.5 + 0.5 * Math.cos(a - Math.PI * 0.75);
             double r = Math.hypot(u - 8, v - 8) / 8;
-            return at(BRASS, 2.4 + shine * 1.6 - r * 0.8);
+            return at(Paint.AGED_BRASS, 2.4 + shine * 1.6 - r * 0.8);
         });
-        p.ring(8, 8, 7.3, 7.9, at(BRASS, 1.3));
-        p.ring(8, 8, 5.0, 5.35, at(BRASS, 1.0));
-        p.ring(8, 8, 5.35, 5.6, at(BRASS, 4.6));
+        p.ring(8, 8, 7.3, 7.9, at(Paint.AGED_BRASS, 1.3));
+        p.ring(8, 8, 5.0, 5.35, at(Paint.AGED_BRASS, 1.0));
+        p.ring(8, 8, 5.35, 5.6, at(Paint.AGED_BRASS, 4.6));
         for (int i = 0; i < 8; i++) {
             double a = i * Math.PI / 4 + Math.PI / 8;
-            p.screw(8 + Math.cos(a) * 6.3, 8 + Math.sin(a) * 6.3, 0.75, BRASS, a);
+            p.screw(8 + Math.cos(a) * 6.3, 8 + Math.sin(a) * 6.3, 0.75, Paint.AGED_BRASS, a);
         }
         p.disc(8, 8, 4.9, rgb(0x161c20));
         p.ring(8, 8, 4.4, 4.9, at(IRON, 0.6));
@@ -248,12 +258,12 @@ final class Pipes {
     }
 
     /**
-     * Warehouse dock door (a dead end with a warehouse): a steel roller shutter of horizontal slats in a brass frame, at the bottom
+     * Warehouse dock door (a dead end with a warehouse): a steel roller shutter of horizontal slats in an aged-brass frame, at the bottom
      * a yellow-black bumper, a handle in the middle, a teal lamp above the door. It is clear at once that this is not an ordinary plug.
      */
     static Paint dock() {
         Paint p = new Paint(16, 16, K);
-        p.slab(0, 0, 16, 16, BRASS, 2.6, 1);
+        p.slab(0, 0, 16, 16, Paint.AGED_BRASS, 2.6, 1);
         p.slab(2.2, 2.6, 13.8, 14.2, IRON, 1.2, 1);
         for (int k = 0; k < 8; k++) {
             double y = 3.0 + k * 1.3;
@@ -268,11 +278,11 @@ final class Pipes {
         }
         p.rect(2.6, 12.4, 13.4, 12.6, at(IRON, 0.4));
         // handle and lamp
-        p.rect(6.6, 11.0, 9.4, 11.6, at(BRASS, 4.4));
-        p.rect(6.6, 11.6, 9.4, 11.9, at(BRASS, 1.4));
+        p.rect(6.6, 11.0, 9.4, 11.6, at(Paint.AGED_BRASS, 4.4));
+        p.rect(6.6, 11.6, 9.4, 11.9, at(Paint.AGED_BRASS, 1.4));
         p.glowRect(6.4, 0.9, 9.6, 2.1, 0.5, at(CYAN, 5.6), 90);
         for (double[] b : new double[][]{{1.3, 1.3}, {14.7, 1.3}, {1.3, 14.7}, {14.7, 14.7}}) {
-            p.rivet(b[0], b[1], 0.55, BRASS);
+            p.rivet(b[0], b[1], 0.55, Paint.AGED_BRASS);
         }
         return p;
     }
@@ -297,6 +307,7 @@ final class Pipes {
         wheel().save(Forge2.tex("pipe_wheel"));
         snow().save(Forge2.tex("pipe_snow"));
         flange().save(Forge2.tex("pipe_flange"));
+        capIron().save(Forge2.tex("pipe_cap_iron"));
         hubPlate(false).save(Forge2.tex("pipe_hub"));
         hubPlate(true).save(Forge2.tex("pipe_dense_hub"));
     }
@@ -309,7 +320,7 @@ final class Pipes {
                 {"clamp", dense ? "pipe_dense_clamp" : "pipe_clamp"}, {"bolt", "pipe_bolt"}, {"wood", "nixie_wood"}, {"socket", "nixie_socket"},
                 {"mesh", "nixie_mesh"}, {"nglass", "nixie_glass"},
                 {"wheel", "pipe_wheel"},
-                {"flange", "pipe_flange"}, {"hub", dense ? "pipe_dense_hub" : "pipe_hub"}, {"plug", "pipe_plug"}, {"dock", "pipe_dock"},
+                {"flange", "pipe_flange"}, {"cap_iron", "pipe_cap_iron"}, {"hub", dense ? "pipe_dense_hub" : "pipe_hub"}, {"plug", "pipe_plug"}, {"dock", "pipe_dock"},
                 {"dial", "resonator_dial"}, {"ice", "sat_ice"}, {"brass", "sat_brass"}, {"copper", "resonator_pipe"}, {"dark", "sat_dark"},
                 {"snow", "pipe_snow"}};
     }
@@ -540,7 +551,7 @@ final class Pipes {
         List<Models.El> cap = new ArrayList<>();
         double fl = dense ? lo - 1.8 : lo - 1.7, fh = 16 - fl, fc = c + (dense ? 1.4 : 1.3);
         double cf1 = dense ? 1.1 : 1.05;
-        Buses.oct(cap, fl, fl, 0, fh, fh, cf1, fc, "flange", "flange", "flange", "flange", "flange");
+        Buses.oct(cap, fl, fl, 0, fh, fh, cf1, fc, "cap_iron", "cap_iron", "cap_iron", "cap_iron", "cap_iron");
         ring(cap, cl, ch, cf1, cf1 + (dense ? 2.0 : 1.8), cc, "clamp", dense ? 0.8 : 0.65);
         double bs = 0.4, br = (ch - 8 + bs + 0.05) / Math.cos(Math.PI / 8); // the bolts clear the collar
         for (int i = 0; i < 8; i++) {

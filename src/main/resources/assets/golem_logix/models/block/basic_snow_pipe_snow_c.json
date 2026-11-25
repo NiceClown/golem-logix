@@ -17,6 +17,7 @@
     "nglass": "golem_logix:block/nixie_glass",
     "wheel": "golem_logix:block/pipe_wheel",
     "flange": "golem_logix:block/pipe_flange",
+    "cap_iron": "golem_logix:block/pipe_cap_iron",
     "hub": "golem_logix:block/pipe_hub",
     "plug": "golem_logix:block/pipe_plug",
     "dock": "golem_logix:block/pipe_dock",

@@ -21,13 +21,12 @@ import org.joml.Vector3f;
  */
 public class FormationBusRenderer extends com.golemlogix.client.render.LegacyBer<FormationBusBlockEntity> {
     /**
-     * The golem (pixels, facing north) in the alcove above the mouth (y 8.5..15, back wall at z 5): 24 model pixels with the antenna,
-     * at 0.34 about 8.2 pixels, its legs hidden under the brass sill (top at 9.25) so it rises from it at the waist, its back sunk
-     * into the wall - fused into the bus; the antenna's ball ends at 14.8, under the alcove's roof.
+     * The golem (pixels, facing north) stands on the inner iron platform behind the workbench (z 1.25..5.0) and under the
+     * copper arch header / hoist crane (y 11.8): 24 model pixels at 0.34 = 8.16 pixels tall (3.2..11.36).
      */
-    private static final float GOLEM_SCALE = 0.34f, GOLEM_Y = 6.6f, GOLEM_Z = 4.2f;
-    /** The block's path: from inside the mouth (centre 8, 4.5, 3) to the centre of the spot in front (8, 8, -8). */
-    private static final float MOUTH_Y = 4.5f, MOUTH_Z = 3f;
+    private static final float GOLEM_SCALE = 0.34f, GOLEM_Y = 3.2f, GOLEM_Z = 6.3f;
+    /** The block's path: from resting on the workbench top (centre 8, 8.2, 2.8) to the centre of the spot in front (8, 8, -8). */
+    private static final float MOUTH_Y = 8.2f, MOUTH_Z = 2.8f;
 
     public FormationBusRenderer(BlockEntityRendererProvider.Context context) {
     }
@@ -89,7 +88,7 @@ public class FormationBusRenderer extends com.golemlogix.client.render.LegacyBer
 
         if (holding && carrying.getItem() instanceof BlockItem item) {
             BlockState state = item.getBlock().defaultBlockState();
-            float size = Mth.lerp(out, 0.5f, 1f);
+            float size = Mth.lerp(out, 0.45f, 1f);
             float cy = Mth.lerp(out, MOUTH_Y, 8f) / 16f, cz = Mth.lerp(out, MOUTH_Z, -8f) / 16f;
             pose.pushPose();
             pose.translate(0.5f, cy, cz);

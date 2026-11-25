@@ -51,15 +51,15 @@ public class StockManometerRenderer extends com.golemlogix.client.render.LegacyB
         }
         pose.translate(-0.5f, -0.5f, -0.5f);
 
-        // the needle's pivot: the dial's centre (8, 8), just proud of the clock face at z = 5.48
-        pose.translate(8f / 16f, 8f / 16f, 5.44f / 16f);
+        // the needle's pivot: the dial's centre (8, 8), just proud of the clock face at z = 4.9 (recessed inside bezel 3.75..5.75)
+        pose.translate(8f / 16f, 8f / 16f, 4.78f / 16f);
 
         double ratio = be.getThreshold() <= 0 ? 0.0 : (double) be.getStockCount() / Math.max(1.0, 2.0 * be.getThreshold());
         float targetAngle = (float) (-135.0 + Math.clamp(ratio, 0.0, 1.0) * 270.0);
         pose.mulPose(Axis.ZP.rotationDegrees(-targetAngle));
 
         VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(NEEDLE));
-        float r = 4.6f / 16f;
+        float r = 4.1f / 16f;
         PoseStack.Pose p = pose.last();
         // Quad centred at pivot (0, 0)
         vertex(vc, p, r, -r, 0f, 0f, 1f, light);
@@ -158,19 +158,19 @@ public class StockManometerRenderer extends com.golemlogix.client.render.LegacyB
         }
     }
 
-    /** Where a bridge leaves the clock for that world side (block units): on the rim of the head, clear of the dial, the crown and the body. */
+    /** Where a bridge leaves the clock for that world side (block units): docked into the copper flank ports, clear of dial & top crystal tube. */
     private static org.joml.Vector3f rim(org.joml.Quaternionf q, Direction d) {
         org.joml.Vector3f l = new org.joml.Vector3f(d.getStepX(), d.getStepY(), d.getStepZ()).rotate(new org.joml.Quaternionf(q).conjugate());
         org.joml.Vector3f m;
         if (Math.abs(l.x) > 0.5f) {
-            m = new org.joml.Vector3f(Math.signum(l.x) * 6.4f, 0f, -1f);
+            m = new org.joml.Vector3f(Math.signum(l.x) * 5.8f, 0f, 1.0f);
         } else if (Math.abs(l.y) > 0.5f) {
-            // up the side of the crown, not through it
-            m = new org.joml.Vector3f(l.y > 0f ? -2.6f : 0f, Math.signum(l.y) * 6.4f, -1f);
+            // up past the top cryo sight-tube, not through it
+            m = new org.joml.Vector3f(l.y > 0f ? -2.8f : 0f, Math.signum(l.y) * 5.6f, 0.5f);
         } else if (l.z < 0f) {
-            m = new org.joml.Vector3f(0f, -6f, -3.3f);
+            m = new org.joml.Vector3f(0f, -6.2f, -3.5f);
         } else {
-            m = new org.joml.Vector3f(0f, 5f, 0.5f);
+            m = new org.joml.Vector3f(0f, 5.2f, 1.5f);
         }
         return m.rotate(q).div(16f).add(0.5f, 0.5f, 0.5f);
     }

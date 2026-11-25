@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.2.0 (26.1.2) — Visual Overhaul & Palette Harmonization
+
+- **Standalone Block Redesigns (Waves 1–3):**
+  - Rebuilt standalone block models, textures, and renderers for deeper 3D silhouettes, recessed screens, stepped frames, and cohesive Minecraft pixel density:
+  - **Processing, Terminals & Control:** redesigned `Analog Terminal` & `Crafting Terminal` (recessed backlit screens), `Security Terminal`, `Pattern Encoder`, `Pattern Provider`, `Recipe Monitor`, `Cryo-Calculator`, `Cooling Co-Processor`, `Cryo Schematic Concentrator`, `Eternal Frost Resonator` (stepped industrial casing and gauges), and `Channel Counter`.
+  - **Automation, Storage & Fluid Devices:** redesigned `Formation Bus` & `Annihilation Bus` (re-aligned copper/iron golem niches with full occlusion/skylight handling), `Vacuum Import Bus`, `Injector Export Bus`, `Golem Interface`, `Periscope Storage Bus`, `Copper Tank` (dual north/south pressure gauges and matched fluid bounds), `Stock Manometer` (stepped dial housing and docked redstone wire ports), `Order Ledger` (`Stock Requester`), and `Cryo-Diode` (3D baked spinning handwheel and full bounding alignment).
+  - **Conduits & Expanders:** updated `Atlas Conduit`, `Cable Bushing`, `Channel Expander`, `Quantum Channel Expander`, `Creative Source Jar`, and pipe textures/models.
+- **Unified Industrial Palette ("Warm Bronze & Aged Brass"):**
+  - Harmonized textures and renderer tint hierarchies across both newly redesigned blocks and existing multiblocks (`Punch Card Catalog`, `Cryo-Mainframe`, `Mana Saturator`, `Cryo-Source Jar` / `Giga Jar` / `Antigravity Reactor`, `Cryo-Mixer`, `Cryo-Distillation Tower`, `Cryo-Source Telegraph`, and `Atlas Array`), replacing harsh blacks with slate-matched darks and warming bright legacy metals.
+
 ## 2.1.5 (26.1.2) — Optimization, Transfer API & Reliability
 
 - **Autocrafting planner fixes:** returned catalysts now reserve a single upfront seed instead of one per iteration, and transitive sub-steps never consume a parent step's future byproduct.

@@ -792,8 +792,9 @@ final class Gen3 {
      * a teal matrix and a small snowman, a red valve in the corner.
      */
     static Paint mainframeFront() {
+        int[] aged = Paint.AGED_BRASS;
         Paint p = Terminals.plate(7101, BRONZE, 2.4);
-        p.slab(1.2, 1.2, 14.8, 14.8, BRASS, 2.7, 1);
+        p.slab(1.2, 1.2, 14.8, 14.8, aged, 2.7, 1);
         p.slab(2.2, 2.4, 13.8, 13.8, IRON, 0.45, 1);
         // the matrix behind the glass: teal dots of different brightness
         java.util.Random r = new java.util.Random(7102);
@@ -808,19 +809,19 @@ final class Gen3 {
         p.disc(5.2, 10.7, 0.75, rgb(0xF6FAFC));
         p.rect(4.9, 10.5, 5.05, 10.65, rgb(0x202020));
         p.rect(5.35, 10.5, 5.5, 10.65, rgb(0x202020));
-        // door leaves: a brass joint in the middle, handles and highlights on the glass
-        p.rect(7.75, 2.4, 8.25, 13.8, at(BRASS, 2.2));
-        p.rect(6.8, 7.0, 7.3, 9.2, at(BRASS, 3.4));
-        p.rect(8.7, 7.0, 9.2, 9.2, at(BRASS, 3.4));
+        // door leaves: an aged-brass joint in the middle, handles and highlights on the glass
+        p.rect(7.75, 2.4, 8.25, 13.8, at(aged, 2.2));
+        p.rect(6.8, 7.0, 7.3, 9.2, at(aged, 3.4));
+        p.rect(8.7, 7.0, 9.2, 9.2, at(aged, 3.4));
         p.line(3.0, 6.0, 6.0, 3.0, 0.35, argb(90, 0xE8F6FF));
         p.line(9.4, 9.0, 12.6, 5.8, 0.35, argb(70, 0xE8F6FF));
         // a red valve in the top right corner of the frame
         p.ring(13.6, 2.4, 0.9, 1.35, rgb(0xC8432F));
         p.line(12.6, 2.4, 14.6, 2.4, 0.25, rgb(0xA8331F));
         p.line(13.6, 1.4, 13.6, 3.4, 0.25, rgb(0xA8331F));
-        p.disc(13.6, 2.4, 0.35, at(BRASS, 3.6));
+        p.disc(13.6, 2.4, 0.35, at(aged, 3.6));
         for (double[] rv : new double[][]{{1.9, 1.9}, {1.9, 14.1}, {14.1, 14.1}}) {
-            p.rivet(rv[0], rv[1], 0.45, BRASS);
+            p.rivet(rv[0], rv[1], 0.45, aged);
         }
         return p;
     }
