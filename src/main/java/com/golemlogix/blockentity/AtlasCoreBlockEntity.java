@@ -177,6 +177,7 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         if (newFormed && !formed) {
             AtlasStructure.orientAtlants(level, pos);
         }
+        AtlasStructure.dress(level, pos, duplicate ? AtlasStructure.check(level, pos).valid() : newFormed);
         boolean newInfinite = net.hasInfiniteSource() || !com.golemlogix.system.SourceHelper.sourceRequired();
         int newSps = newInfinite ? 0 : cost;
         boolean changed = newFormed != formed || newPowered != powered || net.channelsUsed() != channelsUsed

@@ -6,7 +6,7 @@
     "particle": "golem_logix:block/sat_bronze",
     "sat_brass": "golem_logix:block/sat_brass",
     "sat_f_12": "golem_logix:block/sat_f_12",
-    "sat_top": "golem_logix:block/sat_top",
+    "sat_roof_10": "golem_logix:block/sat_roof_10",
     "sat_bronze": "golem_logix:block/sat_bronze",
     "sat_crystal": "golem_logix:block/sat_crystal"
   },
@@ -60,7 +60,7 @@
       "to": [16, 12, 16],
       "faces": {
         "north": {"texture": "#sat_f_12"},
-        "up": {"texture": "#sat_top"},
+        "up": {"texture": "#sat_roof_10"},
         "down": {"texture": "#sat_bronze"}
       }
     },

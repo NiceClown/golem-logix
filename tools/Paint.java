@@ -15,8 +15,10 @@ import java.util.Random;
 public final class Paint {
     // ---------------------------------------------------------------- palettes (dark -> light)
     static final int[] BRASS = {0x2a1d07, 0x523a0f, 0x7b5a1b, 0xa07a28, 0xc29b3c, 0xe0bc58, 0xf8e3a0};
+    static final int[] AGED_BRASS = {0x221506, 0x422a0d, 0x644317, 0x855c21, 0xa6772f, 0xc69745, 0xe4bf76};
     static final int[] BRONZE = {0x1c0e07, 0x35190c, 0x552b15, 0x74401f, 0x955828, 0xb97538, 0xdba066};
     static final int[] IRON = {0x0c0e11, 0x16191e, 0x23272e, 0x31353f, 0x444a56, 0x5d6573, 0x8089a0};
+    static final int[] SLATE_IRON = {0x2a2827, 0x3e3b39, 0x514e4b, 0x64605c, 0x78736e, 0x908a84, 0xaea79f};
     static final int[] CYAN = {0x062426, 0x0d4547, 0x136f70, 0x20a8a6, 0x45d6d2, 0x96f2ee, 0xe2fffe};
     static final int[] VIOLET = {0x160b30, 0x2c1a5c, 0x4a2e9a, 0x7050d8, 0x9e80f8, 0xc8b4ff, 0xf2ecff};
     static final int[] FROST = {0x2f5878, 0x558cb0, 0x86bedc, 0xb6e0f2, 0xd8f0fa, 0xeef9ff, 0xffffff};
@@ -166,7 +168,8 @@ public final class Paint {
         int r = (int) (((a >> 16) & 255) * (1 - t) + ((b >> 16) & 255) * t);
         int g = (int) (((a >> 8) & 255) * (1 - t) + ((b >> 8) & 255) * t);
         int bl = (int) ((a & 255) * (1 - t) + (b & 255) * t);
-        int al = (int) (aa * (1 - t) + ba * t);
+        // rounded: truncating made 254 out of two opaque colours, and one such texel puts a whole face into 26.1's translucent layer
+        int al = (int) Math.round(aa * (1 - t) + ba * t);
         return (al << 24) | (r << 16) | (g << 8) | bl;
     }
 
@@ -714,12 +717,25 @@ public final class Paint {
     }
 
     /** A snow cap/frost along a horizontal edge: an uneven white layer on top. */
+    /**
+     * Hoarfrost along an edge: in clumps with bare metal between them and pale blue rather than white - an unbroken white row
+     * on a block's edge reads as a see-through seam.
+     */
     void frostLine(double x0, double x1, double y, double depth, long seed) {
         Random r = new Random(seed);
+        int run = 0;
+        boolean on = r.nextBoolean();
         for (int i = (int) Math.round(x0 * k); i < (int) Math.round(x1 * k); i++) {
-            int d = (int) Math.round(depth * k * (0.4 + r.nextDouble()));
+            if (run-- <= 0) {
+                on = !on;
+                run = on ? 2 + r.nextInt(4) : 1 + r.nextInt(3);
+            }
+            if (!on) {
+                continue;
+            }
+            int d = Math.max(1, (int) Math.round(depth * k * (0.4 + r.nextDouble())));
             for (int j = 0; j < d; j++) {
-                px(i, (int) Math.round(y * k) + j, ramp(FROST, 0.85 + 0.15 * r.nextDouble() - j * 0.12));
+                px(i, (int) Math.round(y * k) + j, ramp(FROST, 0.62 + 0.18 * r.nextDouble() - j * 0.12));
             }
         }
     }

@@ -86,4 +86,12 @@ public class AtlasCoreBlock extends Block implements GolemNode, EntityBlock, Atl
         }
         return InteractionResult.CONSUME;
     }
+
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
+        if (!state.is(newState.getBlock()) && !level.isClientSide()) {
+            AtlasStructure.dress(level, pos, false);
+        }
+        super.onRemove(state, level, pos, newState, isMoving);
+    }
 }

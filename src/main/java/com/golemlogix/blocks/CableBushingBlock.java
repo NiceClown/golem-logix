@@ -19,7 +19,7 @@ import net.minecraft.world.phys.BlockHitResult;
  */
 public class CableBushingBlock extends Block implements GolemNode, AtlasPart {
     public CableBushingBlock(Properties properties) {
-        super(properties.sound(SoundType.COPPER).strength(4.0f).requiresCorrectToolForDrops());
+        super(properties.sound(SoundType.COPPER).strength(4.0f).requiresCorrectToolForDrops().noOcclusion());
     }
 
     @Override

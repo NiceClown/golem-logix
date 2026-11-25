@@ -13,8 +13,8 @@ import javax.imageio.ImageIO;
  */
 final class Catalog {
     static final int K = Forge2.K;
-    static final int[] BRASS = Paint.BRASS, COPPER = Paint.COPPER, IRON = Paint.IRON, CYAN = Paint.CYAN, CREAM = Paint.CREAM,
-            BRONZE = Paint.BRONZE;
+    static final int[] BRASS = Paint.BRASS, AGED = Paint.AGED_BRASS, COPPER = Paint.COPPER, IRON = Paint.IRON, SLATE = Paint.SLATE_IRON,
+            CYAN = Paint.CYAN, CREAM = Paint.CREAM, BRONZE = Paint.BRONZE;
 
     static int at(int[] r, double i) {
         return Paint.at(r, i);
@@ -28,39 +28,39 @@ final class Catalog {
         return Paint.argb(a, c);
     }
 
-    /** A drawer front (drawn squeezed into 8 x 5 pixels): rusty copper in a brass frame, a paper label, a bracket handle. */
+    /** A drawer front (drawn squeezed into 8 x 5 pixels): rusty copper in an aged-brass frame, a paper label, a bracket handle. */
     static Paint drawer(long seed) {
         Paint p = new Paint(16, 16, K);
-        p.slab(0, 0, 16, 16, BRASS, 2.2, 1);
+        p.slab(0, 0, 16, 16, AGED, 2.2, 1);
         p.slab(0.9, 1.4, 15.1, 14.6, COPPER, 2.1, 1);
         p.grain(1.0, 1.5, 15.0, 14.5, 0.05, seed);
         // the brass label frame and the label itself with "writing"
-        p.slab(4.0, 2.6, 12.0, 7.6, BRASS, 3.0, 1);
+        p.slab(4.0, 2.6, 12.0, 7.6, AGED, 3.0, 1);
         p.rect(4.6, 3.4, 11.4, 6.8, rgb(0xE8D8B0));
         for (int i = 0; i < 2; i++) {
             double y = 4.1 + i * 1.4;
             p.rect(5.2, y, 5.2 + (i == 0 ? 5.2 : 4.0), y + 0.5, rgb(0x4a3322));
         }
         // bracket handle
-        p.rect(5.0, 10.0, 11.0, 11.0, at(BRASS, 4.4));
-        p.rect(5.0, 11.0, 11.0, 12.6, at(BRASS, 2.8));
-        p.rect(5.0, 12.6, 11.0, 13.0, at(BRASS, 1.2));
-        p.rivet(5.0, 11.4, 0.6, BRASS);
-        p.rivet(11.0, 11.4, 0.6, BRASS);
+        p.rect(5.0, 10.0, 11.0, 11.0, at(AGED, 4.4));
+        p.rect(5.0, 11.0, 11.0, 12.6, at(AGED, 2.8));
+        p.rect(5.0, 12.6, 11.0, 13.0, at(AGED, 1.2));
+        p.rivet(5.0, 11.4, 0.6, AGED);
+        p.rivet(11.0, 11.4, 0.6, AGED);
         // green patina in the bottom corners
         p.rect(1.0, 13.2, 2.6, 14.6, argb(150, 0x3fa38a));
         p.rect(13.6, 12.6, 15.0, 14.6, argb(120, 0x3fa38a));
         return p;
     }
 
-    /** Letter drum band: brass cells with dark "letters" (runes and digits), 4 in a row. */
+    /** Letter drum band: aged-brass cells with dark "letters" (runes and digits), 4 in a row. */
     static Paint drum() {
         Paint p = new Paint(16, 16, K);
-        p.slab(0, 0, 16, 16, BRASS, 2.8, 1);
+        p.slab(0, 0, 16, 16, AGED, 2.8, 1);
         for (int row = 0; row < 4; row++) {
             double y = row * 4;
-            p.rect(0, y, 16, y + 0.4, at(BRASS, 1.0));
-            p.rect(0, y + 3.6, 16, y + 4, at(BRASS, 4.6));
+            p.rect(0, y, 16, y + 0.4, at(AGED, 1.0));
+            p.rect(0, y + 3.6, 16, y + 4, at(AGED, 4.6));
             for (int col = 0; col < 4; col++) {
                 double x = col * 4 + 0.9;
                 p.rect(x - 0.3, y + 0.8, x + 2.5, y + 3.3, rgb(0xE8D8B0));
@@ -363,11 +363,11 @@ final class Catalog {
         // Outer brass bezel with teeth
         for (int i = 0; i < 16; i++) {
             double a = i * Math.PI / 8;
-            p.disc(8 + Math.cos(a) * 7.1, 8 + Math.sin(a) * 7.1, 0.7, at(BRASS, 2.4));
+            p.disc(8 + Math.cos(a) * 7.1, 8 + Math.sin(a) * 7.1, 0.7, at(AGED, 2.4));
         }
-        p.disc(8, 8, 7.0, at(BRASS, 2.0));
-        p.ring(8, 8, 5.9, 6.9, at(BRASS, 3.6));
-        p.ring(8, 8, 6.55, 6.75, at(BRASS, 4.8));
+        p.disc(8, 8, 7.0, at(AGED, 2.0));
+        p.ring(8, 8, 5.9, 6.9, at(AGED, 3.6));
+        p.ring(8, 8, 6.55, 6.75, at(AGED, 4.8));
         p.disc(8, 8, 5.9, at(IRON, 0.4));
 
         // CRT screen: a deep dark azure phosphor background
@@ -379,7 +379,41 @@ final class Catalog {
         // The 8-phase animation of the azure archivist right in the CRT screen texture
         p.animate(2.5, 2.5, 13.5, 13.5, (q, t) -> {
             int f = (int) Math.floor(t * 8) % 8;
-            drawArchivistScreenFrame(q, f);
+            if (K >= 4) {
+                drawArchivistScreenFrame(q, f);
+                return;
+            }
+            // the archivist is pixel art on the 64-pixel grid: it is drawn there and reduced to this grid, every block of
+            // pixels taking its commonest colour (the brighter one on a tie), so the figure keeps its shape and palette
+            Paint big = new Paint(16, 16, 4);
+            drawArchivistScreenFrame(big, f);
+            int s = 4 / K;
+            for (int y = 0; y < q.h; y++) {
+                for (int x = 0; x < q.w; x++) {
+                    java.util.Map<Integer, Integer> count = new java.util.HashMap<>();
+                    for (int j = 0; j < s; j++) {
+                        for (int i = 0; i < s; i++) {
+                            int c = big.get(x * s + i, y * s + j);
+                            if ((c >>> 24) != 0) {
+                                count.merge(c, 1, Integer::sum);
+                            }
+                        }
+                    }
+                    if (count.isEmpty()) {
+                        continue;
+                    }
+                    int best = 0, bestN = -1, bestL = -1;
+                    for (var e : count.entrySet()) {
+                        int c = e.getKey(), l = ((c >> 16) & 255) + ((c >> 8) & 255) + (c & 255);
+                        if (e.getValue() > bestN || (e.getValue() == bestN && l > bestL)) {
+                            best = c;
+                            bestN = e.getValue();
+                            bestL = l;
+                        }
+                    }
+                    q.px(x, y, best);
+                }
+            }
         });
 
         // Porthole glass highlight over the screen
@@ -387,21 +421,21 @@ final class Catalog {
         return p;
     }
 
-    /** Front of the unassembled catalog (and the icon): 2 x 3 drawers in a brass frame, a round screen in the middle. */
+    /** Front of the unassembled catalog (and the icon): 2 x 3 drawers in an aged-brass frame, a round screen in the middle. */
     static Paint front() {
         Paint p = Terminals.plate(9911, COPPER, 2.2);
-        p.slab(1.0, 1.0, 15.0, 15.0, BRASS, 2.5, 1);
+        p.slab(1.0, 1.0, 15.0, 15.0, AGED, 2.5, 1);
         p.slab(1.6, 1.6, 14.4, 14.4, IRON, 0.5, 1);
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 2; col++) {
                 double x = col == 0 ? 1.9 : 10.1, y = 2.0 + row * 4.1;
                 p.slab(x, y, x + 4.0, y + 3.7, COPPER, 2.3, 1);
                 p.rect(x + 0.8, y + 0.6, x + 3.2, y + 1.6, rgb(0xE8D8B0));
-                p.rect(x + 1.2, y + 2.3, x + 2.8, y + 2.8, at(BRASS, 4.0));
+                p.rect(x + 1.2, y + 2.3, x + 2.8, y + 2.8, at(AGED, 4.0));
             }
         }
         // screen in the middle
-        p.disc(8, 6.4, 2.3, at(BRASS, 3.0));
+        p.disc(8, 6.4, 2.3, at(AGED, 3.0));
         p.disc(8, 6.4, 1.8, at(CYAN, 3.4));
         p.rect(6.9, 5.6, 9.1, 5.9, at(CYAN, 5.6));
         p.rect(6.9, 6.5, 8.6, 6.8, at(CYAN, 5.6));
@@ -411,7 +445,7 @@ final class Catalog {
             p.rect(x - 0.15, 10.2, x + 0.15, 12.4, at(IRON, 2.0));
             p.disc(x, 10.1, 0.45, rgb(x == 8.0 ? 0xC8432F : 0xB8862B));
         }
-        p.rect(5.8, 12.4, 10.2, 13.2, at(BRASS, 2.6));
+        p.rect(5.8, 12.4, 10.2, 13.2, at(AGED, 2.6));
         return p;
     }
 
@@ -421,6 +455,11 @@ final class Catalog {
         screen().save(Forge2.tex("catalog_screen"));
         front().save(Forge2.tex("catalog_front"));
         catalogModel();
+        concentratorWood().save(Forge2.tex("concentrator_wood"));
+        concentratorTop().save(Forge2.tex("concentrator_top"));
+        concentratorIron().save(Forge2.tex("concentrator_iron"));
+        concentratorBrass().save(Forge2.tex("concentrator_brass"));
+        concentratorPipe().save(Forge2.tex("concentrator_pipe"));
         concentratorFront().save(Forge2.tex("concentrator_front"));
         concentratorSide().save(Forge2.tex("concentrator_side"));
         holo().save(Forge2.entityTex("concentrator_holo"));
@@ -436,50 +475,136 @@ final class Catalog {
         return argb(255, (rr << 16) | (gg << 8) | bb);
     }
 
+    /** Warm workshop walnut planking matching Order Ledger, Security Terminal, and Golem Interface. */
+    static Paint concentratorWood() {
+        Paint p = new Paint(16, 16, K);
+        int[] tones = {0x321f12, 0x3e2716, 0x4b301b, 0x583a21, 0x674629};
+        for (int j = 0; j < p.h; j++) {
+            for (int i = 0; i < p.w; i++) {
+                double v = (j + 0.5) / K;
+                int plank = (int) (v / 4);
+                double t = Atlant.hash(plank, i / 5, 9941) * 0.5 + Atlant.noise(i, j, 6, 9942) * 0.5;
+                p.px(i, j, rgb(tones[(int) Math.min(4, t * 5)]));
+            }
+        }
+        for (double y = 4; y < 16; y += 4) {
+            p.rect(0, y - 0.5, 16, y, rgb(0x22140b));
+        }
+        return p;
+    }
+
+    /** Carved walnut roof deck with cyan schematic rune-circuit inlay and slate-steel trim. */
+    static Paint concentratorTop() {
+        Paint p = concentratorWood();
+        p.frame(0, 0, 16, 16, 1.0, rgb(SLATE[2]));
+        p.frame(1.0, 1.0, 15.0, 15.0, 0.5, rgb(SLATE[4]));
+        p.line(2.5, 4.0, 13.5, 4.0, 0.5, rgb(CYAN[3]));
+        p.line(2.5, 4.0, 4.5, 7.5, 0.5, rgb(CYAN[3]));
+        p.line(4.5, 7.5, 8.5, 7.5, 0.5, rgb(CYAN[4]));
+        p.line(3.0, 12.0, 9.5, 12.0, 0.5, rgb(CYAN[3]));
+        p.disc(8.5, 7.5, 0.7, rgb(CYAN[5]));
+        for (double[] c : new double[][]{{1.5, 1.5}, {14.5, 1.5}, {1.5, 14.5}, {14.5, 14.5}}) {
+            p.rivet(c[0], c[1], 0.4, SLATE);
+        }
+        return p;
+    }
+
+    /** Forged deepslate-gray steel for Concentrator plinth, pilasters, console, and chimney. */
+    static Paint concentratorIron() {
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, SLATE, 2.6, 1);
+        p.grain(0, 0, 16, 16, 0.06, 9945);
+        p.frame(0, 0, 16, 16, 0.5, rgb(SLATE[1]));
+        p.frame(1.5, 1.5, 14.5, 14.5, 0.5, rgb(SLATE[4]));
+        for (double[] r : new double[][]{{1.5, 1.5}, {13.5, 1.5}, {1.5, 13.5}, {13.5, 13.5}}) {
+            p.rivet(r[0] + 0.5, r[1] + 0.5, 0.4, SLATE);
+        }
+        return p;
+    }
+
+    /** Warm antique brass trim for Concentrator dials and accents. */
+    static Paint concentratorBrass() {
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, BRASS, 2.9, 1);
+        p.streaks(0.5, 0.5, 15.5, 15.5, 0.06, 9947, true);
+        p.frame(0, 0, 16, 16, 0.5, rgb(BRASS[2]));
+        return p;
+    }
+
+    /** Weathered riveted copper coolant conduit (matches Frost Pipe bands). */
+    static Paint concentratorPipe() {
+        Paint p = new Paint(16, 16, K);
+        for (int j = 0; j < p.h; j++) {
+            for (int i = 0; i < p.w; i++) {
+                double n = Atlant.noise(i, j, 8, 9949);
+                p.px(i, j, rgb(Atlant.COPPER[Math.max(1, Math.min(5, 1 + (int) Math.round(n * 4)))]));
+            }
+        }
+        p.rect(0, 0, 16, 0.6, rgb(Atlant.COPPER[0]));
+        p.rect(0, 7.5, 16, 8.2, rgb(Atlant.COPPER[0]));
+        p.rect(0, 8.2, 16, 8.8, rgb(Atlant.COPPER[5]));
+        p.rect(0, 15.4, 16, 16, rgb(Atlant.COPPER[0]));
+        return p;
+    }
+
     /**
-     * Concentrator front: rusty copper, a big toothed brass rim around the dark screen glass (the renderer draws the hologram),
-     * under it a slot for punch cards and a console: lamps and a lever.
+     * Concentrator front: slate-steel trim & weathered copper surround, toothed antique-brass rim around the glowing
+     * cyan screen centered at (8, 6.5), punch card slot and indicator jewels below.
      */
     static Paint concentratorFront() {
         Paint p = new Paint(16, 16, K);
-        p.slab(0, 0, 16, 16, BRASS, 2.6, 1);
-        p.slab(1.0, 1.0, 15.0, 15.0, COPPER, 2.3, 1);
+        p.slab(0, 0, 16, 16, SLATE, 2.5, 1);
+        p.slab(1.0, 1.0, 15.0, 15.0, Atlant.COPPER, 2.3, 1);
         p.streaks(1.1, 1.1, 14.9, 14.9, 0.05, 9951, true);
         // screen rim (centre 8, 6.5 in the texture = 9.5 from the bottom)
         for (int i = 0; i < 18; i++) {
             double a = i * Math.PI / 9;
-            p.disc(8 + Math.cos(a) * 6.3, 6.5 + Math.sin(a) * 6.3, 0.6, at(BRASS, 2.4));
+            p.disc(8 + Math.cos(a) * 6.3, 6.5 + Math.sin(a) * 6.3, 0.6, at(BRASS, 2.6));
         }
-        p.disc(8, 6.5, 6.2, at(BRASS, 2.0));
+        p.disc(8, 6.5, 6.2, at(BRASS, 2.3));
         p.ring(8, 6.5, 5.3, 6.1, at(BRASS, 3.8));
         p.ring(8, 6.5, 5.75, 5.9, at(BRASS, 5.0));
+        // the glint on the glass is mixed into the screen: a translucent texel would put the whole face into the translucent
+        // layer, which 26.1 draws after the hologram and over it
         p.discFn(8, 6.5, 5.3, (u, v) -> {
             double d = Math.hypot(u - 8, v - 6.5) / 5.3;
-            return Paint.ramp(CYAN, 0.3 + 0.5 * (1 - d));
+            int c = Paint.ramp(CYAN, 0.3 + 0.5 * (1 - d));
+            double t = Math.max(0, Math.min(1, ((u - 4.2) * 2.2 + (v - 4.6) * -2.0) / (2.2 * 2.2 + 2.0 * 2.0)));
+            boolean glint = Math.hypot(u - (4.2 + 2.2 * t), v - (4.6 - 2.0 * t)) <= 0.15;
+            return glint ? Paint.mix(c, rgb(0xFFFFFF), 90 / 255.0) : c;
         });
-        p.line(4.2, 4.6, 6.4, 2.6, 0.3, argb(90, 0xFFFFFF));
         // card slot, lamps, lever
-        p.slab(4.0, 13.0, 12.0, 14.4, IRON, 0.6, 1);
-        p.rect(4.6, 13.5, 11.4, 13.9, rgb(0x050505));
-        p.rect(7.0, 13.2, 9.0, 13.5, at(COPPER, 4.6));
+        p.slab(4.0, 13.0, 12.0, 14.4, SLATE, 2.0, 1);
+        p.rect(4.6, 13.5, 11.4, 13.9, rgb(0x14161b));
+        p.rect(7.0, 13.2, 9.0, 13.5, at(Atlant.COPPER, 4.4));
         p.disc(2.6, 13.6, 0.55, at(CYAN, 5.4));
         p.disc(13.4, 13.6, 0.55, rgb(0xC8432F));
         for (double[] rv : new double[][]{{1.9, 1.9}, {14.1, 1.9}, {1.9, 11.6}, {14.1, 11.6}}) {
-            p.rivet(rv[0], rv[1], 0.45, BRASS);
+            p.rivet(rv[0], rv[1], 0.45, SLATE);
         }
         p.frostLine(0, 16, 0, 0.7, 9953);
         return p;
     }
 
-    /** Concentrator side: rusty copper and a big brass gear (it turns), a gauge. */
+    /** Concentrator side: weathered copper in a slate-steel frame with a spinning antique-brass gear inside a slate well. */
     static Paint concentratorSide() {
-        Paint p = Resonator.body(9961, false);
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, SLATE, 2.5, 1);
+        p.slab(1.1, 1.1, 14.9, 14.9, Atlant.COPPER, 2.4, 1);
+        p.streaks(1.2, 1.2, 14.8, 14.8, 0.05, 9961, true);
+        p.grain(1.2, 1.2, 14.8, 14.8, 0.04, 9962);
+        for (double x : new double[]{2.2, 13.8}) {
+            for (double y : new double[]{2.2, 8.0, 13.8}) {
+                p.rivet(x, y, 0.5, SLATE);
+            }
+        }
+        p.frostLine(0, 16, 0, 0.7, 9963);
         p.animFrames = 24;
         p.frameTime = 2;
-        p.disc(8, 8.6, 5.6, at(IRON, 0.5));
-        p.animate(1.8, 2.4, 14.2, 14.8, (q, t) -> q.gear(8, 8.6, 5.0, 12, t * Math.PI * 2 / 12, BRASS, 2.8));
+        p.disc(8, 8.6, 5.6, rgb(SLATE[1]));
+        p.animate(1.8, 2.4, 14.2, 14.8, (q, t) -> q.gear(8, 8.6, 5.0, 12, t * Math.PI * 2 / 12, BRASS, 2.9));
         p.disc(8, 8.6, 1.4, at(BRASS, 4.4));
-        p.disc(8, 8.6, 0.6, at(IRON, 0.3));
+        p.disc(8, 8.6, 0.6, rgb(SLATE[1]));
         return p;
     }
 
@@ -531,35 +656,57 @@ final class Catalog {
 
     static void concentratorModel() throws Exception {
         List<Models.El> l = new ArrayList<>();
-        // body: the front with the screen, the sides with the gear and the gauge
-        l.add(Models.e(0, 0, 0, 16, 1, 16).all("#dark"));
-        l.add(Models.e(0.3, 1, 0.3, 15.7, 15, 15.7).face("north", "#front", 0, 0, 16, 16).face("south", "#body", 0, 0, 16, 16)
-                .face("west", "#side", 0, 0, 16, 16).face("east", "#side", 0, 0, 16, 16)
-                .face("up", "#top", 0, 0, 16, 16).face("down", "#dark", 0, 0, 16, 16));
-        l.add(Models.e(0, 15, 0, 16, 16, 16).all("#brass"));
-        // console under the screen: a slanted brass shelf with buttons
-        l.add(Models.e(3.5, 2.2, -1.2, 12.5, 3.2, 0.3).all("#brass"));
+        // Forged deepslate-steel base plinth & 4 slim corner pilasters
+        l.add(Models.e(0.0, 0.0, 0.0, 16.0, 1.25, 16.0).all("#iron"));
+        for (double px : new double[]{0.0, 14.75}) {
+            for (double pz : new double[]{0.0, 14.75}) {
+                l.add(Models.e(px, 1.25, pz, px + 1.25, 14.75, pz + 1.25).only("#iron", "north", "south", "east", "west"));
+            }
+        }
+        // Main body recessed strictly inside corner pilasters (north face at z=0.5 leaves hologram at z=-0.05 unobstructed)
+        l.add(Models.e(0.5, 1.25, 0.5, 15.5, 14.75, 15.5)
+                .face("north", "#front", 0, 0, 16, 16)
+                .face("south", "#back", 0, 0, 16, 16)
+                .face("west", "#side", 0, 0, 16, 16)
+                .face("east", "#side", 0, 0, 16, 16));
+
+        // Stepped warm walnut roof cornice matching Order Ledger & Catalog + 4 steel corner clamps
+        l.add(Models.e(0.0, 14.75, 0.0, 16.0, 15.75, 16.0).only("#wood", "north", "south", "east", "west", "up", "down"));
+        l.add(Models.e(1.25, 15.75, 1.25, 14.75, 16.15, 14.75).only("#wood", "north", "south", "east", "west")
+                .face("up", "#top", 0, 0, 16, 16));
+        for (double cx : new double[]{0.15, 14.6}) {
+            for (double cz : new double[]{0.15, 14.6}) {
+                l.add(Models.e(cx, 15.75, cz, cx + 1.25, 16.25, cz + 1.25).only("#iron", "north", "south", "east", "west", "up"));
+            }
+        }
+
+        // Lower front control shelf well below hologram disc
+        l.add(Models.e(3.5, 1.8, -1.0, 12.5, 2.8, 0.5).only("#iron", "north", "east", "west", "up", "down"));
         for (double x : new double[]{4.6, 6.6, 9.4, 11.4}) {
-            l.add(Models.e(x, 3.2, -0.9, x + 0.8, 3.7, -0.1).all(x < 8 ? "#ice" : "#brass"));
+            l.add(Models.e(x, 2.8, -0.85, x + 0.8, 3.35, -0.05).only(x < 8 ? "#ice" : "#brass", "north", "south", "east", "west", "up"));
         }
-        // coolant pipe: out of the side, up and onto the roof, with brass clamps and a crown
-        l.add(Models.e(15.4, 3, 10.5, 17.6, 5.2, 12.7).all("#pipe"));
+
+        // Weathered copper coolant conduit up the east side into forged steel roof chimney stack
+        l.add(Models.e(15.5, 3.0, 10.5, 17.6, 5.2, 12.7).only("#pipe", "north", "south", "up", "down"));
         l.add(Models.e(16.0, 2.9, 10.4, 18.2, 17.4, 12.8).all("#pipe"));
-        l.add(Models.e(9.6, 16, 10.4, 16.0, 17.4, 12.8).all("#pipe"));
-        l.add(Models.e(9.5, 16.1, 10.3, 12.0, 19.5, 12.9).all("#pipe"));
-        l.add(Models.e(9.3, 19.5, 10.1, 12.2, 20.2, 13.1).all("#brass"));
-        // Brass mounting clamps to the wall
-        l.add(Models.e(15.8, 7.2, 10.2, 18.3, 8.2, 13.0).all("#brass"));
-        l.add(Models.e(15.8, 12.2, 10.2, 18.3, 13.2, 13.0).all("#brass"));
-        // A crystal drop of ice under the lower bend
-        l.add(Models.e(16.2, 1.8, 11.2, 17.2, 2.9, 12.0).all("#ice"));
-        // icicles from the top edge of the front
+        l.add(Models.e(12.5, 16.15, 10.4, 16.0, 17.4, 12.8).only("#pipe", "north", "south", "up", "down"));
+        l.add(Models.e(15.8, 7.2, 10.2, 18.4, 8.2, 13.0).all("#iron"));
+        l.add(Models.e(15.8, 12.2, 10.2, 18.4, 13.2, 13.0).all("#iron"));
+        // Cast-iron chimney flue stack & flared crown on roof
+        l.add(Models.e(9.5, 16.15, 9.5, 12.5, 19.6, 12.5).only("#iron", "north", "south", "east", "west"));
+        l.add(Models.e(9.1, 19.6, 9.1, 12.9, 20.3, 12.9).all("#iron"));
+        l.add(Models.e(10.0, 20.3, 10.0, 12.0, 20.38, 12.0).only("#flue", "north", "south", "east", "west", "up"));
+
+        // Frost drop under lower pipe bend & crisp frost icicles under front eaves
+        l.add(Models.e(16.2, 1.8, 11.2, 17.2, 2.9, 12.0).only("#ice", "north", "south", "east", "west", "down"));
         for (double[] ic : new double[][]{{1.6, 1.2}, {3.4, 0.8}, {12.4, 1.0}, {14.2, 1.4}}) {
-            l.add(Models.e(ic[0], 15 - ic[1], -0.3, ic[0] + 0.45, 15, 0.3).all("#ice"));
+            l.add(Models.e(ic[0], 14.75 - ic[1], -0.25, ic[0] + 0.45, 14.75, 0.5).only("#ice", "north", "east", "west", "down"));
         }
-        Models.model("schematic_concentrator", false, "resonator_body",
-                new String[][]{{"front", "concentrator_front"}, {"side", "concentrator_side"}, {"body", "resonator_body"},
-                        {"top", "resonator_top"}, {"brass", "sat_brass"}, {"dark", "sat_dark"}, {"pipe", "resonator_pipe"}, {"ice", "sat_ice"}},
+        Models.model("schematic_concentrator", false, "concentrator_side",
+                new String[][]{{"front", "concentrator_front"}, {"side", "concentrator_side"}, {"back", "concentrator_iron"},
+                        {"copper", "concentrator_side"}, {"wood", "concentrator_wood"}, {"top", "concentrator_top"},
+                        {"iron", "concentrator_iron"}, {"brass", "concentrator_brass"}, {"pipe", "concentrator_pipe"},
+                        {"flue", "dev_sec_back"}, {"ice", "sat_ice"}},
                 l.toArray(new Models.El[0]));
         Models.facing4("schematic_concentrator", "schematic_concentrator");
         Models.item("schematic_concentrator", "schematic_concentrator");

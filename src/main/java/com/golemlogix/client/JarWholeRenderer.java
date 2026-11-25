@@ -65,7 +65,7 @@ final class JarWholeRenderer {
     private static final int SOURCE_GLOW = 8;
     private static final float TOP = 31.4f;
     private static final ResourceLocation GRATE = ResourceLocation.withDefaultNamespace("block/iron_trapdoor");
-    private static final int LIGHT_BRASS = 0xFFE8C878, DIM_BRASS = 0xFFC8A060;
+    private static final int LIGHT_BRASS = 0xFFF5E2B8, DIM_BRASS = 0xFFDCC49A;
 
     private JarWholeRenderer() {
     }
@@ -198,7 +198,7 @@ final class JarWholeRenderer {
     private static Object irisApi;
 
     /** Whether an Iris shader pack is running now (looked up through Iris's public API by reflection; false without Iris). */
-    private static boolean shaderPackActive() {
+    static boolean shaderPackActive() {
         if (irisPresent == null) {
             try {
                 Class<?> api = Class.forName("net.irisshaders.iris.api.v0.IrisApi");

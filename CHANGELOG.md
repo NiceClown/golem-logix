@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.2.0 (1.21.1) — Visual Overhaul, Palette Harmonization & 26.1.2 Visual Parity
+
+- **Full Visual Parity with 26.1.2 (`2.0.x–2.2.0`):**
+  - **Dressed Atlas Array:** assembled `Atlas Array` structures automatically dress `Atlas Casing` blocks with corner icicles, crown balcony railings, and flanking frost columns (`AtlasStructure.dress`), paired with updated glyph offsets and crystal golem orbit geometry.
+  - **Furnished Cryo-Mainframe Interior:** added custom shelf flooring (`mainframe_floor`), snowman crew quarters and store furnishings (snowball crate, barrels, notice board, bookshelf with potted orchid, wrench rack, upper bunk with frost painting, ceiling lanterns, and flag garlands), plus aged-brass frame contrast.
+  - **Pipe Heat Lamps:** straight horizontal `Basic Snow Pipe` and `Dense Frost Pipe` segments render mounted nixie heat lamps every 6 blocks displaying live channel loads (`PipeBlockEntity.setLamp`) while remaining compatible with Iris/Oculus shader packs.
+  - **Periscope Eye Renderer:** added animated ender-eye iris tracking, darting glances, and glass glint behind the `Periscope Storage Bus` monocle (`PeriscopeEyeRenderer`).
+- **Standalone Block Redesigns (Waves 1–3) & Palette Harmonization:**
+  - Updated all remaining early `1.21.1` textures and models to the `2.2.0` visual overhaul: redesigned terminals, buses, `Golem Interface`, `Stock Manometer`, `Order Ledger`, `Eternal Frost Resonator`, `Copper Tank` (dual north/south dials), `Cryo-Diode` (3D baked handwheel), conduits, expanders, and `Creative Source Jar` (while preserving 1.21.1 copper golem entity textures).
+  - Harmonized all blocks and multiblocks (`Punch Card Catalog`, `Cryo-Mainframe`, `Mana Saturator`, `Cryo-Source Jars` / `Giga Jar` / `Antigravity Reactor`, `Cryo-Mixer`, `Cryo-Distillation Tower`, `Atlas Array`) under the unified warm antique bronze & aged brass industrial palette.
+
 ## 2.1.5 (1.21.1) — Reliability, autocrafting, performance & Plasma Temper parity
 
 The bugfixes, performance optimizations, and guidebook polish of the 2.1.5 release backported to Minecraft 1.21.1 (NeoForge 21.1):

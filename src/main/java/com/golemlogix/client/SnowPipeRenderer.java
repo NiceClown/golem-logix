@@ -48,11 +48,14 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
 
     public static final net.minecraft.client.resources.model.ModelResourceLocation PLUG_BASIC = plugModel("basic_snow_pipe_plug");
     public static final net.minecraft.client.resources.model.ModelResourceLocation PLUG_DENSE = plugModel("dense_frost_pipe_plug");
-    public static final net.minecraft.client.resources.model.ModelResourceLocation BAND_BASIC = plugModel("basic_snow_pipe_band");
-    public static final net.minecraft.client.resources.model.ModelResourceLocation BAND_DENSE = plugModel("dense_frost_pipe_band");
     /** Warehouse dock door: a dead end with a warehouse is closed not by a plug but by a roller shutter with a lamp. */
     public static final net.minecraft.client.resources.model.ModelResourceLocation DOCK_BASIC = plugModel("basic_snow_pipe_dock");
     public static final net.minecraft.client.resources.model.ModelResourceLocation DOCK_DENSE = plugModel("dense_frost_pipe_dock");
+    /** Heat lamp: baked body (cutout) and glass (translucent), drawn every sixth block of a straight horizontal pipe. */
+    public static final net.minecraft.client.resources.model.ModelResourceLocation LAMP_BASIC = plugModel("basic_snow_pipe_lamp");
+    public static final net.minecraft.client.resources.model.ModelResourceLocation LAMP_DENSE = plugModel("dense_frost_pipe_lamp");
+    public static final net.minecraft.client.resources.model.ModelResourceLocation LAMP_GLASS_BASIC = plugModel("basic_snow_pipe_lamp_glass");
+    public static final net.minecraft.client.resources.model.ModelResourceLocation LAMP_GLASS_DENSE = plugModel("dense_frost_pipe_lamp_glass");
 
     private static net.minecraft.client.resources.model.ModelResourceLocation plugModel(String name) {
         return net.minecraft.client.resources.model.ModelResourceLocation.standalone(
@@ -355,55 +358,41 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
     }
 
     /**
-     * Support brackets with a gauge: rendered strictly every 4 blocks (a 4-block interval along the run).
-     * The straight sections between them are smooth seamless glass tubes without extra rings.
+     * The heat lamp on a straight horizontal pipe (every sixth block, see SnowPipeBlock.hasLamp): two nixie tubes on a walnut base
+     * from the baked lamp model, and in them the number of channels running through the pipe, glowing cyan while there is room,
+     * amber when it fills, red when it is (nearly) full. On the east side of a north-south run, on the south of an east-west one.
      */
-    private static void brackets(PipeBlockEntity be, BlockState state, PoseStack pose, MultiBufferSource buffers, int light) {
-        net.minecraft.core.BlockPos pos = be.getBlockPos();
-        if (Math.floorMod(pos.getX() + pos.getY() + pos.getZ(), 4) != 0) {
-            return;
-        }
-
-        var north = state.getValue(SnowPipeBlock.NORTH);
-        var south = state.getValue(SnowPipeBlock.SOUTH);
-        var east = state.getValue(SnowPipeBlock.EAST);
-        var west = state.getValue(SnowPipeBlock.WEST);
-        var up = state.getValue(SnowPipeBlock.UP);
-        var down = state.getValue(SnowPipeBlock.DOWN);
-
-        boolean zLinked = north != SnowPipeBlock.Link.NONE && south != SnowPipeBlock.Link.NONE;
-        boolean xLinked = east != SnowPipeBlock.Link.NONE && west != SnowPipeBlock.Link.NONE;
-        boolean yLinked = up != SnowPipeBlock.Link.NONE && down != SnowPipeBlock.Link.NONE;
-
-        net.minecraft.core.Direction.Axis straightAxis = null;
-        if (zLinked && east == SnowPipeBlock.Link.NONE && west == SnowPipeBlock.Link.NONE && up == SnowPipeBlock.Link.NONE && down == SnowPipeBlock.Link.NONE) {
-            straightAxis = net.minecraft.core.Direction.Axis.Z;
-        } else if (xLinked && north == SnowPipeBlock.Link.NONE && south == SnowPipeBlock.Link.NONE && up == SnowPipeBlock.Link.NONE && down == SnowPipeBlock.Link.NONE) {
-            straightAxis = net.minecraft.core.Direction.Axis.X;
-        } else if (yLinked && north == SnowPipeBlock.Link.NONE && south == SnowPipeBlock.Link.NONE && east == SnowPipeBlock.Link.NONE && west == SnowPipeBlock.Link.NONE) {
-            straightAxis = net.minecraft.core.Direction.Axis.Y;
-        }
-
-        if (straightAxis == null) {
-            return;
-        }
-
+    private static void heatLamp(PipeBlockEntity be, BlockState state, PoseStack pose, MultiBufferSource buffers, int light) {
         boolean dense = state.getBlock() instanceof SnowPipeBlock p && p.isDense();
         var mc = Minecraft.getInstance();
-        var model = mc.getModelManager().getModel(dense ? BAND_DENSE : BAND_BASIC);
         var renderer = mc.getBlockRenderer().getModelRenderer();
-
+        var lampModel = mc.getModelManager().getModel(dense ? LAMP_DENSE : LAMP_BASIC);
         pose.pushPose();
-        pose.translate(0.5, 0.5, 0.5);
-        if (straightAxis == net.minecraft.core.Direction.Axis.X) {
-            pose.mulPose(Axis.YP.rotationDegrees(90));
-        } else if (straightAxis == net.minecraft.core.Direction.Axis.Y) {
-            pose.mulPose(Axis.XP.rotationDegrees(90));
+        if (SnowPipeBlock.straightAxis(state) == Direction.Axis.X) {
+            pose.translate(0.5, 0.5, 0.5);
+            pose.mulPose(Axis.YP.rotationDegrees(-90));
+            pose.translate(-0.5, -0.5, -0.5);
         }
-        pose.translate(-0.5, -0.5, -0.5);
-
-        renderer.renderModel(pose.last(), buffers.getBuffer(RenderType.cutout()), null, model, 1f, 1f, 1f, light,
+        renderer.renderModel(pose.last(), buffers.getBuffer(RenderType.cutout()), null, lampModel, 1f, 1f, 1f, light,
                 OverlayTexture.NO_OVERLAY, net.neoforged.neoforge.client.model.data.ModelData.EMPTY, RenderType.cutout());
+        // the digits face east, in front of the tubes' mesh planes; seen from there the tens tube is on the left (south)
+        int load = Math.min(99, be.lampLoad());
+        int color = com.golemlogix.client.render.NixieDigits.loadColor(load, be.lampCapacity());
+        // Outside the translucent glass wall (x = 16.2 / 18.3) so 1.21.1 translucent glass sorting doesn't swallow emissive digits
+        float x = (dense ? 14.7f : 12.6f) + 3.65f;
+        Vector3f right = new Vector3f(0, 0, -1), up = new Vector3f(0, 1, 0);
+        if (load >= 10) {
+            com.golemlogix.client.render.NixieDigits.digit(pose.last(), buffers, load / 10, new Vector3f(x, 8f, 9.35f), 2.2f, 4.4f,
+                    right, up, color);
+        }
+        com.golemlogix.client.render.NixieDigits.digit(pose.last(), buffers, load % 10, new Vector3f(x, 8f, 6.65f), 2.2f, 4.4f,
+                right, up, color);
+        // under Iris/Oculus shader packs, translucent glass can wash out or hide emissive digits behind it: skip glass then
+        if (!JarWholeRenderer.shaderPackActive()) {
+            var glassModel = mc.getModelManager().getModel(dense ? LAMP_GLASS_DENSE : LAMP_GLASS_BASIC);
+            renderer.renderModel(pose.last(), buffers.getBuffer(RenderType.translucent()), null, glassModel, 1f, 1f, 1f, light,
+                    OverlayTexture.NO_OVERLAY, net.neoforged.neoforge.client.model.data.ModelData.EMPTY, RenderType.translucent());
+        }
         pose.popPose();
     }
 
@@ -414,7 +403,9 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
             return;
         }
         plugs(be, state, pose, buffers, light);
-        brackets(be, state, pose, buffers, light);
+        if (SnowPipeBlock.hasLamp(state, be.getBlockPos())) {
+            heatLamp(be, state, pose, buffers, light);
+        }
         if (!state.getValue(GolemProperties.ACTIVE)) {
             return;
         }

@@ -10,8 +10,9 @@ import java.util.List;
  */
 final class Terminals {
     static final int K = Forge2.K;
-    static final int[] BRASS = Paint.BRASS, BRONZE = Paint.BRONZE, IRON = Paint.IRON, CYAN = Paint.CYAN, VIOLET = Paint.VIOLET,
-            FROST = Paint.FROST, COPPER = Paint.COPPER, CREAM = Paint.CREAM;
+    static final int[] BRASS = Paint.BRASS, BRONZE = Paint.BRONZE, IRON = Paint.IRON, SLATE = Paint.SLATE_IRON,
+            CYAN = Paint.CYAN, VIOLET = Paint.VIOLET, FROST = Paint.FROST, COPPER = Paint.COPPER, CREAM = Paint.CREAM;
+    static final int[] COPPER_W = Atlant.COPPER, PATINA = Atlant.PATINA;
     static final int[] GREEN = {0x03180a, 0x07301a, 0x0f5a2c, 0x1c9448, 0x3cd070, 0x8cf4a4, 0xe0ffe8};
     static final int[] AMBER = {0x261304, 0x4a2608, 0x80420c, 0xc26a14, 0xf09a2c, 0xffc860, 0xfff0c8};
 
@@ -96,81 +97,179 @@ final class Terminals {
     }
 
     // ------------------------------------------------------------------------------- analog terminal (CRT)
+    /** Deepslate-iron framed panel variant used for upgraded Analog & Crafting Terminals (preserves {@link #plate} for Pattern Encoder). */
+    static Paint slatePlate(long seed, int[] ramp, double mid) {
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, SLATE, 1.9, 1);
+        p.slab(1.0, 1.0, 15.0, 15.0, ramp, mid, 1);
+        p.streaks(1.2, 1.2, 14.8, 14.8, 0.08, seed, true);
+        p.grain(1.0, 1.0, 15.0, 15.0, 0.05, seed + 1);
+        for (double[] c : new double[][]{{2.0, 2.0}, {14.0, 2.0}, {2.0, 14.0}, {14.0, 14.0}}) {
+            p.rivet(c[0], c[1], 0.38, BRASS);
+        }
+        return p;
+    }
+
+    static void slateVent(Paint p, double x0, double y0, double x1, double y1, int slots) {
+        p.slab(x0 - 0.3, y0 - 0.3, x1 + 0.3, y1 + 0.3, SLATE, 1.6, 1);
+        double step = (y1 - y0) / slots;
+        for (int i = 0; i < slots; i++) {
+            double y = y0 + i * step;
+            p.rect(x0, y + 0.1, x1, y + step * 0.62, rgb(0x090b0f));
+            p.rect(x0, y + step * 0.62, x1, y + step * 0.82, at(SLATE, 4.0));
+        }
+    }
+
+    static Paint termIron() {
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, SLATE, 2.6, 1);
+        p.grain(0, 0, 16, 16, 0.06, 651);
+        p.frame(0, 0, 16, 16, 0.5, rgb(SLATE[1]));
+        p.frame(1.5, 1.5, 14.5, 14.5, 0.5, rgb(SLATE[4]));
+        for (double[] r : new double[][]{{1.5, 1.5}, {13.5, 1.5}, {1.5, 13.5}, {13.5, 13.5}}) {
+            p.rect(r[0], r[1], r[0] + 1.0, r[1] + 1.0, rgb(SLATE[0]));
+            p.rect(r[0], r[1], r[0] + 0.5, r[1] + 0.5, rgb(SLATE[5]));
+        }
+        return p;
+    }
+
+    static Paint termCopper() {
+        Paint p = new Paint(16, 16, K);
+        for (int j = 0; j < p.h; j++) {
+            for (int i = 0; i < p.w; i++) {
+                double n = Atlant.hash(i / 2, j / 2, 653) * 0.45 + Atlant.noise(i, j, 10, 654) * 0.55;
+                p.px(i, j, rgb(COPPER_W[Math.max(0, Math.min(4, (int) Math.round(n * 4)))]));
+            }
+        }
+        p.frame(0, 0, 16, 16, 0.5, rgb(COPPER_W[0]));
+        p.rect(0.5, 0.5, 15.5, 1.0, rgb(COPPER_W[5]));
+        p.rect(0.5, 7.5, 15.5, 8.0, rgb(COPPER_W[0]));
+        p.rect(0.5, 8.0, 15.5, 8.5, rgb(COPPER_W[4]));
+        for (double[] r : new double[][]{{1.5, 1.5}, {13.5, 1.5}, {1.5, 13.5}, {13.5, 13.5}}) {
+            p.rect(r[0], r[1], r[0] + 1.0, r[1] + 1.0, rgb(COPPER_W[0]));
+            p.rect(r[0], r[1], r[0] + 0.5, r[1] + 0.5, rgb(COPPER_W[5]));
+        }
+        p.px(2, 3, rgb(PATINA[0]));
+        p.px(p.w - 3, p.h - 4, rgb(PATINA[1]));
+        return p;
+    }
+
+    static Paint termBrass() {
+        Paint p = new Paint(16, 16, K);
+        p.slab(0, 0, 16, 16, BRASS, 2.8, 1);
+        p.streaks(0.5, 0.5, 15.5, 15.5, 0.06, 655, true);
+        p.frame(0, 0, 16, 16, 0.5, rgb(BRASS[2]));
+        return p;
+    }
+
+    static Paint termWalnut() {
+        Paint p = new Paint(16, 16, K);
+        int[] tones = {0x321f12, 0x3e2716, 0x4b301b, 0x583a21, 0x674629};
+        for (int j = 0; j < p.h; j++) {
+            for (int i = 0; i < p.w; i++) {
+                double v = (j + 0.5) / K;
+                int plank = (int) (v / 4);
+                double t = Atlant.hash(plank, i / 5, 657) * 0.5 + Atlant.noise(i, j, 6, 658) * 0.5;
+                p.px(i, j, rgb(tones[(int) Math.min(4, t * 5)]));
+            }
+        }
+        for (double y = 4; y < 16; y += 4) {
+            p.rect(0, y - 0.5, 16, y, rgb(0x22140b));
+        }
+        return p;
+    }
+
+    static Paint termLed(boolean green) {
+        int[] ramp = green ? GREEN : AMBER;
+        Paint p = new Paint(8, 8, K);
+        p.slab(0, 0, 8, 8, SLATE, 1.5, 1);
+        p.glowRect(1.5, 1.5, 6.5, 6.5, 0.5, at(ramp, 4.6), 210);
+        p.rect(2.0, 2.0, 6.0, 6.0, at(ramp, 5.4));
+        p.rect(2.5, 2.5, 4.2, 4.2, at(ramp, 6.0));
+        return p;
+    }
+
+    static Paint craftBadge() {
+        Paint p = new Paint(16, 8, K);
+        p.slab(0, 0, 16, 8, BRASS, 2.8, 1);
+        p.frame(0, 0, 16, 8, 0.5, rgb(BRONZE[1]));
+        p.rect(2.0, 1.2, 14.0, 6.8, rgb(SLATE[0]));
+        for (int r = 0; r < 3; r++) {
+            for (int c = 0; c < 3; c++) {
+                double x0 = 3.2 + c * 3.4, y0 = 1.6 + r * 1.75;
+                p.rect(x0, y0, x0 + 2.6, y0 + 1.35, at(AMBER, 4.2));
+            }
+        }
+        return p;
+    }
+
     static Paint analogFront() {
-        Paint p = plate(601, BRONZE, 2.7);
-        p.slab(1.9, 1.9, 14.1, 14.1, IRON, 1.0, 1);
-        p.grain(1.9, 1.9, 14.1, 14.1, 0.07, 603);
-        // the screen ring and glass (the renderer draws over it: a 7x7 circle in the middle)
-        p.disc(8, 8, 4.75, at(BRASS, 1.2));
-        p.ring(8, 8, 4.0, 4.65, at(BRASS, 4.4));
-        p.disc(8, 8, 3.95, at(IRON, 0.2));
-        p.discFn(8, 8, 3.55, (u, v) -> {
-            double dx = (u - 8) / 3.55, dy = (v - 8) / 3.55, d = Math.hypot(dx, dy);
-            return Paint.ramp(GREEN, 0.04 + 0.1 * (1 - d) + 0.08 * Math.max(0, -dx * 0.5 - dy * 0.6));
+        Paint p = slatePlate(601, BRONZE, 2.7);
+        p.slab(1.6, 1.5, 14.4, 14.5, SLATE, 1.1, 1);
+        p.grain(1.6, 1.5, 14.4, 14.5, 0.07, 603);
+        // the CRT glass center (TerminalRenderer draws active sprites across x=4.5..11.5, y=4.5..11.5 flush on this plane)
+        p.disc(8, 8, 4.5, at(SLATE, 0.4));
+        p.discFn(8, 8, 3.65, (u, v) -> {
+            double dx = (u - 8) / 3.65, dy = (v - 8) / 3.65, d = Math.hypot(dx, dy);
+            return Paint.ramp(GREEN, 0.05 + 0.1 * (1 - d) + 0.08 * Math.max(0, -dx * 0.5 - dy * 0.6));
         });
         p.line(5.9, 5.3, 8.5, 4.7, 0.3, argb(80, 0xFFFFFF));
-        // ventilation on top, knobs and lamps at the bottom
-        vent(p, 4.0, 2.6, 12.0, 3.9, 3);
-        knob(p, 4.2, 12.6, 0.85, 0.6);
-        knob(p, 6.7, 12.6, 0.85, 2.2);
-        for (int i = 0; i < 4; i++) {
-            led(p, 9.2 + i * 1.3, 12.6, GREEN, i < 3 ? 4.5 : 2.0);
-        }
-        p.frostLine(1.0, 15.0, 0, 0.5, 604);
+        // upper ventilation slots strictly above the 3D bezel (lower region is covered by the physical 3D control deck)
+        slateVent(p, 4.2, 2.0, 11.8, 3.1, 2);
         return p;
     }
 
     /** CRT side: a cooling grate and a carrying handle; the front (u = 16) is the edge at the screen. */
     static Paint analogSide() {
-        Paint p = plate(611, BRONZE, 2.6);
-        vent(p, 3.0, 3.2, 12.4, 12.6, 8);
-        // a bracket handle at the front edge
-        p.slab(13.3, 4.0, 14.3, 12.0, BRASS, 3.0, 1);
+        Paint p = slatePlate(611, BRONZE, 2.6);
+        slateVent(p, 4.4, 3.2, 12.4, 12.4, 7);
+        p.slab(13.3, 4.0, 14.3, 12.0, BRASS, 2.8, 1);
         p.rect(13.5, 5.0, 14.1, 11.0, at(BRASS, 1.0));
-        tag(p, 1.6, 1.8, 3.6, 1.4, 12, GREEN);
+        Carve.filigree(p, 4.0, 0.9, 15.1, 15.1, 2.0, at(BRASS, 3.2), at(BRASS, 4.8));
+        Carve.runeRow(p, 4.4, 12.4, 12.8, 1.1, 613, at(BRONZE, 0.4), at(GREEN, 2.2));
+        tag(p, 4.4, 1.6, 3.6, 1.4, 12, GREEN);
         return p;
     }
 
     /** CRT back: the picture tube itself sticks out in the middle, around it sockets, cables and a plate. */
     static Paint analogBack() {
-        Paint p = plate(621, IRON, 1.6);
-        p.slab(1.0, 1.0, 15.0, 15.0, IRON, 1.5, 1);
+        Paint p = slatePlate(621, SLATE, 1.8);
+        p.slab(1.0, 1.0, 15.0, 15.0, SLATE, 1.7, 1);
         p.grain(1.0, 1.0, 15.0, 15.0, 0.07, 622);
         for (double[] c : new double[][]{{2.0, 2.0}, {14.0, 2.0}, {2.0, 14.0}, {14.0, 14.0}}) {
             p.rivet(c[0], c[1], 0.38, BRASS);
         }
-        // cable sockets at the bottom and a red warning plate at the top
         for (double x : new double[]{3.6, 12.4}) {
-            p.slab(x - 1.4, 12.2, x + 1.4, 14.2, BRASS, 3.0, 1);
-            p.disc(x, 13.2, 0.65, rgb(0x050607));
+            p.slab(x - 1.4, 12.2, x + 1.4, 14.2, BRASS, 2.8, 1);
+            p.disc(x, 13.2, 0.65, rgb(0x06080b));
         }
         tag(p, 5.5, 1.7, 5.0, 1.5, 4, GREEN);
         p.slab(1.6, 6.5, 2.8, 9.6, BRASS, 2.4, 1);
         p.slab(13.2, 6.5, 14.4, 9.6, BRASS, 2.4, 1);
-        // a cable hanging from a socket
         p.line(3.6, 14.2, 3.6, 15.4, 0.5, at(COPPER, 3.0));
         p.line(12.4, 14.2, 12.4, 15.4, 0.5, at(COPPER, 3.0));
         return p;
     }
 
-    /** CRT roof: a vent grate and two screws, frost along the front edge. */
+    /** CRT roof: a vent grate centered over the 12.25-deep housing, four screws, subtle carved trim. */
     static Paint analogTop() {
-        Paint p = plate(631, BRONZE, 2.5);
-        vent(p, 4.5, 4.5, 11.5, 11.5, 6);
-        for (double[] c : new double[][]{{3.0, 3.0}, {13.0, 3.0}, {3.0, 13.0}, {13.0, 13.0}}) {
-            p.screw(c[0], c[1], 0.7, BRASS, c[0]);
+        Paint p = slatePlate(631, BRONZE, 2.5);
+        slateVent(p, 4.5, 2.8, 11.5, 9.2, 5);
+        for (double[] c : new double[][]{{2.5, 2.2}, {13.5, 2.2}, {2.5, 10.2}, {13.5, 10.2}}) {
+            p.screw(c[0], c[1], 0.65, BRASS, c[0]);
         }
-        p.frostLine(1.0, 15.0, 0, 0.5, 632);
+        Carve.runeRow(p, 4.4, 11.6, 1.3, 1.1, 633, at(BRONZE, 0.4), at(BRONZE, 3.4));
+        Carve.runeRow(p, 4.4, 11.6, 9.8, 1.1, 634, at(BRONZE, 0.4), at(BRONZE, 3.4));
         return p;
     }
 
-    /** Picture tube (the bump at the back): brass bands and teal veins. */
+    /** Picture tube (the bump at the back): deepslate-iron neck with brass bands and green phosphor veins. */
     static Paint crt() {
         Paint p = new Paint(16, 16, K);
-        p.slab(0, 0, 16, 16, IRON, 2.2, 1);
+        p.slab(0, 0, 16, 16, SLATE, 2.4, 1);
         p.grain(0, 0, 16, 16, 0.07, 641);
         for (double y : new double[]{1.0, 7.4, 13.0}) {
-            p.slab(0, y, 16, y + 2.0, BRASS, 3.0, 1);
+            p.slab(0, y, 16, y + 2.0, BRASS, 2.8, 1);
             for (double x = 1.5; x < 16; x += 3.5) {
                 p.rivet(x, y + 1.0, 0.3, BRASS);
             }
@@ -184,35 +283,21 @@ final class Terminals {
 
     // --------------------------------------------------------------------------------------- crafting terminal
     static Paint craftFront() {
-        Paint p = plate(701, BRONZE, 2.8);
-        p.slab(1.9, 1.9, 14.1, 14.1, IRON, 1.0, 1);
-        p.grain(1.9, 1.9, 14.1, 14.1, 0.07, 703);
-        // a square amber window (the renderer draws it)
-        p.slab(3.9, 3.9, 12.1, 12.1, BRASS, 3.0, 2);
+        Paint p = slatePlate(701, BRONZE, 2.8);
+        p.slab(1.6, 1.5, 14.4, 14.5, SLATE, 1.1, 1);
+        p.grain(1.6, 1.5, 14.4, 14.5, 0.07, 703);
+        // square amber glass behind the recessed copper 3D bezel (dark iron inner reveal avoids flat yellow outline)
+        p.slab(3.9, 3.9, 12.1, 12.1, SLATE, 0.6, 1);
         p.rect(4.4, 4.4, 11.6, 11.6, at(AMBER, 0.55));
         p.fill(4.4, 4.4, 11.6, 11.6, (u, v) -> Paint.ramp(AMBER, 0.14 + 0.1 * (1 - Math.hypot(u - 8, v - 8) / 5)));
         p.line(5.2, 5.2, 7.6, 4.8, 0.3, argb(70, 0xFFFFFF));
-        // a 3x3 crafting table sign above the screen, toggles and lamps at the bottom
-        p.slab(5.9, 2.2, 10.1, 3.7, BRASS, 3.0, 1);
-        for (int r = 0; r < 3; r++) {
-            for (int c = 0; c < 3; c++) {
-                p.rect(6.3 + c * 1.1, 2.5 + r * 0.4, 6.9 + c * 1.1, 2.8 + r * 0.4, at(AMBER, 3.6));
-            }
-        }
-        toggle(p, 4.3, 13.0, true);
-        toggle(p, 6.1, 13.0, false);
-        toggle(p, 7.9, 13.0, true);
-        for (int i = 0; i < 3; i++) {
-            led(p, 10.3 + i * 1.4, 13.0, AMBER, i < 2 ? 4.8 : 2.0);
-        }
-        p.frostLine(1.0, 15.0, 0, 0.5, 704);
         return p;
     }
 
     /** Crafting side: a rack with a hammer and a saw on brass hooks; the front (u = 16) is the edge at the screen. */
     static Paint craftSide() {
-        Paint p = plate(711, BRONZE, 2.6);
-        p.slab(2.6, 2.6, 13.4, 13.4, IRON, 0.9, 1);
+        Paint p = slatePlate(711, BRONZE, 2.6);
+        p.slab(2.6, 2.6, 13.4, 13.4, SLATE, 1.0, 1);
         p.grain(2.6, 2.6, 13.4, 13.4, 0.07, 712);
         // a workbench scene: a board on trestles, the saw goes back and forth and drops sawdust, the hammer above it taps
         p.slab(3.0, 10.6, 13.0, 11.8, BRONZE, 4.2, 1);
@@ -225,21 +310,19 @@ final class Terminals {
         p.interpolate = false;
         p.animate(2.6, 2.6, 13.4, 13.4, (q, t) -> {
             double s = Math.sin(2 * Math.PI * 3 * t), dx = 1.3 * s;
-            // a cut in the board and sawdust under it
             q.rect(8.5, 10.6, 8.75, 11.2, at(BRONZE, 1.0));
             for (int i = 0; i < 4; i++) {
                 double fall = (t * 4 + i * 0.25) % 1.0;
                 q.rect(8.3 + (i % 2) * 0.5, 11.9 + fall * 1.2, 8.5 + (i % 2) * 0.5, 12.1 + fall * 1.2, at(CREAM, 5.0));
             }
             saw(q, 3.6 + dx, 10.5, 6.2);
-            // the hammer swings on its hook
             double a = Math.toRadians(-35 + 18 * Math.sin(2 * Math.PI * t + 1.0));
             double hx = 8.5, hy = 3.6, ex = hx + Math.cos(a + Math.PI / 2) * 3.4, ey = hy + Math.sin(a + Math.PI / 2) * 3.4;
             q.line(hx, hy, ex, ey, 0.6, at(BRONZE, 4.2));
-            q.line(ex - Math.cos(a) * 1.1, ey - Math.sin(a) * 1.1, ex + Math.cos(a) * 1.1, ey + Math.sin(a) * 1.1, 0.9, at(IRON, 4.8));
+            q.line(ex - Math.cos(a) * 1.1, ey - Math.sin(a) * 1.1, ex + Math.cos(a) * 1.1, ey + Math.sin(a) * 1.1, 0.9, at(SLATE, 4.8));
             q.sphere(hx, hy, 0.45, BRASS, 0.3, 1.0);
         });
-        tag(p, 1.6, 1.8, 3.6, 1.4, 6, AMBER);
+        tag(p, 2.8, 1.5, 3.6, 1.1, 6, AMBER);
         return p;
     }
 
@@ -250,34 +333,32 @@ final class Terminals {
     static void saw(Paint p, double x, double y, double len) {
         double h0 = 1.2, h1 = 2.4;
         p.polyFn(new double[]{x, x + len, x + len, x}, new double[]{y, y, y - h1, y - h0},
-                (u, v) -> Paint.ramp(IRON, 0.62 + 0.25 * (y - v) / h1));
-        p.line(x, y - h0 + 0.1, x + len, y - h1 + 0.1, 0.18, at(IRON, 6.0));
+                (u, v) -> Paint.ramp(SLATE, 0.62 + 0.25 * (y - v) / h1));
+        p.line(x, y - h0 + 0.1, x + len, y - h1 + 0.1, 0.18, at(SLATE, 6.0));
         for (double tx = x + 0.1; tx < x + len - 0.3; tx += 0.5) {
-            p.poly(new double[]{tx, tx + 0.5, tx + 0.25}, new double[]{y, y, y + 0.4}, at(IRON, 3.2));
+            p.poly(new double[]{tx, tx + 0.5, tx + 0.25}, new double[]{y, y, y + 0.4}, at(SLATE, 3.2));
         }
-        // handle: a wooden "D" with a slot and two brass screws
         double hx = x + len - 0.2;
         p.slab(hx, y - h1 - 0.6, hx + 2.2, y + 0.4, BRONZE, 4.0, 1);
-        p.rect(hx + 0.6, y - h1 + 0.3, hx + 1.6, y - 0.4, at(IRON, 0.6));
+        p.rect(hx + 0.6, y - h1 + 0.3, hx + 1.6, y - 0.4, at(SLATE, 0.8));
         p.rivet(hx + 0.3, y - h1 + 0.1, 0.22, BRASS);
         p.rivet(hx + 0.3, y - 0.3, 0.22, BRASS);
     }
 
     /** Crafting back: a gear train under a brass cover and a "3x3" plate. */
     static Paint craftBack() {
-        Paint p = plate(721, BRONZE, 2.4);
-        p.slab(2.0, 2.0, 14.0, 14.0, IRON, 1.0, 1);
+        Paint p = slatePlate(721, BRONZE, 2.4);
+        p.slab(2.0, 2.0, 14.0, 14.0, SLATE, 1.2, 1);
         p.grain(2.0, 2.0, 14.0, 14.0, 0.07, 722);
-        p.gear(5.6, 9.0, 3.2, 12, 0.1, BRASS, 3.1);
+        p.gear(5.6, 9.0, 3.2, 12, 0.1, BRASS, 3.0);
         p.gear(10.6, 6.2, 2.2, 9, 0.35, COPPER, 3.0);
         p.gear(11.6, 11.4, 1.5, 8, 0.2, BRASS, 2.8);
-        p.slab(1.6, 1.6, 6.4, 3.2, BRASS, 3.0, 1);
+        p.slab(1.6, 1.6, 6.4, 3.2, BRASS, 2.8, 1);
         for (int r = 0; r < 3; r++) {
             for (int c = 0; c < 3; c++) {
                 p.rect(2.0 + c * 1.35, 1.95 + r * 0.38, 2.9 + c * 1.35, 2.3 + r * 0.38, at(AMBER, 3.6));
             }
         }
-        // a tube with a valve
         p.slab(1.5, 13.4, 14.5, 14.3, BRASS, 2.4, 1);
         p.sphere(8.0, 13.85, 0.8, BRASS, 0.3, 1.0);
         return p;
@@ -325,7 +406,7 @@ final class Terminals {
      * between the cells (two blocks swap places there and back, the cycle is closed), the other blocks lie still.
      */
     static Paint craftTop() {
-        Paint p = plate(731, BRONZE, 2.6);
+        Paint p = slatePlate(731, BRONZE, 2.6);
         p.slab(2.0, 2.0, 14.0, 14.0, BRASS, 2.6, 1);
         for (int r = 0; r < 3; r++) {
             for (int c = 0; c < 3; c++) {
@@ -739,13 +820,13 @@ final class Terminals {
         return p;
     }
 
-    /** A brass magazine wall. */
+    /** An aged-brass magazine wall. */
     static Paint hopperWall() {
         Paint p = new Paint(16, 16, K);
-        p.slab(0, 0, 16, 16, BRASS, 3.0, 1);
+        p.slab(0, 0, 16, 16, Paint.AGED_BRASS, 2.8, 1);
         p.streaks(0.3, 0.3, 15.7, 15.7, 0.07, 841, true);
         for (double x = 2; x < 16; x += 4) {
-            p.rivet(x, 8, 0.45, BRASS);
+            p.rivet(x, 8, 0.45, Paint.AGED_BRASS);
         }
         return p;
     }
@@ -766,6 +847,13 @@ final class Terminals {
         craftSide().save(Forge2.tex("crafting_terminal_side"));
         craftBack().save(Forge2.tex("crafting_terminal_back"));
         craftTop().save(Forge2.tex("crafting_terminal_top"));
+        termIron().save(Forge2.tex("term_iron"));
+        termCopper().save(Forge2.tex("term_copper"));
+        termBrass().save(Forge2.tex("term_brass"));
+        termWalnut().save(Forge2.tex("term_walnut"));
+        termLed(true).save(Forge2.tex("term_led_g"));
+        termLed(false).save(Forge2.tex("term_led_a"));
+        craftBadge().save(Forge2.tex("term_craft_badge"));
         encoderFront().save(Forge2.tex("pattern_encoder_front"));
         encoderSide().save(Forge2.tex("pattern_encoder_side"));
         encoderBack().save(Forge2.tex("pattern_encoder_back"));
@@ -815,32 +903,113 @@ final class Terminals {
     }
 
     static void models() throws Exception {
-        // --- Analog terminal: a body 12 deep, the picture tube sticks out at the back
+        // --- Analog terminal: recessed 3D chassis, forged SLATE_IRON frame, octagonal antique-brass CRT bezel, physical knobs/LEDs
         List<Models.El> a = new ArrayList<>();
-        a.add(body(12, 16, "analog_terminal"));
+        Models.El ab = box(0.5, 1.0, 1.0, 15.5, 15.0, 12.0);
+        face(ab, "north", "analog_terminal_front", 0.5, 1.0, 15.5, 15.0);
+        face(ab, "south", "analog_terminal_back", 0.5, 1.0, 15.5, 15.0);
+        face(ab, "east", "analog_terminal_side", 4.0, 1.0, 15.0, 15.0);
+        face(ab, "west", "analog_terminal_side", 15.0, 1.0, 4.0, 15.0);
+        a.add(ab);
+        Models.El aPlinth = box(0.0, 0.0, 0.25, 16.0, 1.0, 12.25).all("#iron");
+        face(aPlinth, "down", "bottom", 0, 0, 16, 12.25);
+        a.add(aPlinth);
+        Models.El aCornice = box(0.0, 15.0, 0.0, 16.0, 16.0, 12.25).all("#iron");
+        face(aCornice, "up", "analog_terminal_top", 0, 0, 16, 12.25);
+        a.add(aCornice);
+        a.add(box(0.0, 1.0, 0.25, 1.5, 15.0, 1.0).only("#iron", "north", "south", "east", "west"));
+        a.add(box(14.5, 1.0, 0.25, 16.0, 15.0, 1.0).only("#iron", "north", "south", "east", "west"));
+        // 3D octagonal antique-brass CRT bezel & upper glare visor (strictly outside 4.5..11.5)
+        a.add(box(5.25, 11.5, 0.0, 10.75, 12.5, 1.0).only("#brass", "north", "east", "west", "up", "down"));
+        a.add(box(5.25, 3.5, 0.35, 10.75, 4.5, 1.0).only("#brass", "north", "east", "west", "up", "down"));
+        a.add(box(3.5, 5.25, 0.35, 4.5, 10.75, 1.0).only("#brass", "north", "east", "west", "up", "down"));
+        a.add(box(11.5, 5.25, 0.35, 12.5, 10.75, 1.0).only("#brass", "north", "east", "west", "up", "down"));
+        for (double[] cr : new double[][]{
+                {4.25, 10.75, 0.25}, {10.75, 10.75, 0.25},
+                {4.25, 4.25, 0.35}, {10.75, 4.25, 0.35}}) {
+            a.add(box(cr[0], cr[1], cr[2], cr[0] + 1.0, cr[1] + 1.0, 1.0).only("#brass", "north", "east", "west", "up", "down"));
+        }
+        // Lower physical control shelf with forged bases & solid antique brass rotary knobs + glowing emerald LEDs
+        a.add(box(1.5, 1.0, 0.45, 14.5, 2.8, 1.0).only("#iron", "north", "up"));
+        for (double kx : new double[]{2.8, 5.0}) {
+            a.add(box(kx, 1.25, 0.25, kx + 1.2, 2.45, 0.45).only("#iron", "north", "east", "west", "up", "down"));
+            a.add(box(kx + 0.2, 1.45, 0.05, kx + 1.0, 2.25, 0.25).only("#brass", "north", "east", "west", "up", "down"));
+        }
+        for (double lx : new double[]{9.0, 10.6, 12.2}) {
+            a.add(box(lx, 1.5, 0.2, lx + 0.8, 2.3, 0.45).only("#led_g", "north", "east", "west", "up", "down").glow(12));
+        }
+        // Stepped rear CRT tube neck
         Models.El tube1 = box(3, 3, 12, 13, 13, 14);
         for (String d : new String[]{"east", "west", "up", "down", "south"}) {
             face(tube1, d, "crt");
         }
         a.add(tube1);
-        Models.El tube2 = box(5, 5, 14, 11, 11, 16);
+        a.add(box(4.5, 4.5, 14.0, 11.5, 11.5, 14.5).only("#brass", "east", "west", "up", "down", "south"));
+        Models.El tube2 = box(5, 5, 14.5, 11, 11, 16);
         for (String d : new String[]{"east", "west", "up", "down", "south"}) {
             face(tube2, d, "crt");
         }
         a.add(tube2);
-        Models.model("analog_terminal", false, "analog_terminal_front", tex("analog_terminal", "crt", "terminal_crt"), a.toArray(new Models.El[0]));
+        Models.model("analog_terminal", false, "term_iron",
+                tex("analog_terminal", "crt", "terminal_crt", "iron", "term_iron", "brass", "term_brass", "led_g", "term_led_g"),
+                a.toArray(new Models.El[0]));
 
-        // --- Crafting terminal: a 16x15x16 body and a work plate on top
+        // --- Crafting terminal: recessed chassis, copper bezel, physical toggle bank, and 3D walnut+brass top workbench tray
         List<Models.El> c = new ArrayList<>();
-        Models.El cb = body(16, 15, "crafting_terminal");
+        Models.El cb = box(0.5, 1.0, 1.0, 15.5, 14.25, 15.5);
+        face(cb, "north", "crafting_terminal_front", 0.5, 1.75, 15.5, 15.0);
+        face(cb, "south", "crafting_terminal_back", 0.5, 1.75, 15.5, 15.0);
+        face(cb, "east", "crafting_terminal_side", 0.5, 1.75, 15.0, 15.0);
+        face(cb, "west", "crafting_terminal_side", 15.0, 1.75, 0.5, 15.0);
         c.add(cb);
-        Models.El plate = box(1, 15, 1, 15, 16, 15);
-        face(plate, "up", "crafting_terminal_top", 1, 1, 15, 15);
-        for (String d : new String[]{"north", "south", "east", "west"}) {
-            face(plate, d, "crafting_terminal_top");
+        Models.El cPlinth = box(0.0, 0.0, 0.25, 16.0, 1.0, 15.75).all("#iron");
+        face(cPlinth, "down", "bottom", 0, 0.25, 16, 15.75);
+        c.add(cPlinth);
+        c.add(box(0.0, 14.25, 0.0, 16.0, 15.0, 16.0).all("#iron"));
+        c.add(box(0.0, 1.0, 0.25, 1.5, 14.25, 1.0).only("#iron", "north", "south", "east", "west"));
+        c.add(box(14.5, 1.0, 0.25, 16.0, 14.25, 1.0).only("#iron", "north", "south", "east", "west"));
+        c.add(box(0.0, 1.0, 14.75, 1.0, 14.25, 15.75).only("#iron", "north", "south", "east", "west"));
+        c.add(box(15.0, 1.0, 14.75, 16.0, 14.25, 15.75).only("#iron", "north", "south", "east", "west"));
+        // 3D weathered-copper screen bezel + antique brass studs + centered 3x3 amber badge
+        c.add(box(3.75, 11.5, 0.15, 12.25, 12.5, 1.0).only("#copper", "north", "east", "west", "up", "down"));
+        c.add(box(3.75, 3.5, 0.45, 12.25, 4.5, 1.0).only("#copper", "north", "east", "west", "up", "down"));
+        c.add(box(3.75, 4.5, 0.45, 4.5, 11.5, 1.0).only("#copper", "north", "east", "west", "up", "down"));
+        c.add(box(11.5, 4.5, 0.45, 12.25, 11.5, 1.0).only("#copper", "north", "east", "west", "up", "down"));
+        for (double[] rv : new double[][]{
+                {3.85, 11.7, 0.0, 0.15}, {11.55, 11.7, 0.0, 0.15},
+                {3.85, 3.7, 0.3, 0.45}, {11.55, 3.7, 0.3, 0.45}}) {
+            c.add(box(rv[0], rv[1], rv[2], rv[0] + 0.6, rv[1] + 0.6, rv[3]).only("#brass", "north", "east", "west", "up", "down"));
         }
-        c.add(plate);
-        Models.model("crafting_terminal", false, "crafting_terminal_front", tex("crafting_terminal"), c.toArray(new Models.El[0]));
+        Models.El badge = box(5.75, 12.5, 0.4, 10.25, 13.75, 1.0).only("#brass", "east", "west", "up");
+        face(badge, "north", "badge", 0, 0, 16, 16);
+        c.add(badge);
+        // Lower physical toggle bank & amber LED indicators
+        c.add(box(1.5, 1.0, 0.5, 14.5, 2.75, 1.0).only("#iron", "north", "up"));
+        boolean[] up = {true, false, true};
+        double[] tx = {3.2, 5.0, 6.8};
+        for (int i = 0; i < 3; i++) {
+            c.add(box(tx[i], 1.35, 0.35, tx[i] + 0.9, 2.4, 0.5).only("#brass", "north", "east", "west", "up", "down"));
+            double y0 = up[i] ? 1.85 : 1.3, y1 = up[i] ? 2.45 : 1.9;
+            c.add(box(tx[i] + 0.25, y0, 0.08, tx[i] + 0.65, y1, 0.35).only("#copper", "north", "east", "west", "up", "down"));
+        }
+        for (double lx : new double[]{9.4, 11.0, 12.6}) {
+            c.add(box(lx, 1.45, 0.25, lx + 0.8, 2.25, 0.5).only("#led_a", "north", "east", "west", "up", "down").glow(12));
+        }
+        // Raised 3D walnut + antique-brass workbench tray framing the animated 3x3 copper grid on top
+        Models.El cBed = box(2.0, 15.0, 2.0, 14.0, 15.5, 14.0);
+        face(cBed, "up", "crafting_terminal_top", 2, 2, 14, 14);
+        c.add(cBed);
+        c.add(box(2.0, 15.0, 0.75, 14.0, 15.85, 2.0).only("#walnut", "north", "south", "up"));
+        c.add(box(2.0, 15.0, 14.0, 14.0, 15.85, 15.25).only("#walnut", "north", "south", "up"));
+        c.add(box(0.75, 15.0, 2.0, 2.0, 15.85, 14.0).only("#walnut", "east", "west", "up"));
+        c.add(box(14.0, 15.0, 2.0, 15.25, 15.85, 14.0).only("#walnut", "east", "west", "up"));
+        for (double[] cr : new double[][]{{0.75, 0.75}, {14.0, 0.75}, {0.75, 14.0}, {14.0, 14.0}}) {
+            c.add(box(cr[0], 15.0, cr[1], cr[0] + 1.25, 16.0, cr[1] + 1.25).only("#brass", "north", "south", "east", "west", "up"));
+        }
+        Models.model("crafting_terminal", false, "term_iron",
+                tex("crafting_terminal", "iron", "term_iron", "copper", "term_copper", "brass", "term_brass",
+                        "walnut", "term_walnut", "led_a", "term_led_a", "badge", "term_craft_badge"),
+                c.toArray(new Models.El[0]));
 
         // --- Encoder: a 16x13x16 body and a punch card magazine on top
         List<Models.El> e = new ArrayList<>();

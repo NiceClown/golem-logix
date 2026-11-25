@@ -22,29 +22,39 @@ import net.neoforged.neoforge.fluids.FluidStack;
  * gauge on the front post shows how full it is: from the dial's lower left (empty) round to its lower right (full).
  */
 public class CopperTankRenderer implements BlockEntityRenderer<CopperTankBlockEntity> {
-    /** The inside of the tank (pixels): within the glass, between the base (top at 4) and the lid (underside at 13). */
-    private static final float IN0 = 1.6f, IN1 = 14.4f, BOTTOM = 4.05f, TOP = 12.95f;
+    /** The inside of the tank (pixels): within the glass chamber (2..14), between the base (top at 3.5) and the lid (underside at 12.5). */
+    private static final float IN0 = 2.2f, IN1 = 13.8f, BOTTOM = 3.55f, TOP = 12.45f;
 
     public CopperTankRenderer(BlockEntityRendererProvider.Context context) {
     }
 
     private static final ResourceLocation WHITE =
             ResourceLocation.fromNamespaceAndPath(com.golemlogix.GolemLogixMod.MOD_ID, "textures/entity/bay_white.png");
-    /** The gauge's face (pixels): centre and the plane just in front of it (the dial is the face at z -1.2 of the model). */
-    private static final float GAUGE_X = 14.25f, GAUGE_Y = 8.25f, GAUGE_Z = -1.26f;
+    /** The gauge's face (pixels): centered on BOTH north (z = 1.35) and south (z = 14.65) glass walls so the dial is always readable. */
+    private static final float GAUGE_X = 8.0f, GAUGE_Y = 8.0f, GAUGE_Z_N = 1.24f, GAUGE_Z_S = 14.76f;
 
-    /** The needle: a thin red bar from the centre, at 150 degrees of the dial (lower left) when empty, 390 (lower right) when full. */
+    /** Needles on both north and south dials: from empty (lower left) around top to full (lower right). */
     private static void needle(PoseStack.Pose p, MultiBufferSource buffers, float fill, int light) {
         VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(WHITE));
         double a = Math.toRadians(150 + 240 * fill);
-        // the dial's texture runs right and down; on the north face that is towards -x and -y
-        float dx = (float) -Math.cos(a), dy = (float) -Math.sin(a), len = 1.05f, w = 0.14f;
-        float nx = -dy * w, ny = dx * w;
-        float[][] c = {{GAUGE_X - nx, GAUGE_Y - ny}, {GAUGE_X + nx, GAUGE_Y + ny},
-                {GAUGE_X + dx * len + nx, GAUGE_Y + dy * len + ny}, {GAUGE_X + dx * len - nx, GAUGE_Y + dy * len - ny}};
-        for (float[] v : c) {
-            vc.addVertex(p, v[0] / 16f, v[1] / 16f, GAUGE_Z / 16f).setColor(0xFFC8281E).setUv(0.5f, 0.5f)
+        float len = 1.15f, w = 0.15f;
+        // North face: texture u -> -x, v -> -y
+        float dxN = (float) -Math.cos(a), dyN = (float) -Math.sin(a);
+        float nxN = -dyN * w, nyN = dxN * w;
+        float[][] cN = {{GAUGE_X - nxN, GAUGE_Y - nyN}, {GAUGE_X + nxN, GAUGE_Y + nyN},
+                {GAUGE_X + dxN * len + nxN, GAUGE_Y + dyN * len + nyN}, {GAUGE_X + dxN * len - nxN, GAUGE_Y + dyN * len - nyN}};
+        for (float[] v : cN) {
+            vc.addVertex(p, v[0] / 16f, v[1] / 16f, GAUGE_Z_N / 16f).setColor(0xFFC8281E).setUv(0.5f, 0.5f)
                     .setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(p, 0, 0, -1);
+        }
+        // South face: mirrored u -> +x, v -> -y
+        float dxS = (float) Math.cos(a), dyS = (float) -Math.sin(a);
+        float nxS = -dyS * w, nyS = dxS * w;
+        float[][] cS = {{GAUGE_X + dxS * len - nxS, GAUGE_Y + dyS * len - nyS}, {GAUGE_X + dxS * len + nxS, GAUGE_Y + dyS * len + nyS},
+                {GAUGE_X + nxS, GAUGE_Y + nyS}, {GAUGE_X - nxS, GAUGE_Y - nyS}};
+        for (float[] v : cS) {
+            vc.addVertex(p, v[0] / 16f, v[1] / 16f, GAUGE_Z_S / 16f).setColor(0xFFC8281E).setUv(0.5f, 0.5f)
+                    .setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(p, 0, 0, 1);
         }
     }
 

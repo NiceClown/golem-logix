@@ -18,7 +18,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class CreativeSourceJarBlock extends Block implements EntityBlock {
     /** The real size of the jar with its cork (as in the model), not the whole block: neighbouring blocks stay reachable. */
-    private static final VoxelShape SHAPE = Block.box(3, 0, 3, 13, 15, 13);
+    private static final VoxelShape SHAPE = Block.box(1.5, 0, 1.5, 14.5, 16, 14.5);
 
     public CreativeSourceJarBlock(Properties properties) {
         super(properties.sound(SoundType.GLASS).strength(3.0f).lightLevel(state -> 15).noOcclusion());

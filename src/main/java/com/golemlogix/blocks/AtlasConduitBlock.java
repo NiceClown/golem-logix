@@ -12,7 +12,7 @@ import net.minecraft.world.level.block.state.BlockState;
  */
 public class AtlasConduitBlock extends Block implements GolemNode, AtlasPart {
     public AtlasConduitBlock(Properties properties) {
-        super(properties.sound(SoundType.COPPER).strength(4.5f, 6.0f).requiresCorrectToolForDrops());
+        super(properties.sound(SoundType.COPPER).strength(4.5f, 6.0f).requiresCorrectToolForDrops().noOcclusion());
     }
 
     @Override

@@ -27,7 +27,7 @@ public class TerminalRenderer implements BlockEntityRenderer<TerminalBlockEntity
     private static final float SHEET_SIZE = 64f;
     /** Screen size in texels and texel size in block fractions (the front texture is 32x32). */
     private static final int SCREEN = 14;
-    private static final float TEXEL = 1f / 32f;
+    private static final float TEXEL = 1f / 32f, SCREEN_Z = 1.0f / 16f;
 
     private static final float WAVE_TICKS = 110f;
     private static final float TICKS_PER_WAVE_FRAME = 7f;
@@ -132,7 +132,7 @@ public class TerminalRenderer implements BlockEntityRenderer<TerminalBlockEntity
         float offY = SCREEN / 2f - (sy + h / 2f);
         float cx = 0.5f - offX * TEXEL;
         float cy = 0.5f + offY * TEXEL;
-        float z = -(0.002f + 0.0015f * layer);
+        float z = SCREEN_Z - (0.002f + 0.0015f * layer);
         // a thin UV gap so filtering does not catch neighbouring sprites of the sheet
         float e = 0.0005f;
         Quads.front(vc, p, cx, cy, z, w * TEXEL, h * TEXEL, 0f,

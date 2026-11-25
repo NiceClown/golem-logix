@@ -1,5 +1,24 @@
 {
   "variants": {
-    "": {"model": "golem_logix:block/atlas_casing"}
+    "facing=north,part=none": {"model": "golem_logix:block/atlas_casing"},
+    "facing=east,part=none": {"model": "golem_logix:block/atlas_casing"},
+    "facing=south,part=none": {"model": "golem_logix:block/atlas_casing"},
+    "facing=west,part=none": {"model": "golem_logix:block/atlas_casing"},
+    "facing=north,part=column_low": {"model": "golem_logix:block/atlas_casing_column_low"},
+    "facing=east,part=column_low": {"model": "golem_logix:block/atlas_casing_column_low", "y": 90},
+    "facing=south,part=column_low": {"model": "golem_logix:block/atlas_casing_column_low", "y": 180},
+    "facing=west,part=column_low": {"model": "golem_logix:block/atlas_casing_column_low", "y": 270},
+    "facing=north,part=column_high": {"model": "golem_logix:block/atlas_casing_column_high"},
+    "facing=east,part=column_high": {"model": "golem_logix:block/atlas_casing_column_high", "y": 90},
+    "facing=south,part=column_high": {"model": "golem_logix:block/atlas_casing_column_high", "y": 180},
+    "facing=west,part=column_high": {"model": "golem_logix:block/atlas_casing_column_high", "y": 270},
+    "facing=north,part=top_edge": {"model": "golem_logix:block/atlas_casing_top_edge"},
+    "facing=east,part=top_edge": {"model": "golem_logix:block/atlas_casing_top_edge", "y": 90},
+    "facing=south,part=top_edge": {"model": "golem_logix:block/atlas_casing_top_edge", "y": 180},
+    "facing=west,part=top_edge": {"model": "golem_logix:block/atlas_casing_top_edge", "y": 270},
+    "facing=north,part=top_corner": {"model": "golem_logix:block/atlas_casing_top_corner"},
+    "facing=east,part=top_corner": {"model": "golem_logix:block/atlas_casing_top_corner", "y": 90},
+    "facing=south,part=top_corner": {"model": "golem_logix:block/atlas_casing_top_corner", "y": 180},
+    "facing=west,part=top_corner": {"model": "golem_logix:block/atlas_casing_top_corner", "y": 270}
   }
 }

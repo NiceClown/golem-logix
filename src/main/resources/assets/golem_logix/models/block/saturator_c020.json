@@ -8,7 +8,7 @@
     "sat_brass": "golem_logix:block/sat_brass",
     "sat_f_02": "golem_logix:block/sat_f_02",
     "sat_l_02": "golem_logix:block/sat_l_02",
-    "sat_top": "golem_logix:block/sat_top",
+    "sat_roof_00": "golem_logix:block/sat_roof_00",
     "sat_bronze": "golem_logix:block/sat_bronze"
   },
   "elements": [
@@ -96,7 +96,7 @@
       "faces": {
         "north": {"texture": "#sat_f_02"},
         "east": {"texture": "#sat_l_02"},
-        "up": {"texture": "#sat_top"},
+        "up": {"texture": "#sat_roof_00"},
         "down": {"texture": "#sat_bronze"}
       }
     },

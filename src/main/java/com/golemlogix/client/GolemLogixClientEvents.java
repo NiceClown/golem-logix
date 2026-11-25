@@ -43,6 +43,7 @@ public class GolemLogixClientEvents {
         event.registerBlockEntityRenderer(ModBlockEntities.STOCK_REQUESTER.get(), StockRequesterRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.CRYO_DIODE.get(), CryoDiodeRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.CHANNEL_COUNTER.get(), ChannelCounterRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.PERISCOPE.get(), PeriscopeEyeRenderer::new);
     }
 
     @SubscribeEvent
@@ -61,8 +62,11 @@ public class GolemLogixClientEvents {
         event.register(SnowPipeRenderer.PLUG_DENSE);
         event.register(SnowPipeRenderer.DOCK_BASIC);
         event.register(SnowPipeRenderer.DOCK_DENSE);
-        event.register(SnowPipeRenderer.BAND_BASIC);
-        event.register(SnowPipeRenderer.BAND_DENSE);
+        event.register(CryoDiodeRenderer.WHEEL);
+        event.register(SnowPipeRenderer.LAMP_BASIC);
+        event.register(SnowPipeRenderer.LAMP_DENSE);
+        event.register(SnowPipeRenderer.LAMP_GLASS_BASIC);
+        event.register(SnowPipeRenderer.LAMP_GLASS_DENSE);
     }
 
     /** Rune glow layers on top of the mod's models. */

@@ -3,13 +3,16 @@
   "ambientocclusion": false,
   "render_type": "minecraft:translucent",
   "textures": {
-    "particle": "golem_logix:block/bus_plate",
+    "particle": "golem_logix:block/bus_iron",
     "plate": "golem_logix:block/bus_plate",
+    "iron": "golem_logix:block/bus_iron",
+    "copper": "golem_logix:block/bus_copper",
+    "bronze": "golem_logix:block/bus_bronze",
     "socket": "golem_logix:block/bus_socket",
     "su": "golem_logix:block/pipe_glass_u",
     "sv": "golem_logix:block/pipe_glass_v",
     "sd": "golem_logix:block/pipe_glass_d",
-    "band": "golem_logix:block/pipe_band"
+    "band": "golem_logix:block/bus_iron"
   },
   "elements": [
     {

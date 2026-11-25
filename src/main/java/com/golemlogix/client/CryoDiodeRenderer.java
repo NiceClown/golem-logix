@@ -4,24 +4,27 @@ import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.CryoDiodeBlockEntity;
 import com.golemlogix.blocks.CryoDiodeBlock;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
+import net.neoforged.neoforge.client.model.data.ModelData;
 
 /**
- * Cryo-Diode: the five-handled brass wheel on the valve's stem. It turns slowly while Source flows through the valve and stops
- * where it is when the flow stops.
+ * Cryo-Diode: the handwheel on the valve's stem (rendered from the baked model so the spokes and hub have full 3D geometry).
+ * Turns slowly while Source flows through the valve and freezes at its angle when flow stops.
  */
 public class CryoDiodeRenderer implements BlockEntityRenderer<CryoDiodeBlockEntity> {
-    private static final ResourceLocation WHEEL = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/dev_diode_wheel5.png");
-    /** The wheel round the stem at (8, y, 8) of the north-facing frame: two layers for its thickness, its radius (pixels). */
-    private static final float Y0 = 14.6f, Y1 = 15.3f, R = 5.6f, SPEED = 2.5f;
+    public static final ModelResourceLocation WHEEL = ModelResourceLocation.standalone(
+            ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/cryo_diode_wheel"));
+    private static final float SPEED = 2.5f;
 
     public CryoDiodeRenderer(BlockEntityRendererProvider.Context context) {
     }
@@ -41,17 +44,16 @@ public class CryoDiodeRenderer implements BlockEntityRenderer<CryoDiodeBlockEnti
             be.wheelTick = now;
         }
         float angle = be.wheelAngle + (turning ? SPEED * partialTick : 0f);
+        BakedModel wheel = Minecraft.getInstance().getModelManager().getModel(WHEEL);
+        var renderer = Minecraft.getInstance().getBlockRenderer().getModelRenderer();
+
         pose.pushPose();
         orient(pose, be.getFacing());
         pose.translate(0.5f, 0, 0.5f);
         pose.mulPose(Axis.YP.rotationDegrees(angle));
-        VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(WHEEL));
-        PoseStack.Pose p = pose.last();
-        float r = R / 16f;
-        for (float y : new float[]{Y0 / 16f, Y1 / 16f}) {
-            // one quad a layer: this render type draws both sides, a second quad on top of the first would flicker
-            quad(vc, p, y, r, light, 1);
-        }
+        pose.translate(-0.5f, 0, -0.5f);
+        renderer.renderModel(pose.last(), buffers.getBuffer(RenderType.cutout()), null, wheel, 1f, 1f, 1f, light,
+                OverlayTexture.NO_OVERLAY, ModelData.EMPTY, RenderType.cutout());
         pose.popPose();
     }
 
@@ -68,14 +70,5 @@ public class CryoDiodeRenderer implements BlockEntityRenderer<CryoDiodeBlockEnti
             }
         }
         pose.translate(-0.5f, -0.5f, -0.5f);
-    }
-
-    private static void quad(VertexConsumer vc, PoseStack.Pose p, float y, float r, int light, int up) {
-        float[][] c = {{-r, -r, 0, 0}, {-r, r, 0, 1}, {r, r, 1, 1}, {r, -r, 1, 0}};
-        for (int i = 0; i < 4; i++) {
-            float[] v = c[up > 0 ? i : 3 - i];
-            vc.addVertex(p, v[0], y, v[1]).setColor(0xFFFFFFFF).setUv(v[2], v[3]).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light)
-                    .setNormal(p, 0, up, 0);
-        }
     }
 }

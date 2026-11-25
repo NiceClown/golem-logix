@@ -8,7 +8,7 @@
     "sat_b_22": "golem_logix:block/sat_b_22",
     "sat_bronze": "golem_logix:block/sat_bronze",
     "sat_r_12": "golem_logix:block/sat_r_12",
-    "sat_top": "golem_logix:block/sat_top"
+    "sat_roof_21": "golem_logix:block/sat_roof_21"
   },
   "elements": [
     {
@@ -27,7 +27,7 @@
       "faces": {
         "south": {"texture": "#sat_b_22"},
         "west": {"texture": "#sat_r_12"},
-        "up": {"texture": "#sat_top"},
+        "up": {"texture": "#sat_roof_21"},
         "down": {"texture": "#sat_bronze"}
       }
     }

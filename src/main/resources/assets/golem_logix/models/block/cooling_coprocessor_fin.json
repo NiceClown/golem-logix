@@ -2,16 +2,63 @@
   "parent": "minecraft:block/block",
   "ambientocclusion": false,
   "textures": {
-    "particle": "golem_logix:block/cryo_fin",
-    "panel": "golem_logix:block/cryo_panel",
-    "fin": "golem_logix:block/cryo_fin"
+    "particle": "golem_logix:block/cop_fin",
+    "iron": "golem_logix:block/cop_iron",
+    "copper": "golem_logix:block/cop_copper",
+    "top": "golem_logix:block/cop_top",
+    "spindle": "golem_logix:block/cop_spindle",
+    "fin": "golem_logix:block/cop_fin"
   },
   "elements": [
     {
-      "from": [1, 0, 1],
-      "to": [15, 1, 15],
+      "from": [1.5, 0, 1.5],
+      "to": [14.5, 1, 14.5],
       "faces": {
         "north": {"texture": "#fin"},
+        "south": {"texture": "#fin"},
+        "east": {"texture": "#fin"},
+        "west": {"texture": "#fin"},
+        "up": {"texture": "#fin"},
+        "down": {"texture": "#fin"}
+      }
+    },
+    {
+      "from": [0.75, 0.2, 2.25],
+      "to": [1.5, 0.8, 13.75],
+      "faces": {
+        "north": {"texture": "#fin"},
+        "south": {"texture": "#fin"},
+        "west": {"texture": "#fin"},
+        "up": {"texture": "#fin"},
+        "down": {"texture": "#fin"}
+      }
+    },
+    {
+      "from": [14.5, 0.2, 2.25],
+      "to": [15.25, 0.8, 13.75],
+      "faces": {
+        "north": {"texture": "#fin"},
+        "south": {"texture": "#fin"},
+        "east": {"texture": "#fin"},
+        "up": {"texture": "#fin"},
+        "down": {"texture": "#fin"}
+      }
+    },
+    {
+      "from": [2.25, 0.2, 0.75],
+      "to": [13.75, 0.8, 1.5],
+      "faces": {
+        "north": {"texture": "#fin"},
+        "east": {"texture": "#fin"},
+        "west": {"texture": "#fin"},
+        "up": {"texture": "#fin"},
+        "down": {"texture": "#fin"}
+      }
+    },
+    {
+      "from": [2.25, 0.2, 14.5],
+      "to": [13.75, 0.8, 15.25],
+      "faces": {
         "south": {"texture": "#fin"},
         "east": {"texture": "#fin"},
         "west": {"texture": "#fin"},

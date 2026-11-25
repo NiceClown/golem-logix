@@ -63,9 +63,9 @@ public class StockManometerBlock extends DirectionalBlock implements GolemNode, 
 
     /** The clock head out front, the flange on the block behind; not a full cube, so the set-back parts of the model are lit. */
     private static final java.util.Map<Direction, net.minecraft.world.phys.shapes.VoxelShape> SHAPES = java.util.Map.of(
-            Direction.NORTH, Block.box(1, 1, 4.5, 15, 16, 16), Direction.SOUTH, Block.box(1, 1, 0, 15, 16, 11.5),
-            Direction.WEST, Block.box(4.5, 1, 1, 16, 16, 15), Direction.EAST, Block.box(0, 1, 1, 11.5, 16, 15),
-            Direction.UP, Block.box(1, 0, 0, 15, 11.5, 16), Direction.DOWN, Block.box(1, 4.5, 0, 15, 16, 16));
+            Direction.NORTH, Block.box(1.5, 1, 3.75, 14.5, 16, 16), Direction.SOUTH, Block.box(1.5, 1, 0, 14.5, 16, 12.25),
+            Direction.WEST, Block.box(3.75, 1, 1.5, 16, 16, 14.5), Direction.EAST, Block.box(0, 1, 1.5, 12.25, 16, 14.5),
+            Direction.UP, Block.box(1.5, 0, 0, 14.5, 12.25, 16), Direction.DOWN, Block.box(1.5, 3.75, 0, 14.5, 16, 16));
 
     @Override
     protected net.minecraft.world.phys.shapes.VoxelShape getShape(BlockState state, net.minecraft.world.level.BlockGetter level,

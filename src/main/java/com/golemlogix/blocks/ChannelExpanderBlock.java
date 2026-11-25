@@ -16,7 +16,7 @@ public class ChannelExpanderBlock extends Block implements AtlasPart, GolemNode 
     private final boolean quantum;
 
     public ChannelExpanderBlock(boolean quantum, Properties properties) {
-        super(properties.sound(SoundType.AMETHYST).strength(5.0f, 8.0f).lightLevel(s -> quantum ? 12 : 9).requiresCorrectToolForDrops());
+        super(properties.sound(SoundType.AMETHYST).strength(5.0f, 8.0f).lightLevel(s -> quantum ? 12 : 9).requiresCorrectToolForDrops().noOcclusion());
         this.quantum = quantum;
     }
 

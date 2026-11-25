@@ -29,7 +29,7 @@ public class AnnihilationBusRenderer implements BlockEntityRenderer<Annihilation
     private static final ResourceLocation GOLEM = ResourceLocation.withDefaultNamespace("textures/entity/iron_golem/iron_golem.png");
     private static final ResourceLocation BELT = ResourceLocation.fromNamespaceAndPath(com.golemlogix.GolemLogixMod.MOD_ID, "textures/entity/plasma_belt.png");
     /** About 10 pixels tall, on the niche floor (y 2), in the middle of its depth (z 0..5). */
-    private static final float SCALE = 0.235f, FLOOR = 2f, GOLEM_Z = 2.9f;
+    private static final float SCALE = 0.235f, FLOOR = 2f, GOLEM_Z = 3.6f;
     private final ModelPart golem;
 
     public AnnihilationBusRenderer(BlockEntityRendererProvider.Context context) {

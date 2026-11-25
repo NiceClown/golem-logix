@@ -11,7 +11,7 @@ import java.util.*;
 public final class Forge2 {
     static final Path RES = Path.of("src/main/resources/assets/golem_logix");
     static final String NS = "golem_logix:block/";
-    static final int K = 4;
+    static final int K = 2;
     static final Path PREVIEW = Path.of("build/preview");
 
     static final int[] BRASS = Paint.BRASS, BRONZE = Paint.BRONZE, IRON = Paint.IRON, CYAN = Paint.CYAN, VIOLET = Paint.VIOLET,
@@ -177,6 +177,9 @@ public final class Forge2 {
                 p.rect(3.3 + i * 2.4, 19.7, 4.7 + i * 2.4, 21.3, i < 3 ? at(CYAN, 4 - i * 0.5) : at(IRON, 3));
             }
         }
+        // engraved rune rows on the bronze bands at the top and the bottom, a few lit teal
+        Carve.runeRow(p, 1.4, 14.6, 1.1, 1.2, (int) seed + 7, at(BRONZE, 0.3), at(CYAN, 4.6));
+        Carve.runeRow(p, 1.4, 14.6, 29.0, 1.2, (int) seed + 8, at(BRONZE, 0.3), at(CYAN, 4.6));
         p.frostLine(0, 16, 0, 0.5, seed + 3);
         return p;
     }
@@ -721,6 +724,8 @@ public final class Forge2 {
         for (int i = 0; i < 6; i++) {
             p.rect(5.0, 5.2 + i * 0.95, 11.0, 5.7 + i * 0.95, at(IRON, 0.2));
         }
+        // a ring of engraved runes round the grate, every fourth inlaid teal
+        Carve.runeRing(p, 8, 8, 5.8, 1.05, 10, 512, at(BRONZE, 0.3), at(CYAN, 4.6));
         for (double[] c : new double[][]{{2.2, 2.2}, {13.8, 2.2}, {2.2, 13.8}, {13.8, 13.8}}) {
             p.screw(c[0], c[1], 0.6, BRASS, c[0]);
         }
@@ -819,6 +824,10 @@ public final class Forge2 {
         cabinet();
         Buses.all();
         Pipes.all();
+        Nixie.all();
+        GolemBuses.all();
+        GolemDevices.all();
+        DevicesV3.all();
         Terminals.all();
         Saturator.all();
     }

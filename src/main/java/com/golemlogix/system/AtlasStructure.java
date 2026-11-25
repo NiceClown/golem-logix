@@ -1,6 +1,7 @@
 package com.golemlogix.system;
 
 import com.golemlogix.blocks.AtlantBlock;
+import com.golemlogix.blocks.AtlasCasingBlock;
 import com.golemlogix.init.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
@@ -71,6 +72,53 @@ public final class AtlasStructure {
                     BlockState s = level.getBlockState(pos);
                     if (s.is(ModBlocks.ATLAS_ATLANT.get()) && s.getValue(AtlantBlock.FACING) != face) {
                         level.setBlock(pos, s.setValue(AtlantBlock.FACING, face), 18);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Gives every casing of the array around the core its part of the assembled look (formed) or takes it back (not formed). Cheap
+     * and idempotent: the core runs it with its check once a second, so an array of an older world dresses itself on load and an
+     * array losing a block undresses within a second. A side column stands only where both of its casings are casings (an expander
+     * leaves a gap).
+     */
+    public static void dress(Level level, BlockPos corePos, boolean formed) {
+        BlockPos origin = corePos.below(3);
+        for (int dy = 1; dy <= 3; dy++) {
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    if (dx == 0 && dz == 0) {
+                        continue;
+                    }
+                    BlockPos pos = origin.offset(dx, dy, dz);
+                    if (!level.isLoaded(pos)) {
+                        continue;
+                    }
+                    BlockState state = level.getBlockState(pos);
+                    if (!(state.getBlock() instanceof AtlasCasingBlock)) {
+                        continue;
+                    }
+                    BlockState want = state.setValue(AtlasCasingBlock.PART, AtlasCasingBlock.Part.NONE)
+                            .setValue(AtlasCasingBlock.FACING, net.minecraft.core.Direction.NORTH);
+                    if (formed) {
+                        net.minecraft.core.Direction xOut = dx < 0 ? net.minecraft.core.Direction.WEST : net.minecraft.core.Direction.EAST;
+                        net.minecraft.core.Direction zOut = dz < 0 ? net.minecraft.core.Direction.NORTH : net.minecraft.core.Direction.SOUTH;
+                        boolean corner = dx != 0 && dz != 0;
+                        if (dy == 3) {
+                            // a corner faces the outer side whose counter-clockwise neighbour is its other outer side
+                            net.minecraft.core.Direction face = !corner ? (dx != 0 ? xOut : zOut) : zOut.getCounterClockWise() == xOut ? zOut : xOut;
+                            want = want.setValue(AtlasCasingBlock.PART, corner ? AtlasCasingBlock.Part.TOP_CORNER : AtlasCasingBlock.Part.TOP_EDGE)
+                                    .setValue(AtlasCasingBlock.FACING, face);
+                        } else if (!corner && level.getBlockState(origin.offset(dx, 1, dz)).getBlock() instanceof AtlasCasingBlock
+                                && level.getBlockState(origin.offset(dx, 2, dz)).getBlock() instanceof AtlasCasingBlock) {
+                            want = want.setValue(AtlasCasingBlock.PART, dy == 1 ? AtlasCasingBlock.Part.COLUMN_LOW : AtlasCasingBlock.Part.COLUMN_HIGH)
+                                    .setValue(AtlasCasingBlock.FACING, dx != 0 ? xOut : zOut);
+                        }
+                    }
+                    if (want != state) {
+                        level.setBlock(pos, want, 18);
                     }
                 }
             }

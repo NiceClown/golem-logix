@@ -67,7 +67,9 @@
         "north": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
         "south": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
         "east": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
-        "west": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}}
+        "west": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
+        "up": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
+        "down": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}}
       }
     },
     {
@@ -77,7 +79,9 @@
         "north": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
         "south": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
         "east": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
-        "west": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}}
+        "west": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
+        "up": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
+        "down": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}}
       }
     },
     {
@@ -87,7 +91,9 @@
         "north": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
         "south": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
         "east": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
-        "west": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}}
+        "west": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
+        "up": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
+        "down": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}}
       }
     },
     {
@@ -97,7 +103,9 @@
         "north": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
         "south": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
         "east": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
-        "west": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}}
+        "west": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
+        "up": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}},
+        "down": {"texture": "#sat_cryo_tube", "neoforge_data": {"block_light": 10, "sky_light": 10}}
       }
     },
     {
