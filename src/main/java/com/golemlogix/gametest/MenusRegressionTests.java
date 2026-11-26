@@ -4,6 +4,7 @@ import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.BusBlockEntity;
 import com.golemlogix.blockentity.CardCatalogBlockEntity;
 import com.golemlogix.blockentity.CopperDriveBayBlockEntity;
+import com.golemlogix.blockentity.CopperTankBlockEntity;
 import com.golemlogix.blockentity.CryoMixerBlockEntity;
 import com.golemlogix.blockentity.InterfaceBlockEntity;
 import com.golemlogix.blockentity.PatternEncoderBlockEntity;
@@ -26,6 +27,7 @@ import com.golemlogix.network.MonitorPayload;
 import com.golemlogix.network.PrecraftPayload;
 import com.golemlogix.network.RecipeFillPayload;
 import com.golemlogix.network.TerminalActionPayload;
+import com.golemlogix.network.TerminalInfoPayload;
 import com.golemlogix.network.TerminalListPayload;
 import com.golemlogix.security.SecurityPermission;
 import com.golemlogix.system.DiskStorage;
@@ -43,11 +45,17 @@ import net.minecraft.gametest.framework.FunctionGameTestInstance;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.TestData;
 import net.minecraft.gametest.framework.TestEnvironmentDefinition;
+import net.minecraft.network.Connection;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.PacketFlow;
+import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.CommonListenerCookie;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.ItemStack;
@@ -64,6 +72,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.gametest.GameTestHooks;
 import net.neoforged.neoforge.network.connection.ConnectionType;
 import net.neoforged.neoforge.registries.RegisterEvent;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -86,7 +95,8 @@ public final class MenusRegressionTests {
             new Entry("menuscodecboundsrejectmalformed", MenusRegressionTests::codecBoundsRejectMalformed, 40),
             new Entry("menusslotandghostsafety", MenusRegressionTests::slotAndGhostSafety, 120),
             new Entry("menusterminalcachefreshness", MenusRegressionTests::terminalCacheFreshness, 120),
-            new Entry("menusterminalclientindex", MenusRegressionTests::terminalClientIndex, 40)
+            new Entry("menusterminalclientindex", MenusRegressionTests::terminalClientIndex, 40),
+            new Entry("menusterminalinfoliverefresh", MenusRegressionTests::terminalInfoLiveRefresh, 120)
     );
 
     private MenusRegressionTests() {
@@ -566,5 +576,115 @@ public final class MenusRegressionTests {
                 "empty reset clears entries and index");
 
         helper.succeed();
+    }
+
+    private static List<TerminalInfoPayload> attachInfoRecorder(ServerPlayer player) {
+        List<TerminalInfoPayload> received = new ArrayList<>();
+        player.connection = new ServerGamePacketListenerImpl(
+                player.level().getServer(),
+                new Connection(PacketFlow.SERVERBOUND),
+                player,
+                CommonListenerCookie.createInitial(player.getGameProfile(), false)) {
+            @Override
+            public void send(Packet<?> packet) {
+                if (packet instanceof ClientboundCustomPayloadPacket custom
+                        && custom.payload() instanceof TerminalInfoPayload info) {
+                    received.add(info);
+                }
+            }
+        };
+        return received;
+    }
+
+    private static int fluidAmount(TerminalInfoPayload info, net.minecraft.world.level.material.Fluid fluid) {
+        for (FluidStack f : info.fluids()) {
+            if (f.getFluid() == fluid) {
+                return f.getAmount();
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Verifies TerminalSync suppresses duplicate TerminalInfoPayload packets when nothing changed, yet immediately
+     * updates on the next broadcastChanges() after inserting an empty item disk, an empty or pre-filled fluid disk,
+     * or externally filling/draining a fluid tank behind a Periscope Storage Bus.
+     */
+    private static void terminalInfoLiveRefresh(GameTestHelper helper) {
+        BlockPos bayPos = baseNetwork(helper);
+        helper.setBlock(TERM, ModBlocks.ANALOG_TERMINAL.get().defaultBlockState());
+        helper.setBlock(BUS_OUT, ModBlocks.PERISCOPE_STORAGE_BUS.get().defaultBlockState()
+                .setValue(DirectionalBlock.FACING, Direction.NORTH));
+        BlockPos tankPos = BUS_OUT.north();
+        helper.setBlock(tankPos, ModBlocks.COPPER_TANK.get().defaultBlockState());
+
+        ServerPlayer player = fakePlayer(helper, "menus-info-recorder");
+        List<TerminalInfoPayload> received = attachInfoRecorder(player);
+        BlockPos absTerm = helper.absolutePos(TERM);
+        int delay = (int) (10 - (helper.getLevel().getGameTime() % 10)) + 10;
+
+        helper.runAfterDelay(delay, () -> {
+            CopperDriveBayBlockEntity bay = helper.getBlockEntity(bayPos, CopperDriveBayBlockEntity.class);
+            CopperTankBlockEntity tank = helper.getBlockEntity(tankPos, CopperTankBlockEntity.class);
+            TerminalMenu menu = new TerminalMenu(104, player.getInventory(), helper.getLevel(), absTerm, absTerm,
+                    ModBlocks.ANALOG_TERMINAL.get(), false, false, 0);
+
+            // Initial sync sends TerminalInfoPayload with 1K item disk and no fluids
+            menu.broadcastChanges();
+            helper.assertTrue(received.size() == 1, "initial sync sends TerminalInfoPayload");
+            long baseItemCap = received.get(0).itemsCapacity();
+            helper.assertTrue(baseItemCap > 0 && received.get(0).fluidsCapacity() == 0 && received.get(0).fluids().isEmpty(),
+                    "initial info reflects 1K item disk and empty fluids");
+
+            // Unchanged sync suppresses redundant TerminalInfoPayload
+            menu.broadcastChanges();
+            helper.assertTrue(received.size() == 1, "unchanged sync must not resend TerminalInfoPayload");
+
+            // 1. Inserting an empty item disk (networkEpoch unchanged, items unchanged) updates itemsCapacity immediately
+            ItemStack emptyItemDisk = new ItemStack(ModItems.COPPER_DISK_16K.get());
+            bay.getContainer().setItem(1, emptyItemDisk);
+            menu.broadcastChanges();
+            helper.assertTrue(received.size() == 2, "empty item disk insert must trigger updated TerminalInfoPayload");
+            helper.assertTrue(received.get(1).itemsCapacity() == baseItemCap + DiskStorage.capacity(emptyItemDisk),
+                    "itemsCapacity reflects newly inserted empty 16K disk");
+
+            // 2. Inserting an empty fluid disk updates fluidsCapacity immediately
+            ItemStack emptyFluidDisk = new ItemStack(ModItems.FLUID_DISK_16K.get());
+            bay.getContainer().setItem(2, emptyFluidDisk);
+            menu.broadcastChanges();
+            helper.assertTrue(received.size() == 3, "empty fluid disk insert must trigger updated TerminalInfoPayload");
+            long fluidDiskCap = DiskStorage.capacity(emptyFluidDisk);
+            helper.assertTrue(received.get(2).fluidsCapacity() == fluidDiskCap && received.get(2).fluidsUsed() == 0,
+                    "fluidsCapacity reflects newly inserted empty fluid disk");
+
+            // 3. Inserting a pre-filled fluid disk updates fluidsUsed and fluids list immediately
+            ItemStack filledFluidDisk = new ItemStack(ModItems.FLUID_DISK_16K.get());
+            DiskStorage.insertFluid(filledFluidDisk, new FluidStack(Fluids.LAVA, 2000), false);
+            bay.getContainer().setItem(3, filledFluidDisk);
+            menu.broadcastChanges();
+            helper.assertTrue(received.size() == 4, "filled fluid disk insert must trigger updated TerminalInfoPayload");
+            helper.assertTrue(received.get(3).fluidsCapacity() == fluidDiskCap * 2
+                            && received.get(3).fluidsUsed() == 2000
+                            && fluidAmount(received.get(3), Fluids.LAVA) == 2000,
+                    "filled fluid disk updates fluidsUsed, fluidsCapacity, and fluid list");
+
+            // 4. Externally filling tank behind Periscope (bypassing GolemNetwork.insertFluid) updates fluids immediately
+            tank.tank().set(0, FluidResource.of(Fluids.WATER), 3000);
+            menu.broadcastChanges();
+            helper.assertTrue(received.size() == 5, "external Periscope tank fill must trigger updated TerminalInfoPayload");
+            helper.assertTrue(fluidAmount(received.get(4), Fluids.WATER) == 3000
+                            && fluidAmount(received.get(4), Fluids.LAVA) == 2000,
+                    "external Periscope tank water appears alongside disk lava");
+
+            // 5. Externally draining tank behind Periscope removes water immediately
+            tank.tank().set(0, FluidResource.EMPTY, 0);
+            menu.broadcastChanges();
+            helper.assertTrue(received.size() == 6, "external Periscope tank drain must trigger updated TerminalInfoPayload");
+            helper.assertTrue(fluidAmount(received.get(5), Fluids.WATER) == 0
+                            && fluidAmount(received.get(5), Fluids.LAVA) == 2000,
+                    "drained Periscope tank fluid disappears while disk lava stays");
+
+            helper.succeed();
+        });
     }
 }

@@ -20,8 +20,8 @@ import java.util.Set;
 
 /**
  * Server-side item/craftable delta tracking and status bar syncing for {@link TerminalMenu}.
- * Sends chunked full lists on initial open, single-pass diffs afterwards, and caches disk/fluid
- * info totals against {@code (net, net.networkEpoch())} so unchanged ticks avoid redundant disk scans.
+ * Sends chunked full lists on initial open, single-pass diffs afterwards, and compares status-bar
+ * fields before allocating or sending a {@link TerminalInfoPayload}.
  */
 final class TerminalSync {
     @Nullable
@@ -30,14 +30,6 @@ final class TerminalSync {
     private Set<ItemKey> lastCraftable;
     @Nullable
     private TerminalInfoPayload lastInfo;
-    @Nullable
-    private GolemNetwork lastStatsNet;
-    private long lastStatsEpoch = Long.MIN_VALUE;
-    private long cachedItemsUsed;
-    private long cachedItemsCap;
-    private long cachedFluidsUsed;
-    private long cachedFluidsCap;
-    private List<FluidStack> cachedFluids = List.of();
     private boolean forceSync = true;
 
     void markDirty() {
@@ -57,17 +49,15 @@ final class TerminalSync {
         Map<ItemKey, Long> items = err == null ? net.listItemsShared() : Map.of();
         Set<ItemKey> liveCraftable = err == null ? net.patternIndex().keySet() : Set.of();
 
-        boolean itemsDiff = false;
         if (lastItems == null) {
             sendList(sp, containerId, items, liveCraftable);
             lastItems = items;
             lastCraftable = liveCraftable.isEmpty() ? Set.of() : Set.copyOf(liveCraftable);
-            itemsDiff = true;
         } else {
             boolean checkItems = items != lastItems;
             boolean craftableChanged = !liveCraftable.equals(lastCraftable);
             if (checkItems || craftableChanged) {
-                itemsDiff = sendChanges(sp, containerId, items, liveCraftable, checkItems, craftableChanged);
+                sendChanges(sp, containerId, items, liveCraftable, checkItems, craftableChanged);
                 if (craftableChanged) {
                     lastCraftable = liveCraftable.isEmpty() ? Set.of() : Set.copyOf(liveCraftable);
                 }
@@ -75,11 +65,11 @@ final class TerminalSync {
             lastItems = items;
         }
 
-        syncInfo(sp, containerId, net, err, wireless, chronometer, itemsDiff);
+        syncInfo(sp, containerId, net, err, wireless, chronometer);
     }
 
     private void syncInfo(ServerPlayer sp, int containerId, GolemNetwork net, @Nullable String err,
-                          boolean wireless, @Nullable ItemStack chronometer, boolean itemsDiff) {
+                          boolean wireless, @Nullable ItemStack chronometer) {
         int busy = 0;
         int total = 0;
         long itemsUsed = 0;
@@ -96,24 +86,11 @@ final class TerminalSync {
                     }
                 }
             }
-            long epoch = net.networkEpoch();
-            if (net != lastStatsNet || epoch != lastStatsEpoch || itemsDiff) {
-                lastStatsNet = net;
-                lastStatsEpoch = epoch;
-                cachedItemsUsed = net.itemsStoredOnDisks();
-                cachedItemsCap = net.itemCapacity();
-                cachedFluidsUsed = net.fluidStoredOnDisks();
-                cachedFluidsCap = net.fluidCapacity();
-                cachedFluids = net.listFluids();
-            }
-            itemsUsed = cachedItemsUsed;
-            itemsCap = cachedItemsCap;
-            fluidsUsed = cachedFluidsUsed;
-            fluidsCap = cachedFluidsCap;
-            fluids = cachedFluids;
-        } else {
-            lastStatsNet = null;
-            cachedFluids = List.of();
+            itemsUsed = net.itemsStoredOnDisks();
+            itemsCap = net.itemCapacity();
+            fluidsUsed = net.fluidStoredOnDisks();
+            fluidsCap = net.fluidCapacity();
+            fluids = net.listFluids();
         }
         int charge = -1;
         boolean resonator = false;
@@ -171,12 +148,11 @@ final class TerminalSync {
 
     /**
      * Diffs {@code items}/{@code craftable} against the previous snapshot in a single pass and sends only changed entries
-     * (an entry with count 0 and !craftable is removed on the client). Returns true if any stored item count differed.
+     * (an entry with count 0 and !craftable is removed on the client).
      */
-    private boolean sendChanges(ServerPlayer sp, int containerId, Map<ItemKey, Long> items, Set<ItemKey> craftable,
-                                boolean checkItems, boolean craftableChanged) {
+    private void sendChanges(ServerPlayer sp, int containerId, Map<ItemKey, Long> items, Set<ItemKey> craftable,
+                             boolean checkItems, boolean craftableChanged) {
         List<TerminalListPayload.Entry> changes = null;
-        boolean itemsDiff = false;
         if (!checkItems) {
             // Only the craftable set changed: scan craftable/lastCraftable directly instead of every stored item
             for (ItemKey k : craftable) {
@@ -202,13 +178,11 @@ final class TerminalSync {
                         continue;
                     }
                 }
-                itemsDiff = true;
                 changes = addChange(changes, k.stack(), e.getValue(), anyCraftable && craftable.contains(k));
             }
             if (seen < lastItems.size()) {
                 for (ItemKey k : lastItems.keySet()) {
                     if (!items.containsKey(k)) {
-                        itemsDiff = true;
                         changes = addChange(changes, k.stack(), 0, anyCraftable && craftable.contains(k));
                     }
                 }
@@ -226,9 +200,6 @@ final class TerminalSync {
                     countDiff = true;
                 }
                 boolean can = craftable.contains(k);
-                if (countDiff) {
-                    itemsDiff = true;
-                }
                 if (countDiff || can != lastCraftable.contains(k)) {
                     changes = addChange(changes, k.stack(), e.getValue(), can);
                 }
@@ -236,7 +207,6 @@ final class TerminalSync {
             if (seen < lastItems.size()) {
                 for (ItemKey k : lastItems.keySet()) {
                     if (!items.containsKey(k)) {
-                        itemsDiff = true;
                         changes = addChange(changes, k.stack(), 0, craftable.contains(k));
                     }
                 }
@@ -253,7 +223,7 @@ final class TerminalSync {
             }
         }
         if (changes == null) {
-            return itemsDiff;
+            return;
         }
         for (int i = 0; i < changes.size(); i += TerminalListPayload.CHUNK) {
             int end = Math.min(changes.size(), i + TerminalListPayload.CHUNK);
@@ -261,7 +231,6 @@ final class TerminalSync {
                     ? changes : new ArrayList<>(changes.subList(i, end));
             PacketDistributor.sendToPlayer(sp, new TerminalListPayload(containerId, false, chunk));
         }
-        return itemsDiff;
     }
 
     private static void sendList(ServerPlayer sp, int containerId, Map<ItemKey, Long> items, Set<ItemKey> craftable) {
