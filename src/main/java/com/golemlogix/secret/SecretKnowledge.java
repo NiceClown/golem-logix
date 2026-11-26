@@ -86,11 +86,8 @@ public final class SecretKnowledge {
         if (id.equals(MIND)) {
             sync(sp);
             if (event.getProgressType() == AdvancementEvent.AdvancementProgressEvent.ProgressType.GRANT) {
-                Component link = Component.translatable("message.golem_logix.secret.open_book").withStyle(style -> style
-                        .withColor(ChatFormatting.AQUA).withUnderlined(true)
-                        .withClickEvent(new ClickEvent.RunCommand("/golemlogix_book dispel"))
-                        .withHoverEvent(new HoverEvent.ShowText(Component.translatable("message.golem_logix.secret.open_book_hint"))));
-                sp.sendSystemMessage(Component.translatable("message.golem_logix.mind.unlocked").withStyle(ChatFormatting.AQUA).append(" ").append(link));
+                sp.sendSystemMessage(Component.translatable("message.golem_logix.mind.unlocked")
+                        .withStyle(ChatFormatting.AQUA).append(" ").append(bookLink("dispel")));
             }
             return;
         }
@@ -101,13 +98,18 @@ public final class SecretKnowledge {
         sync(sp);
         if (event.getProgressType() == AdvancementEvent.AdvancementProgressEvent.ProgressType.GRANT) {
             // a page opened in the book: clicking the message opens it
-            String entry = s[0] && s[1] ? "wither" : "secret_hint";
-            Component link = Component.translatable("message.golem_logix.secret.open_book").withStyle(style -> style
-                    .withColor(ChatFormatting.AQUA).withUnderlined(true)
-                    .withClickEvent(new ClickEvent.RunCommand("/golemlogix_book " + entry))
-                    .withHoverEvent(new HoverEvent.ShowText(Component.translatable("message.golem_logix.secret.open_book_hint"))));
-            String key = s[0] && s[1] ? "message.golem_logix.secret.revealed" : "message.golem_logix.secret.page";
-            sp.sendSystemMessage(Component.translatable(key).withStyle(ChatFormatting.LIGHT_PURPLE).append(" ").append(link));
+            boolean bothDone = s[0] && s[1];
+            String entry = bothDone ? "wither" : "secret_hint";
+            String key = bothDone ? "message.golem_logix.secret.revealed" : "message.golem_logix.secret.page";
+            sp.sendSystemMessage(Component.translatable(key).withStyle(ChatFormatting.LIGHT_PURPLE)
+                    .append(" ").append(bookLink(entry)));
         }
+    }
+
+    private static Component bookLink(String entry) {
+        return Component.translatable("message.golem_logix.secret.open_book").withStyle(style -> style
+                .withColor(ChatFormatting.AQUA).withUnderlined(true)
+                .withClickEvent(new ClickEvent.RunCommand("/golemlogix_book " + entry))
+                .withHoverEvent(new HoverEvent.ShowText(Component.translatable("message.golem_logix.secret.open_book_hint"))));
     }
 }

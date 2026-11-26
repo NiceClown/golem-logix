@@ -2,9 +2,15 @@ package com.golemlogix.init;
 
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.items.*;
+import com.golemlogix.upgrade.UpgradeType;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
+
+import java.util.function.Supplier;
 
 public class ModItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(GolemLogixMod.MOD_ID);
@@ -57,53 +63,53 @@ public class ModItems {
     public static final DeferredItem<CopperPunchCardItem> COPPER_PUNCH_CARD = item("copper_punch_card",
             () -> new CopperPunchCardItem(props()));
 
-    public static final DeferredItem<com.golemlogix.items.IdentityPunchCardItem> IDENTITY_PUNCH_CARD = item("identity_punch_card",
-            () -> new com.golemlogix.items.IdentityPunchCardItem(props()));
+    public static final DeferredItem<IdentityPunchCardItem> IDENTITY_PUNCH_CARD = item("identity_punch_card",
+            () -> new IdentityPunchCardItem(props()));
 
     /** Pipe Plug: closes a side of a pipe so neighbouring lines do not merge. */
     public static final DeferredItem<PipePlugItem> PIPE_PLUG = item("pipe_plug",
             () -> new PipePlugItem(props().stacksTo(64)));
 
     /** Forge Hammer: forges plates on the anvil (an unassembled Saturator); charged with Source from a jar. */
-    public static final DeferredItem<com.golemlogix.items.ForgeHammerItem> FORGE_HAMMER = item("forge_hammer",
-            () -> new com.golemlogix.items.ForgeHammerItem(props()));
+    public static final DeferredItem<ForgeHammerItem> FORGE_HAMMER = item("forge_hammer",
+            () -> new ForgeHammerItem(props()));
 
     public static final DeferredItem<PortableChronometerItem> PORTABLE_CHRONOMETER = item("portable_chronometer",
             () -> new PortableChronometerItem(props().stacksTo(1)));
 
     // Cryo-Source Telegraph cards: the link card and the two range cards (the same tiers as the Chronometer)
-    public static final DeferredItem<com.golemlogix.items.TelegraphLinkCardItem> AETHERIAL_LINKAGE = item("aetherial_linkage",
-            () -> new com.golemlogix.items.TelegraphLinkCardItem(props().stacksTo(16)));
+    public static final DeferredItem<TelegraphLinkCardItem> AETHERIAL_LINKAGE = item("aetherial_linkage",
+            () -> new TelegraphLinkCardItem(props().stacksTo(16)));
 
-    public static final DeferredItem<com.golemlogix.items.TelegraphRangeCardItem> AETHER_RESONANCE_CORE = item("aether_resonance_core",
-            () -> new com.golemlogix.items.TelegraphRangeCardItem(1, props().stacksTo(16)));
+    public static final DeferredItem<TelegraphRangeCardItem> AETHER_RESONANCE_CORE = item("aether_resonance_core",
+            () -> new TelegraphRangeCardItem(1, props().stacksTo(16)));
 
-    public static final DeferredItem<com.golemlogix.items.TelegraphRangeCardItem> VOID_GLASS_PRISM = item("void_glass_prism",
-            () -> new com.golemlogix.items.TelegraphRangeCardItem(2, props().stacksTo(16)));
+    public static final DeferredItem<TelegraphRangeCardItem> VOID_GLASS_PRISM = item("void_glass_prism",
+            () -> new TelegraphRangeCardItem(2, props().stacksTo(16)));
 
     // Machine upgrades
     public static final DeferredItem<UpgradeItem> COMPRESSED_COPROCESSOR = item("compressed_coprocessor",
-            () -> new UpgradeItem(com.golemlogix.upgrade.UpgradeType.SPEED, "tooltip.golem_logix.compressed_coprocessor",
+            () -> new UpgradeItem(UpgradeType.SPEED, "tooltip.golem_logix.compressed_coprocessor",
                     props().stacksTo(64)));
     /** The Co-Processor on Create's assembly line (the transitional item of its sequenced assembly recipe). */
-    public static final DeferredItem<com.golemlogix.items.IncompleteAssemblyItem> INCOMPLETE_COMPRESSED_COPROCESSOR =
-            item("incomplete_compressed_coprocessor", () -> new com.golemlogix.items.IncompleteAssemblyItem(props()));
+    public static final DeferredItem<IncompleteAssemblyItem> INCOMPLETE_COMPRESSED_COPROCESSOR =
+            item("incomplete_compressed_coprocessor", () -> new IncompleteAssemblyItem(props()));
 
     public static final DeferredItem<UpgradeItem> AUTOCRAFT_MODULE = item("autocraft_module",
-            () -> new UpgradeItem(com.golemlogix.upgrade.UpgradeType.CRAFTING, "tooltip.golem_logix.autocraft_module",
+            () -> new UpgradeItem(UpgradeType.CRAFTING, "tooltip.golem_logix.autocraft_module",
                     props().stacksTo(16)));
 
     public static final DeferredItem<UpgradeItem> REDSTONE_MODULE = item("redstone_module",
-            () -> new UpgradeItem(com.golemlogix.upgrade.UpgradeType.REDSTONE, "tooltip.golem_logix.redstone_module",
+            () -> new UpgradeItem(UpgradeType.REDSTONE, "tooltip.golem_logix.redstone_module",
                     props().stacksTo(16)));
     /** Plasma Temper (secret, from the Wither's plasma): the Annihilation Bus's golem never wears its tool. */
     public static final DeferredItem<UpgradeItem> PLASMA_TEMPER = item("plasma_temper",
-            () -> new UpgradeItem(com.golemlogix.upgrade.UpgradeType.TEMPER, "tooltip.golem_logix.plasma_temper",
+            () -> new UpgradeItem(UpgradeType.TEMPER, "tooltip.golem_logix.plasma_temper",
                     props().stacksTo(16)));
 
     /** Fuzzy Card: the filters of a bus or an interface match fuzzily (any components, or a tag chosen on the filter). */
     public static final DeferredItem<UpgradeItem> FUZZY_CARD = item("fuzzy_card",
-            () -> new UpgradeItem(com.golemlogix.upgrade.UpgradeType.FUZZY, "tooltip.golem_logix.fuzzy_card",
+            () -> new UpgradeItem(UpgradeType.FUZZY, "tooltip.golem_logix.fuzzy_card",
                     props().stacksTo(16)));
 
     // Magnetic Copper Storage Disks (Raw Item Count - RS style)
@@ -139,15 +145,14 @@ public class ModItems {
             () -> new MagneticDiskItem(256000, true, props()));
 
     /** The item being built right now: since 1.21.2 its properties must carry its id. */
-    private static net.minecraft.resources.Identifier building;
+    private static Identifier building;
 
     /** Properties of the item being registered, with its id set. */
     private static Item.Properties props() {
-        return new Item.Properties().setId(net.minecraft.resources.ResourceKey.create(
-                net.minecraft.core.registries.Registries.ITEM, building));
+        return new Item.Properties().setId(ResourceKey.create(Registries.ITEM, building));
     }
 
-    private static <T extends Item> DeferredItem<T> item(String name, java.util.function.Supplier<T> supplier) {
+    private static <T extends Item> DeferredItem<T> item(String name, Supplier<T> supplier) {
         return ITEMS.register(name, id -> {
             building = id;
             try {
