@@ -28,8 +28,11 @@ import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * The anvil ritual, from data packs ("golem_logix:anvil_crushing"): a falling anvil on a battered golem flattens it into the
@@ -117,7 +120,7 @@ public record AnvilCrushingRecipe(HolderSet<EntityType<?>> entity, List<String> 
 
     /** The entity types this ritual accepts (JEI): the listed ones, then any registered type whose id contains a word. */
     public List<EntityType<?>> entityTypes() {
-        List<EntityType<?>> out = new java.util.ArrayList<>();
+        Set<EntityType<?>> out = new LinkedHashSet<>();
         entity.forEach(h -> out.add(h.value()));
         if (!entityIdContains.isEmpty()) {
             for (EntityType<?> type : BuiltInRegistries.ENTITY_TYPE) {
@@ -126,7 +129,7 @@ public record AnvilCrushingRecipe(HolderSet<EntityType<?>> entity, List<String> 
                 }
             }
         }
-        return out;
+        return new ArrayList<>(out);
     }
 
     @Override

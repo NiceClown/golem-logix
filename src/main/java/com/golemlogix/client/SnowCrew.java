@@ -1,9 +1,9 @@
 package com.golemlogix.client;
 
+import com.golemlogix.client.render.BerBuffers;
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.Minecraft;
+import com.mojang.math.Axis;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -30,14 +30,32 @@ public final class SnowCrew {
     private static final float PART_SIZE = 0.3f;
     private static final Vector3f UP_LEFT = new Vector3f(3f, 27f, 5f), UP_RIGHT = new Vector3f(-3f, 27f, 5f);
     private static final Vector3f UP_CENTER = new Vector3f(0f, 27.5f, 5f);
+    private static final Vector3f FOREMAN_R0 = new Vector3f(-8f, 17f, 7f), FOREMAN_R1 = new Vector3f(-6f, 28f, 5f);
+    private static final Vector3f FOREMAN_L_REST = new Vector3f(7.5f, 12f, 1.5f);
+    private static final Vector3f FOREMAN_L_POINT = new Vector3f(3f, 24f, 9f), FOREMAN_R_POINT = new Vector3f(-3f, 24f, 9f);
+
+    // Render-thread scratch buffers (consumed synchronously by SnowmanPuppet.render)
+    private static final Vector3f WORKER_POS = new Vector3f();
+    private static final Vector3f IDLE_L = new Vector3f(), IDLE_R = new Vector3f();
+    private static final Vector3f WORK_L = new Vector3f(), WORK_R = new Vector3f(), WORK_BOX = new Vector3f();
+    private static final Vector3f BLEND_L = new Vector3f(), BLEND_R = new Vector3f();
+    private static final Vector3f FOREMAN_POS = new Vector3f(), FOREMAN_R = new Vector3f();
+
+    private static final WorkState WORK = new WorkState();
+    private static final IdleState IDLE = new IdleState();
 
     private SnowCrew() {
     }
 
-    private record WorkData(SnowmanPuppet.Pose pose, Vector3f heldAt, float boxSize) {
+    private static final class WorkState {
+        float bob, squash, pitch, boxSize;
+        Vector3f lh, rh;
+        boolean hasBox;
     }
 
-    private record IdleData(SnowmanPuppet.Pose pose, float yaw) {
+    private static final class IdleState {
+        float bob, squash, headYaw, headPitch, yaw;
+        Vector3f lh, rh;
     }
 
     /**
@@ -49,36 +67,41 @@ public final class SnowCrew {
         float blend = ease(work);
         for (int i = 0; i < CREW.length; i++) {
             Worker w = CREW[i];
-            Vector3f pos = new Vector3f(w.x / 16f, floorY, w.z / 16f);
-            float toCenter = (float) Math.toDegrees(Math.atan2(0.5f - pos.x, 0.5f - pos.z));
+            WORKER_POS.set(w.x / 16f, floorY, w.z / 16f);
+            float toCenter = (float) Math.toDegrees(Math.atan2(0.5f - WORKER_POS.x, 0.5f - WORKER_POS.z));
             float offset = (float) Math.floorMod(seed * 31 + i * 977L, 1000L) / 1000f;
             if (blend <= 0.001f) {
-                IdleData id = computeIdle(time, seed, i, toCenter, offset);
-                SnowmanPuppet.render(pose, buffers, light, pos, id.yaw, w.scale, SnowmanPuppet.Head.SNOW, id.pose, null);
+                computeIdle(time, seed, i, toCenter, offset);
+                SnowmanPuppet.Pose p = new SnowmanPuppet.Pose(IDLE.bob, IDLE.squash, IDLE.headYaw, IDLE.headPitch, IDLE.lh, IDLE.rh);
+                SnowmanPuppet.render(pose, buffers, light, WORKER_POS, IDLE.yaw, w.scale, SnowmanPuppet.Head.SNOW, p, null);
             } else if (blend >= 0.999f) {
-                WorkData wd = computeWorking(pose, buffers, light, time, w, pos, toCenter, offset, proj, 1f);
-                SnowmanPuppet.render(pose, buffers, light, pos, toCenter, w.scale, SnowmanPuppet.Head.SNOW, wd.pose,
-                        wd.heldAt == null ? null : hp -> {
-                            hp.translate((wd.heldAt.x - SnowmanPuppet.HOLD_CENTER.x) / 16f, (wd.heldAt.y - SnowmanPuppet.HOLD_CENTER.y) / 16f,
-                                    (wd.heldAt.z - SnowmanPuppet.HOLD_CENTER.z) / 16f);
-                            cube(hp, buffers, light, wd.boxSize);
+                computeWorking(pose, buffers, light, time, w, WORKER_POS, toCenter, offset, proj, 1f);
+                SnowmanPuppet.Pose p = new SnowmanPuppet.Pose(WORK.bob, WORK.squash, 0f, WORK.pitch, WORK.lh, WORK.rh);
+                float bx = WORK_BOX.x, by = WORK_BOX.y, bz = WORK_BOX.z, bSize = WORK.boxSize;
+                SnowmanPuppet.render(pose, buffers, light, WORKER_POS, toCenter, w.scale, SnowmanPuppet.Head.SNOW, p,
+                        !WORK.hasBox ? null : hp -> {
+                            hp.translate((bx - SnowmanPuppet.HOLD_CENTER.x) / 16f, (by - SnowmanPuppet.HOLD_CENTER.y) / 16f,
+                                    (bz - SnowmanPuppet.HOLD_CENTER.z) / 16f);
+                            cube(hp, buffers, light, bSize);
                         });
             } else {
-                IdleData id = computeIdle(time, seed, i, toCenter, offset);
-                WorkData wd = computeWorking(pose, buffers, light, time, w, pos, toCenter, offset, proj, blend);
-                float yaw = Mth.rotLerp(blend, id.yaw, toCenter);
+                computeIdle(time, seed, i, toCenter, offset);
+                computeWorking(pose, buffers, light, time, w, WORKER_POS, toCenter, offset, proj, blend);
+                float yaw = Mth.rotLerp(blend, IDLE.yaw, toCenter);
+                BLEND_L.set(IDLE.lh).lerp(WORK.lh, blend);
+                BLEND_R.set(IDLE.rh).lerp(WORK.rh, blend);
                 SnowmanPuppet.Pose p = new SnowmanPuppet.Pose(
-                        Mth.lerp(blend, id.pose.bob(), wd.pose.bob()),
-                        Mth.lerp(blend, id.pose.squash(), wd.pose.squash()),
-                        Mth.lerp(blend, id.pose.headYaw(), wd.pose.headYaw()),
-                        Mth.lerp(blend, id.pose.headPitch(), wd.pose.headPitch()),
-                        lerp(id.pose.leftHand(), wd.pose.leftHand(), blend),
-                        lerp(id.pose.rightHand(), wd.pose.rightHand(), blend));
-                float finalSize = wd.boxSize * blend;
-                SnowmanPuppet.render(pose, buffers, light, pos, yaw, w.scale, SnowmanPuppet.Head.SNOW, p,
-                        wd.heldAt == null || finalSize <= 0.01f ? null : hp -> {
-                            hp.translate((wd.heldAt.x - SnowmanPuppet.HOLD_CENTER.x) / 16f, (wd.heldAt.y - SnowmanPuppet.HOLD_CENTER.y) / 16f,
-                                    (wd.heldAt.z - SnowmanPuppet.HOLD_CENTER.z) / 16f);
+                        Mth.lerp(blend, IDLE.bob, WORK.bob),
+                        Mth.lerp(blend, IDLE.squash, WORK.squash),
+                        Mth.lerp(blend, IDLE.headYaw, 0f),
+                        Mth.lerp(blend, IDLE.headPitch, WORK.pitch),
+                        BLEND_L, BLEND_R);
+                float bx = WORK_BOX.x, by = WORK_BOX.y, bz = WORK_BOX.z;
+                float finalSize = WORK.boxSize * blend;
+                SnowmanPuppet.render(pose, buffers, light, WORKER_POS, yaw, w.scale, SnowmanPuppet.Head.SNOW, p,
+                        !WORK.hasBox || finalSize <= 0.01f ? null : hp -> {
+                            hp.translate((bx - SnowmanPuppet.HOLD_CENTER.x) / 16f, (by - SnowmanPuppet.HOLD_CENTER.y) / 16f,
+                                    (bz - SnowmanPuppet.HOLD_CENTER.z) / 16f);
                             cube(hp, buffers, light, finalSize);
                         });
             }
@@ -88,69 +111,76 @@ public final class SnowCrew {
         }
     }
 
-    private static WorkData computeWorking(PoseStack pose, MultiBufferSource buffers, int light, float time, Worker w, Vector3f pos,
-                                           float yaw, float offset, Vector3f proj, float blend) {
+    private static void computeWorking(PoseStack pose, MultiBufferSource buffers, int light, float time, Worker w, Vector3f pos,
+                                       float yaw, float offset, Vector3f proj, float blend) {
         float f = ((time / w.period) + offset) % 1f;
-        Vector3f lh, rh, box = null;
-        float bob = 0f, squash = 0f, pitch, boxSize = PART_SIZE;
+        WORK.bob = 0f;
+        WORK.squash = 0f;
+        WORK.hasBox = false;
+        WORK.boxSize = PART_SIZE;
         if (f < 0.15f) {
             // bent down for a part
             float k = f / 0.15f, dip = Mth.sin(k * Mth.PI);
-            squash = 0.14f * dip;
-            pitch = 25f;
-            lh = new Vector3f(SnowmanPuppet.HOLD_LEFT).add(0f, -4f * dip, 0f);
-            rh = new Vector3f(SnowmanPuppet.HOLD_RIGHT).add(0f, -4f * dip, 0f);
+            WORK.squash = 0.14f * dip;
+            WORK.pitch = 25f;
+            WORK.lh = WORK_L.set(SnowmanPuppet.HOLD_LEFT).add(0f, -4f * dip, 0f);
+            WORK.rh = WORK_R.set(SnowmanPuppet.HOLD_RIGHT).add(0f, -4f * dip, 0f);
             if (k > 0.5f) {
-                box = new Vector3f(SnowmanPuppet.HOLD_CENTER).add(0f, -4f * dip, 0f);
-                boxSize = PART_SIZE * (k - 0.5f) * 2f;
+                WORK_BOX.set(SnowmanPuppet.HOLD_CENTER).add(0f, -4f * dip, 0f);
+                WORK.hasBox = true;
+                WORK.boxSize = PART_SIZE * (k - 0.5f) * 2f;
             }
         } else if (f < 0.45f) {
             // lifts it over its head
             float k = ease((f - 0.15f) / 0.3f);
-            pitch = Mth.lerp(k, 10f, -30f);
-            lh = lerp(SnowmanPuppet.HOLD_LEFT, UP_LEFT, k);
-            rh = lerp(SnowmanPuppet.HOLD_RIGHT, UP_RIGHT, k);
-            box = lerp(SnowmanPuppet.HOLD_CENTER, UP_CENTER, k);
-            bob = 0.6f * k;
+            WORK.pitch = Mth.lerp(k, 10f, -30f);
+            WORK.lh = WORK_L.set(SnowmanPuppet.HOLD_LEFT).lerp(UP_LEFT, k);
+            WORK.rh = WORK_R.set(SnowmanPuppet.HOLD_RIGHT).lerp(UP_RIGHT, k);
+            WORK_BOX.set(SnowmanPuppet.HOLD_CENTER).lerp(UP_CENTER, k);
+            WORK.hasBox = true;
+            WORK.bob = 0.6f * k;
         } else if (f < 0.75f) {
             // tossed it: the part flies into the projection, the arms go down
             float k = (f - 0.45f) / 0.3f;
-            pitch = -35f;
-            lh = lerp(UP_LEFT, SnowmanPuppet.REST_LEFT, ease(k));
-            rh = lerp(UP_RIGHT, SnowmanPuppet.REST_RIGHT, ease(k));
+            WORK.pitch = -35f;
+            float ek = ease(k);
+            WORK.lh = WORK_L.set(UP_LEFT).lerp(SnowmanPuppet.REST_LEFT, ek);
+            WORK.rh = WORK_R.set(UP_RIGHT).lerp(SnowmanPuppet.REST_RIGHT, ek);
             if (blend > 0.25f) {
                 flyingPart(pose, buffers, light, pos, yaw, w.scale, proj, k, (blend - 0.25f) / 0.75f);
             }
         } else {
             // pleased: hopped
             float k = (f - 0.75f) / 0.25f;
-            bob = 1.6f * Mth.sin(k * Mth.PI);
-            pitch = -10f;
-            lh = SnowmanPuppet.REST_LEFT;
-            rh = SnowmanPuppet.REST_RIGHT;
+            WORK.bob = 1.6f * Mth.sin(k * Mth.PI);
+            WORK.pitch = -10f;
+            WORK.lh = SnowmanPuppet.REST_LEFT;
+            WORK.rh = SnowmanPuppet.REST_RIGHT;
         }
-        return new WorkData(new SnowmanPuppet.Pose(bob, squash, 0f, pitch, lh, rh), box, boxSize);
     }
 
     /** A part in flight from the raised hands to the projection: in an arc, shrinking. */
     private static void flyingPart(PoseStack pose, MultiBufferSource buffers, int light, Vector3f pos, float yaw, float scale,
                                    Vector3f proj, float k, float blendScale) {
-        float rad = yaw * Mth.DEG_TO_RAD;
-        float sx = UP_CENTER.z * Mth.sin(rad), sz = UP_CENTER.z * Mth.cos(rad);
-        Vector3f start = new Vector3f(pos.x + sx / 16f * scale, pos.y + UP_CENTER.y / 16f * scale, pos.z + sz / 16f * scale);
-        Vector3f at = lerp(start, proj, k).add(0f, 0.08f * Mth.sin(k * Mth.PI), 0f);
         float size = PART_SIZE * scale * (1f - 0.8f * k) * blendScale;
         if (size <= 0.001f) {
             return;
         }
+        float rad = yaw * Mth.DEG_TO_RAD;
+        float startX = pos.x + UP_CENTER.z * Mth.sin(rad) / 16f * scale;
+        float startY = pos.y + UP_CENTER.y / 16f * scale;
+        float startZ = pos.z + UP_CENTER.z * Mth.cos(rad) / 16f * scale;
+        float atX = Mth.lerp(k, startX, proj.x);
+        float atY = Mth.lerp(k, startY, proj.y) + 0.08f * Mth.sin(k * Mth.PI);
+        float atZ = Mth.lerp(k, startZ, proj.z);
         pose.pushPose();
-        pose.translate(at.x, at.y, at.z);
-        pose.mulPose(com.mojang.math.Axis.YP.rotationDegrees(k * 540f));
+        pose.translate(atX, atY, atZ);
+        pose.mulPose(Axis.YP.rotationDegrees(k * 540f));
         cube(pose, buffers, light, size);
         pose.popPose();
     }
 
-    private static IdleData computeIdle(float time, long seed, int i, float toCenter, float offset) {
+    private static void computeIdle(float time, long seed, int i, float toCenter, float offset) {
         float t = time + offset * 400f;
         long window = (long) Math.floor(t / 120f);
         long h = seed * 6364136223846793005L + i * 1442695040888963407L + window * 0x9E3779B97F4A7C15L;
@@ -158,36 +188,48 @@ public final class SnowCrew {
         float local = t - window * 120f;
         // a smooth start and end of each "activity"
         float fade = Mth.clamp(Math.min(local, 120f - local) / 15f, 0f, 1f);
-        float yaw = toCenter;
-        SnowmanPuppet.Pose p;
+        IDLE.yaw = toCenter;
+        IDLE.bob = 0f;
+        IDLE.squash = 0f;
+        IDLE.headYaw = 0f;
         switch (activity) {
             case 0 -> {
                 // looks around
-                yaw = toCenter + 60f * Mth.sin(t * 0.04f) * fade;
-                p = new SnowmanPuppet.Pose(0f, 0f, 35f * Mth.sin(t * 0.09f) * fade, -5f, SnowmanPuppet.REST_LEFT, SnowmanPuppet.REST_RIGHT);
+                IDLE.yaw = toCenter + 60f * Mth.sin(t * 0.04f) * fade;
+                IDLE.headYaw = 35f * Mth.sin(t * 0.09f) * fade;
+                IDLE.headPitch = -5f;
+                IDLE.lh = SnowmanPuppet.REST_LEFT;
+                IDLE.rh = SnowmanPuppet.REST_RIGHT;
             }
             case 1 -> {
                 // hops in a circle on the spot
-                yaw = toCenter + local * 3f * fade;
+                IDLE.yaw = toCenter + local * 3f * fade;
                 float hop = Math.abs(Mth.sin(t * 0.3f)) * fade;
-                p = new SnowmanPuppet.Pose(2.2f * hop, 0.12f * (1f - hop) * fade, 0f, -10f,
-                        new Vector3f(9f, 18f + 6f * hop, 2f), new Vector3f(-9f, 18f + 6f * hop, 2f));
+                IDLE.bob = 2.2f * hop;
+                IDLE.squash = 0.12f * (1f - hop) * fade;
+                IDLE.headPitch = -10f;
+                IDLE.lh = IDLE_L.set(9f, 18f + 6f * hop, 2f);
+                IDLE.rh = IDLE_R.set(-9f, 18f + 6f * hop, 2f);
             }
             case 2 -> {
                 // turned away from the centre and waves
-                yaw = toCenter + 180f * fade;
+                IDLE.yaw = toCenter + 180f * fade;
                 float wave = Mth.sin(t * 0.5f);
-                p = new SnowmanPuppet.Pose(0f, 0f, 0f, -15f * fade, SnowmanPuppet.REST_LEFT,
-                        lerp(SnowmanPuppet.REST_RIGHT, new Vector3f(-9f + 2f * wave, 27f, 3f + 3f * wave), fade));
+                IDLE.headPitch = -15f * fade;
+                IDLE.lh = SnowmanPuppet.REST_LEFT;
+                IDLE.rh = IDLE_R.set(-9f + 2f * wave, 27f, 3f + 3f * wave);
+                IDLE_L.set(SnowmanPuppet.REST_RIGHT).lerp(IDLE_R, fade);
+                IDLE.rh = IDLE_L;
             }
             default -> {
                 // dozes: the head droops, it breathes
                 float nod = 0.5f + 0.5f * Mth.sin(t * 0.05f);
-                p = new SnowmanPuppet.Pose(0f, 0.04f * Mth.sin(t * 0.08f) * fade, 0f, (20f + 12f * nod) * fade,
-                        SnowmanPuppet.REST_LEFT, SnowmanPuppet.REST_RIGHT);
+                IDLE.squash = 0.04f * Mth.sin(t * 0.08f) * fade;
+                IDLE.headPitch = (20f + 12f * nod) * fade;
+                IDLE.lh = SnowmanPuppet.REST_LEFT;
+                IDLE.rh = SnowmanPuppet.REST_RIGHT;
             }
         }
-        return new IdleData(p, yaw);
     }
 
     /** The foreman with an atlant head at the front edge: waves, nods, hops to the beat, urging the crew on. */
@@ -195,16 +237,19 @@ public final class SnowCrew {
         float pop = easeOutBack(appear);
         float beat = time / 14f * Mth.TWO_PI;
         float pump = 0.5f + 0.5f * Mth.sin(beat);
-        Vector3f right = lerp(new Vector3f(-8f, 17f, 7f), new Vector3f(-6f, 28f, 5f), pump);
-        Vector3f left = new Vector3f(7.5f, 12f, 1.5f);
+        Vector3f left, right;
         // once every few beats it points at the projection with both hands: "there, there!"
         if (Mth.sin(time * 0.021f) > 0.85f) {
-            left = new Vector3f(3f, 24f, 9f);
-            right = new Vector3f(-3f, 24f, 9f);
+            left = FOREMAN_L_POINT;
+            right = FOREMAN_R_POINT;
+        } else {
+            left = FOREMAN_L_REST;
+            right = FOREMAN_R.set(FOREMAN_R0).lerp(FOREMAN_R1, pump);
         }
         SnowmanPuppet.Pose p = new SnowmanPuppet.Pose(0.8f * Math.abs(Mth.sin(beat * 0.5f)), 0f, 12f * Mth.sin(time * 0.05f),
                 8f * Mth.sin(beat), left, right);
-        SnowmanPuppet.render(pose, buffers, light, new Vector3f(0.5f, floorY, 14.2f / 16f), 180f, 0.2f * pop,
+        FOREMAN_POS.set(0.5f, floorY, 14.2f / 16f);
+        SnowmanPuppet.render(pose, buffers, light, FOREMAN_POS, 180f, 0.2f * pop,
                 SnowmanPuppet.Head.ATLANT, p, null);
     }
 
@@ -215,12 +260,8 @@ public final class SnowCrew {
         pose.pushPose();
         pose.scale(size, size, size);
         pose.translate(-0.5f, -0.5f, -0.5f);
-        com.golemlogix.client.render.BerBuffers.block(buffers, PART, pose, light);
+        BerBuffers.block(buffers, PART, pose, light);
         pose.popPose();
-    }
-
-    private static Vector3f lerp(Vector3f a, Vector3f b, float k) {
-        return new Vector3f(a).lerp(b, k);
     }
 
     private static float ease(float k) {

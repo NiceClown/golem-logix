@@ -73,25 +73,21 @@ public final class BusLinks {
         return state.setValue(PROPS.get(direction), GolemNode.linked(level, pos, state, pos.relative(direction), neighbor, direction));
     }
 
+    private static BlockState remapHorizontal(BlockState state, java.util.function.UnaryOperator<Direction> map) {
+        return state
+                .setValue(DirectionalBlock.FACING, map.apply(state.getValue(DirectionalBlock.FACING)))
+                .setValue(PROPS.get(map.apply(Direction.NORTH)), state.getValue(BlockStateProperties.NORTH))
+                .setValue(PROPS.get(map.apply(Direction.EAST)), state.getValue(BlockStateProperties.EAST))
+                .setValue(PROPS.get(map.apply(Direction.SOUTH)), state.getValue(BlockStateProperties.SOUTH))
+                .setValue(PROPS.get(map.apply(Direction.WEST)), state.getValue(BlockStateProperties.WEST));
+    }
+
     public static BlockState rotate(BlockState state, net.minecraft.world.level.block.Rotation rotation) {
-        BlockState rotated = state.setValue(DirectionalBlock.FACING, rotation.rotate(state.getValue(DirectionalBlock.FACING)));
-        return rotated
-                .setValue(PROPS.get(rotation.rotate(Direction.NORTH)), state.getValue(BlockStateProperties.NORTH))
-                .setValue(PROPS.get(rotation.rotate(Direction.EAST)), state.getValue(BlockStateProperties.EAST))
-                .setValue(PROPS.get(rotation.rotate(Direction.SOUTH)), state.getValue(BlockStateProperties.SOUTH))
-                .setValue(PROPS.get(rotation.rotate(Direction.WEST)), state.getValue(BlockStateProperties.WEST));
+        return remapHorizontal(state, rotation::rotate);
     }
 
     public static BlockState mirror(BlockState state, net.minecraft.world.level.block.Mirror mirror) {
-        if (mirror == net.minecraft.world.level.block.Mirror.NONE) {
-            return state;
-        }
-        BlockState mirrored = state.setValue(DirectionalBlock.FACING, mirror.mirror(state.getValue(DirectionalBlock.FACING)));
-        return mirrored
-                .setValue(PROPS.get(mirror.mirror(Direction.NORTH)), state.getValue(BlockStateProperties.NORTH))
-                .setValue(PROPS.get(mirror.mirror(Direction.EAST)), state.getValue(BlockStateProperties.EAST))
-                .setValue(PROPS.get(mirror.mirror(Direction.SOUTH)), state.getValue(BlockStateProperties.SOUTH))
-                .setValue(PROPS.get(mirror.mirror(Direction.WEST)), state.getValue(BlockStateProperties.WEST));
+        return mirror == net.minecraft.world.level.block.Mirror.NONE ? state : remapHorizontal(state, mirror::mirror);
     }
 
     // ----------------------------------------------------------------------------------------------- shapes

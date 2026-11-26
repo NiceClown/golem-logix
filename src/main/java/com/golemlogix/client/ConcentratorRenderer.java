@@ -1,20 +1,19 @@
 package com.golemlogix.client;
 
-import net.minecraft.util.LightCoordsUtil;
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.SchematicConcentratorBlockEntity;
 import com.golemlogix.blocks.SchematicConcentratorBlock;
 import com.golemlogix.client.render.GlowTypes;
+import com.golemlogix.client.render.LegacyBer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.AABB;
 
@@ -23,7 +22,7 @@ import net.minecraft.world.phys.AABB;
  * is open, glowing "punch cards" fan out of the screen and the rings spin faster. Everything is drawn glowing ({@link GlowTypes}: added
  * to the light, textures with a black background instead of transparency).
  */
-public class ConcentratorRenderer extends com.golemlogix.client.render.LegacyBer<SchematicConcentratorBlockEntity> {
+public class ConcentratorRenderer extends LegacyBer<SchematicConcentratorBlockEntity> {
     private static final Identifier HOLO = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/concentrator_holo.png"),
             CARD = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/concentrator_card.png");
 
@@ -44,7 +43,7 @@ public class ConcentratorRenderer extends com.golemlogix.client.render.LegacyBer
         float holo = Mth.lerp(partialTick, be.holoPrev, be.holo);
         holo = holo * holo * (3 - 2 * holo);
         float spin = Mth.lerp(partialTick, be.spinPrev, be.spin);
-        float time = (be.getLevel() == null ? 0 : be.getLevel().getGameTime()) + partialTick;
+        float time = (be.getLevel() == null ? 0L : be.getLevel().getGameTime() % 72000L) + partialTick;
         pose.pushPose();
         Quads.faceModel(pose, facing);
         // screen centre on the front (pixels): x 8, y 9.3, just in front of the glass

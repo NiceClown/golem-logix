@@ -17,8 +17,11 @@ public final class FluidIcons {
         if (fluid.isEmpty()) {
             return;
         }
-        int tint = tint(fluid);
-        g.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, still(fluid), x, y, 16, 16, (tint >>> 24) == 0 ? tint | 0xFF000000 : tint);
+        var m = model(fluid);
+        var source = m.fluidTintSource();
+        int tint = source == null ? 0xFFFFFFFF : source.colorAsStack(fluid);
+        g.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, m.stillMaterial().sprite(), x, y, 16, 16,
+                (tint >>> 24) == 0 ? tint | 0xFF000000 : tint);
     }
 
     /** The fluid's still texture (from its fluid model, since 26.1). */
@@ -51,7 +54,6 @@ public final class FluidIcons {
         if (label) {
             String text = label(fluid.getAmount());
             g.pose().pushMatrix();
-            g.pose().translate(0, 0);
             g.pose().scale(0.5f, 0.5f);
             g.text(font, text, (x + 16) * 2 - font.width(text) - 1, (y + 16) * 2 - 8, 0xFFFFFFFF, true);
             g.pose().popMatrix();

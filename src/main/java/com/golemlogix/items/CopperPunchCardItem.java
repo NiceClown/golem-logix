@@ -2,14 +2,24 @@ package com.golemlogix.items;
 
 import com.golemlogix.data.PatternData;
 import com.golemlogix.init.ModDataComponents;
+import com.golemlogix.system.ItemKey;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
+import net.minecraft.world.level.Level;
 
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * Copper punch card: blank ones stack up to 64, a written one is single (each has its own recipe, and a stack of
@@ -28,24 +38,21 @@ public class CopperPunchCardItem extends Item {
     public static ItemStack written(Item card, PatternData data) {
         ItemStack s = new ItemStack(card, 1);
         s.set(ModDataComponents.PATTERN.get(), data);
-        s.set(net.minecraft.core.component.DataComponents.MAX_STACK_SIZE, 1);
+        s.set(DataComponents.MAX_STACK_SIZE, 1);
         return s;
     }
 
     /** Shift + right-click with a written card in hand erases the recipe: the card is blank again and stacks. */
     @Override
-    public net.minecraft.world.InteractionResult use(net.minecraft.world.level.Level level,
-                                                                       net.minecraft.world.entity.player.Player player,
-                                                                       net.minecraft.world.InteractionHand hand) {
+    public InteractionResult use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (player.isShiftKeyDown() && hasPattern(stack)) {
             if (!level.isClientSide()) {
                 player.setItemInHand(hand, new ItemStack(stack.getItem(), stack.getCount()));
                 player.sendOverlayMessage(Component.translatable("message.golem_logix.card.cleared"));
-                level.playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.BOOK_PAGE_TURN,
-                        net.minecraft.sounds.SoundSource.PLAYERS, 0.8f, 0.8f);
+                level.playSound(null, player.blockPosition(), SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 0.8f, 0.8f);
             }
-            return net.minecraft.world.InteractionResult.SUCCESS;
+            return InteractionResult.SUCCESS;
         }
         return super.use(level, player, hand);
     }
@@ -56,39 +63,44 @@ public class CopperPunchCardItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
-                                java.util.function.Consumer<Component> lines, TooltipFlag tooltipFlag) {
+    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
+                                Consumer<Component> lines, TooltipFlag tooltipFlag) {
         PatternData data = stack.get(ModDataComponents.PATTERN.get());
         if (data != null) {
-            lines.accept(Component.translatable(data.crafting()
-                    ? "tooltip.golem_logix.punch_card.mode_crafting"
-                    : "tooltip.golem_logix.punch_card.mode_processing").withStyle(ChatFormatting.GREEN));
-            if (data.isFuzzy()) {
-                lines.accept(Component.translatable(data.crafting() ? "tooltip.golem_logix.punch_card.fuzzy_crafting"
-                        : "tooltip.golem_logix.punch_card.fuzzy_processing").withStyle(ChatFormatting.AQUA));
-            }
-            lines.accept(Component.translatable("tooltip.golem_logix.punch_card.inputs").withStyle(ChatFormatting.GRAY));
-            for (Map.Entry<com.golemlogix.system.ItemKey, Integer> e : data.ingredientTotals().entrySet()) {
-                lines.accept(line(e.getValue(), e.getKey().stack()));
-            }
-            // the tags chosen for processing inputs
-            for (int i = 0; i < data.inputs().size(); i++) {
-                if (data.spec(i).startsWith("#")) {
-                    lines.accept(Component.literal("  ≈ ").append(data.inputs().get(i).getHoverName())
-                            .append(" → " + data.spec(i)).withStyle(ChatFormatting.DARK_AQUA));
-                }
-            }
-            lines.accept(Component.translatable("tooltip.golem_logix.punch_card.outputs").withStyle(ChatFormatting.GRAY));
-            for (Map.Entry<com.golemlogix.system.ItemKey, Integer> e : data.outputTotals().entrySet()) {
-                lines.accept(line(e.getValue(), e.getKey().stack()));
-            }
-            lines.accept(Component.translatable("tooltip.golem_logix.punch_card.clear_hint")
-                    .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
+            appendPatternTooltip(data, lines);
         } else {
             lines.accept(Component.translatable("tooltip.golem_logix.punch_card.blank")
                     .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
         }
         super.appendHoverText(stack, context, display, lines, tooltipFlag);
+    }
+
+    private static void appendPatternTooltip(PatternData data, Consumer<Component> lines) {
+        lines.accept(Component.translatable(data.crafting()
+                ? "tooltip.golem_logix.punch_card.mode_crafting"
+                : "tooltip.golem_logix.punch_card.mode_processing").withStyle(ChatFormatting.GREEN));
+        if (data.isFuzzy()) {
+            lines.accept(Component.translatable(data.crafting()
+                    ? "tooltip.golem_logix.punch_card.fuzzy_crafting"
+                    : "tooltip.golem_logix.punch_card.fuzzy_processing").withStyle(ChatFormatting.AQUA));
+        }
+        lines.accept(Component.translatable("tooltip.golem_logix.punch_card.inputs").withStyle(ChatFormatting.GRAY));
+        for (Map.Entry<ItemKey, Integer> e : data.ingredientTotals().entrySet()) {
+            lines.accept(line(e.getValue(), e.getKey().stack()));
+        }
+        // the tags chosen for processing inputs
+        for (int i = 0; i < data.inputs().size(); i++) {
+            if (data.spec(i).startsWith("#")) {
+                lines.accept(Component.literal("  ≈ ").append(data.inputs().get(i).getHoverName())
+                        .append(" → " + data.spec(i)).withStyle(ChatFormatting.DARK_AQUA));
+            }
+        }
+        lines.accept(Component.translatable("tooltip.golem_logix.punch_card.outputs").withStyle(ChatFormatting.GRAY));
+        for (Map.Entry<ItemKey, Integer> e : data.outputTotals().entrySet()) {
+            lines.accept(line(e.getValue(), e.getKey().stack()));
+        }
+        lines.accept(Component.translatable("tooltip.golem_logix.punch_card.clear_hint")
+                .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
     }
 
     private static MutableComponent line(int count, ItemStack stack) {

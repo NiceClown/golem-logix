@@ -24,18 +24,45 @@ public final class NixieDigits {
      */
     public static void digit(PoseStack.Pose p, MultiBufferSource buffers, int digit, Vector3f c, float w, float h, Vector3f right, Vector3f up,
                              int color) {
+        digit(p, buffers, digit, c.x, c.y, c.z, w, h, right.x, right.y, right.z, up.x, up.y, up.z, color);
+    }
+
+    /** Scalar form of {@link #digit}: avoids per-digit Vector3f allocations at call sites. */
+    public static void digit(PoseStack.Pose p, MultiBufferSource buffers, int digit,
+                             float cx, float cy, float cz, float w, float h,
+                             float rx, float ry, float rz, float ux, float uy, float uz, int color) {
         if (digit < 0 || digit > 9) {
             return;
         }
-        VertexConsumer vc = buffers.getBuffer(GlowTypes.glow(DIGITS));
-        float u0 = digit / 10f, u1 = (digit + 1) / 10f;
-        Vector3f n = new Vector3f(right).cross(up);
-        float[][] corners = {{-1, 1, u0, 0}, {-1, -1, u0, 1}, {1, -1, u1, 1}, {1, 1, u1, 0}};
-        for (float[] k : corners) {
-            Vector3f at = new Vector3f(c).add(new Vector3f(right).mul(k[0] * w / 2)).add(new Vector3f(up).mul(k[1] * h / 2)).div(16f);
-            vc.addVertex(p, at.x, at.y, at.z).setColor(color).setUv(k[2], k[3]).setOverlay(OverlayTexture.NO_OVERLAY)
-                    .setLight(0xF000F0).setNormal(p, n.x, n.y, n.z);
+        digit(p, buffers.getBuffer(GlowTypes.glow(DIGITS)), digit, cx, cy, cz, w, h, rx, ry, rz, ux, uy, uz, color);
+    }
+
+    /** Direct-buffer form for drawing several digits without re-looking up the glow buffer. */
+    public static void digit(PoseStack.Pose p, VertexConsumer vc, int digit,
+                             float cx, float cy, float cz, float w, float h,
+                             float rx, float ry, float rz, float ux, float uy, float uz, int color) {
+        if (digit < 0 || digit > 9) {
+            return;
         }
+        float u0 = digit / 10f, u1 = (digit + 1) / 10f;
+        float nx = ry * uz - rz * uy, ny = rz * ux - rx * uz, nz = rx * uy - ry * ux;
+        float hw = w * 0.5f, hh = h * 0.5f;
+        float hrx = rx * hw, hry = ry * hw, hrz = rz * hw;
+        float hux = ux * hh, huy = uy * hh, huz = uz * hh;
+        float inv16 = 1f / 16f;
+        vc.addVertex(p, (cx - hrx + hux) * inv16, (cy - hry + huy) * inv16, (cz - hrz + huz) * inv16)
+                .setColor(color).setUv(u0, 0f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(p, nx, ny, nz);
+        vc.addVertex(p, (cx - hrx - hux) * inv16, (cy - hry - huy) * inv16, (cz - hrz - huz) * inv16)
+                .setColor(color).setUv(u0, 1f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(p, nx, ny, nz);
+        vc.addVertex(p, (cx + hrx - hux) * inv16, (cy + hry - huy) * inv16, (cz + hrz - huz) * inv16)
+                .setColor(color).setUv(u1, 1f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(p, nx, ny, nz);
+        vc.addVertex(p, (cx + hrx + hux) * inv16, (cy + hry + huy) * inv16, (cz + hrz + huz) * inv16)
+                .setColor(color).setUv(u1, 0f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(p, nx, ny, nz);
+    }
+
+    /** The shared glow buffer for drawing a batch of nixie digits. */
+    public static VertexConsumer buffer(MultiBufferSource buffers) {
+        return buffers.getBuffer(GlowTypes.glow(DIGITS));
     }
 
     /** The load colours: cyan while there is room, amber as it fills, red when (nearly) full; a dim ember for nothing at all. */

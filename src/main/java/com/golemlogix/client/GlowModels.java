@@ -24,7 +24,6 @@ import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
 import java.util.ArrayList;
-import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -48,9 +47,12 @@ public final class GlowModels {
     private static final Map<TextureAtlasSprite, Optional<TextureAtlasSprite>> SPRITES = new ConcurrentHashMap<>();
     /** Quad -> its glowing copy (empty if the texture has no glow). */
     private static final Map<BakedQuad, Optional<BakedQuad>> QUADS = new ConcurrentHashMap<>();
-    /** The parts of a model (the same objects every time for a plain model) -> their glow part (empty if nothing glows). */
+    /** Fast path for single-part models (most blocks): avoids creating a List key per collectParts call. */
+    private static final Map<BlockStateModelPart, Optional<GlowPart>> SINGLE_PART = new ConcurrentHashMap<>();
+    /** Multi-part model parts -> their glow part (empty if nothing glows). */
     private static final Map<List<BlockStateModelPart>, Optional<GlowPart>> PARTS = new ConcurrentHashMap<>();
-    private static Function<Identifier, TextureAtlasSprite> textures = id -> null;
+    /** Written on the model-reload worker thread and read by chunk-meshing threads. */
+    private static volatile Function<Identifier, TextureAtlasSprite> textures = id -> null;
 
     private GlowModels() {
     }
@@ -59,6 +61,7 @@ public final class GlowModels {
     public static void wrap(ModelBakery.BakingResult result, Function<Identifier, TextureAtlasSprite> textureGetter) {
         SPRITES.clear();
         QUADS.clear();
+        SINGLE_PART.clear();
         PARTS.clear();
         textures = textureGetter;
         result.blockStateModels().replaceAll((state, model) ->
@@ -129,11 +132,33 @@ public final class GlowModels {
         }
 
         private static void addGlow(List<BlockStateModelPart> parts, int from) {
-            if (parts.size() > from) {
-                PARTS.computeIfAbsent(List.copyOf(parts.subList(from, parts.size())), list -> {
-                    GlowPart glow = new GlowPart(list);
-                    return glow.hasAny() ? Optional.of(glow) : Optional.empty();
-                }).ifPresent(parts::add);
+            int count = parts.size() - from;
+            if (count <= 0) {
+                return;
+            }
+            if (count == 1) {
+                BlockStateModelPart single = parts.get(from);
+                Optional<GlowPart> cached = SINGLE_PART.get(single);
+                if (cached == null) {
+                    GlowPart glow = new GlowPart(List.of(single));
+                    cached = glow.hasAny() ? Optional.of(glow) : Optional.empty();
+                    SINGLE_PART.putIfAbsent(single, cached);
+                }
+                if (cached.isPresent()) {
+                    parts.add(cached.get());
+                }
+                return;
+            }
+            List<BlockStateModelPart> view = from == 0 ? parts : parts.subList(from, parts.size());
+            Optional<GlowPart> cached = PARTS.get(view);
+            if (cached == null) {
+                List<BlockStateModelPart> copy = List.copyOf(view);
+                GlowPart glow = new GlowPart(copy);
+                cached = glow.hasAny() ? Optional.of(glow) : Optional.empty();
+                PARTS.putIfAbsent(copy, cached);
+            }
+            if (cached.isPresent()) {
+                parts.add(cached.get());
             }
         }
     }
@@ -141,36 +166,56 @@ public final class GlowModels {
     /** Only the glowing copies of the faces of the parts, unshaded and without ambient occlusion. */
     static final class GlowPart implements BlockStateModelPart {
         private static final Direction[] SIDES = Direction.values();
-        private final List<BlockStateModelPart> parts;
-        private final Map<Direction, List<BakedQuad>> sides = new EnumMap<>(Direction.class);
+        private final Material.Baked particleMaterial;
+        @SuppressWarnings("unchecked")
+        private final List<BakedQuad>[] sides = new List[SIDES.length];
         private final List<BakedQuad> unculled;
+        private final int materialFlags;
 
         GlowPart(List<BlockStateModelPart> parts) {
-            this.parts = parts;
-            this.unculled = glowing(null);
+            this.particleMaterial = parts.get(0).particleMaterial();
+            this.unculled = glowing(parts, null);
+            int flags = hasTranslucent(unculled) ? BakedQuad.FLAG_TRANSLUCENT : 0;
             for (Direction d : SIDES) {
-                sides.put(d, glowing(d));
+                List<BakedQuad> list = glowing(parts, d);
+                sides[d.ordinal()] = list;
+                if (flags == 0 && hasTranslucent(list)) {
+                    flags = BakedQuad.FLAG_TRANSLUCENT;
+                }
             }
+            this.materialFlags = flags;
         }
 
-        private List<BakedQuad> glowing(@Nullable Direction side) {
-            List<BakedQuad> out = new ArrayList<>();
+        private static List<BakedQuad> glowing(List<BlockStateModelPart> parts, @Nullable Direction side) {
+            List<BakedQuad> out = null;
             for (BlockStateModelPart p : parts) {
                 for (BakedQuad q : p.getQuads(side)) {
                     BakedQuad g = glowOf(q);
                     if (g != null) {
+                        if (out == null) {
+                            out = new ArrayList<>();
+                        }
                         out.add(g);
                     }
                 }
             }
-            return out.isEmpty() ? List.of() : out;
+            return out == null ? List.of() : out;
+        }
+
+        private static boolean hasTranslucent(List<BakedQuad> quads) {
+            for (BakedQuad q : quads) {
+                if (q.materialInfo().layer() == ChunkSectionLayer.TRANSLUCENT) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         boolean hasAny() {
             if (!unculled.isEmpty()) {
                 return true;
             }
-            for (List<BakedQuad> l : sides.values()) {
+            for (List<BakedQuad> l : sides) {
                 if (!l.isEmpty()) {
                     return true;
                 }
@@ -180,7 +225,7 @@ public final class GlowModels {
 
         @Override
         public List<BakedQuad> getQuads(@Nullable Direction direction) {
-            return direction == null ? unculled : sides.get(direction);
+            return direction == null ? unculled : sides[direction.ordinal()];
         }
 
         @Override
@@ -196,24 +241,12 @@ public final class GlowModels {
 
         @Override
         public Material.Baked particleMaterial() {
-            return parts.get(0).particleMaterial();
+            return particleMaterial;
         }
 
         @Override
         public int materialFlags() {
-            for (List<BakedQuad> l : sides.values()) {
-                for (BakedQuad q : l) {
-                    if (q.materialInfo().layer() == ChunkSectionLayer.TRANSLUCENT) {
-                        return BakedQuad.FLAG_TRANSLUCENT;
-                    }
-                }
-            }
-            for (BakedQuad q : unculled) {
-                if (q.materialInfo().layer() == ChunkSectionLayer.TRANSLUCENT) {
-                    return BakedQuad.FLAG_TRANSLUCENT;
-                }
-            }
-            return 0;
+            return materialFlags;
         }
     }
 }

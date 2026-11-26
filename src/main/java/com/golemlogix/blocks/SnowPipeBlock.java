@@ -8,9 +8,10 @@ import net.minecraft.core.Direction;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -23,8 +24,9 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.function.UnaryOperator;
 
-public class SnowPipeBlock extends Block implements com.golemlogix.blocks.RemovalAware, GolemNode, EntityBlock {
+public class SnowPipeBlock extends Block implements RemovalAware, GolemNode, EntityBlock {
     public static final MapCodec<SnowPipeBlock> CODEC = simpleCodec(props -> new SnowPipeBlock(16, false, props));
 
     /**
@@ -187,7 +189,7 @@ public class SnowPipeBlock extends Block implements com.golemlogix.blocks.Remova
         VoxelShape[] out = new VoxelShape[64];
         for (int mask = 0; mask < 64; mask++) {
             VoxelShape shape = core;
-            for (Direction dir : Direction.values()) {
+            for (Direction dir : DIRECTIONS) {
                 if ((mask & (1 << dir.ordinal())) != 0) {
                     shape = Shapes.or(shape, arms.get(dir));
                 }
@@ -220,14 +222,7 @@ public class SnowPipeBlock extends Block implements com.golemlogix.blocks.Remova
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        BlockGetter level = context.getLevel();
-        BlockPos pos = context.getClickedPos();
-        BlockState state = this.defaultBlockState();
-        for (Direction dir : DIRECTIONS) {
-            BlockPos neighborPos = pos.relative(dir);
-            state = state.setValue(LINKS.get(dir), linkTo(level, pos, neighborPos, level.getBlockState(neighborPos), dir));
-        }
-        return state;
+        return relink(this.defaultBlockState(), context.getLevel(), context.getClickedPos());
     }
 
     @Override
@@ -235,7 +230,7 @@ public class SnowPipeBlock extends Block implements com.golemlogix.blocks.Remova
         return state.setValue(LINKS.get(direction), linkTo(level, pos, neighborPos, neighborState, direction));
     }
 
-    /** Recompute all sides (after a plug is added or removed). */
+    /** Recompute all sides (on placement or after a plug is added or removed). */
     public BlockState relink(BlockState state, BlockGetter level, BlockPos pos) {
         for (Direction dir : DIRECTIONS) {
             BlockPos neighborPos = pos.relative(dir);
@@ -244,25 +239,22 @@ public class SnowPipeBlock extends Block implements com.golemlogix.blocks.Remova
         return state;
     }
 
-    @Override
-    protected BlockState rotate(BlockState state, net.minecraft.world.level.block.Rotation rotation) {
+    private static BlockState remapHorizontal(BlockState state, UnaryOperator<Direction> map) {
         return state
-                .setValue(LINKS.get(rotation.rotate(Direction.NORTH)), state.getValue(NORTH))
-                .setValue(LINKS.get(rotation.rotate(Direction.EAST)), state.getValue(EAST))
-                .setValue(LINKS.get(rotation.rotate(Direction.SOUTH)), state.getValue(SOUTH))
-                .setValue(LINKS.get(rotation.rotate(Direction.WEST)), state.getValue(WEST));
+                .setValue(LINKS.get(map.apply(Direction.NORTH)), state.getValue(NORTH))
+                .setValue(LINKS.get(map.apply(Direction.EAST)), state.getValue(EAST))
+                .setValue(LINKS.get(map.apply(Direction.SOUTH)), state.getValue(SOUTH))
+                .setValue(LINKS.get(map.apply(Direction.WEST)), state.getValue(WEST));
     }
 
     @Override
-    protected BlockState mirror(BlockState state, net.minecraft.world.level.block.Mirror mirror) {
-        if (mirror == net.minecraft.world.level.block.Mirror.NONE) {
-            return state;
-        }
-        return state
-                .setValue(LINKS.get(mirror.mirror(Direction.NORTH)), state.getValue(NORTH))
-                .setValue(LINKS.get(mirror.mirror(Direction.EAST)), state.getValue(EAST))
-                .setValue(LINKS.get(mirror.mirror(Direction.SOUTH)), state.getValue(SOUTH))
-                .setValue(LINKS.get(mirror.mirror(Direction.WEST)), state.getValue(WEST));
+    protected BlockState rotate(BlockState state, Rotation rotation) {
+        return remapHorizontal(state, rotation::rotate);
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, Mirror mirror) {
+        return mirror == Mirror.NONE ? state : remapHorizontal(state, mirror::mirror);
     }
 
     /** Replaced by another block (see RemovalAware): plugs drop together with the pipe. */
