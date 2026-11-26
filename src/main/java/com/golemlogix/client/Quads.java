@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.core.Direction;
 
 /** Small helpers for drawing flat textured rectangles in block entity renderers. */
 public final class Quads {
@@ -79,10 +80,25 @@ public final class Quads {
         vertex(vc, pose, x1, y1, z1, u0, v0, argb, light, 1, 0, 0);
     }
 
-    /** Rotate the pose so the model's "front" (north) faces the block's FACING. */
-    public static void faceModel(PoseStack pose, net.minecraft.core.Direction facing) {
+    /** Rotate the pose so the model's horizontal front (north) faces the block's horizontal FACING. */
+    public static void faceModel(PoseStack pose, Direction facing) {
         pose.translate(0.5, 0.5, 0.5);
         pose.mulPose(Axis.YP.rotationDegrees(180f - facing.toYRot()));
         pose.translate(-0.5, -0.5, -0.5);
+    }
+
+    /** Rotate the pose from north-facing to any 6-way block facing (including UP and DOWN, matching blockstate rotations). */
+    public static void orient(PoseStack pose, Direction facing) {
+        pose.translate(0.5f, 0.5f, 0.5f);
+        switch (facing) {
+            case SOUTH -> pose.mulPose(Axis.YP.rotationDegrees(180f));
+            case EAST -> pose.mulPose(Axis.YP.rotationDegrees(-90f));
+            case WEST -> pose.mulPose(Axis.YP.rotationDegrees(90f));
+            case UP -> pose.mulPose(Axis.XP.rotationDegrees(90f));
+            case DOWN -> pose.mulPose(Axis.XP.rotationDegrees(-90f));
+            default -> {
+            }
+        }
+        pose.translate(-0.5f, -0.5f, -0.5f);
     }
 }

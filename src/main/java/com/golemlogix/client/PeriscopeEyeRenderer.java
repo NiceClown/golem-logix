@@ -2,6 +2,7 @@ package com.golemlogix.client;
 
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.PeriscopeBlockEntity;
+import com.golemlogix.client.render.PixelMesh;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -45,13 +46,12 @@ public class PeriscopeEyeRenderer implements BlockEntityRenderer<PeriscopeBlockE
         float into = (float) (time - glance * period);
         target(seed, glance - 1, TARGET_FROM);
         target(seed, glance, TARGET_TO);
-        float k = Mth.clamp(into / DART, 0f, 1f);
-        k = k * k * (3 - 2 * k);
+        float k = PixelMesh.smoothstep(Mth.clamp(into / DART, 0f, 1f));
         float lookX = Mth.lerp(k, TARGET_FROM[0], TARGET_TO[0]), lookY = Mth.lerp(k, TARGET_FROM[1], TARGET_TO[1]);
 
         pose.pushPose();
         // the model's front is north (z = 0); turn it to the bus's facing, up and down included
-        FormationBusRenderer.orient(pose, facing);
+        Quads.orient(pose, facing);
         VertexConsumer vc = buffers.getBuffer(RenderType.entityTranslucent(EYE));
         // seen from the front the model's +X is on the viewer's left, so "right" is -X
         float squeezeX = 1f - 0.25f * Math.abs(lookX) / REACH, squeezeY = 1f - 0.25f * Math.abs(lookY) / REACH;

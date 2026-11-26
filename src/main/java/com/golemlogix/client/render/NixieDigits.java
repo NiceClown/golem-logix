@@ -3,6 +3,7 @@ package com.golemlogix.client.render;
 import com.golemlogix.GolemLogixMod;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -101,15 +102,15 @@ public final class NixieDigits {
         float hw = bw * 0.5f, hh = bh * 0.5f;
         float hrx = rx * hw, hry = ry * hw, hrz = rz * hw;
         float hux = ux * hh, huy = uy * hh, huz = uz * hh;
-        float inv16 = 1f / 16f;
+        float inv16 = PixelMesh.PIXEL;
         vc.addVertex(p, (ox - hrx + hux) * inv16, (oy - hry + huy) * inv16, (oz - hrz + huz) * inv16)
-                .setColor(color).setUv(0f, 0f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(p, nx, ny, nz);
+                .setColor(color).setUv(0f, 0f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(LightTexture.FULL_BRIGHT).setNormal(p, nx, ny, nz);
         vc.addVertex(p, (ox - hrx - hux) * inv16, (oy - hry - huy) * inv16, (oz - hrz - huz) * inv16)
-                .setColor(color).setUv(0f, 0f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(p, nx, ny, nz);
+                .setColor(color).setUv(0f, 0f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(LightTexture.FULL_BRIGHT).setNormal(p, nx, ny, nz);
         vc.addVertex(p, (ox + hrx - hux) * inv16, (oy + hry - huy) * inv16, (oz + hrz - huz) * inv16)
-                .setColor(color).setUv(0f, 0f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(p, nx, ny, nz);
+                .setColor(color).setUv(0f, 0f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(LightTexture.FULL_BRIGHT).setNormal(p, nx, ny, nz);
         vc.addVertex(p, (ox + hrx + hux) * inv16, (oy + hry + huy) * inv16, (oz + hrz + huz) * inv16)
-                .setColor(color).setUv(0f, 0f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(p, nx, ny, nz);
+                .setColor(color).setUv(0f, 0f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(LightTexture.FULL_BRIGHT).setNormal(p, nx, ny, nz);
     }
 
     /** The load colours: cyan while there is room, amber as it fills, red when (nearly) full; a dim ember for nothing at all. */

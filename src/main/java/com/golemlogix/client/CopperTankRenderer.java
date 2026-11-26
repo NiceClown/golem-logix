@@ -1,5 +1,6 @@
 package com.golemlogix.client;
 
+import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.CopperTankBlockEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -29,7 +30,7 @@ public class CopperTankRenderer implements BlockEntityRenderer<CopperTankBlockEn
     }
 
     private static final ResourceLocation WHITE =
-            ResourceLocation.fromNamespaceAndPath(com.golemlogix.GolemLogixMod.MOD_ID, "textures/entity/bay_white.png");
+            ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/bay_white.png");
     /** The gauge's face (pixels): centered on BOTH north (z = 1.35) and south (z = 14.65) glass walls so the dial is always readable. */
     private static final float GAUGE_X = 8.0f, GAUGE_Y = 8.0f, GAUGE_Z_N = 1.24f, GAUGE_Z_S = 14.76f;
 
