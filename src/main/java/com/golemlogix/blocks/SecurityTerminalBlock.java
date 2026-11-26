@@ -82,7 +82,7 @@ public class SecurityTerminalBlock extends HorizontalDirectionalBlock implements
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
-        if (placer instanceof Player player && level.getBlockEntity(pos) instanceof SecurityTerminalBlockEntity be) {
+        if (!level.isClientSide() && placer instanceof Player player && level.getBlockEntity(pos) instanceof SecurityTerminalBlockEntity be) {
             be.setOwner(player);
         }
     }
@@ -93,6 +93,10 @@ public class SecurityTerminalBlock extends HorizontalDirectionalBlock implements
             return InteractionResult.SUCCESS;
         }
         if (player instanceof ServerPlayer sp && level.getBlockEntity(pos) instanceof SecurityTerminalBlockEntity be) {
+            if (be.getOwnerId() != null && !be.isOwner(player) && !player.canUseGameMasterBlocks()) {
+                sp.sendOverlayMessage(Component.translatable("message.golem_logix.security_denied"));
+                return InteractionResult.CONSUME;
+            }
             sp.openMenu(new SimpleMenuProvider(
                     (id, inv, p) -> new SecurityTerminalMenu(id, inv, be.getCards(), be.getBlockPos(), be.getOwnerId(), be.getOwnerName()),
                     Component.translatable("gui.golem_logix.title.security_terminal")),
@@ -108,7 +112,7 @@ public class SecurityTerminalBlock extends HorizontalDirectionalBlock implements
 
     @Override
     public void onRemoved(BlockState state, Level level, BlockPos pos) {
-        if (level.getBlockEntity(pos) instanceof SecurityTerminalBlockEntity be) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof SecurityTerminalBlockEntity be) {
             Containers.dropContents(level, pos, be.getCards());
         }
     }
