@@ -404,7 +404,15 @@ public class TerminalMenu extends GolemMenu {
         if (fits <= 0) {
             return;
         }
-        FluidStack extracted = net.extractFluid(fluid, fits, false);
+        FluidStack avail = net.extractFluid(fluid, fits, true);
+        if (avail.isEmpty()) {
+            return;
+        }
+        int willTake = handler.fill(avail, IFluidHandler.FluidAction.SIMULATE);
+        if (willTake <= 0) {
+            return;
+        }
+        FluidStack extracted = net.extractFluid(fluid, willTake, false);
         if (extracted.isEmpty()) {
             return;
         }
@@ -412,7 +420,9 @@ public class TerminalMenu extends GolemMenu {
         if (filled < extracted.getAmount()) {
             net.insertFluid(extracted.copyWithAmount(extracted.getAmount() - filled), false);
         }
-        giveContainer(sp, handler, carried);
+        if (filled > 0) {
+            giveContainer(sp, handler, carried);
+        }
     }
 
     private void fluidDrainCarried(GolemNetwork net, ServerPlayer sp) {

@@ -27,6 +27,7 @@ public final class Baked {
     public static Baked bake(BiConsumer<VertexConsumer, PoseStack> draw) {
         Recorder recorder = new Recorder();
         draw.accept(recorder, new PoseStack());
+        recorder.trim();
         return new Baked(recorder);
     }
 
@@ -37,20 +38,29 @@ public final class Baked {
         }
     }
 
-    /** Vertices of one render type: position, colour, texture, overlay, light, normal. */
+    /** Vertices of one render type: position, colour, texture, overlay, normal (light is supplied at replay time). */
     private static final class Recorder implements VertexConsumer {
         private float[] f = new float[8 * 128];
-        private int[] i = new int[3 * 128];
+        private int[] i = new int[2 * 128];
         private int count;
 
         private int base() {
             return (count - 1) * 8;
         }
 
+        void trim() {
+            if (count * 8 < f.length) {
+                f = Arrays.copyOf(f, count * 8);
+            }
+            if (count * 2 < i.length) {
+                i = Arrays.copyOf(i, count * 2);
+            }
+        }
+
         @Override
         public VertexConsumer addVertex(float x, float y, float z) {
             count++;
-            if (count * 8 > f.length || count * 3 > i.length) {
+            if (count * 8 > f.length || count * 2 > i.length) {
                 f = Arrays.copyOf(f, f.length * 2);
                 i = Arrays.copyOf(i, i.length * 2);
             }
@@ -63,22 +73,21 @@ public final class Baked {
             f[b + 5] = 0f;
             f[b + 6] = 1f;
             f[b + 7] = 0f;
-            int c = (count - 1) * 3;
+            int c = (count - 1) * 2;
             i[c] = -1;
             i[c + 1] = OverlayTexture.NO_OVERLAY;
-            i[c + 2] = 0xF000F0;
             return this;
         }
 
         @Override
         public VertexConsumer setColor(int r, int g, int b, int a) {
-            i[(count - 1) * 3] = (a & 255) << 24 | (r & 255) << 16 | (g & 255) << 8 | (b & 255);
+            i[(count - 1) * 2] = (a & 255) << 24 | (r & 255) << 16 | (g & 255) << 8 | (b & 255);
             return this;
         }
 
         @Override
         public VertexConsumer setColor(int color) {
-            i[(count - 1) * 3] = color;
+            i[(count - 1) * 2] = color;
             return this;
         }
 
@@ -91,13 +100,12 @@ public final class Baked {
 
         @Override
         public VertexConsumer setUv1(int u, int v) {
-            i[(count - 1) * 3 + 1] = (v & 0xFFFF) << 16 | (u & 0xFFFF);
+            i[(count - 1) * 2 + 1] = (v & 0xFFFF) << 16 | (u & 0xFFFF);
             return this;
         }
 
         @Override
         public VertexConsumer setUv2(int u, int v) {
-            i[(count - 1) * 3 + 2] = (v & 0xFFFF) << 16 | (u & 0xFFFF);
             return this;
         }
 
@@ -110,20 +118,26 @@ public final class Baked {
         }
 
         void replay(VertexConsumer vc, Matrix4f m, Matrix3f n3, int light, int tint) {
+            float m00 = m.m00(), m10 = m.m10(), m20 = m.m20(), m30 = m.m30();
+            float m01 = m.m01(), m11 = m.m11(), m21 = m.m21(), m31 = m.m31();
+            float m02 = m.m02(), m12 = m.m12(), m22 = m.m22(), m32 = m.m32();
+            float n00 = n3.m00(), n10 = n3.m10(), n20 = n3.m20();
+            float n01 = n3.m01(), n11 = n3.m11(), n21 = n3.m21();
+            float n02 = n3.m02(), n12 = n3.m12(), n22 = n3.m22();
             for (int n = 0; n < count; n++) {
-                int b = n * 8, c = n * 3;
+                int b = n * 8, c = n * 2;
                 float x = f[b], y = f[b + 1], z = f[b + 2], nx = f[b + 5], ny = f[b + 6], nz = f[b + 7];
-                float tx = n3.m00() * nx + n3.m10() * ny + n3.m20() * nz;
-                float ty = n3.m01() * nx + n3.m11() * ny + n3.m21() * nz;
-                float tz = n3.m02() * nx + n3.m12() * ny + n3.m22() * nz;
+                float tx = n00 * nx + n10 * ny + n20 * nz;
+                float ty = n01 * nx + n11 * ny + n21 * nz;
+                float tz = n02 * nx + n12 * ny + n22 * nz;
                 float len = (float) Math.sqrt(tx * tx + ty * ty + tz * tz);
                 if (len > 1e-6f) {
                     tx /= len;
                     ty /= len;
                     tz /= len;
                 }
-                vc.addVertex(m.m00() * x + m.m10() * y + m.m20() * z + m.m30(), m.m01() * x + m.m11() * y + m.m21() * z + m.m31(),
-                                m.m02() * x + m.m12() * y + m.m22() * z + m.m32())
+                vc.addVertex(m00 * x + m10 * y + m20 * z + m30, m01 * x + m11 * y + m21 * z + m31,
+                                m02 * x + m12 * y + m22 * z + m32)
                         .setColor(tint != 0 ? tint : i[c]).setUv(f[b + 3], f[b + 4]).setOverlay(i[c + 1]).setLight(light)
                         .setNormal(tx, ty, tz);
             }

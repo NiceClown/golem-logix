@@ -64,17 +64,17 @@ public class PatternProviderBlockEntity extends BlockEntity {
 
         @Override
         public net.neoforged.neoforge.fluids.FluidStack getFluidInTank(int tank) {
-            return returnFluids[tank];
+            return tank >= 0 && tank < RETURN_TANKS ? returnFluids[tank] : net.neoforged.neoforge.fluids.FluidStack.EMPTY;
         }
 
         @Override
         public int getTankCapacity(int tank) {
-            return RETURN_TANK_MB;
+            return tank >= 0 && tank < RETURN_TANKS ? RETURN_TANK_MB : 0;
         }
 
         @Override
         public boolean isFluidValid(int tank, net.neoforged.neoforge.fluids.FluidStack stack) {
-            return !com.golemlogix.system.CryoSource.is(stack);
+            return tank >= 0 && tank < RETURN_TANKS && !com.golemlogix.system.CryoSource.is(stack);
         }
 
         @Override
@@ -82,26 +82,32 @@ public class PatternProviderBlockEntity extends BlockEntity {
             if (resource.isEmpty() || com.golemlogix.system.CryoSource.is(resource)) {
                 return 0;
             }
-            int to = -1;
-            for (int i = 0; i < RETURN_TANKS && to < 0; i++) {
-                if (net.neoforged.neoforge.fluids.FluidStack.isSameFluidSameComponents(returnFluids[i], resource)) {
-                    to = i;
+            int remaining = resource.getAmount();
+            int inserted = 0;
+            // stack into tanks already holding this fluid first, then spill into empty tanks
+            for (int pass = 0; pass < 2 && remaining > 0; pass++) {
+                for (int i = 0; i < RETURN_TANKS && remaining > 0; i++) {
+                    boolean match = !returnFluids[i].isEmpty()
+                            && net.neoforged.neoforge.fluids.FluidStack.isSameFluidSameComponents(returnFluids[i], resource);
+                    if (pass == 0 ? !match : !returnFluids[i].isEmpty()) {
+                        continue;
+                    }
+                    int room = RETURN_TANK_MB - returnFluids[i].getAmount();
+                    if (room <= 0) {
+                        continue;
+                    }
+                    int n = Math.min(remaining, room);
+                    if (action.execute()) {
+                        returnFluids[i] = resource.copyWithAmount(returnFluids[i].getAmount() + n);
+                    }
+                    inserted += n;
+                    remaining -= n;
                 }
             }
-            for (int i = 0; i < RETURN_TANKS && to < 0; i++) {
-                if (returnFluids[i].isEmpty()) {
-                    to = i;
-                }
-            }
-            if (to < 0) {
-                return 0;
-            }
-            int n = Math.min(resource.getAmount(), RETURN_TANK_MB - returnFluids[to].getAmount());
-            if (n > 0 && action.execute()) {
-                returnFluids[to] = resource.copyWithAmount(returnFluids[to].getAmount() + n);
+            if (inserted > 0 && action.execute()) {
                 setChanged();
             }
-            return n;
+            return inserted;
         }
 
         @Override
@@ -149,12 +155,12 @@ public class PatternProviderBlockEntity extends BlockEntity {
 
         @Override
         public ItemStack getStackInSlot(int slot) {
-            return returns.getItem(slot);
+            return slot >= 0 && slot < RETURN_SLOTS ? returns.getItem(slot) : ItemStack.EMPTY;
         }
 
         @Override
         public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-            if (stack.isEmpty()) {
+            if (slot < 0 || slot >= RETURN_SLOTS || stack.isEmpty()) {
                 return stack;
             }
             ItemStack cur = returns.getItem(slot);
@@ -184,12 +190,12 @@ public class PatternProviderBlockEntity extends BlockEntity {
 
         @Override
         public int getSlotLimit(int slot) {
-            return 64;
+            return slot >= 0 && slot < RETURN_SLOTS ? 64 : 0;
         }
 
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
-            return true;
+            return slot >= 0 && slot < RETURN_SLOTS;
         }
     };
 
@@ -436,11 +442,55 @@ public class PatternProviderBlockEntity extends BlockEntity {
         return null;
     }
 
-    /** Every fluid fits whole (each checked on its own by simulation). */
+    /** Every distinct fluid fits together: each passes fill(SIMULATE) and has its own tank capacity (not sharing one empty tank). */
     private static boolean canAcceptFluids(net.neoforged.neoforge.fluids.capability.IFluidHandler tanks,
                                            List<net.neoforged.neoforge.fluids.FluidStack> fluids) {
         for (net.neoforged.neoforge.fluids.FluidStack f : fluids) {
             if (tanks.fill(f.copy(), net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.SIMULATE) < f.getAmount()) {
+                return false;
+            }
+        }
+        int tankCount = tanks.getTanks();
+        if (fluids.size() <= 1 || tankCount <= 0) {
+            return true;
+        }
+        boolean[] usedEmpty = new boolean[tankCount];
+        for (int idx = 0; idx < fluids.size(); idx++) {
+            net.neoforged.neoforge.fluids.FluidStack f = fluids.get(idx);
+            long room = 0;
+            for (int t = 0; t < tankCount; t++) {
+                net.neoforged.neoforge.fluids.FluidStack cur = tanks.getFluidInTank(t);
+                if (!cur.isEmpty() && net.neoforged.neoforge.fluids.FluidStack.isSameFluidSameComponents(cur, f)) {
+                    room += Math.max(0, tanks.getTankCapacity(t) - cur.getAmount());
+                }
+            }
+            // Prefer empty tanks specific to this fluid before claiming generic ones
+            for (int pass = 0; pass < 2 && room < f.getAmount(); pass++) {
+                for (int t = 0; t < tankCount && room < f.getAmount(); t++) {
+                    if (usedEmpty[t] || !tanks.getFluidInTank(t).isEmpty() || !tanks.isFluidValid(t, f)) {
+                        continue;
+                    }
+                    int cap = tanks.getTankCapacity(t);
+                    if (cap <= 0) {
+                        continue;
+                    }
+                    if (pass == 0) {
+                        boolean acceptsOther = false;
+                        for (int j = idx + 1; j < fluids.size(); j++) {
+                            if (tanks.isFluidValid(t, fluids.get(j))) {
+                                acceptsOther = true;
+                                break;
+                            }
+                        }
+                        if (acceptsOther) {
+                            continue;
+                        }
+                    }
+                    usedEmpty[t] = true;
+                    room += cap;
+                }
+            }
+            if (room < f.getAmount()) {
                 return false;
             }
         }
@@ -457,12 +507,44 @@ public class PatternProviderBlockEntity extends BlockEntity {
         list.add(f.copy());
     }
 
-    /** All ingredients will fit (each checked on its own, then a joint check on the real slots). */
+    /** All ingredients fit together across the handler's slots (tracks virtual slot occupancy across multiple stacks). */
     private static boolean canAcceptAll(IItemHandler handler, List<ItemStack> inputs) {
-        // check every item by simulation; to be safe, identical ones are summed
+        if (inputs.size() == 1) {
+            return ItemHandlerHelper.insertItem(handler, inputs.get(0).copy(), true).isEmpty();
+        }
+        int slots = handler.getSlots();
+        if (slots <= 0) {
+            return false;
+        }
+        ItemStack[] claimed = new ItemStack[slots];
+        int[] room = new int[slots];
         for (ItemStack in : inputs) {
-            ItemStack rest = ItemHandlerHelper.insertItem(handler, in.copy(), true);
-            if (!rest.isEmpty()) {
+            int left = in.getCount();
+            for (int s = 0; s < slots && left > 0; s++) {
+                if (claimed[s] != null) {
+                    if (ItemStack.isSameItemSameComponents(claimed[s], in) && room[s] > 0) {
+                        int put = Math.min(left, room[s]);
+                        room[s] -= put;
+                        left -= put;
+                    }
+                    continue;
+                }
+                int slotLimit = handler.getSlotLimit(s);
+                if (slotLimit <= 0) {
+                    continue;
+                }
+                int probeCap = Math.min(slotLimit, Math.max(left, in.getMaxStackSize()));
+                ItemStack rest = handler.insertItem(s, in.copyWithCount(probeCap), true);
+                int free = probeCap - rest.getCount();
+                if (free <= 0) {
+                    continue;
+                }
+                int put = Math.min(left, free);
+                claimed[s] = in;
+                room[s] = free - put;
+                left -= put;
+            }
+            if (left > 0) {
                 return false;
             }
         }

@@ -102,6 +102,8 @@ public final class SnowmanPuppet {
             pose.translate(HOLD_CENTER.x / 16f, HOLD_CENTER.y / 16f, HOLD_CENTER.z / 16f);
             held.accept(pose);
             pose.popPose();
+            // held may have requested another RenderType, finishing the shared snowman buffer
+            vc = buffers.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
         }
 
         // body and head: in the model frame (Y down, face to -Z, feet at y = 24)

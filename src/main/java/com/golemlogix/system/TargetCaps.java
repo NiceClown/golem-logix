@@ -26,6 +26,8 @@ public final class TargetCaps {
     private final Direction side;
     private final BooleanSupplier valid;
     private final Runnable onChange;
+    /** False once replaced by a newer TargetCaps for another target/side, so NeoForge drops the old listeners. */
+    private boolean alive = true;
     private final BlockCapabilityCache<IItemHandler, @Nullable Direction> items;
     private final BlockCapabilityCache<IFluidHandler, @Nullable Direction> fluids;
     @Nullable
@@ -37,10 +39,14 @@ public final class TargetCaps {
         this.level = level;
         this.pos = pos.immutable();
         this.side = side;
-        this.valid = valid;
-        this.onChange = onChange;
-        this.items = BlockCapabilityCache.create(Capabilities.ItemHandler.BLOCK, level, this.pos, side, valid, onChange);
-        this.fluids = BlockCapabilityCache.create(Capabilities.FluidHandler.BLOCK, level, this.pos, side, valid, onChange);
+        this.valid = () -> alive && valid.getAsBoolean();
+        this.onChange = () -> {
+            if (alive) {
+                onChange.run();
+            }
+        };
+        this.items = BlockCapabilityCache.create(Capabilities.ItemHandler.BLOCK, level, this.pos, side, this.valid, this.onChange);
+        this.fluids = BlockCapabilityCache.create(Capabilities.FluidHandler.BLOCK, level, this.pos, side, this.valid, this.onChange);
     }
 
     /**
@@ -53,6 +59,9 @@ public final class TargetCaps {
                                 BooleanSupplier valid, Runnable onChange) {
         if (old != null && old.level == level && old.pos.equals(pos) && old.side == side) {
             return old;
+        }
+        if (old != null) {
+            old.alive = false;
         }
         return new TargetCaps(level, pos, side, valid, onChange);
     }
@@ -93,13 +102,18 @@ public final class TargetCaps {
         return first(fluidsAny);
     }
 
-    /** Caches for the unsided handler and for each of the six sides, in that order. */
+    /** Caches for the unsided handler and each remaining side (skipping the primary side already checked). */
     @SuppressWarnings("unchecked")
     private <T> BlockCapabilityCache<T, @Nullable Direction>[] anyCaches(BlockCapability<T, @Nullable Direction> cap) {
-        BlockCapabilityCache<T, @Nullable Direction>[] out = new BlockCapabilityCache[7];
-        out[0] = BlockCapabilityCache.create(cap, level, pos, null, valid, onChange);
+        BlockCapabilityCache<T, @Nullable Direction>[] out = new BlockCapabilityCache[6];
+        int k = 0;
+        if (side != null) {
+            out[k++] = BlockCapabilityCache.create(cap, level, pos, null, valid, onChange);
+        }
         for (Direction d : Direction.values()) {
-            out[1 + d.ordinal()] = BlockCapabilityCache.create(cap, level, pos, d, valid, onChange);
+            if (d != side) {
+                out[k++] = BlockCapabilityCache.create(cap, level, pos, d, valid, onChange);
+            }
         }
         return out;
     }

@@ -83,17 +83,17 @@ public class CryoMixerBlockEntity extends BlockEntity {
 
         @Override
         public FluidStack getFluidInTank(int t) {
-            return t == 0 ? water.getFluid() : cryo.getFluid();
+            return t == 0 ? water.getFluid() : t == 1 ? cryo.getFluid() : FluidStack.EMPTY;
         }
 
         @Override
         public int getTankCapacity(int t) {
-            return t == 0 ? WATER_TANK : CRYO_TANK;
+            return t == 0 ? WATER_TANK : t == 1 ? CRYO_TANK : 0;
         }
 
         @Override
         public boolean isFluidValid(int t, FluidStack stack) {
-            return (t == 0 ? water : cryo).isFluidValid(stack);
+            return t == 0 ? water.isFluidValid(stack) : t == 1 && cryo.isFluidValid(stack);
         }
 
         @Override
@@ -124,7 +124,7 @@ public class CryoMixerBlockEntity extends BlockEntity {
 
         @Override
         public ItemStack getStackInSlot(int slot) {
-            return output.getItem(0);
+            return slot == 0 ? output.getItem(0) : ItemStack.EMPTY;
         }
 
         @Override
@@ -134,8 +134,11 @@ public class CryoMixerBlockEntity extends BlockEntity {
 
         @Override
         public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            if (slot != 0 || amount <= 0) {
+                return ItemStack.EMPTY;
+            }
             ItemStack in = output.getItem(0);
-            if (in.isEmpty() || amount <= 0) {
+            if (in.isEmpty()) {
                 return ItemStack.EMPTY;
             }
             int n = Math.min(amount, in.getCount());
@@ -148,7 +151,7 @@ public class CryoMixerBlockEntity extends BlockEntity {
 
         @Override
         public int getSlotLimit(int slot) {
-            return 64;
+            return slot == 0 ? 64 : 0;
         }
 
         @Override

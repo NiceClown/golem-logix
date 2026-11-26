@@ -110,8 +110,11 @@ public final class GlowModels {
 
     /** A mod model with a glow layer. The glow goes into the cutout layer, and for translucent models into the same translucent one. */
     static final class Glowing extends BakedModelWrapper<BakedModel> {
+        private final List<BakedModel> singlePasses;
+
         Glowing(BakedModel original) {
             super(original);
+            this.singlePasses = List.of(original, new ItemGlowPass(List.of(original)));
         }
 
         private static RenderType glowType(ChunkRenderTypeSet types) {
@@ -138,17 +141,29 @@ public final class GlowModels {
                 return own;
             }
             // glow layer: copies of all the model's faces (from all its layers) on top of its own faces of this layer
-            List<BakedQuad> out = new ArrayList<>(own);
+            List<BakedQuad> out = null;
             for (RenderType t : types) {
-                out.addAll(glowing(t == renderType ? own : originalModel.getQuads(state, side, rand, data, t)));
+                List<BakedQuad> g = glowing(t == renderType ? own : originalModel.getQuads(state, side, rand, data, t));
+                if (!g.isEmpty()) {
+                    if (out == null) {
+                        out = new ArrayList<>(own.size() + g.size());
+                        out.addAll(own);
+                    }
+                    out.addAll(g);
+                }
             }
-            return out;
+            return out != null ? out : own;
         }
 
         @Override
         public List<BakedModel> getRenderPasses(ItemStack stack, boolean fabulous) {
-            List<BakedModel> passes = new ArrayList<>(originalModel.getRenderPasses(stack, fabulous));
-            passes.add(new ItemGlowPass(List.copyOf(passes)));
+            List<BakedModel> base = originalModel.getRenderPasses(stack, fabulous);
+            if (base.size() == 1 && base.get(0) == originalModel) {
+                return singlePasses;
+            }
+            List<BakedModel> passes = new ArrayList<>(base.size() + 1);
+            passes.addAll(base);
+            passes.add(new ItemGlowPass(List.copyOf(base)));
             return passes;
         }
     }
@@ -164,11 +179,26 @@ public final class GlowModels {
 
         @Override
         public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, RandomSource rand) {
-            List<BakedQuad> out = new ArrayList<>();
-            for (BakedModel m : passes) {
-                out.addAll(glowing(m.getQuads(state, side, rand)));
+            if (passes.size() == 1) {
+                return glowing(passes.get(0).getQuads(state, side, rand));
             }
-            return out;
+            List<BakedQuad> out = null;
+            for (BakedModel m : passes) {
+                List<BakedQuad> g = glowing(m.getQuads(state, side, rand));
+                if (!g.isEmpty()) {
+                    if (out == null) {
+                        out = new ArrayList<>(g.size());
+                    }
+                    out.addAll(g);
+                }
+            }
+            return out != null ? out : List.of();
+        }
+
+        @Override
+        public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, RandomSource rand, ModelData data,
+                                        @Nullable RenderType renderType) {
+            return getQuads(state, side, rand);
         }
 
         @Override

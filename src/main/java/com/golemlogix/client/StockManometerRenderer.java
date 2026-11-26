@@ -103,7 +103,11 @@ public class StockManometerRenderer implements BlockEntityRenderer<StockManomete
         int signal = be.getSignal();
         net.minecraft.world.phys.Vec3 camera = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
         boolean near = camera.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) < TINY_SIGHT * TINY_SIGHT;
-        VertexConsumer copper = buffers.getBuffer(RenderType.entityCutoutNoCull(COPPER));
+        org.joml.Vector3f[] froms = new org.joml.Vector3f[6];
+        org.joml.Vector3f[] alongs = new org.joml.Vector3f[6];
+        float[] lengths = new float[6];
+        // Pass 1: all bridge decks in one buffer before any CopperGolemPuppet switches RenderTypes
+        VertexConsumer copper = null;
         for (Direction d : Direction.values()) {
             int i = d.ordinal();
             if (!be.hasBridge(d)) {
@@ -117,7 +121,23 @@ public class StockManometerRenderer implements BlockEntityRenderer<StockManomete
             if (length < 1e-3f) {
                 continue;
             }
+            if (copper == null) {
+                copper = buffers.getBuffer(RenderType.entityCutoutNoCull(COPPER));
+            }
             deck(copper, pose, from, along, light);
+            froms[i] = from;
+            alongs[i] = along;
+            lengths[i] = length;
+        }
+        // Pass 2: update carrier phases and draw golems (each puppet switches buffers)
+        for (Direction d : Direction.values()) {
+            int i = d.ordinal();
+            if (froms[i] == null) {
+                continue;
+            }
+            org.joml.Vector3f from = froms[i];
+            org.joml.Vector3f along = alongs[i];
+            float length = lengths[i];
             // the longer the bridge and the weaker the signal, the longer the trip
             float speed = (0.05f + 0.006f * signal) / 16f / length;
             float phase = be.bridgePhase[i];

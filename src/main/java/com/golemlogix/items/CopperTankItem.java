@@ -49,7 +49,7 @@ public class CopperTankItem extends ModBlockItem {
     }
 
     public static int capacity(ItemStack stack) {
-        return stack.getOrDefault(ModDataComponents.TANK_CAPACITY.get(), CopperTankBlockEntity.CAPACITY);
+        return Math.max(1, stack.getOrDefault(ModDataComponents.TANK_CAPACITY.get(), CopperTankBlockEntity.CAPACITY));
     }
 
     public static boolean bucketMode(ItemStack stack) {

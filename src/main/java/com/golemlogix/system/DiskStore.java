@@ -83,10 +83,10 @@ public class DiskStore extends SavedData {
         ListTag list = tag.getList("Disks", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
             CompoundTag t = list.getCompound(i);
-            if (!t.contains("Id")) {
+            if (!t.hasUUID("Id")) {
                 continue;
             }
-            UUID id = NbtUtils.loadUUID(t.get("Id"));
+            UUID id = t.getUUID("Id");
             Disk disk = new Disk();
 
             ListTag items = t.getList("Items", Tag.TAG_COMPOUND);

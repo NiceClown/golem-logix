@@ -182,6 +182,11 @@ public final class Fuzzy {
     private static final Map<RecipeManager, Map<List<Object>, List<Ingredient>>> SUBSTITUTES =
             Collections.synchronizedMap(new WeakHashMap<>());
 
+    /** Clears cached recipe substitutes (needed on client /reload where RecipeManager is updated in place). */
+    public static void clearCache() {
+        SUBSTITUTES.clear();
+    }
+
     /**
      * For a crafting table grid (9 cells): in every cell, what the recipe accepts there (Ingredient.EMPTY where the cell is empty or
      * the recipe is of a special kind: then only the encoded item). Like AE2's substitutions: the recipe still works with them.

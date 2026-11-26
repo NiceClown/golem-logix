@@ -53,6 +53,11 @@ public final class ArsImbuement {
     private ArsImbuement() {
     }
 
+    /** Clears cached entries (called on client recipe sync, where RecipeManager is updated in place). */
+    public static void clearCache() {
+        CACHE.clear();
+    }
+
     /** Ticks the Imbuement Chamber needs for a recipe with this Source cost. */
     public static int chamberTicks(int source) {
         int seconds = (source + CHAMBER_SOURCE_PER_SECOND - 1) / CHAMBER_SOURCE_PER_SECOND;

@@ -47,7 +47,8 @@ public final class CopperBootstrap {
                 }
                 continue;
             }
-            if (holder.value().getResultItem(server.registryAccess()).is(ModItems.FLATTENED_COPPER_MATRIX.get())) {
+            var result = holder.value().getResultItem(server.registryAccess());
+            if (result != null && result.is(ModItems.FLATTENED_COPPER_MATRIX.get())) {
                 return false;
             }
         }

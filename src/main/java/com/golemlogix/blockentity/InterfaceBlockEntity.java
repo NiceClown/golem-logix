@@ -252,11 +252,17 @@ public class InterfaceBlockEntity extends BlockEntity {
 
         @Override
         public net.neoforged.neoforge.fluids.FluidStack getFluidInTank(int t) {
+            if (t < 0 || t > SLOTS) {
+                return net.neoforged.neoforge.fluids.FluidStack.EMPTY;
+            }
             return t == 0 ? tank.getFluid() : fluidStock[t - 1];
         }
 
         @Override
         public int getTankCapacity(int t) {
+            if (t < 0 || t > SLOTS) {
+                return 0;
+            }
             return t == 0 ? TANK : Math.max(wantedFluid(t - 1), fluidStock[t - 1].getAmount());
         }
 
@@ -272,6 +278,9 @@ public class InterfaceBlockEntity extends BlockEntity {
 
         @Override
         public net.neoforged.neoforge.fluids.FluidStack drain(net.neoforged.neoforge.fluids.FluidStack resource, FluidAction action) {
+            if (resource.isEmpty()) {
+                return net.neoforged.neoforge.fluids.FluidStack.EMPTY;
+            }
             for (int i = 0; i < SLOTS; i++) {
                 if (net.neoforged.neoforge.fluids.FluidStack.isSameFluidSameComponents(fluidStock[i], resource)) {
                     return drainSlot(i, resource.getAmount(), action);
@@ -722,12 +731,15 @@ public class InterfaceBlockEntity extends BlockEntity {
 
         @Override
         public ItemStack getStackInSlot(int slot) {
+            if (slot < 0 || slot >= SLOTS * 2) {
+                return ItemStack.EMPTY;
+            }
             return slot < SLOTS ? stock.getItem(slot) : inbox.getItem(slot - SLOTS);
         }
 
         @Override
         public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-            if (slot < SLOTS || stack.isEmpty()) {
+            if (slot < SLOTS || slot >= SLOTS * 2 || stack.isEmpty()) {
                 return stack;
             }
             int i = slot - SLOTS;
@@ -754,7 +766,7 @@ public class InterfaceBlockEntity extends BlockEntity {
 
         @Override
         public ItemStack extractItem(int slot, int amount, boolean simulate) {
-            if (slot >= SLOTS || amount <= 0) {
+            if (slot < 0 || slot >= SLOTS || amount <= 0) {
                 return ItemStack.EMPTY;
             }
             ItemStack cur = stock.getItem(slot);
@@ -772,12 +784,12 @@ public class InterfaceBlockEntity extends BlockEntity {
 
         @Override
         public int getSlotLimit(int slot) {
-            return 64;
+            return slot >= 0 && slot < SLOTS * 2 ? 64 : 0;
         }
 
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
-            return slot >= SLOTS;
+            return slot >= SLOTS && slot < SLOTS * 2;
         }
     }
 }

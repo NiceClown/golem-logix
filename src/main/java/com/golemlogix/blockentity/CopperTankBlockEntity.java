@@ -93,7 +93,7 @@ public class CopperTankBlockEntity extends BlockEntity {
     @Override
     protected void applyImplicitComponents(BlockEntity.DataComponentInput components) {
         super.applyImplicitComponents(components);
-        tank.setCapacity(components.getOrDefault(ModDataComponents.TANK_CAPACITY.get(), CAPACITY));
+        tank.setCapacity(Math.max(1, components.getOrDefault(ModDataComponents.TANK_CAPACITY.get(), CAPACITY)));
         FluidStack fluid = components.getOrDefault(ModDataComponents.TANK_FLUID.get(), SimpleFluidContent.EMPTY).copy();
         if (fluid.getAmount() > tank.getCapacity()) {
             fluid.setAmount(tank.getCapacity());

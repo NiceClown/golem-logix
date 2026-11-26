@@ -131,4 +131,24 @@ public class GolemLogixClientEvents {
         event.registerAboveAll(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "ghost_hud"),
                 com.golemlogix.client.ghost.GhostHud::render);
     }
+
+    /** Reset cached puppet models and guidebook pages on client resource reload (F3+T / resource pack change). */
+    @SubscribeEvent
+    public static void registerReloadListeners(net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent event) {
+        event.registerReloadListener((net.minecraft.server.packs.resources.ResourceManagerReloadListener) rm -> {
+            CopperGolemPuppet.invalidate();
+            SnowmanPuppet.invalidate();
+            com.golemlogix.client.book.BookModel.invalidate();
+        });
+    }
+
+    @EventBusSubscriber(modid = GolemLogixMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
+    public static class ClientGameEvents {
+        /** On /reload the client mutates its RecipeManager in place: drop cached recipe lookups so they re-read. */
+        @SubscribeEvent
+        public static void onRecipesUpdated(net.neoforged.neoforge.client.event.RecipesUpdatedEvent event) {
+            com.golemlogix.integration.ars.ArsImbuement.clearCache();
+            com.golemlogix.system.Fuzzy.clearCache();
+        }
+    }
 }

@@ -128,7 +128,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
 
         @Override
         public ItemStack getStackInSlot(int slot) {
-            return slot == 0 ? inDeck : outDeck;
+            return slot == 0 ? inDeck : slot == 1 ? outDeck : ItemStack.EMPTY;
         }
 
         @Override
@@ -166,7 +166,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
 
         @Override
         public int getSlotLimit(int slot) {
-            return slot == 0 ? DECK_MAX : 64;
+            return slot == 0 ? DECK_MAX : slot == 1 ? 64 : 0;
         }
 
         @Override
