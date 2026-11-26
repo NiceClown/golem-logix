@@ -7,6 +7,8 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
+import org.joml.Matrix3f;
+import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -22,6 +24,7 @@ public final class PixelMesh {
 
     private static final Vector3f SCRATCH_LIMB = new Vector3f();
     private static final Quaternionf SCRATCH_QUAT = new Quaternionf();
+    private static final PoseStack LIMB_POSE = new PoseStack();
 
     private PixelMesh() {
     }
@@ -117,7 +120,7 @@ public final class PixelMesh {
         limb(vc, pose, from.x, from.y, from.z, to.x, to.y, to.z, t, tex, light);
     }
 
-    /** Scalar form of {@link #limb}: avoids temporary Vector3f/Quaternionf allocations. */
+    /** Scalar form of {@link #limb}: avoids temporary Vector3f/Quaternionf/PoseStack.pushPose allocations. */
     public static void limb(VertexConsumer vc, PoseStack pose, float fx, float fy, float fz, float tx, float ty, float tz, float t,
                             Identifier tex, int light) {
         Vector3f d = SCRATCH_LIMB.set(tx - fx, ty - fy, tz - fz);
@@ -126,11 +129,12 @@ public final class PixelMesh {
             return;
         }
         d.div(len);
-        pose.pushPose();
-        pose.translate(fx * PIXEL, fy * PIXEL, fz * PIXEL);
-        pose.mulPose(SCRATCH_QUAT.rotationTo(0f, 1f, 0f, d.x, d.y, d.z));
-        box(vc, pose.last(), -t / 2f, -t / 4f, -t / 2f, t / 2f, len + t / 4f, t / 2f, tex, 0xFFFFFFFF, light);
-        pose.popPose();
+        SCRATCH_QUAT.rotationTo(0f, 1f, 0f, d.x, d.y, d.z);
+        PoseStack.Pose lp = LIMB_POSE.last();
+        lp.set(pose.last());
+        lp.pose().translate(fx * PIXEL, fy * PIXEL, fz * PIXEL).rotate(SCRATCH_QUAT);
+        lp.normal().rotate(SCRATCH_QUAT);
+        box(vc, lp, -t / 2f, -t / 4f, -t / 2f, t / 2f, len + t / 4f, t / 2f, tex, 0xFFFFFFFF, light);
     }
 
     /** A {@code w x h} face (pixels) in tiles of 16 along affine basis {@code o + a*da + b*db}. */
@@ -162,13 +166,30 @@ public final class PixelMesh {
                             float ax, float ay, float az, float bx, float by, float bz,
                             float cx, float cy, float cz, float dx, float dy, float dz,
                             float u0, float v0, float u1, float v1, int color, int light, float nx, float ny, float nz) {
-        vc.addVertex(p, ax * PIXEL, ay * PIXEL, az * PIXEL).setColor(color).setUv(u0, v1).setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(light).setNormal(p, nx, ny, nz);
-        vc.addVertex(p, bx * PIXEL, by * PIXEL, bz * PIXEL).setColor(color).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(light).setNormal(p, nx, ny, nz);
-        vc.addVertex(p, cx * PIXEL, cy * PIXEL, cz * PIXEL).setColor(color).setUv(u1, v0).setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(light).setNormal(p, nx, ny, nz);
-        vc.addVertex(p, dx * PIXEL, dy * PIXEL, dz * PIXEL).setColor(color).setUv(u0, v0).setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(light).setNormal(p, nx, ny, nz);
+        Matrix4f m = p.pose();
+        float m00 = m.m00() * PIXEL, m01 = m.m01() * PIXEL, m02 = m.m02() * PIXEL;
+        float m10 = m.m10() * PIXEL, m11 = m.m11() * PIXEL, m12 = m.m12() * PIXEL;
+        float m20 = m.m20() * PIXEL, m21 = m.m21() * PIXEL, m22 = m.m22() * PIXEL;
+        float m30 = m.m30(), m31 = m.m31(), m32 = m.m32();
+        Matrix3f nm = p.normal();
+        float tnx = nm.m00() * nx + nm.m10() * ny + nm.m20() * nz;
+        float tny = nm.m01() * nx + nm.m11() * ny + nm.m21() * nz;
+        float tnz = nm.m02() * nx + nm.m12() * ny + nm.m22() * nz;
+        float lenSq = tnx * tnx + tny * tny + tnz * tnz;
+        if (Math.abs(lenSq - 1f) > 1e-3f && lenSq > 1e-8f) {
+            float inv = Mth.invSqrt(lenSq);
+            tnx *= inv;
+            tny *= inv;
+            tnz *= inv;
+        }
+        int ov = OverlayTexture.NO_OVERLAY;
+        vc.addVertex(m00 * ax + m10 * ay + m20 * az + m30, m01 * ax + m11 * ay + m21 * az + m31, m02 * ax + m12 * ay + m22 * az + m32,
+                color, u0, v1, ov, light, tnx, tny, tnz);
+        vc.addVertex(m00 * bx + m10 * by + m20 * bz + m30, m01 * bx + m11 * by + m21 * bz + m31, m02 * bx + m12 * by + m22 * bz + m32,
+                color, u1, v1, ov, light, tnx, tny, tnz);
+        vc.addVertex(m00 * cx + m10 * cy + m20 * cz + m30, m01 * cx + m11 * cy + m21 * cz + m31, m02 * cx + m12 * cy + m22 * cz + m32,
+                color, u1, v0, ov, light, tnx, tny, tnz);
+        vc.addVertex(m00 * dx + m10 * dy + m20 * dz + m30, m01 * dx + m11 * dy + m21 * dz + m31, m02 * dx + m12 * dy + m22 * dz + m32,
+                color, u0, v0, ov, light, tnx, tny, tnz);
     }
 }

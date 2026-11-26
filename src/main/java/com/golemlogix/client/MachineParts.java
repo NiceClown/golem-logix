@@ -49,7 +49,8 @@ final class MachineParts {
      * in front of the face).
      */
     static int frontLight(Level level, BlockPos pos, Direction facing) {
-        int block = 0, sky = 0;
+        int self = LevelRenderer.getLightCoords(level, pos);
+        int block = LightCoordsUtil.block(self), sky = LightCoordsUtil.sky(self);
         Direction back = facing.getOpposite();
         for (Direction d : DIRS) {
             if (d != back) {

@@ -485,38 +485,125 @@ public class Models {
         model("cable_bushing", false, "atlas_rim_copper", t, l.toArray(new El[0]));
     }
 
-    /** 3D Atlas Conduit capsule: glowing faceted ice core inside bolted copper stanchions, slate clamp boots & brass hoops. */
-    private static void atlasConduitModel() throws Exception {
+    /**
+     * Builds a vertical glowing Atlas pillar variant (used by Atlas Conduit and formed Channel / Quantum Expanders).
+     * Connected ends (down=true or up=true) omit horizontal collars, boots, and brass hoops so stacked pillars merge into
+     * a single continuous glowing line without copper/brass dividers between blocks.
+     */
+    static void buildAtlasPillarVariant(String modelName, String coreTex, int lightLevel,
+                                        boolean down, boolean up, boolean midBandWhenStandalone) throws Exception {
         String[][] t = {
                 {"copper", "atlas_rim_copper"}, {"iron", "atlas_rim_iron"},
-                {"brass", "atlas_rim_wheel"}, {"ice", "conduit_ice"}
+                {"brass", "atlas_rim_wheel"}, {"ice", coreTex}
         };
         List<El> l = new ArrayList<>();
-        // Central seamless vertical ice pillar (y=0..16)
-        l.add(e(3.75, 0.0, 3.75, 12.25, 16.0, 12.25).all("#ice").glow(12));
-        // Inner SLATE_IRON top & bottom sealing collars (staggered slightly inside y=0/16 so zero coplanar faces with ice up/down)
-        l.add(e(3.25, 0.15, 3.25, 12.75, 1.4, 12.75).only("#iron", "north", "south", "east", "west", "up", "down"));
-        l.add(e(3.25, 14.6, 3.25, 12.75, 15.85, 12.75).only("#iron", "north", "south", "east", "west", "up", "down"));
-        // 4 corner vertical stacks: bolted SLATE_IRON clamp boots + copper shaft spans between clamps (zero Y overlap)
+        // Central seamless vertical crystal core (y=0..16), omitting internal seam faces where connected
+        List<String> coreFaces = new ArrayList<>(List.of("north", "south", "east", "west"));
+        if (!up) coreFaces.add("up");
+        if (!down) coreFaces.add("down");
+        l.add(e(3.75, 0.0, 3.75, 12.25, 16.0, 12.25).only("#ice", coreFaces.toArray(new String[0])).glow(lightLevel));
+
+        // Bottom sealing collar, corner boots & brass base hoops ONLY at the bottom of a pillar run (!down)
+        if (!down) {
+            l.add(e(3.25, 0.15, 3.25, 12.75, 1.4, 12.75).only("#iron", "north", "south", "east", "west", "up", "down"));
+            for (double cx : new double[]{0.0, 13.0}) {
+                for (double cz : new double[]{0.0, 13.0}) {
+                    l.add(e(cx, 0.0, cz, cx + 3.0, 2.0, cz + 3.0).all("#iron"));
+                }
+            }
+            l.add(e(3.0, 0.25, 0.65, 13.0, 1.75, 2.65).only("#brass", "north", "south", "up", "down"));
+            l.add(e(3.0, 0.25, 13.35, 13.0, 1.75, 15.35).only("#brass", "north", "south", "up", "down"));
+            l.add(e(0.65, 0.25, 3.0, 2.65, 1.75, 13.0).only("#brass", "east", "west", "up", "down"));
+            l.add(e(13.35, 0.25, 3.0, 15.35, 1.75, 13.0).only("#brass", "east", "west", "up", "down"));
+        }
+
+        // Top sealing collar, corner boots & brass capital hoops ONLY at the top of a pillar run (!up)
+        if (!up) {
+            l.add(e(3.25, 14.6, 3.25, 12.75, 15.85, 12.75).only("#iron", "north", "south", "east", "west", "up", "down"));
+            for (double cx : new double[]{0.0, 13.0}) {
+                for (double cz : new double[]{0.0, 13.0}) {
+                    l.add(e(cx, 14.0, cz, cx + 3.0, 16.0, cz + 3.0).all("#iron"));
+                }
+            }
+            l.add(e(3.0, 14.25, 0.65, 13.0, 15.75, 2.65).only("#brass", "north", "south", "up", "down"));
+            l.add(e(3.0, 14.25, 13.35, 13.0, 15.75, 15.35).only("#brass", "north", "south", "up", "down"));
+            l.add(e(0.65, 14.25, 3.0, 2.65, 15.75, 13.0).only("#brass", "east", "west", "up", "down"));
+            l.add(e(13.35, 14.25, 3.0, 15.35, 15.75, 13.0).only("#brass", "east", "west", "up", "down"));
+        }
+
+        boolean midBand = midBandWhenStandalone && !down && !up;
         for (double cx : new double[]{0.0, 13.0}) {
             for (double cz : new double[]{0.0, 13.0}) {
-                for (double cy : new double[]{0.0, 7.0, 14.0}) {
-                    l.add(e(cx, cy, cz, cx + 3.0, cy + 2.0, cz + 3.0).all("#iron"));
-                }
                 double sx = cx == 0.0 ? 0.35 : 13.15;
                 double sz = cz == 0.0 ? 0.35 : 13.15;
-                l.add(e(sx, 2.0, sz, sx + 2.5, 7.0, sz + 2.5).only("#copper", "north", "south", "east", "west"));
-                l.add(e(sx, 9.0, sz, sx + 2.5, 14.0, sz + 2.5).only("#copper", "north", "south", "east", "west"));
+                if (midBand) {
+                    l.add(e(cx, 7.0, cz, cx + 3.0, 9.0, cz + 3.0).all("#iron"));
+                    l.add(e(sx, 2.0, sz, sx + 2.5, 7.0, sz + 2.5).only("#copper", "north", "south", "east", "west"));
+                    l.add(e(sx, 9.0, sz, sx + 2.5, 14.0, sz + 2.5).only("#copper", "north", "south", "east", "west"));
+                } else {
+                    double y0 = down ? 0.0 : 2.0;
+                    double y1 = up ? 16.0 : 14.0;
+                    l.add(e(sx, y0, sz, sx + 2.5, y1, sz + 2.5).only("#copper", "north", "south", "east", "west"));
+                }
             }
         }
-        // 3 horizontal warm antique-brass clamp hoops spanning strictly between corner clamps (x/z 3.0..13.0)
-        for (double hy : new double[]{0.25, 7.25, 14.25}) {
-            l.add(e(3.0, hy, 0.65, 13.0, hy + 1.5, 2.65).only("#brass", "north", "south", "up", "down"));
-            l.add(e(3.0, hy, 13.35, 13.0, hy + 1.5, 15.35).only("#brass", "north", "south", "up", "down"));
-            l.add(e(0.65, hy, 3.0, 2.65, hy + 1.5, 13.0).only("#brass", "east", "west", "up", "down"));
-            l.add(e(13.35, hy, 3.0, 15.35, hy + 1.5, 13.0).only("#brass", "east", "west", "up", "down"));
+        if (midBand) {
+            l.add(e(3.0, 7.25, 0.65, 13.0, 8.75, 2.65).only("#brass", "north", "south", "up", "down"));
+            l.add(e(3.0, 7.25, 13.35, 13.0, 8.75, 15.35).only("#brass", "north", "south", "up", "down"));
+            l.add(e(0.65, 7.25, 3.0, 2.65, 8.75, 13.0).only("#brass", "east", "west", "up", "down"));
+            l.add(e(13.35, 7.25, 3.0, 15.35, 8.75, 13.0).only("#brass", "east", "west", "up", "down"));
         }
-        model("atlas_conduit", false, "atlas_rim_copper", t, l.toArray(new El[0]));
+        model(modelName, false, "atlas_rim_copper", t, l.toArray(new El[0]));
+    }
+
+    /** Outer pipe socket collar (facing NORTH, z=0..3.75) when a network pipe docks onto a formed Expander pillar. */
+    private static void atlasPillarSocketModel() throws Exception {
+        String[][] t = {{"iron", "atlas_rim_iron"}, {"brass", "atlas_rim_wheel"}};
+        List<El> l = new ArrayList<>();
+        l.add(e(3.25, 3.25, 0.85, 12.75, 12.75, 3.75).only("#iron", "east", "west", "up", "down"));
+        l.add(e(2.5, 2.5, 0.0, 13.5, 13.5, 0.85).all("#brass"));
+        model("atlas_pillar_socket", false, "atlas_rim_iron", t, l.toArray(new El[0]));
+    }
+
+    /** 3D Atlas Conduit & Expander connected pillar variants + blockstates (uniform lightLevel=14 for seamless cross-block gradients). */
+    private static void atlasConduitModel() throws Exception {
+        buildAtlasPillarVariant("atlas_conduit", "conduit_ice", 14, false, false, true);
+        buildAtlasPillarVariant("atlas_conduit_bottom", "conduit_ice", 14, false, true, false);
+        buildAtlasPillarVariant("atlas_conduit_mid", "conduit_ice", 14, true, true, false);
+        buildAtlasPillarVariant("atlas_conduit_top", "conduit_ice", 14, true, false, false);
+        write(RES.resolve("blockstates/atlas_conduit.json"),
+                "{\n  \"variants\": {\n"
+                        + "    \"down=false,up=false\": {\"model\": \"" + NS + "atlas_conduit\"},\n"
+                        + "    \"down=false,up=true\": {\"model\": \"" + NS + "atlas_conduit_bottom\"},\n"
+                        + "    \"down=true,up=true\": {\"model\": \"" + NS + "atlas_conduit_mid\"},\n"
+                        + "    \"down=true,up=false\": {\"model\": \"" + NS + "atlas_conduit_top\"}\n"
+                        + "  }\n}\n");
+
+        atlasPillarSocketModel();
+        buildExpanderPillars("channel_expander", "conduit_blue", 14);
+        buildExpanderPillars("quantum_channel_expander", "conduit_quantum", 14);
+    }
+
+    static void buildExpanderPillars(String name, String coreTex, int lightLevel) throws Exception {
+        buildAtlasPillarVariant(name + "_pillar_single", coreTex, lightLevel, false, false, false);
+        buildAtlasPillarVariant(name + "_pillar_bottom", coreTex, lightLevel, false, true, false);
+        buildAtlasPillarVariant(name + "_pillar_mid", coreTex, lightLevel, true, true, false);
+        buildAtlasPillarVariant(name + "_pillar_top", coreTex, lightLevel, true, false, false);
+    }
+
+    static void expanderBlockstate(String name) throws Exception {
+        write(RES.resolve("blockstates/" + name + ".json"),
+                "{\n  \"multipart\": [\n"
+                        + "    {\"when\": {\"formed\": \"false\"}, \"apply\": {\"model\": \"" + NS + name + "\"}},\n"
+                        + "    {\"when\": {\"formed\": \"true\", \"down\": \"false\", \"up\": \"false\"}, \"apply\": {\"model\": \"" + NS + name + "_pillar_single\"}},\n"
+                        + "    {\"when\": {\"formed\": \"true\", \"down\": \"false\", \"up\": \"true\"}, \"apply\": {\"model\": \"" + NS + name + "_pillar_bottom\"}},\n"
+                        + "    {\"when\": {\"formed\": \"true\", \"down\": \"true\", \"up\": \"true\"}, \"apply\": {\"model\": \"" + NS + name + "_pillar_mid\"}},\n"
+                        + "    {\"when\": {\"formed\": \"true\", \"down\": \"true\", \"up\": \"false\"}, \"apply\": {\"model\": \"" + NS + name + "_pillar_top\"}},\n"
+                        + "    {\"when\": {\"formed\": \"true\", \"pipe\": \"true\", \"facing\": \"north\"}, \"apply\": {\"model\": \"" + NS + "atlas_pillar_socket\"}},\n"
+                        + "    {\"when\": {\"formed\": \"true\", \"pipe\": \"true\", \"facing\": \"east\"}, \"apply\": {\"model\": \"" + NS + "atlas_pillar_socket\", \"y\": 90}},\n"
+                        + "    {\"when\": {\"formed\": \"true\", \"pipe\": \"true\", \"facing\": \"south\"}, \"apply\": {\"model\": \"" + NS + "atlas_pillar_socket\", \"y\": 180}},\n"
+                        + "    {\"when\": {\"formed\": \"true\", \"pipe\": \"true\", \"facing\": \"west\"}, \"apply\": {\"model\": \"" + NS + "atlas_pillar_socket\", \"y\": 270}}\n"
+                        + "  ]\n}\n");
     }
 
     /** 3D Atlas Core: sculpted runic crucible + openwork lantern cage raising the cyan beacon visibly above the 22.5px rail. */
@@ -582,14 +669,13 @@ public class Models {
         item("cable_bushing", "cable_bushing");
 
         atlasConduitModel();
-        single("atlas_conduit", "atlas_conduit");
         item("atlas_conduit", "atlas_conduit");
 
         cube("channel_expander", "channel_expander");
-        single("channel_expander", "channel_expander");
+        expanderBlockstate("channel_expander");
         item("channel_expander", "channel_expander");
         cube("quantum_channel_expander", "quantum_channel_expander");
-        single("quantum_channel_expander", "quantum_channel_expander");
+        expanderBlockstate("quantum_channel_expander");
         item("quantum_channel_expander", "quantum_channel_expander");
 
         atlasCoreModel();

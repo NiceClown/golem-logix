@@ -25,6 +25,7 @@ import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 public class GolemLogixClientEvents {
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
+        com.golemlogix.client.render.BerBuffers.clientTick();
         ClientLevel level = Minecraft.getInstance().level;
         if (level != null) {
             StaleLight.clientTick(level);
@@ -39,11 +40,14 @@ public class GolemLogixClientEvents {
         PipeRunners.clear();
         SnowPipeRenderer.clearCaches();
         BookModel.invalidate();
+        com.golemlogix.client.render.BerBuffers.clearPool();
     }
 
     @SubscribeEvent
     public static void onResourceReload(ClientResourceLoadFinishedEvent event) {
         BookModel.invalidate();
+        CopperGolemPuppet.invalidate();
+        SnowmanPuppet.invalidate();
     }
 
     @SubscribeEvent

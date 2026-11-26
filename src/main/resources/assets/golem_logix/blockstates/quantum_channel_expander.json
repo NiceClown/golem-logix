@@ -1,5 +1,13 @@
 {
-  "variants": {
-    "": {"model": "golem_logix:block/quantum_channel_expander"}
-  }
+  "multipart": [
+    {"when": {"formed": "false"}, "apply": {"model": "golem_logix:block/quantum_channel_expander"}},
+    {"when": {"formed": "true", "down": "false", "up": "false"}, "apply": {"model": "golem_logix:block/quantum_channel_expander_pillar_single"}},
+    {"when": {"formed": "true", "down": "false", "up": "true"}, "apply": {"model": "golem_logix:block/quantum_channel_expander_pillar_bottom"}},
+    {"when": {"formed": "true", "down": "true", "up": "true"}, "apply": {"model": "golem_logix:block/quantum_channel_expander_pillar_mid"}},
+    {"when": {"formed": "true", "down": "true", "up": "false"}, "apply": {"model": "golem_logix:block/quantum_channel_expander_pillar_top"}},
+    {"when": {"formed": "true", "pipe": "true", "facing": "north"}, "apply": {"model": "golem_logix:block/atlas_pillar_socket"}},
+    {"when": {"formed": "true", "pipe": "true", "facing": "east"}, "apply": {"model": "golem_logix:block/atlas_pillar_socket", "y": 90}},
+    {"when": {"formed": "true", "pipe": "true", "facing": "south"}, "apply": {"model": "golem_logix:block/atlas_pillar_socket", "y": 180}},
+    {"when": {"formed": "true", "pipe": "true", "facing": "west"}, "apply": {"model": "golem_logix:block/atlas_pillar_socket", "y": 270}}
+  ]
 }

@@ -53,9 +53,12 @@ public abstract class LegacyBer<T extends BlockEntity> implements BlockEntityRen
         if (camera != null && camera.initialized && camera.pos != null) {
             LegacyBer.camera = camera.pos;
         }
-        BerBuffers buffers = new BerBuffers(collector);
-        render(state.blockEntity, state.partialTick, poseStack, buffers, state.lightCoords, OverlayTexture.NO_OVERLAY);
-        buffers.flush();
+        BerBuffers buffers = BerBuffers.acquire(collector);
+        try {
+            render(state.blockEntity, state.partialTick, poseStack, buffers, state.lightCoords, OverlayTexture.NO_OVERLAY);
+        } finally {
+            buffers.flushAndRelease();
+        }
     }
 
     /** The drawing, as before: pose at the block's corner, vertices into the buffers. */

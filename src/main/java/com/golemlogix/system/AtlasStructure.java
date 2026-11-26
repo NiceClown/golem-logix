@@ -2,6 +2,8 @@ package com.golemlogix.system;
 
 import com.golemlogix.blocks.AtlantBlock;
 import com.golemlogix.blocks.AtlasCasingBlock;
+import com.golemlogix.blocks.AtlasConduitBlock;
+import com.golemlogix.blocks.ChannelExpanderBlock;
 import com.golemlogix.init.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -83,17 +85,17 @@ public final class AtlasStructure {
     }
 
     /**
-     * Gives every casing of the array around the core its part of the assembled look (formed) or takes it back (not formed). Cheap
-     * and idempotent: the core runs it with its check once a second, so an array of an older world dresses itself on load and an
-     * array losing a block undresses within a second. A side column stands only where both of its casings are casings (an expander
-     * leaves a gap).
+     * Gives every casing, expander, and conduit of the array around the core its assembled look (formed) or takes it back (not formed).
+     * Cheap and idempotent: the core runs it with its check once a second, so an array of an older world dresses itself on load and an
+     * array losing a block undresses within a second.
      */
     public static void dress(Level level, BlockPos corePos, boolean formed) {
         BlockPos origin = corePos.below(3);
-        for (int dy = 1; dy <= 3; dy++) {
+        // Pass 1: flip Channel Expanders into/out of pillar mode first so Pass 2 sees accurate vertical pillar adjacency
+        for (int dy = 1; dy <= 2; dy++) {
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dz = -1; dz <= 1; dz++) {
-                    if (dx == 0 && dz == 0) {
+                    if (cell(dx, dz) != Cell.EDGE) {
                         continue;
                     }
                     BlockPos pos = origin.offset(dx, dy, dz);
@@ -101,10 +103,51 @@ public final class AtlasStructure {
                         continue;
                     }
                     BlockState state = level.getBlockState(pos);
-                    if (!(state.getBlock() instanceof AtlasCasingBlock)) {
+                    if (!(state.getBlock() instanceof ChannelExpanderBlock)) {
                         continue;
                     }
-                    BlockState want = dressedCasingState(level, origin, dx, dy, dz, state, formed);
+                    Direction outer = dx != 0 ? (dx < 0 ? Direction.WEST : Direction.EAST) : (dz < 0 ? Direction.NORTH : Direction.SOUTH);
+                    BlockState pre = state.setValue(ChannelExpanderBlock.FORMED, formed)
+                            .setValue(ChannelExpanderBlock.FACING, formed ? outer : Direction.NORTH);
+                    if (!formed) {
+                        pre = pre.setValue(ChannelExpanderBlock.UP, false)
+                                .setValue(ChannelExpanderBlock.DOWN, false)
+                                .setValue(ChannelExpanderBlock.PIPE, false);
+                    }
+                    if (pre != state) {
+                        level.setBlock(pos, pre, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+                    }
+                }
+            }
+        }
+
+        // Pass 2: finalize casings, expanders (vertical links + outer pipe collar), and conduits (vertical links)
+        for (int dy = 0; dy <= 3; dy++) {
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    BlockPos pos = origin.offset(dx, dy, dz);
+                    if (!level.isLoaded(pos)) {
+                        continue;
+                    }
+                    BlockState state = level.getBlockState(pos);
+                    BlockState want = state;
+                    if (state.getBlock() instanceof AtlasCasingBlock && dy >= 1 && !(dx == 0 && dz == 0)) {
+                        want = dressedCasingState(level, origin, dx, dy, dz, state, formed);
+                    } else if (state.getBlock() instanceof ChannelExpanderBlock && formed && cell(dx, dz) == Cell.EDGE && (dy == 1 || dy == 2)) {
+                        Direction outer = dx != 0 ? (dx < 0 ? Direction.WEST : Direction.EAST) : (dz < 0 ? Direction.NORTH : Direction.SOUTH);
+                        BlockPos outerPos = pos.relative(outer);
+                        BlockState outerState = level.getBlockState(outerPos);
+                        boolean pipe = !(outerState.getBlock() instanceof AtlasPart)
+                                && GolemNode.linked(level, pos, state, outerPos, outerState, outer);
+                        want = state.setValue(ChannelExpanderBlock.FORMED, true)
+                                .setValue(ChannelExpanderBlock.FACING, outer)
+                                .setValue(ChannelExpanderBlock.UP, AtlasConduitBlock.isPillar(level.getBlockState(pos.above())))
+                                .setValue(ChannelExpanderBlock.DOWN, AtlasConduitBlock.isPillar(level.getBlockState(pos.below())))
+                                .setValue(ChannelExpanderBlock.PIPE, pipe);
+                    } else if (state.getBlock() instanceof AtlasConduitBlock) {
+                        want = state.setValue(AtlasConduitBlock.UP, AtlasConduitBlock.isPillar(level.getBlockState(pos.above())))
+                                .setValue(AtlasConduitBlock.DOWN, AtlasConduitBlock.isPillar(level.getBlockState(pos.below())));
+                    }
                     if (want != state) {
                         level.setBlock(pos, want, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
                     }

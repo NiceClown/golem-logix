@@ -24,10 +24,23 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
-public class AtlasCoreBlock extends Block implements GolemNode, EntityBlock, AtlasPart {
+public class AtlasCoreBlock extends Block implements GolemNode, EntityBlock, AtlasPart, RemovalAware {
     public AtlasCoreBlock(Properties properties) {
         // partial model (pedestal and crystal): without noOcclusion the block would count as a solid cube and its faces would be black
         super(properties.sound(SoundType.ANVIL).strength(6.0f).requiresCorrectToolForDrops().noOcclusion().lightLevel(state -> 10));
+    }
+
+    @Override
+    public void onRemoved(BlockState state, Level level, BlockPos pos) {
+        if (!level.isClientSide()) {
+            AtlasStructure.dress(level, pos, false);
+        }
+    }
+
+    @Override
+    protected void affectNeighborsAfterRemoval(BlockState state, ServerLevel level, BlockPos pos, boolean movedByPiston) {
+        super.affectNeighborsAfterRemoval(state, level, pos, movedByPiston);
+        onRemoved(state, level, pos);
     }
 
     /**

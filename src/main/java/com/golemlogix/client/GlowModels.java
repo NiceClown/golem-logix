@@ -1,6 +1,8 @@
 package com.golemlogix.client;
 
 import com.golemlogix.GolemLogixMod;
+import com.golemlogix.blocks.AtlasConduitBlock;
+import com.golemlogix.blocks.ChannelExpanderBlock;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.builders.UVPair;
 import net.minecraft.client.renderer.Sheets;
@@ -17,13 +19,16 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.TriState;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.neoforged.neoforge.client.model.DelegateBlockStateModel;
 import net.neoforged.neoforge.client.model.quad.BakedColors;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
+import org.joml.Vector3fc;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,6 +49,24 @@ public final class GlowModels {
     /** Light of the copy (0..15): a "light" glow, not a floodlight. */
     private static final int GLOW_LIGHT = 12;
     private static final float LIFT = 0.0008f;
+    private static final float GRAD_LIFT = 0.0006f;
+    private static final float GRAD_SPAN = 6.5f / 16f;
+    private static final int GRAD_STRIPS = 4;
+
+    enum PillarTone {
+        ICE("block/conduit_ice"),
+        BLUE("block/conduit_blue"),
+        QUANTUM("block/conduit_quantum");
+
+        final Identifier spriteId;
+
+        PillarTone(String path) {
+            this.spriteId = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, path);
+        }
+    }
+
+    private record GradientKey(BlockStateModelPart part, PillarTone self, @Nullable PillarTone down, @Nullable PillarTone up) {
+    }
 
     /** Texture -> its glow layer (empty if there is none). The key is the sprite itself: after a resource reload the sprites are new. */
     private static final Map<TextureAtlasSprite, Optional<TextureAtlasSprite>> SPRITES = new ConcurrentHashMap<>();
@@ -53,6 +76,8 @@ public final class GlowModels {
     private static final Map<BlockStateModelPart, Optional<GlowPart>> SINGLE_PART = new ConcurrentHashMap<>();
     /** Multi-part model parts -> their glow part (empty if nothing glows). */
     private static final Map<List<BlockStateModelPart>, Optional<GlowPart>> PARTS = new ConcurrentHashMap<>();
+    /** Cached cross-block vertical color-gradient overlay parts for multi-tone Atlas pillars. */
+    private static final Map<GradientKey, Optional<PillarGradientPart>> GRADIENTS = new ConcurrentHashMap<>();
     /** Written on the model-reload worker thread and read by chunk-meshing threads. */
     private static volatile Function<Identifier, TextureAtlasSprite> textures = id -> null;
 
@@ -65,6 +90,7 @@ public final class GlowModels {
         QUADS.clear();
         SINGLE_PART.clear();
         PARTS.clear();
+        GRADIENTS.clear();
         textures = textureGetter;
         result.blockStateModels().replaceAll((state, model) ->
                 GolemLogixMod.MOD_ID.equals(BuiltInRegistries.BLOCK.getKey(state.getBlock()).getNamespace()) && !(model instanceof Glowing)
@@ -130,7 +156,42 @@ public final class GlowModels {
         public void collectParts(BlockAndTintGetter level, BlockPos pos, BlockState state, RandomSource random, List<BlockStateModelPart> parts) {
             int from = parts.size();
             super.collectParts(level, pos, state, random, parts);
+            int baseEnd = parts.size();
             addGlow(parts, from);
+            addPillarGradient(level, pos, state, parts, from, baseEnd);
+        }
+
+        private static void addPillarGradient(BlockAndTintGetter level, BlockPos pos, BlockState state,
+                                              List<BlockStateModelPart> parts, int from, int baseEnd) {
+            PillarTone selfTone = toneOf(state);
+            if (selfTone == null || baseEnd <= from) {
+                return;
+            }
+            boolean hasDown = state.getValue(BlockStateProperties.DOWN);
+            boolean hasUp = state.getValue(BlockStateProperties.UP);
+            if (!hasDown && !hasUp) {
+                return;
+            }
+            PillarTone downTone = hasDown ? toneOf(level.getBlockState(pos.below())) : null;
+            if (downTone == selfTone) {
+                downTone = null;
+            }
+            PillarTone upTone = hasUp ? toneOf(level.getBlockState(pos.above())) : null;
+            if (upTone == selfTone) {
+                upTone = null;
+            }
+            if (downTone == null && upTone == null) {
+                return;
+            }
+            for (int i = from; i < baseEnd; i++) {
+                BlockStateModelPart candidate = parts.get(i);
+                if (hasPillarCoreQuads(candidate, selfTone.spriteId)) {
+                    GradientKey key = new GradientKey(candidate, selfTone, downTone, upTone);
+                    Optional<PillarGradientPart> grad = GRADIENTS.computeIfAbsent(key, GlowModels::buildGradient);
+                    grad.ifPresent(parts::add);
+                    break;
+                }
+            }
         }
 
         private static void addGlow(List<BlockStateModelPart> parts, int from) {
@@ -228,6 +289,168 @@ public final class GlowModels {
         @Override
         public List<BakedQuad> getQuads(@Nullable Direction direction) {
             return direction == null ? unculled : sides[direction.ordinal()];
+        }
+
+        @Override
+        @Deprecated
+        public boolean useAmbientOcclusion() {
+            return false;
+        }
+
+        @Override
+        public TriState ambientOcclusion() {
+            return TriState.FALSE;
+        }
+
+        @Override
+        public Material.Baked particleMaterial() {
+            return particleMaterial;
+        }
+
+        @Override
+        public int materialFlags() {
+            return materialFlags;
+        }
+    }
+
+    @Nullable
+    private static PillarTone toneOf(BlockState state) {
+        if (state.getBlock() instanceof AtlasConduitBlock) {
+            return PillarTone.ICE;
+        }
+        if (state.getBlock() instanceof ChannelExpanderBlock exp && state.getValue(ChannelExpanderBlock.FORMED)) {
+            return exp.isQuantum() ? PillarTone.QUANTUM : PillarTone.BLUE;
+        }
+        return null;
+    }
+
+    private static boolean hasPillarCoreQuads(BlockStateModelPart part, Identifier spriteId) {
+        for (BakedQuad q : part.getQuads(null)) {
+            if (q.direction().getAxis().isHorizontal() && q.materialInfo().sprite().contents().name().equals(spriteId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static float hermite(float u) {
+        return u * u * (3f - 2f * u);
+    }
+
+    private static Optional<PillarGradientPart> buildGradient(GradientKey key) {
+        TextureAtlasSprite baseSprite = textures.apply(key.self().spriteId);
+        TextureAtlasSprite downSprite = key.down() != null ? textures.apply(key.down().spriteId) : null;
+        TextureAtlasSprite upSprite = key.up() != null ? textures.apply(key.up().spriteId) : null;
+        if (baseSprite == null || (downSprite == null && upSprite == null)) {
+            return Optional.empty();
+        }
+        List<BakedQuad> out = new ArrayList<>();
+        for (BakedQuad q : key.part().getQuads(null)) {
+            if (!q.direction().getAxis().isHorizontal()
+                    || !q.materialInfo().sprite().contents().name().equals(key.self().spriteId)) {
+                continue;
+            }
+            if (downSprite != null) {
+                for (int s = 0; s < GRAD_STRIPS; s++) {
+                    float f0 = (float) s / GRAD_STRIPS;
+                    float f1 = (float) (s + 1) / GRAD_STRIPS;
+                    float yLo = GRAD_SPAN * f0;
+                    float yHi = GRAD_SPAN * f1;
+                    int aLo = Math.round((1f - hermite(0.5f + 0.5f * f0)) * 255f);
+                    int aHi = Math.round((1f - hermite(0.5f + 0.5f * f1)) * 255f);
+                    out.add(sliceGradientQuad(q, baseSprite, downSprite, yLo, yHi, aLo, aHi));
+                }
+            }
+            if (upSprite != null) {
+                for (int s = 0; s < GRAD_STRIPS; s++) {
+                    float f0 = (float) s / GRAD_STRIPS;
+                    float f1 = (float) (s + 1) / GRAD_STRIPS;
+                    float yLo = (1f - GRAD_SPAN) + GRAD_SPAN * f0;
+                    float yHi = (1f - GRAD_SPAN) + GRAD_SPAN * f1;
+                    int aLo = Math.round(hermite(0.5f * f0) * 255f);
+                    int aHi = Math.round(hermite(0.5f * f1) * 255f);
+                    out.add(sliceGradientQuad(q, baseSprite, upSprite, yLo, yHi, aLo, aHi));
+                }
+            }
+        }
+        return out.isEmpty() ? Optional.empty() : Optional.of(new PillarGradientPart(key.part().particleMaterial(), List.copyOf(out)));
+    }
+
+    private static BakedQuad sliceGradientQuad(BakedQuad q, TextureAtlasSprite baseSprite, TextureAtlasSprite overSprite,
+                                               float yLo, float yHi, int aLo, int aHi) {
+        Direction d = q.direction();
+        int[] bot = new int[4];
+        int[] top = new int[4];
+        for (int i = 0; i < 4; i++) {
+            float xi = q.position(i).x(), zi = q.position(i).z();
+            int bestB = 0, bestT = 0;
+            float distB = Float.MAX_VALUE, distT = Float.MAX_VALUE;
+            for (int k = 0; k < 4; k++) {
+                float dx = q.position(k).x() - xi, dz = q.position(k).z() - zi;
+                float dist = dx * dx + dz * dz;
+                if (q.position(k).y() < 0.5f) {
+                    if (dist < distB) {
+                        distB = dist;
+                        bestB = k;
+                    }
+                } else {
+                    if (dist < distT) {
+                        distT = dist;
+                        bestT = k;
+                    }
+                }
+            }
+            bot[i] = bestB;
+            top[i] = bestT;
+        }
+
+        Vector3f[] pos = new Vector3f[4];
+        long[] uv = new long[4];
+        int[] col = new int[4];
+        float baseU0 = baseSprite.getU0(), baseDU = baseSprite.getU1() - baseU0;
+        float baseV0 = baseSprite.getV0(), baseDV = baseSprite.getV1() - baseV0;
+        for (int i = 0; i < 4; i++) {
+            boolean isTop = q.position(i).y() > 0.5f;
+            float ty = isTop ? yHi : yLo;
+            int alpha = isTop ? aHi : aLo;
+            int b = bot[i], t = top[i];
+            Vector3fc pb = q.position(b), pt = q.position(t);
+            pos[i] = new Vector3f(
+                    Mth.lerp(ty, pb.x(), pt.x()) + d.getStepX() * GRAD_LIFT,
+                    Mth.lerp(ty, pb.y(), pt.y()) + d.getStepY() * GRAD_LIFT,
+                    Mth.lerp(ty, pb.z(), pt.z()) + d.getStepZ() * GRAD_LIFT);
+            float uNorm = (UVPair.unpackU(q.packedUV(i)) - baseU0) / baseDU;
+            float vBot = (UVPair.unpackV(q.packedUV(b)) - baseV0) / baseDV;
+            float vTop = (UVPair.unpackV(q.packedUV(t)) - baseV0) / baseDV;
+            float vNorm = Mth.lerp(ty, vBot, vTop);
+            uv[i] = UVPair.pack(overSprite.getU(uNorm), overSprite.getV(vNorm));
+            col[i] = (alpha << 24) | 0x00FFFFFF;
+        }
+        BakedQuad.MaterialInfo info = new BakedQuad.MaterialInfo(overSprite, ChunkSectionLayer.TRANSLUCENT,
+                Sheets.translucentBlockItemSheet(), -1, q.materialInfo().shade(), q.materialInfo().lightEmission(), false);
+        return new BakedQuad(pos[0], pos[1], pos[2], pos[3], uv[0], uv[1], uv[2], uv[3], d, info,
+                q.bakedNormals(), BakedColors.of(col[0], col[1], col[2], col[3]));
+    }
+
+    /** Translucent per-vertex alpha gradient overlay blending neighbouring pillar tones across block boundaries. */
+    static final class PillarGradientPart implements BlockStateModelPart {
+        private final Material.Baked particleMaterial;
+        private final List<BakedQuad> unculled;
+        private final int materialFlags;
+
+        PillarGradientPart(Material.Baked particleMaterial, List<BakedQuad> unculled) {
+            this.particleMaterial = particleMaterial;
+            this.unculled = unculled;
+            int flags = 0;
+            for (BakedQuad q : unculled) {
+                flags |= q.materialInfo().flags();
+            }
+            this.materialFlags = flags;
+        }
+
+        @Override
+        public List<BakedQuad> getQuads(@Nullable Direction direction) {
+            return direction == null ? unculled : List.of();
         }
 
         @Override

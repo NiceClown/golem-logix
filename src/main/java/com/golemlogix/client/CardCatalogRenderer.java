@@ -221,6 +221,11 @@ public class CardCatalogRenderer extends LegacyBer<CardCatalogBlockEntity> {
     private static void renderConsoleAndLevers(VertexConsumer vc, PoseStack pose, PoseStack.Pose p, int light,
                                                float time, float open, float fill, TextureAtlasSprite brassSprite) {
         fitWall(vc, p, 3.4f, 17.1f, 12.6f, 26.9f, -0.5f, SCREEN, WHITE, LightCoordsUtil.FULL_BRIGHT);
+        // Square 8.0 x 8.0 rear Archivist CRT porthole inside the rear center bezel (+Z face at z = 33.3f)
+        TextureAtlasSprite scr = sprite(SCREEN);
+        com.golemlogix.client.render.PixelMesh.quad(vc, p,
+                2.2f, 18.6f, 33.3f, 10.2f, 18.6f, 33.3f, 10.2f, 26.6f, 33.3f, 2.2f, 26.6f, 33.3f,
+                scr.getU0(), scr.getV0(), scr.getU1(), scr.getV1(), WHITE, LightCoordsUtil.FULL_BRIGHT, 0, 0, 1);
         if (fill > 0f) {
             float fx = 4.6f + 6.8f * fill;
             box(vc, p, 4.6f, 14.5f, -0.5f, fx, 15.3f, -0.35f, PANEL, 0xFF40F0E8, LightCoordsUtil.FULL_BRIGHT);
@@ -261,8 +266,8 @@ public class CardCatalogRenderer extends LegacyBer<CardCatalogBlockEntity> {
         for (int k = 0; k < 2; k++) {
             boolean right = k == 1;
             int ox = Math.max(0, Math.min(3, be.golemOxidation(k)));
-            float px0 = right ? 32f : -32f, px1 = right ? 48f : -16f;
-            box(vc, p, px0, 0, 0.5f, px1, 6, 15.5f, PEDESTAL[ox], WHITE, light);
+            float px0 = right ? 32.02f : -32f, px1 = right ? 48f : -16.02f;
+            box(vc, p, px0, 0.02f, 0.5f, px1, 5.6f, 15.5f, PEDESTAL[ox], WHITE, light);
         }
         for (int k = 0; k < 2; k++) {
             renderSideGolem(be, pose, buffers, light, time, open, k);

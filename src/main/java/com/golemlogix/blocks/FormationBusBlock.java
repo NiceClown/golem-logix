@@ -24,11 +24,6 @@ public class FormationBusBlock extends GolemPlaneBlock {
     }
 
     @Override
-    protected boolean propagatesSkylightDown(BlockState state) {
-        return true;
-    }
-
-    @Override
     protected MapCodec<? extends DirectionalBlock> codec() {
         return CODEC;
     }

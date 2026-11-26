@@ -24,6 +24,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.phys.AABB;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import static com.golemlogix.client.MachineParts.BRASS;
@@ -66,8 +67,12 @@ public class DistillationTowerRenderer extends LegacyBer<DistillationTowerBlockE
     private static final Vector3f FWD_EAST = new Vector3f(1f, 0f, 0f);
     private static final Vector3f UP = new Vector3f(0f, 1f, 0f);
     private static final BlockPos.MutableBlockPos JAR_PROBE = new BlockPos.MutableBlockPos();
+    private static final double CREW_SIGHT_SQ = 40.0 * 40.0;
+    private static final Quaternionf SCRATCH_QUAT = new Quaternionf();
+    private static final PoseStack SCRATCH_POSE = new PoseStack();
 
-    private record Meshes(TextureAtlasSprite atlasMark, BerBuffers.Baked lower, BerBuffers.Baked head) {
+    private record Meshes(TextureAtlasSprite atlasMark, BerBuffers.Baked lower, BerBuffers.Baked head,
+                          BerBuffers.Baked coilRing, BerBuffers.Baked bracket, BerBuffers.Baked wheel) {
     }
 
     private static Meshes meshes;
@@ -77,7 +82,13 @@ public class DistillationTowerRenderer extends LegacyBer<DistillationTowerBlockE
         if (meshes == null || meshes.atlasMark() != mark) {
             meshes = new Meshes(mark,
                     BerBuffers.bake(DistillationTowerRenderer::bakeLower),
-                    BerBuffers.bake(DistillationTowerRenderer::bakeHead));
+                    BerBuffers.bake(DistillationTowerRenderer::bakeHead),
+                    BerBuffers.bake(DistillationTowerRenderer::bakeCoilRing),
+                    BerBuffers.bake((vc, p) -> {
+                        box(vc, p.last(), -0.6f, 14.4f, 3.2f, 0.8f, 34f, 4.6f, COPPER, WHITE, 0);
+                        MachineParts.platform(vc, p, -5f, 1.2f, 17.4f, 2.2f, 5.8f, 13.6f, 0.2f, 0);
+                    }),
+                    BerBuffers.bake((vc, p) -> MachineParts.wheelX(vc, p, 0f, 0f, 0f, 2.4f, 0f, 0)));
         }
         return meshes;
     }
@@ -120,7 +131,8 @@ public class DistillationTowerRenderer extends LegacyBer<DistillationTowerBlockE
         boolean piped = renderJarPipes(vc, pose.last(), level, pos, lightTop);
 
         Direction facing = state.getValue(DistillationTowerBlock.FACING);
-        float golemTurn = MachineParts.golemTurn(level, pos, facing, 2);
+        boolean showCrew = LegacyBer.camera().distanceToSqr(pos.getX() + 0.5, pos.getY() + 1.5, pos.getZ() + 0.5) < CREW_SIGHT_SQ;
+        float golemTurn = showCrew ? MachineParts.golemTurn(level, pos, facing, 2) : 0f;
 
         pose.pushPose();
         Quads.faceModel(pose, facing);
@@ -139,30 +151,44 @@ public class DistillationTowerRenderer extends LegacyBer<DistillationTowerBlockE
             box(vc, p, 1.6f, 47.6f, 6.2f, 2.6f, 50.6f, 9.8f, ICE, WHITE, lightTop);
         }
 
-        // side feed pipe, valve wheel, and bracket (cutout before switching buffers for the golem puppet)
-        float turn = work > 0.05f ? phase * 14f : 0f;
-        pose.pushPose();
-        pose.rotateAround(Axis.YP.rotationDegrees(golemTurn), 0.5f, 0.5f, 0.5f);
-        box(vc, pose.last(), -0.6f, 14.4f, 3.2f, 0.8f, 34f, 4.6f, COPPER, WHITE, light);
-        MachineParts.wheelX(vc, pose, -1.2f, 24f, 3.9f, 2.4f, turn, light);
-        MachineParts.platform(vc, pose, -5f, 1.2f, 17.4f, 2.2f, 5.8f, 13.6f, 0.2f, light);
-        pose.popPose();
+        if (showCrew) {
+            float turn = work > 0.05f ? phase * 14f : 0f;
+            PoseStack.Pose bp = SCRATCH_POSE.last();
+            bp.set(p);
+            if (golemTurn != 0f) {
+                SCRATCH_QUAT.rotationY(golemTurn * Mth.DEG_TO_RAD);
+                bp.pose().rotateAround(SCRATCH_QUAT, 0.5f, 0.5f, 0.5f);
+                bp.normal().rotate(SCRATCH_QUAT);
+            }
+            baked.bracket().draw(buffers, solid, bp, light, 0);
 
-        renderCoil(vc, pose, phase, work, time, blood);
-        renderOperatorGolem(pose, buffers, golemTurn, light, work, phase, time);
+            SCRATCH_QUAT.rotationX(turn * Mth.DEG_TO_RAD);
+            bp.pose().translate(-1.2f * PIXEL, 24f * PIXEL, 3.9f * PIXEL).rotate(SCRATCH_QUAT);
+            bp.normal().rotate(SCRATCH_QUAT);
+            baked.wheel().draw(buffers, solid, bp, light, 0);
+        }
+
+        renderCoil(vc, buffers, solid, baked.coilRing(), p, phase, work, time, blood);
+        if (showCrew) {
+            renderOperatorGolem(p, buffers, golemTurn, light, work, phase, time);
+        }
         renderBloodAndGlass(pose, p, buffers, light, blood, work, time);
         pose.popPose();
     }
 
-    private static void renderOperatorGolem(PoseStack pose, MultiBufferSource buffers, float golemTurn,
+    private static void renderOperatorGolem(PoseStack.Pose basePose, MultiBufferSource buffers, float golemTurn,
                                             int light, float work, float phase, float time) {
         float reach = work > 0.05f ? -1.2f + 0.15f * Mth.sin(phase * 0.7f) : -0.85f;
         CopperGolemPuppet.Arms arms = new CopperGolemPuppet.Arms(reach, 0.25f, reach, -0.25f, 0.2f * Mth.sin(time * 0.013f));
-        pose.pushPose();
-        pose.rotateAround(Axis.YP.rotationDegrees(golemTurn), 0.5f, 0.5f, 0.5f);
-        CopperGolemPuppet.render(pose, buffers, light, GOLEM_POS, FWD_EAST,
+        PoseStack.Pose bp = SCRATCH_POSE.last();
+        bp.set(basePose);
+        if (golemTurn != 0f) {
+            SCRATCH_QUAT.rotationY(golemTurn * Mth.DEG_TO_RAD);
+            bp.pose().rotateAround(SCRATCH_QUAT, 0.5f, 0.5f, 0.5f);
+            bp.normal().rotate(SCRATCH_QUAT);
+        }
+        CopperGolemPuppet.render(SCRATCH_POSE, buffers, light, GOLEM_POS, FWD_EAST,
                 UP, 0.45f, new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.1f), 1, null, arms);
-        pose.popPose();
     }
 
     private static void renderBloodAndGlass(PoseStack pose, PoseStack.Pose p, MultiBufferSource buffers, int light,
@@ -220,31 +246,36 @@ public class DistillationTowerRenderer extends LegacyBer<DistillationTowerBlockE
         return COLUMN_BOTTOM + 0.6f + (COLUMN_TOP - COLUMN_BOTTOM - 1.2f) * Math.min(1f, blood);
     }
 
-    /** Five helical coil rings climbing the column; rings submerged in blood glow and pulse while distilling. */
-    private static void renderCoil(VertexConsumer vc, PoseStack pose, float phase, float work, float time, float blood) {
-        float surface = blood > 0.002f ? bloodLevelY(blood) : COLUMN_BOTTOM;
+    private static void bakeCoilRing(VertexConsumer vc, PoseStack pose) {
+        PoseStack.Pose p = pose.last();
         TextureAtlasSprite glowSprite = sprite(GLOW);
+        for (int i = 0; i < 12; i++) {
+            float a = i * Mth.TWO_PI / 12f;
+            float cx = Mth.cos(a) * 3.9f, cz = Mth.sin(a) * 3.9f;
+            float dy = (i / 12f) * 1.2f;
+            box(vc, p, cx - 0.75f, dy - 0.45f, cz - 0.75f, cx + 0.75f, dy + 0.45f, cz + 0.75f, glowSprite, WHITE, 0);
+        }
+    }
+
+    /** Five helical coil rings climbing the column; rings submerged in blood glow and pulse while distilling. */
+    private static void renderCoil(VertexConsumer vc, MultiBufferSource buffers, RenderType solid, BerBuffers.Baked coilRing,
+                                   PoseStack.Pose basePose, float phase, float work, float time, float blood) {
+        float surface = blood > 0.002f ? bloodLevelY(blood) : COLUMN_BOTTOM;
+        PoseStack.Pose cp = SCRATCH_POSE.last();
         for (int k = 0; k < COIL_COLORS.length; k++) {
             float y = COLUMN_BOTTOM + 2.6f + k * 3.6f;
             float pulse = 0.5f + 0.5f * Mth.sin(phase * 1.6f - k * 1.2f);
             float b = y > surface ? 0.12f : 0.35f + 0.65f * (0.25f + 0.75f * work) * (0.55f + 0.45f * pulse);
             int col = scaledRgb(COIL_COLORS[k], b);
-            pose.pushPose();
-            pose.translate(8f * PIXEL, y * PIXEL, 8f * PIXEL);
-            pose.mulPose(Axis.YP.rotationDegrees(phase * 22f + k * 17f));
-            PoseStack.Pose p = pose.last();
-            for (int i = 0; i < 12; i++) {
-                float a = i * Mth.TWO_PI / 12f;
-                float cx = Mth.cos(a) * 3.9f, cz = Mth.sin(a) * 3.9f;
-                float dy = (i / 12f) * 1.2f;
-                box(vc, p, cx - 0.75f, dy - 0.45f, cz - 0.75f, cx + 0.75f, dy + 0.45f, cz + 0.75f,
-                        glowSprite, col, LightCoordsUtil.FULL_BRIGHT);
-            }
-            pose.popPose();
+            SCRATCH_QUAT.rotationY((phase * 22f + k * 17f) * Mth.DEG_TO_RAD);
+            cp.set(basePose);
+            cp.pose().translate(8f * PIXEL, y * PIXEL, 8f * PIXEL).rotate(SCRATCH_QUAT);
+            cp.normal().rotate(SCRATCH_QUAT);
+            coilRing.draw(buffers, solid, cp, LightCoordsUtil.FULL_BRIGHT, col);
         }
         float g = 0.2f + 0.5f * work * (0.8f + 0.2f * Mth.sin(time * 0.2f));
         int core = 0xFF000000 | ((int) (0x60 * g) << 16) | ((int) (0xC8 * g) << 8) | (int) (0xFF * g);
-        box(vc, pose.last(), 7.4f, COLUMN_BOTTOM + 2f, 7.4f, 8.6f, COLUMN_TOP - 1.5f, 8.6f, glowSprite, core, LightCoordsUtil.FULL_BRIGHT);
+        box(vc, basePose, 7.4f, COLUMN_BOTTOM + 2f, 7.4f, 8.6f, COLUMN_TOP - 1.5f, 8.6f, sprite(GLOW), core, LightCoordsUtil.FULL_BRIGHT);
     }
 
     /** Overhead brass outlet pipes running from the tower riser down into adjacent Cryo-Source Jars. */

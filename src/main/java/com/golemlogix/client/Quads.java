@@ -5,15 +5,41 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
+import net.minecraft.util.Mth;
+import org.joml.Matrix3f;
+import org.joml.Matrix4f;
+import org.joml.Quaternionf;
 
 /** Small helpers for drawing flat textured rectangles in block entity renderers. */
 public final class Quads {
+    private static final Quaternionf ROT_SOUTH = Axis.YP.rotationDegrees(180f);
+    private static final Quaternionf ROT_EAST = Axis.YP.rotationDegrees(-90f);
+    private static final Quaternionf ROT_WEST = Axis.YP.rotationDegrees(90f);
+    private static final Quaternionf ROT_UP = Axis.XP.rotationDegrees(90f);
+    private static final Quaternionf ROT_DOWN = Axis.XP.rotationDegrees(-90f);
+
     private Quads() {
     }
 
     private static void vertex(VertexConsumer vc, PoseStack.Pose pose, float x, float y, float z, float u, float v,
                                int argb, int light, float nx, float ny, float nz) {
-        vc.addVertex(pose, x, y, z).setColor(argb).setUv(u, v).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, nx, ny, nz);
+        Matrix4f m = pose.pose();
+        Matrix3f nm = pose.normal();
+        float tnx = nm.m00() * nx + nm.m10() * ny + nm.m20() * nz;
+        float tny = nm.m01() * nx + nm.m11() * ny + nm.m21() * nz;
+        float tnz = nm.m02() * nx + nm.m12() * ny + nm.m22() * nz;
+        float lenSq = tnx * tnx + tny * tny + tnz * tnz;
+        if (Math.abs(lenSq - 1f) > 1e-3f && lenSq > 1e-8f) {
+            float inv = Mth.invSqrt(lenSq);
+            tnx *= inv;
+            tny *= inv;
+            tnz *= inv;
+        }
+        vc.addVertex(
+                m.m00() * x + m.m10() * y + m.m20() * z + m.m30(),
+                m.m01() * x + m.m11() * y + m.m21() * z + m.m31(),
+                m.m02() * x + m.m12() * y + m.m22() * z + m.m32(),
+                argb, u, v, OverlayTexture.NO_OVERLAY, light, tnx, tny, tnz);
     }
 
     /** A horizontal rectangle (facing up) at height y. Coordinates are block fractions. */
@@ -82,20 +108,31 @@ public final class Quads {
 
     /** Rotate the pose so the model's horizontal front (north) faces the block's horizontal FACING. */
     public static void faceModel(PoseStack pose, Direction facing) {
+        if (facing == Direction.NORTH) {
+            return;
+        }
         pose.translate(0.5, 0.5, 0.5);
-        pose.mulPose(Axis.YP.rotationDegrees(180f - facing.toYRot()));
+        switch (facing) {
+            case SOUTH -> pose.mulPose(ROT_SOUTH);
+            case EAST -> pose.mulPose(ROT_EAST);
+            case WEST -> pose.mulPose(ROT_WEST);
+            default -> pose.mulPose(Axis.YP.rotationDegrees(180f - facing.toYRot()));
+        }
         pose.translate(-0.5, -0.5, -0.5);
     }
 
     /** Rotate the pose from north-facing to any 6-way block facing (including UP and DOWN, matching blockstate rotations). */
     public static void orient(PoseStack pose, Direction facing) {
+        if (facing == Direction.NORTH) {
+            return;
+        }
         pose.translate(0.5f, 0.5f, 0.5f);
         switch (facing) {
-            case SOUTH -> pose.mulPose(Axis.YP.rotationDegrees(180f));
-            case EAST -> pose.mulPose(Axis.YP.rotationDegrees(-90f));
-            case WEST -> pose.mulPose(Axis.YP.rotationDegrees(90f));
-            case UP -> pose.mulPose(Axis.XP.rotationDegrees(90f));
-            case DOWN -> pose.mulPose(Axis.XP.rotationDegrees(-90f));
+            case SOUTH -> pose.mulPose(ROT_SOUTH);
+            case EAST -> pose.mulPose(ROT_EAST);
+            case WEST -> pose.mulPose(ROT_WEST);
+            case UP -> pose.mulPose(ROT_UP);
+            case DOWN -> pose.mulPose(ROT_DOWN);
             default -> {
             }
         }

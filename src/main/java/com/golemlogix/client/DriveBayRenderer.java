@@ -24,6 +24,9 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import org.joml.Matrix3f;
+import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 import static com.golemlogix.client.render.PixelMesh.PIXEL;
@@ -75,6 +78,8 @@ public class DriveBayRenderer extends LegacyBer<CopperDriveBayBlockEntity> {
     private static final int[] GOLEM_ROWS = {0, 2, 4};
     /** Display and gauge glass door vertical bounds and depth. */
     private static final float GLASS_Z = 0.8f, GLASS_Y0 = 4f, GLASS_Y1 = 28f;
+    /** Distance within which sub-pixel spinning reels, swinging saloon doors, and 0.115-scale internal archivists animate. */
+    private static final double DETAIL_SIGHT_SQ = 22.0 * 22.0;
 
     public DriveBayRenderer(BlockEntityRendererProvider.Context context) {
     }
@@ -122,6 +127,21 @@ public class DriveBayRenderer extends LegacyBer<CopperDriveBayBlockEntity> {
             return;
         }
         Direction facing = state.getValue(CopperDriveBayBlock.FACING);
+        BlockPos pos = be.getBlockPos();
+        Vec3 cam = LegacyBer.camera();
+        // The cabinet's back, sides, top, and bottom are opaque chunk blocks: when closed and viewed from behind, nothing inside is visible.
+        if (be.door <= 0.001f && be.doorPrev <= 0.001f) {
+            double frontX = pos.getX() + 0.5 + 0.5 * facing.getStepX();
+            double frontZ = pos.getZ() + 0.5 + 0.5 * facing.getStepZ();
+            double inFront = (cam.x - frontX) * facing.getStepX() + (cam.z - frontZ) * facing.getStepZ();
+            if (inFront < -0.15) {
+                return;
+            }
+        }
+
+        Direction right = CopperDriveBayBlock.rightOf(facing);
+        double distSq = cam.distanceToSqr(pos.getX() + 0.5 + 0.5 * right.getStepX(), pos.getY() + 1.0, pos.getZ() + 0.5 + 0.5 * right.getStepZ());
+        boolean detail = distSq < DETAIL_SIGHT_SQ;
         boolean active = state.getValue(GolemProperties.ACTIVE);
         float time = (be.getLevel().getGameTime() % 72000L) + partialTick;
 
@@ -130,12 +150,14 @@ public class DriveBayRenderer extends LegacyBer<CopperDriveBayBlockEntity> {
         PoseStack.Pose p = pose.last();
 
         if (be.getMask() != 0) {
-            renderCassettes(be, p, buffers, light, active, time);
+            renderCassettes(be, p, buffers, light, active, detail, time);
         }
         boolean walking = active && be.getMask() != 0;
-        renderSaloonDoors(p, buffers, light, walking, time);
-        if (walking) {
-            renderArchivistGolems(pose, buffers, light, time);
+        if (detail) {
+            renderSaloonDoors(p, buffers, light, walking, time);
+            if (walking) {
+                renderArchivistGolems(pose, buffers, light, time);
+            }
         }
         if (active) {
             // pulsing runes on the plinth and top beam
@@ -155,14 +177,16 @@ public class DriveBayRenderer extends LegacyBer<CopperDriveBayBlockEntity> {
 
     /** Draws all installed cassettes in five texture-batched passes to minimise render-type switches. */
     private static void renderCassettes(CopperDriveBayBlockEntity be, PoseStack.Pose p, MultiBufferSource buffers,
-                                        int light, boolean active, float time) {
+                                        int light, boolean active, boolean detail, float time) {
         renderCassetteFronts(be, p, buffers.getBuffer(RenderTypes.entityCutout(CASSETTE)), light);
-        renderCassetteBodiesAndLeds(be, p, buffers.getBuffer(RenderTypes.entityCutout(WHITE)), light);
-        renderTapeWindings(be, p, buffers.getBuffer(RenderTypes.entityCutout(TAPE)), light, active, time);
-        if (active) {
-            renderTapeGlow(be, p, buffers.getBuffer(RenderTypes.eyes(TAPE_GLOW)), time);
+        renderCassetteBodiesAndLeds(be, p, buffers.getBuffer(RenderTypes.entityCutout(WHITE)), light, detail);
+        if (detail) {
+            renderTapeWindings(be, p, buffers.getBuffer(RenderTypes.entityCutout(TAPE)), light, active, time);
+            if (active) {
+                renderTapeGlow(be, p, buffers.getBuffer(RenderTypes.eyes(TAPE_GLOW)), time);
+            }
+            renderReels(be, p, buffers.getBuffer(RenderTypes.entityCutout(REEL)), light, active, time);
         }
-        renderReels(be, p, buffers.getBuffer(RenderTypes.entityCutout(REEL)), light, active, time);
     }
 
     private static void renderCassetteFronts(CopperDriveBayBlockEntity be, PoseStack.Pose p, VertexConsumer body, int light) {
@@ -176,7 +200,8 @@ public class DriveBayRenderer extends LegacyBer<CopperDriveBayBlockEntity> {
         }
     }
 
-    private static void renderCassetteBodiesAndLeds(CopperDriveBayBlockEntity be, PoseStack.Pose p, VertexConsumer solid, int light) {
+    private static void renderCassetteBodiesAndLeds(CopperDriveBayBlockEntity be, PoseStack.Pose p, VertexConsumer solid, int light,
+                                                    boolean detail) {
         for (int slot = 0; slot < CopperDriveBayBlockEntity.SLOTS; slot++) {
             ItemStack disk = be.getDisks().get(slot);
             if (disk.isEmpty()) {
@@ -186,7 +211,9 @@ public class DriveBayRenderer extends LegacyBer<CopperDriveBayBlockEntity> {
             float y0 = shelfBottomY(slot / 2), y1 = y0 + CASSETTE_H;
             boolean fluid = disk.getItem() instanceof MagneticDiskItem d && d.isFluid();
             int label = (fluid ? FLUID_LABEL : ITEM_LABEL)[diskTier(disk)];
-            sides(solid, p, x0, y0, x1, y1, Z_FRONT, Z_BACK, CASSETTE_SIDE_TINT, light);
+            if (detail) {
+                sides(solid, p, x0, y0, x1, y1, Z_FRONT, Z_BACK, CASSETTE_SIDE_TINT, light);
+            }
             front(solid, p, x0 + 0.5f, y1 - 0.75f, x1 - 0.5f, y1 - 0.15f, Z_FRONT - 0.02f, 0.5f, 0.5f, 0.5f, 0.5f, label, light);
 
             long stored = MagneticDiskItem.getStoredCount(disk);
@@ -357,25 +384,49 @@ public class DriveBayRenderer extends LegacyBer<CopperDriveBayBlockEntity> {
 
     private static void vertex(VertexConsumer vc, PoseStack.Pose pose, float x, float y, float z, float u, float v,
                                int color, int light, float nx, float ny, float nz) {
-        vc.addVertex(pose, (16f - x) * PIXEL, y * PIXEL, z * PIXEL).setColor(color).setUv(u, v)
-                .setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, nx, ny, nz);
+        Matrix4f m = pose.pose();
+        Matrix3f nm = pose.normal();
+        float lx = (16f - x) * PIXEL, ly = y * PIXEL, lz = z * PIXEL;
+        vc.addVertex(
+                m.m00() * lx + m.m10() * ly + m.m20() * lz + m.m30(),
+                m.m01() * lx + m.m11() * ly + m.m21() * lz + m.m31(),
+                m.m02() * lx + m.m12() * ly + m.m22() * lz + m.m32(),
+                color, u, v, OverlayTexture.NO_OVERLAY, light,
+                nm.m00() * nx + nm.m10() * ny + nm.m20() * nz,
+                nm.m01() * nx + nm.m11() * ny + nm.m21() * nz,
+                nm.m02() * nx + nm.m12() * ny + nm.m22() * nz);
     }
 
     private static void front(VertexConsumer vc, PoseStack.Pose pose, float x0, float y0, float x1, float y1, float z,
                               float u0, float v0, float u1, float v1, int color, int light) {
-        vertex(vc, pose, x0, y1, z, u0, v0, color, light, 0, 0, -1);
-        vertex(vc, pose, x1, y1, z, u1, v0, color, light, 0, 0, -1);
-        vertex(vc, pose, x1, y0, z, u1, v1, color, light, 0, 0, -1);
-        vertex(vc, pose, x0, y0, z, u0, v1, color, light, 0, 0, -1);
+        Matrix4f m = pose.pose();
+        Matrix3f nm = pose.normal();
+        float tnx = -nm.m20(), tny = -nm.m21(), tnz = -nm.m22();
+        float lx0 = (16f - x0) * PIXEL, lx1 = (16f - x1) * PIXEL;
+        float ly0 = y0 * PIXEL, ly1 = y1 * PIXEL, lz = z * PIXEL;
+        int ov = OverlayTexture.NO_OVERLAY;
+        vc.addVertex(m.m00() * lx0 + m.m10() * ly1 + m.m20() * lz + m.m30(), m.m01() * lx0 + m.m11() * ly1 + m.m21() * lz + m.m31(), m.m02() * lx0 + m.m12() * ly1 + m.m22() * lz + m.m32(), color, u0, v0, ov, light, tnx, tny, tnz);
+        vc.addVertex(m.m00() * lx1 + m.m10() * ly1 + m.m20() * lz + m.m30(), m.m01() * lx1 + m.m11() * ly1 + m.m21() * lz + m.m31(), m.m02() * lx1 + m.m12() * ly1 + m.m22() * lz + m.m32(), color, u1, v0, ov, light, tnx, tny, tnz);
+        vc.addVertex(m.m00() * lx1 + m.m10() * ly0 + m.m20() * lz + m.m30(), m.m01() * lx1 + m.m11() * ly0 + m.m21() * lz + m.m31(), m.m02() * lx1 + m.m12() * ly0 + m.m22() * lz + m.m32(), color, u1, v1, ov, light, tnx, tny, tnz);
+        vc.addVertex(m.m00() * lx0 + m.m10() * ly0 + m.m20() * lz + m.m30(), m.m01() * lx0 + m.m11() * ly0 + m.m21() * lz + m.m31(), m.m02() * lx0 + m.m12() * ly0 + m.m22() * lz + m.m32(), color, u0, v1, ov, light, tnx, tny, tnz);
     }
 
     private static void spun(VertexConsumer vc, PoseStack.Pose pose, float cx, float cy, float half, float z, float angle,
                              int color, int light) {
         float c = Mth.cos(angle * Mth.DEG_TO_RAD) * half, s = Mth.sin(angle * Mth.DEG_TO_RAD) * half;
-        vertex(vc, pose, cx - c - s, cy - s + c, z, 0, 0, color, light, 0, 0, -1);
-        vertex(vc, pose, cx + c - s, cy + s + c, z, 1, 0, color, light, 0, 0, -1);
-        vertex(vc, pose, cx + c + s, cy + s - c, z, 1, 1, color, light, 0, 0, -1);
-        vertex(vc, pose, cx - c + s, cy - s - c, z, 0, 1, color, light, 0, 0, -1);
+        Matrix4f m = pose.pose();
+        Matrix3f nm = pose.normal();
+        float tnx = -nm.m20(), tny = -nm.m21(), tnz = -nm.m22();
+        float lz = z * PIXEL;
+        int ov = OverlayTexture.NO_OVERLAY;
+        float ax = (16f - (cx - c - s)) * PIXEL, ay = (cy - s + c) * PIXEL;
+        float bx = (16f - (cx + c - s)) * PIXEL, by = (cy + s + c) * PIXEL;
+        float dx = (16f - (cx + c + s)) * PIXEL, dy = (cy + s - c) * PIXEL;
+        float ex = (16f - (cx - c + s)) * PIXEL, ey = (cy - s - c) * PIXEL;
+        vc.addVertex(m.m00() * ax + m.m10() * ay + m.m20() * lz + m.m30(), m.m01() * ax + m.m11() * ay + m.m21() * lz + m.m31(), m.m02() * ax + m.m12() * ay + m.m22() * lz + m.m32(), color, 0f, 0f, ov, light, tnx, tny, tnz);
+        vc.addVertex(m.m00() * bx + m.m10() * by + m.m20() * lz + m.m30(), m.m01() * bx + m.m11() * by + m.m21() * lz + m.m31(), m.m02() * bx + m.m12() * by + m.m22() * lz + m.m32(), color, 1f, 0f, ov, light, tnx, tny, tnz);
+        vc.addVertex(m.m00() * dx + m.m10() * dy + m.m20() * lz + m.m30(), m.m01() * dx + m.m11() * dy + m.m21() * lz + m.m31(), m.m02() * dx + m.m12() * dy + m.m22() * lz + m.m32(), color, 1f, 1f, ov, light, tnx, tny, tnz);
+        vc.addVertex(m.m00() * ex + m.m10() * ey + m.m20() * lz + m.m30(), m.m01() * ex + m.m11() * ey + m.m21() * lz + m.m31(), m.m02() * ex + m.m12() * ey + m.m22() * lz + m.m32(), color, 0f, 1f, ov, light, tnx, tny, tnz);
     }
 
     private static void sides(VertexConsumer vc, PoseStack.Pose pose, float x0, float y0, float x1, float y1, float z0, float z1,

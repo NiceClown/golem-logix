@@ -1,0 +1,33 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "golem_logix:block/atlas_rim_iron",
+    "iron": "golem_logix:block/atlas_rim_iron",
+    "brass": "golem_logix:block/atlas_rim_wheel"
+  },
+  "elements": [
+    {
+      "from": [3.25, 3.25, 0.85],
+      "to": [12.75, 12.75, 3.75],
+      "faces": {
+        "east": {"texture": "#iron"},
+        "west": {"texture": "#iron"},
+        "up": {"texture": "#iron"},
+        "down": {"texture": "#iron"}
+      }
+    },
+    {
+      "from": [2.5, 2.5, 0],
+      "to": [13.5, 13.5, 0.85],
+      "faces": {
+        "north": {"texture": "#brass"},
+        "south": {"texture": "#brass"},
+        "east": {"texture": "#brass"},
+        "west": {"texture": "#brass"},
+        "up": {"texture": "#brass"},
+        "down": {"texture": "#brass"}
+      }
+    }
+  ]
+}

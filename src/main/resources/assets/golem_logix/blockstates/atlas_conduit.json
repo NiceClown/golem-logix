@@ -1,5 +1,8 @@
 {
   "variants": {
-    "": {"model": "golem_logix:block/atlas_conduit"}
+    "down=false,up=false": {"model": "golem_logix:block/atlas_conduit"},
+    "down=false,up=true": {"model": "golem_logix:block/atlas_conduit_bottom"},
+    "down=true,up=true": {"model": "golem_logix:block/atlas_conduit_mid"},
+    "down=true,up=false": {"model": "golem_logix:block/atlas_conduit_top"}
   }
 }

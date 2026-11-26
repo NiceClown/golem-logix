@@ -1,5 +1,6 @@
 package com.golemlogix.client.render;
 
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.QuadInstance;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -21,11 +22,15 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
+import net.minecraft.util.Mth;
+
+import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -37,6 +42,9 @@ import java.util.function.BiConsumer;
  * set to the collector as custom geometry; items and blocks go straight to the collector (they have their own submissions now).
  */
 public final class BerBuffers implements MultiBufferSource {
+    /** Sentinel light value for {@link Baked#draw}: preserves each vertex's baked light coordinate instead of overriding it. */
+    public static final int KEEP_LIGHT = -1;
+
     private static final BlockDisplayContext BLOCK_CONTEXT = BlockDisplayContext.create();
     private static final PoseStack IDENTITY = new PoseStack();
     private static final PoseStack BAKED_POSE = new PoseStack();
@@ -45,68 +53,118 @@ public final class BerBuffers implements MultiBufferSource {
     private static final Vector3f SCRATCH_POS = new Vector3f();
     private static final Vector3f SCRATCH_NORM = new Vector3f();
 
-    private final SubmitNodeCollector collector;
+    /** Small render-thread pool of BerBuffers wrappers (handles nested submissions without per-BE allocations). */
+    private static final ArrayDeque<BerBuffers> BUFFER_POOL = new ArrayDeque<>(8);
+    /**
+     * Render-thread ring arena of vertex {@link Recorder}s so steady-state frames allocate zero float[]/int[] buffers
+     * and never trigger {@code Arrays.copyOf} churn. Sized well above a single frame's (BE x RenderType) count including
+     * Iris shadow passes; slots still marked {@code inUse} from the current tick are skipped safely.
+     */
+    private static final int RING_SIZE = 2048;
+    private static final int RING_MASK = RING_SIZE - 1;
+    private static final Recorder[] RING = new Recorder[RING_SIZE];
+    private static int ringCursor = 0;
+    private static long clientTickCounter = 0;
+
+    private SubmitNodeCollector collector;
+    private final Map<RenderType, Recorder> recorders = new LinkedHashMap<>(4);
     @Nullable
-    private RenderType firstType;
+    private RenderType lastType;
     @Nullable
-    private Recorder firstRecorder;
-    @Nullable
-    private Map<RenderType, Recorder> recorders;
+    private Recorder lastRecorder;
 
     public BerBuffers(SubmitNodeCollector collector) {
         this.collector = collector;
     }
 
+    /** Acquires a reusable render-thread {@link BerBuffers} bound to {@code collector}. */
+    public static BerBuffers acquire(SubmitNodeCollector collector) {
+        BerBuffers b = BUFFER_POOL.pollLast();
+        if (b == null) {
+            return new BerBuffers(collector);
+        }
+        b.collector = collector;
+        return b;
+    }
+
+    /** Advances the tick epoch so any recorder dropped by a non-rendering custom collector can be reclaimed safely. */
+    public static void clientTick() {
+        clientTickCounter++;
+    }
+
+    /** Releases pooled arena buffers on client disconnect. */
+    public static void clearPool() {
+        Arrays.fill(RING, null);
+        ringCursor = 0;
+        BUFFER_POOL.clear();
+    }
+
+    private static Recorder acquireRecorder(boolean fastEntityFormat) {
+        int idx = ringCursor++ & RING_MASK;
+        Recorder r = RING[idx];
+        if (r == null) {
+            r = new Recorder(Recorder.POOL_INITIAL_VERTICES);
+            RING[idx] = r;
+        } else if (r.inUse && (clientTickCounter - r.acquiredTick) < 2L) {
+            // More than RING_SIZE active submissions in flight at once: fall back to a transient recorder without clobbering.
+            r = new Recorder(Recorder.POOL_INITIAL_VERTICES);
+        }
+        r.prepare(clientTickCounter, fastEntityFormat);
+        return r;
+    }
+
     @Override
     public VertexConsumer getBuffer(RenderType renderType) {
-        if (firstType == null) {
-            firstType = renderType;
-            firstRecorder = new Recorder();
-            return firstRecorder;
+        if (renderType == lastType || renderType.equals(lastType)) {
+            return lastRecorder;
         }
-        if (firstType.equals(renderType)) {
-            return firstRecorder;
+        Recorder r = recorders.get(renderType);
+        if (r == null) {
+            r = acquireRecorder(renderType.format() == DefaultVertexFormat.ENTITY);
+            recorders.put(renderType, r);
         }
-        if (recorders == null) {
-            recorders = new LinkedHashMap<>(4);
-            recorders.put(firstType, firstRecorder);
-        }
-        return recorders.computeIfAbsent(renderType, t -> new Recorder());
+        lastType = renderType;
+        lastRecorder = r;
+        return r;
     }
 
     /** Hands everything recorded to the collector (vertices are already in the frame of the pose the renderer got). */
     public void flush() {
-        if (firstType == null) {
+        if (recorders.isEmpty()) {
             return;
         }
-        if (recorders == null) {
-            Recorder r = firstRecorder;
+        // CustomFeatureRenderer stores blended submits in a HashMap<RenderType, List>, so two blended types at the
+        // same order (e.g. nixie digits inside translucent lamp glass, or tape glow behind drive-bay glass) draw in
+        // hashCode order and the glass depth-culls what sits behind it ~50% of launches. Stepping collector.order()
+        // across blended types preserves each renderer's submission order deterministically.
+        int blendedOrder = 0;
+        for (Map.Entry<RenderType, Recorder> e : recorders.entrySet()) {
+            Recorder r = e.getValue();
             if (r.count > 0) {
-                collector.submitCustomGeometry(IDENTITY, firstType, (pose, vc) -> r.replay(vc));
-            }
-        } else {
-            // CustomFeatureRenderer stores blended submits in a HashMap<RenderType, List>, so two blended types at the
-            // same order (e.g. nixie digits inside translucent lamp glass, or tape glow behind drive-bay glass) draw in
-            // hashCode order and the glass depth-culls what sits behind it ~50% of launches. Stepping collector.order()
-            // across blended types preserves each renderer's submission order deterministically.
-            int blendedOrder = 0;
-            for (Map.Entry<RenderType, Recorder> e : recorders.entrySet()) {
-                Recorder r = e.getValue();
-                if (r.count > 0) {
-                    RenderType type = e.getKey();
-                    OrderedSubmitNodeCollector target = type.hasBlending() && blendedOrder > 0
-                            ? collector.order(blendedOrder)
-                            : collector;
-                    if (type.hasBlending()) {
-                        blendedOrder++;
-                    }
-                    target.submitCustomGeometry(IDENTITY, type, (pose, vc) -> r.replay(vc));
+                RenderType type = e.getKey();
+                OrderedSubmitNodeCollector target = type.hasBlending() && blendedOrder > 0
+                        ? collector.order(blendedOrder)
+                        : collector;
+                if (type.hasBlending()) {
+                    blendedOrder++;
                 }
+                target.submitCustomGeometry(IDENTITY, type, r);
+            } else {
+                r.inUse = false;
             }
-            recorders.clear();
         }
-        firstType = null;
-        firstRecorder = null;
+        recorders.clear();
+        lastType = null;
+        lastRecorder = null;
+    }
+
+    /** Flushes recorded geometry and returns this wrapper to the render-thread pool. */
+    public void flushAndRelease() {
+        flush();
+        collector = null;
+        if (BUFFER_POOL.size() < 16) {
+            BUFFER_POOL.addLast(this);
+        }
     }
 
     /** An item drawn where the pose stands now (was ItemRenderer#renderStatic). */
@@ -139,6 +197,8 @@ public final class BerBuffers implements MultiBufferSource {
      * and the vertices go straight to the game. Build it with bake, with the pose and the light of no account.
      */
     public static final class Baked {
+        /** Small repeated props merge into the block entity's buffer to avoid per-prop PoseStack/lambda submissions. */
+        private static final int DIRECT_SUBMIT_THRESHOLD = 384;
         private final Recorder recorder;
 
         private Baked(Recorder recorder) {
@@ -148,28 +208,55 @@ public final class BerBuffers implements MultiBufferSource {
         /** Draws it where the pose stands now. tint: replaces the colour it was built with, 0 keeps that. */
         public void draw(MultiBufferSource buffers, RenderType type, PoseStack.Pose pose, int light, int tint) {
             if (buffers instanceof BerBuffers b && recorder.count > 0) {
-                BAKED_POSE.last().set(pose);
-                b.collector.submitCustomGeometry(BAKED_POSE, type, (p, vc) -> recorder.replay(vc, p, light, tint));
+                if (recorder.count <= DIRECT_SUBMIT_THRESHOLD) {
+                    recorder.replay(b.getBuffer(type), pose, light, tint, true);
+                } else {
+                    boolean fastEntity = type.format() == DefaultVertexFormat.ENTITY;
+                    BAKED_POSE.last().set(pose);
+                    b.collector.submitCustomGeometry(BAKED_POSE, type, (p, vc) -> recorder.replay(vc, p, light, tint, fastEntity));
+                }
             }
         }
     }
 
     public static Baked bake(BiConsumer<VertexConsumer, PoseStack> draw) {
-        Recorder recorder = new Recorder();
+        Recorder recorder = new Recorder(64);
         draw.accept(recorder, new PoseStack());
         recorder.trim();
         return new Baked(recorder);
     }
 
-    /** Vertices of one render type: position, colour, texture, overlay, light, normal. */
-    private static final class Recorder implements VertexConsumer {
-        private static final int INITIAL_VERTICES = 16;
-        private float[] f = new float[9 * INITIAL_VERTICES];
-        private int[] i = new int[3 * INITIAL_VERTICES];
+    /** Vertices of one render type: position (3f), texture (2f), normal (3f) = 8 floats; colour, overlay, light = 3 ints. */
+    private static final class Recorder implements VertexConsumer, SubmitNodeCollector.CustomGeometryRenderer {
+        static final int POOL_INITIAL_VERTICES = 128;
+        private static final int MAX_RETAINED_VERTICES = 4096;
+        private static final int STRIDE_F = 8;
+
+        private float[] f;
+        private int[] i;
         private int count;
+        boolean inUse;
+        long acquiredTick;
+        boolean fastEntityFormat;
+
+        Recorder(int initialVertices) {
+            this.f = new float[STRIDE_F * initialVertices];
+            this.i = new int[3 * initialVertices];
+        }
+
+        void prepare(long tick, boolean fastEntityFormat) {
+            if (f.length > STRIDE_F * MAX_RETAINED_VERTICES) {
+                f = new float[STRIDE_F * MAX_RETAINED_VERTICES];
+                i = new int[3 * MAX_RETAINED_VERTICES];
+            }
+            count = 0;
+            inUse = true;
+            acquiredTick = tick;
+            this.fastEntityFormat = fastEntityFormat;
+        }
 
         private int base() {
-            return (count - 1) * 9;
+            return (count - 1) * STRIDE_F;
         }
 
         private void grow() {
@@ -178,7 +265,7 @@ public final class BerBuffers implements MultiBufferSource {
         }
 
         void trim() {
-            int fn = count * 9;
+            int fn = count * STRIDE_F;
             if (f.length > fn) {
                 f = Arrays.copyOf(f, fn);
                 i = Arrays.copyOf(i, count * 3);
@@ -188,9 +275,9 @@ public final class BerBuffers implements MultiBufferSource {
         @Override
         public VertexConsumer addVertex(float x, float y, float z) {
             int idx = count++;
-            int b = idx * 9;
+            int b = idx * STRIDE_F;
             int c = idx * 3;
-            if (b + 9 > f.length) {
+            if (b + STRIDE_F > f.length) {
                 grow();
             }
             f[b] = x;
@@ -199,9 +286,8 @@ public final class BerBuffers implements MultiBufferSource {
             f[b + 3] = 0f;
             f[b + 4] = 0f;
             f[b + 5] = 0f;
-            f[b + 6] = 0f;
-            f[b + 7] = 1f;
-            f[b + 8] = 0f;
+            f[b + 6] = 1f;
+            f[b + 7] = 0f;
             i[c] = -1;
             i[c + 1] = OverlayTexture.NO_OVERLAY;
             i[c + 2] = LightCoordsUtil.FULL_BRIGHT;
@@ -212,9 +298,9 @@ public final class BerBuffers implements MultiBufferSource {
         public void addVertex(float x, float y, float z, int color, float u, float v, int overlayCoords, int lightCoords,
                               float nx, float ny, float nz) {
             int idx = count++;
-            int b = idx * 9;
+            int b = idx * STRIDE_F;
             int c = idx * 3;
-            if (b + 9 > f.length) {
+            if (b + STRIDE_F > f.length) {
                 grow();
             }
             f[b] = x;
@@ -222,10 +308,9 @@ public final class BerBuffers implements MultiBufferSource {
             f[b + 2] = z;
             f[b + 3] = u;
             f[b + 4] = v;
-            f[b + 5] = 0f;
-            f[b + 6] = nx;
-            f[b + 7] = ny;
-            f[b + 8] = nz;
+            f[b + 5] = nx;
+            f[b + 6] = ny;
+            f[b + 7] = nz;
             i[c] = color;
             i[c + 1] = overlayCoords;
             i[c + 2] = lightCoords;
@@ -298,37 +383,84 @@ public final class BerBuffers implements MultiBufferSource {
         @Override
         public VertexConsumer setNormal(float x, float y, float z) {
             int b = base();
-            f[b + 6] = x;
-            f[b + 7] = y;
-            f[b + 8] = z;
+            f[b + 5] = x;
+            f[b + 6] = y;
+            f[b + 7] = z;
             return this;
         }
 
         @Override
         public VertexConsumer setLineWidth(float width) {
-            f[base() + 5] = width;
             return this;
         }
 
-        void replay(VertexConsumer vc, PoseStack.Pose pose, int light, int tint) {
+        void replay(VertexConsumer vc, PoseStack.Pose pose, int light, int tint, boolean fastEntity) {
             Matrix4f m = pose.pose();
-            for (int n = 0; n < count; n++) {
-                int b = n * 9, c = n * 3;
-                float x = f[b], y = f[b + 1], z = f[b + 2];
-                pose.transformNormal(f[b + 6], f[b + 7], f[b + 8], SCRATCH_NORM);
-                vc.addVertex(m.m00() * x + m.m10() * y + m.m20() * z + m.m30(),
-                                m.m01() * x + m.m11() * y + m.m21() * z + m.m31(),
-                                m.m02() * x + m.m12() * y + m.m22() * z + m.m32())
-                        .setColor(tint != 0 ? tint : i[c]).setUv(f[b + 3], f[b + 4]).setOverlay(i[c + 1]).setLight(light)
-                        .setNormal(SCRATCH_NORM.x, SCRATCH_NORM.y, SCRATCH_NORM.z);
+            float m00 = m.m00(), m01 = m.m01(), m02 = m.m02();
+            float m10 = m.m10(), m11 = m.m11(), m12 = m.m12();
+            float m20 = m.m20(), m21 = m.m21(), m22 = m.m22();
+            float m30 = m.m30(), m31 = m.m31(), m32 = m.m32();
+            Matrix3f nm = pose.normal();
+            float n00 = nm.m00(), n01 = nm.m01(), n02 = nm.m02();
+            float n10 = nm.m10(), n11 = nm.m11(), n12 = nm.m12();
+            float n20 = nm.m20(), n21 = nm.m21(), n22 = nm.m22();
+            boolean unitNormal = Math.abs(n00 * n00 + n01 * n01 + n02 * n02 - 1f) < 1e-3f
+                    && Math.abs(n10 * n10 + n11 * n11 + n12 * n12 - 1f) < 1e-3f
+                    && Math.abs(n20 * n20 + n21 * n21 + n22 * n22 - 1f) < 1e-3f;
+            float[] fv = this.f;
+            int[] iv = this.i;
+            int total = this.count;
+            for (int n = 0, b = 0, c = 0; n < total; n++, b += STRIDE_F, c += 3) {
+                float x = fv[b], y = fv[b + 1], z = fv[b + 2];
+                float nx = fv[b + 5], ny = fv[b + 6], nz = fv[b + 7];
+                float tnx = n00 * nx + n10 * ny + n20 * nz;
+                float tny = n01 * nx + n11 * ny + n21 * nz;
+                float tnz = n02 * nx + n12 * ny + n22 * nz;
+                if (!unitNormal) {
+                    float lenSq = tnx * tnx + tny * tny + tnz * tnz;
+                    if (lenSq > 1e-8f) {
+                        float inv = Mth.invSqrt(lenSq);
+                        tnx *= inv;
+                        tny *= inv;
+                        tnz *= inv;
+                    }
+                }
+                float px = m00 * x + m10 * y + m20 * z + m30;
+                float py = m01 * x + m11 * y + m21 * z + m31;
+                float pz = m02 * x + m12 * y + m22 * z + m32;
+                int col = tint != 0 ? tint : iv[c];
+                int lgt = light >= 0 ? light : iv[c + 2];
+                if (fastEntity) {
+                    vc.addVertex(px, py, pz, col, fv[b + 3], fv[b + 4], iv[c + 1], lgt, tnx, tny, tnz);
+                } else {
+                    vc.addVertex(px, py, pz).setColor(col).setUv(fv[b + 3], fv[b + 4])
+                            .setOverlay(iv[c + 1]).setLight(lgt).setNormal(tnx, tny, tnz);
+                }
             }
         }
 
+        @Override
+        public void render(PoseStack.Pose pose, VertexConsumer vc) {
+            replay(vc);
+            inUse = false;
+        }
+
         void replay(VertexConsumer vc) {
-            for (int n = 0; n < count; n++) {
-                int b = n * 9, c = n * 3;
-                vc.addVertex(f[b], f[b + 1], f[b + 2]).setColor(i[c]).setUv(f[b + 3], f[b + 4]).setOverlay(i[c + 1]).setLight(i[c + 2])
-                        .setNormal(f[b + 6], f[b + 7], f[b + 8]);
+            float[] fv = this.f;
+            int[] iv = this.i;
+            int total = this.count;
+            // BufferBuilder's 11-arg fastFormat skips writing normals when fullFormat == false (DefaultVertexFormat.BLOCK),
+            // so only use 11-arg direct call on DefaultVertexFormat.ENTITY where fullFormat == true.
+            if (fastEntityFormat) {
+                for (int n = 0, b = 0, c = 0; n < total; n++, b += STRIDE_F, c += 3) {
+                    vc.addVertex(fv[b], fv[b + 1], fv[b + 2], iv[c], fv[b + 3], fv[b + 4], iv[c + 1], iv[c + 2],
+                            fv[b + 5], fv[b + 6], fv[b + 7]);
+                }
+            } else {
+                for (int n = 0, b = 0, c = 0; n < total; n++, b += STRIDE_F, c += 3) {
+                    vc.addVertex(fv[b], fv[b + 1], fv[b + 2]).setColor(iv[c]).setUv(fv[b + 3], fv[b + 4])
+                            .setOverlay(iv[c + 1]).setLight(iv[c + 2]).setNormal(fv[b + 5], fv[b + 6], fv[b + 7]);
+                }
             }
         }
     }

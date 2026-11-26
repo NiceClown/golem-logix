@@ -1,9 +1,12 @@
 package com.golemlogix.client;
 
 import com.golemlogix.blockentity.PipeBlockEntity;
+import com.golemlogix.client.render.BlockQuads;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import it.unimi.dsi.fastutil.longs.Long2BooleanOpenHashMap;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.LightCoordsUtil;
@@ -223,5 +226,79 @@ final class PipeWarehouseRenderer {
                 0.50f, railY - 0.005f, 0.26f, railSpan * 2f + railThick * 1.5f, railThick * 1.4f, 0.04f, light);
         renderBlockBox(pose, buffers, Blocks.COPPER_BLOCK.defaultBlockState(),
                 0.50f, railY - 0.02f, 0.40f, dense ? 0.14f : 0.09f, dense ? 0.04f : 0.025f, dense ? 0.12f : 0.08f, light);
+    }
+
+    /** Bakes the static warehouse interior into {@code vc} (split by ambient vs full-bright warm props). */
+    static void bakeDecorations(PoseStack pose, VertexConsumer vc, boolean dense, boolean warmOnly) {
+        float floorY = dense ? 0.14f : 0.27f;
+        float ceilY = dense ? 0.86f : 0.73f;
+        float leftX = dense ? 0.15f : 0.28f;
+        float rightX = dense ? 0.85f : 0.72f;
+        float rackDepth = dense ? 0.09f : 0.05f;
+        float rackX = leftX + rackDepth / 2f;
+
+        if (warmOnly) {
+            if (dense) {
+                bakeBox(pose, vc, Blocks.AMETHYST_CLUSTER.defaultBlockState(), rackX, floorY + 0.20f, 0.38f, rackDepth * 0.8f, 0.11f, 0.12f);
+            }
+            float lanternY = ceilY - (dense ? 0.15f : 0.10f);
+            bakeBox(pose, vc, Blocks.IRON_CHAIN.defaultBlockState(), 0.50f, ceilY - (dense ? 0.05f : 0.03f), 0.32f, 0.025f, dense ? 0.06f : 0.04f, 0.025f);
+            bakeBox(pose, vc, Blocks.LANTERN.defaultBlockState(), 0.50f, lanternY, 0.32f, dense ? 0.10f : 0.07f, dense ? 0.12f : 0.08f, dense ? 0.10f : 0.07f);
+            return;
+        }
+
+        float deckWidth = dense ? 0.60f : 0.30f;
+        bakeBox(pose, vc, Blocks.DARK_OAK_PLANKS.defaultBlockState(), 0.50f, floorY + 0.01f, 0.54f, deckWidth, 0.02f, 0.54f);
+
+        float pillarThick = dense ? 0.04f : 0.028f;
+        float pillarH = ceilY - floorY;
+        float pillarMidY = (floorY + ceilY) / 2f;
+        BlockState rib = Blocks.CUT_COPPER_SLAB.defaultBlockState();
+        for (float z : new float[]{0.28f, 0.68f}) {
+            bakeBox(pose, vc, rib, leftX + pillarThick / 2f, pillarMidY, z, pillarThick, pillarH, pillarThick);
+            bakeBox(pose, vc, rib, rightX - pillarThick / 2f, pillarMidY, z, pillarThick, pillarH, pillarThick);
+            bakeBox(pose, vc, rib, 0.50f, ceilY - 0.02f, z, deckWidth, 0.03f, pillarThick);
+        }
+
+        bakeBox(pose, vc, Blocks.DARK_OAK_SLAB.defaultBlockState(), rackX, floorY + 0.12f, 0.46f, rackDepth, 0.02f, 0.32f);
+        bakeBox(pose, vc, Blocks.BOOKSHELF.defaultBlockState(), rackX, floorY + 0.07f, 0.38f, rackDepth * 0.9f, 0.09f, 0.14f);
+        bakeBox(pose, vc, Blocks.CHISELED_BOOKSHELF.defaultBlockState(), rackX, floorY + 0.07f, 0.52f, rackDepth * 0.9f, 0.09f, 0.14f);
+        if (dense) {
+            bakeBox(pose, vc, Blocks.DARK_OAK_SLAB.defaultBlockState(), rackX, floorY + 0.26f, 0.46f, rackDepth, 0.02f, 0.32f);
+            bakeBox(pose, vc, Blocks.LIGHT_WEIGHTED_PRESSURE_PLATE.defaultBlockState(), rackX, floorY + 0.28f, 0.52f, rackDepth * 0.8f, 0.02f, 0.12f);
+        }
+
+        float rightWallDist = dense ? 0.06f : 0.04f;
+        bakeBox(pose, vc, Blocks.COPPER_BLOCK.defaultBlockState(), rightX - rightWallDist / 2f, floorY + (dense ? 0.28f : 0.16f), 0.42f, rightWallDist, dense ? 0.18f : 0.12f, 0.14f);
+        bakeBox(pose, vc, Blocks.LIGHTNING_ROD.defaultBlockState(), rightX - rightWallDist / 2f, floorY + (dense ? 0.42f : 0.26f), 0.42f, 0.025f, dense ? 0.10f : 0.06f, 0.025f);
+
+        float barrelS = dense ? 0.16f : 0.10f;
+        bakeBox(pose, vc, Blocks.BARREL.defaultBlockState(), rightX - (dense ? 0.12f : 0.08f), floorY + (dense ? 0.10f : 0.06f), 0.28f, barrelS, barrelS, barrelS);
+        if (dense) {
+            bakeBox(pose, vc, Blocks.BARREL.defaultBlockState(), rightX - 0.11f, floorY + 0.07f, 0.44f, 0.13f, 0.13f, 0.13f);
+        }
+        float chestS = dense ? 0.15f : 0.09f;
+        bakeBox(pose, vc, Blocks.CHEST.defaultBlockState(), leftX + (dense ? 0.12f : 0.08f), floorY + (dense ? 0.08f : 0.05f), 0.28f, chestS, chestS, chestS);
+        float rawS = dense ? 0.09f : 0.05f;
+        bakeBox(pose, vc, Blocks.RAW_COPPER_BLOCK.defaultBlockState(), leftX + (dense ? 0.11f : 0.07f), floorY + (dense ? 0.20f : 0.12f), 0.28f, rawS, rawS, rawS);
+        bakeBox(pose, vc, Blocks.HEAVY_CORE.defaultBlockState(), leftX + (dense ? 0.12f : 0.08f), floorY + 0.04f, 0.65f, dense ? 0.08f : 0.05f, dense ? 0.05f : 0.03f, dense ? 0.08f : 0.05f);
+
+        float railSpan = dense ? 0.09f : 0.055f;
+        float railY = ceilY - 0.035f;
+        float railThick = dense ? 0.035f : 0.022f;
+        bakeBox(pose, vc, rib, 0.50f - railSpan, railY, 0.54f, railThick, railThick, 0.54f);
+        bakeBox(pose, vc, rib, 0.50f + railSpan, railY, 0.54f, railThick, railThick, 0.54f);
+        bakeBox(pose, vc, Blocks.COPPER_BLOCK.defaultBlockState(), 0.50f, railY - 0.005f, 0.26f, railSpan * 2f + railThick * 1.5f, railThick * 1.4f, 0.04f);
+        bakeBox(pose, vc, Blocks.COPPER_BLOCK.defaultBlockState(), 0.50f, railY - 0.02f, 0.40f, dense ? 0.14f : 0.09f, dense ? 0.04f : 0.025f, dense ? 0.12f : 0.08f);
+    }
+
+    private static void bakeBox(PoseStack pose, VertexConsumer vc, BlockState state,
+                                float x, float y, float z, float sx, float sy, float sz) {
+        pose.pushPose();
+        pose.translate(x, y, z);
+        pose.scale(sx, sy, sz);
+        pose.translate(-0.5f, -0.5f, -0.5f);
+        BlockQuads.draw(pose.last(), vc, state, 0, OverlayTexture.NO_OVERLAY);
+        pose.popPose();
     }
 }
