@@ -1,8 +1,10 @@
 package com.golemlogix.client;
 
 import com.golemlogix.blockentity.InterfaceBlockEntity;
+import com.golemlogix.items.FluidGhostItem;
 import com.golemlogix.menu.InterfaceMenu;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -22,6 +24,19 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
     private static final int[] ROW_Y = {InterfaceMenu.CONFIG_Y, InterfaceMenu.STOCK_Y, InterfaceMenu.INBOX_Y};
     private static final String[] GEAR_ROWS = {"X.XX.X", ".XXXX.", "XX..XX", "XX..XX", ".XXXX.", "X.XX.X"};
 
+    private static final Component LABEL_KEEP = Component.translatable("gui.golem_logix.interface.keep");
+    private static final Component LABEL_STOCK = Component.translatable("gui.golem_logix.interface.stock");
+    private static final Component LABEL_INBOX = Component.translatable("gui.golem_logix.interface.inbox");
+    private static final Component SLOT_HINT = Component.translatable("gui.golem_logix.interface.slot_hint").withStyle(ChatFormatting.DARK_GRAY);
+    private static final Component MODE_CLICK = Component.translatable("gui.golem_logix.interface.mode_click").withStyle(ChatFormatting.DARK_GRAY);
+    private static final List<Component> EMPTY_KEEP_TIP = List.of(
+            LABEL_KEEP, Component.translatable("gui.golem_logix.interface.empty_hint").withStyle(ChatFormatting.GRAY));
+    private static final List<Component> INBOX_TIP = List.of(
+            LABEL_INBOX, Component.translatable("gui.golem_logix.interface.inbox.hint").withStyle(ChatFormatting.GRAY));
+    private static final List<Component> GEAR_TIP = List.of(
+            Component.translatable("gui.golem_logix.interface.gear"),
+            Component.translatable("gui.golem_logix.interface.gear.hint").withStyle(ChatFormatting.GRAY));
+
     public InterfaceScreen(InterfaceMenu menu, Inventory inv, Component title) {
         super(menu, inv, title, InterfaceMenu.IMAGE_WIDTH, InterfaceMenu.IMAGE_HEIGHT);
     }
@@ -39,7 +54,8 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
     /** Whether the slot has a switch: the config holds a container with fluid. */
     private boolean hasToggle(int i) {
         // a fluid ghost is always fluid: only real containers can be kept as items
-        return !com.golemlogix.items.FluidGhostItem.is(menu.configItem(i)) && !InterfaceBlockEntity.containedFluid(menu.configItem(i)).isEmpty();
+        ItemStack cfg = menu.configItem(i);
+        return !FluidGhostItem.is(cfg) && !InterfaceBlockEntity.containedFluid(cfg).isEmpty();
     }
 
     private int gearX(int i) {
@@ -103,7 +119,7 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
             return true;
         }
         int c = hoveredConfig();
-        if (c >= 0 && menu.getCarried().isEmpty() && !net.minecraft.client.Minecraft.getInstance().hasShiftDown()) {
+        if (c >= 0 && menu.getCarried().isEmpty() && !Minecraft.getInstance().hasShiftDown()) {
             // an empty hand on a slot opens the settings window (the click does not go to the server: there is nothing to take from a ghost slot)
             if (hasGear(c) && (button == 0 || button == 1)) {
                 openSlot(c);
@@ -135,21 +151,24 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
                 gear(g, gearX(i) + 1, ty + 1, gearHover == i ? GolemGui.CYAN : 0xFFD8DEE6);
             }
             if (hasToggle(i)) {
-                int x = toggleX(i);
-                box(g, x, ty, toggleHover == i);
-                if (!menu.itemMode(i)) {
-                    // drop: blue, with a highlight
-                    g.fill(x + 3, ty + 1, x + 5, ty + 2, 0xFF3E8CE6);
-                    g.fill(x + 2, ty + 2, x + 6, ty + 4, 0xFF3E8CE6);
-                    g.fill(x + 1, ty + 4, x + 7, ty + 6, 0xFF2A68C8);
-                    g.fill(x + 2, ty + 6, x + 6, ty + 7, 0xFF2A68C8);
-                    g.fill(x + 2, ty + 4, x + 3, ty + 6, 0xFFCFE4FF);
-                } else {
-                    // item: the dark square of a slot
-                    g.fill(x + 1, ty + 1, x + 7, ty + 7, 0xFF16222B);
-                    g.fill(x + 2, ty + 2, x + 6, ty + 6, 0xFF9AA4B4);
-                }
+                drawModeToggle(g, toggleX(i), ty, toggleHover == i, !menu.itemMode(i));
             }
+        }
+    }
+
+    private static void drawModeToggle(GuiGraphicsExtractor g, int x, int ty, boolean hover, boolean fluidMode) {
+        box(g, x, ty, hover);
+        if (fluidMode) {
+            // drop: blue, with a highlight
+            g.fill(x + 3, ty + 1, x + 5, ty + 2, 0xFF3E8CE6);
+            g.fill(x + 2, ty + 2, x + 6, ty + 4, 0xFF3E8CE6);
+            g.fill(x + 1, ty + 4, x + 7, ty + 6, 0xFF2A68C8);
+            g.fill(x + 2, ty + 6, x + 6, ty + 7, 0xFF2A68C8);
+            g.fill(x + 2, ty + 4, x + 3, ty + 6, 0xFFCFE4FF);
+        } else {
+            // item: the dark square of a slot
+            g.fill(x + 1, ty + 1, x + 7, ty + 7, 0xFF16222B);
+            g.fill(x + 2, ty + 2, x + 6, ty + 6, 0xFF9AA4B4);
         }
     }
 
@@ -183,7 +202,7 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
             if (amount > 0 && !FluidIcons.drawGhost(g, font, icon, x, y, false)) {
                 g.item(icon.getCount() == 1 ? icon : icon.copyWithCount(1), x, y);
             }
-            String text = amount >= 1000 ? InterfaceSlotScreen.bucketText(amount) : amount + "";
+            String text = amount >= 1000 ? SlotAmountHelper.bucketText(amount) : Integer.toString(amount);
             small(g, text, x, y, amount > 0 ? 0xFF96F2EE : 0xFF6A7480);
         }
     }
@@ -205,9 +224,9 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
     @Override
     protected void extractLabels(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         super.extractLabels(g, mouseX, mouseY);
-        g.text(font, Component.translatable("gui.golem_logix.interface.keep"), 8, InterfaceMenu.CONFIG_Y - 11, GolemGui.CYAN, false);
-        g.text(font, Component.translatable("gui.golem_logix.interface.stock"), 8, InterfaceMenu.STOCK_Y - 11, GolemGui.CYAN, false);
-        g.text(font, Component.translatable("gui.golem_logix.interface.inbox"), 8, InterfaceMenu.INBOX_Y - 11, GolemGui.CYAN, false);
+        g.text(font, LABEL_KEEP, 8, InterfaceMenu.CONFIG_Y - 11, GolemGui.CYAN, false);
+        g.text(font, LABEL_STOCK, 8, InterfaceMenu.STOCK_Y - 11, GolemGui.CYAN, false);
+        g.text(font, LABEL_INBOX, 8, InterfaceMenu.INBOX_Y - 11, GolemGui.CYAN, false);
         // how much to keep, as a number on the config slot (the ghost itself is always 1)
         for (int i = 0; i < InterfaceBlockEntity.SLOTS; i++) {
             if (menu.configItem(i).isEmpty()) {
@@ -215,7 +234,7 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
             }
             int x = 8 + i * 18, y = InterfaceMenu.CONFIG_Y, n = menu.amount(i);
             if (menu.isFluidSlot(i)) {
-                small(g, n >= 1000 ? InterfaceSlotScreen.bucketText(n) : n + "", x, y, 0xFF96F2EE);
+                small(g, n >= 1000 ? SlotAmountHelper.bucketText(n) : Integer.toString(n), x, y, 0xFF96F2EE);
             } else if (n > 1) {
                 String s = Integer.toString(n);
                 g.text(font, s, x + 17 - font.width(s), y + 9, 0xFFFFFFFF, true);
@@ -231,27 +250,23 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
             List<Component> lines = new ArrayList<>(getTooltipFromContainerItem(stack));
             int n = menu.amount(c);
             lines.add(Component.translatable("gui.golem_logix.interface.keep_amount",
-                    menu.isFluidSlot(c) ? n + " mB (" + InterfaceSlotScreen.bucketText(n) + ")" : Integer.toString(n)).withStyle(ChatFormatting.AQUA));
-            lines.add(Component.translatable("gui.golem_logix.interface.slot_hint").withStyle(ChatFormatting.DARK_GRAY));
+                    menu.isFluidSlot(c) ? n + " mB (" + SlotAmountHelper.bucketText(n) + ")" : Integer.toString(n)).withStyle(ChatFormatting.AQUA));
+            lines.add(SLOT_HINT);
             g.setTooltipForNextFrame(font, lines, stack.getTooltipImage(), mouseX, mouseY);
             return;
         }
         if (c >= 0 && menu.getCarried().isEmpty()) {
-            g.setComponentTooltipForNextFrame(font, List.of(Component.translatable("gui.golem_logix.interface.keep"),
-                    Component.translatable("gui.golem_logix.interface.empty_hint").withStyle(ChatFormatting.GRAY)), mouseX, mouseY);
+            g.setComponentTooltipForNextFrame(font, EMPTY_KEEP_TIP, mouseX, mouseY);
             return;
         }
         if (hoveredSlot != null && !hoveredSlot.hasItem() && menu.getCarried().isEmpty()
                 && hoveredSlot.index >= 2 * InterfaceBlockEntity.SLOTS && hoveredSlot.index < 3 * InterfaceBlockEntity.SLOTS) {
-            g.setComponentTooltipForNextFrame(font, List.of(Component.translatable("gui.golem_logix.interface.inbox"),
-                    Component.translatable("gui.golem_logix.interface.inbox.hint").withStyle(ChatFormatting.GRAY)), mouseX, mouseY);
+            g.setComponentTooltipForNextFrame(font, INBOX_TIP, mouseX, mouseY);
             return;
         }
         super.extractTooltip(g, mouseX, mouseY);
-        int gi = hoveredGear(mouseX, mouseY);
-        if (gi >= 0) {
-            g.setComponentTooltipForNextFrame(font, List.of(Component.translatable("gui.golem_logix.interface.gear"),
-                    Component.translatable("gui.golem_logix.interface.gear.hint").withStyle(ChatFormatting.GRAY)), mouseX, mouseY);
+        if (hoveredGear(mouseX, mouseY) >= 0) {
+            g.setComponentTooltipForNextFrame(font, GEAR_TIP, mouseX, mouseY);
             return;
         }
         int i = hoveredToggle(mouseX, mouseY);
@@ -262,8 +277,7 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
                     Component.translatable(fluidMode ? "gui.golem_logix.interface.mode_fluid" : "gui.golem_logix.interface.mode_item"),
                     Component.translatable(fluidMode ? "gui.golem_logix.interface.mode_fluid.hint" : "gui.golem_logix.interface.mode_item.hint",
                             fluid.getHoverName()).withStyle(ChatFormatting.GRAY),
-                    Component.translatable("gui.golem_logix.interface.mode_click").withStyle(ChatFormatting.DARK_GRAY)),
-                    mouseX, mouseY);
+                    MODE_CLICK), mouseX, mouseY);
         }
     }
 }

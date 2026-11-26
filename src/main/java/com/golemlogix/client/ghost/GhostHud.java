@@ -25,12 +25,29 @@ public final class GhostHud {
     private static final Component COMPLETE = Component.translatable("gui.golem_logix.ghost.complete");
 
     private static final Map<Item, ItemStack> ICON_CACHE = new IdentityHashMap<>();
+    private static Component cachedConfirmKey;
+    private static Component cachedCancelKey;
+    private static Component cachedKeysHint;
 
     private GhostHud() {
     }
 
     static void clearCache() {
         ICON_CACHE.clear();
+        cachedConfirmKey = null;
+        cachedCancelKey = null;
+        cachedKeysHint = null;
+    }
+
+    private static Component keysHint() {
+        Component confirm = GolemKeys.GHOST_CONFIRM.getTranslatedKeyMessage();
+        Component cancel = GolemKeys.GHOST_CANCEL.getTranslatedKeyMessage();
+        if (cachedKeysHint == null || !confirm.equals(cachedConfirmKey) || !cancel.equals(cachedCancelKey)) {
+            cachedConfirmKey = confirm;
+            cachedCancelKey = cancel;
+            cachedKeysHint = Component.translatable("gui.golem_logix.ghost.keys", confirm, cancel);
+        }
+        return cachedKeysHint;
     }
 
     public static void render(GuiGraphicsExtractor g, DeltaTracker delta) {
@@ -50,8 +67,7 @@ public final class GhostHud {
         Map<Item, Integer> missing = GhostProjection.cachedMissingItems(mc.level);
         Component state = GhostProjection.anchor() == null ? STATE_AIM
                 : GhostProjection.isLocked() ? STATE_LOCKED : STATE_FOLLOWING;
-        Component hint = Component.translatable("gui.golem_logix.ghost.keys",
-                GolemKeys.GHOST_CONFIRM.getTranslatedKeyMessage(), GolemKeys.GHOST_CANCEL.getTranslatedKeyMessage());
+        Component hint = keysHint();
         boolean complete = GhostProjection.anchor() != null && missing.isEmpty();
         int rows = Math.max(1, missing.size());
         int w = Math.max(176, Math.max(font.width(title), Math.max(font.width(state), font.width(hint))) + 6);

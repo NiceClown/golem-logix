@@ -26,12 +26,21 @@ public class StockManometerScreen extends GolemScreen<StockManometerMenu> {
     private static final ItemStack ICON_BELOW = new ItemStack(Items.LEVER);
     private static final ItemStack ICON_ANALOG = new ItemStack(Items.COMPARATOR);
     private static final ItemStack ICON_BARRIER = new ItemStack(Items.BARRIER);
+    private static final Component LABEL_FULL = Component.translatable("gui.golem_logix.manometer.full");
+    private static final Component LABEL_ON = Component.translatable("gui.golem_logix.manometer.on");
+    private static final Component LABEL_OFF = Component.translatable("gui.golem_logix.manometer.off");
 
     private EditBox low, high;
     /** What this window last sent: a field is overwritten from the server only when someone else changed the value. */
     private int sentLow, sentHigh;
     private final Block[] cachedNeighbourBlocks = new Block[6];
     private final ItemStack[] cachedNeighbourIcons = new ItemStack[6];
+    private java.util.List<Component> offHintLines = java.util.List.of();
+    private int cachedMode = -1, cachedThreshold = -1, cachedHysteresis = -1, cachedSignal = -1;
+    private long cachedStock = Long.MIN_VALUE;
+    private boolean cachedFluid;
+    private Component cachedRule = Component.empty();
+    private Component cachedStatus = Component.empty();
 
     public StockManometerScreen(StockManometerMenu menu, Inventory inv, Component title) {
         super(menu, inv, title, StockManometerMenu.IMAGE_WIDTH, StockManometerMenu.IMAGE_HEIGHT);
@@ -60,6 +69,13 @@ public class StockManometerScreen extends GolemScreen<StockManometerMenu> {
         low = number(leftPos + 122, topPos + 22, sentLow);
         high = number(leftPos + 122, topPos + 40, sentHigh);
         high.visible = menu.getMode() != StockManometerBlockEntity.MODE_ANALOG;
+        java.util.List<Component> lines = new java.util.ArrayList<>();
+        for (var line : font.getSplitter().splitLines(Component.translatable("gui.golem_logix.manometer.off.hint"), 200,
+                net.minecraft.network.chat.Style.EMPTY)) {
+            lines.add(Component.literal(line.getString()));
+        }
+        offHintLines = lines;
+        cachedMode = -1;
     }
 
     private net.minecraft.world.level.block.state.BlockState neighbour(net.minecraft.core.Direction side) {
@@ -219,8 +235,7 @@ public class StockManometerScreen extends GolemScreen<StockManometerMenu> {
         }
     }
 
-    private String amount(long n) {
-        boolean fluid = FluidGhostItem.is(menu.getSlot(0).getItem());
+    private static String amount(long n, boolean fluid) {
         return fluid ? GolemGui.formatCount(n) + " mB" : String.format(java.util.Locale.ROOT, "%,d", n).replace(',', ' ');
     }
 
@@ -230,36 +245,49 @@ public class StockManometerScreen extends GolemScreen<StockManometerMenu> {
         super.extractRenderState(g, mouseX, mouseY, partialTick);
         int x = mouseX - leftPos, y = mouseY - topPos;
         if (menu.getMode() != StockManometerBlockEntity.MODE_ANALOG && x >= 48 && x < 168 && y >= 36 && y < 52) {
-            java.util.List<Component> lines = new java.util.ArrayList<>();
-            for (var line : font.getSplitter().splitLines(Component.translatable("gui.golem_logix.manometer.off.hint"), 200,
-                    net.minecraft.network.chat.Style.EMPTY)) {
-                lines.add(Component.literal(line.getString()));
-            }
-            g.setComponentTooltipForNextFrame(font, lines, mouseX, mouseY);
+            g.setComponentTooltipForNextFrame(font, offHintLines, mouseX, mouseY);
         }
+    }
+
+    private void ensureTextCache() {
+        int mode = menu.getMode();
+        int t = menu.getThreshold();
+        int h = menu.getHysteresis();
+        long stock = menu.getStock();
+        int signal = menu.getSignal();
+        boolean fluid = FluidGhostItem.is(menu.getSlot(0).getItem());
+        if (mode == cachedMode && t == cachedThreshold && h == cachedHysteresis
+                && stock == cachedStock && signal == cachedSignal && fluid == cachedFluid) {
+            return;
+        }
+        cachedMode = mode;
+        cachedThreshold = t;
+        cachedHysteresis = h;
+        cachedStock = stock;
+        cachedSignal = signal;
+        cachedFluid = fluid;
+        cachedRule = switch (mode) {
+            case StockManometerBlockEntity.MODE_BELOW -> h > t
+                    ? Component.translatable("gui.golem_logix.manometer.rule.below_band", amount(t, fluid), amount(h, fluid))
+                    : Component.translatable("gui.golem_logix.manometer.rule.below", amount(t, fluid));
+            case StockManometerBlockEntity.MODE_ANALOG -> Component.translatable("gui.golem_logix.manometer.rule.analog", amount(t, fluid));
+            default -> h > 0 && h < t
+                    ? Component.translatable("gui.golem_logix.manometer.rule.above_band", amount(t, fluid), amount(h, fluid))
+                    : Component.translatable("gui.golem_logix.manometer.rule.above", amount(t, fluid));
+        };
+        cachedStatus = Component.translatable("gui.golem_logix.manometer.status", amount(stock, fluid), signal);
     }
 
     @Override
     protected void extractLabels(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+        ensureTextCache();
         g.text(font, title, 8, 6, GolemGui.PARCHMENT, false);
-        boolean analog = menu.getMode() == StockManometerBlockEntity.MODE_ANALOG;
-        g.text(font, Component.translatable(analog ? "gui.golem_logix.manometer.full" : "gui.golem_logix.manometer.on"), 48, 22,
-                GolemGui.PARCHMENT, false);
+        boolean analog = cachedMode == StockManometerBlockEntity.MODE_ANALOG;
+        g.text(font, analog ? LABEL_FULL : LABEL_ON, 48, 22, GolemGui.PARCHMENT, false);
         if (!analog) {
-            g.text(font, Component.translatable("gui.golem_logix.manometer.off"), 48, 40, GolemGui.PARCHMENT, false);
+            g.text(font, LABEL_OFF, 48, 40, GolemGui.PARCHMENT, false);
         }
-        int t = menu.getThreshold(), h = menu.getHysteresis();
-        Component rule = switch (menu.getMode()) {
-            case StockManometerBlockEntity.MODE_BELOW -> h > t
-                    ? Component.translatable("gui.golem_logix.manometer.rule.below_band", amount(t), amount(h))
-                    : Component.translatable("gui.golem_logix.manometer.rule.below", amount(t));
-            case StockManometerBlockEntity.MODE_ANALOG -> Component.translatable("gui.golem_logix.manometer.rule.analog", amount(t));
-            default -> h > 0 && h < t
-                    ? Component.translatable("gui.golem_logix.manometer.rule.above_band", amount(t), amount(h))
-                    : Component.translatable("gui.golem_logix.manometer.rule.above", amount(t));
-        };
-        g.textWithWordWrap(font, rule, 8, 58, imageWidth - 16, GolemGui.CYAN_DARK);
-        g.text(font, Component.translatable("gui.golem_logix.manometer.status", amount(menu.getStock()), menu.getSignal()), 8, 82,
-                0xFFA89880, false);
+        g.textWithWordWrap(font, cachedRule, 8, 58, imageWidth - 16, GolemGui.CYAN_DARK);
+        g.text(font, cachedStatus, 8, 82, 0xFFA89880, false);
     }
 }

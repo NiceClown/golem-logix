@@ -7,6 +7,7 @@ import com.golemlogix.network.MonitorPayload;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.core.BlockPos;
+import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
@@ -24,10 +25,17 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
     private static final int H = 206;
     private static final int LIST_X = 8, LIST_Y = 20, ROW_H = 22, ROWS = 8, LIST_W = 112;
     private static final int DX = 126;
+
     private static final ItemStack ICON_MAINFRAME = new ItemStack(ModBlocks.CRYO_MAINFRAME.get());
     private static final ItemStack ICON_CALCULATOR = new ItemStack(ModBlocks.CRYO_CALCULATOR.get());
     private static final ItemStack ICON_COPROCESSOR = new ItemStack(ModBlocks.COOLING_COPROCESSOR.get());
-    private static final Component NOW_LABEL = Component.translatable("gui.golem_logix.monitor.now");
+    private static final Component LABEL_CANCEL = Component.translatable("gui.golem_logix.calc.cancel");
+    private static final Component LABEL_WAITING = Component.translatable("gui.golem_logix.calc.waiting");
+    private static final Component LABEL_NO_CPUS = Component.translatable("gui.golem_logix.monitor.no_cpus");
+    private static final Component LABEL_CALC_IDLE = Component.translatable("gui.golem_logix.calc.idle");
+    private static final Component LABEL_NOW = Component.translatable("gui.golem_logix.monitor.now");
+    private static final Component LABEL_STEPS = Component.translatable("gui.golem_logix.monitor.steps");
+    private static final Component LABEL_WAITING_STEPS = Component.translatable("gui.golem_logix.monitor.waiting");
 
     private int scroll = 0;
     @Nullable
@@ -39,6 +47,11 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
     private ItemStack hoverStack = ItemStack.EMPTY;
     private Rect2i hoverArea = null;
 
+    private MonitorPayload cachedSummaryData;
+    private Language cachedSummaryLang;
+    private String cachedSummaryText = "";
+    private String cachedIdleText = "";
+
     public RecipeMonitorScreen(RecipeMonitorMenu menu, Inventory inv, Component title) {
         super(menu, inv, title, W, H);
     }
@@ -46,8 +59,7 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
     @Override
     protected void init() {
         super.init();
-        cancel = addRenderableWidget(new GolemButton(leftPos + DX + 54, topPos + H - 24, 66, 16,
-                Component.translatable("gui.golem_logix.calc.cancel"), b -> {
+        cancel = addRenderableWidget(new GolemButton(leftPos + DX + 54, topPos + H - 24, 66, 16, LABEL_CANCEL, b -> {
             int idx = selectedIndex();
             if (idx >= 0) {
                 menuButton(RecipeMonitorMenu.BUTTON_CANCEL_BASE + idx);
@@ -70,10 +82,23 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
         return list.isEmpty() ? -1 : 0;
     }
 
-    @Nullable
-    private MonitorPayload.Cpu selectedCpu() {
-        int i = selectedIndex();
-        return i < 0 ? null : cpus().get(i);
+    private void ensureSummaryCache() {
+        MonitorPayload data = menu.clientData;
+        Language lang = Language.getInstance();
+        if (data == cachedSummaryData && lang == cachedSummaryLang) {
+            return;
+        }
+        cachedSummaryData = data;
+        cachedSummaryLang = lang;
+        List<MonitorPayload.Cpu> list = data == null ? List.of() : data.cpus();
+        int busy = 0;
+        for (MonitorPayload.Cpu c : list) {
+            if (c.state() >= 0) {
+                busy++;
+            }
+        }
+        cachedSummaryText = Component.translatable("gui.golem_logix.monitor.summary", busy, list.size()).getString();
+        cachedIdleText = Component.translatable("gui.golem_logix.monitor.idle").getString();
     }
 
     // ---------------------------------------------------------------------------------- drawing
@@ -82,12 +107,12 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
     protected void renderExtraBg(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
         hoverStack = ItemStack.EMPTY;
         hoverArea = null;
+        ensureSummaryCache();
         GolemGui.inset(g, leftPos + LIST_X - 1, topPos + LIST_Y - 1, LIST_W + 2, ROWS * ROW_H + 2);
         GolemGui.inset(g, leftPos + DX - 1, topPos + LIST_Y - 1, W - DX - 7, H - LIST_Y - 30);
         MonitorPayload data = menu.clientData;
         if (data == null) {
-            g.textWithWordWrap(font, Component.translatable("gui.golem_logix.calc.waiting"), leftPos + LIST_X + 4, topPos + LIST_Y + 4,
-                    LIST_W - 8, GolemGui.PARCHMENT);
+            g.textWithWordWrap(font, LABEL_WAITING, leftPos + LIST_X + 4, topPos + LIST_Y + 4, LIST_W - 8, GolemGui.PARCHMENT);
             cancel.active = false;
             return;
         }
@@ -98,8 +123,7 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
         }
         List<MonitorPayload.Cpu> list = data.cpus();
         if (list.isEmpty()) {
-            g.textWithWordWrap(font, Component.translatable("gui.golem_logix.monitor.no_cpus"), leftPos + LIST_X + 4, topPos + LIST_Y + 4,
-                    LIST_W - 8, GolemGui.CYAN);
+            g.textWithWordWrap(font, LABEL_NO_CPUS, leftPos + LIST_X + 4, topPos + LIST_Y + 4, LIST_W - 8, GolemGui.CYAN);
         }
         scroll = Math.max(0, Math.min(scroll, Math.max(0, list.size() - ROWS)));
         int sel = selectedIndex();
@@ -119,8 +143,15 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
         }
     }
 
-    private void drawRow(GuiGraphicsExtractor g, MonitorPayload.Cpu c, boolean selected, int x, int y, int mx, int my) {
-        if (selected) {
+    private void recordHover(ItemStack stack, int x, int y, int mx, int my) {
+        if (mx >= x && mx < x + 16 && my >= y && my < y + 16) {
+            hoverStack = stack;
+            hoverArea = new Rect2i(x, y, 16, 16);
+        }
+    }
+
+    private void drawRow(GuiGraphicsExtractor g, MonitorPayload.Cpu c, boolean isSelected, int x, int y, int mx, int my) {
+        if (isSelected) {
             g.fill(x, y, x + LIST_W - 4, y + ROW_H, 0x60235A58);
         }
         boolean idle = c.state() < 0;
@@ -129,35 +160,36 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
         ItemStack icon = idle ? (c.core() > 0 ? ICON_MAINFRAME : ICON_CALCULATOR)
                 : !c.current().isEmpty() ? c.current() : c.targets().isEmpty() ? ItemStack.EMPTY : c.targets().get(0).item();
         g.item(icon, x + 5, y + 3);
-        if (!idle && mx >= x + 5 && mx < x + 21 && my >= y + 3 && my < y + 19) {
-            hoverStack = icon;
-            hoverArea = new Rect2i(x + 5, y + 3, 16, 16);
+        if (!idle) {
+            recordHover(icon, x + 5, y + 3, mx, my);
         }
-        String name;
-        if (idle) {
-            name = Component.translatable("gui.golem_logix.monitor.idle").getString();
-        } else {
-            MonitorPayload.Step t = c.targets().isEmpty() ? null : c.targets().get(0);
-            name = t == null ? "?" : t.left() + "× " + t.item().getHoverName().getString();
-            if (c.targets().size() > 1) {
-                name += " +" + (c.targets().size() - 1);
-            }
-        }
+        String name = rowTitle(c, idle);
         g.text(font, font.plainSubstrByWidth(name, LIST_W - 30), x + 24, y + 3, idle ? 0xFF8C9AA0 : GolemGui.PARCHMENT, false);
         if (!idle) {
             double frac = c.total() <= 0 ? 0 : (double) c.done() / c.total();
             GolemGui.bar(g, x + 24, y + 13, LIST_W - 32, 6, frac, GolemGui.CYAN_DARK);
-            CraftingJob.Status st = c.state() >= 0 ? CalculatorScreen.status(c.state()) : null;
-            boolean blocked = st != null && (st == CraftingJob.Status.WAITING_MACHINE || st == CraftingJob.Status.NO_MACHINE
-                    || st == CraftingJob.Status.NO_PROVIDER || st == CraftingJob.Status.NO_SOURCE
-                    || st == CraftingJob.Status.INVALID_PATTERN || st == CraftingJob.Status.PAUSED);
-            if (blocked) {
+            if (isBlocked(CalculatorScreen.status(c.state()))) {
                 boolean lit = (System.currentTimeMillis() / 400) % 2 == 0;
                 g.fill(x + LIST_W - 14, y + 3, x + LIST_W - 8, y + 9, lit ? 0xFFFF2020 : 0xFF600000);
             }
         } else {
             g.text(font, font.plainSubstrByWidth(where(c), LIST_W - 30), x + 24, y + 12, 0xFF5C6B70, false);
         }
+    }
+
+    private String rowTitle(MonitorPayload.Cpu c, boolean idle) {
+        if (idle) {
+            return cachedIdleText;
+        }
+        MonitorPayload.Step t = c.targets().isEmpty() ? null : c.targets().get(0);
+        String name = t == null ? "?" : t.left() + "× " + t.item().getHoverName().getString();
+        return c.targets().size() > 1 ? name + " +" + (c.targets().size() - 1) : name;
+    }
+
+    private static boolean isBlocked(CraftingJob.Status st) {
+        return st == CraftingJob.Status.WAITING_MACHINE || st == CraftingJob.Status.NO_MACHINE
+                || st == CraftingJob.Status.NO_PROVIDER || st == CraftingJob.Status.NO_SOURCE
+                || st == CraftingJob.Status.INVALID_PATTERN || st == CraftingJob.Status.PAUSED;
     }
 
     /** Where the processor is: block coordinates, plus the core number for a mainframe core. */
@@ -175,10 +207,17 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
         int copX = x + w - 18 - font.width(cop);
         if (c.state() < 0) {
             drawCoprocessors(g, cop, copX, y, mx, my);
-            g.textWithWordWrap(font, Component.translatable("gui.golem_logix.calc.idle"), x, y + 19, copX - x - 2, GolemGui.CYAN);
+            g.textWithWordWrap(font, LABEL_CALC_IDLE, x, y + 19, copX - x - 2, GolemGui.CYAN);
             return;
         }
-        // order: items and how many
+        drawTargetsRow(g, c, x, y, copX, cop, mx, my);
+        y += 19;
+        y = drawProgressSection(g, c, x, y, w);
+        y = drawCurrentStep(g, c, x, y, w, mx, my);
+        drawPendingSteps(g, c, x, y, w, mx, my);
+    }
+
+    private void drawTargetsRow(GuiGraphicsExtractor g, MonitorPayload.Cpu c, int x, int y, int copX, String cop, int mx, int my) {
         int ix = x;
         for (MonitorPayload.Step t : c.targets()) {
             if (ix + 18 > copX - 2) {
@@ -188,7 +227,9 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
             ix += 18;
         }
         drawCoprocessors(g, cop, copX, y, mx, my);
-        y += 19;
+    }
+
+    private int drawProgressSection(GuiGraphicsExtractor g, MonitorPayload.Cpu c, int x, int y, int w) {
         CraftingJob.Status st = CalculatorScreen.status(c.state());
         g.text(font, Component.translatable("gui.golem_logix.calc.status." + st.name().toLowerCase(Locale.ROOT)), x, y,
                 CalculatorScreen.statusColor(st), false);
@@ -196,26 +237,29 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
         double frac = c.total() <= 0 ? 0 : (double) c.done() / c.total();
         GolemGui.bar(g, x, y, w, 10, frac, GolemGui.CYAN_DARK);
         g.centeredText(font, c.done() + " / " + c.total(), x + w / 2, y + 1, GolemGui.PARCHMENT);
-        y += 13;
+        return y + 13;
+    }
+
+    private int drawCurrentStep(GuiGraphicsExtractor g, MonitorPayload.Cpu c, int x, int y, int w, int mx, int my) {
         if (!c.current().isEmpty()) {
-            g.text(font, NOW_LABEL, x, y + 4, GolemGui.PARCHMENT, false);
-            int nx = x + font.width(NOW_LABEL) + 3;
+            g.text(font, LABEL_NOW, x, y + 4, GolemGui.PARCHMENT, false);
+            int nx = x + font.width(LABEL_NOW) + 3;
             g.item(c.current(), nx, y);
-            if (mx >= nx && mx < nx + 16 && my >= y && my < y + 16) {
-                hoverStack = c.current();
-                hoverArea = new Rect2i(nx, y, 16, 16);
-            }
+            recordHover(c.current(), nx, y, mx, my);
             g.text(font, font.plainSubstrByWidth(c.current().getHoverName().getString(), x + w - nx - 20), nx + 19, y + 4,
                     GolemGui.CYAN, false);
         }
-        y += 18;
+        return y + 18;
+    }
+
+    private void drawPendingSteps(GuiGraphicsExtractor g, MonitorPayload.Cpu c, int x, int y, int w, int mx, int my) {
         if (!c.steps().isEmpty()) {
-            g.text(font, Component.translatable("gui.golem_logix.monitor.steps"), x, y, GolemGui.PARCHMENT, false);
+            g.text(font, LABEL_STEPS, x, y, GolemGui.PARCHMENT, false);
             y += 10;
             y = stepGrid(g, c.steps(), x, y, w, 3, mx, my);
         }
         if (!c.waiting().isEmpty()) {
-            g.text(font, Component.translatable("gui.golem_logix.monitor.waiting"), x, y, GolemGui.PARCHMENT, false);
+            g.text(font, LABEL_WAITING_STEPS, x, y, GolemGui.PARCHMENT, false);
             y += 10;
             stepGrid(g, c.waiting(), x, y, w, 1, mx, my);
         }
@@ -224,10 +268,7 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
     private void drawCoprocessors(GuiGraphicsExtractor g, String count, int x, int y, int mx, int my) {
         g.item(ICON_COPROCESSOR, x, y);
         g.text(font, count, x + 17, y + 5, GolemGui.PARCHMENT, false);
-        if (mx >= x && mx < x + 16 && my >= y && my < y + 16) {
-            hoverStack = ICON_COPROCESSOR;
-            hoverArea = new Rect2i(x, y, 16, 16);
-        }
+        recordHover(ICON_COPROCESSOR, x, y, mx, my);
     }
 
     private int stepGrid(GuiGraphicsExtractor g, List<MonitorPayload.Step> steps, int x, int y, int w, int maxRows, int mx, int my) {
@@ -253,23 +294,14 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
         g.pose().scale(0.5f, 0.5f);
         g.text(font, count, (x + 17) * 2 - font.width(count), (y + 11) * 2, 0xFFFFFFFF, true);
         g.pose().popMatrix();
-        if (mx >= x && mx < x + 16 && my >= y && my < y + 16) {
-            hoverStack = s.item();
-            hoverArea = new Rect2i(x, y, 16, 16);
-        }
+        recordHover(s.item(), x, y, mx, my);
     }
 
     @Override
     protected void extractLabels(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+        ensureSummaryCache();
         g.text(font, title, titleLabelX, titleLabelY, GolemGui.PARCHMENT, false);
-        int busy = 0;
-        for (MonitorPayload.Cpu c : cpus()) {
-            if (c.state() >= 0) {
-                busy++;
-            }
-        }
-        String s = Component.translatable("gui.golem_logix.monitor.summary", busy, cpus().size()).getString();
-        g.text(font, s, imageWidth - 8 - font.width(s), titleLabelY, GolemGui.CYAN, false);
+        g.text(font, cachedSummaryText, imageWidth - 8 - font.width(cachedSummaryText), titleLabelY, GolemGui.CYAN, false);
     }
 
     @Override
