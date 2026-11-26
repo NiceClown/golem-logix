@@ -1,13 +1,10 @@
 package com.golemlogix.items;
 
-import com.golemlogix.config.GolemConfig;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-
-import java.util.List;
 
 /**
  * A range card for the Cryo-Source Telegraph, the same tiers as the Portable Chronometer: without a card the link reaches
@@ -38,9 +35,7 @@ public class TelegraphRangeCardItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
                                 java.util.function.Consumer<Component> lines, TooltipFlag flag) {
-        List<Component> tooltip = new com.golemlogix.items.TooltipLines(lines);
-        tooltip.add(Component.translatable("tooltip.golem_logix.telegraph_range." + tier, GolemConfig.LOCAL_WIRELESS_RANGE.get())
-                .withStyle(ChatFormatting.AQUA));
-        tooltip.add(Component.translatable("tooltip.golem_logix.telegraph_range.hint").withStyle(ChatFormatting.DARK_GRAY));
+        lines.accept(Component.translatable("tooltip.golem_logix.telegraph_range." + tier).withStyle(ChatFormatting.AQUA));
+        lines.accept(Component.translatable("tooltip.golem_logix.telegraph_range.hint").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

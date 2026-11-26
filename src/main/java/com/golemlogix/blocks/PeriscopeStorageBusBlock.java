@@ -108,6 +108,16 @@ public class PeriscopeStorageBusBlock extends DirectionalBlock implements com.go
     }
 
     @Override
+    protected BlockState rotate(BlockState state, net.minecraft.world.level.block.Rotation rotation) {
+        return BusLinks.rotate(state, rotation);
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, net.minecraft.world.level.block.Mirror mirror) {
+        return BusLinks.mirror(state, mirror);
+    }
+
+    @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         BusLinks.addProperties(builder);
     }

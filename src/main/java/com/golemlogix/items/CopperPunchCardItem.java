@@ -9,7 +9,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -59,35 +58,34 @@ public class CopperPunchCardItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
                                 java.util.function.Consumer<Component> lines, TooltipFlag tooltipFlag) {
-        List<Component> tooltipComponents = new com.golemlogix.items.TooltipLines(lines);
         PatternData data = stack.get(ModDataComponents.PATTERN.get());
         if (data != null) {
-            tooltipComponents.add(Component.translatable(data.crafting()
+            lines.accept(Component.translatable(data.crafting()
                     ? "tooltip.golem_logix.punch_card.mode_crafting"
                     : "tooltip.golem_logix.punch_card.mode_processing").withStyle(ChatFormatting.GREEN));
             if (data.isFuzzy()) {
-                tooltipComponents.add(Component.translatable(data.crafting() ? "tooltip.golem_logix.punch_card.fuzzy_crafting"
+                lines.accept(Component.translatable(data.crafting() ? "tooltip.golem_logix.punch_card.fuzzy_crafting"
                         : "tooltip.golem_logix.punch_card.fuzzy_processing").withStyle(ChatFormatting.AQUA));
             }
-            tooltipComponents.add(Component.translatable("tooltip.golem_logix.punch_card.inputs").withStyle(ChatFormatting.GRAY));
+            lines.accept(Component.translatable("tooltip.golem_logix.punch_card.inputs").withStyle(ChatFormatting.GRAY));
             for (Map.Entry<com.golemlogix.system.ItemKey, Integer> e : data.ingredientTotals().entrySet()) {
-                tooltipComponents.add(line(e.getValue(), e.getKey().stack()));
+                lines.accept(line(e.getValue(), e.getKey().stack()));
             }
             // the tags chosen for processing inputs
             for (int i = 0; i < data.inputs().size(); i++) {
                 if (data.spec(i).startsWith("#")) {
-                    tooltipComponents.add(Component.literal("  ≈ ").append(data.inputs().get(i).getHoverName())
+                    lines.accept(Component.literal("  ≈ ").append(data.inputs().get(i).getHoverName())
                             .append(" → " + data.spec(i)).withStyle(ChatFormatting.DARK_AQUA));
                 }
             }
-            tooltipComponents.add(Component.translatable("tooltip.golem_logix.punch_card.outputs").withStyle(ChatFormatting.GRAY));
+            lines.accept(Component.translatable("tooltip.golem_logix.punch_card.outputs").withStyle(ChatFormatting.GRAY));
             for (Map.Entry<com.golemlogix.system.ItemKey, Integer> e : data.outputTotals().entrySet()) {
-                tooltipComponents.add(line(e.getValue(), e.getKey().stack()));
+                lines.accept(line(e.getValue(), e.getKey().stack()));
             }
-            tooltipComponents.add(Component.translatable("tooltip.golem_logix.punch_card.clear_hint")
+            lines.accept(Component.translatable("tooltip.golem_logix.punch_card.clear_hint")
                     .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
         } else {
-            tooltipComponents.add(Component.translatable("tooltip.golem_logix.punch_card.blank")
+            lines.accept(Component.translatable("tooltip.golem_logix.punch_card.blank")
                     .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
         }
         super.appendHoverText(stack, context, display, lines, tooltipFlag);

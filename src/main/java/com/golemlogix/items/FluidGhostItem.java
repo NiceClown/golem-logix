@@ -10,8 +10,6 @@ import net.minecraft.world.item.TooltipFlag;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.SimpleFluidContent;
 
-import java.util.List;
-
 /**
  * A fluid "ghost": a marker that stands for a fluid and an amount in ghost slots (bus filters, interface stock, pattern
  * inputs), like the wrapped fluid stacks of AE2. It is never a real item in an inventory: ghost slots only keep copies.
@@ -58,11 +56,10 @@ public class FluidGhostItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
                                 java.util.function.Consumer<Component> lines, TooltipFlag flag) {
-        List<Component> tooltip = new com.golemlogix.items.TooltipLines(lines);
         FluidStack f = fluid(stack);
         if (!f.isEmpty()) {
-            tooltip.add(Component.translatable("tooltip.golem_logix.fluid_ghost.amount", f.getAmount()).withStyle(ChatFormatting.AQUA));
+            lines.accept(Component.translatable("tooltip.golem_logix.fluid_ghost.amount", f.getAmount()).withStyle(ChatFormatting.AQUA));
         }
-        tooltip.add(Component.translatable("tooltip.golem_logix.fluid_ghost").withStyle(ChatFormatting.GRAY));
+        lines.accept(Component.translatable("tooltip.golem_logix.fluid_ghost").withStyle(ChatFormatting.GRAY));
     }
 }

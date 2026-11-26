@@ -29,7 +29,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
 
 import javax.annotation.Nullable;
-import java.util.List;
 
 /**
  * Portable Chronometer: a wireless crafting terminal (with a crafting grid) built into a pocket watch.
@@ -257,26 +256,25 @@ public class PortableChronometerItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
                                 java.util.function.Consumer<Component> lines, TooltipFlag tooltipFlag) {
-        List<Component> tooltipComponents = new com.golemlogix.items.TooltipLines(lines);
         RangeTier tier = getTier(stack);
-        tooltipComponents.add(Component.translatable("tooltip.golem_logix.chronometer.tier." + tier.getKey())
+        lines.accept(Component.translatable("tooltip.golem_logix.chronometer.tier." + tier.getKey())
                 .withStyle(ChatFormatting.DARK_AQUA));
 
         GlobalPos bound = getBound(stack);
         if (bound != null) {
             BlockPos p = bound.pos();
-            tooltipComponents.add(Component.translatable("tooltip.golem_logix.chronometer.bound", p.getX(), p.getY(), p.getZ(),
+            lines.accept(Component.translatable("tooltip.golem_logix.chronometer.bound", p.getX(), p.getY(), p.getZ(),
                     bound.dimension().identifier().toString()).withStyle(ChatFormatting.GRAY));
         } else {
-            tooltipComponents.add(Component.translatable("tooltip.golem_logix.chronometer.unbound_hint")
+            lines.accept(Component.translatable("tooltip.golem_logix.chronometer.unbound_hint")
                     .withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
         }
         if (SourceHelper.sourceRequired()) {
             if (stack.getOrDefault(ModDataComponents.RESONATOR_LINK.get(), false)) {
-                tooltipComponents.add(Component.translatable("tooltip.golem_logix.chronometer.resonator")
+                lines.accept(Component.translatable("tooltip.golem_logix.chronometer.resonator")
                         .withStyle(ChatFormatting.LIGHT_PURPLE));
             } else {
-                tooltipComponents.add(Component.translatable("tooltip.golem_logix.chronometer.charge", getCharge(stack), MAX_CHARGE)
+                lines.accept(Component.translatable("tooltip.golem_logix.chronometer.charge", getCharge(stack), MAX_CHARGE)
                         .withStyle(ChatFormatting.LIGHT_PURPLE));
             }
         }

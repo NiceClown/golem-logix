@@ -74,10 +74,12 @@ public class PipePlugItem extends ModItemWithTooltip {
         be.setPlugged(side, plug);
         level.setBlock(pos, pipe.relink(level.getBlockState(pos), level, pos), Block.UPDATE_ALL);
         BlockPos n = pos.relative(side);
-        BlockState ns = level.getBlockState(n);
-        BlockState updated = Block.updateFromNeighbourShapes(ns, level, n);
-        if (updated != ns) {
-            level.setBlock(n, updated, Block.UPDATE_ALL);
+        if (level.isLoaded(n)) {
+            BlockState ns = level.getBlockState(n);
+            BlockState updated = Block.updateFromNeighbourShapes(ns, level, n);
+            if (updated != ns) {
+                level.setBlock(n, updated, Block.UPDATE_ALL);
+            }
         }
         // both sides of the plug: a split network needs its lights and channels recomputed on each side
         GolemNetwork.nodesChanged(level, pos);
