@@ -2,6 +2,7 @@ package com.golemlogix.init;
 
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.items.*;
+import com.golemlogix.upgrade.UpgradeType;
 import net.minecraft.world.item.Item;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -57,53 +58,53 @@ public class ModItems {
     public static final DeferredItem<CopperPunchCardItem> COPPER_PUNCH_CARD = ITEMS.register("copper_punch_card",
             () -> new CopperPunchCardItem(new Item.Properties()));
 
-    public static final DeferredItem<com.golemlogix.items.IdentityPunchCardItem> IDENTITY_PUNCH_CARD = ITEMS.register("identity_punch_card",
-            () -> new com.golemlogix.items.IdentityPunchCardItem(new Item.Properties()));
+    public static final DeferredItem<IdentityPunchCardItem> IDENTITY_PUNCH_CARD = ITEMS.register("identity_punch_card",
+            () -> new IdentityPunchCardItem(new Item.Properties()));
 
     /** Pipe Plug: closes a side of a pipe so neighbouring lines do not merge. */
     public static final DeferredItem<PipePlugItem> PIPE_PLUG = ITEMS.register("pipe_plug",
             () -> new PipePlugItem(new Item.Properties().stacksTo(64)));
 
     /** Forge Hammer: forges plates on the anvil (an unassembled Saturator); charged with Source from a jar. */
-    public static final DeferredItem<com.golemlogix.items.ForgeHammerItem> FORGE_HAMMER = ITEMS.register("forge_hammer",
-            () -> new com.golemlogix.items.ForgeHammerItem(new Item.Properties()));
+    public static final DeferredItem<ForgeHammerItem> FORGE_HAMMER = ITEMS.register("forge_hammer",
+            () -> new ForgeHammerItem(new Item.Properties()));
 
     public static final DeferredItem<PortableChronometerItem> PORTABLE_CHRONOMETER = ITEMS.register("portable_chronometer",
             () -> new PortableChronometerItem(new Item.Properties().stacksTo(1)));
 
     // Cryo-Source Telegraph cards: the link card and the two range cards (the same tiers as the Chronometer)
-    public static final DeferredItem<com.golemlogix.items.TelegraphLinkCardItem> AETHERIAL_LINKAGE = ITEMS.register("aetherial_linkage",
-            () -> new com.golemlogix.items.TelegraphLinkCardItem(new Item.Properties().stacksTo(16)));
+    public static final DeferredItem<TelegraphLinkCardItem> AETHERIAL_LINKAGE = ITEMS.register("aetherial_linkage",
+            () -> new TelegraphLinkCardItem(new Item.Properties().stacksTo(16)));
 
-    public static final DeferredItem<com.golemlogix.items.TelegraphRangeCardItem> AETHER_RESONANCE_CORE = ITEMS.register("aether_resonance_core",
-            () -> new com.golemlogix.items.TelegraphRangeCardItem(1, new Item.Properties().stacksTo(16)));
+    public static final DeferredItem<TelegraphRangeCardItem> AETHER_RESONANCE_CORE = ITEMS.register("aether_resonance_core",
+            () -> new TelegraphRangeCardItem(1, new Item.Properties().stacksTo(16)));
 
-    public static final DeferredItem<com.golemlogix.items.TelegraphRangeCardItem> VOID_GLASS_PRISM = ITEMS.register("void_glass_prism",
-            () -> new com.golemlogix.items.TelegraphRangeCardItem(2, new Item.Properties().stacksTo(16)));
+    public static final DeferredItem<TelegraphRangeCardItem> VOID_GLASS_PRISM = ITEMS.register("void_glass_prism",
+            () -> new TelegraphRangeCardItem(2, new Item.Properties().stacksTo(16)));
 
     // Machine upgrades
     public static final DeferredItem<UpgradeItem> COMPRESSED_COPROCESSOR = ITEMS.register("compressed_coprocessor",
-            () -> new UpgradeItem(com.golemlogix.upgrade.UpgradeType.SPEED, "tooltip.golem_logix.compressed_coprocessor",
+            () -> new UpgradeItem(UpgradeType.SPEED, "tooltip.golem_logix.compressed_coprocessor",
                     new Item.Properties().stacksTo(64)));
     /** The Co-Processor on Create's assembly line (the transitional item of its sequenced assembly recipe). */
-    public static final DeferredItem<com.golemlogix.items.IncompleteAssemblyItem> INCOMPLETE_COMPRESSED_COPROCESSOR =
-            ITEMS.register("incomplete_compressed_coprocessor", () -> new com.golemlogix.items.IncompleteAssemblyItem(new Item.Properties()));
+    public static final DeferredItem<IncompleteAssemblyItem> INCOMPLETE_COMPRESSED_COPROCESSOR =
+            ITEMS.register("incomplete_compressed_coprocessor", () -> new IncompleteAssemblyItem(new Item.Properties()));
 
     public static final DeferredItem<UpgradeItem> AUTOCRAFT_MODULE = ITEMS.register("autocraft_module",
-            () -> new UpgradeItem(com.golemlogix.upgrade.UpgradeType.CRAFTING, "tooltip.golem_logix.autocraft_module",
+            () -> new UpgradeItem(UpgradeType.CRAFTING, "tooltip.golem_logix.autocraft_module",
                     new Item.Properties().stacksTo(16)));
 
     public static final DeferredItem<UpgradeItem> REDSTONE_MODULE = ITEMS.register("redstone_module",
-            () -> new UpgradeItem(com.golemlogix.upgrade.UpgradeType.REDSTONE, "tooltip.golem_logix.redstone_module",
+            () -> new UpgradeItem(UpgradeType.REDSTONE, "tooltip.golem_logix.redstone_module",
                     new Item.Properties().stacksTo(16)));
     /** Plasma Temper (secret, from the Wither's plasma): the Annihilation Bus's golem never wears its tool. */
     public static final DeferredItem<UpgradeItem> PLASMA_TEMPER = ITEMS.register("plasma_temper",
-            () -> new UpgradeItem(com.golemlogix.upgrade.UpgradeType.TEMPER, "tooltip.golem_logix.plasma_temper",
+            () -> new UpgradeItem(UpgradeType.TEMPER, "tooltip.golem_logix.plasma_temper",
                     new Item.Properties().stacksTo(16)));
 
     /** Fuzzy Card: the filters of a bus or an interface match fuzzily (any components, or a tag chosen on the filter). */
     public static final DeferredItem<UpgradeItem> FUZZY_CARD = ITEMS.register("fuzzy_card",
-            () -> new UpgradeItem(com.golemlogix.upgrade.UpgradeType.FUZZY, "tooltip.golem_logix.fuzzy_card",
+            () -> new UpgradeItem(UpgradeType.FUZZY, "tooltip.golem_logix.fuzzy_card",
                     new Item.Properties().stacksTo(16)));
 
     // Magnetic Copper Storage Disks (Raw Item Count - RS style)

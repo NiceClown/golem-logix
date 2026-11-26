@@ -1,8 +1,10 @@
 package com.golemlogix.secret;
 
 import com.golemlogix.init.ModItems;
+import com.golemlogix.init.ModTags;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -18,6 +20,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 import javax.annotation.Nullable;
+import java.util.Locale;
 
 /**
  * The Dispel method (Ars Nouveau): a Dispel cast on a battered golem unbinds its mind, and the golem turns into a raw mind
@@ -47,10 +50,10 @@ public final class GolemMinds {
      * modpacks add their own), or any golem with "copper" in its id.
      */
     public static boolean isCopperGolem(Entity entity) {
-        if (entity.getType().is(com.golemlogix.init.ModTags.COPPER_GOLEMS)) {
+        if (entity.getType().is(ModTags.COPPER_GOLEMS)) {
             return true;
         }
-        String path = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).getPath();
+        String path = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).getPath();
         return path.contains("copper_golem") || (entity instanceof AbstractGolem && path.contains("copper"));
     }
 
@@ -91,7 +94,7 @@ public final class GolemMinds {
         }
         if (!battered(golem, kind)) {
             caster.displayClientMessage(Component.translatable("message.golem_logix.mind.too_strong",
-                    String.format("%.0f", golem.getHealth())).withStyle(ChatFormatting.YELLOW), true);
+                    String.format(Locale.ROOT, "%.0f", golem.getHealth())).withStyle(ChatFormatting.YELLOW), true);
             level.sendParticles(ParticleTypes.CRIT, golem.getX(), golem.getY() + 1.0, golem.getZ(), 12, 0.3, 0.4, 0.3, 0.1);
             return true;
         }

@@ -3,13 +3,17 @@ package com.golemlogix.event;
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.init.ModItems;
 import com.golemlogix.init.ModSounds;
+import com.golemlogix.recipe.AnvilCrushingRecipe;
+import com.golemlogix.secret.SecretKnowledge;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.animal.SnowGolem;
@@ -27,6 +31,7 @@ import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 import java.util.List;
+import java.util.Locale;
 
 @EventBusSubscriber(modid = GolemLogixMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
 public class AnvilCrushingHandler {
@@ -34,17 +39,21 @@ public class AnvilCrushingHandler {
     public static final int WITHER_SPAWN_TICKS = 220;
     public static final int WITHER_WINDOW_TICKS = 80;
 
+    private static boolean isInWitherWindow(WitherBoss wither) {
+        int invul = wither.getInvulnerableTicks();
+        return invul >= WITHER_SPAWN_TICKS - WITHER_WINDOW_TICKS && invul <= WITHER_SPAWN_TICKS;
+    }
+
     /**
      * While the Wither is invulnerable (just summoned) it takes no damage at all, and no damage event happens.
      * So the falling anvil is caught by intersecting its hitbox every tick of the window.
      */
     @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Pre event) {
-        if (!(event.getEntity() instanceof WitherBoss wither) || !(wither.level() instanceof ServerLevel serverLevel) || wither.isRemoved()) {
-            return;
-        }
-        int invul = wither.getInvulnerableTicks();
-        if (invul < WITHER_SPAWN_TICKS - WITHER_WINDOW_TICKS || invul > WITHER_SPAWN_TICKS) {
+        if (!(event.getEntity() instanceof WitherBoss wither)
+                || !(wither.level() instanceof ServerLevel serverLevel)
+                || wither.isRemoved()
+                || !isInWitherWindow(wither)) {
             return;
         }
         for (FallingBlockEntity fb : serverLevel.getEntitiesOfClass(FallingBlockEntity.class, wither.getBoundingBox().inflate(0.4))) {
@@ -80,84 +89,71 @@ public class AnvilCrushingHandler {
     public static void onLivingDamage(LivingDamageEvent.Pre event) {
         Entity victim = event.getEntity();
         Level level = victim.level();
-
-        if (level.isClientSide() || victim.isRemoved()) {
+        if (level.isClientSide() || victim.isRemoved() || !isAnvilDamage(level, victim, event.getSource())) {
             return;
         }
 
-        if (!isAnvilDamage(level, victim, event.getSource())) {
-            return;
-        }
-
-        float currentHealth = event.getEntity().getHealth();
         ServerLevel serverLevel = (ServerLevel) level;
-
         // 1. The Wither in its spawn window (in case damage did get through)
-        if (victim instanceof WitherBoss wither) {
-            int invulTicks = wither.getInvulnerableTicks();
-            if (invulTicks >= WITHER_SPAWN_TICKS - WITHER_WINDOW_TICKS && invulTicks <= WITHER_SPAWN_TICKS) {
-                implodeWither(serverLevel, wither);
-                event.setNewDamage(0.0f);
-                return;
-            }
+        if (victim instanceof WitherBoss wither && isInWitherWindow(wither)) {
+            implodeWither(serverLevel, wither);
+            event.setNewDamage(0.0f);
+            return;
         }
 
-        // 2. The golem rituals (recipes "golem_logix:anvil_crushing" from data packs): which golem, how battered, what it gives
-        com.golemlogix.recipe.AnvilCrushingRecipe ritual = com.golemlogix.recipe.AnvilCrushingRecipe.find(serverLevel, victim);
+        // 2. The golem rituals (recipes "golem_logix:anvil_crushing" from data packs)
+        AnvilCrushingRecipe ritual = AnvilCrushingRecipe.find(serverLevel, victim);
         if (ritual == null) {
             return;
         }
-        boolean healthTooHigh = currentHealth > ritual.maxHealth();
-        ItemStack reward = ritual.battered(currentHealth) ? ritual.result().copy() : ItemStack.EMPTY;
-
-        if (healthTooHigh) {
-            // Helpful in-game guidance so the player knows what to do!
-            if (victim instanceof SnowGolem) {
-                notifyNearbyPlayers(serverLevel, victim.blockPosition(),
-                        Component.translatable("message.golem_logix.snow_golem_full_hp").withStyle(ChatFormatting.YELLOW));
-            } else {
-                notifyNearbyPlayers(serverLevel, victim.blockPosition(),
-                        Component.translatable("message.golem_logix.golem_hp_too_high", String.format("%.0f", currentHealth))
-                                .withStyle(ChatFormatting.YELLOW));
-            }
-            // Spawn warning clink sparks
-            serverLevel.sendParticles(ParticleTypes.CRIT, victim.getX(), victim.getY() + 1.0, victim.getZ(),
-                    15, 0.3, 0.3, 0.3, 0.1);
+        float currentHealth = event.getEntity().getHealth();
+        if (currentHealth > ritual.maxHealth()) {
+            warnHealthTooHigh(serverLevel, victim, currentHealth);
             return;
         }
-
+        ItemStack reward = ritual.battered(currentHealth) ? ritual.result().copy() : ItemStack.EMPTY;
         if (!reward.isEmpty()) {
-            // Successful crush!
-            Component rewardName = reward.getHoverName();
-            ItemEntity drop = new ItemEntity(serverLevel, victim.getX(), victim.getY() + 0.2, victim.getZ(), reward);
-            serverLevel.addFreshEntity(drop);
-
-            serverLevel.sendParticles(ParticleTypes.SNOWFLAKE, victim.getX(), victim.getY() + 0.5, victim.getZ(),
-                    35, 0.3, 0.3, 0.3, 0.05);
-            serverLevel.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, victim.getX(), victim.getY() + 0.5, victim.getZ(),
-                    25, 0.2, 0.2, 0.2, 0.03);
-
-            serverLevel.playSound(null, victim.getX(), victim.getY(), victim.getZ(),
-                    ModSounds.ANVIL_CRUSH.get(), SoundSource.BLOCKS, 1.2f, 1.0f);
-            serverLevel.playSound(null, victim.getX(), victim.getY(), victim.getZ(),
-                    SoundEvents.ANVIL_LAND, SoundSource.BLOCKS, 1.0f, 0.9f);
-
-            notifyNearbyPlayers(serverLevel, victim.blockPosition(),
-                    Component.translatable("message.golem_logix.crush_success", rewardName)
-                            .withStyle(ChatFormatting.AQUA));
-            // the first plate made on an anvil opens the Dispel method to everyone who saw it
-            for (Player p : serverLevel.getEntitiesOfClass(Player.class, new AABB(victim.blockPosition()).inflate(12.0))) {
-                if (p instanceof net.minecraft.server.level.ServerPlayer sp) {
-                    com.golemlogix.secret.SecretKnowledge.plateMade(sp);
-                }
-            }
-
-            victim.discard();
+            completeCrush(serverLevel, victim, reward);
             event.setNewDamage(0.0f);
         }
     }
 
-    private static boolean isAnvilDamage(Level level, Entity victim, net.minecraft.world.damagesource.DamageSource source) {
+    private static void warnHealthTooHigh(ServerLevel serverLevel, Entity victim, float currentHealth) {
+        Component warning = victim instanceof SnowGolem
+                ? Component.translatable("message.golem_logix.snow_golem_full_hp").withStyle(ChatFormatting.YELLOW)
+                : Component.translatable("message.golem_logix.golem_hp_too_high", String.format(Locale.ROOT, "%.0f", currentHealth))
+                        .withStyle(ChatFormatting.YELLOW);
+        notifyNearbyPlayers(serverLevel, victim.blockPosition(), warning);
+        serverLevel.sendParticles(ParticleTypes.CRIT, victim.getX(), victim.getY() + 1.0, victim.getZ(),
+                15, 0.3, 0.3, 0.3, 0.1);
+    }
+
+    private static void completeCrush(ServerLevel serverLevel, Entity victim, ItemStack reward) {
+        Component rewardName = reward.getHoverName();
+        serverLevel.addFreshEntity(new ItemEntity(serverLevel, victim.getX(), victim.getY() + 0.2, victim.getZ(), reward));
+
+        serverLevel.sendParticles(ParticleTypes.SNOWFLAKE, victim.getX(), victim.getY() + 0.5, victim.getZ(),
+                35, 0.3, 0.3, 0.3, 0.05);
+        serverLevel.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, victim.getX(), victim.getY() + 0.5, victim.getZ(),
+                25, 0.2, 0.2, 0.2, 0.03);
+
+        serverLevel.playSound(null, victim.getX(), victim.getY(), victim.getZ(),
+                ModSounds.ANVIL_CRUSH.get(), SoundSource.BLOCKS, 1.2f, 1.0f);
+        serverLevel.playSound(null, victim.getX(), victim.getY(), victim.getZ(),
+                SoundEvents.ANVIL_LAND, SoundSource.BLOCKS, 1.0f, 0.9f);
+
+        notifyNearbyPlayers(serverLevel, victim.blockPosition(),
+                Component.translatable("message.golem_logix.crush_success", rewardName).withStyle(ChatFormatting.AQUA));
+        // the first plate made on an anvil opens the Dispel method to everyone who saw it
+        for (Player p : serverLevel.getEntitiesOfClass(Player.class, new AABB(victim.blockPosition()).inflate(12.0))) {
+            if (p instanceof ServerPlayer sp) {
+                SecretKnowledge.plateMade(sp);
+            }
+        }
+        victim.discard();
+    }
+
+    private static boolean isAnvilDamage(Level level, Entity victim, DamageSource source) {
         Entity directSource = source.getDirectEntity();
         if (directSource instanceof FallingBlockEntity fallingBlock) {
             return fallingBlock.getBlockState().getBlock() instanceof AnvilBlock;
@@ -184,10 +180,9 @@ public class AnvilCrushingHandler {
     }
 
     private static void notifyNearbyPlayers(ServerLevel level, BlockPos pos, Component message) {
-        AABB searchBox = new AABB(pos).inflate(12.0);
-        List<Player> players = level.getEntitiesOfClass(Player.class, searchBox);
+        List<Player> players = level.getEntitiesOfClass(Player.class, new AABB(pos).inflate(12.0));
         for (Player p : players) {
-            p.displayClientMessage(message, true); // Displays directly in Action Bar!
+            p.displayClientMessage(message, true);
         }
     }
 }
