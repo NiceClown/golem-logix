@@ -4,15 +4,19 @@ import com.golemlogix.blockentity.CryoJarBlockEntity;
 import com.golemlogix.blocks.CryoJarBlock;
 import com.golemlogix.blocks.JarForm;
 import com.golemlogix.client.render.BerBuffers;
+import com.golemlogix.client.render.GlowTypes;
+import com.golemlogix.client.render.LegacyBer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
@@ -20,24 +24,30 @@ import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
-import static com.golemlogix.client.CryoJarRenderer.BRASS;
-import static com.golemlogix.client.CryoJarRenderer.BRICK;
-import static com.golemlogix.client.CryoJarRenderer.BRICK_TINT;
-import static com.golemlogix.client.CryoJarRenderer.COPPER;
-import static com.golemlogix.client.CryoJarRenderer.CRYO;
-import static com.golemlogix.client.CryoJarRenderer.DARK;
-import static com.golemlogix.client.CryoJarRenderer.FRAME;
-import static com.golemlogix.client.CryoJarRenderer.GAUGE;
-import static com.golemlogix.client.CryoJarRenderer.GLASS;
-import static com.golemlogix.client.CryoJarRenderer.ICE;
-import static com.golemlogix.client.CryoJarRenderer.RUNES;
-import static com.golemlogix.client.CryoJarRenderer.SNOW;
-import static com.golemlogix.client.CryoJarRenderer.WHITE;
-import static com.golemlogix.client.CryoMainframeRenderer.box;
-import static com.golemlogix.client.CryoMainframeRenderer.fitWall;
-import static com.golemlogix.client.CryoMainframeRenderer.limb;
+import static com.golemlogix.client.MachineParts.BRASS;
+import static com.golemlogix.client.MachineParts.BRICK;
+import static com.golemlogix.client.MachineParts.BRICK_TINT;
+import static com.golemlogix.client.MachineParts.COPPER;
+import static com.golemlogix.client.MachineParts.CRYO;
+import static com.golemlogix.client.MachineParts.DARK;
+import static com.golemlogix.client.MachineParts.DIM_BRASS;
+import static com.golemlogix.client.MachineParts.FRAME;
+import static com.golemlogix.client.MachineParts.GAUGE;
+import static com.golemlogix.client.MachineParts.GLASS;
+import static com.golemlogix.client.MachineParts.ICE;
+import static com.golemlogix.client.MachineParts.LIGHT_BRASS;
+import static com.golemlogix.client.MachineParts.RUNES;
+import static com.golemlogix.client.MachineParts.SNOW;
+import static com.golemlogix.client.MachineParts.WHITE;
+import static com.golemlogix.client.render.PixelMesh.box;
+import static com.golemlogix.client.render.PixelMesh.fitWall;
+import static com.golemlogix.client.render.PixelMesh.limb;
+import static com.golemlogix.client.render.PixelMesh.quad;
+import static com.golemlogix.client.render.PixelMesh.smoothstep;
+import static com.golemlogix.client.render.PixelMesh.sprite;
 
 /**
  * The joined jars, drawn from their corner. Pixels, in a frame where the machine's front is Z 0 and its footprint starts at 0:
@@ -64,7 +74,6 @@ final class JarWholeRenderer {
     private static final int SOURCE_GLOW = 8;
     private static final float TOP = 31.4f;
     private static final Identifier GRATE = Identifier.withDefaultNamespace("block/iron_trapdoor");
-    private static final int LIGHT_BRASS = 0xFFF5E2B8, DIM_BRASS = 0xFFDCC49A;
     private static final Vector3f UP = new Vector3f(0f, 1f, 0f);
     private static final Vector3f FWD_EAST = new Vector3f(1f, 0f, 0f);
     private static final Vector3f FWD_WEST = new Vector3f(-1f, 0f, 0f);
@@ -73,7 +82,7 @@ final class JarWholeRenderer {
     private static final Vector3f SCRATCH_POS = new Vector3f();
     private static final Vector3f SCRATCH_HAND = new Vector3f();
     private static final Vector3f SCRATCH_OFF = new Vector3f();
-    private static final org.joml.Quaternionf SCRATCH_QUAT = new org.joml.Quaternionf();
+    private static final Quaternionf SCRATCH_QUAT = new Quaternionf();
 
     private JarWholeRenderer() {
     }
@@ -93,7 +102,7 @@ final class JarWholeRenderer {
         float fill = Math.min(1f, Mth.lerp(partialTick, be.fillPrev, be.fill));
         float time = (level.getGameTime() % 72000L) + partialTick;
         boolean charged = be.clientSource() > 0;
-        Vec3 cam = com.golemlogix.client.render.LegacyBer.camera();
+        Vec3 cam = LegacyBer.camera();
         double distance = cam.distanceToSqr(pos.getX() + width / 2.0, pos.getY() + 2.0, pos.getZ() + width / 2.0);
         boolean crew = distance < CREW_SIGHT * CREW_SIGHT, detail = distance < DETAIL_SIGHT * DETAIL_SIGHT;
         // what dims glass that glows by itself: how much light really falls on it now
@@ -107,7 +116,7 @@ final class JarWholeRenderer {
             for (int z = 0; z < width; z++) {
                 pose.pushPose();
                 pose.translate(x, 0, z);
-                CryoJarRenderer.sockets(solid, pose.last(), level, pos.offset(x, 0, z), light);
+                MachineParts.jarSockets(solid, pose.last(), level, pos.offset(x, 0, z), light);
                 pose.popPose();
             }
         }
@@ -153,7 +162,7 @@ final class JarWholeRenderer {
     // ------------------------------------------------------------------------------------------------ the Giga Jar
 
     /** What is built once: per machine a near and a far version, the glowing runes apart (their colour pulses), the rings and the unit spheres. */
-    private record Meshes(net.minecraft.client.renderer.texture.TextureAtlasSprite atlasMark, BerBuffers.Baked gigaNear, BerBuffers.Baked gigaFar, BerBuffers.Baked gigaRunes,
+    private record Meshes(TextureAtlasSprite atlasMark, BerBuffers.Baked gigaNear, BerBuffers.Baked gigaFar, BerBuffers.Baked gigaRunes,
                           BerBuffers.Baked reactorNear, BerBuffers.Baked reactorFar, BerBuffers.Baked reactorRunes, BerBuffers.Baked collar, BerBuffers.Baked lowRing,
                           BerBuffers.Baked outerRing, BerBuffers.Baked outerRunes, BerBuffers.Baked levelRing, BerBuffers.Baked levelRingFar, BerBuffers.Baked innerRing,
                           BerBuffers.Baked ballCryo, BerBuffers.Baked ballIce) {
@@ -163,7 +172,7 @@ final class JarWholeRenderer {
 
     /** Built at first use and again after a resource reload, when the atlas has changed under them. */
     private static Meshes meshes() {
-        net.minecraft.client.renderer.texture.TextureAtlasSprite mark = CryoMainframeRenderer.sprite(BRASS);
+        TextureAtlasSprite mark = sprite(BRASS);
         if (meshes == null || meshes.atlasMark() != mark) {
             meshes = new Meshes(mark,
                     BerBuffers.bake((vc, pose) -> gigaStatic(vc, pose, true)),
@@ -201,14 +210,8 @@ final class JarWholeRenderer {
         return meshes;
     }
 
-    private static net.minecraft.client.renderer.rendertype.RenderType clearType(boolean shaderPack) {
+    private static RenderType clearType(boolean shaderPack) {
         return shaderPack ? RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS) : RenderTypes.entityTranslucentEmissive(TextureAtlas.LOCATION_BLOCKS);
-    }
-
-    /** The colour of runes at this moment: dim while there is no Source, breathing while there is. */
-    private static int runeColor(float time, boolean on) {
-        float glow = on ? 0.55f + 0.45f * (0.8f + 0.2f * Mth.sin(time * 0.08f)) : 0.18f;
-        return 0xFF000000 | ((int) (0x50 * glow) << 16) | ((int) (0xF0 * glow) << 8) | (int) (0xF0 * glow);
     }
 
     private static void teeth(VertexConsumer vc, PoseStack pose, int count, float r0, float r1, float halfWide, float halfDeep, Identifier tex, int color) {
@@ -298,9 +301,9 @@ final class JarWholeRenderer {
 
     private static void giga(PoseStack pose, MultiBufferSource buffers, Meshes meshes, int light, float time, float fill, boolean on, boolean crew, boolean detail,
                              float ambient) {
-        net.minecraft.client.renderer.rendertype.RenderType solid = RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS);
+        RenderType solid = RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS);
         (detail ? meshes.gigaNear() : meshes.gigaFar()).draw(buffers, solid, pose.last(), light, 0);
-        meshes.gigaRunes().draw(buffers, solid, pose.last(), on ? LightCoordsUtil.FULL_BRIGHT : light, runeColor(time, on));
+        meshes.gigaRunes().draw(buffers, solid, pose.last(), on ? LightCoordsUtil.FULL_BRIGHT : light, MachineParts.cyanRuneColor(time, on));
 
         VertexConsumer vc = buffers.getBuffer(solid);
         PoseStack.Pose p = pose.last();
@@ -313,7 +316,7 @@ final class JarWholeRenderer {
 
         // the crank on the gearbox, its wheel on the front of the box
         float crankX = 25.4f, crankY = 41f, crankZ = 20.2f;
-        wheelZ(vc, pose, crankX, crankY, crankZ, 4f, crank * Mth.RAD_TO_DEG, light);
+        MachineParts.wheelZ(vc, pose, crankX, crankY, crankZ, 4f, crank * Mth.RAD_TO_DEG, light);
         // the counterweight: a heavy brass lobe opposite the crank pin
         pose.pushPose();
         pose.translate(crankX / 16f, crankY / 16f, (crankZ - 1f) / 16f);
@@ -351,9 +354,9 @@ final class JarWholeRenderer {
         box(vc, p, rodX - 0.45f, rodTop - 44f, 15.55f, rodX + 0.45f, rodTop, 16.45f, BRASS, LIGHT_BRASS, light);
         box(vc, p, rodX - 2.2f, rodTop - 47.4f, 13.8f, rodX + 2.2f, rodTop - 44f, 18.2f, FRAME, WHITE, light);
 
-        float turn = CryoJarRenderer.turnAngle(time, on);
+        float turn = MachineParts.valveTurnAngle(time, on);
         if (detail) {
-            CryoJarRenderer.wheel(vc, pose, 3f, 35.8f, 3.6f, 2.2f, turn, light);
+            MachineParts.wheelX(vc, pose, 3f, 35.8f, 3.6f, 2.2f, turn, light);
         }
 
         if (crew) {
@@ -361,7 +364,7 @@ final class JarWholeRenderer {
         }
 
         // the Source and the glass over it; see the class comment on why these types
-        boolean pack = com.golemlogix.client.render.GlowTypes.shaderPackActive();
+        boolean pack = GlowTypes.shaderPackActive();
         VertexConsumer tv = buffers.getBuffer(clearType(pack));
         PoseStack.Pose t = pose.last();
         float bottom = 8.26f, top = 26.74f;
@@ -391,7 +394,7 @@ final class JarWholeRenderer {
         // on the ladder: up, a rest at the top, down, a rest at the bottom; the hands go hand over hand while it moves
         float cycle = (time * 0.0035f) % 1f;
         float k = cycle < 0.4f ? cycle / 0.4f : cycle < 0.5f ? 1f : cycle < 0.9f ? 1f - (cycle - 0.5f) / 0.4f : 0f;
-        float climb = k * k * (3f - 2f * k);
+        float climb = smoothstep(k);
         boolean moving = cycle < 0.4f || (cycle > 0.5f && cycle < 0.9f);
         float hands = moving ? 0.35f * Mth.sin(time * 0.35f) : 0f;
         SCRATCH_POS.set(35.2f / 16f, (7.4f + 17f * climb) / 16f, 22.5f / 16f);
@@ -445,10 +448,10 @@ final class JarWholeRenderer {
 
     private static void reactor(PoseStack pose, MultiBufferSource buffers, Meshes meshes, CryoJarRenderer.IronGolemParts ironGolem, int light, float time, float fill, boolean on, boolean crew,
                                 boolean detail) {
-        net.minecraft.client.renderer.rendertype.RenderType solid = RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS);
+        RenderType solid = RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS);
         float top = TOP;
         int runeLight = on ? LightCoordsUtil.FULL_BRIGHT : light;
-        int rune = runeColor(time, on);
+        int rune = MachineParts.cyanRuneColor(time, on);
         (detail ? meshes.reactorNear() : meshes.reactorFar()).draw(buffers, solid, pose.last(), light, 0);
         meshes.reactorRunes().draw(buffers, solid, pose.last(), runeLight, rune);
 
@@ -483,16 +486,16 @@ final class JarWholeRenderer {
         meshes.innerRing().draw(buffers, solid, pose.last(), light, 0);
         pose.popPose();
 
-        float turn = CryoJarRenderer.turnAngle(time, on);
+        float turn = MachineParts.valveTurnAngle(time, on);
         if (detail) {
             VertexConsumer vc = buffers.getBuffer(solid);
-            CryoJarRenderer.wheel(vc, pose, 22.8f, top + 4.2f, 6.2f, 2.2f, turn, light);
-            CryoJarRenderer.wheel(vc, pose, 40.6f, top + 4.2f, 24f, 2.2f, turn, light);
-            CryoJarRenderer.wheel(vc, pose, 7.4f, top + 4.2f, 24f, 2.2f, -turn, light);
+            MachineParts.wheelX(vc, pose, 22.8f, top + 4.2f, 6.2f, 2.2f, turn, light);
+            MachineParts.wheelX(vc, pose, 40.6f, top + 4.2f, 24f, 2.2f, turn, light);
+            MachineParts.wheelX(vc, pose, 7.4f, top + 4.2f, 24f, 2.2f, -turn, light);
             for (int side = 0; side < 4; side++) {
                 pose.pushPose();
                 pose.rotateAround(Axis.YP.rotationDegrees(side * 90f), 1.5f, 0f, 1.5f);
-                wheelZ(vc, pose, 41.5f, 13f, 0.05f, 2.4f, CryoJarRenderer.turnAngle(time + side * 23f, on), light);
+                MachineParts.wheelZ(vc, pose, 41.5f, 13f, 0.05f, 2.4f, MachineParts.valveTurnAngle(time + side * 23f, on), light);
                 pose.popPose();
             }
         }
@@ -511,7 +514,7 @@ final class JarWholeRenderer {
         (on ? meshes.ballCryo() : meshes.ballIce()).draw(buffers, solid, pose.last(), on ? LightCoordsUtil.FULL_BRIGHT : light, 0);
         pose.popPose();
         if (on) {
-            VertexConsumer tv = buffers.getBuffer(clearType(com.golemlogix.client.render.GlowTypes.shaderPackActive()));
+            VertexConsumer tv = buffers.getBuffer(clearType(GlowTypes.shaderPackActive()));
             PoseStack.Pose t = pose.last();
             for (int i = 0; i < 10; i++) {
                 float k = (time * 0.006f + i * 0.137f) % 1f;
@@ -674,23 +677,6 @@ final class JarWholeRenderer {
         }
     }
 
-    /** A brass hand wheel in the XY plane (its axle along Z) at x, y, z, turned by angle degrees. */
-    private static void wheelZ(VertexConsumer vc, PoseStack pose, float x, float y, float z, float r, float angle, int light) {
-        pose.pushPose();
-        pose.translate(x / 16f, y / 16f, z / 16f);
-        pose.mulPose(Axis.ZP.rotationDegrees(angle));
-        PoseStack.Pose p = pose.last();
-        box(vc, p, -r, -0.35f, -0.4f, r, 0.35f, 0.4f, BRASS, WHITE, light);
-        box(vc, p, -0.35f, -r, -0.4f, 0.35f, r, 0.4f, BRASS, WHITE, light);
-        for (int i = 0; i < 8; i++) {
-            float a = i * Mth.TWO_PI / 8f;
-            float cx = Mth.cos(a) * r, cy = Mth.sin(a) * r;
-            box(vc, p, cx - 0.5f, cy - 0.5f, -0.45f, cx + 0.5f, cy + 0.5f, 0.45f, BRASS, LIGHT_BRASS, light);
-        }
-        box(vc, p, -0.7f, -0.7f, -0.6f, 0.7f, 0.7f, 0.6f, DARK, WHITE, light);
-        pose.popPose();
-    }
-
     /** A ring in the current XY plane around the origin, made of straight segments. */
     private static void ring(VertexConsumer vc, PoseStack pose, float radius, float thick, float width, int segments, Identifier tex, int color, int light) {
         float half = radius * Mth.PI / segments + 0.1f;
@@ -721,7 +707,7 @@ final class JarWholeRenderer {
 
     /** A sphere. All its faces carry the same normal: it glows evenly, without the bands the sun's shading would draw on it. */
     private static void ball(VertexConsumer vc, PoseStack.Pose p, float radius, Identifier tex, int color, int light) {
-        net.minecraft.client.renderer.texture.TextureAtlasSprite s = CryoMainframeRenderer.sprite(tex);
+        TextureAtlasSprite s = sprite(tex);
         int bands = 10, sides = 20;
         for (int b = 0; b < bands; b++) {
             float a0 = -Mth.HALF_PI + Mth.PI * b / bands, a1 = -Mth.HALF_PI + Mth.PI * (b + 1) / bands;
@@ -731,7 +717,7 @@ final class JarWholeRenderer {
                 float t0 = Mth.TWO_PI * i / sides, t1 = Mth.TWO_PI * (i + 1) / sides;
                 float u0 = s.getU((i % 4) / 4f), u1 = s.getU((i % 4 + 1) / 4f);
                 float c0 = Mth.cos(t0), s0 = Mth.sin(t0), c1 = Mth.cos(t1), s1 = Mth.sin(t1);
-                CryoMainframeRenderer.quad(vc, p, r1 * c0, y1, r1 * s0, r1 * c1, y1, r1 * s1,
+                quad(vc, p, r1 * c0, y1, r1 * s0, r1 * c1, y1, r1 * s1,
                         r0 * c1, y0, r0 * s1, r0 * c0, y0, r0 * s0, u0, v0, u1, v1, color, light, 0f, 1f, 0f);
             }
         }

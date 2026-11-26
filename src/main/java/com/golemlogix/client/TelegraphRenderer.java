@@ -1,9 +1,9 @@
 package com.golemlogix.client;
 
-import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.TelegraphBlockEntity;
 import com.golemlogix.blocks.TelegraphBlock;
 import com.golemlogix.client.render.BerBuffers;
+import com.golemlogix.client.render.LegacyBer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -24,10 +24,13 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import org.joml.Vector3f;
 
-import static com.golemlogix.client.CryoMainframeRenderer.box;
-import static com.golemlogix.client.CryoMainframeRenderer.fitWall;
-import static com.golemlogix.client.CryoMainframeRenderer.limb;
-import static com.golemlogix.client.CryoMainframeRenderer.sprite;
+import static com.golemlogix.client.render.PixelMesh.box;
+import static com.golemlogix.client.render.PixelMesh.fitWall;
+import static com.golemlogix.client.render.PixelMesh.limb;
+import static com.golemlogix.client.render.PixelMesh.mcBlock;
+import static com.golemlogix.client.render.PixelMesh.modBlock;
+import static com.golemlogix.client.render.PixelMesh.rgb;
+import static com.golemlogix.client.render.PixelMesh.sprite;
 
 /**
  * The whole Cryo-Source Telegraph, drawn from its main cell. A rusty copper base with frost on its edges, gauges and a rune panel;
@@ -39,12 +42,12 @@ import static com.golemlogix.client.CryoMainframeRenderer.sprite;
  * Pixels in the main cell's north-facing frame: the front is Z 0, "right" (seen from the front) is -X, so the base spans X -16..16,
  * Z 0..32; the mast stands on X -16..0, Z 16..32.
  */
-public class TelegraphRenderer extends com.golemlogix.client.render.LegacyBer<TelegraphBlockEntity> {
-    private static final Identifier RUST = mc("exposed_copper"), VERDIGRIS = mc("weathered_copper"),
-            CUT = mc("exposed_cut_copper"), COPPER = mc("copper_block"), BRASS = tex("sat_brass"), DARK = tex("sat_dark"),
-            ICE = tex("sat_ice"), GAUGE = tex("monitor_gauge"), DIAL = tex("resonator_dial"), RUNES = tex("cryo_panel_matrix"),
-            GLASS = tex("sat_glass"), CRYSTAL = tex("core_crystal"), GEM = tex("sat_crystal"), WHITE = mc("white_concrete"),
-            PANEL = tex("telegraph_panel"), BAND = tex("telegraph_band"), DARK_OAK = mc("dark_oak_planks");
+public class TelegraphRenderer extends LegacyBer<TelegraphBlockEntity> {
+    private static final Identifier RUST = mcBlock("exposed_copper"), VERDIGRIS = mcBlock("weathered_copper"),
+            CUT = mcBlock("exposed_cut_copper"), COPPER = mcBlock("copper_block"), BRASS = modBlock("sat_brass"), DARK = modBlock("sat_dark"),
+            ICE = modBlock("sat_ice"), GAUGE = modBlock("monitor_gauge"), DIAL = modBlock("resonator_dial"), RUNES = modBlock("cryo_panel_matrix"),
+            GLASS = modBlock("sat_glass"), CRYSTAL = modBlock("core_crystal"), GEM = modBlock("sat_crystal"), WHITE = mcBlock("white_concrete"),
+            PANEL = modBlock("telegraph_panel"), BAND = modBlock("telegraph_band"), DARK_OAK = mcBlock("dark_oak_planks");
     /** Rusty tint over the vanilla exposed copper (on its own it reads pink). */
     private static final int RUST_TINT = 0xFFB07A62;
     /** Ticks a pulse needs to run from the base to the dish. */
@@ -69,14 +72,6 @@ public class TelegraphRenderer extends com.golemlogix.client.render.LegacyBer<Te
                     BerBuffers.bake(TelegraphRenderer::bakeDish));
         }
         return meshes;
-    }
-
-    private static Identifier tex(String name) {
-        return Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/" + name);
-    }
-
-    private static Identifier mc(String name) {
-        return Identifier.withDefaultNamespace("block/" + name);
     }
 
     public TelegraphRenderer(BlockEntityRendererProvider.Context context) {
@@ -136,7 +131,7 @@ public class TelegraphRenderer extends com.golemlogix.client.render.LegacyBer<Te
         pose.mulPose(Axis.XP.rotationDegrees(-30f));
         baked.dish().draw(buffers, solid, pose.last(), light, 0);
         VertexConsumer vc = buffers.getBuffer(solid);
-        int tip = color(0.4f + 0.6f * flash, 0.85f, 1f);
+        int tip = rgb(0.4f + 0.6f * flash, 0.85f, 1f);
         box(vc, pose.last(), -0.7f, 6.3f, -0.7f, 0.7f, 7.7f, 0.7f, WHITE, tip, wake > 0.05f ? LightCoordsUtil.FULL_BRIGHT : light);
         pose.popPose();
 
@@ -169,7 +164,7 @@ public class TelegraphRenderer extends com.golemlogix.client.render.LegacyBer<Te
 
         // spinning violet crystal in the cage
         float b = Math.min(1f, 0.62f + 0.23f * wake + 0.4f * flash);
-        int crystal = color(b, Math.min(1f, b * 0.9f + 0.25f * flash), b);
+        int crystal = rgb(b, Math.min(1f, b * 0.9f + 0.25f * flash), b);
         TextureAtlasSprite gemSprite = sprite(GEM);
         pose.pushPose();
         pose.translate(MAST_X / 16f, 24f / 16f, MAST_Z / 16f);
@@ -181,7 +176,7 @@ public class TelegraphRenderer extends com.golemlogix.client.render.LegacyBer<Te
         pose.popPose();
 
         // two small crystals in the lattice tower
-        int small = color(Math.min(1f, 0.7f * b + 0.3f), Math.min(1f, 0.85f * b + 0.15f), 1f);
+        int small = rgb(Math.min(1f, 0.7f * b + 0.3f), Math.min(1f, 0.85f * b + 0.15f), 1f);
         TextureAtlasSprite crystalSprite = sprite(CRYSTAL);
         box(vc, p, MAST_X - 3f, 34.5f, MAST_Z - 1f, MAST_X - 1f, 39f, MAST_Z + 1f, crystalSprite, small, LightCoordsUtil.FULL_BRIGHT);
         box(vc, p, MAST_X + 1f, 35.5f, MAST_Z - 1f, MAST_X + 3f, 39.5f, MAST_Z + 1f, crystalSprite, small, LightCoordsUtil.FULL_BRIGHT);
@@ -215,7 +210,7 @@ public class TelegraphRenderer extends com.golemlogix.client.render.LegacyBer<Te
                 }
                 float y = MAST_BOTTOM + t * (MAST_TOP - MAST_BOTTOM);
                 float fade = 1f - t * 0.5f;
-                int c = color(0.35f * fade, 0.95f * fade, 1f * fade);
+                int c = rgb(0.35f * fade, 0.95f * fade, 1f * fade);
                 float z = y < 31f ? MAST_Z - 7.9f : MAST_Z - 3.2f;
                 box(vc, p, MAST_X - 1.1f, y, z, MAST_X + 1.1f, y + 2.4f, z + 1.2f, whiteSprite, c, LightCoordsUtil.FULL_BRIGHT);
             }
@@ -345,10 +340,5 @@ public class TelegraphRenderer extends com.golemlogix.client.render.LegacyBer<Te
             pose.popPose();
         }
         limb(vc, pose, 0f, 1f, 0f, 0f, 6.5f, 0f, 0.9f, BRASS, 0);
-    }
-
-    private static int color(float r, float g, float b) {
-        return 0xFF000000 | ((int) (Mth.clamp(r, 0f, 1f) * 255) << 16) | ((int) (Mth.clamp(g, 0f, 1f) * 255) << 8)
-                | (int) (Mth.clamp(b, 0f, 1f) * 255);
     }
 }

@@ -1,11 +1,10 @@
 package com.golemlogix.client;
 
-import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.CryoJarBlockEntity;
 import com.golemlogix.blocks.CryoJarBlock;
 import com.golemlogix.blocks.JarForm;
-import com.golemlogix.blocks.SnowPipeBlock;
 import com.golemlogix.client.render.BerBuffers;
+import com.golemlogix.client.render.LegacyBer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -20,7 +19,6 @@ import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.Identifier;
 import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
@@ -29,10 +27,22 @@ import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.phys.AABB;
 import org.joml.Vector3f;
 
-import static com.golemlogix.client.CryoMainframeRenderer.box;
-import static com.golemlogix.client.CryoMainframeRenderer.fitWall;
-import static com.golemlogix.client.CryoMainframeRenderer.limb;
-import static com.golemlogix.client.CryoMainframeRenderer.sprite;
+import static com.golemlogix.client.MachineParts.BRASS;
+import static com.golemlogix.client.MachineParts.BRICK;
+import static com.golemlogix.client.MachineParts.BRICK_TINT;
+import static com.golemlogix.client.MachineParts.COPPER;
+import static com.golemlogix.client.MachineParts.CRYO;
+import static com.golemlogix.client.MachineParts.DARK;
+import static com.golemlogix.client.MachineParts.FRAME;
+import static com.golemlogix.client.MachineParts.GAUGE;
+import static com.golemlogix.client.MachineParts.GLASS;
+import static com.golemlogix.client.MachineParts.ICE;
+import static com.golemlogix.client.MachineParts.RUNES;
+import static com.golemlogix.client.MachineParts.SNOW;
+import static com.golemlogix.client.MachineParts.WHITE;
+import static com.golemlogix.client.render.PixelMesh.box;
+import static com.golemlogix.client.render.PixelMesh.fitWall;
+import static com.golemlogix.client.render.PixelMesh.sprite;
 
 /**
  * The Cryo-Source Jar, two blocks high, drawn from its lower half: a dark brick plinth with a rune band (cold while empty, glowing
@@ -42,13 +52,7 @@ import static com.golemlogix.client.CryoMainframeRenderer.sprite;
  * <p>
  * Pixels in the north-facing frame: the front is Z 0, the viewer's right is -X; Y 0..32 over both halves.
  */
-public class CryoJarRenderer extends com.golemlogix.client.render.LegacyBer<CryoJarBlockEntity> {
-    static final Identifier BRICK = mc("nether_bricks"), DARK = tex("sat_dark"), BRASS = tex("sat_brass"), ICE = tex("sat_ice"),
-            GLASS = tex("sat_glass"), RUNES = tex("cryo_panel_matrix"), GAUGE = tex("monitor_gauge"), FRAME = mc("weathered_copper"),
-            SNOW = mc("snow"), CRYO = tex("cryo_source_still"), COPPER = mc("copper_block");
-    static final int BRICK_TINT = 0xFFC89A8A, WHITE = 0xFFFFFFFF;
-    private static final Direction[] DIRS = Direction.values();
-    private static final float[] GOLEM_TURNS = {0f, 180f, 90f, 270f};
+public class CryoJarRenderer extends LegacyBer<CryoJarBlockEntity> {
     private static final Vector3f GOLEM_POS = new Vector3f(-1.8f / 16f, 11.2f / 16f, 2.8f / 16f);
     private static final Vector3f FWD_EAST = new Vector3f(1f, 0f, 0f);
     private static final Vector3f UP = new Vector3f(0f, 1f, 0f);
@@ -79,14 +83,6 @@ public class CryoJarRenderer extends com.golemlogix.client.render.LegacyBer<Cryo
             return new IronGolemParts(root, root.getChild("head"), root.getChild("right_arm"), root.getChild("left_arm"),
                     root.getChild("right_leg"), root.getChild("left_leg"));
         }
-    }
-
-    static Identifier tex(String name) {
-        return Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/" + name);
-    }
-
-    static Identifier mc(String name) {
-        return Identifier.withDefaultNamespace("block/" + name);
     }
 
     private final IronGolemParts ironGolem;
@@ -138,9 +134,9 @@ public class CryoJarRenderer extends com.golemlogix.client.render.LegacyBer<Cryo
 
         VertexConsumer vc = buffers.getBuffer(solid);
         // brass sockets where network pipes dock onto the jar (in the world's own directions)
-        boolean pipeAbove = sockets(vc, pose.last(), level, pos, light);
+        boolean pipeAbove = MachineParts.jarSockets(vc, pose.last(), level, pos, light);
         Direction facing = state.getValue(CryoJarBlock.FACING);
-        float golemTurn = golemTurn(level, pos, facing, 2);
+        float golemTurn = MachineParts.golemTurn(level, pos, facing, 2);
 
         pose.pushPose();
         Quads.faceModel(pose, facing);
@@ -149,8 +145,7 @@ public class CryoJarRenderer extends com.golemlogix.client.render.LegacyBer<Cryo
         // static plinth, valves, gauge, frame and louvred cap under snow
         singleMeshes().body().draw(buffers, solid, p, light, 0);
 
-        float glow = charged ? 0.55f + 0.45f * (0.8f + 0.2f * Mth.sin(time * 0.08f)) : 0.18f;
-        int rune = 0xFF000000 | ((int) (0x50 * glow) << 16) | ((int) (0xF0 * glow) << 8) | (int) (0xF0 * glow);
+        int rune = MachineParts.cyanRuneColor(time, charged);
         fitWall(vc, p, 1.6f, 1.8f, 14.4f, 4.4f, 0.94f, RUNES, rune, charged ? LightCoordsUtil.FULL_BRIGHT : light);
         if (!pipeAbove) {
             box(vc, p, 6.8f, 29.4f, 6.8f, 9.2f, 31.4f, 9.2f, BRASS, WHITE, light);
@@ -158,12 +153,12 @@ public class CryoJarRenderer extends com.golemlogix.client.render.LegacyBer<Cryo
         }
 
         // the valve pipe, wheel, platform and golem on its bracket, turned to a free side
-        float turn = turnAngle(time, charged);
+        float turn = MachineParts.valveTurnAngle(time, charged);
         pose.pushPose();
         pose.rotateAround(Axis.YP.rotationDegrees(golemTurn), 0.5f, 0.5f, 0.5f);
         box(vc, pose.last(), 1.1f, 9f, 2.3f, 2.1f, 20.5f, 3.3f, COPPER, WHITE, light);
-        wheel(vc, pose, 0.6f, 14.2f, 2.8f, 2.1f, turn, light);
-        platform(vc, pose, -3.4f, 2.0f, 10.6f, 1.2f, 4.4f, 6.8f, 0.8f, light);
+        MachineParts.wheelX(vc, pose, 0.6f, 14.2f, 2.8f, 2.1f, turn, light);
+        MachineParts.platform(vc, pose, -3.4f, 2.0f, 10.6f, 1.2f, 4.4f, 6.8f, 0.8f, light);
         float reach = charged ? -1.15f + 0.12f * Mth.sin(turn * Mth.DEG_TO_RAD) : -0.9f;
         CopperGolemPuppet.Arms arms = new CopperGolemPuppet.Arms(reach, 0.2f, reach, -0.2f, 0.15f * Mth.sin(time * 0.017f));
         CopperGolemPuppet.render(pose, buffers, light, GOLEM_POS, FWD_EAST,
@@ -208,116 +203,5 @@ public class CryoJarRenderer extends com.golemlogix.client.render.LegacyBer<Cryo
         for (float[] i : new float[][]{{2.4f, 1.6f}, {5.2f, 0.9f}, {8.6f, 2.1f}, {11.8f, 1.2f}}) {
             box(vc, p, i[0], 28f - i[1], 1.2f, i[0] + 0.6f, 28f, 1.8f, ICE, WHITE, light);
         }
-    }
-
-    /**
-     * The extra turn (degrees about the vertical axis, in the model's frame) for a golem's corner: the bracket, the valve and the golem
-     * sit on the right side (the model's -X); when a block stands there (a tower, another jar, a pipe) they move to the left, the back
-     * or the front, whichever is free first. height: how many blocks up the golem reaches beside the machine.
-     */
-    static float golemTurn(Level level, BlockPos pos, Direction facing, int height) {
-        BlockPos.MutableBlockPos q = new BlockPos.MutableBlockPos();
-        for (int i = 0; i < 4; i++) {
-            Direction side = switch (i) {
-                case 0 -> facing.getCounterClockWise();
-                case 1 -> facing.getClockWise();
-                case 2 -> facing.getOpposite();
-                default -> facing;
-            };
-            boolean free = true;
-            for (int k = 0; k < height && free; k++) {
-                q.set(pos.getX() + side.getStepX(), pos.getY() + k, pos.getZ() + side.getStepZ());
-                free = level.getBlockState(q).getCollisionShape(level, q).isEmpty();
-            }
-            if (free) {
-                return GOLEM_TURNS[i];
-            }
-        }
-        return 0f;
-    }
-
-    /**
-     * Brass sockets where network pipes dock onto the jar: on the sides of both halves and on the cap (where the vent pipe then gives
-     * way to the socket). Pixels in the world's own frame of the lower half (Y 0..32). Returns whether a pipe docks from above.
-     */
-    static boolean sockets(VertexConsumer vc, PoseStack.Pose p, Level level, BlockPos pos, int light) {
-        boolean above = false;
-        BlockPos.MutableBlockPos npos = new BlockPos.MutableBlockPos();
-        for (int half = 0; half < 2; half++) {
-            for (Direction d : DIRS) {
-                if (d == Direction.DOWN || (d == Direction.UP && half == 0)) {
-                    continue;
-                }
-                npos.set(pos.getX() + d.getStepX(), pos.getY() + half + d.getStepY(), pos.getZ() + d.getStepZ());
-                BlockState n = level.getBlockState(npos);
-                if (!(n.getBlock() instanceof SnowPipeBlock)
-                        || n.getValue(SnowPipeBlock.LINKS.get(d.getOpposite())) != SnowPipeBlock.Link.DEVICE) {
-                    continue;
-                }
-                if (d == Direction.UP) {
-                    above = true;
-                    box(vc, p, 4.4f, 29.4f, 4.4f, 11.6f, 32f, 11.6f, BRASS, 0xFFE8C878, light);
-                    continue;
-                }
-                // from the block's face 3 px in (to the glass), around the pipe's axis at the middle of the half
-                float y = half * 16 + 8, a0 = d.getAxisDirection() == Direction.AxisDirection.POSITIVE ? 13f : 0f, a1 = a0 + 3f;
-                if (d.getAxis() == Direction.Axis.X) {
-                    box(vc, p, a0, y - 3.6f, 4.4f, a1, y + 3.6f, 11.6f, BRASS, 0xFFE8C878, light);
-                } else {
-                    box(vc, p, 4.4f, y - 3.6f, a0, 11.6f, y + 3.6f, a1, BRASS, 0xFFE8C878, light);
-                }
-            }
-        }
-        return above;
-    }
-
-    /** Degrees the valve wheel has turned: a quarter turn every few seconds while the jar holds Source, otherwise still. */
-    static float turnAngle(float time, boolean on) {
-        if (!on) {
-            return 0f;
-        }
-        float cycle = time / 70f;
-        float k = cycle - (float) Math.floor(cycle);
-        float ease = k < 0.25f ? Mth.sin(k / 0.25f * Mth.HALF_PI) : 1f;
-        return ((float) Math.floor(cycle) + ease) * 90f;
-    }
-
-    /**
-     * The golem's little platform on the machine's right side and what holds it: a dark grated deck from x0 out to the frame at x1
-     * (y = its top), a brass bracket plate bolted to the frame, and two brass struts from the deck's outer edge down to the plinth
-     * (at y footY, x footX), so it does not hang in the air.
-     */
-    static void platform(VertexConsumer vc, PoseStack pose, float x0, float x1, float y, float z0, float z1, float footY, float footX,
-                         int light) {
-        PoseStack.Pose p = pose.last();
-        TextureAtlasSprite darkSprite = sprite(DARK), brassSprite = sprite(BRASS);
-        box(vc, p, x0, y - 0.6f, z0, x1, y, z1, darkSprite, WHITE, light);
-        box(vc, p, x0 - 0.2f, y - 0.8f, z0 - 0.2f, x0 + 0.6f, y + 0.2f, z1 + 0.2f, brassSprite, WHITE, light);
-        // the bracket plate on the frame with two bolts
-        box(vc, p, x1 - 0.5f, y - 2.4f, z0 + 0.2f, x1, y + 0.6f, z1 - 0.2f, brassSprite, 0xFFD8B880, light);
-        box(vc, p, x1 - 0.8f, y - 1.6f, z0 + 0.8f, x1 - 0.4f, y - 1.2f, z0 + 1.2f, darkSprite, WHITE, light);
-        box(vc, p, x1 - 0.8f, y - 1.6f, z1 - 1.2f, x1 - 0.4f, y - 1.2f, z1 - 0.8f, darkSprite, WHITE, light);
-        // two struts from under the deck's outer edge down to the plinth
-        limb(vc, pose, x0 + 0.6f, y - 0.6f, z0 + 0.5f, footX, footY, z0 + 0.5f, 0.55f, BRASS, light);
-        limb(vc, pose, x0 + 0.6f, y - 0.6f, z1 - 0.5f, footX, footY, z1 - 0.5f, 0.55f, BRASS, light);
-        box(vc, p, footX - 0.3f, footY - 0.5f, z0 + 0.1f, footX + 0.3f, footY + 0.5f, z1 - 0.1f, brassSprite, 0xFFC8A060, light);
-    }
-
-    /** A brass hand wheel in the YZ plane (its axle along X) at x, centred at (y, z), turned by angle degrees. */
-    static void wheel(VertexConsumer vc, PoseStack pose, float x, float y, float z, float r, float angle, int light) {
-        pose.pushPose();
-        pose.translate(x / 16f, y / 16f, z / 16f);
-        pose.mulPose(Axis.XP.rotationDegrees(angle));
-        PoseStack.Pose p = pose.last();
-        TextureAtlasSprite brassSprite = sprite(BRASS);
-        box(vc, p, -0.5f, -0.35f, -r, 0.5f, 0.35f, r, brassSprite, WHITE, light);
-        box(vc, p, -0.5f, -r, -0.35f, 0.5f, r, 0.35f, brassSprite, WHITE, light);
-        for (int i = 0; i < 8; i++) {
-            float a = i * Mth.TWO_PI / 8f;
-            float cy = Mth.sin(a) * r, cz = Mth.cos(a) * r;
-            box(vc, p, -0.45f, cy - 0.45f, cz - 0.45f, 0.45f, cy + 0.45f, cz + 0.45f, brassSprite, 0xFFF0D080, light);
-        }
-        box(vc, p, -0.7f, -0.6f, -0.6f, 0.7f, 0.6f, 0.6f, DARK, WHITE, light);
-        pose.popPose();
     }
 }

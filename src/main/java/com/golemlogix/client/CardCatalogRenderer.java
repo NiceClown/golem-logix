@@ -1,10 +1,10 @@
 package com.golemlogix.client;
 
 import com.google.common.base.Suppliers;
-import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.CardCatalogBlockEntity;
 import com.golemlogix.blocks.CardCatalogBlock;
 import com.golemlogix.client.render.BerBuffers;
+import com.golemlogix.client.render.LegacyBer;
 import com.golemlogix.init.ModItems;
 import com.golemlogix.system.CatalogStructure;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -32,10 +32,13 @@ import org.joml.Vector3f;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import static com.golemlogix.client.CryoMainframeRenderer.box;
-import static com.golemlogix.client.CryoMainframeRenderer.fitWall;
-import static com.golemlogix.client.CryoMainframeRenderer.sprite;
-import static com.golemlogix.client.CryoMainframeRenderer.wall;
+import static com.golemlogix.client.render.PixelMesh.box;
+import static com.golemlogix.client.render.PixelMesh.fitWall;
+import static com.golemlogix.client.render.PixelMesh.mcBlock;
+import static com.golemlogix.client.render.PixelMesh.modBlock;
+import static com.golemlogix.client.render.PixelMesh.smoothstep;
+import static com.golemlogix.client.render.PixelMesh.sprite;
+import static com.golemlogix.client.render.PixelMesh.wall;
 
 /**
  * Assembled Punch Card Catalog: a rusty copper 3 x 2 x 2 cabinet with twenty brass card drawers (two columns
@@ -47,15 +50,14 @@ import static com.golemlogix.client.CryoMainframeRenderer.wall;
  * Coordinates are pixels in the owner's north-facing frame: cabinet X -16..32, Y 0..32, Z 0..32 (front = Z 0), golems in
  * columns X -32..-16 and 32..48 of the front row.
  */
-public class CardCatalogRenderer extends com.golemlogix.client.render.LegacyBer<CardCatalogBlockEntity> {
-    private static final Identifier RUST = tex("resonator_body"), BRASS = tex("sat_brass"), BRONZE = tex("sat_bronze"),
-            DARK = tex("sat_dark"), DRAWER = tex("catalog_drawer"), DRUM = tex("catalog_drum"),
-            SCREEN = tex("catalog_screen"), PANEL = tex("cryo_panel"), FROST_PIPE = tex("resonator_pipe"), ICE = tex("sat_ice"),
-            CARD = tex("encoder_cards"), VINE = Identifier.withDefaultNamespace("block/vine"),
-            PIPE = Identifier.withDefaultNamespace("block/copper_block");
+public class CardCatalogRenderer extends LegacyBer<CardCatalogBlockEntity> {
+    private static final Identifier RUST = modBlock("resonator_body"), BRASS = modBlock("sat_brass"), BRONZE = modBlock("sat_bronze"),
+            DARK = modBlock("sat_dark"), DRAWER = modBlock("catalog_drawer"), DRUM = modBlock("catalog_drum"),
+            SCREEN = modBlock("catalog_screen"), PANEL = modBlock("cryo_panel"), FROST_PIPE = modBlock("resonator_pipe"),
+            ICE = modBlock("sat_ice"), CARD = modBlock("encoder_cards"), VINE = mcBlock("vine"), PIPE = mcBlock("copper_block");
     private static final Identifier[] PEDESTAL = {
-            Identifier.withDefaultNamespace("block/copper_block"), Identifier.withDefaultNamespace("block/exposed_copper"),
-            Identifier.withDefaultNamespace("block/weathered_copper"), Identifier.withDefaultNamespace("block/oxidized_copper")};
+            mcBlock("copper_block"), mcBlock("exposed_copper"),
+            mcBlock("weathered_copper"), mcBlock("oxidized_copper")};
     private static final float[] DRAWER_COL_X = {-13.6f, -5.8f, 14.4f, 22.2f};
     private static final float[][] DRUM_X = {{-11.6f, -3.6f}, {-2.2f, 6.2f}, {7.6f, 15.6f}, {17.0f, 27.6f}};
     private static final Vector3f UP = new Vector3f(0f, 1f, 0f);
@@ -90,10 +92,6 @@ public class CardCatalogRenderer extends com.golemlogix.client.render.LegacyBer<
                     BerBuffers.bake(CardCatalogRenderer::bakeGear));
         }
         return meshes;
-    }
-
-    private static Identifier tex(String name) {
-        return Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/" + name);
     }
 
     public CardCatalogRenderer(BlockEntityRendererProvider.Context context) {
@@ -139,8 +137,7 @@ public class CardCatalogRenderer extends com.golemlogix.client.render.LegacyBer<
         float time = (level.getGameTime() % 72000L) + partialTick;
         int light = LevelRenderer.getLightCoords(level, be.getBlockPos().relative(facing));
         light = LightCoordsUtil.pack(Math.max(LightCoordsUtil.block(light), 6), LightCoordsUtil.sky(light));
-        float open = Mth.lerp(partialTick, be.drawersPrev, be.drawers);
-        open = open * open * (3 - 2 * open);
+        float open = smoothstep(Mth.lerp(partialTick, be.drawersPrev, be.drawers));
         float drums = Mth.lerp(partialTick, be.drumsPrev, be.drums);
         int cap = Math.max(1, be.clientCapacity());
         float fill = be.clientCapacity() == 0 ? 0f : Math.min(1f, be.clientCards() / (float) cap);

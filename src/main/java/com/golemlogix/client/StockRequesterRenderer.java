@@ -4,6 +4,7 @@ import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.StockRequesterBlockEntity;
 import com.golemlogix.client.render.BerBuffers;
 import com.golemlogix.client.render.LegacyBer;
+import com.golemlogix.client.render.PixelMesh;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -91,11 +92,11 @@ public class StockRequesterRenderer extends LegacyBer<StockRequesterBlockEntity>
         } else {
             glow = 0.75f + 0.25f * Mth.sin(time * 0.08f);
         }
-        int tint = shade(color, glow);
+        int tint = PixelMesh.scaledRgb(color, glow);
         int flowerLight = glow > 0.9f || !(missing || noPattern) ? LightCoordsUtil.FULL_BRIGHT : -1;
         pose.pushPose();
-        FormationBusRenderer.orient(pose, facing);
-        int lit = FormationBusRenderer.light(be.getLevel(), be.getBlockPos(), facing);
+        Quads.orient(pose, facing);
+        int lit = MachineParts.frontLight(be.getLevel(), be.getBlockPos(), facing);
         CopperGolemPuppet.render(pose, buffers, lit, GOLEM_POS, FWD_NORTH, UP, SCALE, anim, 0, null, arms, head -> {
             PoseStack.Pose p = head.last();
             cross(buffers.getBuffer(RenderTypes.entityCutout(STEM)), p, 0xFFFFFFFF, lit);
@@ -206,10 +207,5 @@ public class StockRequesterRenderer extends LegacyBer<StockRequesterBlockEntity>
 
     private static void vert(VertexConsumer vc, PoseStack.Pose p, float x, float y, float z, float u, float v, int argb, int light) {
         vc.addVertex(p, x, y, z).setColor(argb).setUv(u, v).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(p, 0f, 1f, 0f);
-    }
-
-    private static int shade(int rgb, float k) {
-        int r = (int) (((rgb >> 16) & 255) * k), g = (int) (((rgb >> 8) & 255) * k), b = (int) ((rgb & 255) * k);
-        return 0xFF000000 | (r << 16) | (g << 8) | b;
     }
 }

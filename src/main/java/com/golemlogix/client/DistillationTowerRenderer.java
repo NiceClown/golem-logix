@@ -4,6 +4,7 @@ import com.golemlogix.blockentity.DistillationTowerBlockEntity;
 import com.golemlogix.blocks.CryoJarBlock;
 import com.golemlogix.blocks.DistillationTowerBlock;
 import com.golemlogix.client.render.BerBuffers;
+import com.golemlogix.client.render.LegacyBer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -25,21 +26,23 @@ import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.phys.AABB;
 import org.joml.Vector3f;
 
-import static com.golemlogix.client.CryoJarRenderer.BRASS;
-import static com.golemlogix.client.CryoJarRenderer.BRICK;
-import static com.golemlogix.client.CryoJarRenderer.BRICK_TINT;
-import static com.golemlogix.client.CryoJarRenderer.COPPER;
-import static com.golemlogix.client.CryoJarRenderer.DARK;
-import static com.golemlogix.client.CryoJarRenderer.FRAME;
-import static com.golemlogix.client.CryoJarRenderer.GAUGE;
-import static com.golemlogix.client.CryoJarRenderer.GLASS;
-import static com.golemlogix.client.CryoJarRenderer.ICE;
-import static com.golemlogix.client.CryoJarRenderer.RUNES;
-import static com.golemlogix.client.CryoJarRenderer.SNOW;
-import static com.golemlogix.client.CryoJarRenderer.WHITE;
-import static com.golemlogix.client.CryoMainframeRenderer.box;
-import static com.golemlogix.client.CryoMainframeRenderer.fitWall;
-import static com.golemlogix.client.CryoMainframeRenderer.sprite;
+import static com.golemlogix.client.MachineParts.BRASS;
+import static com.golemlogix.client.MachineParts.BRICK;
+import static com.golemlogix.client.MachineParts.BRICK_TINT;
+import static com.golemlogix.client.MachineParts.COPPER;
+import static com.golemlogix.client.MachineParts.DARK;
+import static com.golemlogix.client.MachineParts.FRAME;
+import static com.golemlogix.client.MachineParts.GAUGE;
+import static com.golemlogix.client.MachineParts.GLASS;
+import static com.golemlogix.client.MachineParts.ICE;
+import static com.golemlogix.client.MachineParts.RUNES;
+import static com.golemlogix.client.MachineParts.SNOW;
+import static com.golemlogix.client.MachineParts.WHITE;
+import static com.golemlogix.client.render.PixelMesh.box;
+import static com.golemlogix.client.render.PixelMesh.fitWall;
+import static com.golemlogix.client.render.PixelMesh.mcBlock;
+import static com.golemlogix.client.render.PixelMesh.scaledRgb;
+import static com.golemlogix.client.render.PixelMesh.sprite;
 
 /**
  * The Cryo-Distillation Tower, three blocks high, drawn from its plinth. The plinth: dark bricks with blood-red runes, two brass
@@ -50,8 +53,8 @@ import static com.golemlogix.client.CryoMainframeRenderer.sprite;
  * <p>
  * Pixels in the north-facing frame: the front is Z 0, the viewer's right is -X; Y 0..48.
  */
-public class DistillationTowerRenderer extends com.golemlogix.client.render.LegacyBer<DistillationTowerBlockEntity> {
-    private static final Identifier BLOOD = CryoJarRenderer.mc("water_still"), GLOW = CryoJarRenderer.mc("white_concrete");
+public class DistillationTowerRenderer extends LegacyBer<DistillationTowerBlockEntity> {
+    private static final Identifier BLOOD = mcBlock("water_still"), GLOW = mcBlock("white_concrete");
     private static final float COLUMN_BOTTOM = 14.5f, COLUMN_TOP = 33.5f;
     /** The coil's colours from the bottom up: blood, ember, violet, ice. */
     private static final int[] COIL = {0xD02424, 0xE8661E, 0xC03CB0, 0x7A5CFF, 0x5CE6F8};
@@ -112,8 +115,8 @@ public class DistillationTowerRenderer extends com.golemlogix.client.render.Lega
         boolean piped = jarPipes(vc, pose.last(), level, pos, lightTop);
 
         Direction facing = state.getValue(DistillationTowerBlock.FACING);
-        // the golem's corner (the feed pipe, the valve, the bracket) goes to a free side, see CryoJarRenderer.golemTurn
-        float golemTurn = CryoJarRenderer.golemTurn(level, pos, facing, 2);
+        // the golem's corner (the feed pipe, the valve, the bracket) goes to a free side, see MachineParts.golemTurn
+        float golemTurn = MachineParts.golemTurn(level, pos, facing, 2);
 
         pose.pushPose();
         Quads.faceModel(pose, facing);
@@ -138,8 +141,8 @@ public class DistillationTowerRenderer extends com.golemlogix.client.render.Lega
         pose.pushPose();
         pose.rotateAround(Axis.YP.rotationDegrees(golemTurn), 0.5f, 0.5f, 0.5f);
         box(vc, pose.last(), -0.6f, 14.4f, 3.2f, 0.8f, 34f, 4.6f, COPPER, WHITE, light);
-        CryoJarRenderer.wheel(vc, pose, -1.2f, 24f, 3.9f, 2.4f, turn, light);
-        CryoJarRenderer.platform(vc, pose, -5f, 1.2f, 17.4f, 2.2f, 5.8f, 13.6f, 0.2f, light);
+        MachineParts.wheelX(vc, pose, -1.2f, 24f, 3.9f, 2.4f, turn, light);
+        MachineParts.platform(vc, pose, -5f, 1.2f, 17.4f, 2.2f, 5.8f, 13.6f, 0.2f, light);
         pose.popPose();
 
         // ---- inside the glass: the coil, then the golem, then (translucent) the blood and the glass itself
@@ -225,8 +228,7 @@ public class DistillationTowerRenderer extends com.golemlogix.client.render.Lega
             if (y > surface) {
                 b = 0.12f;
             }
-            int c = COIL[k];
-            int col = 0xFF000000 | ((int) (((c >> 16) & 255) * b) << 16) | ((int) (((c >> 8) & 255) * b) << 8) | (int) ((c & 255) * b);
+            int col = scaledRgb(COIL[k], b);
             pose.pushPose();
             pose.translate(8f / 16f, y / 16f, 8f / 16f);
             pose.mulPose(Axis.YP.rotationDegrees(phase * 22f + k * 17f));

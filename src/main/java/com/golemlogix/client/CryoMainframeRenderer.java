@@ -1,12 +1,11 @@
 package com.golemlogix.client;
 
 import com.google.common.base.Suppliers;
-import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.CryoMainframeBlockEntity;
 import com.golemlogix.blocks.CryoMainframeBlock;
 import com.golemlogix.blocks.GolemProperties;
 import com.golemlogix.client.render.BerBuffers;
-import com.golemlogix.client.render.Sprites;
+import com.golemlogix.client.render.LegacyBer;
 import com.golemlogix.client.render.StandaloneModels;
 import com.golemlogix.init.ModBlocks;
 import com.golemlogix.init.ModItems;
@@ -37,11 +36,22 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LanternBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
-import org.joml.Quaternionf;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+
+import static com.golemlogix.client.render.PixelMesh.box;
+import static com.golemlogix.client.render.PixelMesh.fitWall;
+import static com.golemlogix.client.render.PixelMesh.limb;
+import static com.golemlogix.client.render.PixelMesh.mbox;
+import static com.golemlogix.client.render.PixelMesh.mcBlock;
+import static com.golemlogix.client.render.PixelMesh.modBlock;
+import static com.golemlogix.client.render.PixelMesh.quad;
+import static com.golemlogix.client.render.PixelMesh.smoothstep;
+import static com.golemlogix.client.render.PixelMesh.sprite;
+import static com.golemlogix.client.render.PixelMesh.wall;
 
 /**
  * The whole assembled Cryo-Mainframe: a bronze 3 x 2 x 2 cabinet in a brass frame; behind double glass doors
@@ -51,14 +61,12 @@ import java.util.function.Supplier;
  * <p>
  * Coordinates are pixels in the owner's north-facing frame: X -16..32 (three cells across), Y 0..32, Z 0..32 (front = Z 0).
  */
-public class CryoMainframeRenderer extends com.golemlogix.client.render.LegacyBer<CryoMainframeBlockEntity> {
-    private static final Identifier BRONZE = tex("sat_bronze"), BRASS = tex("sat_brass"), DARK = tex("sat_dark"),
-            MATRIX = tex("cryo_panel_matrix"), GLASS = tex("sat_glass"), PANEL = tex("cryo_panel"), GAUGE = tex("monitor_gauge"),
-            COPPER = Identifier.withDefaultNamespace("block/copper_block"), FLOOR = tex("mainframe_floor");
+public class CryoMainframeRenderer extends LegacyBer<CryoMainframeBlockEntity> {
+    private static final Identifier BRONZE = modBlock("sat_bronze"), BRASS = modBlock("sat_brass"), DARK = modBlock("sat_dark"),
+            MATRIX = modBlock("cryo_panel_matrix"), GLASS = modBlock("sat_glass"), PANEL = modBlock("cryo_panel"),
+            GAUGE = modBlock("monitor_gauge"), COPPER = mcBlock("copper_block"), FLOOR = modBlock("mainframe_floor");
 
     private static final Vector3f UP = new Vector3f(0f, 1f, 0f);
-    private static final Vector3f SCRATCH_LIMB = new Vector3f();
-    private static final Quaternionf SCRATCH_QUAT = new Quaternionf();
     private static final Vector3f SCRATCH_AT = new Vector3f();
     private static final Vector3f SCRATCH_FWD = new Vector3f();
 
@@ -84,10 +92,6 @@ public class CryoMainframeRenderer extends com.golemlogix.client.render.LegacyBe
                     BerBuffers.bake(CryoMainframeRenderer::bakeValveWheel));
         }
         return meshes;
-    }
-
-    private static Identifier tex(String name) {
-        return Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/" + name);
     }
 
     public CryoMainframeRenderer(BlockEntityRendererProvider.Context context) {
@@ -266,9 +270,9 @@ public class CryoMainframeRenderer extends com.golemlogix.client.render.LegacyBe
         valve(pose, vc, 0f, 0f, 0f, 3.4f, 0f, 0);
     }
 
-    private static final Identifier ATLANT_BODY = tex("atlant_body"), ATLANT_LIMB = tex("atlant_limb"),
-            ATLANT_BELT = tex("atlant_belt"), CASING = tex("atlas_casing"), FROST_PIPE = tex("resonator_pipe"),
-            ICE = tex("sat_ice");
+    private static final Identifier ATLANT_BODY = modBlock("atlant_body"), ATLANT_LIMB = modBlock("atlant_limb"),
+            ATLANT_BELT = modBlock("atlant_belt"), CASING = modBlock("atlas_casing"), FROST_PIPE = modBlock("resonator_pipe"),
+            ICE = modBlock("sat_ice");
 
     /**
      * Animated parts of an atlant built into a side (k = 0 left, 1 right): breathing torso, gripping arms, and head tracking the player.
@@ -313,38 +317,6 @@ public class CryoMainframeRenderer extends com.golemlogix.client.render.LegacyBe
         return mirror ? 16f - x : x;
     }
 
-    /** A point of the left atlant, or its mirror for the right one (pixels). */
-    static Vector3f mv(boolean mirror, float x, float y, float z) {
-        return new Vector3f(mirror ? 16f - x : x, y, z);
-    }
-
-    /** A box of the left atlant, or its mirror for the right one. */
-    static void mbox(VertexConsumer vc, PoseStack pose, boolean mirror, float x0, float y0, float z0, float x1, float y1, float z1,
-                     Identifier tex, int color, int light) {
-        float a = mirror ? 16f - x1 : x0, b = mirror ? 16f - x0 : x1;
-        box(vc, pose.last(), a, y0, z0, b, y1, z1, tex, color, light);
-    }
-
-    /** A limb: a bar of thickness t from point from to point to (pixels). */
-    static void limb(VertexConsumer vc, PoseStack pose, Vector3f from, Vector3f to, float t, Identifier tex, int light) {
-        limb(vc, pose, from.x, from.y, from.z, to.x, to.y, to.z, t, tex, light);
-    }
-
-    /** Scalar form of {@link #limb}: avoids temporary Vector3f/Quaternionf allocations. */
-    static void limb(VertexConsumer vc, PoseStack pose, float fx, float fy, float fz, float tx, float ty, float tz, float t, Identifier tex, int light) {
-        Vector3f d = SCRATCH_LIMB.set(tx - fx, ty - fy, tz - fz);
-        float len = d.length();
-        if (len < 1e-3f) {
-            return;
-        }
-        d.div(len);
-        pose.pushPose();
-        pose.translate(fx / 16f, fy / 16f, fz / 16f);
-        pose.mulPose(SCRATCH_QUAT.rotationTo(0f, 1f, 0f, d.x, d.y, d.z));
-        box(vc, pose.last(), -t / 2f, -t / 4f, -t / 2f, t / 2f, len + t / 4f, t / 2f, tex, 0xFFFFFFFF, light);
-        pose.popPose();
-    }
-
     // ------------------------------------------------------------------------------------------------ copper golems
     /** A thing in the golem's hand: a small item turned with the palm. */
     private static Consumer<PoseStack> held(ItemStack stack, float scale, float rotX, int light, MultiBufferSource buffers) {
@@ -353,7 +325,7 @@ public class CryoMainframeRenderer extends com.golemlogix.client.render.LegacyBe
             if (rotX != 0f) {
                 hp.mulPose(Axis.XP.rotationDegrees(rotX));
             }
-            com.golemlogix.client.render.BerBuffers.item(buffers, stack, ItemDisplayContext.FIXED, light, hp, null, 0);
+            BerBuffers.item(buffers, stack, ItemDisplayContext.FIXED, light, hp, null, 0);
         };
     }
 
@@ -375,8 +347,8 @@ public class CryoMainframeRenderer extends com.golemlogix.client.render.LegacyBe
 
     /** Moving between two shelf points over the fraction t (0..1): walks looking ahead. */
     private static GolemPose walk(float t, float x0, float z0, float x1, float z1, float floor, float time,
-                                  @org.jetbrains.annotations.Nullable Consumer<PoseStack> inHand) {
-        float e = t * t * (3f - 2f * t);
+                                  @Nullable Consumer<PoseStack> inHand) {
+        float e = smoothstep(t);
         Vector3f at = spot(Mth.lerp(e, x0, x1), floor, Mth.lerp(e, z0, z1));
         Vector3f fwd = new Vector3f(x1 - x0, 0f, z1 - z0);
         if (fwd.lengthSquared() < 1e-4f) {
@@ -660,60 +632,11 @@ public class CryoMainframeRenderer extends com.golemlogix.client.render.LegacyBe
         pose.popPose();
     }
 
-    // ------------------------------------------------------------------------------------------ quads
-    static TextureAtlasSprite sprite(Identifier id) {
-        return Sprites.block(id);
-    }
-
-    /** A flat wall in the z plane (facing -Z), with the texture tiled every 16 pixels. */
-    static void wall(VertexConsumer vc, PoseStack.Pose p, float x0, float y0, float x1, float y1, float z,
-                     Identifier tex, int color, int light) {
-        TextureAtlasSprite s = sprite(tex);
-        for (float x = x0; x < x1 - 1e-3f; x += 16f) {
-            float xe = Math.min(x1, x + 16f);
-            float u0 = s.getU((x - x0) % 16f / 16f), u1 = s.getU(((x - x0) % 16f + (xe - x)) / 16f);
-            for (float y = y0; y < y1 - 1e-3f; y += 16f) {
-                float ye = Math.min(y1, y + 16f);
-                float v0 = s.getV(1f - ((y - y0) % 16f + (ye - y)) / 16f), v1 = s.getV(1f - (y - y0) % 16f / 16f);
-                quad(vc, p, xe, y, z, x, y, z, x, ye, z, xe, ye, z, u0, v0, u1, v1, color, light, 0, 0, -1);
-            }
-        }
-    }
-
-    /** A wall facing -Z with the whole texture squeezed to its size (dials, plates). */
-    static void fitWall(VertexConsumer vc, PoseStack.Pose p, float x0, float y0, float x1, float y1, float z,
-                        Identifier tex, int color, int light) {
-        TextureAtlasSprite s = sprite(tex);
-        quad(vc, p, x1, y0, z, x0, y0, z, x0, y1, z, x1, y1, z,
-                s.getU0(), s.getV0(), s.getU1(), s.getV1(), color, light, 0, 0, -1);
-    }
-
-    /** A box (pixels); every face takes a piece of the texture by its own size (over 16 it tiles). */
-    static void box(VertexConsumer vc, PoseStack.Pose p, float x0, float y0, float z0, float x1, float y1, float z1,
-                    Identifier tex, int color, int light) {
-        box(vc, p, x0, y0, z0, x1, y1, z1, sprite(tex), color, light);
-    }
-
-    /** Sprite-pre-fetched form of {@link #box}: avoids repeated atlas lookups inside loops. */
-    static void box(VertexConsumer vc, PoseStack.Pose p, float x0, float y0, float z0, float x1, float y1, float z1,
-                    TextureAtlasSprite s, int color, int light) {
-        float dx = x1 - x0, dy = y1 - y0, dz = z1 - z0;
-        // north (-Z) and south (+Z)
-        tileFace(vc, p, s, color, light, dx, dy, x1, y0, z0, -1, 0, 0, 0, 1, 0, 0, 0, -1);
-        tileFace(vc, p, s, color, light, dx, dy, x0, y0, z1, 1, 0, 0, 0, 1, 0, 0, 0, 1);
-        // west (-X) and east (+X)
-        tileFace(vc, p, s, color, light, dz, dy, x0, y0, z0, 0, 0, 1, 0, 1, 0, -1, 0, 0);
-        tileFace(vc, p, s, color, light, dz, dy, x1, y0, z1, 0, 0, -1, 0, 1, 0, 1, 0, 0);
-        // top and bottom
-        tileFace(vc, p, s, color, light, dx, dz, x0, y1, z1, 1, 0, 0, 0, 0, -1, 0, 1, 0);
-        tileFace(vc, p, s, color, light, dx, dz, x0, y0, z0, 1, 0, 0, 0, 0, 1, 0, -1, 0);
-    }
-
-    private static final Identifier SPRUCE = Identifier.withDefaultNamespace("block/spruce_planks"),
-            STRIPPED = Identifier.withDefaultNamespace("block/stripped_spruce_log"), WOOL = Identifier.withDefaultNamespace("block/white_wool"),
-            BLANKET = Identifier.withDefaultNamespace("block/light_blue_wool"), RED = Identifier.withDefaultNamespace("block/red_wool"),
-            BLUE = Identifier.withDefaultNamespace("block/blue_wool"), PAPER = Identifier.withDefaultNamespace("block/white_concrete"),
-            SNOW = Identifier.withDefaultNamespace("block/snow"), BLUE_ICE = Identifier.withDefaultNamespace("block/blue_ice");
+    private static final Identifier SPRUCE = mcBlock("spruce_planks"),
+            STRIPPED = mcBlock("stripped_spruce_log"), WOOL = mcBlock("white_wool"),
+            BLANKET = mcBlock("light_blue_wool"), RED = mcBlock("red_wool"),
+            BLUE = mcBlock("blue_wool"), PAPER = mcBlock("white_concrete"),
+            SNOW = mcBlock("snow"), BLUE_ICE = mcBlock("blue_ice");
 
     /**
      * Static furniture boxes inside the cabinet (baked once in {@link #bakeStaticCabinet}): snowdrifts, snowball crate,
@@ -775,27 +698,15 @@ public class CryoMainframeRenderer extends com.golemlogix.client.render.LegacyBe
     /** Vanilla block props inside the cabinet: barrels, potted orchid, and four hanging lanterns. */
     private static void furnishBlocks(PoseStack pose, MultiBufferSource buffers, int light) {
         BlockState barrel = Blocks.BARREL.defaultBlockState();
-        block(pose, buffers, barrel, 26.5f, 3.2f, 14.5f, 0.3f, 15f, light);
-        block(pose, buffers, barrel, 26.5f, 8f, 14.5f, 0.3f, -20f, light);
-        block(pose, buffers, Blocks.POTTED_BLUE_ORCHID.defaultBlockState(), 27.8f, 10.6f, 11.5f, 0.45f, 0f, light);
-        block(pose, buffers, barrel, 21.8f, 16.2f, 4.2f, 0.28f, 40f, light);
+        MachineParts.scaledBlock(pose, buffers, barrel, 26.5f, 3.2f, 14.5f, 0.3f, 15f, light);
+        MachineParts.scaledBlock(pose, buffers, barrel, 26.5f, 8f, 14.5f, 0.3f, -20f, light);
+        MachineParts.scaledBlock(pose, buffers, Blocks.POTTED_BLUE_ORCHID.defaultBlockState(), 27.8f, 10.6f, 11.5f, 0.45f, 0f, light);
+        MachineParts.scaledBlock(pose, buffers, barrel, 21.8f, 16.2f, 4.2f, 0.28f, 40f, light);
         BlockState lantern = Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true);
-        block(pose, buffers, lantern, 0f, 15f - 0.35f * 16f, 11f, 0.35f, 0f, LightCoordsUtil.FULL_BRIGHT);
-        block(pose, buffers, lantern, 19f, 15f - 0.35f * 16f, 11f, 0.35f, 0f, LightCoordsUtil.FULL_BRIGHT);
-        block(pose, buffers, lantern, 0f, 28.9f - 0.35f * 16f, 11f, 0.35f, 0f, LightCoordsUtil.FULL_BRIGHT);
-        block(pose, buffers, lantern, 19f, 28.9f - 0.35f * 16f, 11f, 0.35f, 0f, LightCoordsUtil.FULL_BRIGHT);
-    }
-
-    /** A vanilla block, scaled, standing with the middle of its base at (x, y, z) pixels and turned by yaw degrees. */
-    private static void block(PoseStack pose, MultiBufferSource buffers, BlockState state, float x, float y, float z, float scale,
-                              float yaw, int light) {
-        pose.pushPose();
-        pose.translate(x / 16f, y / 16f, z / 16f);
-        pose.mulPose(Axis.YP.rotationDegrees(yaw));
-        pose.scale(scale, scale, scale);
-        pose.translate(-0.5f, 0f, -0.5f);
-        BerBuffers.block(buffers, state, pose, light);
-        pose.popPose();
+        MachineParts.scaledBlock(pose, buffers, lantern, 0f, 15f - 0.35f * 16f, 11f, 0.35f, 0f, LightCoordsUtil.FULL_BRIGHT);
+        MachineParts.scaledBlock(pose, buffers, lantern, 19f, 15f - 0.35f * 16f, 11f, 0.35f, 0f, LightCoordsUtil.FULL_BRIGHT);
+        MachineParts.scaledBlock(pose, buffers, lantern, 0f, 28.9f - 0.35f * 16f, 11f, 0.35f, 0f, LightCoordsUtil.FULL_BRIGHT);
+        MachineParts.scaledBlock(pose, buffers, lantern, 19f, 28.9f - 0.35f * 16f, 11f, 0.35f, 0f, LightCoordsUtil.FULL_BRIGHT);
     }
 
     /** The floor picture of a shelf over its whole top (x -14..30, z 3..29 pixels): 44 x 26 units of the 48 x 32 texture. */
@@ -803,45 +714,5 @@ public class CryoMainframeRenderer extends com.golemlogix.client.render.LegacyBe
         TextureAtlasSprite s = sprite(FLOOR);
         quad(vc, p, -14, y, 29, 30, y, 29, 30, y, 3, -14, y, 3,
                 s.getU(0f), s.getV(0f), s.getU(44f / 48f), s.getV(26f / 32f), 0xFFFFFFFF, light, 0, 1, 0);
-    }
-
-    /** A w x h face (pixels) in tiles of 16 along affine basis (ox, oy, oz) + a*(dax, day, daz) + b*(dbx, dby, dbz). */
-    private static void tileFace(VertexConsumer vc, PoseStack.Pose p, TextureAtlasSprite s, int color, int light, float w, float h,
-                                 float ox, float oy, float oz, float dax, float day, float daz, float dbx, float dby, float dbz,
-                                 float nx, float ny, float nz) {
-        float u0 = s.getU(0f);
-        float v1 = s.getV(1f);
-        for (float a = 0; a < w - 1e-3f; a += 16f) {
-            float ae = Math.min(w, a + 16f);
-            float u1 = s.getU((ae - a) / 16f);
-            float ax0 = ox + dax * a, ay0 = oy + day * a, az0 = oz + daz * a;
-            float ax1 = ox + dax * ae, ay1 = oy + day * ae, az1 = oz + daz * ae;
-            for (float b = 0; b < h - 1e-3f; b += 16f) {
-                float be = Math.min(h, b + 16f);
-                float v0 = s.getV(1f - (be - b) / 16f);
-                quad(vc, p,
-                        ax0 + dbx * b, ay0 + dby * b, az0 + dbz * b,
-                        ax1 + dbx * b, ay1 + dby * b, az1 + dbz * b,
-                        ax1 + dbx * be, ay1 + dby * be, az1 + dbz * be,
-                        ax0 + dbx * be, ay0 + dby * be, az0 + dbz * be,
-                        u0, v0, u1, v1, color, light, nx, ny, nz);
-            }
-        }
-    }
-
-    /** a = bottom left, b = bottom right, c = top right, d = top left (from outside); coordinates in pixels. */
-    static void quad(VertexConsumer vc, PoseStack.Pose p,
-                     float ax, float ay, float az, float bx, float by, float bz,
-                     float cx, float cy, float cz, float dx, float dy, float dz,
-                     float u0, float v0, float u1, float v1, int color, int light, float nx, float ny, float nz) {
-        float inv = 1f / 16f;
-        vc.addVertex(p, ax * inv, ay * inv, az * inv).setColor(color).setUv(u0, v1).setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(light).setNormal(p, nx, ny, nz);
-        vc.addVertex(p, bx * inv, by * inv, bz * inv).setColor(color).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(light).setNormal(p, nx, ny, nz);
-        vc.addVertex(p, cx * inv, cy * inv, cz * inv).setColor(color).setUv(u1, v0).setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(light).setNormal(p, nx, ny, nz);
-        vc.addVertex(p, dx * inv, dy * inv, dz * inv).setColor(color).setUv(u0, v0).setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(light).setNormal(p, nx, ny, nz);
     }
 }

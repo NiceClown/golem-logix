@@ -3,18 +3,14 @@ package com.golemlogix.client;
 import com.golemlogix.blockentity.FormationBusBlockEntity;
 import com.golemlogix.client.render.BerBuffers;
 import com.golemlogix.client.render.LegacyBer;
+import com.golemlogix.client.render.PixelMesh;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
-import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.DirectionalBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -34,46 +30,11 @@ public class FormationBusRenderer extends LegacyBer<FormationBusBlockEntity> {
     /** The block's path: from resting on the workbench top (centre 8, 8.2, 2.8) to the centre of the spot in front (8, 8, -8). */
     private static final float MOUTH_Y = 8.2f, MOUTH_Z = 2.8f;
 
-    private static final Direction[] DIRS = Direction.values();
-    private static final BlockPos.MutableBlockPos LIGHT_POS = new BlockPos.MutableBlockPos();
     private static final Vector3f GOLEM_POS = new Vector3f(0.5f, GOLEM_Y / 16f, GOLEM_Z / 16f);
     private static final Vector3f FWD_NORTH = new Vector3f(0f, 0f, -1f);
     private static final Vector3f UP = new Vector3f(0f, 1f, 0f);
 
     public FormationBusRenderer(BlockEntityRendererProvider.Context context) {
-    }
-
-    /**
-     * The light the golem in the bus is lit by: the brightest round the bus but behind it (the glass side windows let it in) - the
-     * spot in front alone goes dark as soon as a whole block stands there.
-     */
-    static int light(Level level, BlockPos pos, Direction facing) {
-        int block = 0, sky = 0;
-        Direction back = facing.getOpposite();
-        for (Direction d : DIRS) {
-            if (d != back) {
-                LIGHT_POS.setWithOffset(pos, d);
-                int c = LevelRenderer.getLightCoords(level, LIGHT_POS);
-                block = Math.max(block, LightCoordsUtil.block(c));
-                sky = Math.max(sky, LightCoordsUtil.sky(c));
-            }
-        }
-        return LightCoordsUtil.pack(block, sky);
-    }
-
-    /** Turns the frame from "facing north" to the block's facing (as the blockstate turns the model). */
-    static void orient(PoseStack pose, Direction facing) {
-        pose.translate(0.5f, 0.5f, 0.5f);
-        switch (facing) {
-            case SOUTH -> pose.mulPose(Axis.YP.rotationDegrees(180f));
-            case EAST -> pose.mulPose(Axis.YP.rotationDegrees(-90f));
-            case WEST -> pose.mulPose(Axis.YP.rotationDegrees(90f));
-            case UP -> pose.mulPose(Axis.XP.rotationDegrees(90f));
-            case DOWN -> pose.mulPose(Axis.XP.rotationDegrees(-90f));
-            default -> {
-            }
-        }
-        pose.translate(-0.5f, -0.5f, -0.5f);
     }
 
     @Override
@@ -82,17 +43,17 @@ public class FormationBusRenderer extends LegacyBer<FormationBusBlockEntity> {
             return;
         }
         Direction facing = be.getBlockState().getValue(DirectionalBlock.FACING);
-        int front = light(be.getLevel(), be.getBlockPos(), facing);
+        int front = MachineParts.frontLight(be.getLevel(), be.getBlockPos(), facing);
         float time = (be.getLevel().getGameTime() % 72000L) + partialTick;
         ItemStack carrying = be.carrying();
         float push = be.push(partialTick);
         // the push in three beats: take hold (0..0.2), drive it out (0.2..0.85), let go (0.85..1)
         float drive = Mth.clamp((push - 0.2f) / 0.65f, 0f, 1f);
-        float out = drive * drive * (3f - 2f * drive);
+        float out = PixelMesh.smoothstep(drive);
         boolean holding = !carrying.isEmpty();
 
         pose.pushPose();
-        orient(pose, facing);
+        Quads.orient(pose, facing);
         float armX = holding ? -0.9f - 0.75f * out + (push > 0.85f ? 0.6f * (push - 0.85f) / 0.15f : 0f) : -0.25f + 0.05f * Mth.sin(time * 0.08f);
         float headYaw = holding ? 0f : Mth.sin(time * 0.03f) * 0.4f;
         CopperGolemPuppet.Arms arms = new CopperGolemPuppet.Arms(armX, 0.18f, armX, -0.18f, headYaw);

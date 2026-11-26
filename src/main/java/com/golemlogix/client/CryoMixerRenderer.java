@@ -3,6 +3,7 @@ package com.golemlogix.client;
 import com.golemlogix.blockentity.CryoMixerBlockEntity;
 import com.golemlogix.blocks.CryoMixerBlock;
 import com.golemlogix.client.render.BerBuffers;
+import com.golemlogix.client.render.LegacyBer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -23,22 +24,24 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import org.joml.Vector3f;
 
-import static com.golemlogix.client.CryoJarRenderer.BRASS;
-import static com.golemlogix.client.CryoJarRenderer.BRICK;
-import static com.golemlogix.client.CryoJarRenderer.BRICK_TINT;
-import static com.golemlogix.client.CryoJarRenderer.COPPER;
-import static com.golemlogix.client.CryoJarRenderer.CRYO;
-import static com.golemlogix.client.CryoJarRenderer.DARK;
-import static com.golemlogix.client.CryoJarRenderer.FRAME;
-import static com.golemlogix.client.CryoJarRenderer.GAUGE;
-import static com.golemlogix.client.CryoJarRenderer.GLASS;
-import static com.golemlogix.client.CryoJarRenderer.ICE;
-import static com.golemlogix.client.CryoJarRenderer.RUNES;
-import static com.golemlogix.client.CryoJarRenderer.SNOW;
-import static com.golemlogix.client.CryoJarRenderer.WHITE;
-import static com.golemlogix.client.CryoMainframeRenderer.box;
-import static com.golemlogix.client.CryoMainframeRenderer.fitWall;
-import static com.golemlogix.client.CryoMainframeRenderer.sprite;
+import static com.golemlogix.client.MachineParts.BRASS;
+import static com.golemlogix.client.MachineParts.BRICK;
+import static com.golemlogix.client.MachineParts.BRICK_TINT;
+import static com.golemlogix.client.MachineParts.COPPER;
+import static com.golemlogix.client.MachineParts.CRYO;
+import static com.golemlogix.client.MachineParts.DARK;
+import static com.golemlogix.client.MachineParts.FRAME;
+import static com.golemlogix.client.MachineParts.GAUGE;
+import static com.golemlogix.client.MachineParts.GLASS;
+import static com.golemlogix.client.MachineParts.ICE;
+import static com.golemlogix.client.MachineParts.RUNES;
+import static com.golemlogix.client.MachineParts.SNOW;
+import static com.golemlogix.client.MachineParts.WHITE;
+import static com.golemlogix.client.render.PixelMesh.box;
+import static com.golemlogix.client.render.PixelMesh.fitWall;
+import static com.golemlogix.client.render.PixelMesh.mcBlock;
+import static com.golemlogix.client.render.PixelMesh.scaledRgb;
+import static com.golemlogix.client.render.PixelMesh.sprite;
 
 /**
  * The Cryo-Mixer, two blocks high, drawn from its lower block. Below: a dark brick plinth with a rune band (cyan while it works),
@@ -49,9 +52,9 @@ import static com.golemlogix.client.CryoMainframeRenderer.sprite;
  * <p>
  * Pixels in the north-facing frame: the front is Z 0, the viewer's right is -X; Y 0..32 over both blocks.
  */
-public class CryoMixerRenderer extends com.golemlogix.client.render.LegacyBer<CryoMixerBlockEntity> {
-    private static final Identifier WATER = CryoJarRenderer.mc("water_still"), GLOW = CryoJarRenderer.mc("white_concrete"),
-            ICE_BLOCK = CryoJarRenderer.mc("ice"), SNOW_BLOCK = CryoJarRenderer.mc("snow");
+public class CryoMixerRenderer extends LegacyBer<CryoMixerBlockEntity> {
+    private static final Identifier WATER = mcBlock("water_still"), GLOW = mcBlock("white_concrete"),
+            ICE_BLOCK = mcBlock("ice"), SNOW_BLOCK = mcBlock("snow");
     private static final int[] SPIRAL = {0x5CE6F8, 0x7A5CFF, 0xC03CB0};
     /** The flasks' inside (their bottom and top), and their centres across. */
     private static final float FLASK_BOTTOM = 17.06f, FLASK_TOP = 27.4f, WATER_X = 12.1f, CRYO_X = 3.9f, FLASK_Z = 8f;
@@ -99,7 +102,7 @@ public class CryoMixerRenderer extends com.golemlogix.client.render.LegacyBer<Cr
         float cryo = Mth.lerp(partialTick, be.cryoPrev, be.cryoLevel);
         float phase = Mth.lerp(partialTick, be.phasePrev, be.phase);
         Direction facing = state.getValue(CryoMixerBlock.FACING);
-        float golemTurn = CryoJarRenderer.golemTurn(level, pos, facing, 2);
+        float golemTurn = MachineParts.golemTurn(level, pos, facing, 2);
         Meshes baked = meshes();
         RenderType solid = RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS);
 
@@ -142,8 +145,8 @@ public class CryoMixerRenderer extends com.golemlogix.client.render.LegacyBer<Cr
         pose.pushPose();
         pose.rotateAround(Axis.YP.rotationDegrees(golemTurn), 0.5f, 0.5f, 0.5f);
         box(vc, pose.last(), 0.2f, 6.4f, 3.0f, 1.2f, 14.6f, 4.0f, COPPER, WHITE, light);
-        CryoJarRenderer.wheel(vc, pose, -0.2f, 10.4f, 3.5f, 2.0f, turn, light);
-        CryoJarRenderer.platform(vc, pose, -3.8f, 1.0f, 6.0f, 1.6f, 5.4f, 1.4f, 0.4f, light);
+        MachineParts.wheelX(vc, pose, -0.2f, 10.4f, 3.5f, 2.0f, turn, light);
+        MachineParts.platform(vc, pose, -3.8f, 1.0f, 6.0f, 1.6f, 5.4f, 1.4f, 0.4f, light);
         // the golem last: its own buffer ends the one above
         float reach = work > 0.05f ? -1.1f + 0.12f * Mth.sin(phase * 0.8f) : -0.85f;
         CopperGolemPuppet.Arms arms = new CopperGolemPuppet.Arms(reach, 0.2f, reach, -0.2f, 0.15f * Mth.sin(phase * 0.05f));
@@ -235,8 +238,7 @@ public class CryoMixerRenderer extends com.golemlogix.client.render.LegacyBer<Cr
                 break;
             }
             float b = 0.35f + 0.65f * (0.3f + 0.7f * work) * (0.6f + 0.4f * Mth.sin(phase * 1.4f - k * 1.3f));
-            int c = SPIRAL[k];
-            int col = 0xFF000000 | ((int) (((c >> 16) & 255) * b) << 16) | ((int) (((c >> 8) & 255) * b) << 8) | (int) ((c & 255) * b);
+            int col = scaledRgb(SPIRAL[k], b);
             pose.pushPose();
             pose.translate(CRYO_X / 16f, y / 16f, FLASK_Z / 16f);
             pose.mulPose(Axis.YP.rotationDegrees(phase * 30f + k * 40f));
