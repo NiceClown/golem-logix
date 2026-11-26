@@ -264,17 +264,63 @@ public final class GolemNetwork {
     /**
      * A new walk of a network keeps the contents epoch of the walk before it: waiting orders compare it with the epoch they failed
      * at, and a new object starting from 0 every 5 seconds made a changed network look unchanged (orders waited the full 30 seconds)
-     * and the other way round. After a change of nodes (a disk or a storage may have come or gone) the contents count as changed.
+     * and the other way round. After a change to this network's own nodes, storages or peripherals the contents count as changed;
+     * a global {@link #serverVersion} bump from an unrelated network must not bump this network's epoch.
      */
     private static GolemNetwork inherit(Level level, @Nullable CacheEntry before, GolemNetwork fresh) {
         if (before != null && !level.isClientSide()) {
-            if (before.version == versionFor(level)) {
+            if (before.version == versionFor(level) || sameTopology(before.network, fresh)) {
                 fresh.networkEpoch = before.network.networkEpoch();
             } else {
                 fresh.bumpEpoch();
             }
         }
         return fresh;
+    }
+
+    /** Whether two scans found the same core, nodes (and block types), active devices, storages, crafting nodes, and peripherals. */
+    private static boolean sameTopology(GolemNetwork a, GolemNetwork b) {
+        if (a.coreLevel != b.coreLevel
+                || !java.util.Objects.equals(a.corePos, b.corePos)
+                || a.nodeList.size() != b.nodeList.size()
+                || a.activeDevices.size() != b.activeDevices.size()
+                || a.bays.size() != b.bays.size()
+                || a.externals.size() != b.externals.size()
+                || a.providers.size() != b.providers.size()
+                || a.catalogs.size() != b.catalogs.size()
+                || a.cpus.size() != b.cpus.size()
+                || a.peripherals.size() != b.peripherals.size()
+                || a.sources.size() != b.sources.size()
+                || a.telegraphLinks != b.telegraphLinks) {
+            return false;
+        }
+        for (int i = 0; i < a.nodeList.size(); i++) {
+            Integer j = b.nodeIndex.get(a.nodeList.get(i));
+            if (j == null || a.nodeStates.get(i).getBlock() != b.nodeStates.get(j).getBlock()) {
+                return false;
+            }
+        }
+        return a.peripherals.equals(b.peripherals)
+                && a.activeDevices.equals(b.activeDevices)
+                && sameElements(a.bays, b.bays)
+                && sameElements(a.externals, b.externals)
+                && sameElements(a.providers, b.providers)
+                && sameElements(a.catalogs, b.catalogs)
+                && sameElements(a.cpus, b.cpus);
+    }
+
+    private static <T> boolean sameElements(List<T> a, List<T> b) {
+        int n = a.size();
+        if (n != b.size()) {
+            return false;
+        }
+        if (n == 0) {
+            return true;
+        }
+        if (n == 1) {
+            return java.util.Objects.equals(a.get(0), b.get(0));
+        }
+        return a.equals(b) || new HashSet<>(a).equals(new HashSet<>(b));
     }
 
     private static GolemNetwork remember(Level level, GolemNetwork net, long now) {
