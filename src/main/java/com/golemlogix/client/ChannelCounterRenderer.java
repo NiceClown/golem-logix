@@ -4,10 +4,10 @@ import com.golemlogix.blockentity.ChannelCounterBlockEntity;
 import com.golemlogix.blocks.ChannelCounterBlock;
 import com.golemlogix.client.render.NixieDigits;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import org.joml.Vector3f;
 
 /**
  * Channel Counter: the digits in its three nixie tubes, on both sides of the meshes so they read from the front and from behind
@@ -32,20 +32,23 @@ public class ChannelCounterRenderer implements BlockEntityRenderer<ChannelCounte
         if (!be.online() || !be.getBlockState().hasProperty(ChannelCounterBlock.MOUNT)) {
             return;
         }
-        String text = String.valueOf(Math.min(999, be.showsCapacity() ? be.capacity() : be.used()));
+        int val = Math.clamp(be.showsCapacity() ? be.capacity() : be.used(), 0, 999);
         int color = be.showsCapacity() ? NIXIE_ORANGE : NixieDigits.loadColor(be.used(), be.capacity());
         ChannelCounterBlock.Mount mount = be.getBlockState().getValue(ChannelCounterBlock.MOUNT);
         float y = DIGIT_Y + mount.dy, z = MESH_Z + mount.dz;
         pose.pushPose();
         Quads.faceModel(pose, be.getBlockState().getValue(ChannelCounterBlock.FACING));
-        for (int place = 0; place < text.length(); place++) {
-            int digit = text.charAt(text.length() - 1 - place) - '0';
+        PoseStack.Pose p = pose.last();
+        VertexConsumer vc = NixieDigits.buffer(buffers);
+        int place = 0;
+        do {
+            int digit = val % 10;
+            val /= 10;
             // from the front (north) the ones are on the right, at the smallest x; from behind, at the largest
-            NixieDigits.digit(pose.last(), buffers, digit, new Vector3f(TUBE_X[place], y, z - GAP), DIGIT_W, DIGIT_H,
-                    new Vector3f(-1, 0, 0), new Vector3f(0, 1, 0), color);
-            NixieDigits.digit(pose.last(), buffers, digit, new Vector3f(TUBE_X[2 - place], y, z + GAP), DIGIT_W, DIGIT_H,
-                    new Vector3f(1, 0, 0), new Vector3f(0, 1, 0), color);
-        }
+            NixieDigits.digit(p, vc, digit, TUBE_X[place], y, z - GAP, DIGIT_W, DIGIT_H, -1f, 0f, 0f, 0f, 1f, 0f, color);
+            NixieDigits.digit(p, vc, digit, TUBE_X[2 - place], y, z + GAP, DIGIT_W, DIGIT_H, 1f, 0f, 0f, 0f, 1f, 0f, color);
+            place++;
+        } while (val > 0);
         pose.popPose();
     }
 }

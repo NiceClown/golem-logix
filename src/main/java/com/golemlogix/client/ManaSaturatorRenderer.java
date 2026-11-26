@@ -30,6 +30,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import org.joml.Vector3f;
 
 /**
  * The living part of the assembled Saturator: two glass columns fill with Source, in the chamber on the anvil a small
@@ -48,12 +49,27 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
     private static final float GOLEM_Z = 11.2f;
     private static final float ITEM_Z = 6.2f;
 
+    private static final Vector3f UP = new Vector3f(0f, 1f, 0f);
+    private static final Vector3f CARRIER_POS = new Vector3f();
+    private static final Vector3f CARRIER_FWD = new Vector3f();
+    private static final float[] ALONG_OUT = new float[5];
+
     private final ItemRenderer itemRenderer;
-    private ModelPart golem;
+    private final ModelPart golem;
+    private final ModelPart head;
+    private final ModelPart rightArm;
+    private final ModelPart leftArm;
+    private final ModelPart rightLeg;
+    private final ModelPart leftLeg;
 
     public ManaSaturatorRenderer(BlockEntityRendererProvider.Context context) {
         this.itemRenderer = Minecraft.getInstance().getItemRenderer();
         this.golem = context.bakeLayer(ModelLayers.IRON_GOLEM);
+        this.head = golem.getChild("head");
+        this.rightArm = golem.getChild("right_arm");
+        this.leftArm = golem.getChild("left_arm");
+        this.rightLeg = golem.getChild("right_leg");
+        this.leftLeg = golem.getChild("left_leg");
     }
 
     /** Machine coordinates -> fractions of the owner block (facing north; x is mirrored: it grows to the viewer's left). */
@@ -73,11 +89,13 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
     @Override
     public AABB getRenderBoundingBox(ManaSaturatorBlockEntity entity) {
         BlockPos pos = entity.getBlockPos();
-        if (!entity.getBlockState().getValue(ManaSaturatorBlock.FORMED)) {
+        BlockState state = entity.getBlockState();
+        if (!state.hasProperty(ManaSaturatorBlock.FORMED) || !state.getValue(ManaSaturatorBlock.FORMED)
+                || !state.hasProperty(ManaSaturatorBlock.FACING)) {
             return new AABB(pos);
         }
         AABB box = new AABB(pos);
-        for (BlockPos p : SaturatorStructure.cells(pos, entity.getBlockState().getValue(ManaSaturatorBlock.FACING))) {
+        for (BlockPos p : SaturatorStructure.cells(pos, state.getValue(ManaSaturatorBlock.FACING))) {
             box = box.minmax(new AABB(p));
         }
         return box.inflate(0.5);
@@ -94,12 +112,19 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
         if (level == null) {
             return;
         }
-        if (!entity.getBlockState().getValue(ManaSaturatorBlock.FORMED)) {
+        BlockState state = entity.getBlockState();
+        if (!state.hasProperty(ManaSaturatorBlock.FORMED)) {
+            return;
+        }
+        if (!state.getValue(ManaSaturatorBlock.FORMED)) {
             renderAnvilItem(entity, partialTick, pose, buffers, level);
             return;
         }
-        Direction facing = entity.getBlockState().getValue(ManaSaturatorBlock.FACING);
-        float time = level.getGameTime() + partialTick;
+        if (!state.hasProperty(ManaSaturatorBlock.FACING)) {
+            return;
+        }
+        Direction facing = state.getValue(ManaSaturatorBlock.FACING);
+        float time = (level.getGameTime() % 72000L) + partialTick;
         // the light is taken above the machine: the owner itself stands inside and does not light its own air
         int light = LevelRenderer.getLightColor(level, entity.getBlockPos().above());
         light = LightTexture.pack(Math.max(LightTexture.block(light), 10), Math.max(LightTexture.sky(light), 6));
@@ -130,10 +155,11 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
         float shift = (time * 0.006f) % 1f;
         float wob = entity.isCrafting() ? 0.04f * (float) Math.sin(time * 0.7f) : 0.01f * (float) Math.sin(time * 0.15f);
         VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(LIQUID));
-        for (float x0 : new float[]{4f, 36f}) {
-            Quads.box(vc, p, lx(x0 + 8f), ly(29f), lz(4f), lx(x0), ly(29f + height) + wob / 16f, lz(12f),
-                    shift, shift, shift + 0.8f, shift + 0.8f, 0xFFFFFFFF, LightTexture.FULL_BRIGHT);
-        }
+        float topY = ly(29f + height) + wob / 16f;
+        Quads.box(vc, p, lx(12f), ly(29f), lz(4f), lx(4f), topY, lz(12f),
+                shift, shift, shift + 0.8f, shift + 0.8f, 0xFFFFFFFF, LightTexture.FULL_BRIGHT);
+        Quads.box(vc, p, lx(44f), ly(29f), lz(4f), lx(36f), topY, lz(12f),
+                shift, shift, shift + 0.8f, shift + 0.8f, 0xFFFFFFFF, LightTexture.FULL_BRIGHT);
     }
 
     /** Strike phase 0..1 within one of the five strikes of a ritual. */
@@ -146,11 +172,6 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
      * calmly and sways its head a little; without a blank it offers a poppy, like a real iron golem.
      */
     private void renderGolem(ManaSaturatorBlockEntity entity, PoseStack pose, MultiBufferSource buffers, int light, float time, float progress) {
-        ModelPart head = golem.getChild("head");
-        ModelPart rightArm = golem.getChild("right_arm");
-        ModelPart leftArm = golem.getChild("left_arm");
-        ModelPart rightLeg = golem.getChild("right_leg");
-        ModelPart leftLeg = golem.getChild("left_leg");
         rightLeg.xRot = 0f;
         leftLeg.xRot = 0f;
         // something is on the anvil or a blank is already being carried: the smith waits; empty with nothing to wait for: it offers a poppy
@@ -250,6 +271,17 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
             {19.3f, 29.5f, 7.8f}};
     /** The taker's path: mirrored, from the right deck. */
     private static final float[][] PATH_OUT = mirror(PATH_IN);
+    /** Precomputed horizontal segment lengths (shared by PATH_IN and its mirror PATH_OUT). */
+    private static final float[] PATH_SEG = new float[PATH_IN.length - 1];
+    private static final float PATH_LEN;
+    static {
+        float total = 0f;
+        for (int i = 0; i < PATH_SEG.length; i++) {
+            PATH_SEG[i] = (float) Math.hypot(PATH_IN[i + 1][0] - PATH_IN[i][0], PATH_IN[i + 1][2] - PATH_IN[i][2]);
+            total += PATH_SEG[i];
+        }
+        PATH_LEN = total;
+    }
     /** Where the blank (left deck) and the finished item (right deck) lie, on the rune circles of the decks. */
     private static final float[] SPOT_IN = {7.6f, 28f, 23.4f}, SPOT_OUT = {40.4f, 28f, 23.4f};
     private static final float[] SPOT_ANVIL = {24f, ANVIL_TOP, ITEM_Z};
@@ -264,33 +296,29 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
         return out;
     }
 
-    /** A point on the polyline path at path fraction f (0 = start, 1 = end): x, y, z and direction (dx, dz). */
-    private static float[] along(float[][] path, float f) {
-        float total = 0f;
-        float[] seg = new float[path.length - 1];
-        for (int i = 0; i < seg.length; i++) {
-            seg[i] = (float) Math.hypot(path[i + 1][0] - path[i][0], path[i + 1][2] - path[i][2]);
-            total += seg[i];
-        }
-        float d = Mth.clamp(f, 0f, 1f) * total;
-        for (int i = 0; i < seg.length; i++) {
-            if (d <= seg[i] || i == seg.length - 1) {
-                float k = seg[i] <= 0f ? 0f : Mth.clamp(d / seg[i], 0f, 1f);
+    /** Fills {@code out} with (x, y, z, dx, dz) along the polyline path at fraction f (0 = start, 1 = end). */
+    private static void along(float[][] path, float f, float[] out) {
+        float d = Mth.clamp(f, 0f, 1f) * PATH_LEN;
+        for (int i = 0; i < PATH_SEG.length; i++) {
+            float segLen = PATH_SEG[i];
+            if (d <= segLen || i == PATH_SEG.length - 1) {
+                float k = segLen <= 0f ? 0f : Mth.clamp(d / segLen, 0f, 1f);
                 float[] a = path[i], b = path[i + 1];
-                return new float[]{Mth.lerp(k, a[0], b[0]), Mth.lerp(k, a[1], b[1]), Mth.lerp(k, a[2], b[2]), b[0] - a[0], b[2] - a[2]};
+                out[0] = Mth.lerp(k, a[0], b[0]);
+                out[1] = Mth.lerp(k, a[1], b[1]);
+                out[2] = Mth.lerp(k, a[2], b[2]);
+                out[3] = b[0] - a[0];
+                out[4] = b[2] - a[2];
+                return;
             }
-            d -= seg[i];
+            d -= segLen;
         }
         float[] last = path[path.length - 1];
-        return new float[]{last[0], last[1], last[2], 0f, 1f};
-    }
-
-    private static float pathLength(float[][] path) {
-        float total = 0f;
-        for (int i = 0; i + 1 < path.length; i++) {
-            total += (float) Math.hypot(path[i + 1][0] - path[i][0], path[i + 1][2] - path[i][2]);
-        }
-        return total;
+        out[0] = last[0];
+        out[1] = last[1];
+        out[2] = last[2];
+        out[3] = 0f;
+        out[4] = 1f;
     }
 
     /**
@@ -300,17 +328,17 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
      */
     private void carrier(ManaSaturatorBlockEntity entity, ManaSaturatorBlockEntity.Carrier c, float[][] path, float[] deck, PoseStack pose,
                          MultiBufferSource buffers, int light, int overlay, float time, float pt, int variant, float lookPhase) {
-        float len = pathLength(path), walkT = ManaSaturatorBlockEntity.WALK;
+        float len = PATH_LEN, walkT = ManaSaturatorBlockEntity.WALK;
         float left = Math.max(0f, c.timer - pt);
-        float[] pos, face;
+        float px, py, pz, fx, fz;
         boolean walking = false;
         float bow = 0f, dist = 0f;
         switch (c.phase) {
             case ManaSaturatorBlockEntity.TO_ANVIL -> {
                 float f = 1f - left / walkT;
-                float[] at = along(path, f);
-                pos = at;
-                face = new float[]{at[3], at[4]};
+                along(path, f, ALONG_OUT);
+                px = ALONG_OUT[0]; py = ALONG_OUT[1]; pz = ALONG_OUT[2];
+                fx = ALONG_OUT[3]; fz = ALONG_OUT[4];
                 walking = left > 0f;
                 dist = f * len;
                 float since = walkT - left;
@@ -320,44 +348,46 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
                 }
             }
             case ManaSaturatorBlockEntity.AT_ANVIL -> {
-                pos = path[path.length - 1];
-                face = toward(pos, SPOT_ANVIL);
+                float[] last = path[path.length - 1];
+                px = last[0]; py = last[1]; pz = last[2];
+                fx = SPOT_ANVIL[0] - px; fz = SPOT_ANVIL[2] - pz;
                 bow = 0.12f + 0.08f * Mth.sin(time * 0.35f + variant);
             }
             case ManaSaturatorBlockEntity.TO_DECK -> {
                 float f = left / walkT;
-                float[] at = along(path, f);
-                pos = at;
-                face = new float[]{-at[3], -at[4]};
+                along(path, f, ALONG_OUT);
+                px = ALONG_OUT[0]; py = ALONG_OUT[1]; pz = ALONG_OUT[2];
                 walking = left > 0f;
+                if (walking) {
+                    fx = -ALONG_OUT[3]; fz = -ALONG_OUT[4];
+                } else {
+                    fx = deck[0] - px; fz = deck[2] - pz;
+                }
                 dist = (1f - f) * len;
                 float since = walkT - left;
                 if (since < BOW_TICKS) {
                     // has just put it on the anvil or taken it off
                     bow = Mth.sin((1f - since / BOW_TICKS) * Mth.HALF_PI) * 0.8f;
                 }
-                if (!walking) {
-                    face = toward(pos, deck);
-                }
             }
             default -> {
-                pos = path[0];
+                float[] first = path[0];
+                px = first[0]; py = first[1]; pz = first[2];
                 float look = Mth.sin(time * 0.021f + lookPhase) * 0.5f + 0.5f;
-                float[] a = toward(pos, deck), b = toward(pos, SPOT_ANVIL);
-                face = new float[]{Mth.lerp(look, a[0], b[0]), Mth.lerp(look, a[1], b[1])};
+                fx = Mth.lerp(look, deck[0] - px, SPOT_ANVIL[0] - px);
+                fz = Mth.lerp(look, deck[2] - pz, SPOT_ANVIL[2] - pz);
             }
         }
         ItemStack item = c.hands;
         boolean hold = !item.isEmpty();
-        org.joml.Vector3f p = new org.joml.Vector3f(lx(pos[0]), ly(pos[1]), lz(pos[2]));
-        float fx = face[0], fz = face[1];
+        CARRIER_POS.set(lx(px), ly(py), lz(pz));
         if (Math.abs(fx) + Math.abs(fz) < 1e-4f) {
             fz = 1f;
         }
         // the model's x is mirrored: the direction along machine X goes into the pose with a minus sign
-        org.joml.Vector3f forward = new org.joml.Vector3f(-fx, 0f, fz);
+        CARRIER_FWD.set(-fx, 0f, fz);
         CopperGolemPuppet.Anim anim = new CopperGolemPuppet.Anim(walking ? dist * 1.3f : time * 0.1f, walking, hold, Mth.clamp(bow, 0f, 1f));
-        CopperGolemPuppet.render(pose, buffers, light, p, forward, new org.joml.Vector3f(0f, 1f, 0f), CARRIER_SCALE, anim, variant,
+        CopperGolemPuppet.render(pose, buffers, light, CARRIER_POS, CARRIER_FWD, UP, CARRIER_SCALE, anim, variant,
                 hold ? hp -> {
                     boolean block = item.getItem() instanceof BlockItem;
                     float sc = block ? 0.75f : 0.55f;
@@ -373,34 +403,29 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
         // the queue of blanks on the left deck (up to three in a stack) and the finished plates on the right one slowly turn
         ItemStack in = entity.inputDeck();
         for (int i = 0; i < Math.min(3, in.getCount()); i++) {
-            deckItem(pose, buffers, light, overlay, entity, in, new float[]{SPOT_IN[0] + (i % 2) * 1.6f - 0.8f * (i / 2), SPOT_IN[1] + i * 0.02f,
-                    SPOT_IN[2] - i * 1.9f}, i * 17f);
+            deckItem(pose, buffers, light, overlay, entity, in, SPOT_IN[0] + (i % 2) * 1.6f - 0.8f * (i / 2), SPOT_IN[1] + i * 0.02f,
+                    SPOT_IN[2] - i * 1.9f, i * 17f);
         }
         ItemStack out = entity.outputDeck();
         if (!out.isEmpty()) {
-            deckItem(pose, buffers, light, overlay, entity, out, SPOT_OUT, time * 1.5f);
+            deckItem(pose, buffers, light, overlay, entity, out, SPOT_OUT[0], SPOT_OUT[1], SPOT_OUT[2], time * 1.5f);
             if (out.getCount() > 2) {
-                deckItem(pose, buffers, light, overlay, entity, out, new float[]{SPOT_OUT[0], SPOT_OUT[1] + 0.6f, SPOT_OUT[2]}, time * 1.5f + 40f);
+                deckItem(pose, buffers, light, overlay, entity, out, SPOT_OUT[0], SPOT_OUT[1] + 0.6f, SPOT_OUT[2], time * 1.5f + 40f);
             }
         }
     }
 
-    /** Direction (dx, dz) from point from to point to (machine coordinates). */
-    private static float[] toward(float[] from, float[] to) {
-        return new float[]{to[0] - from[0], to[2] - from[2]};
-    }
-
     private void deckItem(PoseStack pose, MultiBufferSource buffers, int light, int overlay, ManaSaturatorBlockEntity entity, ItemStack item,
-                          float[] spot, float spin) {
+                          float sx, float sy, float sz, float spin) {
         boolean block = item.getItem() instanceof BlockItem;
         pose.pushPose();
         if (block) {
             float size = 0.42f;
-            pose.translate(lx(spot[0]), ly(spot[1]) + size * 0.25f, lz(spot[2]));
+            pose.translate(lx(sx), ly(sy) + size * 0.25f, lz(sz));
             pose.mulPose(Axis.YP.rotationDegrees(25f + spin));
             pose.scale(size, size, size);
         } else {
-            pose.translate(lx(spot[0]), ly(spot[1]) + 0.02f, lz(spot[2]));
+            pose.translate(lx(sx), ly(sy) + 0.02f, lz(sz));
             pose.mulPose(Axis.YP.rotationDegrees(spin));
             pose.mulPose(Axis.XP.rotationDegrees(90f));
             pose.scale(0.3f, 0.3f, 0.3f);
@@ -450,7 +475,7 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
             return;
         }
         int light = LevelRenderer.getLightColor(level, entity.getBlockPos().above());
-        float time = level.getGameTime() + partialTick;
+        float time = (level.getGameTime() % 72000L) + partialTick;
         pose.pushPose();
         if (ManaSaturatorBlockEntity.isManualInput(level, item)) {
             float squash = 1f - 0.55f * entity.manualHits() / (float) ManaSaturatorBlockEntity.MANUAL_HITS;

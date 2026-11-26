@@ -43,7 +43,7 @@ public class ConcentratorRenderer implements BlockEntityRenderer<SchematicConcen
         float holo = Mth.lerp(partialTick, be.holoPrev, be.holo);
         holo = holo * holo * (3 - 2 * holo);
         float spin = Mth.lerp(partialTick, be.spinPrev, be.spin);
-        float time = (be.getLevel() == null ? 0 : be.getLevel().getGameTime()) + partialTick;
+        float time = (be.getLevel() == null ? 0L : be.getLevel().getGameTime() % 72000L) + partialTick;
         pose.pushPose();
         Quads.faceModel(pose, facing);
         // screen centre on the front (pixels): x 8, y 9.3, just in front of the glass

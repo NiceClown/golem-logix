@@ -38,8 +38,9 @@ public class CryoDiodeRenderer implements BlockEntityRenderer<CryoDiodeBlockEnti
         boolean turning = be.flowing(now);
         // the angle is kept on the block entity, so a stop leaves the wheel where it is
         if (now != be.wheelTick) {
-            if (turning) {
-                be.wheelAngle += SPEED * Math.min(3, now - be.wheelTick);
+            long delta = now - be.wheelTick;
+            if (turning && delta > 0L) {
+                be.wheelAngle = (be.wheelAngle + SPEED * Math.min(3L, delta)) % 360f;
             }
             be.wheelTick = now;
         }

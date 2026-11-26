@@ -32,6 +32,7 @@ public class TerminalRenderer implements BlockEntityRenderer<TerminalBlockEntity
     private static final float WAVE_TICKS = 110f;
     private static final float TICKS_PER_WAVE_FRAME = 7f;
     private static final float WALK = 52f, PAUSE = 14f, CYCLE = 2 * (WALK + PAUSE);
+    private static final long FOUR_CYCLES = 4L * (long) CYCLE;
 
     private static final int GREEN = 0xFF7DFF8C;
     private static final int AMBER = 0xFFFFB347;
@@ -50,8 +51,12 @@ public class TerminalRenderer implements BlockEntityRenderer<TerminalBlockEntity
             return;
         }
         BlockState state = be.getBlockState();
+        if (!state.hasProperty(GolemProperties.ACTIVE) || !state.hasProperty(HorizontalDirectionalBlock.FACING)) {
+            return;
+        }
         boolean active = state.getValue(GolemProperties.ACTIVE);
-        float time = be.getLevel().getGameTime() + partialTick;
+        long gameTime = be.getLevel().getGameTime();
+        float time = (gameTime % 72000L) + partialTick;
         // network start: "off -> on" before the player's eyes (the first observation only shows the state)
         if (be.animInitialized && active && !be.lastActive) {
             be.waveStart = time;
@@ -75,7 +80,10 @@ public class TerminalRenderer implements BlockEntityRenderer<TerminalBlockEntity
         sprite(vc, p, 0, 0, SCREEN, SCREEN, crt ? 0 : 16, 0, SCREEN, SCREEN, false, 0xFFFFFFFF, full, 0);
 
         float sinceWave = time - be.waveStart;
-        if (sinceWave >= 0 && sinceWave < WAVE_TICKS) {
+        if (sinceWave < -36000f) {
+            sinceWave += 72000f;
+        }
+        if (be.waveStart >= 0f && sinceWave >= 0f && sinceWave < WAVE_TICKS) {
             // greeting: a golem across the whole screen waves; at the end it blinks and disappears
             int frame = (int) (sinceWave / TICKS_PER_WAVE_FRAME) % 4;
             boolean blink = sinceWave > WAVE_TICKS - 12f && ((int) (sinceWave / 2f)) % 2 == 0;
@@ -83,7 +91,9 @@ public class TerminalRenderer implements BlockEntityRenderer<TerminalBlockEntity
                 sprite(vc, p, 0, 0, SCREEN, SCREEN, frame * 16, 32, SCREEN, SCREEN, false, tint, full, 1);
             }
         } else {
-            scene(vc, p, time + (be.getBlockPos().hashCode() & 127), tint, full);
+            be.waveStart = -1000f;
+            float sceneTime = Math.floorMod(gameTime + (be.getBlockPos().hashCode() & 127), FOUR_CYCLES) + partialTick;
+            scene(vc, p, sceneTime, tint, full);
         }
         pose.popPose();
     }

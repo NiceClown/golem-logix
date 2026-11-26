@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -35,6 +36,13 @@ public final class CopperGolemPuppet {
 
     private static final ResourceLocation[] TEXTURES = new ResourceLocation[4];
     private static final ResourceLocation[] EYES = new ResourceLocation[4];
+    private static final Quaternionf ROT_X_180 = Axis.XP.rotationDegrees(180f);
+    /** Scratch math objects on the render thread to avoid per-golem allocations every frame. */
+    private static final Vector3f SCRATCH_F = new Vector3f();
+    private static final Vector3f SCRATCH_U = new Vector3f();
+    private static final Vector3f SCRATCH_X = new Vector3f();
+    private static final Matrix3f SCRATCH_MAT = new Matrix3f();
+    private static final Quaternionf SCRATCH_QUAT = new Quaternionf();
 
     static {
         String[] prefix = {"", "exposed_", "weathered_", "oxidized_"};
@@ -44,7 +52,8 @@ public final class CopperGolemPuppet {
         }
     }
 
-    private static ModelPart root;
+    private static EntityModelSet bakedFrom;
+    private static ModelPart root, bodyPart, headPart, rightArmPart, leftArmPart, rightLegPart, leftLegPart;
 
     private CopperGolemPuppet() {
     }
@@ -79,15 +88,25 @@ public final class CopperGolemPuppet {
     }
 
     private static ModelPart model() {
-        if (root == null) {
-            root = Minecraft.getInstance().getEntityModels().bakeLayer(LAYER);
+        EntityModelSet current = Minecraft.getInstance().getEntityModels();
+        if (root == null || bakedFrom != current) {
+            bakedFrom = current;
+            root = current.bakeLayer(LAYER);
+            bodyPart = root.getChild("body");
+            headPart = bodyPart.getChild("head");
+            rightArmPart = bodyPart.getChild("right_arm");
+            leftArmPart = bodyPart.getChild("left_arm");
+            rightLegPart = root.getChild("right_leg");
+            leftLegPart = root.getChild("left_leg");
         }
         return root;
     }
 
     /** Reset the cache on resource reload. */
     public static void invalidate() {
+        bakedFrom = null;
         root = null;
+        bodyPart = headPart = rightArmPart = leftArmPart = rightLegPart = leftLegPart = null;
     }
 
     /** Golem pose: phase = step phase (radians), walking = whether it walks, carrying = whether it holds a crate, bow = lean (0..1). */
@@ -141,11 +160,11 @@ public final class CopperGolemPuppet {
                               float scale, Anim anim, int variant, @org.jetbrains.annotations.Nullable java.util.function.Consumer<PoseStack> held,
                               @org.jetbrains.annotations.Nullable Arms arms,
                               @org.jetbrains.annotations.Nullable java.util.function.Consumer<PoseStack> onHead) {
-        Vector3f f = new Vector3f(forward).normalize();
-        Vector3f u = new Vector3f(up);
-        u.sub(new Vector3f(f).mul(u.dot(f))).normalize();
-        Vector3f x = new Vector3f(u).cross(f).normalize();
-        Quaternionf q = new Quaternionf().setFromNormalized(new Matrix3f(x.x, x.y, x.z, u.x, u.y, u.z, f.x, f.y, f.z));
+        Vector3f f = SCRATCH_F.set(forward).normalize();
+        float dot = up.dot(f);
+        Vector3f u = SCRATCH_U.set(up.x - f.x * dot, up.y - f.y * dot, up.z - f.z * dot).normalize();
+        Vector3f x = SCRATCH_X.set(u).cross(f).normalize();
+        Quaternionf q = SCRATCH_QUAT.setFromNormalized(SCRATCH_MAT.set(x.x, x.y, x.z, u.x, u.y, u.z, f.x, f.y, f.z));
 
         pose.pushPose();
         pose.translate(pos.x, pos.y, pos.z);
@@ -169,15 +188,15 @@ public final class CopperGolemPuppet {
         }
 
         // from the "upright" frame into the model frame (Y down, face to -Z): a 180° turn around X
-        pose.mulPose(Axis.XP.rotationDegrees(180f));
+        pose.mulPose(ROT_X_180);
 
         ModelPart m = model();
-        ModelPart body = m.getChild("body");
-        ModelPart head = body.getChild("head");
-        ModelPart rightArm = body.getChild("right_arm");
-        ModelPart leftArm = body.getChild("left_arm");
-        ModelPart rightLeg = m.getChild("right_leg");
-        ModelPart leftLeg = m.getChild("left_leg");
+        ModelPart body = bodyPart;
+        ModelPart head = headPart;
+        ModelPart rightArm = rightArmPart;
+        ModelPart leftArm = leftArmPart;
+        ModelPart rightLeg = rightLegPart;
+        ModelPart leftLeg = leftLegPart;
 
         float swing = anim.walking ? Mth.sin(anim.phase) * 0.9f : 0f;
         rightLeg.xRot = swing;

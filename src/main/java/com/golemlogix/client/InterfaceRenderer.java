@@ -25,6 +25,7 @@ public class InterfaceRenderer implements BlockEntityRenderer<InterfaceBlockEnti
             ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/golem_interface_turbine"));
     public static final ModelResourceLocation PENDULUM = ModelResourceLocation.standalone(
             ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/golem_interface_pendulum"));
+    private static final Direction[] DIRS = Direction.values();
     /**
      * Metronomes lying flat on the side faces (as in tools/Interface.java: left of the funnel as seen by the viewer, axis at height 5.2,
      * in front of the body at depth 0.42 from the block plane): x, z of the axis in pixels and the rotation of the pendulum model facing outwards.
@@ -48,7 +49,7 @@ public class InterfaceRenderer implements BlockEntityRenderer<InterfaceBlockEnti
         float activity = Mth.lerp(partialTick, be.activityPrev, be.activity);
         float phase = Mth.lerp(partialTick, be.phasePrev, be.phase);
 
-        for (Direction d : Direction.values()) {
+        for (Direction d : DIRS) {
             pose.pushPose();
             pose.translate(0.5, 0.5, 0.5);
             switch (d) {

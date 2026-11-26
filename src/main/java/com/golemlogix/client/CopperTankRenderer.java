@@ -37,31 +37,35 @@ public class CopperTankRenderer implements BlockEntityRenderer<CopperTankBlockEn
     private static void needle(PoseStack.Pose p, MultiBufferSource buffers, float fill, int light) {
         VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(WHITE));
         double a = Math.toRadians(150 + 240 * fill);
+        float cos = (float) Math.cos(a), sin = (float) Math.sin(a);
         float len = 1.15f, w = 0.15f;
         // North face: texture u -> -x, v -> -y
-        float dxN = (float) -Math.cos(a), dyN = (float) -Math.sin(a);
+        float dxN = -cos, dyN = -sin;
         float nxN = -dyN * w, nyN = dxN * w;
-        float[][] cN = {{GAUGE_X - nxN, GAUGE_Y - nyN}, {GAUGE_X + nxN, GAUGE_Y + nyN},
-                {GAUGE_X + dxN * len + nxN, GAUGE_Y + dyN * len + nyN}, {GAUGE_X + dxN * len - nxN, GAUGE_Y + dyN * len - nyN}};
-        for (float[] v : cN) {
-            vc.addVertex(p, v[0] / 16f, v[1] / 16f, GAUGE_Z_N / 16f).setColor(0xFFC8281E).setUv(0.5f, 0.5f)
-                    .setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(p, 0, 0, -1);
-        }
+        float zN = GAUGE_Z_N / 16f;
+        needleVert(vc, p, (GAUGE_X - nxN) / 16f, (GAUGE_Y - nyN) / 16f, zN, -1f, light);
+        needleVert(vc, p, (GAUGE_X + nxN) / 16f, (GAUGE_Y + nyN) / 16f, zN, -1f, light);
+        needleVert(vc, p, (GAUGE_X + dxN * len + nxN) / 16f, (GAUGE_Y + dyN * len + nyN) / 16f, zN, -1f, light);
+        needleVert(vc, p, (GAUGE_X + dxN * len - nxN) / 16f, (GAUGE_Y + dyN * len - nyN) / 16f, zN, -1f, light);
         // South face: mirrored u -> +x, v -> -y
-        float dxS = (float) Math.cos(a), dyS = (float) -Math.sin(a);
+        float dxS = cos, dyS = -sin;
         float nxS = -dyS * w, nyS = dxS * w;
-        float[][] cS = {{GAUGE_X + dxS * len - nxS, GAUGE_Y + dyS * len - nyS}, {GAUGE_X + dxS * len + nxS, GAUGE_Y + dyS * len + nyS},
-                {GAUGE_X + nxS, GAUGE_Y + nyS}, {GAUGE_X - nxS, GAUGE_Y - nyS}};
-        for (float[] v : cS) {
-            vc.addVertex(p, v[0] / 16f, v[1] / 16f, GAUGE_Z_S / 16f).setColor(0xFFC8281E).setUv(0.5f, 0.5f)
-                    .setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(p, 0, 0, 1);
-        }
+        float zS = GAUGE_Z_S / 16f;
+        needleVert(vc, p, (GAUGE_X + dxS * len - nxS) / 16f, (GAUGE_Y + dyS * len - nyS) / 16f, zS, 1f, light);
+        needleVert(vc, p, (GAUGE_X + dxS * len + nxS) / 16f, (GAUGE_Y + dyS * len + nyS) / 16f, zS, 1f, light);
+        needleVert(vc, p, (GAUGE_X + nxS) / 16f, (GAUGE_Y + nyS) / 16f, zS, 1f, light);
+        needleVert(vc, p, (GAUGE_X - nxS) / 16f, (GAUGE_Y - nyS) / 16f, zS, 1f, light);
+    }
+
+    private static void needleVert(VertexConsumer vc, PoseStack.Pose p, float x, float y, float z, float nz, int light) {
+        vc.addVertex(p, x, y, z).setColor(0xFFC8281E).setUv(0.5f, 0.5f)
+                .setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(p, 0f, 0f, nz);
     }
 
     @Override
     public void render(CopperTankBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
         FluidStack fluid = be.fluid();
-        float fill = fluid.isEmpty() ? 0f : Math.min(1f, fluid.getAmount() / (float) be.capacity());
+        float fill = fluid.isEmpty() ? 0f : Math.min(1f, fluid.getAmount() / (float) Math.max(1, be.capacity()));
         needle(pose.last(), buffers, fill, light);
         if (fluid.isEmpty()) {
             return;
@@ -82,28 +86,30 @@ public class CopperTankRenderer implements BlockEntityRenderer<CopperTankBlockEn
         TextureAtlasSprite s = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(still);
         VertexConsumer vc = buffers.getBuffer(RenderType.entityTranslucent(InventoryMenu.BLOCK_ATLAS));
         PoseStack.Pose p = pose.last();
+        float span = IN1 - IN0;
+        float u0 = s.getU(0f), u1 = s.getU(span / 16f);
+        float v0 = s.getV(0f), vSide = s.getV((y1 - y0) / 16f), vCap = s.getV(span / 16f);
+        float i0 = IN0 / 16f, i1 = IN1 / 16f, b0 = y0 / 16f, b1 = y1 / 16f;
         // the four sides, the top and (seen through the base's gap only when lifted) the bottom
-        quad(vc, p, s, tint, lit, new float[][]{{IN1, y0, IN0}, {IN0, y0, IN0}, {IN0, y1, IN0}, {IN1, y1, IN0}}, 0, 0, -1);
-        quad(vc, p, s, tint, lit, new float[][]{{IN0, y0, IN1}, {IN1, y0, IN1}, {IN1, y1, IN1}, {IN0, y1, IN1}}, 0, 0, 1);
-        quad(vc, p, s, tint, lit, new float[][]{{IN0, y0, IN0}, {IN0, y0, IN1}, {IN0, y1, IN1}, {IN0, y1, IN0}}, -1, 0, 0);
-        quad(vc, p, s, tint, lit, new float[][]{{IN1, y0, IN1}, {IN1, y0, IN0}, {IN1, y1, IN0}, {IN1, y1, IN1}}, 1, 0, 0);
-        quad(vc, p, s, tint, lit, new float[][]{{IN0, y1, IN1}, {IN1, y1, IN1}, {IN1, y1, IN0}, {IN0, y1, IN0}}, 0, 1, 0);
-        quad(vc, p, s, tint, lit, new float[][]{{IN0, y0, IN0}, {IN1, y0, IN0}, {IN1, y0, IN1}, {IN0, y0, IN1}}, 0, -1, 0);
+        face(vc, p, i1, b0, i0, i0, b0, i0, i0, b1, i0, i1, b1, i0, u0, u1, v0, vSide, tint, lit, 0f, 0f, -1f);
+        face(vc, p, i0, b0, i1, i1, b0, i1, i1, b1, i1, i0, b1, i1, u0, u1, v0, vSide, tint, lit, 0f, 0f, 1f);
+        face(vc, p, i0, b0, i0, i0, b0, i1, i0, b1, i1, i0, b1, i0, u0, u1, v0, vSide, tint, lit, -1f, 0f, 0f);
+        face(vc, p, i1, b0, i1, i1, b0, i0, i1, b1, i0, i1, b1, i1, u0, u1, v0, vSide, tint, lit, 1f, 0f, 0f);
+        face(vc, p, i0, b1, i1, i1, b1, i1, i1, b1, i0, i0, b1, i0, u0, u1, v0, vCap, tint, lit, 0f, 1f, 0f);
+        face(vc, p, i0, b0, i0, i1, b0, i0, i1, b0, i1, i0, b0, i1, u0, u1, v0, vCap, tint, lit, 0f, -1f, 0f);
     }
 
     /**
-     * One face (corners in pixels, counter-clockwise seen from outside, starting bottom left), the sprite laid on it at one pixel a
+     * One face (counter-clockwise seen from outside, starting bottom left), the sprite laid on it at one pixel a
      * texel so a low level shows a strip of the texture rather than all of it squeezed.
      */
-    private static void quad(VertexConsumer vc, PoseStack.Pose p, TextureAtlasSprite s, int color, int light, float[][] c,
-                             float nx, float ny, float nz) {
-        float w = (float) Math.hypot(c[1][0] - c[0][0], c[1][2] - c[0][2]);
-        float h = c[2][1] - c[1][1] + (float) Math.hypot(c[2][0] - c[1][0], c[2][2] - c[1][2]);
-        float[][] uv = {{0, h}, {w, h}, {w, 0}, {0, 0}};
-        for (int i = 0; i < 4; i++) {
-            vc.addVertex(p, c[i][0] / 16f, c[i][1] / 16f, c[i][2] / 16f).setColor(color)
-                    .setUv(s.getU(uv[i][0] / 16f), s.getV(uv[i][1] / 16f)).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light)
-                    .setNormal(p, nx, ny, nz);
-        }
+    private static void face(VertexConsumer vc, PoseStack.Pose p,
+                             float ax, float ay, float az, float bx, float by, float bz,
+                             float cx, float cy, float cz, float dx, float dy, float dz,
+                             float u0, float u1, float v0, float v1, int color, int light, float nx, float ny, float nz) {
+        vc.addVertex(p, ax, ay, az).setColor(color).setUv(u0, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(p, nx, ny, nz);
+        vc.addVertex(p, bx, by, bz).setColor(color).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(p, nx, ny, nz);
+        vc.addVertex(p, cx, cy, cz).setColor(color).setUv(u1, v0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(p, nx, ny, nz);
+        vc.addVertex(p, dx, dy, dz).setColor(color).setUv(u0, v0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(p, nx, ny, nz);
     }
 }

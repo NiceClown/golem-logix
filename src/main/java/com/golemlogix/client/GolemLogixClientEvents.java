@@ -157,6 +157,7 @@ public class GolemLogixClientEvents {
             com.golemlogix.client.ghost.GhostProjection.clear();
             HammerClientEvents.reset();
             PipeRunners.clear();
+            SnowPipeRenderer.clearCaches();
             com.golemlogix.client.book.BookModel.invalidate();
         }
     }

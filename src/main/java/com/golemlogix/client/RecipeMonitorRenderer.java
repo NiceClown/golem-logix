@@ -14,6 +14,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.AABB;
 
 /**
  * Recipe Monitor: in the purple vortex of the porthole punch cards float in a circle, one for every job running in the network
@@ -28,50 +29,46 @@ public class RecipeMonitorRenderer implements BlockEntityRenderer<RecipeMonitorB
     public RecipeMonitorRenderer(BlockEntityRendererProvider.Context context) {
     }
 
+    /** The lamplighter golem stands on top of the monitor (y > 1), so expand upward to avoid frustum culling. */
     @Override
-    public void render(RecipeMonitorBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
-        if (be.getLevel() == null) {
-            return;
-        }
-        lampGolem(be, partialTick, pose, buffers, light);
-        float shown = Mth.lerp(partialTick, be.shownCardsPrev, be.shownCards);
-        if (shown < 0.02f) {
-            return;
-        }
-        if (card == null) {
-            card = new ItemStack(ModItems.COPPER_PUNCH_CARD.get());
-        }
-        float time = be.getLevel().getGameTime() + partialTick;
-        int count = (int) Math.ceil(shown - 0.001f);
-        pose.pushPose();
-        Quads.faceModel(pose, be.getBlockState().getValue(RecipeMonitorBlock.FACING));
-        for (int i = 0; i < count; i++) {
-            // the last card "develops" as shown grows
-            float alive = Math.min(1f, shown - i);
-            float a = (float) Math.toRadians(time * 2.4f + i * 360f / Math.max(1, count));
-            float x = CX + Mth.cos(a) * RADIUS, y = CY + Mth.sin(a) * RADIUS;
-            pose.pushPose();
-            // in front of the vortex (it is sunk into the frame); the model's "north" is the front
-            pose.translate(1f - x / 16f, y / 16f, 0.9f / 16f);
-            pose.mulPose(Axis.YP.rotationDegrees(180f + Mth.sin(time * 0.08f + i) * 25f));
-            pose.mulPose(Axis.ZP.rotationDegrees(Mth.sin(time * 0.05f + i * 1.7f) * 20f));
-            float s = 0.2f * alive;
-            pose.scale(s, s, s);
-            Minecraft.getInstance().getItemRenderer().renderStatic(card, ItemDisplayContext.FIXED, LightTexture.FULL_BRIGHT,
-                    OverlayTexture.NO_OVERLAY, pose, buffers, be.getLevel(), i);
-            pose.popPose();
-        }
-        pose.popPose();
+    public AABB getRenderBoundingBox(RecipeMonitorBlockEntity be) {
+        return new AABB(be.getBlockPos()).expandTowards(0, 0.5, 0);
     }
 
-    /**
-     * Copper lamplighter golem on the roof: when idle the lamp glows steady purple and the golem wanders over the platform; while crafting
-     * it stands in the middle and the lamp blinks green; on a failure or with no connection it glows red.
-     */
-    private void lampGolem(RecipeMonitorBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light) {
+    @Override
+    public void render(RecipeMonitorBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
+        if (be.getLevel() == null || !be.getBlockState().hasProperty(RecipeMonitorBlock.FACING)) {
+            return;
+        }
+        float time = (be.getLevel().getGameTime() % 72000L) + partialTick;
         pose.pushPose();
         Quads.faceModel(pose, be.getBlockState().getValue(RecipeMonitorBlock.FACING));
-        LampGolem.render(pose, buffers, light, be.walker, partialTick, be.lampState(), be.getLevel().getGameTime() + partialTick, 16f, 16.4f);
+        // Copper lamplighter golem on the roof: steady purple when idle, blinking green while crafting, red on error/offline
+        LampGolem.render(pose, buffers, light, be.walker, partialTick, be.lampState(), time, 16f, 16.4f);
+
+        float shown = Mth.lerp(partialTick, be.shownCardsPrev, be.shownCards);
+        if (shown >= 0.02f) {
+            if (card == null) {
+                card = new ItemStack(ModItems.COPPER_PUNCH_CARD.get());
+            }
+            int count = (int) Math.ceil(shown - 0.001f);
+            for (int i = 0; i < count; i++) {
+                // the last card "develops" as shown grows
+                float alive = Math.min(1f, shown - i);
+                float a = (float) Math.toRadians(time * 2.4f + i * 360f / Math.max(1, count));
+                float x = CX + Mth.cos(a) * RADIUS, y = CY + Mth.sin(a) * RADIUS;
+                pose.pushPose();
+                // in front of the vortex (it is sunk into the frame); the model's "north" is the front
+                pose.translate(1f - x / 16f, y / 16f, 0.9f / 16f);
+                pose.mulPose(Axis.YP.rotationDegrees(180f + Mth.sin(time * 0.08f + i) * 25f));
+                pose.mulPose(Axis.ZP.rotationDegrees(Mth.sin(time * 0.05f + i * 1.7f) * 20f));
+                float s = 0.2f * alive;
+                pose.scale(s, s, s);
+                Minecraft.getInstance().getItemRenderer().renderStatic(card, ItemDisplayContext.FIXED, LightTexture.FULL_BRIGHT,
+                        OverlayTexture.NO_OVERLAY, pose, buffers, be.getLevel(), i);
+                pose.popPose();
+            }
+        }
         pose.popPose();
     }
 }

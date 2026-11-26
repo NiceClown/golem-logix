@@ -35,50 +35,81 @@ public final class NixieDigits {
      */
     public static void digit(PoseStack.Pose p, MultiBufferSource buffers, int digit, Vector3f c, float w, float h, Vector3f right, Vector3f up,
                              int color) {
+        digit(p, buffers, digit, c.x, c.y, c.z, w, h, right.x, right.y, right.z, up.x, up.y, up.z, color);
+    }
+
+    /** Scalar form of {@link #digit}: avoids per-digit Vector3f allocations at call sites. */
+    public static void digit(PoseStack.Pose p, MultiBufferSource buffers, int digit,
+                             float cx, float cy, float cz, float w, float h,
+                             float rx, float ry, float rz, float ux, float uy, float uz, int color) {
         if (digit < 0 || digit > 9) {
             return;
         }
-        VertexConsumer vc = buffers.getBuffer(RenderType.entityTranslucentEmissive(WHITE));
+        digit(p, buffer(buffers), digit, cx, cy, cz, w, h, rx, ry, rz, ux, uy, uz, color);
+    }
+
+    /** Direct-buffer form for drawing several digits without re-looking up the glow buffer. */
+    public static void digit(PoseStack.Pose p, VertexConsumer vc, int digit,
+                             float cx, float cy, float cz, float w, float h,
+                             float rx, float ry, float rz, float ux, float uy, float uz, int color) {
+        if (digit < 0 || digit > 9) {
+            return;
+        }
+        float nx = ry * uz - rz * uy, ny = rz * ux - rx * uz, nz = rx * uy - ry * ux;
         float t = Math.max(0.22f, Math.min(w, h) * 0.16f);   // the bar's thickness
-        float half = w / 2f, qh = h / 2f, vq = h / 4f;
+        float half = w * 0.5f, qh = h * 0.5f, vq = h * 0.25f;
         String bars = SEGMENTS[digit];
         // horizontal bars: a (top), g (middle), d (bottom)
         if (bars.indexOf('a') >= 0) {
-            bar(vc, p, c, right, up, 0f, qh - t / 2f, w - t, t, color);
+            bar(vc, p, cx, cy, cz, rx, ry, rz, ux, uy, uz, nx, ny, nz, 0f, qh - t * 0.5f, w - t, t, color);
         }
         if (bars.indexOf('g') >= 0) {
-            bar(vc, p, c, right, up, 0f, 0f, w - t, t, color);
+            bar(vc, p, cx, cy, cz, rx, ry, rz, ux, uy, uz, nx, ny, nz, 0f, 0f, w - t, t, color);
         }
         if (bars.indexOf('d') >= 0) {
-            bar(vc, p, c, right, up, 0f, -qh + t / 2f, w - t, t, color);
+            bar(vc, p, cx, cy, cz, rx, ry, rz, ux, uy, uz, nx, ny, nz, 0f, -qh + t * 0.5f, w - t, t, color);
         }
         // vertical bars: f (top-left), b (top-right), e (bottom-left), c (bottom-right)
         if (bars.indexOf('f') >= 0) {
-            bar(vc, p, c, right, up, -half + t / 2f, vq, t, vq * 2f - t, color);
+            bar(vc, p, cx, cy, cz, rx, ry, rz, ux, uy, uz, nx, ny, nz, -half + t * 0.5f, vq, t, vq * 2f - t, color);
         }
         if (bars.indexOf('b') >= 0) {
-            bar(vc, p, c, right, up, half - t / 2f, vq, t, vq * 2f - t, color);
+            bar(vc, p, cx, cy, cz, rx, ry, rz, ux, uy, uz, nx, ny, nz, half - t * 0.5f, vq, t, vq * 2f - t, color);
         }
         if (bars.indexOf('e') >= 0) {
-            bar(vc, p, c, right, up, -half + t / 2f, -vq, t, vq * 2f - t, color);
+            bar(vc, p, cx, cy, cz, rx, ry, rz, ux, uy, uz, nx, ny, nz, -half + t * 0.5f, -vq, t, vq * 2f - t, color);
         }
         if (bars.indexOf('c') >= 0) {
-            bar(vc, p, c, right, up, half - t / 2f, -vq, t, vq * 2f - t, color);
+            bar(vc, p, cx, cy, cz, rx, ry, rz, ux, uy, uz, nx, ny, nz, half - t * 0.5f, -vq, t, vq * 2f - t, color);
         }
     }
 
+    /** The shared glow buffer for drawing a batch of nixie digits. */
+    public static VertexConsumer buffer(MultiBufferSource buffers) {
+        return buffers.getBuffer(RenderType.entityTranslucentEmissive(WHITE));
+    }
+
     /** One bar: a rectangle of bw x bh, its centre at (dx, dy) from the digit's centre, in the plane of right and up. */
-    private static void bar(VertexConsumer vc, PoseStack.Pose p, Vector3f c, Vector3f right, Vector3f up,
-                             float dx, float dy, float bw, float bh, int color) {
-        Vector3f centre = new Vector3f(c).add(new Vector3f(right).mul(dx)).add(new Vector3f(up).mul(dy));
-        Vector3f n = new Vector3f(right).cross(up);
-        float hw = bw / 2f, hh = bh / 2f;
-        float[][] corners = {{-1, 1}, {-1, -1}, {1, -1}, {1, 1}};
-        for (float[] k : corners) {
-            Vector3f at = new Vector3f(centre).add(new Vector3f(right).mul(k[0] * hw)).add(new Vector3f(up).mul(k[1] * hh)).div(16f);
-            vc.addVertex(p, at.x, at.y, at.z).setColor(color).setUv(0f, 0f).setOverlay(OverlayTexture.NO_OVERLAY)
-                    .setLight(0xF000F0).setNormal(p, n.x, n.y, n.z);
-        }
+    private static void bar(VertexConsumer vc, PoseStack.Pose p,
+                            float cx, float cy, float cz,
+                            float rx, float ry, float rz, float ux, float uy, float uz,
+                            float nx, float ny, float nz,
+                            float dx, float dy, float bw, float bh, int color) {
+        float ox = cx + rx * dx + ux * dy;
+        float oy = cy + ry * dx + uy * dy;
+        float oz = cz + rz * dx + uz * dy;
+        float hw = bw * 0.5f, hh = bh * 0.5f;
+        float hrx = rx * hw, hry = ry * hw, hrz = rz * hw;
+        float hux = ux * hh, huy = uy * hh, huz = uz * hh;
+        float inv16 = 1f / 16f;
+        vc.addVertex(p, (ox - hrx + hux) * inv16, (oy - hry + huy) * inv16, (oz - hrz + huz) * inv16)
+                .setColor(color).setUv(0f, 0f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(p, nx, ny, nz);
+        vc.addVertex(p, (ox - hrx - hux) * inv16, (oy - hry - huy) * inv16, (oz - hrz - huz) * inv16)
+                .setColor(color).setUv(0f, 0f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(p, nx, ny, nz);
+        vc.addVertex(p, (ox + hrx - hux) * inv16, (oy + hry - huy) * inv16, (oz + hrz - huz) * inv16)
+                .setColor(color).setUv(0f, 0f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(p, nx, ny, nz);
+        vc.addVertex(p, (ox + hrx + hux) * inv16, (oy + hry + huy) * inv16, (oz + hrz + huz) * inv16)
+                .setColor(color).setUv(0f, 0f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(p, nx, ny, nz);
     }
 
     /** The load colours: cyan while there is room, amber as it fills, red when (nearly) full; a dim ember for nothing at all. */

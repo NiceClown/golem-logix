@@ -23,6 +23,8 @@ import org.joml.Vector3f;
  * The running "matrix rain" on the side panels is an animated texture of the model in the ACTIVE state.
  */
 public class CryoCalculatorRenderer implements BlockEntityRenderer<CryoCalculatorBlockEntity> {
+    private static final Vector3f PROJ = new Vector3f();
+
     public CryoCalculatorRenderer(BlockEntityRendererProvider.Context context) {
     }
 
@@ -41,22 +43,22 @@ public class CryoCalculatorRenderer implements BlockEntityRenderer<CryoCalculato
         if (be.getLevel() == null) {
             return;
         }
-        float time = be.getLevel().getGameTime() + partialTick;
+        float time = (be.getLevel().getGameTime() % 72000L) + partialTick;
         float spin = Mth.lerp(partialTick, be.spinPrev, be.spin);
         float foreman = Mth.lerp(partialTick, be.foremanPrev, be.foreman);
         int light = LevelRenderer.getLightColor(be.getLevel(), be.getBlockPos().above());
 
         float appear = spin * spin * (3 - 2 * spin);
         float bob = Mth.sin(time * 0.1f) * 0.03f;
-        Vector3f proj = new Vector3f(0.5f, 1.0f + 0.78f * appear + bob, 0.5f);
-        SnowCrew.render(pose, buffers, light, time, be.getBlockPos().asLong(), 1.0f, spin, foreman, proj);
+        PROJ.set(0.5f, 1.0f + 0.78f * appear + bob, 0.5f);
+        SnowCrew.render(pose, buffers, light, time, be.getBlockPos().asLong(), 1.0f, spin, foreman, PROJ);
 
         // mini model of the current item: floats above the roof while the calculator works (held by the visual window)
         ItemStack current = be.clientDisplayItem();
         if (!current.isEmpty() && appear > 0.005f) {
             float size = (current.getItem() instanceof BlockItem ? 0.5f : 0.42f) * appear;
             pose.pushPose();
-            pose.translate(proj.x, proj.y, proj.z);
+            pose.translate(PROJ.x, PROJ.y, PROJ.z);
             pose.mulPose(Axis.YP.rotationDegrees(time * 3f));
             pose.scale(size, size, size);
             Minecraft.getInstance().getItemRenderer().renderStatic(current, ItemDisplayContext.FIXED, 0xF000F0, OverlayTexture.NO_OVERLAY,

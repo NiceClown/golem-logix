@@ -42,6 +42,13 @@ public class DriveBayRenderer implements BlockEntityRenderer<CopperDriveBayBlock
     private static final ResourceLocation TAPE_GLOW = tex("bay_tape_glow");
     private static final ResourceLocation WHITE = tex("bay_white");
     private static final ResourceLocation RUNES = tex("bay_runes_glow");
+    private static final ResourceLocation GLASS_DISPLAY = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/cab_glass_d");
+    private static final ResourceLocation GLASS_GAUGE = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/cab_glass_g");
+    private static final ResourceLocation SAT_BRASS = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/sat_brass");
+    private static final Vector3f UP = new Vector3f(0f, 1f, 0f);
+    private static final Vector3f FWD_RIGHT = new Vector3f(-1f, 0f, 0f);
+    private static final Vector3f FWD_LEFT = new Vector3f(1f, 0f, 0f);
+    private static final Vector3f GOLEM_AT = new Vector3f();
 
     /** Label colours by capacity (1k, 4k, 16k, 64k, 256k): item disks are metals, fluid disks cold tints. */
     private static final int[] ITEM_LABEL = {0xFFD9803A, 0xFF9AA4B4, 0xFFF0C850, 0xFF55E6E0, 0xFFA070FF};
@@ -75,7 +82,11 @@ public class DriveBayRenderer implements BlockEntityRenderer<CopperDriveBayBlock
     @Override
     public AABB getRenderBoundingBox(CopperDriveBayBlockEntity be) {
         BlockPos p = be.getBlockPos();
-        Direction right = CopperDriveBayBlock.rightOf(be.getBlockState().getValue(CopperDriveBayBlock.FACING));
+        BlockState state = be.getBlockState();
+        if (!state.hasProperty(CopperDriveBayBlock.FACING)) {
+            return new AABB(p);
+        }
+        Direction right = CopperDriveBayBlock.rightOf(state.getValue(CopperDriveBayBlock.FACING));
         return new AABB(p).minmax(new AABB(p.relative(right).above())).inflate(0.25);
     }
 
@@ -149,7 +160,7 @@ public class DriveBayRenderer implements BlockEntityRenderer<CopperDriveBayBlock
         }
         Direction facing = state.getValue(CopperDriveBayBlock.FACING);
         boolean active = state.getValue(GolemProperties.ACTIVE);
-        float time = be.getLevel().getGameTime() + partialTick;
+        float time = (be.getLevel().getGameTime() % 72000L) + partialTick;
 
         pose.pushPose();
         Quads.faceModel(pose, facing);
@@ -173,8 +184,8 @@ public class DriveBayRenderer implements BlockEntityRenderer<CopperDriveBayBlock
         float open = Mth.lerp(partialTick, be.doorPrev, be.door);
         float ease = open * open * (3f - 2f * open);
         // the big display is hinged at the left post, the narrow right door with the gauges at the right one
-        glassDoor(p, buffers, light, 7.5f, 16f, 1f, "cab_glass_d", ease * 105f);
-        glassDoor(p, buffers, light, 29.5f, 4f, -1f, "cab_glass_g", ease * 100f);
+        glassDoor(p, buffers, light, 7.5f, 16f, 1f, GLASS_DISPLAY, ease * 105f);
+        glassDoor(p, buffers, light, 29.5f, 4f, -1f, GLASS_GAUGE, ease * 100f);
         pose.popPose();
     }
 
@@ -318,33 +329,32 @@ public class DriveBayRenderer implements BlockEntityRenderer<CopperDriveBayBlock
      * dir = which way the leaf goes from the hinge (+1 right, -1 left); angle = how many degrees it is open outwards (towards the viewer).
      * The cabinet in the world is drawn in the cutout layer (before block entities), so the translucent glass lies over the shelves.
      */
-    private static void glassDoor(PoseStack.Pose p, MultiBufferSource buffers, int light, float hinge, float width, float dir, String tex,
-                                  float angle) {
+    private static void glassDoor(PoseStack.Pose p, MultiBufferSource buffers, int light, float hinge, float width, float dir,
+                                  ResourceLocation glassTex, float angle) {
         var atlas = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS);
-        TextureAtlasSprite glass = atlas.apply(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/" + tex));
-        TextureAtlasSprite brass = atlas.apply(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/sat_brass"));
+        TextureAtlasSprite glass = atlas.apply(glassTex);
+        TextureAtlasSprite brass = atlas.apply(SAT_BRASS);
         float c = Mth.cos(angle * Mth.DEG_TO_RAD), s = Mth.sin(angle * Mth.DEG_TO_RAD);
-        // a door point at distance d from the hinge, shifted by t along the normal (+ is into the cabinet)
-        java.util.function.BiFunction<Float, Float, float[]> at =
-                (d, t) -> new float[]{hinge + dir * (d * c + t * s), GLASS_Z - d * s + t * c};
         VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS));
         float f = Math.min(0.7f, width * 0.15f);
         // frame: top, bottom, at the hinge, at the free edge, on both sides of the glass
-        for (float t : new float[]{-0.12f, 0.12f}) {
-            strip(vc, p, at, 0f, width, GLASS_Y1 - f, GLASS_Y1, t, brass, light);
-            strip(vc, p, at, 0f, width, GLASS_Y0, GLASS_Y0 + f, t, brass, light);
-            strip(vc, p, at, 0f, f, GLASS_Y0, GLASS_Y1, t, brass, light);
-            strip(vc, p, at, width - f, width, GLASS_Y0, GLASS_Y1, t, brass, light);
+        for (int side = -1; side <= 1; side += 2) {
+            float t = side * 0.12f;
+            strip(vc, p, hinge, dir, c, s, 0f, width, GLASS_Y1 - f, GLASS_Y1, t, brass, light);
+            strip(vc, p, hinge, dir, c, s, 0f, width, GLASS_Y0, GLASS_Y0 + f, t, brass, light);
+            strip(vc, p, hinge, dir, c, s, 0f, f, GLASS_Y0, GLASS_Y1, t, brass, light);
+            strip(vc, p, hinge, dir, c, s, width - f, width, GLASS_Y0, GLASS_Y1, t, brass, light);
         }
         // handle: a brass bracket in front of the glass at the free edge
         float h0 = width - Math.min(2.2f, width * 0.45f), h1 = h0 + 0.7f;
-        for (float t : new float[]{-0.9f, -0.5f}) {
-            strip(vc, p, at, h0, h1, 14f, 18f, t, brass, light);
-        }
-        strip(vc, p, at, h0, h1, 14f, 14.5f, -0.7f, brass, light);
+        strip(vc, p, hinge, dir, c, s, h0, h1, 14f, 18f, -0.9f, brass, light);
+        strip(vc, p, hinge, dir, c, s, h0, h1, 14f, 18f, -0.5f, brass, light);
+        strip(vc, p, hinge, dir, c, s, h0, h1, 14f, 14.5f, -0.7f, brass, light);
         // glass
         VertexConsumer gv = buffers.getBuffer(RenderType.entityTranslucent(InventoryMenu.BLOCK_ATLAS));
-        float[] a = at.apply(f, 0f), b = at.apply(width - f, 0f);
+        float d1 = width - f;
+        float ax = hinge + dir * (f * c), az = GLASS_Z - f * s;
+        float bx = hinge + dir * (d1 * c), bz = GLASS_Z - d1 * s;
         float u0 = glass.getU(f / width), u1 = glass.getU(1f - f / width);
         float v0 = glass.getV(f / (GLASS_Y1 - GLASS_Y0)), v1 = glass.getV(1f - f / (GLASS_Y1 - GLASS_Y0));
         if (dir < 0) {
@@ -352,22 +362,23 @@ public class DriveBayRenderer implements BlockEntityRenderer<CopperDriveBayBlock
             u0 = u1;
             u1 = tmp;
         }
-        vertex(gv, p, a[0], GLASS_Y1 - f, a[1], u0, v0, 0xFFFFFFFF, light, 0, 0, -1);
-        vertex(gv, p, b[0], GLASS_Y1 - f, b[1], u1, v0, 0xFFFFFFFF, light, 0, 0, -1);
-        vertex(gv, p, b[0], GLASS_Y0 + f, b[1], u1, v1, 0xFFFFFFFF, light, 0, 0, -1);
-        vertex(gv, p, a[0], GLASS_Y0 + f, a[1], u0, v1, 0xFFFFFFFF, light, 0, 0, -1);
+        vertex(gv, p, ax, GLASS_Y1 - f, az, u0, v0, 0xFFFFFFFF, light, 0, 0, -1);
+        vertex(gv, p, bx, GLASS_Y1 - f, bz, u1, v0, 0xFFFFFFFF, light, 0, 0, -1);
+        vertex(gv, p, bx, GLASS_Y0 + f, bz, u1, v1, 0xFFFFFFFF, light, 0, 0, -1);
+        vertex(gv, p, ax, GLASS_Y0 + f, az, u0, v1, 0xFFFFFFFF, light, 0, 0, -1);
     }
 
     /** A strip of the door from d0 to d1 (along the leaf) and from y0 to y1, shifted by t along the normal, with the sprite texture. */
-    private static void strip(VertexConsumer vc, PoseStack.Pose p, java.util.function.BiFunction<Float, Float, float[]> at,
+    private static void strip(VertexConsumer vc, PoseStack.Pose p, float hinge, float dir, float c, float s,
                               float d0, float d1, float y0, float y1, float t, TextureAtlasSprite sprite, int light) {
-        float[] a = at.apply(d0, t), b = at.apply(d1, t);
+        float ax = hinge + dir * (d0 * c + t * s), az = GLASS_Z - d0 * s + t * c;
+        float bx = hinge + dir * (d1 * c + t * s), bz = GLASS_Z - d1 * s + t * c;
         float u0 = sprite.getU(0f), u1 = sprite.getU(Math.min(1f, (d1 - d0) / 16f));
         float v0 = sprite.getV(0f), v1 = sprite.getV(Math.min(1f, (y1 - y0) / 16f));
-        vertex(vc, p, a[0], y1, a[1], u0, v0, 0xFFFFFFFF, light, 0, 0, -1);
-        vertex(vc, p, b[0], y1, b[1], u1, v0, 0xFFFFFFFF, light, 0, 0, -1);
-        vertex(vc, p, b[0], y0, b[1], u1, v1, 0xFFFFFFFF, light, 0, 0, -1);
-        vertex(vc, p, a[0], y0, a[1], u0, v1, 0xFFFFFFFF, light, 0, 0, -1);
+        vertex(vc, p, ax, y1, az, u0, v0, 0xFFFFFFFF, light, 0, 0, -1);
+        vertex(vc, p, bx, y1, bz, u1, v0, 0xFFFFFFFF, light, 0, 0, -1);
+        vertex(vc, p, bx, y0, bz, u1, v1, 0xFFFFFFFF, light, 0, 0, -1);
+        vertex(vc, p, ax, y0, az, u0, v1, 0xFFFFFFFF, light, 0, 0, -1);
     }
 
     /** Three archivists walk back and forth along the shelves in front of the cassettes (they take a crate at the left end and leave it at the right). */
@@ -379,10 +390,9 @@ public class DriveBayRenderer implements BlockEntityRenderer<CopperDriveBayBlock
             float x = golemX(i, time);
             float y = 28f - 4.8f * (rows[i] + 1) + 0.5f;
             // forward in the model frame: the viewer looks from the north, their "right" is the model's -x
-            Vector3f forward = new Vector3f(toRight ? -1f : 1f, 0f, 0f);
-            Vector3f at = new Vector3f((16f - x) / 16f, y / 16f, 3.6f / 16f);
+            GOLEM_AT.set((16f - x) / 16f, y / 16f, 3.6f / 16f);
             CopperGolemPuppet.Anim anim = new CopperGolemPuppet.Anim(time * 0.42f + i * 2f, true, toRight, 0f);
-            CopperGolemPuppet.render(pose, buffers, light, at, forward, new Vector3f(0f, 1f, 0f), 0.115f, anim, i);
+            CopperGolemPuppet.render(pose, buffers, light, GOLEM_AT, toRight ? FWD_RIGHT : FWD_LEFT, UP, 0.115f, anim, i);
         }
     }
 }

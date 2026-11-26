@@ -3,36 +3,38 @@ package com.golemlogix.client;
 import com.golemlogix.blockentity.PipeBlockEntity;
 import com.golemlogix.blocks.GolemProperties;
 import com.golemlogix.blocks.SnowPipeBlock;
+import com.golemlogix.client.render.NixieDigits;
 import com.golemlogix.init.ModItems;
+import com.golemlogix.system.GolemNetwork;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
+import it.unimi.dsi.fastutil.longs.Long2BooleanOpenHashMap;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.model.geom.ModelLayers;
-import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.block.BlockRenderDispatcher;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
-import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import net.minecraft.client.renderer.block.BlockRenderDispatcher;
-import com.golemlogix.system.GolemNetwork;
+import net.minecraft.util.Mth;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.BarrelBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -57,6 +59,17 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
     public static final net.minecraft.client.resources.model.ModelResourceLocation LAMP_GLASS_BASIC = plugModel("basic_snow_pipe_lamp_glass");
     public static final net.minecraft.client.resources.model.ModelResourceLocation LAMP_GLASS_DENSE = plugModel("dense_frost_pipe_lamp_glass");
 
+    private static final Direction[] DIRS = Direction.values();
+    private static final Vector3f UP = new Vector3f(0f, 1f, 0f);
+    private static final Vector3f ARM_FORWARD = new Vector3f(0f, -0.20f, 0.98f).normalize();
+    private static final SnowmanPuppet.Pose TURN_POSE =
+            new SnowmanPuppet.Pose(0f, 0f, 0f, 0f, SnowmanPuppet.REST_LEFT, SnowmanPuppet.REST_RIGHT);
+    private static final CopperGolemPuppet.Arms OPEN_ARMS = new CopperGolemPuppet.Arms(0.1f, -0.55f, 0.1f, 0.55f, 0f);
+    private static final Vector3f FEET_POS = new Vector3f();
+    private static final Vector3f GOLEM_POS = new Vector3f();
+    private static final Vector3f HAND_L = new Vector3f();
+    private static final Vector3f HAND_R = new Vector3f();
+
     private static net.minecraft.client.resources.model.ModelResourceLocation plugModel(String name) {
         return net.minecraft.client.resources.model.ModelResourceLocation.standalone(
                 ResourceLocation.fromNamespaceAndPath(com.golemlogix.GolemLogixMod.MOD_ID, "block/" + name));
@@ -67,30 +80,89 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
         return 64;
     }
 
-    private static final class WarehouseKey {
-        final long pos;
-        final int dir;
-
-        WarehouseKey(BlockPos p, Direction d) {
-            this.pos = p.asLong();
-            this.dir = d.ordinal();
+    @Override
+    public boolean shouldRender(PipeBlockEntity be, Vec3 cameraPosition) {
+        if (!BlockEntityRenderer.super.shouldRender(be, cameraPosition)) {
+            return false;
         }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof WarehouseKey that)) return false;
-            return pos == that.pos && dir == that.dir;
+        Level level = be.getLevel();
+        if (level == null) {
+            return false;
         }
-
-        @Override
-        public int hashCode() {
-            return Long.hashCode(pos) * 31 + dir;
+        BlockState state = be.getBlockState();
+        if (terminalMask(be, state) != 0 || SnowPipeBlock.hasLamp(state, be.getBlockPos())) {
+            return true;
         }
+        return state.hasProperty(GolemProperties.ACTIVE)
+                && state.getValue(GolemProperties.ACTIVE)
+                && PipeRunners.mayVisit(level, be.getBlockPos(), level.getGameTime());
     }
 
-    private static final Map<WarehouseKey, Boolean> WAREHOUSE_CACHE = new HashMap<>();
+    private static final Long2BooleanOpenHashMap[] WAREHOUSE_CACHE = new Long2BooleanOpenHashMap[6];
+    static {
+        for (int i = 0; i < WAREHOUSE_CACHE.length; i++) {
+            WAREHOUSE_CACHE[i] = new Long2BooleanOpenHashMap();
+        }
+    }
+    private static int warehouseCacheSize = 0;
+    private static WeakReference<Level> warehouseLevel = new WeakReference<>(null);
     private static long lastCacheClearTime = 0;
+
+    private static void clearWarehouseCache() {
+        for (Long2BooleanOpenHashMap map : WAREHOUSE_CACHE) {
+            map.clear();
+        }
+        warehouseCacheSize = 0;
+    }
+
+    /** Clears static client-side pipe caches (warehouse election and cargo samples) on world/dimension unload. */
+    public static void clearCaches() {
+        clearWarehouseCache();
+        warehouseLevel = new WeakReference<>(null);
+        lastCacheClearTime = 0;
+        CARGO_POOLS.clear();
+        cargoLevel = new WeakReference<>(null);
+    }
+
+    /** Bitmask of terminal directions ({@code 1 << dir.ordinal()}); avoids list/array allocations per pipe. */
+    private static int terminalMask(PipeBlockEntity be, BlockState state) {
+        if (!(state.getBlock() instanceof SnowPipeBlock)) {
+            return 0;
+        }
+        int mask = 0;
+        int pipeLinks = 0;
+        Direction singlePipeDir = null;
+        int anyLinks = 0;
+        Direction onlyLinkDir = null;
+        for (int i = 0; i < DIRS.length; i++) {
+            Direction d = DIRS[i];
+            if (be.isPlugged(d)) {
+                mask |= 1 << i;
+            }
+            SnowPipeBlock.Link link = SnowPipeBlock.link(state, d);
+            if (link == SnowPipeBlock.Link.PIPE) {
+                pipeLinks++;
+                singlePipeDir = d;
+            }
+            if (link != SnowPipeBlock.Link.NONE) {
+                anyLinks++;
+                onlyLinkDir = d;
+            }
+        }
+        if (pipeLinks == 1) {
+            Direction deadEnd = singlePipeDir.getOpposite();
+            if (SnowPipeBlock.link(state, deadEnd) == SnowPipeBlock.Link.NONE) {
+                mask |= 1 << deadEnd.ordinal();
+            }
+        } else if (pipeLinks == 0 && anyLinks == 1) {
+            // a single pipe: a plug only on the blind end, if it has one exit (otherwise it would close off a device)
+            Direction deadEnd = onlyLinkDir.getOpposite();
+            if (SnowPipeBlock.link(state, deadEnd) == SnowPipeBlock.Link.NONE) {
+                mask |= 1 << deadEnd.ordinal();
+            }
+        }
+        return mask;
+    }
 
     /**
      * Returns the dead end / terminal directions of this pipe:
@@ -99,38 +171,11 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
      * 3. A single pipe (no links) gets a terminal on its north side.
      */
     public static List<Direction> getTerminalDirections(PipeBlockEntity be, BlockState state) {
+        int mask = terminalMask(be, state);
         List<Direction> terminals = new ArrayList<>(2);
-        for (Direction d : Direction.values()) {
-            if (be.isPlugged(d)) {
-                terminals.add(d);
-            }
-        }
-        int pipeLinks = 0;
-        Direction singlePipeDir = null;
-        for (Direction d : Direction.values()) {
-            if (SnowPipeBlock.link(state, d) == SnowPipeBlock.Link.PIPE) {
-                pipeLinks++;
-                singlePipeDir = d;
-            }
-        }
-        if (pipeLinks == 1) {
-            Direction deadEnd = singlePipeDir.getOpposite();
-            if (SnowPipeBlock.link(state, deadEnd) == SnowPipeBlock.Link.NONE && !terminals.contains(deadEnd)) {
-                terminals.add(deadEnd);
-            }
-        } else if (pipeLinks == 0) {
-            // a single pipe: a plug only on the blind end, if it has one exit (otherwise it would close off a device)
-            Direction only = null;
-            int links = 0;
-            for (Direction d : Direction.values()) {
-                if (SnowPipeBlock.linked(state, d)) {
-                    links++;
-                    only = d;
-                }
-            }
-            if (links == 1 && SnowPipeBlock.link(state, only.getOpposite()) == SnowPipeBlock.Link.NONE
-                    && !terminals.contains(only.getOpposite())) {
-                terminals.add(only.getOpposite());
+        for (int i = 0; i < DIRS.length; i++) {
+            if ((mask & (1 << i)) != 0) {
+                terminals.add(DIRS[i]);
             }
         }
         return terminals;
@@ -147,14 +192,16 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
             return false;
         }
         long gameTime = level.getGameTime();
-        if (gameTime - lastCacheClearTime > 40L || WAREHOUSE_CACHE.size() > 1024) {
-            WAREHOUSE_CACHE.clear();
+        if (warehouseLevel.get() != level || gameTime < lastCacheClearTime
+                || gameTime - lastCacheClearTime > 40L || warehouseCacheSize > 1024) {
+            clearWarehouseCache();
+            warehouseLevel = new WeakReference<>(level);
             lastCacheClearTime = gameTime;
         }
-        WarehouseKey key = new WarehouseKey(pos, dir);
-        Boolean cached = WAREHOUSE_CACHE.get(key);
-        if (cached != null) {
-            return cached;
+        Long2BooleanOpenHashMap byDir = WAREHOUSE_CACHE[dir.ordinal()];
+        long key = pos.asLong();
+        if (byDir.containsKey(key)) {
+            return byDir.get(key);
         }
 
         long myScore = getWarehouseScore(pos, dir);
@@ -162,9 +209,9 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
 
         // Check the other sides of the same block (if one block has several dead ends)
         if (level.getBlockEntity(pos) instanceof PipeBlockEntity thisBe) {
-            List<Direction> myTerminals = getTerminalDirections(thisBe, thisBe.getBlockState());
-            for (Direction otherDir : myTerminals) {
-                if (otherDir != dir && getWarehouseScore(pos, otherDir) < myScore) {
+            int mask = terminalMask(thisBe, thisBe.getBlockState());
+            for (int i = 0; i < DIRS.length; i++) {
+                if ((mask & (1 << i)) != 0 && DIRS[i] != dir && getWarehouseScore(pos, DIRS[i]) < myScore) {
                     isSmallest = false;
                     break;
                 }
@@ -183,10 +230,9 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
                     }
                     mpos.set(pos.getX() + dx, pos.getY() + dy, pos.getZ() + dz);
                     if (level.getBlockEntity(mpos) instanceof PipeBlockEntity otherBe) {
-                        List<Direction> otherTerminals = getTerminalDirections(otherBe, otherBe.getBlockState());
-                        for (Direction otherDir : otherTerminals) {
-                            long otherScore = getWarehouseScore(mpos, otherDir);
-                            if (otherScore < myScore) {
+                        int mask = terminalMask(otherBe, otherBe.getBlockState());
+                        for (int i = 0; i < DIRS.length; i++) {
+                            if ((mask & (1 << i)) != 0 && getWarehouseScore(mpos, DIRS[i]) < myScore) {
                                 isSmallest = false;
                                 break;
                             }
@@ -196,7 +242,8 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
             }
         }
 
-        WAREHOUSE_CACHE.put(key, isSmallest);
+        byDir.put(key, isSmallest);
+        warehouseCacheSize++;
         return isSmallest;
     }
 
@@ -320,19 +367,30 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
 
     /** Plugs on closed sides and pipe dead ends: a north-facing model turned towards its side. */
     private static void plugs(PipeBlockEntity be, BlockState state, PoseStack pose, MultiBufferSource buffers, int light) {
-        List<Direction> terminals = getTerminalDirections(be, state);
-        if (terminals.isEmpty()) {
+        int mask = terminalMask(be, state);
+        if (mask == 0) {
             return;
         }
         boolean dense = state.getBlock() instanceof SnowPipeBlock p && p.isDense();
         var mc = Minecraft.getInstance();
-        var plugModel = mc.getModelManager().getModel(dense ? PLUG_DENSE : PLUG_BASIC);
-        var dockModel = mc.getModelManager().getModel(dense ? DOCK_DENSE : DOCK_BASIC);
+        BakedModel plugModel = null;
+        BakedModel dockModel = null;
         var renderer = mc.getBlockRenderer().getModelRenderer();
         var dispatcher = mc.getBlockRenderer();
-        for (net.minecraft.core.Direction d : terminals) {
+        for (int i = 0; i < DIRS.length; i++) {
+            if ((mask & (1 << i)) == 0) {
+                continue;
+            }
+            Direction d = DIRS[i];
             boolean warehouse = be.getLevel() != null && isWarehouse(be.getLevel(), be.getBlockPos(), d);
-            var model = warehouse ? dockModel : plugModel;
+            BakedModel model;
+            if (warehouse) {
+                if (dockModel == null) dockModel = mc.getModelManager().getModel(dense ? DOCK_DENSE : DOCK_BASIC);
+                model = dockModel;
+            } else {
+                if (plugModel == null) plugModel = mc.getModelManager().getModel(dense ? PLUG_DENSE : PLUG_BASIC);
+                model = plugModel;
+            }
             pose.pushPose();
             pose.translate(0.5, 0.5, 0.5);
             switch (d) {
@@ -377,16 +435,14 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
                 OverlayTexture.NO_OVERLAY, net.neoforged.neoforge.client.model.data.ModelData.EMPTY, RenderType.cutout());
         // the digits face east, in front of the tubes' mesh planes; seen from there the tens tube is on the left (south)
         int load = Math.min(99, be.lampLoad());
-        int color = com.golemlogix.client.render.NixieDigits.loadColor(load, be.lampCapacity());
+        int color = NixieDigits.loadColor(load, be.lampCapacity());
         // Outside the translucent glass wall (x = 16.2 / 18.3) so 1.21.1 translucent glass sorting doesn't swallow emissive digits
         float x = (dense ? 14.7f : 12.6f) + 3.65f;
-        Vector3f right = new Vector3f(0, 0, -1), up = new Vector3f(0, 1, 0);
+        VertexConsumer nixie = NixieDigits.buffer(buffers);
         if (load >= 10) {
-            com.golemlogix.client.render.NixieDigits.digit(pose.last(), buffers, load / 10, new Vector3f(x, 8f, 9.35f), 2.2f, 4.4f,
-                    right, up, color);
+            NixieDigits.digit(pose.last(), nixie, load / 10, x, 8f, 9.35f, 2.2f, 4.4f, 0f, 0f, -1f, 0f, 1f, 0f, color);
         }
-        com.golemlogix.client.render.NixieDigits.digit(pose.last(), buffers, load % 10, new Vector3f(x, 8f, 6.65f), 2.2f, 4.4f,
-                right, up, color);
+        NixieDigits.digit(pose.last(), nixie, load % 10, x, 8f, 6.65f, 2.2f, 4.4f, 0f, 0f, -1f, 0f, 1f, 0f, color);
         // under Iris/Oculus shader packs, translucent glass can wash out or hide emissive digits behind it: skip glass then
         if (!JarWholeRenderer.shaderPackActive()) {
             var glassModel = mc.getModelManager().getModel(dense ? LAMP_GLASS_DENSE : LAMP_GLASS_BASIC);
@@ -406,7 +462,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
         if (SnowPipeBlock.hasLamp(state, be.getBlockPos())) {
             heatLamp(be, state, pose, buffers, light);
         }
-        if (!state.getValue(GolemProperties.ACTIVE)) {
+        if (!state.hasProperty(GolemProperties.ACTIVE) || !state.getValue(GolemProperties.ACTIVE)) {
             return;
         }
         float time = (be.getLevel().getGameTime() % 24000L) + partialTick;
@@ -447,7 +503,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
             // Oriented strictly along the pipe axis (baseYaw)
             pose.pushPose();
             pose.mulPose(Axis.YP.rotationDegrees(baseYaw));
-            renderMechanicalArmAndGolem(pose, dispatcher, buffers, itemRenderer, be.getLevel(), outItem, dense, turn, time, light, overlay, spot.heading());
+            renderMechanicalArmAndGolem(pose, dispatcher, buffers, itemRenderer, be.getLevel(), outItem, dense, turn, time, light, overlay);
             pose.popPose();
 
             // During the snowman's calm turn (turn in 0..1):
@@ -474,12 +530,12 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
             pose.translate(0, Math.abs(step) * 0.012, 0);
         }
 
-        boolean isVertical = spot.heading().getAxis() == Direction.Axis.Y;
         if (dense) {
             // a whole snowman: the snow golem model with a pumpkin head; stick arms
             final float s = 0.2f;
-            final float feet = isVertical ? -0.16f : -0.355f;
+            final float feet = vertical ? -0.16f : -0.355f;
             final float boxSize = 0.42f; // in the golem puppet's coordinates
+            FEET_POS.set(0f, feet, 0f);
 
             if (!turning) {
                 // Normal run: the item morphs into a crate right in the hands in the middle of the path (tripProgress ~ 0.5)
@@ -490,7 +546,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
                 boolean beforeMorph = tripProgress < morphStart;
                 boolean afterMorph = tripProgress > morphEnd;
 
-                SnowmanPuppet.render(pose, buffers, light, new Vector3f(0f, feet, 0f), 180f, s, SnowmanPuppet.Head.PUMPKIN,
+                SnowmanPuppet.render(pose, buffers, light, FEET_POS, 180f, s, SnowmanPuppet.Head.PUMPKIN,
                         SnowmanPuppet.Pose.holding(Math.abs(step) * 0.6f),
                         hp -> {
                             if (beforeMorph) {
@@ -517,16 +573,16 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
                     float pDown = turn / 0.35f;
                     float handY = Mth.lerp(pDown, 13.5f, 3.5f);
                     float handZ = Mth.lerp(pDown, 9.0f, 11.5f);
-                    Vector3f lHand = new Vector3f(3.2f, handY, handZ);
-                    Vector3f rHand = new Vector3f(-3.2f, handY, handZ);
-                    SnowmanPuppet.Pose downPose = new SnowmanPuppet.Pose(0f, pDown * 0.12f, 0f, pDown * 20f, lHand, rHand);
+                    HAND_L.set(3.2f, handY, handZ);
+                    HAND_R.set(-3.2f, handY, handZ);
+                    SnowmanPuppet.Pose downPose = new SnowmanPuppet.Pose(0f, pDown * 0.12f, 0f, pDown * 20f, HAND_L, HAND_R);
 
                     float cargoY = Mth.lerp(pDown, 0f, -0.60f);
                     float cargoZ = Mth.lerp(pDown, 0f, 0.12f);
                     // When it touches the floor the item dissolves into the station
                     float itemScale = pDown > 0.75f ? (1f - (pDown - 0.75f) / 0.25f) * 0.44f : 0.44f;
 
-                    SnowmanPuppet.render(pose, buffers, light, new Vector3f(0f, feet, 0f), 180f, s, SnowmanPuppet.Head.PUMPKIN,
+                    SnowmanPuppet.render(pose, buffers, light, FEET_POS, 180f, s, SnowmanPuppet.Head.PUMPKIN,
                             downPose,
                             hp -> {
                                 if (itemScale > 0.01f) {
@@ -535,16 +591,17 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
                             });
                 } else if (turn < 0.65f) {
                     // PHASE 2: Turning with empty hands (the old item is handed over, the new one is still with the copper golem above)
-                    SnowmanPuppet.Pose turnPose = new SnowmanPuppet.Pose(0f, 0f, 0f, 0f, SnowmanPuppet.REST_LEFT, SnowmanPuppet.REST_RIGHT);
-                    SnowmanPuppet.render(pose, buffers, light, new Vector3f(0f, feet, 0f), 180f, s, SnowmanPuppet.Head.PUMPKIN,
-                            turnPose, null);
+                    SnowmanPuppet.render(pose, buffers, light, FEET_POS, 180f, s, SnowmanPuppet.Head.PUMPKIN,
+                            TURN_POSE, null);
                 } else if (turn < 0.80f) {
                     // PHASE 3a: The snowman throws its arms up towards the item falling from above
                     float pReach = (turn - 0.65f) / 0.15f;
                     float handY = Mth.lerp(pReach, 9.0f, 18.0f);
                     float handZ = Mth.lerp(pReach, 1.5f, 7.5f);
-                    SnowmanPuppet.Pose reachPose = new SnowmanPuppet.Pose(0f, 0f, 0f, -14f, new Vector3f(3.2f, handY, handZ), new Vector3f(-3.2f, handY, handZ));
-                    SnowmanPuppet.render(pose, buffers, light, new Vector3f(0f, feet, 0f), 180f, s, SnowmanPuppet.Head.PUMPKIN,
+                    HAND_L.set(3.2f, handY, handZ);
+                    HAND_R.set(-3.2f, handY, handZ);
+                    SnowmanPuppet.Pose reachPose = new SnowmanPuppet.Pose(0f, 0f, 0f, -14f, HAND_L, HAND_R);
+                    SnowmanPuppet.render(pose, buffers, light, FEET_POS, 180f, s, SnowmanPuppet.Head.PUMPKIN,
                             reachPose, null);
                 } else {
                     // PHASE 3b: Caught it! Springy absorption of the impact and settling the item into the hands
@@ -552,9 +609,11 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
                     float squash = (float) Math.sin((1f - pSettle) * Math.PI) * 0.14f;
                     float handY = Mth.lerp(pSettle, 18.0f, 13.5f);
                     float handZ = Mth.lerp(pSettle, 7.5f, 9.0f);
-                    SnowmanPuppet.Pose catchPose = new SnowmanPuppet.Pose(0f, squash, 0f, Mth.lerp(pSettle, -14f, 8f), new Vector3f(3.2f, handY, handZ), new Vector3f(-3.2f, handY, handZ));
+                    HAND_L.set(3.2f, handY, handZ);
+                    HAND_R.set(-3.2f, handY, handZ);
+                    SnowmanPuppet.Pose catchPose = new SnowmanPuppet.Pose(0f, squash, 0f, Mth.lerp(pSettle, -14f, 8f), HAND_L, HAND_R);
 
-                    SnowmanPuppet.render(pose, buffers, light, new Vector3f(0f, feet, 0f), 180f, s, SnowmanPuppet.Head.PUMPKIN,
+                    SnowmanPuppet.render(pose, buffers, light, FEET_POS, 180f, s, SnowmanPuppet.Head.PUMPKIN,
                             catchPose,
                             hp -> renderItem(itemRenderer, buffers, be.getLevel(), outItem, hp, 0, 0, 0, 0.44f, time * 3f, light, overlay));
                 }
@@ -628,15 +687,11 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
      */
     private static void renderMechanicalArmAndGolem(PoseStack pose, BlockRenderDispatcher dispatcher, MultiBufferSource buffers,
                                                    ItemRenderer itemRenderer, @Nullable Level level, ItemStack outItem,
-                                                   boolean dense, float turn, float time, int light, int overlay, Direction heading) {
+                                                   boolean dense, float turn, float time, int light, int overlay) {
         float ceilingY = dense ? 0.28f : 0.165f;
         float targetFeetY = dense ? 0.02f : 0.01f;
         float retractedFeetY = dense ? 0.10f : 0.07f;
         float golemScale = dense ? 0.095f : 0.055f;
-
-        boolean isVertical = heading.getAxis() == Direction.Axis.Y;
-        float railSpan = dense ? 0.09f : 0.055f;
-        float railY = ceilingY + 0.02f;
         float railThick = dense ? 0.035f : 0.022f;
 
         // Compact ceiling flange mounting the manipulator carriage
@@ -677,13 +732,10 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
         // 6. Hanging copper golem (Copper Golem Puppet)
         boolean holding = turn < 0.70f;
         CopperGolemPuppet.Anim golemAnim = new CopperGolemPuppet.Anim(time * 0.1f, false, holding, 0.12f);
-        CopperGolemPuppet.Arms arms = holding ? null : new CopperGolemPuppet.Arms(0.1f, -0.55f, 0.1f, 0.55f, 0f);
+        CopperGolemPuppet.Arms arms = holding ? null : OPEN_ARMS;
 
-        Vector3f golemPos = new Vector3f(0f, currentFeetY, 0f);
-        Vector3f forward = new Vector3f(0f, -0.20f, 0.98f).normalize();
-        Vector3f up = new Vector3f(0f, 1f, 0f);
-
-        CopperGolemPuppet.render(pose, buffers, light, golemPos, forward, up, golemScale, golemAnim, 0,
+        GOLEM_POS.set(0f, currentFeetY, 0f);
+        CopperGolemPuppet.render(pose, buffers, light, GOLEM_POS, ARM_FORWARD, UP, golemScale, golemAnim, 0,
                 hp -> {
                     // Cargo in the copper golem's hands until the drop
                     float cargoScale = dense ? 0.28f : 0.16f;
@@ -706,17 +758,22 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
         }
     }
 
+    private static BlockState[] cargoBoxes;
+
     // The set of available courier transport crates
     private static BlockState getCargoBox(int cargoId) {
-        final BlockState[] BOX_TEMPLATES = {
-                Blocks.BARREL.defaultBlockState(),
-                Blocks.BARREL.defaultBlockState(),
-                Blocks.COPPER_BLOCK.defaultBlockState(),
-                Blocks.BARREL.defaultBlockState(),
-                Blocks.CHEST.defaultBlockState(),
-                Blocks.BARREL.defaultBlockState()
-        };
-        return BOX_TEMPLATES[Math.floorMod(cargoId, BOX_TEMPLATES.length)];
+        if (cargoBoxes == null) {
+            BlockState barrel = Blocks.BARREL.defaultBlockState();
+            cargoBoxes = new BlockState[]{
+                    barrel,
+                    barrel,
+                    Blocks.COPPER_BLOCK.defaultBlockState(),
+                    barrel,
+                    Blocks.CHEST.defaultBlockState(),
+                    barrel
+            };
+        }
+        return cargoBoxes[Math.floorMod(cargoId, cargoBoxes.length)];
     }
 
     private static final List<ItemStack> FLUID_BUCKETS = List.of(
@@ -755,15 +812,20 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
     }
 
     private static final Map<BlockPos, CargoPool> CARGO_POOLS = new HashMap<>();
+    private static WeakReference<Level> cargoLevel = new WeakReference<>(null);
 
     private static ItemStack getCargoItem(int cargoId, @Nullable Level level, @Nullable BlockPos pos) {
         List<ItemStack> netItems = null;
         List<ItemStack> netFluids = null;
 
         if (level != null && pos != null) {
+            if (cargoLevel.get() != level) {
+                CARGO_POOLS.clear();
+                cargoLevel = new WeakReference<>(level);
+            }
             long now = level.getGameTime();
             CargoPool pool = CARGO_POOLS.get(pos);
-            if (pool == null || pool.expireTime < now) {
+            if (pool == null || pool.expireTime < now || pool.expireTime - now > 40L) {
                 if (CARGO_POOLS.size() > 512) {
                     CARGO_POOLS.clear();
                 }
@@ -777,8 +839,10 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
                         pool.fluids.addAll(net.core().cargoFluids());
                     }
                     if (pool.items.isEmpty()) {
-                        for (Direction dir : Direction.values()) {
-                            var nbe = level.getBlockEntity(pos.relative(dir));
+                        BlockPos.MutableBlockPos mpos = new BlockPos.MutableBlockPos();
+                        for (Direction dir : DIRS) {
+                            mpos.setWithOffset(pos, dir);
+                            var nbe = level.getBlockEntity(mpos);
                             if (nbe instanceof Container container && container.getContainerSize() > 0) {
                                 for (int s = 0; s < container.getContainerSize(); s++) {
                                     ItemStack st = container.getItem(s);

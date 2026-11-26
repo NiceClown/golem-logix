@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -28,6 +29,10 @@ import java.util.function.Consumer;
  */
 public final class SnowmanPuppet {
     private static final ResourceLocation TEXTURE = ResourceLocation.withDefaultNamespace("textures/entity/snow_golem.png");
+    private static final Quaternionf ROT_X_180 = Axis.XP.rotationDegrees(180f);
+    private static final Quaternionf ROT_Y_180 = Axis.YP.rotationDegrees(180f);
+    private static final Vector3f SCRATCH_DIR = new Vector3f();
+    private static final Quaternionf SCRATCH_QUAT = new Quaternionf();
     /** Shoulders (the left one is +X: facing +Z, the snowman's left arm points to +X). */
     private static final Vector3f LEFT_SHOULDER = new Vector3f(5f, 18f, 0f), RIGHT_SHOULDER = new Vector3f(-5f, 18f, 0f);
     /** The hands wrap a crate in front of the chest: palms on the sides of the crate. */
@@ -53,21 +58,30 @@ public final class SnowmanPuppet {
         }
     }
 
-    private static ModelPart root;
+    private static EntityModelSet bakedFrom;
+    private static ModelPart root, headPart, upperPart, lowerPart, leftArmPart, rightArmPart;
 
     private SnowmanPuppet() {
     }
 
-    private static ModelPart model() {
-        if (root == null) {
-            root = Minecraft.getInstance().getEntityModels().bakeLayer(ModelLayers.SNOW_GOLEM);
+    private static void ensureModel() {
+        EntityModelSet current = Minecraft.getInstance().getEntityModels();
+        if (root == null || bakedFrom != current) {
+            bakedFrom = current;
+            root = current.bakeLayer(ModelLayers.SNOW_GOLEM);
+            headPart = root.getChild("head");
+            upperPart = root.getChild("upper_body");
+            lowerPart = root.getChild("lower_body");
+            leftArmPart = root.getChild("left_arm");
+            rightArmPart = root.getChild("right_arm");
         }
-        return root;
     }
 
     /** Reset the cache on resource reload. */
     public static void invalidate() {
+        bakedFrom = null;
         root = null;
+        headPart = upperPart = lowerPart = leftArmPart = rightArmPart = null;
     }
 
     /**
@@ -77,13 +91,7 @@ public final class SnowmanPuppet {
      */
     public static void render(PoseStack pose, MultiBufferSource buffers, int light, Vector3f pos, float yawDeg, float scale, Head head,
                               Pose p, @Nullable Consumer<PoseStack> held) {
-        ModelPart m = model();
-        ModelPart headPart = m.getChild("head");
-        ModelPart upper = m.getChild("upper_body");
-        ModelPart lower = m.getChild("lower_body");
-        ModelPart leftArm = m.getChild("left_arm");
-        ModelPart rightArm = m.getChild("right_arm");
-
+        ensureModel();
         pose.pushPose();
         pose.translate(pos.x, pos.y, pos.z);
         pose.mulPose(Axis.YP.rotationDegrees(yawDeg));
@@ -95,34 +103,26 @@ public final class SnowmanPuppet {
         VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
 
         // arms: in the "upright" frame from the shoulder to the hand (the model's stick lies along +X)
-        arm(pose, vc, light, leftArm, LEFT_SHOULDER, p.leftHand());
-        arm(pose, vc, light, rightArm, RIGHT_SHOULDER, p.rightHand());
-        if (held != null) {
-            pose.pushPose();
-            pose.translate(HOLD_CENTER.x / 16f, HOLD_CENTER.y / 16f, HOLD_CENTER.z / 16f);
-            held.accept(pose);
-            pose.popPose();
-            // held may have requested another RenderType, finishing the shared snowman buffer
-            vc = buffers.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
-        }
+        arm(pose, vc, light, leftArmPart, LEFT_SHOULDER, p.leftHand());
+        arm(pose, vc, light, rightArmPart, RIGHT_SHOULDER, p.rightHand());
 
-        // body and head: in the model frame (Y down, face to -Z, feet at y = 24)
+        // body and head: in the model frame (Y down, face to -Z, feet at y = 24); finish all TEXTURE draws before switching buffers
         pose.pushPose();
-        pose.mulPose(Axis.XP.rotationDegrees(180f));
+        pose.mulPose(ROT_X_180);
         pose.translate(0f, -1.5f, 0f);
         headPart.yRot = -p.headYaw() * ((float) Math.PI / 180f);
         headPart.xRot = -p.headPitch() * ((float) Math.PI / 180f);
-        upper.yRot = headPart.yRot * 0.25f;
-        lower.render(pose, vc, light, OverlayTexture.NO_OVERLAY);
-        upper.render(pose, vc, light, OverlayTexture.NO_OVERLAY);
+        upperPart.yRot = headPart.yRot * 0.25f;
+        lowerPart.render(pose, vc, light, OverlayTexture.NO_OVERLAY);
+        upperPart.render(pose, vc, light, OverlayTexture.NO_OVERLAY);
         if (head == Head.SNOW) {
             headPart.render(pose, vc, light, OverlayTexture.NO_OVERLAY);
         } else {
             pose.pushPose();
             headPart.translateAndRotate(pose);
             pose.translate(0f, -4f / 16f, 0f);
-            pose.mulPose(Axis.XP.rotationDegrees(180f));
-            pose.mulPose(Axis.YP.rotationDegrees(180f));
+            pose.mulPose(ROT_X_180);
+            pose.mulPose(ROT_Y_180);
             var mc = Minecraft.getInstance();
             if (head == Head.PUMPKIN) {
                 pose.scale(0.625f, 0.625f, 0.625f);
@@ -140,18 +140,25 @@ public final class SnowmanPuppet {
             pose.popPose();
         }
         pose.popPose();
+
+        if (held != null) {
+            pose.pushPose();
+            pose.translate(HOLD_CENTER.x / 16f, HOLD_CENTER.y / 16f, HOLD_CENTER.z / 16f);
+            held.accept(pose);
+            pose.popPose();
+        }
         pose.popPose();
     }
 
     private static void arm(PoseStack pose, VertexConsumer vc, int light, ModelPart arm, Vector3f shoulder, Vector3f hand) {
-        Vector3f d = new Vector3f(hand).sub(shoulder);
+        Vector3f d = SCRATCH_DIR.set(hand).sub(shoulder);
         if (d.lengthSquared() < 1e-4f) {
             d.set(1f, 0f, 0f);
         }
         d.normalize();
         pose.pushPose();
         pose.translate(shoulder.x / 16f, shoulder.y / 16f, shoulder.z / 16f);
-        pose.mulPose(new Quaternionf().rotationTo(1f, 0f, 0f, d.x, d.y, d.z));
+        pose.mulPose(SCRATCH_QUAT.rotationTo(1f, 0f, 0f, d.x, d.y, d.z));
         arm.x = arm.y = arm.z = 0f;
         arm.xRot = arm.yRot = arm.zRot = 0f;
         arm.render(pose, vc, light, OverlayTexture.NO_OVERLAY);

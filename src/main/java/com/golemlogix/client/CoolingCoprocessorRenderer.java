@@ -37,13 +37,14 @@ public class CoolingCoprocessorRenderer implements BlockEntityRenderer<CoolingCo
         float squeeze = (1f - Mth.cos(phase)) * 0.5f * speed;
         BakedModel fin = Minecraft.getInstance().getModelManager().getModel(FIN);
         var renderer = Minecraft.getInstance().getBlockRenderer().getModelRenderer();
+        var vc = buffers.getBuffer(RenderType.cutout());
         for (int i = 0; i < REST.length; i++) {
             float y = REST[i] + (CENTER - REST[i]) * 0.7f * squeeze;
             // the outer fins lag a little: a wave across the radiator
             float lag = (Mth.sin(phase - i * 0.35f) * 0.35f) * speed;
             pose.pushPose();
             pose.translate(0, (y + lag) / 16f, 0);
-            renderer.renderModel(pose.last(), buffers.getBuffer(RenderType.cutout()), null, fin, 1f, 1f, 1f,
+            renderer.renderModel(pose.last(), vc, null, fin, 1f, 1f, 1f,
                     light, OverlayTexture.NO_OVERLAY, ModelData.EMPTY, RenderType.cutout());
             pose.popPose();
         }

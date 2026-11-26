@@ -7,6 +7,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -35,8 +36,10 @@ public final class PipeRunners {
     /** Ticks per trip of a lonely pipe: 48% running, 52% turning at the station. */
     private static final int LONELY_TRIP = 60;
     private static final float LONELY_WALK = 0.48f;
+    private static final Direction[] DIRS = Direction.values();
 
     private static final Map<BlockPos, Component> CACHE = new HashMap<>();
+    private static WeakReference<Level> cachedLevel = new WeakReference<>(null);
 
     private PipeRunners() {
     }
@@ -66,6 +69,7 @@ public final class PipeRunners {
 
     public static void clear() {
         CACHE.clear();
+        cachedLevel = new WeakReference<>(null);
     }
 
     /** How far from the centre the station at the dead end in direction d stands. */
@@ -77,8 +81,11 @@ public final class PipeRunners {
         };
     }
 
-    /** Runner position in the pipe at pos at gameTime + partialTick, or null if it is in another pipe now. */
-    public static Spot locate(Level level, BlockPos pos, BlockState state, long gameTime, float partialTick) {
+    private static Component getOrBuild(Level level, BlockPos pos) {
+        if (cachedLevel.get() != level) {
+            CACHE.clear();
+            cachedLevel = new WeakReference<>(level);
+        }
         long now = level.getGameTime();
         Component comp = CACHE.get(pos);
         if (comp == null || comp.expires < now || comp.expires - now > LIFETIME * 2L) {
@@ -92,6 +99,31 @@ public final class PipeRunners {
             }
             CACHE.put(pos.immutable(), comp);
         }
+        return comp;
+    }
+
+    /**
+     * Quick check for renderer culling: returns true if the runner can possibly be inside {@code pos} at any
+     * partialTick in [0, 1] of {@code gameTime}.
+     */
+    public static boolean mayVisit(Level level, BlockPos pos, long gameTime) {
+        Component comp = getOrBuild(level, pos);
+        if (comp.period == 0) {
+            return true;
+        }
+        long cycleTicks = (long) TICKS_PER_BLOCK * comp.period;
+        long rem = Math.floorMod(gameTime, cycleTicks);
+        int i0 = (int) (rem / TICKS_PER_BLOCK);
+        if (pos.equals(comp.tour[i0]) || pos.equals(comp.tour[i0 + 1])) {
+            return true;
+        }
+        int i1 = (int) (((rem + 1L) % cycleTicks) / TICKS_PER_BLOCK);
+        return i1 != i0 && (pos.equals(comp.tour[i1]) || pos.equals(comp.tour[i1 + 1]));
+    }
+
+    /** Runner position in the pipe at pos at gameTime + partialTick, or null if it is in another pipe now. */
+    public static Spot locate(Level level, BlockPos pos, BlockState state, long gameTime, float partialTick) {
+        Component comp = getOrBuild(level, pos);
         if (comp.period == 0) {
             return lonely(state, gameTime, partialTick);
         }
@@ -166,17 +198,20 @@ public final class PipeRunners {
      * to the blind end) and turns around calmly at every station. The path is continuous.
      */
     private static Spot lonely(BlockState state, long gameTime, float partialTick) {
-        List<Direction> stations = new ArrayList<>(6);
-        for (Direction dir : Direction.values()) {
-            if (SnowPipeBlock.linked(state, dir)) {
-                stations.add(dir);
+        int mask = 0;
+        int count = 0;
+        Direction first = null;
+        for (int i = 0; i < DIRS.length; i++) {
+            if (SnowPipeBlock.linked(state, DIRS[i])) {
+                mask |= 1 << i;
+                if (count == 0) {
+                    first = DIRS[i];
+                }
+                count++;
             }
         }
-        if (stations.isEmpty()) {
+        if (count == 0) {
             return null;
-        }
-        if (stations.size() == 1) {
-            stations.add(stations.get(0).getOpposite());
         }
         long k = Math.floorDiv(gameTime, LONELY_TRIP);
         float phase = (float) ((Math.floorMod(gameTime, LONELY_TRIP) + (double) partialTick) / LONELY_TRIP);
@@ -184,9 +219,11 @@ public final class PipeRunners {
             phase -= 1f;
             k++;
         }
-        int n = stations.size();
-        Direction from = stations.get((int) Math.floorMod(k, n));
-        Direction to = stations.get((int) Math.floorMod(k + 1, n));
+        int n = count == 1 ? 2 : count;
+        int fromIdx = (int) Math.floorMod(k, n);
+        int toIdx = (int) Math.floorMod(k + 1, n);
+        Direction from = count == 1 ? (fromIdx == 0 ? first : first.getOpposite()) : nthDir(mask, fromIdx);
+        Direction to = count == 1 ? (toIdx == 0 ? first : first.getOpposite()) : nthDir(mask, toIdx);
         int trip = (int) k;
         if (phase >= LONELY_WALK) {
             // turning at station "to": this is the next turn, its cargo is handed over and a new one is taken
@@ -208,18 +245,32 @@ public final class PipeRunners {
         return new Spot(to.getStepX() * dist, to.getStepY() * dist, to.getStepZ() * dist, to, -1f, trip, trip + 1, t);
     }
 
+    private static Direction nthDir(int mask, int index) {
+        int seen = 0;
+        for (int i = 0; i < DIRS.length; i++) {
+            if ((mask & (1 << i)) != 0) {
+                if (seen == index) {
+                    return DIRS[i];
+                }
+                seen++;
+            }
+        }
+        return Direction.NORTH;
+    }
+
     private static Component build(Level level, BlockPos origin) {
+        BlockPos root = origin.immutable();
         Map<BlockPos, EnumMap<Direction, BlockPos>> graph = new HashMap<>();
         ArrayDeque<BlockPos> queue = new ArrayDeque<>();
-        queue.add(origin.immutable());
-        graph.put(origin.immutable(), new EnumMap<>(Direction.class));
+        queue.add(root);
+        graph.put(root, new EnumMap<>(Direction.class));
         while (!queue.isEmpty() && graph.size() < MAX_PIPES) {
             BlockPos p = queue.poll();
             BlockState ps = level.getBlockState(p);
             if (!(ps.getBlock() instanceof SnowPipeBlock)) {
                 continue;
             }
-            for (Direction dir : Direction.values()) {
+            for (Direction dir : DIRS) {
                 if (SnowPipeBlock.link(ps, dir) != SnowPipeBlock.Link.PIPE) {
                     continue;
                 }
@@ -241,7 +292,7 @@ public final class PipeRunners {
         }
         Component comp = new Component();
         if (graph.size() <= 1) {
-            comp.tour = new BlockPos[]{origin.immutable()};
+            comp.tour = new BlockPos[]{root};
             return comp;
         }
         // the start is the dead end with the smallest coordinates (or just the smallest pipe)

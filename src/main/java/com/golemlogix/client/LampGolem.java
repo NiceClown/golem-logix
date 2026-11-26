@@ -16,6 +16,9 @@ import org.joml.Vector3f;
  */
 public final class LampGolem {
     private static final ResourceLocation WHITE = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/bay_white.png");
+    private static final Vector3f UP = new Vector3f(0f, 1f, 0f);
+    private static final Vector3f SCRATCH_AT = new Vector3f();
+    private static final Vector3f SCRATCH_FWD = new Vector3f();
 
     private LampGolem() {
     }
@@ -33,8 +36,8 @@ public final class LampGolem {
         // standing still while working or failing, the golem looks at the viewer (at the model's -Z)
         float yaw = walking || state == 0 ? heading : 180f;
         float fx = Mth.sin(yaw * Mth.DEG_TO_RAD), fz = Mth.cos(yaw * Mth.DEG_TO_RAD);
-        Vector3f at = new Vector3f((originX - x) / 16f, y / 16f, z / 16f);
-        Vector3f forward = new Vector3f(-fx, 0f, fz);
+        SCRATCH_AT.set((originX - x) / 16f, y / 16f, z / 16f);
+        SCRATCH_FWD.set(-fx, 0f, fz);
         int color;
         boolean lit;
         switch (state) {
@@ -54,19 +57,20 @@ public final class LampGolem {
         }
         final int lampColor = color;
         final boolean lampLit = lit;
-        CopperGolemPuppet.render(pose, buffers, light, at, forward, new Vector3f(0f, 1f, 0f), 0.2f,
+        CopperGolemPuppet.render(pose, buffers, light, SCRATCH_AT, SCRATCH_FWD, UP, 0.2f,
                 new CopperGolemPuppet.Anim(stride * 3f, walking, true, 0f), 0, hp -> {
                     float h = 0.14f;
+                    PoseStack.Pose p = hp.last();
                     var solid = buffers.getBuffer(RenderType.entityCutoutNoCull(WHITE));
-                    Quads.box(solid, hp.last(), -h, -0.12f, -h, h, -0.05f, h, 0.5f, 0.5f, 0.5f, 0.5f, 0xFFB8862B, light);
-                    Quads.box(solid, hp.last(), -h * 0.8f, -0.05f, -h * 0.8f, h * 0.8f, 0.22f, h * 0.8f, 0.5f, 0.5f, 0.5f, 0.5f,
+                    Quads.box(solid, p, -h, -0.12f, -h, h, -0.05f, h, 0.5f, 0.5f, 0.5f, 0.5f, 0xFFB8862B, light);
+                    Quads.box(solid, p, -h * 0.8f, -0.05f, -h * 0.8f, h * 0.8f, 0.22f, h * 0.8f, 0.5f, 0.5f, 0.5f, 0.5f,
                             lampColor, lampLit ? LightTexture.FULL_BRIGHT : light);
-                    Quads.box(solid, hp.last(), -h, 0.22f, -h, h, 0.27f, h, 0.5f, 0.5f, 0.5f, 0.5f, 0xFFB8862B, light);
-                    Quads.box(solid, hp.last(), -0.02f, 0.27f, -0.02f, 0.02f, 0.36f, 0.02f, 0.5f, 0.5f, 0.5f, 0.5f, 0xFF7A5A1A, light);
+                    Quads.box(solid, p, -h, 0.22f, -h, h, 0.27f, h, 0.5f, 0.5f, 0.5f, 0.5f, 0xFFB8862B, light);
+                    Quads.box(solid, p, -0.02f, 0.27f, -0.02f, 0.02f, 0.36f, 0.02f, 0.5f, 0.5f, 0.5f, 0.5f, 0xFF7A5A1A, light);
                     if (lampLit) {
                         var glow = buffers.getBuffer(RenderType.eyes(WHITE));
                         float g = h * 1.6f;
-                        Quads.box(glow, hp.last(), -g, -0.1f, -g, g, 0.3f, g, 0.5f, 0.5f, 0.5f, 0.5f,
+                        Quads.box(glow, p, -g, -0.1f, -g, g, 0.3f, g, 0.5f, 0.5f, 0.5f, 0.5f,
                                 (0x60 << 24) | (lampColor & 0xFFFFFF), LightTexture.FULL_BRIGHT);
                     }
                 });
