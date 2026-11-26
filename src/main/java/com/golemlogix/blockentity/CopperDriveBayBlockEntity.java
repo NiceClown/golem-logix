@@ -11,7 +11,6 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
@@ -29,7 +28,6 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
         @Override
         public void setChanged() {
             super.setChanged();
-            updateMask();
             refreshVisuals();
         }
 
@@ -45,7 +43,10 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
         @Override
         public void stopOpen(net.minecraft.world.entity.ContainerUser user) {
             if (!(user.getLivingEntity() instanceof net.minecraft.world.entity.player.Player player) || !player.isSpectator()) {
-                viewers = Math.max(0, viewers - 1);
+                if (viewers == 0) {
+                    return;
+                }
+                viewers--;
                 signalViewers(viewers == 0);
             }
         }
@@ -124,12 +125,14 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
         return mask;
     }
 
-    /** Recomputes how the cabinet looks from outside and sends it to clients when it changes. */
+    /** Recomputes how the cabinet looks from outside and sends it to clients once when the mask or fill levels change. */
     public void refreshVisuals() {
+        int m = 0;
         int sig = 0;
         for (int i = 0; i < SLOTS; i++) {
             ItemStack d = container.getItem(i);
             if (!d.isEmpty()) {
+                m |= 1 << i;
                 int cap = Math.max(1, DiskStorage.capacity(d));
                 // the counter on the disk itself (the client sees it too)
                 long stored = MagneticDiskItem.getStoredCount(d);
@@ -137,23 +140,9 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
                 sig = sig * 31 + (i + 1) * 8 + level + 977 * BuiltInRegistries.ITEM.getId(d.getItem());
             }
         }
-        if (sig != visualSig) {
-            visualSig = sig;
-            if (level != null && !level.isClientSide()) {
-                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-            }
-        }
-    }
-
-    private void updateMask() {
-        int m = 0;
-        for (int i = 0; i < SLOTS; i++) {
-            if (!container.getItem(i).isEmpty()) {
-                m |= 1 << i;
-            }
-        }
-        if (m != mask) {
+        if (m != mask || sig != visualSig) {
             mask = m;
+            visualSig = sig;
             if (level != null && !level.isClientSide()) {
                 level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
             }
@@ -184,13 +173,7 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
     protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
         container.fromTag(tag.getListOrEmpty("Disks"), registries);
         priority = tag.getIntOr("Priority", 0);
-        int m = 0;
-        for (int i = 0; i < SLOTS; i++) {
-            if (!container.getItem(i).isEmpty()) {
-                m |= 1 << i;
-            }
-        }
-        mask = m;
+        refreshVisuals();
     }
 
     @Override
@@ -232,6 +215,11 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
     @Override
     public void handleUpdateTag(net.minecraft.world.level.storage.ValueInput input) {
         readUpdateTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    }
+
+    @Override
+    public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input) {
+        handleUpdateTag(input);
     }
 
     /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
