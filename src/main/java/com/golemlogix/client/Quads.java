@@ -30,24 +30,24 @@ public final class Quads {
      */
     public static void front(VertexConsumer vc, PoseStack.Pose pose, float cx, float cy, float z, float w, float h, float rot,
                              float u0, float v0, float u1, float v1, boolean flipX, int argb, int light) {
-        float hw = w / 2f, hh = h / 2f;
-        float c = (float) Math.cos(Math.toRadians(rot)), s = (float) Math.sin(Math.toRadians(rot));
-        float[][] corner = {{-hw, -hh}, {hw, -hh}, {hw, hh}, {-hw, hh}};
-        float[][] uv = {{u0, v1}, {u1, v1}, {u1, v0}, {u0, v0}};
-        if (flipX) {
-            float[] t = uv[0];
-            uv[0] = uv[1];
-            uv[1] = t;
-            t = uv[2];
-            uv[2] = uv[3];
-            uv[3] = t;
-        }
+        float hw = w * 0.5f, hh = h * 0.5f;
+        float uLeft = flipX ? u1 : u0, uRight = flipX ? u0 : u1;
         // winding order: we look from -Z, so X grows from right to left, hence x is mirrored
-        for (int i = 3; i >= 0; i--) {
-            float x = corner[i][0], y = corner[i][1];
-            float rx = x * c - y * s, ry = x * s + y * c;
-            vertex(vc, pose, cx - rx, cy + ry, z, uv[i][0], uv[i][1], argb, light, 0, 0, -1);
+        if (rot == 0f) {
+            vertex(vc, pose, cx + hw, cy + hh, z, uLeft, v0, argb, light, 0, 0, -1);
+            vertex(vc, pose, cx - hw, cy + hh, z, uRight, v0, argb, light, 0, 0, -1);
+            vertex(vc, pose, cx - hw, cy - hh, z, uRight, v1, argb, light, 0, 0, -1);
+            vertex(vc, pose, cx + hw, cy - hh, z, uLeft, v1, argb, light, 0, 0, -1);
+            return;
         }
+        double rad = Math.toRadians(rot);
+        float c = (float) Math.cos(rad), s = (float) Math.sin(rad);
+        float hcX = hw * c, hsX = hw * s, hcY = hh * c, hsY = hh * s;
+        // corners in original loop order: (-hw, +hh), (+hw, +hh), (+hw, -hh), (-hw, -hh)
+        vertex(vc, pose, cx + hcX + hsY, cy - hsX + hcY, z, uLeft, v0, argb, light, 0, 0, -1);
+        vertex(vc, pose, cx - hcX + hsY, cy + hsX + hcY, z, uRight, v0, argb, light, 0, 0, -1);
+        vertex(vc, pose, cx - hcX - hsY, cy + hsX - hcY, z, uRight, v1, argb, light, 0, 0, -1);
+        vertex(vc, pose, cx + hcX - hsY, cy - hsX - hcY, z, uLeft, v1, argb, light, 0, 0, -1);
     }
 
     /**

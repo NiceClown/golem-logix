@@ -10,6 +10,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -249,7 +250,7 @@ public final class SaturatorStructure {
         BlockState current = level.getBlockState(pos);
         if (current.getBlock() instanceof SaturatorPartBlock && current.getValue(SaturatorPartBlock.COOLER)) {
             // a coprocessor from a grille goes back to the player as an item
-            Block.popResource(level, pos.above(), new net.minecraft.world.item.ItemStack(ModBlocks.COOLING_COPROCESSOR.get()));
+            Block.popResource(level, pos.above(), new ItemStack(ModBlocks.COOLING_COPROCESSOR.get()));
         }
         boolean was = RESTORING.get();
         RESTORING.set(true);

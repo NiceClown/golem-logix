@@ -1,17 +1,23 @@
 package com.golemlogix.client;
 
 import com.golemlogix.blockentity.FormationBusBlockEntity;
+import com.golemlogix.client.render.BerBuffers;
+import com.golemlogix.client.render.LegacyBer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.DirectionalBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import org.joml.Vector3f;
 
 /**
@@ -19,7 +25,7 @@ import org.joml.Vector3f;
  * sets down. During a push the block slides out of the mouth, growing from half size to a whole block, onto the spot in front,
  * the golem's arms following it and its body leaning in; the push lasts the bus's interval, so it keeps pace at full speed.
  */
-public class FormationBusRenderer extends com.golemlogix.client.render.LegacyBer<FormationBusBlockEntity> {
+public class FormationBusRenderer extends LegacyBer<FormationBusBlockEntity> {
     /**
      * The golem (pixels, facing north) stands on the inner iron platform behind the workbench (z 1.25..5.0) and under the
      * copper arch header / hoist crane (y 11.8): 24 model pixels at 0.34 = 8.16 pixels tall (3.2..11.36).
@@ -28,6 +34,12 @@ public class FormationBusRenderer extends com.golemlogix.client.render.LegacyBer
     /** The block's path: from resting on the workbench top (centre 8, 8.2, 2.8) to the centre of the spot in front (8, 8, -8). */
     private static final float MOUTH_Y = 8.2f, MOUTH_Z = 2.8f;
 
+    private static final Direction[] DIRS = Direction.values();
+    private static final BlockPos.MutableBlockPos LIGHT_POS = new BlockPos.MutableBlockPos();
+    private static final Vector3f GOLEM_POS = new Vector3f(0.5f, GOLEM_Y / 16f, GOLEM_Z / 16f);
+    private static final Vector3f FWD_NORTH = new Vector3f(0f, 0f, -1f);
+    private static final Vector3f UP = new Vector3f(0f, 1f, 0f);
+
     public FormationBusRenderer(BlockEntityRendererProvider.Context context) {
     }
 
@@ -35,16 +47,18 @@ public class FormationBusRenderer extends com.golemlogix.client.render.LegacyBer
      * The light the golem in the bus is lit by: the brightest round the bus but behind it (the glass side windows let it in) - the
      * spot in front alone goes dark as soon as a whole block stands there.
      */
-    static int light(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos, Direction facing) {
+    static int light(Level level, BlockPos pos, Direction facing) {
         int block = 0, sky = 0;
-        for (Direction d : Direction.values()) {
-            if (d != facing.getOpposite()) {
-                int c = LevelRenderer.getLightCoords(level, pos.relative(d));
-                block = Math.max(block, net.minecraft.util.LightCoordsUtil.block(c));
-                sky = Math.max(sky, net.minecraft.util.LightCoordsUtil.sky(c));
+        Direction back = facing.getOpposite();
+        for (Direction d : DIRS) {
+            if (d != back) {
+                LIGHT_POS.setWithOffset(pos, d);
+                int c = LevelRenderer.getLightCoords(level, LIGHT_POS);
+                block = Math.max(block, LightCoordsUtil.block(c));
+                sky = Math.max(sky, LightCoordsUtil.sky(c));
             }
         }
-        return net.minecraft.util.LightCoordsUtil.pack(block, sky);
+        return LightCoordsUtil.pack(block, sky);
     }
 
     /** Turns the frame from "facing north" to the block's facing (as the blockstate turns the model). */
@@ -69,7 +83,7 @@ public class FormationBusRenderer extends com.golemlogix.client.render.LegacyBer
         }
         Direction facing = be.getBlockState().getValue(DirectionalBlock.FACING);
         int front = light(be.getLevel(), be.getBlockPos(), facing);
-        float time = be.getLevel().getGameTime() + partialTick;
+        float time = (be.getLevel().getGameTime() % 72000L) + partialTick;
         ItemStack carrying = be.carrying();
         float push = be.push(partialTick);
         // the push in three beats: take hold (0..0.2), drive it out (0.2..0.85), let go (0.85..1)
@@ -83,8 +97,7 @@ public class FormationBusRenderer extends com.golemlogix.client.render.LegacyBer
         float headYaw = holding ? 0f : Mth.sin(time * 0.03f) * 0.4f;
         CopperGolemPuppet.Arms arms = new CopperGolemPuppet.Arms(armX, 0.18f, armX, -0.18f, headYaw);
         CopperGolemPuppet.Anim anim = new CopperGolemPuppet.Anim(time * 0.1f, false, false, holding ? 0.15f + 0.35f * out : 0f);
-        CopperGolemPuppet.render(pose, buffers, front, new Vector3f(0.5f, GOLEM_Y / 16f, GOLEM_Z / 16f), new Vector3f(0f, 0f, -1f),
-                new Vector3f(0f, 1f, 0f), GOLEM_SCALE, anim, 0, null, arms);
+        CopperGolemPuppet.render(pose, buffers, front, GOLEM_POS, FWD_NORTH, UP, GOLEM_SCALE, anim, 0, null, arms);
 
         if (holding && carrying.getItem() instanceof BlockItem item) {
             BlockState state = item.getBlock().defaultBlockState();
@@ -94,7 +107,7 @@ public class FormationBusRenderer extends com.golemlogix.client.render.LegacyBer
             pose.translate(0.5f, cy, cz);
             pose.scale(size, size, size);
             pose.translate(-0.5f, -0.5f, -0.5f);
-            com.golemlogix.client.render.BerBuffers.block(buffers, state, pose, front);
+            BerBuffers.block(buffers, state, pose, front);
             pose.popPose();
         }
         pose.popPose();
@@ -102,7 +115,7 @@ public class FormationBusRenderer extends com.golemlogix.client.render.LegacyBer
 
     /** The block it pushes out reaches into the spot in front. */
     @Override
-    public net.minecraft.world.phys.AABB getRenderBoundingBox(FormationBusBlockEntity be) {
-        return new net.minecraft.world.phys.AABB(be.getBlockPos()).inflate(1.0);
+    public AABB getRenderBoundingBox(FormationBusBlockEntity be) {
+        return new AABB(be.getBlockPos()).inflate(1.0);
     }
 }

@@ -63,7 +63,20 @@ public class ChannelCounterBlock extends Block implements EntityBlock {
     /** The side the tubes face (they are lit on the back too); on a side mount, away from what it hangs on. */
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final EnumProperty<Mount> MOUNT = EnumProperty.create("mount", Mount.class);
-    private static final java.util.Map<BlockState, VoxelShape> SHAPES = new java.util.concurrent.ConcurrentHashMap<>();
+    /** Precomputed shapes for all 4 horizontal facings x 8 mounts (32 entries, O(1) lock-free lookup). */
+    private static final VoxelShape[][] SHAPES = buildShapes();
+
+    private static VoxelShape[][] buildShapes() {
+        Mount[] mounts = Mount.values();
+        VoxelShape[][] table = new VoxelShape[4][mounts.length];
+        for (Direction facing : Direction.Plane.HORIZONTAL) {
+            int f = facing.get2DDataValue();
+            for (Mount m : mounts) {
+                table[f][m.ordinal()] = buildShape(facing, m);
+            }
+        }
+        return table;
+    }
 
     public ChannelCounterBlock(Properties properties) {
         super(properties.sound(SoundType.WOOD).strength(1.0f).lightLevel(state -> 4).noOcclusion());
@@ -163,17 +176,16 @@ public class ChannelCounterBlock extends Block implements EntityBlock {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return SHAPES.computeIfAbsent(state, ChannelCounterBlock::shape);
+        return SHAPES[state.getValue(FACING).get2DDataValue()][state.getValue(MOUNT).ordinal()];
     }
 
     /** The counter's box (with its shelf on a side mount), turned as the blockstate turns the model. */
-    private static VoxelShape shape(BlockState state) {
-        Mount m = state.getValue(MOUNT);
+    private static VoxelShape buildShape(Direction facing, Mount m) {
         double x0 = 3.5, x1 = 12.5, y0 = Math.max(0, m.dy), y1 = Math.min(16, m.dy + 9.2), z0 = 6 + m.dz, z1 = m.side() ? 16 : 10 + m.dz;
         if (m.side()) {
             y0 = Math.max(0, y0 - 0.8);
         }
-        return switch (state.getValue(FACING)) {
+        return switch (facing) {
             case EAST -> Block.box(16 - z1, y0, x0, 16 - z0, y1, x1);
             case SOUTH -> Block.box(16 - x1, y0, 16 - z1, 16 - x0, y1, 16 - z0);
             case WEST -> Block.box(z0, y0, 16 - x1, z1, y1, 16 - x0);

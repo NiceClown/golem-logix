@@ -53,11 +53,7 @@ public class PatternEncoderBlock extends HorizontalDirectionalBlock implements c
         if (level.isClientSide()) {
             return InteractionResult.SUCCESS;
         }
-        com.golemlogix.system.GolemNetwork net = com.golemlogix.system.GolemNetwork.scan(level, pos);
-        if (!net.hasPermission(player, com.golemlogix.security.SecurityPermission.BUILD)) {
-            if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
-                sp.sendOverlayMessage(Component.translatable("message.golem_logix.security_denied"));
-            }
+        if (!BlockSecurity.allowBuild(level, pos, player)) {
             return InteractionResult.CONSUME;
         }
         if (level.getBlockEntity(pos) instanceof com.golemlogix.blockentity.PatternEncoderBlockEntity be) {

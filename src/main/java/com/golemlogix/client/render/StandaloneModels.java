@@ -2,11 +2,13 @@ package com.golemlogix.client.render;
 
 import com.golemlogix.GolemLogixMod;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.QuadInstance;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.client.resources.model.geometry.QuadCollection;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.ARGB;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -25,6 +27,7 @@ import java.util.Map;
 @EventBusSubscriber(modid = GolemLogixMod.MOD_ID, value = Dist.CLIENT)
 public final class StandaloneModels {
     private static final Map<Identifier, StandaloneModelKey<QuadCollection>> KEYS = new LinkedHashMap<>();
+    private static final QuadInstance INSTANCE = new QuadInstance();
 
     public static final Identifier FIN = add("block/cooling_coprocessor_fin");
     public static final Identifier DIODE_WHEEL = add("block/cryo_diode_wheel");
@@ -62,12 +65,16 @@ public final class StandaloneModels {
 
     /** All the model's quads into the buffer, tinted, at the given light (was ModelBlockRenderer#renderModel). */
     public static void render(PoseStack.Pose pose, VertexConsumer buffer, Identifier model, float r, float g, float b, int light, int overlay) {
-        com.mojang.blaze3d.vertex.QuadInstance instance = new com.mojang.blaze3d.vertex.QuadInstance();
-        instance.setColor(net.minecraft.util.ARGB.colorFromFloat(1f, r, g, b));
-        instance.setLightCoords(light);
-        instance.setOverlayCoords(overlay);
-        for (BakedQuad quad : quads(model)) {
-            buffer.putBakedQuad(pose, quad, instance);
+        render(pose, buffer, quads(model), r, g, b, light, overlay);
+    }
+
+    /** Pre-fetched quads into the buffer, tinted, at the given light (avoids repeated model lookups inside loops). */
+    public static void render(PoseStack.Pose pose, VertexConsumer buffer, List<BakedQuad> quads, float r, float g, float b, int light, int overlay) {
+        INSTANCE.setColor(ARGB.colorFromFloat(1f, r, g, b));
+        INSTANCE.setLightCoords(light);
+        INSTANCE.setOverlayCoords(overlay);
+        for (BakedQuad quad : quads) {
+            buffer.putBakedQuad(pose, quad, INSTANCE);
         }
     }
 }

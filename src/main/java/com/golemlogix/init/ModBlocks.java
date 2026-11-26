@@ -2,13 +2,18 @@ package com.golemlogix.init;
 
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blocks.*;
+import com.golemlogix.items.CopperTankItem;
 import com.golemlogix.items.ModBlockItem;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 public class ModBlocks {
@@ -62,11 +67,11 @@ public class ModBlocks {
 
     public static final DeferredBlock<SnowPipeBlock> BASIC_SNOW_PIPE = registerBlock("basic_snow_pipe",
             "tooltip.golem_logix.basic_snow_pipe",
-            () -> new SnowPipeBlock(16, false, props().lightLevel(s -> s.getValue(com.golemlogix.blocks.GolemProperties.ACTIVE) ? PIPE_GLOW : 0)));
+            () -> new SnowPipeBlock(16, false, props().lightLevel(s -> s.getValue(GolemProperties.ACTIVE) ? PIPE_GLOW : 0)));
 
     public static final DeferredBlock<SnowPipeBlock> DENSE_FROST_PIPE = registerBlock("dense_frost_pipe",
             "tooltip.golem_logix.dense_frost_pipe",
-            () -> new SnowPipeBlock(64, true, props().lightLevel(s -> s.getValue(com.golemlogix.blocks.GolemProperties.ACTIVE) ? PIPE_GLOW : 0)));
+            () -> new SnowPipeBlock(64, true, props().lightLevel(s -> s.getValue(GolemProperties.ACTIVE) ? PIPE_GLOW : 0)));
 
     // Storage Cabinets
     public static final DeferredBlock<CopperDriveBayBlock> COPPER_DRIVE_BAY = registerBlock("copper_drive_bay",
@@ -127,22 +132,22 @@ public class ModBlocks {
             () -> new RecipeMonitorBlock(props()));
 
     // golems working the block in front: a copper golem sets blocks down, an iron golem breaks or clicks them
-    public static final DeferredBlock<com.golemlogix.blocks.FormationBusBlock> FORMATION_BUS = registerBlock("formation_bus",
+    public static final DeferredBlock<FormationBusBlock> FORMATION_BUS = registerBlock("formation_bus",
             "tooltip.golem_logix.formation_bus",
-            () -> new com.golemlogix.blocks.FormationBusBlock(props().noOcclusion()));
-    public static final DeferredBlock<com.golemlogix.blocks.AnnihilationBusBlock> ANNIHILATION_BUS = registerBlock("annihilation_bus",
+            () -> new FormationBusBlock(props().noOcclusion()));
+    public static final DeferredBlock<AnnihilationBusBlock> ANNIHILATION_BUS = registerBlock("annihilation_bus",
             "tooltip.golem_logix.annihilation_bus",
-            () -> new com.golemlogix.blocks.AnnihilationBusBlock(props().noOcclusion()));
+            () -> new AnnihilationBusBlock(props().noOcclusion()));
 
     // a copper chest in glass: a fluid tank that keeps its fluid as an item, a bucket mode, joined in a crafting grid
-    public static final DeferredBlock<com.golemlogix.blocks.CopperTankBlock> COPPER_TANK = registerBlock("copper_tank",
-            () -> new com.golemlogix.blocks.CopperTankBlock(props()),
-            (block, props) -> new com.golemlogix.items.CopperTankItem(block, "tooltip.golem_logix.copper_tank", props.stacksTo(1)));
+    public static final DeferredBlock<CopperTankBlock> COPPER_TANK = registerBlock("copper_tank",
+            () -> new CopperTankBlock(props()),
+            (block, props) -> new CopperTankItem(block, "tooltip.golem_logix.copper_tank", props.stacksTo(1)));
 
     // nixie tubes with the network's channels
-    public static final DeferredBlock<com.golemlogix.blocks.ChannelCounterBlock> CHANNEL_COUNTER = registerBlock("channel_counter",
+    public static final DeferredBlock<ChannelCounterBlock> CHANNEL_COUNTER = registerBlock("channel_counter",
             "tooltip.golem_logix.channel_counter",
-            () -> new com.golemlogix.blocks.ChannelCounterBlock(props()));
+            () -> new ChannelCounterBlock(props()));
 
     // World Interaction Buses
     public static final DeferredBlock<VacuumImportBusBlock> VACUUM_IMPORT_BUS = registerBlock("vacuum_import_bus",
@@ -172,40 +177,39 @@ public class ModBlocks {
             () -> new EternalFrostResonatorBlock(props()));
 
     // Source without Ars Nouveau: blood distilled into Cryo-Source (Neo Vitae)
-    public static final DeferredBlock<com.golemlogix.blocks.CryoJarBlock> CRYO_SOURCE_JAR = registerBlock("cryo_source_jar",
+    public static final DeferredBlock<CryoJarBlock> CRYO_SOURCE_JAR = registerBlock("cryo_source_jar",
             "tooltip.golem_logix.cryo_source_jar",
-            () -> new com.golemlogix.blocks.CryoJarBlock(props()));
-    public static final DeferredBlock<com.golemlogix.blocks.DistillationTowerBlock> CRYO_DISTILLATION_TOWER = registerBlock("cryo_distillation_tower",
+            () -> new CryoJarBlock(props()));
+    public static final DeferredBlock<DistillationTowerBlock> CRYO_DISTILLATION_TOWER = registerBlock("cryo_distillation_tower",
             "tooltip.golem_logix.cryo_distillation_tower",
-            () -> new com.golemlogix.blocks.DistillationTowerBlock(props()));
+            () -> new DistillationTowerBlock(props()));
     // water and Liquid Cryo-Source frozen into snow (for snow golems) or ice
-    public static final DeferredBlock<com.golemlogix.blocks.CryoMixerBlock> CRYO_MIXER = registerBlock("cryo_mixer",
+    public static final DeferredBlock<CryoMixerBlock> CRYO_MIXER = registerBlock("cryo_mixer",
             "tooltip.golem_logix.cryo_mixer",
-            () -> new com.golemlogix.blocks.CryoMixerBlock(props()));
+            () -> new CryoMixerBlock(props()));
 
-    public static final DeferredBlock<com.golemlogix.blocks.StockManometerBlock> STOCK_MANOMETER = registerBlock("stock_manometer",
+    public static final DeferredBlock<StockManometerBlock> STOCK_MANOMETER = registerBlock("stock_manometer",
             "tooltip.golem_logix.stock_manometer",
-            () -> new com.golemlogix.blocks.StockManometerBlock(props()));
+            () -> new StockManometerBlock(props()));
 
-    public static final DeferredBlock<com.golemlogix.blocks.StockRequesterBlock> STOCK_REQUESTER = registerBlock("stock_requester",
+    public static final DeferredBlock<StockRequesterBlock> STOCK_REQUESTER = registerBlock("stock_requester",
             "tooltip.golem_logix.stock_requester",
-            () -> new com.golemlogix.blocks.StockRequesterBlock(props()));
+            () -> new StockRequesterBlock(props()));
 
-    public static final DeferredBlock<com.golemlogix.blocks.CryoDiodeBlock> CRYO_DIODE = registerBlock("cryo_diode",
+    public static final DeferredBlock<CryoDiodeBlock> CRYO_DIODE = registerBlock("cryo_diode",
             "tooltip.golem_logix.cryo_diode",
-            () -> new com.golemlogix.blocks.CryoDiodeBlock(props()));
+            () -> new CryoDiodeBlock(props()));
 
-    public static final DeferredBlock<com.golemlogix.blocks.SecurityTerminalBlock> SECURITY_TERMINAL = registerBlock("security_terminal",
+    public static final DeferredBlock<SecurityTerminalBlock> SECURITY_TERMINAL = registerBlock("security_terminal",
             "tooltip.golem_logix.security_terminal",
-            () -> new com.golemlogix.blocks.SecurityTerminalBlock(props()));
+            () -> new SecurityTerminalBlock(props()));
 
     /** The block being built right now: since 1.21.2 its properties must carry its id. */
-    private static net.minecraft.resources.Identifier building;
+    private static Identifier building;
 
     /** Properties of the block being registered, with its id set. */
     private static BlockBehaviour.Properties props() {
-        return BlockBehaviour.Properties.of().setId(net.minecraft.resources.ResourceKey.create(
-                net.minecraft.core.registries.Registries.BLOCK, building));
+        return BlockBehaviour.Properties.of().setId(ResourceKey.create(Registries.BLOCK, building));
     }
 
     private static <T extends Block> DeferredBlock<T> registerPart(String name, Supplier<T> blockSupplier) {
@@ -225,10 +229,10 @@ public class ModBlocks {
 
     /** A block with an item of its own kind (the properties come with the id set). */
     private static <T extends Block> DeferredBlock<T> registerBlock(String name, Supplier<T> blockSupplier,
-                                                                    java.util.function.BiFunction<T, Item.Properties, ? extends Item> item) {
+                                                                    BiFunction<T, Item.Properties, ? extends Item> item) {
         DeferredBlock<T> block = registerPart(name, blockSupplier);
         ModItems.ITEMS.register(name, id -> item.apply(block.get(), new Item.Properties()
-                .setId(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.ITEM, id))
+                .setId(ResourceKey.create(Registries.ITEM, id))
                 .useBlockDescriptionPrefix()));
         return block;
     }

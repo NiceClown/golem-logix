@@ -14,7 +14,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.EntityBlock;
@@ -59,6 +58,15 @@ public class TelegraphBlock extends Block implements com.golemlogix.blocks.Remov
         MAST("mast", 1, 1, 1),
         DISH("dish", 1, 1, 2);
 
+        static final Part[] VALUES = values();
+        private static final Part[][][] BY_COORD = new Part[2][2][3];
+
+        static {
+            for (Part p : VALUES) {
+                BY_COORD[p.right][p.back][p.up] = p;
+            }
+        }
+
         private final String key;
         public final int right, back, up;
 
@@ -71,12 +79,10 @@ public class TelegraphBlock extends Block implements com.golemlogix.blocks.Remov
 
         @Nullable
         public static Part at(int right, int back, int up) {
-            for (Part p : values()) {
-                if (p.right == right && p.back == back && p.up == up) {
-                    return p;
-                }
+            if (right < 0 || right >= 2 || back < 0 || back >= 2 || up < 0 || up >= 3) {
+                return null;
             }
-            return null;
+            return BY_COORD[right][back][up];
         }
 
         public boolean isBase() {
@@ -137,7 +143,7 @@ public class TelegraphBlock extends Block implements com.golemlogix.blocks.Remov
     /** Places the whole telegraph (commands, tests); the main cell goes to master. */
     public static void place(Level level, BlockPos master, Direction facing) {
         Block block = ModBlocks.CRYO_SOURCE_TELEGRAPH.get();
-        for (Part part : Part.values()) {
+        for (Part part : Part.VALUES) {
             level.setBlock(partPos(master, facing, part), block.defaultBlockState().setValue(FACING, facing).setValue(PART, part), 3);
         }
     }
@@ -164,7 +170,7 @@ public class TelegraphBlock extends Block implements com.golemlogix.blocks.Remov
         Direction facing = context.getHorizontalDirection().getOpposite();
         Level level = context.getLevel();
         BlockPos master = context.getClickedPos();
-        for (Part part : Part.values()) {
+        for (Part part : Part.VALUES) {
             BlockPos p = partPos(master, facing, part);
             if (!level.isInWorldBounds(p) || (part != Part.BASE && !level.getBlockState(p).canBeReplaced(context))) {
                 return null;
@@ -176,7 +182,7 @@ public class TelegraphBlock extends Block implements com.golemlogix.blocks.Remov
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
         Direction facing = state.getValue(FACING);
-        for (Part part : Part.values()) {
+        for (Part part : Part.VALUES) {
             if (part != Part.BASE) {
                 level.setBlock(partPos(pos, facing, part), state.setValue(PART, part), 3);
             }

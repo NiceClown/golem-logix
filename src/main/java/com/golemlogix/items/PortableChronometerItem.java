@@ -5,6 +5,7 @@ import com.golemlogix.config.GolemConfig;
 import com.golemlogix.init.ModDataComponents;
 import com.golemlogix.init.ModTriggers;
 import com.golemlogix.menu.TerminalMenu;
+import com.golemlogix.security.SecurityPermission;
 import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.SourceHelper;
 import net.minecraft.ChatFormatting;
@@ -13,8 +14,6 @@ import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleMenuProvider;
@@ -23,12 +22,13 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
 
 import javax.annotation.Nullable;
+import java.util.function.Consumer;
 
 /**
  * Portable Chronometer: a wireless crafting terminal (with a crafting grid) built into a pocket watch.
@@ -50,6 +50,7 @@ public class PortableChronometerItem extends Item {
         DIMENSIONAL("dimensional"),
         CROSS_DIMENSIONAL("cross_dimensional");
 
+        private static final RangeTier[] VALUES = values();
         private final String key;
 
         RangeTier(String key) {
@@ -61,9 +62,12 @@ public class PortableChronometerItem extends Item {
         }
     }
 
+    private record TargetCore(ServerLevel level, BlockPos pos) {
+    }
+
     public static RangeTier getTier(ItemStack stack) {
         int t = stack.getOrDefault(ModDataComponents.WIRELESS_TIER.get(), 0);
-        return RangeTier.values()[Math.max(0, Math.min(2, t))];
+        return RangeTier.VALUES[Math.max(0, Math.min(2, t))];
     }
 
     @Nullable
@@ -72,11 +76,11 @@ public class PortableChronometerItem extends Item {
     }
 
     public static int getCharge(ItemStack stack) {
-        return stack.getOrDefault(ModDataComponents.SOURCE_CHARGE.get(), 0);
+        return SourceChargeHelper.get(stack);
     }
 
     public static void setCharge(ItemStack stack, int charge) {
-        stack.set(ModDataComponents.SOURCE_CHARGE.get(), Math.max(0, Math.min(MAX_CHARGE, charge)));
+        SourceChargeHelper.set(stack, charge, MAX_CHARGE);
     }
 
     public static void setResonator(ItemStack stack, boolean linked) {
@@ -115,36 +119,22 @@ public class PortableChronometerItem extends Item {
             }
             return InteractionResult.SUCCESS;
         }
-        // charging from a Source jar (or any Ars Nouveau device with a Source store)
-        BlockEntity be = level.getBlockEntity(context.getClickedPos());
-        SourceHelper.Supplier jar = be == null ? null : SourceHelper.asSupplier(be);
-        if (jar != null && SourceHelper.sourceRequired()) {
-            if (!level.isClientSide()) {
-                ItemStack stack = context.getItemInHand();
-                int need = MAX_CHARGE - getCharge(stack);
-                int got = need <= 0 ? 0 : jar.drain(need);
-                setCharge(stack, getCharge(stack) + got);
-                player.sendOverlayMessage(Component.translatable(got > 0 ? "message.golem_logix.chronometer.charged"
-                        : "message.golem_logix.chronometer.nothing_to_charge", getCharge(stack), MAX_CHARGE)
-                        .withStyle(got > 0 ? ChatFormatting.AQUA : ChatFormatting.GRAY));
-                if (got > 0) {
-                    level.playSound(null, context.getClickedPos(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 0.8f, 1.6f);
-                }
-            }
+        if (SourceChargeHelper.tryChargeFromBlock(context, MAX_CHARGE,
+                "message.golem_logix.chronometer.charged", "message.golem_logix.chronometer.nothing_to_charge", 1.6f)) {
             return InteractionResult.SUCCESS;
         }
         return InteractionResult.PASS;
     }
 
     @Override
-    public net.minecraft.world.InteractionResult use(Level level, Player player, InteractionHand hand) {
+    public InteractionResult use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (level.isClientSide() || !(player instanceof ServerPlayer sp)) {
-            return net.minecraft.world.InteractionResult.SUCCESS;
+            return InteractionResult.SUCCESS;
         }
         // the slot the Chronometer lies in is locked while the window is open (40 = offhand)
         int locked = hand == InteractionHand.MAIN_HAND ? sp.getInventory().getSelectedSlot() : Inventory.SLOT_OFFHAND;
-        return open(sp, stack, locked) ? net.minecraft.world.InteractionResult.CONSUME : net.minecraft.world.InteractionResult.FAIL;
+        return open(sp, stack, locked) ? InteractionResult.CONSUME : InteractionResult.FAIL;
     }
 
     /**
@@ -153,72 +143,90 @@ public class PortableChronometerItem extends Item {
      * or Chronometers.CURIO for one worn in the Curios slot. Returns false (with a message to the player) if it cannot.
      */
     public static boolean open(ServerPlayer sp, ItemStack stack, int locked) {
-        Level level = sp.level();
-        GlobalPos bound = getBound(stack);
-        if (bound == null) {
-            sp.sendOverlayMessage(Component.translatable("message.golem_logix.chronometer.unbound")
-                    .withStyle(ChatFormatting.RED));
-            return false;
-        }
-        // trying to reach the core from another dimension is one of the secret recipe trials
-        if (level.dimension() != bound.dimension()) {
-            ModTriggers.CHRONOMETER_DIMENSION.get().trigger(sp);
-        }
         int tier = getTier(stack).ordinal();
-        if (tier < 2 && level.dimension() != bound.dimension()) {
-            sp.sendOverlayMessage(Component.translatable("message.golem_logix.chronometer.other_dimension")
-                    .withStyle(ChatFormatting.RED));
+        TargetCore target = resolveTargetCore(sp, stack, tier);
+        if (target == null) {
             return false;
         }
-        ServerLevel netLevel = sp.level().getServer().getLevel(bound.dimension());
-        if (netLevel == null || !(netLevel.isLoaded(bound.pos()) && netLevel.getBlockState(bound.pos()).getBlock() instanceof AtlasCoreBlock)) {
-            sp.sendOverlayMessage(Component.translatable("message.golem_logix.chronometer.lost")
-                    .withStyle(ChatFormatting.RED));
-            return false;
-        }
-        if (!inRange(tier, level, sp.position(), netLevel, bound.pos())) {
-            sp.sendOverlayMessage(Component.translatable("message.golem_logix.chronometer.out_of_range")
-                    .withStyle(ChatFormatting.RED));
-            return false;
-        }
-        GolemNetwork net = GolemNetwork.scan(netLevel, bound.pos());
+        GolemNetwork net = GolemNetwork.scan(target.level(), target.pos());
         String err = net.accessError(null);
         if (err != null) {
             sp.sendOverlayMessage(Component.translatable(err));
             return false;
         }
-        if (!net.hasPermission(sp, com.golemlogix.security.SecurityPermission.INSERT)
-                && !net.hasPermission(sp, com.golemlogix.security.SecurityPermission.EXTRACT)
-                && !net.hasPermission(sp, com.golemlogix.security.SecurityPermission.CRAFT)) {
+        if (!hasTerminalAccess(net, sp)) {
             sp.sendOverlayMessage(Component.translatable("message.golem_logix.security_denied"));
             return false;
         }
-        // power: the network's Resonator sends Source itself, otherwise the own charge is needed
-        if (SourceHelper.sourceRequired()) {
-            boolean resonator = net.hasResonator();
-            setResonator(stack, resonator);
-            if (resonator) {
-                setCharge(stack, MAX_CHARGE);
-            } else if (getCharge(stack) < OPEN_COST) {
-                sp.sendOverlayMessage(Component.translatable("message.golem_logix.chronometer.empty")
-                        .withStyle(ChatFormatting.RED));
-                return false;
-            } else {
-                setCharge(stack, getCharge(stack) - OPEN_COST);
-            }
+        if (!consumeOpenPower(sp, stack, net)) {
+            return false;
         }
         sp.sendOverlayMessage(Component.translatable("message.golem_logix.chronometer.accessing")
                 .withStyle(ChatFormatting.AQUA));
-        BlockPos anchor = bound.pos();
         // the Chronometer always has a crafting grid
         sp.openMenu(new SimpleMenuProvider(
-                        (id, inv, p) -> new TerminalMenu(id, inv, netLevel, anchor, null, null, true, true, tier, locked),
+                        (id, inv, p) -> new TerminalMenu(id, inv, target.level(), target.pos(), null, null, true, true, tier, locked),
                         Component.translatable("container.golem_logix.chronometer")),
                 buf -> {
                     buf.writeBoolean(true);
                     buf.writeBoolean(true);
                     buf.writeVarInt(locked);
                 });
+        return true;
+    }
+
+    @Nullable
+    private static TargetCore resolveTargetCore(ServerPlayer sp, ItemStack stack, int tier) {
+        Level level = sp.level();
+        GlobalPos bound = getBound(stack);
+        if (bound == null) {
+            sp.sendOverlayMessage(Component.translatable("message.golem_logix.chronometer.unbound").withStyle(ChatFormatting.RED));
+            return null;
+        }
+        // trying to reach the core from another dimension is one of the secret recipe trials
+        if (level.dimension() != bound.dimension()) {
+            ModTriggers.CHRONOMETER_DIMENSION.get().trigger(sp);
+        }
+        if (tier < 2 && level.dimension() != bound.dimension()) {
+            sp.sendOverlayMessage(Component.translatable("message.golem_logix.chronometer.other_dimension").withStyle(ChatFormatting.RED));
+            return null;
+        }
+        ServerLevel netLevel = sp.level().getServer().getLevel(bound.dimension());
+        if (netLevel == null || !netLevel.isLoaded(bound.pos())
+                || !(netLevel.getBlockState(bound.pos()).getBlock() instanceof AtlasCoreBlock)) {
+            sp.sendOverlayMessage(Component.translatable("message.golem_logix.chronometer.lost").withStyle(ChatFormatting.RED));
+            return null;
+        }
+        if (!inRange(tier, level, sp.position(), netLevel, bound.pos())) {
+            sp.sendOverlayMessage(Component.translatable("message.golem_logix.chronometer.out_of_range").withStyle(ChatFormatting.RED));
+            return null;
+        }
+        return new TargetCore(netLevel, bound.pos());
+    }
+
+    private static boolean hasTerminalAccess(GolemNetwork net, ServerPlayer player) {
+        return net.hasPermission(player, SecurityPermission.INSERT)
+                || net.hasPermission(player, SecurityPermission.EXTRACT)
+                || net.hasPermission(player, SecurityPermission.CRAFT);
+    }
+
+    /** Power check: a Resonator on the network powers the Chronometer remotely; otherwise spend own Source charge. */
+    private static boolean consumeOpenPower(ServerPlayer sp, ItemStack stack, GolemNetwork net) {
+        if (!SourceHelper.sourceRequired()) {
+            return true;
+        }
+        boolean resonator = net.hasResonator();
+        setResonator(stack, resonator);
+        if (resonator) {
+            setCharge(stack, MAX_CHARGE);
+            return true;
+        }
+        int charge = getCharge(stack);
+        if (charge < OPEN_COST) {
+            sp.sendOverlayMessage(Component.translatable("message.golem_logix.chronometer.empty").withStyle(ChatFormatting.RED));
+            return false;
+        }
+        setCharge(stack, charge - OPEN_COST);
         return true;
     }
 
@@ -240,22 +248,22 @@ public class PortableChronometerItem extends Item {
 
     @Override
     public boolean isBarVisible(ItemStack stack) {
-        return SourceHelper.sourceRequired() && getCharge(stack) < MAX_CHARGE;
+        return SourceChargeHelper.isBarVisible(stack, MAX_CHARGE);
     }
 
     @Override
     public int getBarWidth(ItemStack stack) {
-        return Math.round(13f * getCharge(stack) / MAX_CHARGE);
+        return SourceChargeHelper.barWidth(stack, MAX_CHARGE);
     }
 
     @Override
     public int getBarColor(ItemStack stack) {
-        return 0xB07CFF;
+        return SourceChargeHelper.BAR_COLOR;
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
-                                java.util.function.Consumer<Component> lines, TooltipFlag tooltipFlag) {
+    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
+                                Consumer<Component> lines, TooltipFlag tooltipFlag) {
         RangeTier tier = getTier(stack);
         lines.accept(Component.translatable("tooltip.golem_logix.chronometer.tier." + tier.getKey())
                 .withStyle(ChatFormatting.DARK_AQUA));
