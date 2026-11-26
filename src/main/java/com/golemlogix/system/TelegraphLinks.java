@@ -16,6 +16,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -77,7 +78,7 @@ public final class TelegraphLinks {
         TelegraphLinkCardItem.Link link = TelegraphLinkCardItem.link(t.memoryCard());
         GlobalPos host = link == null ? null : link.target();
         GlobalPos old = HOST_OF.get(self);
-        if (java.util.Objects.equals(old, host)) {
+        if (Objects.equals(old, host)) {
             return;
         }
         untrack(self);

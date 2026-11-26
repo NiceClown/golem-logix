@@ -54,12 +54,6 @@ public class DiskStore extends SavedData {
         return disks.computeIfAbsent(id, k -> new Disk());
     }
 
-    public void drop(UUID id) {
-        if (disks.remove(id) != null) {
-            setDirty();
-        }
-    }
-
     /** Recomputes used space and equipment counts after a /reload, in case the golem_logix:not_gear tag changed. */
     public void recount() {
         for (Disk disk : disks.values()) {

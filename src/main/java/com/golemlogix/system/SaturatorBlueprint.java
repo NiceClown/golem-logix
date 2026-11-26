@@ -5,6 +5,7 @@ import com.golemlogix.init.ModBlocks;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.ArrayList;
@@ -46,7 +47,7 @@ public final class SaturatorBlueprint {
             need.merge(SaturatorStructure.required(i).asItem(), 1, Integer::sum);
         }
         Map<Item, Integer> sorted = new LinkedHashMap<>();
-        for (Block b : new Block[]{ModBlocks.MANA_SATURATOR.get(), net.minecraft.world.level.block.Blocks.END_ROD,
+        for (Block b : new Block[]{ModBlocks.MANA_SATURATOR.get(), Blocks.END_ROD,
                 ModBlocks.DENSE_FROST_PIPE.get(), ModBlocks.ATLAS_CASING.get()}) {
             if (need.containsKey(b.asItem())) {
                 sorted.put(b.asItem(), need.get(b.asItem()));

@@ -4,6 +4,7 @@ import com.golemlogix.blocks.AtlantBlock;
 import com.golemlogix.blocks.AtlasCasingBlock;
 import com.golemlogix.init.ModBlocks;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -66,7 +67,7 @@ public final class AtlasStructure {
         BlockPos origin = corePos.below(3);
         for (int dx = -1; dx <= 1; dx += 2) {
             for (int dz = -1; dz <= 1; dz += 2) {
-                net.minecraft.core.Direction face = dz < 0 ? net.minecraft.core.Direction.NORTH : net.minecraft.core.Direction.SOUTH;
+                Direction face = dz < 0 ? Direction.NORTH : Direction.SOUTH;
                 for (int dy = 1; dy <= 2; dy++) {
                     BlockPos pos = origin.offset(dx, dy, dz);
                     if (!level.isLoaded(pos)) {
@@ -103,29 +104,37 @@ public final class AtlasStructure {
                     if (!(state.getBlock() instanceof AtlasCasingBlock)) {
                         continue;
                     }
-                    BlockState want = state.setValue(AtlasCasingBlock.PART, AtlasCasingBlock.Part.NONE)
-                            .setValue(AtlasCasingBlock.FACING, net.minecraft.core.Direction.NORTH);
-                    if (formed) {
-                        net.minecraft.core.Direction xOut = dx < 0 ? net.minecraft.core.Direction.WEST : net.minecraft.core.Direction.EAST;
-                        net.minecraft.core.Direction zOut = dz < 0 ? net.minecraft.core.Direction.NORTH : net.minecraft.core.Direction.SOUTH;
-                        boolean corner = dx != 0 && dz != 0;
-                        if (dy == 3) {
-                            // a corner faces the outer side whose counter-clockwise neighbour is its other outer side
-                            net.minecraft.core.Direction face = !corner ? (dx != 0 ? xOut : zOut) : zOut.getCounterClockWise() == xOut ? zOut : xOut;
-                            want = want.setValue(AtlasCasingBlock.PART, corner ? AtlasCasingBlock.Part.TOP_CORNER : AtlasCasingBlock.Part.TOP_EDGE)
-                                    .setValue(AtlasCasingBlock.FACING, face);
-                        } else if (!corner && level.getBlockState(origin.offset(dx, 1, dz)).getBlock() instanceof AtlasCasingBlock
-                                && level.getBlockState(origin.offset(dx, 2, dz)).getBlock() instanceof AtlasCasingBlock) {
-                            want = want.setValue(AtlasCasingBlock.PART, dy == 1 ? AtlasCasingBlock.Part.COLUMN_LOW : AtlasCasingBlock.Part.COLUMN_HIGH)
-                                    .setValue(AtlasCasingBlock.FACING, dx != 0 ? xOut : zOut);
-                        }
-                    }
+                    BlockState want = dressedCasingState(level, origin, dx, dy, dz, state, formed);
                     if (want != state) {
                         level.setBlock(pos, want, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
                     }
                 }
             }
         }
+    }
+
+    private static BlockState dressedCasingState(Level level, BlockPos origin, int dx, int dy, int dz,
+                                                 BlockState state, boolean formed) {
+        BlockState want = state.setValue(AtlasCasingBlock.PART, AtlasCasingBlock.Part.NONE)
+                .setValue(AtlasCasingBlock.FACING, Direction.NORTH);
+        if (!formed) {
+            return want;
+        }
+        Direction xOut = dx < 0 ? Direction.WEST : Direction.EAST;
+        Direction zOut = dz < 0 ? Direction.NORTH : Direction.SOUTH;
+        boolean corner = dx != 0 && dz != 0;
+        if (dy == 3) {
+            // A corner faces the outer side whose counter-clockwise neighbour is its other outer side
+            Direction face = !corner ? (dx != 0 ? xOut : zOut) : zOut.getCounterClockWise() == xOut ? zOut : xOut;
+            return want.setValue(AtlasCasingBlock.PART, corner ? AtlasCasingBlock.Part.TOP_CORNER : AtlasCasingBlock.Part.TOP_EDGE)
+                    .setValue(AtlasCasingBlock.FACING, face);
+        }
+        if (!corner && level.getBlockState(origin.offset(dx, 1, dz)).getBlock() instanceof AtlasCasingBlock
+                && level.getBlockState(origin.offset(dx, 2, dz)).getBlock() instanceof AtlasCasingBlock) {
+            return want.setValue(AtlasCasingBlock.PART, dy == 1 ? AtlasCasingBlock.Part.COLUMN_LOW : AtlasCasingBlock.Part.COLUMN_HIGH)
+                    .setValue(AtlasCasingBlock.FACING, dx != 0 ? xOut : zOut);
+        }
+        return want;
     }
 
     /** The starter tower: the core on two Atlas Conduits and a Cable Bushing, one above the other (the first step to the array). */

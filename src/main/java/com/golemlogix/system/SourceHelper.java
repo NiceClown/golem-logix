@@ -1,15 +1,22 @@
 package com.golemlogix.system;
 
 import com.golemlogix.blockentity.CreativeSourceJarBlockEntity;
+import com.golemlogix.blockentity.CryoJarBlockEntity;
 import com.golemlogix.blockentity.EternalFrostResonatorBlockEntity;
+import com.golemlogix.config.GolemConfig;
+import com.golemlogix.init.ModTags;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.neoforged.fml.ModList;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Universal Source helper: the mod's unlimited blocks (Creative Source Jar, Resonator)
@@ -51,15 +58,15 @@ public class SourceHelper {
     }
 
     public static boolean arsNouveauLoaded() {
-        return net.neoforged.fml.ModList.get().isLoaded("ars_nouveau");
+        return ModList.get().isLoaded("ars_nouveau");
     }
 
     /** Whether a blood mod for the Cryo-Distillation Tower is there: Neo Vitae, or any fluid a modpack put into the tag. */
     public static boolean distillationAvailable() {
-        if (net.neoforged.fml.ModList.get().isLoaded("neovitae")) {
+        if (ModList.get().isLoaded("neovitae")) {
             return true;
         }
-        return net.minecraft.core.registries.BuiltInRegistries.FLUID.getTag(com.golemlogix.init.ModTags.CRYO_DISTILLABLE)
+        return BuiltInRegistries.FLUID.getTag(ModTags.CRYO_DISTILLABLE)
                 .map(t -> t.size() > 0).orElse(false);
     }
 
@@ -69,7 +76,7 @@ public class SourceHelper {
      * itself) the network and the Saturator work for free.
      */
     public static boolean sourceRequired() {
-        return com.golemlogix.config.GolemConfig.REQUIRE_SOURCE.get() && (arsNouveauLoaded() || distillationAvailable());
+        return GolemConfig.REQUIRE_SOURCE.get() && (arsNouveauLoaded() || distillationAvailable());
     }
 
     /** A Source supplier connected to the network. */
@@ -154,7 +161,7 @@ public class SourceHelper {
         if (be instanceof CreativeSourceJarBlockEntity) {
             return INFINITE;
         }
-        if (be instanceof com.golemlogix.blockentity.CryoJarBlockEntity jar) {
+        if (be instanceof CryoJarBlockEntity jar) {
             return jar.owner();
         }
         if (be instanceof EternalFrostResonatorBlockEntity) {
@@ -167,107 +174,18 @@ public class SourceHelper {
         return null;
     }
 
-    /** All Source suppliers directly adjacent to the position. */
-    public static List<Supplier> adjacentSuppliers(Level level, BlockPos pos) {
-        List<Supplier> list = new ArrayList<>(0);
-        for (Direction dir : DIRECTIONS) {
-            BlockPos p = pos.relative(dir);
-            if (!level.isLoaded(p)) {
-                continue;
-            }
-            BlockEntity be = level.getBlockEntity(p);
-            if (be == null) {
-                continue;
-            }
-            Supplier s = asSupplier(be);
-            if (s != null) {
-                list.add(s);
-            }
-        }
-        return list;
-    }
-
-    /**
-     * Old API for blocks that feed from nearby (the Mana Saturator): checks/takes Source
-     * within a radius of a few blocks.
-     */
-    public static boolean extractSource(Level level, BlockPos origin, int requiredSource, boolean simulate) {
-        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
-        for (int dx = -2; dx <= 2; dx++) {
-            for (int dy = -1; dy <= 2; dy++) {
-                for (int dz = -2; dz <= 2; dz++) {
-                    m.set(origin.getX() + dx, origin.getY() + dy, origin.getZ() + dz);
-                    if (!level.isLoaded(m)) {
-                        continue;
-                    }
-                    BlockEntity be = level.getBlockEntity(m);
-                    if (be == null) {
-                        continue;
-                    }
-                    Supplier s = asSupplier(be);
-                    if (s == null) {
-                        continue;
-                    }
-                    if (s.infinite()) {
-                        return true;
-                    }
-                    if (s.available() >= requiredSource) {
-                        if (!simulate) {
-                            s.drain(requiredSource);
-                        }
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Takes up to amount Source from the suppliers around origin (the same area as {@link #extractSource}), possibly in parts.
-     * Returns how much was taken; an unlimited supplier gives everything requested.
-     */
-    public static int drainNearby(Level level, BlockPos origin, int amount) {
-        int taken = 0;
-        java.util.Set<BlockEntity> seen = new java.util.HashSet<>();
-        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
-        for (int dx = -2; dx <= 2 && taken < amount; dx++) {
-            for (int dy = -1; dy <= 2 && taken < amount; dy++) {
-                for (int dz = -2; dz <= 2 && taken < amount; dz++) {
-                    m.set(origin.getX() + dx, origin.getY() + dy, origin.getZ() + dz);
-                    if (!level.isLoaded(m)) {
-                        continue;
-                    }
-                    BlockEntity be = level.getBlockEntity(m);
-                    if (be == null || !seen.add(owner(be))) {
-                        continue;
-                    }
-                    Supplier s = asSupplier(be);
-                    if (s == null) {
-                        continue;
-                    }
-                    if (s.infinite()) {
-                        return amount;
-                    }
-                    taken += s.drain(amount - taken);
-                }
-            }
-        }
-        return taken;
-    }
-
     /**
      * Takes up to amount Source from the suppliers adjacent to the area (the set of machine positions): the area positions themselves are skipped.
      * An unlimited supplier gives everything requested.
      */
-    public static int drainAround(Level level, java.util.Collection<BlockPos> region, int amount) {
-        java.util.Set<BlockPos> inside = new java.util.HashSet<>(region);
-        java.util.Set<BlockEntity> seen = new java.util.HashSet<>();
+    public static int drainAround(Level level, Collection<BlockPos> region, int amount) {
+        Set<BlockPos> inside = region.size() <= 1 ? null : new HashSet<>(region);
+        Set<BlockEntity> seen = new HashSet<>();
         int taken = 0;
         for (BlockPos cell : region) {
             for (Direction dir : DIRECTIONS) {
                 BlockPos p = cell.relative(dir);
-                if (inside.contains(p) || !level.isLoaded(p)) {
+                if ((inside != null && inside.contains(p)) || !level.isLoaded(p)) {
                     continue;
                 }
                 BlockEntity be = level.getBlockEntity(p);
@@ -295,7 +213,7 @@ public class SourceHelper {
      * itself. The network counts every supplier once by it (a jar touching it with both halves is one jar).
      */
     public static BlockEntity owner(BlockEntity be) {
-        if (be instanceof com.golemlogix.blockentity.CryoJarBlockEntity jar) {
+        if (be instanceof CryoJarBlockEntity jar) {
             BlockEntity o = jar.owner();
             return o == null ? be : o;
         }
@@ -308,7 +226,7 @@ public class SourceHelper {
             return 0;
         }
         BlockEntity be = level.getBlockEntity(p);
-        if (be instanceof com.golemlogix.blockentity.CryoJarBlockEntity jar) {
+        if (be instanceof CryoJarBlockEntity jar) {
             return jar.fill(amount, simulate);
         }
         initArsNouveau();
@@ -333,16 +251,16 @@ public class SourceHelper {
 
     /** Pours Source into the jars beside a block (generators). Returns how much was poured. */
     public static int pushSourceToNeighbours(Level level, BlockPos pos, int amount) {
-        return fillAround(level, java.util.List.of(pos), amount, false);
+        return fillAround(level, List.of(pos), amount, false);
     }
 
     /**
      * Pours up to amount Source into the jars touching a machine (its blocks are skipped); a jar touched with both halves or from
      * several blocks is counted once. Returns how much went in; simulate: how much would.
      */
-    public static int fillAround(Level level, java.util.Collection<BlockPos> region, int amount, boolean simulate) {
-        java.util.Set<BlockPos> inside = new java.util.HashSet<>(region);
-        java.util.Set<Object> seen = new java.util.HashSet<>();
+    public static int fillAround(Level level, Collection<BlockPos> region, int amount, boolean simulate) {
+        Set<BlockPos> inside = region.size() <= 1 ? null : new HashSet<>(region);
+        Set<BlockEntity> seen = new HashSet<>();
         int left = amount;
         for (BlockPos cell : region) {
             for (Direction dir : DIRECTIONS) {
@@ -350,7 +268,7 @@ public class SourceHelper {
                     return amount - left;
                 }
                 BlockPos p = cell.relative(dir);
-                if (inside.contains(p) || !level.isLoaded(p)) {
+                if ((inside != null && inside.contains(p)) || !level.isLoaded(p)) {
                     continue;
                 }
                 BlockEntity be = level.getBlockEntity(p);

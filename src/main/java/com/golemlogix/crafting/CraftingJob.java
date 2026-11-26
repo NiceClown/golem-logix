@@ -3,7 +3,10 @@ package com.golemlogix.crafting;
 import com.golemlogix.blockentity.PatternProviderBlockEntity;
 import com.golemlogix.config.GolemConfig;
 import com.golemlogix.data.PatternData;
+import com.golemlogix.system.CraftLoad;
+import com.golemlogix.system.CryoSource;
 import com.golemlogix.system.GolemNetwork;
+import com.golemlogix.system.Ingredients;
 import com.golemlogix.system.ItemKey;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -18,6 +21,7 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.fluids.FluidStack;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -27,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 /**
  * A running autocraft job. It lives inside a Cryo-Calculator:
@@ -43,7 +48,7 @@ public class CraftingJob {
             this.remaining = remaining;
         }
 
-        // what the crafting grid gave for these cells last time: looking a recipe up is what costs most in a crafting step
+        // Cached crafting-grid lookup per RecipeManager: recipe lookup is the costliest part of a crafting step
         private RecipeManager lastRecipes;
         private List<ItemStack> lastCells;
         private List<ItemStack> lastResult;
@@ -228,11 +233,11 @@ public class CraftingJob {
     }
 
     /** Takes from an incoming fluid what the job is waiting for (a fluid output of a processing pattern). Returns the mB taken. */
-    public int absorbFluid(net.neoforged.neoforge.fluids.FluidStack fluid) {
+    public int absorbFluid(FluidStack fluid) {
         if (awaiting.isEmpty() || fluid.isEmpty()) {
             return 0;
         }
-        return absorbAmount(com.golemlogix.system.Ingredients.fluidKey(fluid), fluid.getAmount());
+        return absorbAmount(Ingredients.fluidKey(fluid), fluid.getAmount());
     }
 
     private int absorbAmount(ItemKey key, int available) {
@@ -284,11 +289,12 @@ public class CraftingJob {
             return;
         }
         Level level = net.level();
+        int stepSource = GolemConfig.CRAFT_STEP_SOURCE.get();
 
         Status blocked = null;
         int budget = workers;
         long started = System.nanoTime();
-        long nanosLeft = com.golemlogix.system.CraftLoad.nanosLeft(level);
+        long nanosLeft = CraftLoad.nanosLeft(level);
         boolean outOfTime = false;
 
         for (StepState s : steps) {
@@ -297,88 +303,28 @@ public class CraftingJob {
             }
             List<PatternProviderBlockEntity> candidates = null;
             while (budget > 0 && s.remaining > 0) {
-                // the server's limit; every cycle still gets one step done, so no job starves
+                // Server tick budget; every cycle still runs at least one step so no job starves
                 if (budget < workers && System.nanoTime() - started >= nanosLeft) {
                     outOfTime = true;
                     break;
                 }
-                // the very items of this execution: the encoded ones, or for a fuzzy pattern what may stand for them
+                // Ingredients for this execution: encoded items, or substitutes for a fuzzy pattern
                 Taken taken = take(s.pattern, level);
                 if (taken == null) {
                     break;
                 }
+                Status failure;
                 if (s.pattern.crafting()) {
-                    List<ItemStack> result = s.craft(level, taken.stacks());
-                    if (result == null) {
-                        blocked = Status.INVALID_PATTERN;
-                        break;
-                    }
-                    if (!net.consumeSource(GolemConfig.CRAFT_STEP_SOURCE.get())) {
-                        blocked = Status.NO_SOURCE;
-                        break;
-                    }
-                    consume(taken);
-                    for (ItemStack r : result) {
-                        add(inventory, r);
-                    }
+                    failure = runCraftingStep(s, taken, net, level, stepSource);
                 } else {
-                    // every gateway with this recipe, the one holding this very pattern first: the portion goes to the first
-                    // whose machine takes it (the same plate may sit on a gateway that has no machine beside it)
                     if (candidates == null) {
                         candidates = net.providersFor(s.pattern);
                     }
-                    if (candidates.isEmpty()) {
-                        blocked = Status.NO_PROVIDER;
-                        break;
-                    }
-                    if (!net.hasSource(GolemConfig.CRAFT_STEP_SOURCE.get())) {
-                        blocked = Status.NO_SOURCE;
-                        break;
-                    }
-                    PatternProviderBlockEntity provider = null;
-                    List<ItemStack> pushed = null;
-                    Status why = Status.NO_MACHINE;
-                    for (PatternProviderBlockEntity p : candidates) {
-                        // wait mode: until the result of the previous portion has come back, no new one is loaded
-                        if (p.isBlocking() && net.providerBusy(p.getBlockPos())) {
-                            why = Status.WAITING_MACHINE;
-                            continue;
-                        }
-                        if (!p.redstoneAllows(false)) {
-                            if (why == Status.NO_MACHINE) {
-                                why = Status.PAUSED;
-                            }
-                            continue;
-                        }
-                        if (p.hasMachine()) {
-                            why = Status.WAITING_MACHINE;
-                        }
-                        pushed = p.tryPush(s.pattern, taken.stacks());
-                        if (pushed != null) {
-                            provider = p;
-                            break;
-                        }
-                    }
-                    if (provider == null) {
-                        blocked = why;
-                        break;
-                    }
-                    provider.redstoneAllows(true);
-                    net.consumeSource(GolemConfig.CRAFT_STEP_SOURCE.get());
-                    consume(taken);
-                    // what the machine did not accept goes back into the job's inventory
-                    for (ItemStack back : pushed) {
-                        add(inventory, back);
-                    }
-                    // one record per Provider however many portions are out: a job of millions must not fill the save
-                    InFlight f = inFlightOf(provider.getBlockPos());
-                    for (Map.Entry<ItemKey, Integer> out : s.pattern.outputTotals().entrySet()) {
-                        awaiting.merge(out.getKey(), (long) out.getValue(), Long::sum);
-                        f.left.merge(out.getKey(), (long) out.getValue(), Long::sum);
-                    }
-                    if (f.left.isEmpty()) {
-                        inFlight.remove(f);
-                    }
+                    failure = runProcessingStep(s, taken, candidates, net, stepSource);
+                }
+                if (failure != null) {
+                    blocked = failure;
+                    break;
                 }
                 ItemStack primary = s.pattern.primaryOutput();
                 if (!primary.isEmpty()) {
@@ -393,14 +339,94 @@ public class CraftingJob {
             }
         }
 
-        boolean allStepsIssued = true;
-        for (StepState s : steps) {
-            if (s.remaining > 0) {
-                allStepsIssued = false;
+        boolean allStepsIssued = allStepsIssued();
+        updateStatus(net, allStepsIssued, blocked, budget, outOfTime);
+        starved = budget <= 0 && !allStepsIssued;
+        CraftLoad.ran(System.nanoTime() - started);
+    }
+
+    @Nullable
+    private Status runCraftingStep(StepState s, Taken taken, GolemNetwork net, Level level, int stepSource) {
+        List<ItemStack> result = s.craft(level, taken.stacks());
+        if (result == null) {
+            return Status.INVALID_PATTERN;
+        }
+        if (!net.consumeSource(stepSource)) {
+            return Status.NO_SOURCE;
+        }
+        consume(taken);
+        for (ItemStack r : result) {
+            add(inventory, r);
+        }
+        return null;
+    }
+
+    @Nullable
+    private Status runProcessingStep(StepState s, Taken taken, List<PatternProviderBlockEntity> candidates,
+                                     GolemNetwork net, int stepSource) {
+        if (candidates.isEmpty()) {
+            return Status.NO_PROVIDER;
+        }
+        if (!net.hasSource(stepSource)) {
+            return Status.NO_SOURCE;
+        }
+        PatternProviderBlockEntity provider = null;
+        List<ItemStack> pushed = null;
+        Status why = Status.NO_MACHINE;
+        for (PatternProviderBlockEntity p : candidates) {
+            // Wait mode: until the result of the previous portion returns, no new one is loaded
+            if (p.isBlocking() && net.providerBusy(p.getBlockPos())) {
+                why = Status.WAITING_MACHINE;
+                continue;
+            }
+            if (!p.redstoneAllows(false)) {
+                if (why == Status.NO_MACHINE) {
+                    why = Status.PAUSED;
+                }
+                continue;
+            }
+            if (p.hasMachine()) {
+                why = Status.WAITING_MACHINE;
+            }
+            pushed = p.tryPush(s.pattern, taken.stacks());
+            if (pushed != null) {
+                provider = p;
                 break;
             }
         }
+        if (provider == null) {
+            return why;
+        }
+        provider.redstoneAllows(true);
+        net.consumeSource(stepSource);
+        consume(taken);
+        // What the machine did not accept goes back into the job's inventory
+        for (ItemStack back : pushed) {
+            add(inventory, back);
+        }
+        // One record per Provider however many portions are out: a job of millions must not bloat the save
+        InFlight f = inFlightOf(provider.getBlockPos());
+        for (Map.Entry<ItemKey, Integer> out : s.pattern.outputTotals().entrySet()) {
+            awaiting.merge(out.getKey(), (long) out.getValue(), Long::sum);
+            f.left.merge(out.getKey(), (long) out.getValue(), Long::sum);
+        }
+        if (f.left.isEmpty()) {
+            inFlight.remove(f);
+        }
+        return null;
+    }
 
+    private boolean allStepsIssued() {
+        for (StepState s : steps) {
+            if (s.remaining > 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void updateStatus(GolemNetwork net, boolean allStepsIssued, @Nullable Status blocked,
+                              int budget, boolean outOfTime) {
         if (allStepsIssued && awaiting.isEmpty()) {
             deliver(net);
         } else if (blocked != null && budget > 0 && !outOfTime) {
@@ -410,8 +436,6 @@ public class CraftingJob {
         } else {
             status = Status.RUNNING;
         }
-        starved = budget <= 0 && !allStepsIssued;
-        com.golemlogix.system.CraftLoad.ran(System.nanoTime() - started);
     }
 
     private InFlight inFlightOf(BlockPos provider) {
@@ -431,7 +455,7 @@ public class CraftingJob {
         List<ItemKey> keys = new ArrayList<>(inventory.keySet());
         for (ItemKey key : keys) {
             long n = net.giveBack(key, inventory.get(key));
-            // leftover Liquid Cryo-Source cannot be stored: it goes back into the aether
+            // Leftover Liquid Cryo-Source cannot be stored: it returns to the aether
             if (n <= 0 || isCryo(key)) {
                 inventory.remove(key);
             } else {
@@ -439,11 +463,7 @@ public class CraftingJob {
                 left = true;
             }
         }
-        if (left) {
-            status = Status.DELIVERING;
-        } else {
-            status = Status.DONE;
-        }
+        status = left ? Status.DELIVERING : Status.DONE;
     }
 
     /** Returns all job contents to the network; the rest that did not fit into storage comes back as stacks. */
@@ -451,8 +471,8 @@ public class CraftingJob {
         List<ItemStack> overflow = new ArrayList<>();
         for (Map.Entry<ItemKey, Long> e : inventory.entrySet()) {
             long n = net != null && net.isOnline() ? net.giveBack(e.getKey(), e.getValue()) : e.getValue();
-            // fluids that do not fit cannot be dropped as items: they are lost
-            if (com.golemlogix.system.Ingredients.isFluid(e.getKey())) {
+            // Fluids that do not fit cannot be dropped as items
+            if (Ingredients.isFluid(e.getKey())) {
                 continue;
             }
             while (n > 0) {
@@ -479,9 +499,9 @@ public class CraftingJob {
 
     @Nullable
     private Taken take(PatternData pattern, Level level) {
-        Map<ItemKey, Long> used = new LinkedHashMap<>();
-        List<ItemStack> stacks = new ArrayList<>();
         List<ItemStack> inputs = pattern.inputs();
+        Map<ItemKey, Long> used = new LinkedHashMap<>(inputs.size() * 2);
+        List<ItemStack> stacks = new ArrayList<>(inputs.size());
         for (int i = 0; i < inputs.size(); i++) {
             ItemStack s = inputs.get(i);
             if (s.isEmpty()) {
@@ -490,9 +510,9 @@ public class CraftingJob {
                 }
                 continue;
             }
-            ItemKey key = com.golemlogix.system.Ingredients.key(s);
-            long amount = com.golemlogix.system.Ingredients.amount(s);
-            if (com.golemlogix.system.Ingredients.isFluid(key)) {
+            ItemKey key = Ingredients.key(s);
+            long amount = Ingredients.amount(s);
+            if (Ingredients.isFluid(key)) {
                 if (free(key, used) < amount) {
                     return null;
                 }
@@ -500,35 +520,50 @@ public class CraftingJob {
                 stacks.add(s);
                 continue;
             }
-            java.util.function.Predicate<ItemStack> alt = pattern.matcher(i, level);
-            List<ItemKey> order = new ArrayList<>();
-            order.add(key);
-            if (alt != null) {
-                for (ItemKey k : inventory.keySet()) {
-                    if (!k.equals(key) && !com.golemlogix.system.Ingredients.isFluid(k) && alt.test(k.stack())) {
-                        order.add(k);
-                    }
+            Predicate<ItemStack> alt = pattern.matcher(i, level);
+            if (alt == null) {
+                if (free(key, used) < amount) {
+                    return null;
                 }
-            }
-            long rest = amount;
-            for (ItemKey k : order) {
-                long n = Math.min(rest, free(k, used));
-                // a crafting grid cell holds one item of one kind
-                if (n <= 0 || (pattern.crafting() && n < rest)) {
-                    continue;
-                }
-                used.merge(k, n, Long::sum);
-                stacks.add(k.toStack((int) n));
-                rest -= n;
-                if (rest <= 0) {
-                    break;
-                }
-            }
-            if (rest > 0) {
+                used.merge(key, amount, Long::sum);
+                stacks.add(key.toStack((int) amount));
+            } else if (!takeFuzzy(key, amount, alt, pattern.crafting(), used, stacks)) {
                 return null;
             }
         }
         return new Taken(stacks, used);
+    }
+
+    /** Takes amount of a fuzzy input from the job's inventory (encoded item first, then matching substitutes). */
+    private boolean takeFuzzy(ItemKey key, long amount, Predicate<ItemStack> alt, boolean crafting,
+                              Map<ItemKey, Long> used, List<ItemStack> stacks) {
+        long rest = amount;
+        long first = Math.min(rest, free(key, used));
+        if (first > 0 && (!crafting || first >= rest)) {
+            used.merge(key, first, Long::sum);
+            stacks.add(key.toStack((int) first));
+            rest -= first;
+            if (rest <= 0) {
+                return true;
+            }
+        }
+        for (ItemKey k : inventory.keySet()) {
+            if (k.equals(key) || Ingredients.isFluid(k) || !alt.test(k.stack())) {
+                continue;
+            }
+            long n = Math.min(rest, free(k, used));
+            // A crafting grid cell holds one item of one kind
+            if (n <= 0 || (crafting && n < rest)) {
+                continue;
+            }
+            used.merge(k, n, Long::sum);
+            stacks.add(k.toStack((int) n));
+            rest -= n;
+            if (rest <= 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private long free(ItemKey key, Map<ItemKey, Long> used) {
@@ -548,13 +583,12 @@ public class CraftingJob {
 
     private static void add(Map<ItemKey, Long> map, ItemStack stack) {
         if (!stack.isEmpty()) {
-            map.merge(com.golemlogix.system.Ingredients.key(stack), (long) com.golemlogix.system.Ingredients.amount(stack), Long::sum);
+            map.merge(Ingredients.key(stack), (long) Ingredients.amount(stack), Long::sum);
         }
     }
 
     private static boolean isCryo(ItemKey key) {
-        return com.golemlogix.system.Ingredients.isFluid(key)
-                && com.golemlogix.system.CryoSource.is(com.golemlogix.system.Ingredients.fluid(key, 1));
+        return Ingredients.isFluid(key) && CryoSource.is(Ingredients.fluid(key, 1));
     }
 
     /** Crafting table recipe result + the remaining items (buckets and the like), or null if there is no recipe. */
@@ -593,7 +627,7 @@ public class CraftingJob {
 
     public CompoundTag save(HolderLookup.Provider provider) {
         CompoundTag tag = new CompoundTag();
-        // the old format (one item) is kept for compatibility, the list of orders is saved next to it
+        // Old format (one item) is kept for compatibility; the list of orders is saved next to it
         tag.put("Target", target().toStack(1).save(provider));
         tag.putLong("Amount", amount());
         tag.put("Targets", saveMap(targets, provider));
