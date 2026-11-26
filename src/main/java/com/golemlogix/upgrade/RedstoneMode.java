@@ -1,5 +1,7 @@
 package com.golemlogix.upgrade;
 
+import java.util.Locale;
+
 /**
  * Redstone Module mode, like the AE2 redstone card and the Refined Storage "redstone mode".
  */
@@ -25,6 +27,6 @@ public enum RedstoneMode {
     }
 
     public String key() {
-        return "gui.golem_logix.redstone." + name().toLowerCase(java.util.Locale.ROOT);
+        return "gui.golem_logix.redstone." + name().toLowerCase(Locale.ROOT);
     }
 }

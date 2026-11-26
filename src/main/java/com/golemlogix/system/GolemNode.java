@@ -1,6 +1,10 @@
 package com.golemlogix.system;
 
+import com.golemlogix.blockentity.PipeBlockEntity;
+import com.golemlogix.blocks.SnowPipeBlock;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
@@ -47,16 +51,16 @@ public interface GolemNode {
     }
 
     /** The same in the world: a side closed by a pipe plug (on either of the two) gives no link. */
-    static boolean linked(net.minecraft.world.level.BlockGetter level, net.minecraft.core.BlockPos posA, BlockState a,
-                          net.minecraft.core.BlockPos posB, BlockState b, Direction toB) {
+    static boolean linked(BlockGetter level, BlockPos posA, BlockState a,
+                          BlockPos posB, BlockState b, Direction toB) {
         if (!linked(a, b, toB)) {
             return false;
         }
-        if (a.getBlock() instanceof com.golemlogix.blocks.SnowPipeBlock
-                && com.golemlogix.blockentity.PipeBlockEntity.plugged(level, posA, toB)) {
+        if (a.getBlock() instanceof SnowPipeBlock
+                && PipeBlockEntity.plugged(level, posA, toB)) {
             return false;
         }
-        return !(b.getBlock() instanceof com.golemlogix.blocks.SnowPipeBlock)
-                || !com.golemlogix.blockentity.PipeBlockEntity.plugged(level, posB, toB.getOpposite());
+        return !(b.getBlock() instanceof SnowPipeBlock)
+                || !PipeBlockEntity.plugged(level, posB, toB.getOpposite());
     }
 }

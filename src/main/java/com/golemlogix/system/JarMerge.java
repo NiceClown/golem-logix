@@ -13,7 +13,9 @@ import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Cryo-Source Jars standing side by side join into one, as Create's fluid tanks do: four in a 2 by 2 square become a Giga Jar, nine
@@ -105,7 +107,7 @@ public final class JarMerge {
         List<BlockPos> cells = cells(corner, into.width());
         // a Giga Jar among them comes apart first, also the jars of it that stay outside this square; the jars inside the square
         // take their share without the one-jar cap, since it goes straight into the reactor (a full Giga Jar lost Source here)
-        java.util.Set<BlockPos> inside = new java.util.HashSet<>(cells);
+        Set<BlockPos> inside = new HashSet<>(cells);
         for (BlockPos cell : cells) {
             if (level.getBlockEntity(cell) instanceof CryoJarBlockEntity jar && jar.controller() != null) {
                 apart(level, jar.controller(), null, inside);
@@ -131,11 +133,11 @@ public final class JarMerge {
      * to join. removed: the jar being broken, if one is (it has no share: a jar in the hand holds nothing).
      */
     public static void apart(ServerLevel level, BlockPos corner, @Nullable BlockPos removed) {
-        apart(level, corner, removed, java.util.Set.of());
+        apart(level, corner, removed, Set.of());
     }
 
     /** absorbed: jars that join a larger whole right after this, so they take any Source the jars outside it cannot hold. */
-    private static void apart(ServerLevel level, BlockPos corner, @Nullable BlockPos removed, java.util.Set<BlockPos> absorbed) {
+    private static void apart(ServerLevel level, BlockPos corner, @Nullable BlockPos removed, Set<BlockPos> absorbed) {
         if (!level.isLoaded(corner) || !(level.getBlockEntity(corner) instanceof CryoJarBlockEntity whole)) {
             return;
         }
