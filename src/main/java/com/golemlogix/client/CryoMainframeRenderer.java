@@ -1,25 +1,20 @@
 package com.golemlogix.client;
 
-import com.google.common.base.Suppliers;
 import com.golemlogix.blockentity.CryoMainframeBlockEntity;
 import com.golemlogix.blocks.CryoMainframeBlock;
 import com.golemlogix.blocks.GolemProperties;
 import com.golemlogix.client.render.BerBuffers;
 import com.golemlogix.client.render.LegacyBer;
-import com.golemlogix.client.render.StandaloneModels;
 import com.golemlogix.init.ModBlocks;
-import com.golemlogix.init.ModItems;
 import com.golemlogix.system.MainframeStructure;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
@@ -30,25 +25,14 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.LanternBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
-import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-
+import static com.golemlogix.client.render.PixelMesh.PIXEL;
 import static com.golemlogix.client.render.PixelMesh.box;
-import static com.golemlogix.client.render.PixelMesh.fitWall;
-import static com.golemlogix.client.render.PixelMesh.limb;
-import static com.golemlogix.client.render.PixelMesh.mbox;
-import static com.golemlogix.client.render.PixelMesh.mcBlock;
 import static com.golemlogix.client.render.PixelMesh.modBlock;
-import static com.golemlogix.client.render.PixelMesh.quad;
 import static com.golemlogix.client.render.PixelMesh.smoothstep;
 import static com.golemlogix.client.render.PixelMesh.sprite;
 import static com.golemlogix.client.render.PixelMesh.wall;
@@ -59,25 +43,22 @@ import static com.golemlogix.client.render.PixelMesh.wall;
  * a brass crest with a pressure gauge and a red valve wheel. Atlants hold the cabinet at the sides (they are real blocks).
  * While someone has the cabinet window open, the doors swing outwards.
  * <p>
+ * Static cabinet geometry lives in {@link MainframeCabinetMesh}; animated atlants and copper golems live in {@link MainframeCrew}.
  * Coordinates are pixels in the owner's north-facing frame: X -16..32 (three cells across), Y 0..32, Z 0..32 (front = Z 0).
  */
 public class CryoMainframeRenderer extends LegacyBer<CryoMainframeBlockEntity> {
-    private static final Identifier BRONZE = modBlock("sat_bronze"), BRASS = modBlock("sat_brass"), DARK = modBlock("sat_dark"),
+    static final Identifier BRONZE = modBlock("sat_bronze"), BRASS = modBlock("sat_brass"), DARK = modBlock("sat_dark"),
             MATRIX = modBlock("cryo_panel_matrix"), GLASS = modBlock("sat_glass"), PANEL = modBlock("cryo_panel"),
-            GAUGE = modBlock("monitor_gauge"), COPPER = mcBlock("copper_block"), FLOOR = modBlock("mainframe_floor");
+            GAUGE = modBlock("monitor_gauge"), FLOOR = modBlock("mainframe_floor");
 
-    private static final Vector3f UP = new Vector3f(0f, 1f, 0f);
-    private static final Vector3f SCRATCH_AT = new Vector3f();
-    private static final Vector3f SCRATCH_FWD = new Vector3f();
+    static final float SHELF_0_FLOOR = 3.2f, SHELF_1_FLOOR = 16.2f;
+    private static final int FRIEZE_LED_COUNT = 14;
+    private static final float DOOR_MAX_ANGLE = 95f;
+    private static final int WHITE = 0xFFFFFFFF;
+    private static final int DOOR_HANDLE_TINT = 0xFFFFE6A0;
+    private static final int DOOR_GLASS_TINT = 0xB0DDF6FF;
 
-    private static final Supplier<ItemStack> PAPER_STACK = Suppliers.memoize(() -> new ItemStack(Items.PAPER));
-    private static final Supplier<ItemStack> CARD_STACK = Suppliers.memoize(() -> new ItemStack(ModItems.COPPER_PUNCH_CARD.get()));
-    private static final Supplier<ItemStack> LEVER_STACK = Suppliers.memoize(() -> new ItemStack(Items.LEVER));
-    private static final Supplier<ItemStack> HONEY_STACK = Suppliers.memoize(() -> new ItemStack(Items.HONEY_BOTTLE));
-    private static final Supplier<ItemStack> BRUSH_STACK = Suppliers.memoize(() -> new ItemStack(Items.BRUSH));
-    private static final Supplier<ItemStack> BOOK_STACK = Suppliers.memoize(() -> new ItemStack(Items.WRITABLE_BOOK));
-    private static final Supplier<ItemStack> COPROCESSOR_STACK = Suppliers.memoize(() -> new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get()));
-    private static final Supplier<ItemStack> CHRONOMETER_STACK = Suppliers.memoize(() -> new ItemStack(ModItems.PORTABLE_CHRONOMETER.get()));
+    private static final Vector3f SCRATCH_PROJ = new Vector3f();
 
     private record Meshes(TextureAtlasSprite atlasMark, BerBuffers.Baked cabinet, BerBuffers.Baked valveWheel) {
     }
@@ -88,8 +69,8 @@ public class CryoMainframeRenderer extends LegacyBer<CryoMainframeBlockEntity> {
         TextureAtlasSprite mark = sprite(BRASS);
         if (meshes == null || meshes.atlasMark() != mark) {
             meshes = new Meshes(mark,
-                    BerBuffers.bake(CryoMainframeRenderer::bakeStaticCabinet),
-                    BerBuffers.bake(CryoMainframeRenderer::bakeValveWheel));
+                    BerBuffers.bake(MainframeCabinetMesh::bakeCabinet),
+                    BerBuffers.bake(MainframeCabinetMesh::bakeValveWheel));
         }
         return meshes;
     }
@@ -143,39 +124,64 @@ public class CryoMainframeRenderer extends LegacyBer<CryoMainframeBlockEntity> {
 
         // inside: glowing matrix over the whole back wall (full bright)
         VertexConsumer vc = buffers.getBuffer(solid);
-        wall(vc, p, -14, 3, 30, 28, 28.9f, MATRIX, 0xFFFFFFFF, LightCoordsUtil.FULL_BRIGHT);
+        wall(vc, p, -14, 3, 30, 28, 28.9f, MATRIX, WHITE, LightCoordsUtil.FULL_BRIGHT);
 
         // vanilla blocks inside the cabinet (barrels, potted orchid, hanging lanterns)
-        furnishBlocks(pose, buffers, light);
+        MainframeCabinetMesh.furnishBlocks(pose, buffers, light);
 
-        // calculators on the shelves (as many as are inserted), at the back wall
+        // inserted calculators and snowman assembler crews on both shelves
+        renderCalculators(be, pose, buffers, light, spin);
+        renderSnowCrews(be, level, pose, buffers, light, time, spin, foreman);
+
+        // shelf copper golems and animated side atlants
+        MainframeCrew.renderShelfGolems(be, pose, buffers, light, time, spin);
+        MainframeCrew.renderEmbeddedAtlants(be, pose, buffers, light, partialTick, time, spin);
+
+        // frieze LEDs and spinning roof valve wheel with roof copper golem
+        renderFriezeLeds(buffers.getBuffer(solid), pose.last(), time, spin);
+        renderValveWheel(pose, buffers, solid, baked.valveWheel(), light, time, spin);
+        MainframeCrew.renderRoofGolem(be, pose, buffers, light, time, spin);
+
+        // double glass doors hinged at the side posts, swinging outwards
+        float openAngle = smoothstep(doors) * DOOR_MAX_ANGLE;
+        renderDoor(pose, buffers, -14f, 8f, openAngle, light);
+        renderDoor(pose, buffers, 30f, 8f, -openAngle, light);
+        pose.popPose();
+    }
+
+    /** Calculators standing along the back of both shelves (up to 6 per shelf). */
+    private static void renderCalculators(CryoMainframeBlockEntity be, PoseStack pose, MultiBufferSource buffers, int light, float spin) {
         int calcs = be.clientCalcs();
         BlockState calc = ModBlocks.CRYO_CALCULATOR.get().defaultBlockState().setValue(GolemProperties.ACTIVE, spin > 0.5f);
         for (int k = 0; k < Math.min(calcs, CryoMainframeBlockEntity.CALC_SLOTS); k++) {
             int shelf = k / 6, slot = k % 6;
+            float shelfFloor = shelf == 0 ? SHELF_0_FLOOR : SHELF_1_FLOOR;
             pose.pushPose();
-            pose.translate((-12.5f + slot * 7.2f) / 16f, (shelf == 0 ? 3.2f : 16.2f) / 16f, 22.5f / 16f);
-            pose.scale(5.5f / 16f, 5.5f / 16f, 5.5f / 16f);
+            pose.translate((-12.5f + slot * 7.2f) * PIXEL, shelfFloor * PIXEL, 22.5f * PIXEL);
+            pose.scale(5.5f * PIXEL, 5.5f * PIXEL, 5.5f * PIXEL);
             BerBuffers.block(buffers, calc, pose, light);
             pose.popPose();
         }
+    }
 
-        // snowman crews on the shelves assemble what the cores are making; the foreman is below when the coprocessors help
+    /** Snowman crews on both shelves assembling the current item projections (foreman on shelf 0 when coprocessors boost). */
+    private static void renderSnowCrews(CryoMainframeBlockEntity be, Level level, PoseStack pose, MultiBufferSource buffers,
+                                        int light, float time, float spin, float foreman) {
         long seed = be.getBlockPos().asLong();
-        float appear = spin * spin * (3 - 2 * spin);
+        float appear = smoothstep(spin);
         for (int shelf = 0; shelf < 2; shelf++) {
-            float floor = shelf == 0 ? 3.2f : 16.2f;
+            float floor = shelf == 0 ? SHELF_0_FLOOR : SHELF_1_FLOOR;
             pose.pushPose();
-            pose.translate(0f, 0f, 5f / 16f);
-            Vector3f proj = new Vector3f(0.5f, floor / 16f + 0.5f + Mth.sin(time * 0.1f + shelf) * 0.02f, 0.45f);
+            pose.translate(0f, 0f, 5f * PIXEL);
+            SCRATCH_PROJ.set(0.5f, floor * PIXEL + 0.5f + Mth.sin(time * 0.1f + shelf) * 0.02f, 0.45f);
             float shelfWork = (shelf == 0 || be.clientBusy() > 1 || !be.clientDisplayItem(shelf).isEmpty()) ? spin : 0f;
-            SnowCrew.render(pose, buffers, light, time, seed + shelf * 7919L, floor / 16f, shelfWork,
-                    shelf == 0 ? foreman : 0f, proj);
+            SnowCrew.render(pose, buffers, light, time, seed + shelf * 7919L, floor * PIXEL, shelfWork,
+                    shelf == 0 ? foreman : 0f, SCRATCH_PROJ);
             ItemStack current = be.clientDisplayItem(shelf);
             if (!current.isEmpty() && appear > 0.005f) {
                 float size = (current.getItem() instanceof BlockItem ? 0.3f : 0.26f) * appear;
                 pose.pushPose();
-                pose.translate(proj.x, proj.y, proj.z);
+                pose.translate(SCRATCH_PROJ.x, SCRATCH_PROJ.y, SCRATCH_PROJ.z);
                 pose.mulPose(Axis.YP.rotationDegrees(time * 3f + shelf * 90f));
                 pose.scale(size, size, size);
                 BerBuffers.item(buffers, current, ItemDisplayContext.FIXED, LightCoordsUtil.FULL_BRIGHT, pose, level, 0);
@@ -183,536 +189,54 @@ public class CryoMainframeRenderer extends LegacyBer<CryoMainframeBlockEntity> {
             }
             pose.popPose();
         }
+    }
 
-        // the atlants are built into the cabinet: animated torsos/arms/heads
-        shelfGolems(be, pose, buffers, light, time, spin);
-        for (int k = 0; k < 2; k++) {
-            embeddedAtlantDynamic(be, pose, buffers, light, partialTick, k, time, spin);
-        }
-        vc = buffers.getBuffer(solid);
-        p = pose.last();
-        // frieze above the doors: a row of teal lights that run while the cabinet works and flicker quietly when idle
+    /** Frieze above the doors: teal indicator lights chasing while active, softly breathing while idle. */
+    private static void renderFriezeLeds(VertexConsumer vc, PoseStack.Pose p, float time, float spin) {
         TextureAtlasSprite panelSprite = sprite(PANEL);
-        for (int k = 0; k < 14; k++) {
+        for (int k = 0; k < FRIEZE_LED_COUNT; k++) {
             float lx = -12.6f + k * 3f;
-            float glow = spin > 0.01f ? (((int) (time / 3) - k) % 14 + 14) % 14 < 4 ? 1f : 0.35f : 0.45f + 0.15f * Mth.sin(time * 0.05f + k);
+            float glow = spin > 0.01f
+                    ? (((int) (time / 3) - k) % FRIEZE_LED_COUNT + FRIEZE_LED_COUNT) % FRIEZE_LED_COUNT < 4 ? 1f : 0.35f
+                    : 0.45f + 0.15f * Mth.sin(time * 0.05f + k);
             int c = 0xFF000000 | ((int) (0x30 * glow) << 16) | ((int) (0xF0 * glow) << 8) | (int) (0xE8 * glow);
             box(vc, p, lx, 32.5f, -0.9f, lx + 1.4f, 33.6f, -0.5f, panelSprite, c, LightCoordsUtil.FULL_BRIGHT);
         }
-        // red valve wheel on the crest (the copper golem on the roof turns it)
+    }
+
+    /** Red valve wheel on the brass crest (turned by the roof copper golem). */
+    private static void renderValveWheel(PoseStack pose, MultiBufferSource buffers, RenderType solid, BerBuffers.Baked valveWheel,
+                                         int light, float time, float spin) {
         pose.pushPose();
-        pose.translate(24.5f / 16f, 36f / 16f, -2.6f / 16f);
+        pose.translate(24.5f * PIXEL, 36f * PIXEL, -2.6f * PIXEL);
         pose.mulPose(Axis.ZP.rotationDegrees(time * (spin > 0.01f ? 2.5f : 0.3f)));
-        baked.valveWheel().draw(buffers, solid, pose.last(), light, 0);
-        pose.popPose();
-        roofGolem(be, pose, buffers, light, time, spin);
-
-        // doors: leaves hinged at the side posts, swing outwards
-        float open = doors * doors * (3 - 2 * doors) * 95f;
-        door(pose, buffers, -14f, 8f, open, light);
-        door(pose, buffers, 30f, 8f, -open, light);
+        valveWheel.draw(buffers, solid, pose.last(), light, 0);
         pose.popPose();
     }
 
-    private static void bakeStaticCabinet(VertexConsumer vc, PoseStack pose) {
-        PoseStack.Pose p = pose.last();
-        int white = 0xFFFFFFFF;
-        int light = 0;
-        // body: plinth, back wall, sides, roof
-        box(vc, p, -16, 0, 0, 32, 2, 32, DARK, white, light);
-        box(vc, p, -15, 2, 29, 31, 30, 32, BRONZE, white, light);
-        box(vc, p, -16, 2, 2, -14, 30, 32, BRONZE, white, light);
-        box(vc, p, 30, 2, 2, 32, 30, 32, BRONZE, white, light);
-        box(vc, p, -16, 30, 0, 32, 32, 32, BRONZE, white, light);
-        // aged-brass outer front frame and ribs (slightly deeper tint than door frames for hierarchy)
-        int frameTint = 0xFFE4D4BA;
-        box(vc, p, -16, 2, -0.5f, -14, 30, 2, BRASS, frameTint, light);
-        box(vc, p, 30, 2, -0.5f, 32, 30, 2, BRASS, frameTint, light);
-        box(vc, p, -16, 28, -0.5f, 32, 30, 2, BRASS, frameTint, light);
-        box(vc, p, -16, 2, -0.5f, 32, 3, 2, BRASS, frameTint, light);
-        box(vc, p, -16.3f, 0, 30.7f, -15.3f, 32.3f, 32.3f, BRASS, white, light);
-        box(vc, p, 31.3f, 0, 30.7f, 32.3f, 32.3f, 32.3f, BRASS, white, light);
-        // inside shelves and floors
-        box(vc, p, -14, 15, 3, 30, 16, 29, BRASS, white, light);
-        box(vc, p, -14, 3, 3, 30, 3.2f, 29, BRONZE, white, light);
-        box(vc, p, -14, 16, 3, 30, 16.2f, 29, BRONZE, white, light);
-        shelfFloor(vc, p, 3.21f, light);
-        shelfFloor(vc, p, 16.21f, light);
-        // furniture boxes
-        furnishStatic(vc, p, light);
-        // atlant static pedestal housings and frosted pipes on both sides
-        for (int k = 0; k < 2; k++) {
-            boolean right = k == 1;
-            mbox(vc, pose, right, -25, 0, 0.5f, -16, 11, 15.5f, CASING, white, light);
-            mbox(vc, pose, right, -25.5f, 10.5f, 0, -15.5f, 12, 16, BRASS, white, light);
-            for (int zi = 0; zi < 2; zi++) {
-                float z = zi == 0 ? 3.2f : 10.0f;
-                mbox(vc, pose, right, -28.5f, 2.5f, z, -24.5f, 5.5f, z + 2.8f, FROST_PIPE, white, light);
-                mbox(vc, pose, right, -29.5f, 2.2f, z - 0.3f, -26.5f, 9.5f, z + 3.1f, FROST_PIPE, white, light);
-                mbox(vc, pose, right, -29.8f, 6.4f, z - 0.6f, -26.2f, 7.2f, z + 3.4f, ICE, white, light);
-                mbox(vc, pose, right, -28.4f, 0.6f, z + 1.0f, -27.8f, 2.2f, z + 1.6f, ICE, white, light);
-            }
-        }
-        // frieze backing, crest, pressure gauge and copper pipes over the roof and down the back wall
-        box(vc, p, -16, 32, -0.5f, 32, 34, 3, BRONZE, white, light);
-        box(vc, p, -16.5f, 34, -1.5f, 32.5f, 37.4f, 16, BRASS, white, light);
-        box(vc, p, -15.5f, 37.4f, -0.8f, 31.5f, 38.4f, 15, BRONZE, white, light);
-        box(vc, p, -15, 34.6f, -1.8f, 31, 36.8f, -1.5f, BRONZE, white, light);
-        box(vc, p, -13.2f, 34.2f, -2.4f, -7.8f, 37.8f, -1.8f, BRASS, white, light);
-        fitWall(vc, p, -13f, 34.4f, -8f, 37.6f, -2.45f, GAUGE, white, light);
-        box(vc, p, -15, 32, 20, 31, 33.6f, 21.6f, COPPER, white, light);
-        box(vc, p, -15, 32, 25, 31, 33.6f, 26.6f, COPPER, white, light);
-        box(vc, p, 27, 4, 32, 28.6f, 33.6f, 33.6f, COPPER, white, light);
-        box(vc, p, -12.6f, 4, 32, -11, 33.6f, 33.6f, COPPER, white, light);
-    }
-
-    private static void bakeValveWheel(VertexConsumer vc, PoseStack pose) {
-        valve(pose, vc, 0f, 0f, 0f, 3.4f, 0f, 0);
-    }
-
-    private static final Identifier ATLANT_BODY = modBlock("atlant_body"), ATLANT_LIMB = modBlock("atlant_limb"),
-            ATLANT_BELT = modBlock("atlant_belt"), CASING = modBlock("atlas_casing"), FROST_PIPE = modBlock("resonator_pipe"),
-            ICE = modBlock("sat_ice");
-
-    /**
-     * Animated parts of an atlant built into a side (k = 0 left, 1 right): breathing torso, gripping arms, and head tracking the player.
-     * The static pedestal housing and frosted pipes are baked in {@link #bakeStaticCabinet}.
-     */
-    private static void embeddedAtlantDynamic(CryoMainframeBlockEntity be, PoseStack pose, MultiBufferSource buffers, int light, float pt, int k,
-                                              float time, float spin) {
-        boolean right = k == 1;
-        VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
-        int white = 0xFFFFFFFF;
-        // torso: adjoins the cabinet wall (X <= -16), belt and shoulder plates
-        float breathe = 0.25f * Mth.sin(time * 0.05f + k * 2f);
-        mbox(vc, pose, right, -26, 12, 2.5f, -16f, 26 + breathe, 13.5f, ATLANT_BODY, white, light);
-        mbox(vc, pose, right, -26.5f, 11.5f, 2, -16f, 13.5f, 14, ATLANT_BELT, white, light);
-        mbox(vc, pose, right, -29, 22 + breathe, 1.5f, -24.5f, 27 + breathe, 14.5f, ATLANT_BELT, white, light);
-        mbox(vc, pose, right, -26.5f, 25.5f + breathe, 2.5f, -16f, 27.5f + breathe, 13.5f, ATLANT_BELT, white, light);
-        // outer arm: shoulder -> elbow at the front corner -> palm on the front post
-        float grip = spin > 0.01f ? 0.4f * Mth.sin(time * 0.3f + k) : 0f;
-        float sx1 = mx(right, -27.5f), ex1 = mx(right, -28.5f), hx1 = mx(right, -17.5f);
-        limb(vc, pose, sx1, 24.5f + breathe, 6f, ex1, 16f, -1.5f, 4.2f, ATLANT_LIMB, light);
-        limb(vc, pose, ex1, 16f, -1.5f, hx1, 17.5f + grip, -1.8f, 3.6f, ATLANT_LIMB, light);
-        mbox(vc, pose, right, -18.5f, 15.5f + grip, -3.0f, -16.0f, 20 + grip, -0.6f, ATLANT_BELT, white, light);
-        // inner arm: raised, the palm rests on the roof cornice at the corner
-        float sx2 = mx(right, -22f), ex2 = mx(right, -23.5f), hx2 = mx(right, -16.8f);
-        limb(vc, pose, sx2, 26f + breathe, 12f, ex2, 33.5f, 11f, 3.8f, ATLANT_LIMB, light);
-        limb(vc, pose, ex2, 33.5f, 11f, hx2, 37.2f, 8f, 3.4f, ATLANT_LIMB, light);
-        mbox(vc, pose, right, -18.0f, 36.8f, 5.6f, -16.0f, 38.2f, 10.4f, ATLANT_BELT, white, light);
-        // head at the top corner: the atlant head model (bigger), turns to the player
-        float yaw = be.headsPrev[k][0] + Mth.wrapDegrees(be.heads[k][0] - be.headsPrev[k][0]) * pt;
-        float pitch = Mth.lerp(pt, be.headsPrev[k][1], be.heads[k][1]);
-        pose.pushPose();
-        pose.translate(mx(right, -21.5f) / 16f, (27.5f + breathe) / 16f, 8f / 16f);
-        pose.mulPose(Axis.YP.rotationDegrees(-yaw + (right ? -12f : 12f)));
-        pose.mulPose(Axis.XP.rotationDegrees(pitch));
-        pose.scale(1.15f, 1.15f, 1.15f);
-        pose.translate(-0.5f, -6f / 16f, -0.5f);
-        StandaloneModels.render(pose.last(), buffers.getBuffer(Sheets.cutoutBlockSheet()), AtlantHeadRenderer.HEAD, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
-        pose.popPose();
-    }
-
-    private static float mx(boolean mirror, float x) {
-        return mirror ? 16f - x : x;
-    }
-
-    // ------------------------------------------------------------------------------------------------ copper golems
-    /** A thing in the golem's hand: a small item turned with the palm. */
-    private static Consumer<PoseStack> held(ItemStack stack, float scale, float rotX, int light, MultiBufferSource buffers) {
-        return hp -> {
-            hp.scale(scale, scale, scale);
-            if (rotX != 0f) {
-                hp.mulPose(Axis.XP.rotationDegrees(rotX));
-            }
-            BerBuffers.item(buffers, stack, ItemDisplayContext.FIXED, light, hp, null, 0);
-        };
-    }
-
-    /** The golem's pose at this moment: where it stands (blocks), where it looks, animation, arms, what it holds in front of its chest. */
-    private record GolemPose(Vector3f at, Vector3f forward, CopperGolemPuppet.Anim anim, CopperGolemPuppet.Arms arms,
-                             Consumer<PoseStack> chest) {
-    }
-
-    /**
-     * The calculators stand at the back of each shelf from z = 22.5 (pixels). A golem facing them stands at FRONT at most: with its arms
-     * forward and a bow it reaches about 2.5 px, so it never enters a calculator. The back wall behind them is only for empty shelves.
-     */
-    private static final float FRONT = 19.6f;
-
-    /** A point on the shelf floor (x, z in pixels) in blocks. */
-    private static Vector3f spot(float x, float floor, float z) {
-        return new Vector3f(x / 16f, floor, z / 16f);
-    }
-
-    /** Moving between two shelf points over the fraction t (0..1): walks looking ahead. */
-    private static GolemPose walk(float t, float x0, float z0, float x1, float z1, float floor, float time,
-                                  @Nullable Consumer<PoseStack> inHand) {
-        float e = smoothstep(t);
-        Vector3f at = spot(Mth.lerp(e, x0, x1), floor, Mth.lerp(e, z0, z1));
-        Vector3f fwd = new Vector3f(x1 - x0, 0f, z1 - z0);
-        if (fwd.lengthSquared() < 1e-4f) {
-            fwd.set(0f, 0f, -1f);
-        }
-        return new GolemPose(at, fwd.normalize(), new CopperGolemPuppet.Anim(time * 0.5f, true, false, 0f),
-                new CopperGolemPuppet.Arms(-0.35f, 0.08f, -0.35f, -0.08f, 0f, inHand, null), null);
-    }
-
-    /**
-     * The golem is drawn with smoothed position and rotation: when the cabinet goes from idle to work (and back), the scene
-     * changes, but the golem does not jump; it walks to the new point (and moves its legs while catching up).
-     */
-    private static void renderSmooth(CryoMainframeBlockEntity be, int idx, PoseStack pose, MultiBufferSource buffers, int light, float time,
-                                     GolemPose g, float scale, int variant) {
-        float[] s = be.golemSmooth[idx];
-        float tyaw = (float) Math.atan2(g.forward().x, g.forward().z);
-        float dt = time - s[4];
-        if (dt < -36000f) {
-            dt += 72000f;
-        }
-        if (s[5] == 0f || dt < 0f || dt > 40f) {
-            s[0] = g.at().x;
-            s[1] = g.at().y;
-            s[2] = g.at().z;
-            s[3] = tyaw;
-            s[5] = 1f;
-        } else {
-            float a = 1f - (float) Math.exp(-dt * 0.2f);
-            s[0] += (g.at().x - s[0]) * a;
-            s[1] += (g.at().y - s[1]) * a;
-            s[2] += (g.at().z - s[2]) * a;
-            float dyaw = Mth.wrapDegrees((float) Math.toDegrees(tyaw - s[3]));
-            s[3] += (float) Math.toRadians(dyaw) * a;
-        }
-        s[4] = time;
-        float lag = (float) Math.hypot(g.at().x - s[0], g.at().z - s[2]);
-        CopperGolemPuppet.Anim anim = g.anim();
-        if (lag > 0.03f && !anim.walking()) {
-            anim = new CopperGolemPuppet.Anim(time * 0.5f, true, anim.carrying(), anim.bow());
-        }
-        SCRATCH_FWD.set(Mth.sin(s[3]), 0f, Mth.cos(s[3]));
-        SCRATCH_AT.set(s[0], s[1], s[2]);
-        CopperGolemPuppet.render(pose, buffers, light, SCRATCH_AT, SCRATCH_FWD, UP, scale, anim,
-                variant, g.chest(), g.arms());
-    }
-
-    /**
-     * Copper golem on the roof: while the cabinet works it turns the valve wheel; when idle it walks around the crest, taps the
-     * gauge, wipes the wheel with a rag, stretches and looks around.
-     */
-    private static void roofGolem(CryoMainframeBlockEntity be, PoseStack pose, MultiBufferSource buffers, int light, float time, float spin) {
-        float floor = 38.4f / 16f;
-        GolemPose g;
-        if (spin > 0.3f) {
-            float sway = Mth.sin(time * 0.35f) * 0.25f;
-            g = new GolemPose(spot(24.5f, floor, 3.2f), new Vector3f(Mth.sin(sway) * 0.3f, 0f, -1f),
-                    new CopperGolemPuppet.Anim(time * 0.3f, false, true, 0.25f + 0.1f * Mth.sin(time * 0.7f)), null, hp -> { });
-        } else {
-            float cyc = ((time + be.getBlockPos().asLong() % 97) / 520f) % 1f;
-            if (cyc < 0.26f) {
-                // at the gauge: leans over and taps the glass with a finger
-                float tap = Math.max(0f, Mth.sin(time * 0.9f));
-                g = new GolemPose(spot(-10.5f, floor, 3.4f), new Vector3f(0f, 0f, -1f), new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.28f),
-                        new CopperGolemPuppet.Arms(-1.25f - 0.12f * tap, 0.1f, -0.2f, -0.1f, 0.15f * Mth.sin(time * 0.05f), null, null), null);
-            } else if (cyc < 0.36f) {
-                g = walk((cyc - 0.26f) / 0.10f, -10.5f, 3.4f, 24.5f, 3.2f, floor, time, null);
-            } else if (cyc < 0.68f) {
-                // wipes the wheel: the hand moves in a circle
-                float a = time * 0.35f;
-                g = new GolemPose(spot(24.5f, floor, 3.2f), new Vector3f(0f, 0f, -1f), new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.12f),
-                        new CopperGolemPuppet.Arms(-1.35f + 0.22f * Mth.sin(a), 0.25f + 0.2f * Mth.cos(a), -0.3f, -0.1f, 0f,
-                                held(PAPER_STACK.get(), 0.3f, 0f, light, buffers), null), null);
-            } else if (cyc < 0.78f) {
-                g = walk((cyc - 0.68f) / 0.10f, 24.5f, 3.2f, 6.5f, 8f, floor, time, null);
-            } else {
-                // stretches and looks around
-                float t = (cyc - 0.78f) / 0.22f;
-                float up = Mth.clamp(Mth.sin(t * Mth.PI) * 1.4f, 0f, 1f);
-                g = new GolemPose(spot(6.5f, floor, 8f), new Vector3f(0f, 0f, -1f), new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0f),
-                        new CopperGolemPuppet.Arms(-2.9f * up, 0.3f * up, -2.9f * up, -0.3f * up, 0.6f * Mth.sin(time * 0.06f), null, null), null);
-            }
-        }
-        renderSmooth(be, 2, pose, buffers, light, time, g, 0.3f, 1);
-    }
-
-    /**
-     * Copper golems on the cabinet shelves.
-     * Shelf 0 is the chief cryo engineer: at work it calibrates a calculator with a wrench, turns the manifold valve and checks a
-     * punch card; when idle it wipes the door glass, oils the calculators from an oil can, sweeps frost with a brush and reads the
-     * shift log.
-     * Shelf 1 is the coprocessor operator: at work it carries a compressed coprocessor to the assemblers and feeds punch cards into the reader;
-     * when idle it polishes the glowing matrix, sorts punch cards into stacks, winds the chronometer and stretches.
-     */
-    private static void shelfGolems(CryoMainframeBlockEntity be, PoseStack pose, MultiBufferSource buffers, int light, float time, float spin) {
-        renderSmooth(be, 0, pose, buffers, light, time, shelf0Pose(be, buffers, light, time, spin), 0.24f, 1);
-        renderSmooth(be, 1, pose, buffers, light, time, shelf1Pose(be, buffers, light, time, spin), 0.24f, 2);
-    }
-
-    private static GolemPose shelf0Pose(CryoMainframeBlockEntity be, MultiBufferSource buffers, int light, float time, float spin) {
-        float floor = 3.2f / 16f;
-        if (spin <= 0.05f) {
-            float cyc = ((time + be.getBlockPos().asLong() % 131) / 720f) % 1f;
-            if (cyc < 0.20f) {
-                // wipes the door glass from inside: the hand with a rag draws circles
-                float a = time * 0.4f;
-                return new GolemPose(spot(-9f, floor, 5.5f), new Vector3f(0f, 0f, -1f), new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.04f),
-                        new CopperGolemPuppet.Arms(-1.75f + 0.25f * Mth.sin(a), 0.3f + 0.25f * Mth.cos(a), -0.25f, -0.1f, 0.1f * Mth.sin(time * 0.05f),
-                                held(PAPER_STACK.get(), 0.3f, 0f, light, buffers), null), null);
-            }
-            if (cyc < 0.26f) {
-                return walk((cyc - 0.20f) / 0.06f, -9f, 5.5f, -5.3f, 18.5f, floor, time, null);
-            }
-            if (cyc < 0.46f) {
-                // oils a calculator: leans over, the oil can in its hand "pumps"
-                float pump = Mth.sin(time * 0.8f);
-                return new GolemPose(spot(-5.3f, floor, 18.5f), new Vector3f(0f, 0f, 1f), new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.32f),
-                        new CopperGolemPuppet.Arms(-0.95f + 0.12f * pump, 0.12f, -0.5f, -0.12f, 0.1f * pump,
-                                held(HONEY_STACK.get(), 0.32f, 0f, light, buffers), null), null);
-            }
-            if (cyc < 0.52f) {
-                return walk((cyc - 0.46f) / 0.06f, -5.3f, 18.5f, 12f, 17f, floor, time, null);
-            }
-            if (cyc < 0.74f) {
-                // sweeps frost with a brush: walks slowly along the shelf, the hands sweep
-                float t = (cyc - 0.52f) / 0.22f;
-                float x = 12f + 9f * (0.5f - 0.5f * Mth.cos(t * Mth.PI * 2f));
-                float dir = Mth.sin(t * Mth.PI * 2f) >= 0f ? 1f : -1f;
-                float sweep = Mth.sin(time * 0.6f);
-                return new GolemPose(spot(x, floor, 17f), new Vector3f(dir, 0f, 0.15f), new CopperGolemPuppet.Anim(time * 0.25f, true, false, 0.22f),
-                        new CopperGolemPuppet.Arms(-0.7f + 0.25f * sweep, 0.1f, -0.7f + 0.25f * sweep, -0.1f, 0f,
-                                held(BRUSH_STACK.get(), 0.34f, 90f, light, buffers), null), null);
-            }
-            if (cyc < 0.80f) {
-                return walk((cyc - 0.74f) / 0.06f, 12f, 17f, 2f, 17.5f, floor, time, null);
-            }
-            // reads the shift log: a book in its hands, head bowed, turns a page now and then
-            float flip = Math.max(0f, Mth.sin(time * 0.05f) - 0.9f) * 10f;
-            return new GolemPose(spot(2f, floor, 17.5f), new Vector3f(0f, 0f, -1f), new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.12f),
-                    new CopperGolemPuppet.Arms(-0.95f - 0.5f * flip, 0.18f, -0.95f, -0.18f, 0.12f * Mth.sin(time * 0.02f),
-                            held(BOOK_STACK.get(), 0.34f, 0f, light, buffers), null), null);
-        }
-
-        // work: calculator calibration, manifold valve, punch card check
-        float cycle = ((time / 160f) + 0.12f) % 1.0f;
-        if (cycle < 0.40f) {
-            float ratchet = Mth.sin(time * 0.75f);
-            Consumer<PoseStack> wrench = held(LEVER_STACK.get(), 0.35f, 90f, light, buffers);
-            return new GolemPose(spot(-5.3f, floor, FRONT), new Vector3f(0f, 0f, 1f), new CopperGolemPuppet.Anim(time * 0.3f, false, false, 0.26f),
-                    new CopperGolemPuppet.Arms(-1.15f + 0.28f * ratchet, 0.12f, -0.65f, -0.1f, 0.15f * Mth.sin(time * 0.3f), wrench, null), null);
-        }
-        if (cycle < 0.48f) {
-            return walk((cycle - 0.40f) / 0.08f, -5.3f, FRONT, -12.2f, 19.5f, floor, time, held(LEVER_STACK.get(), 0.35f, 90f, light, buffers));
-        }
-        if (cycle < 0.72f) {
-            float valvePump = Mth.sin(time * 0.45f);
-            return new GolemPose(spot(-12.2f, floor, 19.5f), new Vector3f(-0.8f, 0f, 0.6f),
-                    new CopperGolemPuppet.Anim(time * 0.4f, false, false, 0.16f + 0.10f * valvePump),
-                    new CopperGolemPuppet.Arms(-1.3f + 0.15f * valvePump, 0.22f, -1.3f - 0.15f * valvePump, -0.22f, 0f, null, null), null);
-        }
-        if (cycle < 0.80f) {
-            return walk((cycle - 0.72f) / 0.08f, -12.2f, 19.5f, 2.0f, 18.0f, floor, time, null);
-        }
-        return new GolemPose(spot(2.0f, floor, 18.0f), new Vector3f(0f, 0f, -1f), new CopperGolemPuppet.Anim(time * 0.2f, false, true, 0.08f),
-                new CopperGolemPuppet.Arms(-0.95f, 0.14f, -0.95f, -0.14f, 0.18f * Mth.sin(time * 0.1f), null, null),
-                held(CARD_STACK.get(), 0.4f, 0f, light, buffers));
-    }
-
-    private static GolemPose shelf1Pose(CryoMainframeBlockEntity be, MultiBufferSource buffers, int light, float time, float spin) {
-        float floor = 16.2f / 16f;
-        // calculators on this shelf (slots 7..12): then the golem keeps in front of them instead of going to the back wall
-        boolean shelfFilled = be.clientCalcs() > CryoMainframeBlockEntity.CALC_SLOTS / 2;
-        float polishZ = shelfFilled ? FRONT : 25.5f, sortZ = shelfFilled ? FRONT : 23.5f;
-        if (spin <= 0.05f) {
-            float cyc = ((time + be.getBlockPos().asLong() % 113) / 760f + 0.5f) % 1f;
-            if (cyc < 0.22f) {
-                // polishes the glowing matrix on the back wall (or the calculators in front of it): a rag moves from side to side
-                float a = time * 0.3f;
-                return new GolemPose(spot(-2f, floor, polishZ), new Vector3f(0f, 0f, 1f), new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0f),
-                        new CopperGolemPuppet.Arms((shelfFilled ? -1.45f : -2.35f) + 0.1f * Mth.cos(a), 0.45f * Mth.sin(a), -0.3f, -0.1f,
-                                0.2f * Mth.sin(a), held(PAPER_STACK.get(), 0.3f, 0f, light, buffers), null), null);
-            }
-            if (cyc < 0.28f) {
-                return walk((cyc - 0.22f) / 0.06f, -2f, polishZ, 20f, sortZ, floor, time, null);
-            }
-            if (cyc < 0.50f) {
-                // sorts punch cards into stacks: reaches out with the right hand, then the left
-                float sw = Mth.sin(time * 0.3f);
-                Consumer<PoseStack> card = held(CARD_STACK.get(), 0.35f, 90f, light, buffers);
-                return new GolemPose(spot(20f, floor, sortZ), new Vector3f(0.6f, 0f, 0.8f), new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.2f),
-                        new CopperGolemPuppet.Arms(-0.8f - 0.35f * Math.max(0f, sw), 0.15f, -0.8f - 0.35f * Math.max(0f, -sw), -0.15f, 0.3f * sw,
-                                sw > 0f ? card : null, sw <= 0f ? card : null), null);
-            }
-            if (cyc < 0.56f) {
-                return walk((cyc - 0.50f) / 0.06f, 20f, sortZ, 8f, 18f, floor, time, null);
-            }
-            if (cyc < 0.78f) {
-                // winds the chronometer: the watch in the left hand at the chest, the right one turns the crown
-                float a = time * 0.5f;
-                return new GolemPose(spot(8f, floor, 18f), new Vector3f(0f, 0f, -1f), new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.1f),
-                        new CopperGolemPuppet.Arms(-1.05f + 0.1f * Mth.sin(a), 0.35f + 0.1f * Mth.cos(a), -1.05f, -0.2f, -0.15f, null,
-                                held(CHRONOMETER_STACK.get(), 0.32f, 90f, light, buffers)), null);
-            }
-            if (cyc < 0.84f) {
-                return walk((cyc - 0.78f) / 0.06f, 8f, 18f, -9f, 19f, floor, time, null);
-            }
-            // stretches and looks over the matrix
-            float t = (cyc - 0.84f) / 0.16f;
-            float up = Mth.clamp(Mth.sin(t * Mth.PI) * 1.4f, 0f, 1f);
-            return new GolemPose(spot(-9f, floor, 19f), new Vector3f(0f, 0f, -1f), new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0f),
-                    new CopperGolemPuppet.Arms(-2.9f * up, 0.3f * up, -2.9f * up, -0.3f * up, 0.5f * Mth.sin(time * 0.05f), null, null), null);
-        }
-
-        // work: a coprocessor to the assemblers, the handover, a punch card into the reader
-        float cycle = ((time / 160f) + 0.62f) % 1.0f;
-        if (cycle < 0.42f) {
-            float t = cycle / 0.42f;
-            return new GolemPose(spot(Mth.lerp(t, 22.0f, 6.5f), floor, 18.0f), new Vector3f(-1f, 0f, 0f),
-                    new CopperGolemPuppet.Anim(time * 0.5f, true, true, 0.1f), null, held(COPROCESSOR_STACK.get(), 0.38f, 0f, light, buffers));
-        }
-        if (cycle < 0.65f) {
-            float lift = Mth.clamp((cycle - 0.42f) / 0.06f, 0f, 1f);
-            float rX = Mth.lerp(lift, -1.25f, -1.55f);
-            return new GolemPose(spot(6.5f, floor, 17.0f), new Vector3f(0f, 0f, -1f), new CopperGolemPuppet.Anim(time * 0.3f, false, true, 0f),
-                    new CopperGolemPuppet.Arms(rX, 0.2f, rX, -0.2f, 0f, null, null), held(COPROCESSOR_STACK.get(), 0.38f, 0f, light, buffers));
-        }
-        if (cycle < 0.73f) {
-            return walk((cycle - 0.65f) / 0.08f, 6.5f, 17.0f, 16.3f, FRONT, floor, time, held(CARD_STACK.get(), 0.35f, 90f, light, buffers));
-        }
-        float slide = 0.5f + 0.5f * Mth.sin(time * 0.7f);
-        return new GolemPose(spot(16.3f, floor, FRONT), new Vector3f(0f, 0f, 1f), new CopperGolemPuppet.Anim(time * 0.3f, false, false, 0.15f),
-                new CopperGolemPuppet.Arms(-1.3f + 0.25f * slide, 0.08f, -0.6f, -0.15f, 0f, held(CARD_STACK.get(), 0.35f, 90f, light, buffers), null), null);
-    }
-
-    /** Door leaf: the hinge at x = hinge, the free edge at x = edge; angle = rotation around the hinge (degrees). */
-    private static void door(PoseStack pose, MultiBufferSource buffers, float hinge, float edge, float angle, int light) {
+    /** Door leaf hinged at {@code x = hinge} with free edge at {@code x = edge}, rotated by {@code angle} degrees. */
+    private static void renderDoor(PoseStack pose, MultiBufferSource buffers, float hinge, float edge, float angle, int light) {
         float w = edge - hinge;
         pose.pushPose();
-        pose.translate(hinge / 16f, 0f, 1f / 16f);
+        pose.translate(hinge * PIXEL, 0f, PIXEL);
         pose.mulPose(Axis.YP.rotationDegrees(angle));
         VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
         PoseStack.Pose p = pose.last();
-        int white = 0xFFFFFFFF;
         float x0 = Math.min(0, w), x1 = Math.max(0, w);
-        // door leaf frame
-        box(vc, p, x0, 3, -0.6f, x1, 4.4f, 0.6f, BRASS, white, light);
-        box(vc, p, x0, 26.6f, -0.6f, x1, 28, 0.6f, BRASS, white, light);
-        box(vc, p, x0, 4.4f, -0.6f, x0 + 1.4f, 26.6f, 0.6f, BRASS, white, light);
-        box(vc, p, x1 - 1.4f, 4.4f, -0.6f, x1, 26.6f, 0.6f, BRASS, white, light);
-        box(vc, p, x0 + 1.4f, 15f, -0.4f, x1 - 1.4f, 16f, 0.4f, BRASS, white, light);
+        // door leaf brass frame and horizontal muntin
+        box(vc, p, x0, 3, -0.6f, x1, 4.4f, 0.6f, BRASS, WHITE, light);
+        box(vc, p, x0, 26.6f, -0.6f, x1, 28, 0.6f, BRASS, WHITE, light);
+        box(vc, p, x0, 4.4f, -0.6f, x0 + 1.4f, 26.6f, 0.6f, BRASS, WHITE, light);
+        box(vc, p, x1 - 1.4f, 4.4f, -0.6f, x1, 26.6f, 0.6f, BRASS, WHITE, light);
+        box(vc, p, x0 + 1.4f, 15f, -0.4f, x1 - 1.4f, 16f, 0.4f, BRASS, WHITE, light);
         // handle at the free edge
         float hx = w > 0 ? x1 - 3.2f : x0 + 2.2f;
-        box(vc, p, hx, 13f, -1.6f, hx + 1f, 18f, -0.6f, BRASS, 0xFFFFE6A0, light);
-        // glass
+        box(vc, p, hx, 13f, -1.6f, hx + 1f, 18f, -0.6f, BRASS, DOOR_HANDLE_TINT, light);
+        // translucent glass panes
         VertexConsumer glass = buffers.getBuffer(RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
         PoseStack.Pose gp = pose.last();
-        wall(glass, gp, x0 + 1.4f, 4.4f, x1 - 1.4f, 15f, 0f, GLASS, 0xB0DDF6FF, light);
-        wall(glass, gp, x0 + 1.4f, 16f, x1 - 1.4f, 26.6f, 0f, GLASS, 0xB0DDF6FF, light);
+        wall(glass, gp, x0 + 1.4f, 4.4f, x1 - 1.4f, 15f, 0f, GLASS, DOOR_GLASS_TINT, light);
+        wall(glass, gp, x0 + 1.4f, 16f, x1 - 1.4f, 26.6f, 0f, GLASS, DOOR_GLASS_TINT, light);
         pose.popPose();
-    }
-
-    /** Red valve wheel: a rim of segments, four spokes and a hub; it turns while the cabinet works. */
-    static void valve(PoseStack pose, VertexConsumer vc, float cx, float cy, float z, float r, float rot, int light) {
-        int red = 0xFFC8432F, hub = 0xFFFFE6A0;
-        pose.pushPose();
-        pose.translate(cx / 16f, cy / 16f, z / 16f);
-        pose.mulPose(Axis.ZP.rotationDegrees(rot));
-        for (int k = 0; k < 12; k++) {
-            pose.pushPose();
-            pose.mulPose(Axis.ZP.rotationDegrees(k * 30f));
-            box(vc, pose.last(), -0.95f, r - 0.5f, -0.5f, 0.95f, r + 0.5f, 0.5f, BRASS, red, light);
-            pose.popPose();
-        }
-        for (int k = 0; k < 4; k++) {
-            pose.pushPose();
-            pose.mulPose(Axis.ZP.rotationDegrees(k * 90f + 45f));
-            box(vc, pose.last(), -0.3f, 0f, -0.3f, 0.3f, r - 0.4f, 0.3f, BRASS, red, light);
-            pose.popPose();
-        }
-        box(vc, pose.last(), -0.9f, -0.9f, -0.8f, 0.9f, 0.9f, 0.6f, BRASS, hub, light);
-        pose.popPose();
-    }
-
-    private static final Identifier SPRUCE = mcBlock("spruce_planks"),
-            STRIPPED = mcBlock("stripped_spruce_log"), WOOL = mcBlock("white_wool"),
-            BLANKET = mcBlock("light_blue_wool"), RED = mcBlock("red_wool"),
-            BLUE = mcBlock("blue_wool"), PAPER = mcBlock("white_concrete"),
-            SNOW = mcBlock("snow"), BLUE_ICE = mcBlock("blue_ice");
-
-    /**
-     * Static furniture boxes inside the cabinet (baked once in {@link #bakeStaticCabinet}): snowdrifts, snowball crate,
-     * wall shelf with books, notice board, upstairs cot, ice picture, wrench hooks, ceiling garlands.
-     */
-    private static void furnishStatic(VertexConsumer vc, PoseStack.Pose p, int light) {
-        int white = 0xFFFFFFFF;
-        for (float floor : new float[]{3.2f, 16.2f}) {
-            box(vc, p, -14, floor, 3, -10.5f, floor + 0.8f, 5.5f, SNOW, white, light);
-            box(vc, p, -13, floor + 0.8f, 3, -11.5f, floor + 1.4f, 4.5f, SNOW, white, light);
-        }
-        // downstairs: a crate of snowballs
-        box(vc, p, 23.5f, 3.2f, 3.5f, 29.5f, 6, 8.5f, STRIPPED, white, light);
-        box(vc, p, 24, 6, 4, 29, 6.3f, 8, SNOW, white, light);
-        for (float[] b : new float[][]{{24.4f, 4.4f}, {26.3f, 4.6f}, {27.6f, 6.2f}, {25, 6.4f}, {26.6f, 5.2f}}) {
-            box(vc, p, b[0], 6.3f, b[1], b[0] + 1.3f, 7.5f, b[1] + 1.3f, SNOW, white, light);
-        }
-        // the wall shelf on the right: a board on two brackets, books on it
-        box(vc, p, 26, 10, 9, 30, 10.6f, 20, SPRUCE, white, light);
-        box(vc, p, 29, 8.5f, 10, 30, 10, 10.8f, STRIPPED, white, light);
-        box(vc, p, 29, 8.5f, 18, 30, 10, 18.8f, STRIPPED, white, light);
-        box(vc, p, 27, 10.6f, 15, 29.5f, 13.4f, 15.8f, RED, white, light);
-        box(vc, p, 27, 10.6f, 15.8f, 29.5f, 13, 16.6f, BLUE, white, light);
-        box(vc, p, 27, 10.6f, 16.6f, 29.5f, 12.4f, 17.3f, BRASS, white, light);
-        // the notice board on the left wall: papers and a red pin
-        box(vc, p, -14, 6, 7, -13.4f, 12, 15, SPRUCE, white, light);
-        box(vc, p, -13.4f, 6.8f, 8, -13.2f, 9.8f, 10.5f, PAPER, white, light);
-        box(vc, p, -13.4f, 8.2f, 11, -13.2f, 11.2f, 13.5f, PAPER, white, light);
-        box(vc, p, -13.4f, 7, 12, -13.1f, 7.8f, 14, PAPER, white, light);
-        box(vc, p, -13.2f, 9.2f, 9, -12.8f, 9.6f, 9.4f, RED, white, light);
-        // upstairs: the cot, its pillow and blanket
-        box(vc, p, 23.5f, 16.2f, 4, 29.5f, 17.6f, 14, STRIPPED, white, light);
-        box(vc, p, 24, 17.6f, 4.5f, 29, 18.6f, 13.5f, WOOL, white, light);
-        box(vc, p, 24.5f, 18.6f, 4.8f, 28.5f, 19.4f, 6.8f, WOOL, white, light);
-        box(vc, p, 23.8f, 18.6f, 7.5f, 29.2f, 18.9f, 13.6f, BLANKET, white, light);
-        box(vc, p, 23.5f, 16.2f, 13.5f, 29.5f, 20.5f, 14.2f, STRIPPED, white, light);
-        // a picture of ice over the cot, in a spruce frame
-        box(vc, p, 29.4f, 21, 5.5f, 30, 25.5f, 12, STRIPPED, white, light);
-        box(vc, p, 29.2f, 21.6f, 6.1f, 29.4f, 24.9f, 11.4f, BLUE_ICE, white, light);
-        // the wrench hooks on the left wall: a brass rail and two copper wrenches
-        box(vc, p, -14, 24, 6, -13.4f, 24.6f, 15, BRASS, white, light);
-        for (float z : new float[]{8f, 12f}) {
-            box(vc, p, -13.6f, 20.5f, z, -13f, 24, z + 0.7f, COPPER, white, light);
-            box(vc, p, -13.6f, 20, z - 0.4f, -13f, 21, z + 1.1f, COPPER, white, light);
-        }
-        // a garland of little flags under each ceiling, just behind the glass, sagging between its ends
-        Identifier[] flags = {RED, BLANKET, WOOL, BLUE};
-        // upstairs it hangs a little lower: the brass frame of the doors covers the top 1.5 pixels
-        for (float ceiling : new float[]{15f, 27.6f}) {
-            for (int k = 0; k < 13; k++) {
-                float x = -12.5f + k * 3.3f, t = (x + 12.5f) / 39.6f, sag = 1.0f * 4f * t * (1f - t);
-                float y = ceiling - 0.8f - sag;
-                box(vc, p, x, y, 3.6f, x + 3.3f, y + 0.25f, 3.8f, WOOL, 0xFFB8B0A0, light);
-                box(vc, p, x + 0.6f, y - 1.6f, 3.6f, x + 2.2f, y, 3.75f, flags[k % flags.length], white, light);
-            }
-        }
-    }
-
-    /** Vanilla block props inside the cabinet: barrels, potted orchid, and four hanging lanterns. */
-    private static void furnishBlocks(PoseStack pose, MultiBufferSource buffers, int light) {
-        BlockState barrel = Blocks.BARREL.defaultBlockState();
-        MachineParts.scaledBlock(pose, buffers, barrel, 26.5f, 3.2f, 14.5f, 0.3f, 15f, light);
-        MachineParts.scaledBlock(pose, buffers, barrel, 26.5f, 8f, 14.5f, 0.3f, -20f, light);
-        MachineParts.scaledBlock(pose, buffers, Blocks.POTTED_BLUE_ORCHID.defaultBlockState(), 27.8f, 10.6f, 11.5f, 0.45f, 0f, light);
-        MachineParts.scaledBlock(pose, buffers, barrel, 21.8f, 16.2f, 4.2f, 0.28f, 40f, light);
-        BlockState lantern = Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true);
-        MachineParts.scaledBlock(pose, buffers, lantern, 0f, 15f - 0.35f * 16f, 11f, 0.35f, 0f, LightCoordsUtil.FULL_BRIGHT);
-        MachineParts.scaledBlock(pose, buffers, lantern, 19f, 15f - 0.35f * 16f, 11f, 0.35f, 0f, LightCoordsUtil.FULL_BRIGHT);
-        MachineParts.scaledBlock(pose, buffers, lantern, 0f, 28.9f - 0.35f * 16f, 11f, 0.35f, 0f, LightCoordsUtil.FULL_BRIGHT);
-        MachineParts.scaledBlock(pose, buffers, lantern, 19f, 28.9f - 0.35f * 16f, 11f, 0.35f, 0f, LightCoordsUtil.FULL_BRIGHT);
-    }
-
-    /** The floor picture of a shelf over its whole top (x -14..30, z 3..29 pixels): 44 x 26 units of the 48 x 32 texture. */
-    private static void shelfFloor(VertexConsumer vc, PoseStack.Pose p, float y, int light) {
-        TextureAtlasSprite s = sprite(FLOOR);
-        quad(vc, p, -14, y, 29, 30, y, 29, 30, y, 3, -14, y, 3,
-                s.getU(0f), s.getV(0f), s.getU(44f / 48f), s.getV(26f / 32f), 0xFFFFFFFF, light, 0, 1, 0);
     }
 }
