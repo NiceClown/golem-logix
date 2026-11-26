@@ -18,6 +18,11 @@ public final class ItemKey {
         return new ItemKey(stack.copyWithCount(1));
     }
 
+    /** Wraps an already-owned stack with count 1 without copying it a second time. */
+    static ItemKey ofSingleOwned(ItemStack single) {
+        return new ItemKey(single);
+    }
+
     public ItemStack toStack(int count) {
         return stack.copyWithCount(count);
     }

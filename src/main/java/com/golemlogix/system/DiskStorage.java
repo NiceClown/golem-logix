@@ -95,14 +95,19 @@ public final class DiskStorage {
             return false;
         }
         DiskStore st = store();
-        DiskStore.Disk d = read(disk);
-        if (st == null || d == null) {
+        if (st == null) {
             return false;
         }
-        long stored = isFluidDisk(disk) ? d.storedFluids : d.storedItems;
+        DiskStore.Disk d = read(disk);
+        long stored = d == null ? 0L : (isFluidDisk(disk) ? d.storedFluids : d.storedItems);
+        Integer expected = (d == null || (stored <= 0 && d.isEmpty())) ? null : (int) Math.min(stored, Integer.MAX_VALUE);
         Integer shown = disk.get(ModDataComponents.STORED.get());
-        if (shown == null || shown != (int) Math.min(stored, Integer.MAX_VALUE)) {
-            markStored(disk, d, stored);
+        if (!java.util.Objects.equals(shown, expected)) {
+            if (expected == null) {
+                disk.remove(ModDataComponents.STORED.get());
+            } else {
+                disk.set(ModDataComponents.STORED.get(), expected);
+            }
             return true;
         }
         return false;
@@ -117,6 +122,24 @@ public final class DiskStorage {
         return d == null ? Collections.emptyMap() : Collections.unmodifiableMap(d.items);
     }
 
+    /** Internal read-only view without allocating an unmodifiable wrapper (callers must never mutate). */
+    static Map<ItemKey, Integer> rawItems(ItemStack disk) {
+        if (!isItemDisk(disk)) {
+            return Collections.emptyMap();
+        }
+        DiskStore.Disk d = read(disk);
+        return d == null ? Collections.emptyMap() : d.items;
+    }
+
+    /** Count of one item key on an item disk without wrapper allocations. */
+    public static int itemCount(ItemStack disk, ItemKey key) {
+        if (!isItemDisk(disk)) {
+            return 0;
+        }
+        DiskStore.Disk d = read(disk);
+        return d == null ? 0 : d.items.getOrDefault(key, 0);
+    }
+
     /** How many units are written to the disk (items or mB). */
     public static long storedItems(ItemStack disk) {
         DiskStore.Disk d = read(disk);
@@ -127,8 +150,12 @@ public final class DiskStorage {
     }
 
     public static boolean containsItem(ItemStack disk, ItemStack stack) {
+        return containsItem(disk, ItemKey.of(stack));
+    }
+
+    static boolean containsItem(ItemStack disk, ItemKey key) {
         DiskStore.Disk d = read(disk);
-        return d != null && isItemDisk(disk) && d.items.containsKey(ItemKey.of(stack));
+        return d != null && isItemDisk(disk) && d.items.containsKey(key);
     }
 
     /** Puts items on the disk. Returns how many were actually put (with simulate the disk does not change). */
@@ -208,8 +235,35 @@ public final class DiskStorage {
         return d == null ? List.of() : Collections.unmodifiableList(d.fluids);
     }
 
+    /** Internal read-only view without allocating an unmodifiable wrapper (callers must never mutate). */
+    static List<FluidStack> rawFluids(ItemStack disk) {
+        if (!isFluidDisk(disk)) {
+            return List.of();
+        }
+        DiskStore.Disk d = read(disk);
+        return d == null ? List.of() : d.fluids;
+    }
+
+    /** Amount (mB) of one matching fluid on a fluid disk. */
+    public static long fluidCount(ItemStack disk, FluidStack fluid) {
+        if (!isFluidDisk(disk) || fluid.isEmpty()) {
+            return 0L;
+        }
+        DiskStore.Disk d = read(disk);
+        if (d == null) {
+            return 0L;
+        }
+        long n = 0L;
+        for (FluidStack f : d.fluids) {
+            if (FluidStack.isSameFluidSameComponents(f, fluid)) {
+                n += f.getAmount();
+            }
+        }
+        return n;
+    }
+
     public static boolean containsFluid(ItemStack disk, FluidStack fluid) {
-        for (FluidStack f : fluids(disk)) {
+        for (FluidStack f : rawFluids(disk)) {
             if (FluidStack.isSameFluidSameComponents(f, fluid)) {
                 return true;
             }
@@ -268,7 +322,7 @@ public final class DiskStorage {
                     } else {
                         d.fluids.set(i, f.copyWithAmount(f.getAmount() - take));
                     }
-                    d.storedFluids -= take;
+                    d.storedFluids = Math.max(0, d.storedFluids - take);
                     markStored(disk, d, d.storedFluids);
                     st.setDirty();
                 }

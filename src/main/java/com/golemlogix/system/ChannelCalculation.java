@@ -1,6 +1,5 @@
 package com.golemlogix.system;
 
-import java.util.ArrayDeque;
 import java.util.Arrays;
 
 /**
@@ -76,9 +75,29 @@ public final class ChannelCalculation {
         run(controllers);
     }
 
+    /** Primitive FIFO queue of node indices so the tiered BFS avoids boxing every node. */
+    private static final class IntQueue {
+        private int[] data = new int[16];
+        private int head, tail;
+
+        boolean isEmpty() {
+            return head == tail;
+        }
+
+        void add(int value) {
+            if (tail == data.length) {
+                data = Arrays.copyOf(data, data.length * 2);
+            }
+            data[tail++] = value;
+        }
+
+        int poll() {
+            return data[head++];
+        }
+    }
+
     private void run(int[] controllers) {
-        @SuppressWarnings("unchecked")
-        ArrayDeque<Integer>[] queues = new ArrayDeque[]{new ArrayDeque<Integer>(), new ArrayDeque<Integer>(), new ArrayDeque<Integer>()};
+        IntQueue[] queues = {new IntQueue(), new IntQueue(), new IntQueue()};
         for (int c : controllers) {
             reached[c] = true;
         }
@@ -90,7 +109,7 @@ public final class ChannelCalculation {
             }
         }
         for (int t = 0; t < queues.length; t++) {
-            ArrayDeque<Integer> queue = queues[t];
+            IntQueue queue = queues[t];
             while (!queue.isEmpty()) {
                 int node = queue.poll();
                 for (int next : links[node]) {
@@ -107,7 +126,7 @@ public final class ChannelCalculation {
         }
     }
 
-    private void visit(int node, int from, int currentTier, ArrayDeque<Integer>[] queues) {
+    private void visit(int node, int from, int currentTier, IntQueue[] queues) {
         reached[node] = true;
         parent[node] = from;
         if (needs[node]) {

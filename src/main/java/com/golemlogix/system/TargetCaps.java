@@ -21,6 +21,7 @@ import java.util.function.BooleanSupplier;
  * extra caches are made only when the first ones find nothing.
  */
 public final class TargetCaps {
+    private static final Direction[] DIRECTIONS = Direction.values();
     private final ServerLevel level;
     private final BlockPos pos;
     @Nullable
@@ -60,17 +61,20 @@ public final class TargetCaps {
 
     @Nullable
     public ResourceHandler<ItemResource> items() {
-        return items.getCapability();
+        return level.isLoaded(pos) ? items.getCapability() : null;
     }
 
     @Nullable
     public ResourceHandler<FluidResource> fluids() {
-        return fluids.getCapability();
+        return level.isLoaded(pos) ? fluids.getCapability() : null;
     }
 
     /** The item handler on this side, or else the unsided one, or else the one on any side. */
     @Nullable
     public ResourceHandler<ItemResource> itemsAnySide() {
+        if (!level.isLoaded(pos)) {
+            return null;
+        }
         var h = items.getCapability();
         if (h != null) {
             return h;
@@ -84,6 +88,9 @@ public final class TargetCaps {
     /** The fluid handler on this side, or else the unsided one, or else the one on any side. */
     @Nullable
     public ResourceHandler<FluidResource> fluidsAnySide() {
+        if (!level.isLoaded(pos)) {
+            return null;
+        }
         var h = fluids.getCapability();
         if (h != null) {
             return h;
@@ -94,13 +101,18 @@ public final class TargetCaps {
         return first(fluidsAny);
     }
 
-    /** Caches for the unsided handler and for each of the six sides, in that order. */
+    /** Caches for the unsided handler and for each of the other sides, in that order (skipping the already-checked primary side). */
     @SuppressWarnings("unchecked")
     private <T> BlockCapabilityCache<T, @Nullable Direction>[] anyCaches(BlockCapability<T, @Nullable Direction> cap) {
-        BlockCapabilityCache<T, @Nullable Direction>[] out = new BlockCapabilityCache[7];
-        out[0] = BlockCapabilityCache.create(cap, level, pos, null, valid, onChange);
-        for (Direction d : Direction.values()) {
-            out[1 + d.ordinal()] = BlockCapabilityCache.create(cap, level, pos, d, valid, onChange);
+        BlockCapabilityCache<T, @Nullable Direction>[] out = new BlockCapabilityCache[DIRECTIONS.length];
+        int idx = 0;
+        if (side != null) {
+            out[idx++] = BlockCapabilityCache.create(cap, level, pos, null, valid, onChange);
+        }
+        for (Direction d : DIRECTIONS) {
+            if (d != side) {
+                out[idx++] = BlockCapabilityCache.create(cap, level, pos, d, valid, onChange);
+            }
         }
         return out;
     }
