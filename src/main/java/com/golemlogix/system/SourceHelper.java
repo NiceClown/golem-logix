@@ -70,13 +70,18 @@ public class SourceHelper {
                 .map(t -> t.size() > 0).orElse(false);
     }
 
+    /** Whether any Source-providing magic mod (Ars Nouveau or Neo Vitae / distillable blood) is present. */
+    public static boolean hasSourceProviderMod() {
+        return arsNouveauLoaded() || distillationAvailable();
+    }
+
     /**
      * Whether Source has to be paid. By the requireSource setting yes, but only if there is a way to get it in survival: Ars Nouveau,
      * or blood for the Cryo-Distillation Tower (Neo Vitae). Without either (the Resonator is made in the Saturator, which needs Source
      * itself) the network and the Saturator work for free.
      */
     public static boolean sourceRequired() {
-        return GolemConfig.REQUIRE_SOURCE.get() && (arsNouveauLoaded() || distillationAvailable());
+        return GolemConfig.REQUIRE_SOURCE.get() && hasSourceProviderMod();
     }
 
     /** A Source supplier connected to the network. */

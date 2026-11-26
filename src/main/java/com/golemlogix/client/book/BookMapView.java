@@ -33,10 +33,16 @@ final class BookMapView {
     private static final int SPACING = 46;
     private static final double MIN_ZOOM = 0.4, MAX_ZOOM = 2.2;
     private static final int AX = 8, AY = 30, AW = W - 16, AH = H - 40;
+    private static final int BANNER_X = AX + 6, BANNER_Y = AY + AH - 20, BANNER_H = 15, BANNER_MAX_W = AW - 78;
 
     private static final Component SEARCH_NOTHING = Component.translatable("gui.golem_logix.book.nothing");
     private static final Component TIP_READ = Component.translatable("gui.golem_logix.book.read").withStyle(ChatFormatting.DARK_GRAY);
     private static final Component TIP_NEW = Component.translatable("gui.golem_logix.book.new").withStyle(ChatFormatting.AQUA);
+    private static final Component NO_MAGIC_BANNER = Component.translatable("gui.golem_logix.book.no_magic_banner");
+    private static final List<Component> NO_MAGIC_TIP = List.of(
+            Component.translatable("gui.golem_logix.book.no_magic_tip.1").withStyle(ChatFormatting.GOLD),
+            Component.translatable("gui.golem_logix.book.no_magic_tip.2").withStyle(ChatFormatting.GRAY),
+            Component.translatable("gui.golem_logix.book.no_magic_tip.3").withStyle(ChatFormatting.AQUA));
 
     private final double[] panX;
     private final double[] panY;
@@ -53,6 +59,7 @@ final class BookMapView {
     private long cachedZoomPct = Long.MIN_VALUE;
     private Language cachedZoomLang = null;
     private String cachedZoomText = "";
+    private int lastBannerW = 0;
 
     BookMapView(BookModel book) {
         int n = Math.max(1, book.categories.size());
@@ -155,6 +162,21 @@ final class BookMapView {
             hoverTip = cachedHoverTip;
         } else {
             hoverTip = null;
+        }
+        if (!com.golemlogix.system.SourceHelper.hasSourceProviderMod()) {
+            String label = font.plainSubstrByWidth(NO_MAGIC_BANNER.getString(), BANNER_MAX_W - 12);
+            int bw = font.width(label) + 12;
+            lastBannerW = bw;
+            boolean hoverBanner = mx >= BANNER_X && mx < BANNER_X + bw && my >= BANNER_Y && my < BANNER_Y + BANNER_H;
+            g.fill(BANNER_X, BANNER_Y, BANNER_X + bw, BANNER_Y + BANNER_H, 0xF01A0F08);
+            g.fill(BANNER_X + 1, BANNER_Y + 1, BANNER_X + bw - 1, BANNER_Y + BANNER_H - 1, hoverBanner ? 0xFFFFB84D : 0xFFD88B28);
+            g.fill(BANNER_X + 2, BANNER_Y + 2, BANNER_X + bw - 2, BANNER_Y + BANNER_H - 2, hoverBanner ? 0xF035200C : 0xF0241508);
+            g.text(font, label, BANNER_X + 6, BANNER_Y + 4, hoverBanner ? 0xFFFFE6A3 : 0xFFFFC458, false);
+            if (hoverBanner) {
+                hoverTip = NO_MAGIC_TIP;
+            }
+        } else {
+            lastBannerW = 0;
         }
         drawSearchResults(g, font, book, query, mx, my);
     }
@@ -291,6 +313,22 @@ final class BookMapView {
             g.text(font, font.plainSubstrByWidth(e.category.title, 50), W - 56, y + 4, 0xFF6C7A86, false);
             y += 16;
         }
+    }
+
+    boolean clickNoMagicBanner(BookModel book, double bx, double by, Consumer<BookModel.Entry> onOpen) {
+        if (lastBannerW > 0 && !com.golemlogix.system.SourceHelper.hasSourceProviderMod()
+                && bx >= BANNER_X && bx < BANNER_X + lastBannerW
+                && by >= BANNER_Y && by < BANNER_Y + BANNER_H) {
+            BookModel.Entry e = book.byId.get("free_mode");
+            if (e == null || !e.visible()) {
+                e = book.byId.get("source");
+            }
+            if (e != null) {
+                onOpen.accept(e);
+                return true;
+            }
+        }
+        return false;
     }
 
     boolean clickSearchResults(BookModel book, String query, double bx, double by, Consumer<BookModel.Entry> onOpen) {

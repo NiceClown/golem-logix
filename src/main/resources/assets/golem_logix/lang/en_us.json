@@ -685,5 +685,9 @@
   "gui.golem_logix.requester.status.no_pattern": "No crafting pattern available",
   "gui.golem_logix.requester.status.missing": "Missing ingredients",
   "gui.golem_logix.security.owner": "Owner: %s",
-  "gui.golem_logix.security.card_owner": "Card: %s"
+  "gui.golem_logix.security.card_owner": "Card: %s",
+  "gui.golem_logix.book.no_magic_banner": "! Free Mode: install Ars Nouveau or Neo Vitae",
+  "gui.golem_logix.book.no_magic_tip.1": "No Source Magic Mod Installed",
+  "gui.golem_logix.book.no_magic_tip.2": "Neither Ars Nouveau nor Neo Vitae was found — the mod runs in Free Mode without Source.",
+  "gui.golem_logix.book.no_magic_tip.3": "Installing Ars Nouveau or Neo Vitae is recommended. Click to read more."
 }

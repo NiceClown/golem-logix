@@ -685,5 +685,9 @@
   "gui.golem_logix.requester.status.no_pattern": "Нет шаблона для крафта",
   "gui.golem_logix.requester.status.missing": "Не хватает ингредиентов",
   "gui.golem_logix.security.owner": "Владелец: %s",
-  "gui.golem_logix.security.card_owner": "Карта: %s"
+  "gui.golem_logix.security.card_owner": "Карта: %s",
+  "gui.golem_logix.book.no_magic_banner": "! Free-режим: лучше поставить Ars Nouveau / Neo Vitae",
+  "gui.golem_logix.book.no_magic_tip.1": "Моды на магию Source не установлены",
+  "gui.golem_logix.book.no_magic_tip.2": "Не найдены ни Ars Nouveau, ни Neo Vitae — сейчас всё работает даром во Free-режиме.",
+  "gui.golem_logix.book.no_magic_tip.3": "Для полноценной игры лучше поставить хотя бы один из них. Нажмите для подробностей."
 }

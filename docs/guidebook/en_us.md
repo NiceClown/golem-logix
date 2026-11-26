@@ -36,8 +36,36 @@ Inside an article flip the spread with the arrows, the mouse wheel or **← →*
 
 If you want the road from zero to your first terminal, open **Quick start**.
 
+### No Magic Mods
+<!-- {"id": "free_mode", "icon": "golem_logix:creative_source_jar", "x": 0, "y": -1, "parents": ["intro"], "requires": "no_source_mod", "gold": true} -->
+
+#### Standalone Free Mode
+
+&6Neither **Ars Nouveau** nor **Neo Vitae** is installed.&r Golem Logix has no hard dependencies and runs completely on its own.
+
+Because there is nowhere to draw **Source** in survival, **Free Mode** is active automatically: the Atlas Core, Mana Saturator, Forge Hammer, Cryo-Calculators, Cryo-Mixer and Chronometer work without Source jars.
+
+#### Better with Magic
+
+For the intended progression, **installing at least one of these mods is strongly recommended**:
+
+- **Ars Nouveau** — Source Jars, apparatus recipes, Saturator gems and the Dispel ritual.
+
+- **Neo Vitae** — blood **Cryo-Distillation**, **Cryo-Source Jars**, **Giga Jars** and the **Reactor**.
+
+*Add either mod later: the world switches to Source on its own.*
+
 ### Source - the only energy
 <!-- {"id": "source", "icon": "golem_logix:creative_source_jar", "x": 1, "y": 0, "parents": ["intro"]} -->
+
+#### Free Mode Active
+<!-- {"when": "no_source_mod"} -->
+
+&6Neither **Ars Nouveau** nor **Neo Vitae** was found in this world.&r
+
+With nowhere to get **Source** in survival, Golem Logix runs in **Free Mode**: the Atlas Core, Mana Saturator, Forge Hammer, calculators and Chronometer need no Source at all.
+
+**Installing Ars Nouveau or Neo Vitae is strongly recommended** to unlock the intended magical energy logistics, rituals and Source multiblocks.
 
 #### Powering the network
 

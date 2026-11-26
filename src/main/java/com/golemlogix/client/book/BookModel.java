@@ -99,9 +99,14 @@ public final class BookModel {
             if (showAll) {
                 return true;
             }
-            // an entry about another mod's integration is shown only when that mod is installed
-            if (!requires.isEmpty() && !net.neoforged.fml.ModList.get().isLoaded(requires)) {
-                return false;
+            // an entry about another mod's integration is shown only when that mod is installed (or when none are, for free_mode)
+            if (!requires.isEmpty()) {
+                boolean met = "no_source_mod".equals(requires)
+                        ? !com.golemlogix.system.SourceHelper.hasSourceProviderMod()
+                        : net.neoforged.fml.ModList.get().isLoaded(requires);
+                if (!met) {
+                    return false;
+                }
             }
             return switch (secret) {
                 case "partial" -> com.golemlogix.client.ClientSecrets.any();
@@ -226,8 +231,12 @@ public final class BookModel {
         if (!page.has("when") || showAll) {
             return true;
         }
+        String cond = page.get("when").getAsString();
+        if ("no_source_mod".equals(cond)) {
+            return !com.golemlogix.system.SourceHelper.hasSourceProviderMod();
+        }
         boolean w = com.golemlogix.client.ClientSecrets.wither(), d = com.golemlogix.client.ClientSecrets.dimension();
-        return switch (page.get("when").getAsString()) {
+        return switch (cond) {
             case "wither" -> w;
             case "dimension" -> d;
             case "!wither" -> !w;
