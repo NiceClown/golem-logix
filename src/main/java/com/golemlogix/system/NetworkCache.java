@@ -153,6 +153,7 @@ final class NetworkCache {
         OrderBackoff.forget();
         BusLoad.forget();
         CraftLoad.forget();
+        DiskStore.forgetCachedServer();
         EPOCHS.clear();
         SERVER_CACHE.clear();
         CHANGED.clear();
