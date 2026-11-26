@@ -94,6 +94,17 @@ public final class GlowModels {
         }).orElse(null);
     }
 
+    private static final Direction[] DIRECTIONS = Direction.values();
+
+    private static boolean hasGlowingQuad(List<BakedQuad> quads) {
+        for (BakedQuad q : quads) {
+            if (glowSprite(q.getSprite()) != null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static List<BakedQuad> glowing(List<BakedQuad> quads) {
         List<BakedQuad> out = null;
         for (BakedQuad q : quads) {
@@ -110,7 +121,12 @@ public final class GlowModels {
 
     /** A mod model with a glow layer. The glow goes into the cutout layer, and for translucent models into the same translucent one. */
     static final class Glowing extends BakedModelWrapper<BakedModel> {
+        private record StateGlow(BlockState state, boolean hasGlow) {
+        }
+
         private final List<BakedModel> singlePasses;
+        private volatile StateGlow stateGlow;
+        private volatile byte itemGlow; // 0 = unknown, 1 = yes, -1 = no
 
         Glowing(BakedModel original) {
             super(original);
@@ -121,9 +137,60 @@ public final class GlowModels {
             return types.contains(RenderType.translucent()) ? RenderType.translucent() : RenderType.cutout();
         }
 
+        private boolean hasBlockGlow(BlockState state, ModelData data, ChunkRenderTypeSet types) {
+            StateGlow cached = this.stateGlow;
+            if (cached != null && cached.state() == state) {
+                return cached.hasGlow();
+            }
+            boolean found = scanBlockGlow(state, data, types);
+            this.stateGlow = new StateGlow(state, found);
+            return found;
+        }
+
+        private boolean scanBlockGlow(BlockState state, ModelData data, ChunkRenderTypeSet types) {
+            RandomSource probe = RandomSource.create(42L);
+            for (RenderType t : types) {
+                if (hasGlowingQuad(originalModel.getQuads(state, null, probe, data, t))) {
+                    return true;
+                }
+                for (Direction d : DIRECTIONS) {
+                    if (hasGlowingQuad(originalModel.getQuads(state, d, probe, data, t))) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        private boolean hasItemGlow() {
+            byte g = this.itemGlow;
+            if (g != 0) {
+                return g > 0;
+            }
+            boolean found = modelHasItemGlow(originalModel);
+            this.itemGlow = (byte) (found ? 1 : -1);
+            return found;
+        }
+
+        private static boolean modelHasItemGlow(BakedModel model) {
+            RandomSource probe = RandomSource.create(42L);
+            if (hasGlowingQuad(model.getQuads(null, null, probe))) {
+                return true;
+            }
+            for (Direction d : DIRECTIONS) {
+                if (hasGlowingQuad(model.getQuads(null, d, probe))) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         @Override
         public ChunkRenderTypeSet getRenderTypes(BlockState state, RandomSource rand, ModelData data) {
             ChunkRenderTypeSet types = originalModel.getRenderTypes(state, rand, data);
+            if (!hasBlockGlow(state, data, types)) {
+                return types;
+            }
             return ChunkRenderTypeSet.union(types, ChunkRenderTypeSet.of(glowType(types)));
         }
 
@@ -137,7 +204,7 @@ public final class GlowModels {
             }
             ChunkRenderTypeSet types = originalModel.getRenderTypes(state, rand, data);
             List<BakedQuad> own = types.contains(renderType) ? originalModel.getQuads(state, side, rand, data, renderType) : List.of();
-            if (renderType != glowType(types)) {
+            if (renderType != glowType(types) || !hasBlockGlow(state, data, types)) {
                 return own;
             }
             // glow layer: copies of all the model's faces (from all its layers) on top of its own faces of this layer
@@ -158,8 +225,21 @@ public final class GlowModels {
         @Override
         public List<BakedModel> getRenderPasses(ItemStack stack, boolean fabulous) {
             List<BakedModel> base = originalModel.getRenderPasses(stack, fabulous);
+            if (base.isEmpty()) {
+                return base;
+            }
             if (base.size() == 1 && base.get(0) == originalModel) {
-                return singlePasses;
+                return hasItemGlow() ? singlePasses : base;
+            }
+            boolean anyGlow = false;
+            for (BakedModel m : base) {
+                if (modelHasItemGlow(m)) {
+                    anyGlow = true;
+                    break;
+                }
+            }
+            if (!anyGlow) {
+                return base;
             }
             List<BakedModel> passes = new ArrayList<>(base.size() + 1);
             passes.addAll(base);

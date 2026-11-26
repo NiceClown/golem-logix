@@ -193,30 +193,45 @@ final class JarWholeRenderer {
         return meshes;
     }
 
-    private static Boolean irisPresent;
-    private static java.lang.reflect.Method irisInUse;
-    private static Object irisApi;
+    private static volatile boolean irisChecked;
+    private static java.lang.invoke.MethodHandle irisInUse;
+    private static boolean irisValueCached;
+    private static long irisNextCheckNanos;
+    private static boolean cachedIrisActive;
 
-    /** Whether an Iris shader pack is running now (looked up through Iris's public API by reflection; false without Iris). */
+    /** Whether an Iris shader pack is running now (looked up through Iris's public API via MethodHandle; false without Iris). */
     static boolean shaderPackActive() {
-        if (irisPresent == null) {
+        if (!irisChecked) {
             try {
                 Class<?> api = Class.forName("net.irisshaders.iris.api.v0.IrisApi");
-                irisApi = api.getMethod("getInstance").invoke(null);
-                irisInUse = api.getMethod("isShaderPackInUse");
-                irisPresent = true;
+                Object instance = api.getMethod("getInstance").invoke(null);
+                irisInUse = java.lang.invoke.MethodHandles.publicLookup()
+                        .unreflect(api.getMethod("isShaderPackInUse"))
+                        .bindTo(instance)
+                        .asType(java.lang.invoke.MethodType.methodType(boolean.class));
             } catch (Throwable t) {
-                irisPresent = false;
+                irisInUse = null;
             }
+            irisChecked = true;
         }
-        if (!irisPresent) {
+        java.lang.invoke.MethodHandle handle = irisInUse;
+        if (handle == null) {
             return false;
         }
+        long now = System.nanoTime();
+        if (irisValueCached && (now - irisNextCheckNanos) < 0L) {
+            return cachedIrisActive;
+        }
+        boolean active;
         try {
-            return (Boolean) irisInUse.invoke(irisApi);
+            active = (boolean) handle.invokeExact();
         } catch (Throwable t) {
-            return false;
+            active = false;
         }
+        cachedIrisActive = active;
+        irisNextCheckNanos = now + 100_000_000L;
+        irisValueCached = true;
+        return active;
     }
 
     private static RenderType clearType(boolean shaderPack) {

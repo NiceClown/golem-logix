@@ -759,6 +759,7 @@ public class BookScreen extends Screen {
                 g.setColor(1f, 1f, 1f, pulse);
                 g.blit(NODES, -NODE / 2, -NODE / 2, 3 * NODE, 0, NODE, NODE, NODE * 4, NODE);
                 g.setColor(1f, 1f, 1f, 1f);
+                RenderSystem.disableBlend();
             }
             g.pose().popPose();
         }

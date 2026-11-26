@@ -5,8 +5,8 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import org.joml.Matrix3f;
 import org.joml.Matrix4f;
+import org.joml.Vector3f;
 
 import java.util.Arrays;
 import java.util.function.BiConsumer;
@@ -34,7 +34,7 @@ public final class Baked {
     /** Draws it where the pose stands now. tint: replaces the colour it was built with, 0 keeps that. */
     public void draw(MultiBufferSource buffers, RenderType type, PoseStack.Pose pose, int light, int tint) {
         if (recorder.count > 0) {
-            recorder.replay(buffers.getBuffer(type), pose.pose(), pose.normal(), light, tint);
+            recorder.replay(buffers.getBuffer(type), pose, light, tint);
         }
     }
 
@@ -117,29 +117,20 @@ public final class Baked {
             return this;
         }
 
-        void replay(VertexConsumer vc, Matrix4f m, Matrix3f n3, int light, int tint) {
+        void replay(VertexConsumer vc, PoseStack.Pose pose, int light, int tint) {
+            Matrix4f m = pose.pose();
             float m00 = m.m00(), m10 = m.m10(), m20 = m.m20(), m30 = m.m30();
             float m01 = m.m01(), m11 = m.m11(), m21 = m.m21(), m31 = m.m31();
             float m02 = m.m02(), m12 = m.m12(), m22 = m.m22(), m32 = m.m32();
-            float n00 = n3.m00(), n10 = n3.m10(), n20 = n3.m20();
-            float n01 = n3.m01(), n11 = n3.m11(), n21 = n3.m21();
-            float n02 = n3.m02(), n12 = n3.m12(), n22 = n3.m22();
+            Vector3f norm = new Vector3f();
             for (int n = 0; n < count; n++) {
                 int b = n * 8, c = n * 2;
-                float x = f[b], y = f[b + 1], z = f[b + 2], nx = f[b + 5], ny = f[b + 6], nz = f[b + 7];
-                float tx = n00 * nx + n10 * ny + n20 * nz;
-                float ty = n01 * nx + n11 * ny + n21 * nz;
-                float tz = n02 * nx + n12 * ny + n22 * nz;
-                float len = (float) Math.sqrt(tx * tx + ty * ty + tz * tz);
-                if (len > 1e-6f) {
-                    tx /= len;
-                    ty /= len;
-                    tz /= len;
-                }
+                float x = f[b], y = f[b + 1], z = f[b + 2];
+                pose.transformNormal(f[b + 5], f[b + 6], f[b + 7], norm);
                 vc.addVertex(m00 * x + m10 * y + m20 * z + m30, m01 * x + m11 * y + m21 * z + m31,
                                 m02 * x + m12 * y + m22 * z + m32)
                         .setColor(tint != 0 ? tint : i[c]).setUv(f[b + 3], f[b + 4]).setOverlay(i[c + 1]).setLight(light)
-                        .setNormal(tx, ty, tz);
+                        .setNormal(norm.x, norm.y, norm.z);
             }
         }
     }
