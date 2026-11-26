@@ -49,7 +49,14 @@ public interface GolemNode {
     /** The same in the world: a side closed by a pipe plug (on either of the two) gives no link. */
     static boolean linked(net.minecraft.world.level.BlockGetter level, net.minecraft.core.BlockPos posA, BlockState a,
                           net.minecraft.core.BlockPos posB, BlockState b, Direction toB) {
-        return linked(a, b, toB) && !com.golemlogix.blockentity.PipeBlockEntity.plugged(level, posA, toB)
-                && !com.golemlogix.blockentity.PipeBlockEntity.plugged(level, posB, toB.getOpposite());
+        if (!linked(a, b, toB)) {
+            return false;
+        }
+        if (a.getBlock() instanceof com.golemlogix.blocks.SnowPipeBlock
+                && com.golemlogix.blockentity.PipeBlockEntity.plugged(level, posA, toB)) {
+            return false;
+        }
+        return !(b.getBlock() instanceof com.golemlogix.blocks.SnowPipeBlock)
+                || !com.golemlogix.blockentity.PipeBlockEntity.plugged(level, posB, toB.getOpposite());
     }
 }

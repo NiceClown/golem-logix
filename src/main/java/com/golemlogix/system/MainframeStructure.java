@@ -40,13 +40,17 @@ public final class MainframeStructure {
     /** Atlants: on the sides of the front row (the lower half at the owner's level). */
     public static final int[] ATLANTS = {-2, 2};
 
-    private static boolean restoring = false;
+    private static final ThreadLocal<Boolean> RESTORING = ThreadLocal.withInitial(() -> false);
 
     private MainframeStructure() {
     }
 
     public static boolean isRestoring() {
-        return restoring;
+        return RESTORING.get();
+    }
+
+    private static boolean isLoaded(LevelReader level, BlockPos pos) {
+        return level instanceof Level l ? l.isLoaded(pos) : level.hasChunkAt(pos);
     }
 
     public static boolean isAtlant(int cell) {
@@ -108,11 +112,11 @@ public final class MainframeStructure {
             BlockPos p = cellPos(controller, facing, i);
             if (isAtlant(i)) {
                 // an atlant is one item for two cells: check by the lower half (11, 13) together with the upper one
-                if (CELLS[i][1] == 0 && !(matches(level.getBlockState(p), i, facing)
-                        && matches(level.getBlockState(p.above()), partner(i), facing))) {
+                if (CELLS[i][1] == 0 && (!isLoaded(level, p) || !(matches(level.getBlockState(p), i, facing)
+                        && matches(level.getBlockState(p.above()), partner(i), facing)))) {
                     out.add(new Missing(p, original(i)));
                 }
-            } else if (!matches(level.getBlockState(p), i, facing)) {
+            } else if (!isLoaded(level, p) || !matches(level.getBlockState(p), i, facing)) {
                 out.add(new Missing(p, original(i)));
             }
         }
@@ -128,7 +132,15 @@ public final class MainframeStructure {
      * of the statue, left without its pair, would disappear by itself), and the neighbours are notified at the end.
      */
     public static void form(Level level, BlockPos controller, Direction facing) {
-        restoring = true;
+        if (!level.isLoaded(controller)) {
+            return;
+        }
+        for (int i = 0; i < CELLS.length; i++) {
+            if (!level.isLoaded(cellPos(controller, facing, i))) {
+                return;
+            }
+        }
+        RESTORING.set(true);
         try {
             for (int i = 0; i < CELLS.length; i++) {
                 level.setBlock(cellPos(controller, facing, i), ModBlocks.MAINFRAME_PART.get().defaultBlockState()
@@ -137,7 +149,7 @@ public final class MainframeStructure {
             }
             notifyAll(level, controller, facing);
         } finally {
-            restoring = false;
+            RESTORING.set(false);
         }
         BlockState cs = level.getBlockState(controller);
         if (cs.getBlock() instanceof CryoMainframeBlock) {
@@ -151,21 +163,26 @@ public final class MainframeStructure {
      * the other half disappears too and one item drops), the owner is unassembled.
      */
     public static void disassemble(Level level, BlockPos controller, Direction facing, @Nullable BlockPos broken) {
+        if (RESTORING.get()) {
+            return;
+        }
         int brokenCell = -1;
         for (int i = 0; i < CELLS.length; i++) {
             if (cellPos(controller, facing, i).equals(broken)) {
                 brokenCell = i;
             }
         }
-        restoring = true;
+        RESTORING.set(true);
         try {
             for (int i = 0; i < CELLS.length; i++) {
                 BlockPos p = cellPos(controller, facing, i);
-                if (i == brokenCell) {
+                if (i == brokenCell || !level.isLoaded(p)) {
                     continue;
                 }
                 BlockState s = level.getBlockState(p);
-                if (!(s.getBlock() instanceof MainframePartBlock) || s.getValue(MainframePartBlock.CELL) != i) {
+                if (!(s.getBlock() instanceof MainframePartBlock)
+                        || s.getValue(MainframePartBlock.CELL) != i
+                        || s.getValue(MainframePartBlock.FACING) != facing) {
                     continue;
                 }
                 boolean gone = brokenCell >= 0 && isAtlant(brokenCell) && i == partner(brokenCell);
@@ -174,11 +191,13 @@ public final class MainframeStructure {
             }
             notifyAll(level, controller, facing);
         } finally {
-            restoring = false;
+            RESTORING.set(false);
         }
-        BlockState cs = level.getBlockState(controller);
-        if (cs.getBlock() instanceof CryoMainframeBlock && cs.getValue(CryoMainframeBlock.FORMED)) {
-            level.setBlock(controller, cs.setValue(CryoMainframeBlock.FORMED, false), 3);
+        if (level.isLoaded(controller)) {
+            BlockState cs = level.getBlockState(controller);
+            if (cs.getBlock() instanceof CryoMainframeBlock && cs.getValue(CryoMainframeBlock.FORMED)) {
+                level.setBlock(controller, cs.setValue(CryoMainframeBlock.FORMED, false), 3);
+            }
         }
         GolemNetwork.nodesChanged(level, controller);
     }
@@ -187,6 +206,9 @@ public final class MainframeStructure {
     private static void notifyAll(Level level, BlockPos controller, Direction facing) {
         for (int i = 0; i < CELLS.length; i++) {
             BlockPos p = cellPos(controller, facing, i);
+            if (!level.isLoaded(p)) {
+                continue;
+            }
             BlockState s = level.getBlockState(p);
             s.updateNeighbourShapes(level, p, Block.UPDATE_ALL);
             level.updateNeighborsAt(p, s.getBlock());

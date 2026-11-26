@@ -15,6 +15,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeMap;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 
@@ -43,16 +44,19 @@ public class CraftingJob {
         }
 
         // what the crafting grid gave for these cells last time: looking a recipe up is what costs most in a crafting step
+        private RecipeMap lastRecipes;
         private List<ItemStack> lastCells;
         private List<ItemStack> lastResult;
 
         /** The crafting table's result for these cells, or null if there is no such recipe. */
         @Nullable
         public List<ItemStack> craft(Level level, List<ItemStack> cells) {
-            if (lastCells != null && ItemStack.listMatches(lastCells, cells)) {
+            RecipeMap recipes = com.golemlogix.system.Recipes.map(level);
+            if (lastRecipes == recipes && lastCells != null && ItemStack.listMatches(lastCells, cells)) {
                 return lastResult;
             }
             List<ItemStack> result = craftResult(level, cells);
+            lastRecipes = result == null ? null : recipes;
             lastCells = result == null ? null : cells;
             lastResult = result;
             return result;
@@ -219,19 +223,8 @@ public class CraftingJob {
         if (awaiting.isEmpty() || stack.isEmpty()) {
             return stack;
         }
-        ItemKey key = ItemKey.of(stack);
-        long want = awaiting.getOrDefault(key, 0L);
-        if (want <= 0) {
-            return stack;
-        }
-        int take = (int) Math.min(want, stack.getCount());
-        awaiting.merge(key, (long) -take, Long::sum);
-        if (awaiting.get(key) <= 0) {
-            awaiting.remove(key);
-        }
-        inventory.merge(key, (long) take, Long::sum);
-        settleInFlight(key, take);
-        return stack.copyWithCount(stack.getCount() - take);
+        int take = absorbAmount(ItemKey.of(stack), stack.getCount());
+        return take == 0 ? stack : stack.copyWithCount(stack.getCount() - take);
     }
 
     /** Takes from an incoming fluid what the job is waiting for (a fluid output of a processing pattern). Returns the mB taken. */
@@ -239,15 +232,20 @@ public class CraftingJob {
         if (awaiting.isEmpty() || fluid.isEmpty()) {
             return 0;
         }
-        ItemKey key = com.golemlogix.system.Ingredients.fluidKey(fluid);
+        return absorbAmount(com.golemlogix.system.Ingredients.fluidKey(fluid), fluid.getAmount());
+    }
+
+    private int absorbAmount(ItemKey key, int available) {
         long want = awaiting.getOrDefault(key, 0L);
         if (want <= 0) {
             return 0;
         }
-        int take = (int) Math.min(want, fluid.getAmount());
-        awaiting.merge(key, (long) -take, Long::sum);
-        if (awaiting.get(key) <= 0) {
+        int take = (int) Math.min(want, available);
+        long left = want - take;
+        if (left <= 0) {
             awaiting.remove(key);
+        } else {
+            awaiting.put(key, left);
         }
         inventory.merge(key, (long) take, Long::sum);
         settleInFlight(key, take);
@@ -315,11 +313,10 @@ public class CraftingJob {
                         blocked = Status.INVALID_PATTERN;
                         break;
                     }
-                    if (!net.hasSource(GolemConfig.CRAFT_STEP_SOURCE.get())) {
+                    if (!net.consumeSource(GolemConfig.CRAFT_STEP_SOURCE.get())) {
                         blocked = Status.NO_SOURCE;
                         break;
                     }
-                    net.consumeSource(GolemConfig.CRAFT_STEP_SOURCE.get());
                     consume(taken);
                     for (ItemStack r : result) {
                         add(inventory, r);
@@ -406,7 +403,7 @@ public class CraftingJob {
 
         if (allStepsIssued && awaiting.isEmpty()) {
             deliver(net);
-        } else if (blocked != null) {
+        } else if (blocked != null && budget > 0 && !outOfTime) {
             status = blocked;
         } else if (!awaiting.isEmpty() && budget > 0 && !outOfTime) {
             status = Status.WAITING_MACHINE;
@@ -611,9 +608,10 @@ public class CraftingJob {
         }
 
         ListTag stepList = new ListTag();
+        var ops = provider.createSerializationContext(NbtOps.INSTANCE);
         for (StepState s : steps) {
             CompoundTag t = new CompoundTag();
-            PatternData.CODEC.encodeStart(provider.createSerializationContext(NbtOps.INSTANCE), s.pattern)
+            PatternData.CODEC.encodeStart(ops, s.pattern)
                     .result().ifPresent(p -> t.put("Pattern", p));
             t.putLong("Remaining", s.remaining);
             stepList.add(t);
@@ -647,8 +645,9 @@ public class CraftingJob {
         for (int i = 0; i < list.size(); i++) {
             CompoundTag t = list.getCompoundOrEmpty(i);
             ItemStack stack = com.golemlogix.system.NbtBridge.loadItem(provider, t.getCompoundOrEmpty("Item")).orElse(ItemStack.EMPTY);
-            if (!stack.isEmpty()) {
-                map.put(ItemKey.of(stack), t.getLongOr("Count", 0L));
+            long count = t.getLongOr("Count", 0L);
+            if (!stack.isEmpty() && count > 0) {
+                map.merge(ItemKey.of(stack), count, Long::sum);
             }
         }
     }
@@ -676,9 +675,10 @@ public class CraftingJob {
             job.requesterBus = BlockPos.of(tag.getLongOr("RequesterBus", 0L));
         }
         ListTag stepList = tag.getListOrEmpty("Steps");
+        var ops = provider.createSerializationContext(NbtOps.INSTANCE);
         for (int i = 0; i < stepList.size(); i++) {
             CompoundTag t = stepList.getCompoundOrEmpty(i);
-            PatternData.CODEC.parse(provider.createSerializationContext(NbtOps.INSTANCE), t.get("Pattern"))
+            PatternData.CODEC.parse(ops, t.get("Pattern"))
                     .result().ifPresent(p -> job.steps.add(new StepState(p, t.getLongOr("Remaining", 0L))));
         }
         loadMap(tag.getListOrEmpty("Inventory"), job.inventory, provider);

@@ -35,6 +35,7 @@ public final class RedstoneControl {
     public boolean allows(boolean installed, boolean powered, boolean consume) {
         observe(powered);
         if (!installed) {
+            pulse = false;
             return true;
         }
         return switch (mode) {

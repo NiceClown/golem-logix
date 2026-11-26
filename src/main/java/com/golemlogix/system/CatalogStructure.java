@@ -32,13 +32,17 @@ import java.util.Set;
  */
 public final class CatalogStructure {
     public static final int[][] CELLS = MainframeStructure.CELLS;
-    private static boolean restoring = false;
+    private static final ThreadLocal<Boolean> RESTORING = ThreadLocal.withInitial(() -> false);
 
     private CatalogStructure() {
     }
 
     public static boolean isRestoring() {
-        return restoring;
+        return RESTORING.get();
+    }
+
+    private static boolean isLoaded(LevelReader level, BlockPos pos) {
+        return level instanceof Level l ? l.isLoaded(pos) : level.hasChunkAt(pos);
     }
 
     public static BlockPos cellPos(BlockPos controller, Direction facing, int cell) {
@@ -109,7 +113,7 @@ public final class CatalogStructure {
         List<Missing> out = new ArrayList<>();
         for (int i = 0; i < CELLS.length; i++) {
             BlockPos p = cellPos(controller, facing, i);
-            if (!matches(level.getBlockState(p), i, facing)) {
+            if (!isLoaded(level, p) || !matches(level.getBlockState(p), i, facing)) {
                 out.add(new Missing(p, fallback(i)));
             }
         }
@@ -122,10 +126,15 @@ public final class CatalogStructure {
 
     /** Assemble: remember the former blocks in the owner, all cells become parts, the owner becomes FORMED. */
     public static void form(Level level, BlockPos controller, Direction facing) {
-        if (!(level.getBlockEntity(controller) instanceof CardCatalogBlockEntity be)) {
+        if (!level.isLoaded(controller) || !(level.getBlockEntity(controller) instanceof CardCatalogBlockEntity be)) {
             return;
         }
-        restoring = true;
+        for (int i = 0; i < CELLS.length; i++) {
+            if (!level.isLoaded(cellPos(controller, facing, i))) {
+                return;
+            }
+        }
+        RESTORING.set(true);
         try {
             for (int i = 0; i < CELLS.length; i++) {
                 BlockPos p = cellPos(controller, facing, i);
@@ -138,7 +147,7 @@ public final class CatalogStructure {
             }
             notifyAll(level, controller, facing);
         } finally {
-            restoring = false;
+            RESTORING.set(false);
         }
         BlockState cs = level.getBlockState(controller);
         if (cs.getBlock() instanceof CardCatalogBlock) {
@@ -150,27 +159,34 @@ public final class CatalogStructure {
 
     /** Disassemble: parts become the former blocks again (except the broken one, which drops by itself), the owner is unassembled. */
     public static void disassemble(Level level, BlockPos controller, Direction facing, @Nullable BlockPos broken) {
-        CardCatalogBlockEntity be = level.getBlockEntity(controller) instanceof CardCatalogBlockEntity c ? c : null;
-        restoring = true;
+        if (RESTORING.get()) {
+            return;
+        }
+        CardCatalogBlockEntity be = level.isLoaded(controller) && level.getBlockEntity(controller) instanceof CardCatalogBlockEntity c ? c : null;
+        RESTORING.set(true);
         try {
             for (int i = 0; i < CELLS.length; i++) {
                 BlockPos p = cellPos(controller, facing, i);
-                if (p.equals(broken)) {
+                if (p.equals(broken) || !level.isLoaded(p)) {
                     continue;
                 }
                 BlockState s = level.getBlockState(p);
-                if (s.getBlock() instanceof CatalogPartBlock && s.getValue(CatalogPartBlock.CELL) == i) {
+                if (s.getBlock() instanceof CatalogPartBlock
+                        && s.getValue(CatalogPartBlock.CELL) == i
+                        && s.getValue(CatalogPartBlock.FACING) == facing) {
                     BlockState original = be != null ? be.original(i) : null;
                     level.setBlock(p, original != null ? original : fallback(i).defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
                 }
             }
             notifyAll(level, controller, facing);
         } finally {
-            restoring = false;
+            RESTORING.set(false);
         }
-        BlockState cs = level.getBlockState(controller);
-        if (cs.getBlock() instanceof CardCatalogBlock && cs.getValue(CardCatalogBlock.FORMED)) {
-            level.setBlock(controller, cs.setValue(CardCatalogBlock.FORMED, false), 3);
+        if (level.isLoaded(controller)) {
+            BlockState cs = level.getBlockState(controller);
+            if (cs.getBlock() instanceof CardCatalogBlock && cs.getValue(CardCatalogBlock.FORMED)) {
+                level.setBlock(controller, cs.setValue(CardCatalogBlock.FORMED, false), 3);
+            }
         }
         GolemNetwork.nodesChanged(level, controller);
     }
@@ -178,6 +194,9 @@ public final class CatalogStructure {
     private static void notifyAll(Level level, BlockPos controller, Direction facing) {
         for (int i = 0; i < CELLS.length; i++) {
             BlockPos p = cellPos(controller, facing, i);
+            if (!level.isLoaded(p)) {
+                continue;
+            }
             BlockState s = level.getBlockState(p);
             s.updateNeighbourShapes(level, p, Block.UPDATE_ALL);
             level.updateNeighborsAt(p, s.getBlock());

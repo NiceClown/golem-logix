@@ -87,7 +87,9 @@ public class DiskStore extends SavedData {
     }
 
     public void drop(UUID id) {
-        disks.remove(id);
+        if (disks.remove(id) != null) {
+            setDirty();
+        }
     }
 
     /** Recomputes used space and equipment counts after a /reload, in case the golem_logix:not_gear tag changed. */
@@ -127,7 +129,7 @@ public class DiskStore extends SavedData {
                 ItemStack stack = com.golemlogix.system.NbtBridge.loadItem(provider, it.getCompoundOrEmpty("Item")).orElse(ItemStack.EMPTY);
                 int count = it.getIntOr("Count", 0);
                 if (!stack.isEmpty() && count > 0) {
-                    disk.items.put(ItemKey.of(stack), count);
+                    disk.items.merge(ItemKey.of(stack), count, Integer::sum);
                     int cost = Gear.cost(stack);
                     disk.storedItems += (long) count * cost;
                     if (cost > 1) {

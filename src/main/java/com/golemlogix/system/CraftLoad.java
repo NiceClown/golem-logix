@@ -16,11 +16,21 @@ public final class CraftLoad {
     }
 
     private static void roll(Level level) {
-        long now = level.getServer().getTickCount();
+        var server = level.getServer();
+        if (server == null) {
+            return;
+        }
+        long now = server.getTickCount();
         if (now != tick) {
             tick = now;
             spentThisTick = 0;
         }
+    }
+
+    /** The server stopped: clear the previous world's tick budget. */
+    public static void forget() {
+        tick = -1;
+        spentThisTick = 0;
     }
 
     /** How many nanoseconds of this tick are left (Long.MAX_VALUE without a limit); not above zero when they are used up. */

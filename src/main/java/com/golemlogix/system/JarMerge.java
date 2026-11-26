@@ -56,7 +56,7 @@ public final class JarMerge {
         for (int dx = -2; dx <= 0; dx++) {
             for (int dz = -2; dz <= 0; dz++) {
                 BlockPos corner = lower.offset(dx, 0, dz);
-                if (square(level, corner, lower, JarForm.SUPER)) {
+                if (square(level, corner, JarForm.SUPER)) {
                     join(level, corner, JarForm.SUPER);
                     return;
                 }
@@ -68,7 +68,7 @@ public final class JarMerge {
         for (int dx = -1; dx <= 0; dx++) {
             for (int dz = -1; dz <= 0; dz++) {
                 BlockPos corner = lower.offset(dx, 0, dz);
-                if (square(level, corner, lower, JarForm.GIGA)) {
+                if (square(level, corner, JarForm.GIGA)) {
                     join(level, corner, JarForm.GIGA);
                     return;
                 }
@@ -90,7 +90,7 @@ public final class JarMerge {
         return s.getValue(CryoJarBlock.FORM);
     }
 
-    private static boolean square(Level level, BlockPos corner, BlockPos must, JarForm into) {
+    private static boolean square(Level level, BlockPos corner, JarForm into) {
         for (BlockPos cell : cells(corner, into.width())) {
             JarForm f = form(level, cell);
             // only a jar on its own joins a Giga Jar; a reactor takes those in a Giga Jar as well
@@ -136,7 +136,7 @@ public final class JarMerge {
 
     /** absorbed: jars that join a larger whole right after this, so they take any Source the jars outside it cannot hold. */
     private static void apart(ServerLevel level, BlockPos corner, @Nullable BlockPos removed, java.util.Set<BlockPos> absorbed) {
-        if (!(level.getBlockEntity(corner) instanceof CryoJarBlockEntity whole)) {
+        if (!level.isLoaded(corner) || !(level.getBlockEntity(corner) instanceof CryoJarBlockEntity whole)) {
             return;
         }
         JarForm form = whole.getBlockState().hasProperty(CryoJarBlock.FORM) ? whole.getBlockState().getValue(CryoJarBlock.FORM) : JarForm.SINGLE;
@@ -146,7 +146,7 @@ public final class JarMerge {
         int total = whole.takeAll();
         List<BlockPos> stay = new ArrayList<>();
         for (BlockPos cell : cells(corner, form.width())) {
-            if (!cell.equals(removed) && level.getBlockEntity(cell) instanceof CryoJarBlockEntity) {
+            if (!cell.equals(removed) && level.isLoaded(cell) && level.getBlockEntity(cell) instanceof CryoJarBlockEntity) {
                 stay.add(cell);
             }
         }
@@ -168,7 +168,9 @@ public final class JarMerge {
         }
         for (int i = 0; i < stay.size(); i++) {
             BlockPos cell = stay.get(i);
-            CryoJarBlockEntity jar = (CryoJarBlockEntity) level.getBlockEntity(cell);
+            if (!(level.getBlockEntity(cell) instanceof CryoJarBlockEntity jar)) {
+                continue;
+            }
             jar.setController(null);
             jar.putAll(share[i]);
             setForm(level, cell, JarForm.SINGLE);
@@ -180,6 +182,9 @@ public final class JarMerge {
 
     /** Only the state changes: its neighbours have nothing to learn from it. */
     private static void setForm(ServerLevel level, BlockPos lower, JarForm form) {
+        if (!level.isLoaded(lower)) {
+            return;
+        }
         for (BlockPos p : new BlockPos[]{lower, lower.above()}) {
             BlockState s = level.getBlockState(p);
             if (s.getBlock() instanceof CryoJarBlock && s.getValue(CryoJarBlock.FORM) != form) {
@@ -190,6 +195,9 @@ public final class JarMerge {
 
     private static void sync(ServerLevel level, List<BlockPos> cells) {
         for (BlockPos cell : cells) {
+            if (!level.isLoaded(cell)) {
+                continue;
+            }
             BlockState s = level.getBlockState(cell);
             level.sendBlockUpdated(cell, s, s, Block.UPDATE_ALL);
             level.updateNeighbourForOutputSignal(cell, s.getBlock());

@@ -1,5 +1,6 @@
 package com.golemlogix.system;
 
+import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.AtlasCoreBlockEntity;
 import com.golemlogix.blockentity.BusBlockEntity;
 import com.golemlogix.blockentity.CopperDriveBayBlockEntity;
@@ -22,11 +23,15 @@ import com.golemlogix.crafting.CraftingPlanner;
 import com.golemlogix.data.PatternData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.Containers;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
@@ -58,7 +63,9 @@ import java.util.WeakHashMap;
  * expander its exit, a telegraph 64, a device as much as a basic pipe (config "deviceChannels"). The whole network has the sum
  * of its five lines; a starter tower (the core on two conduits and a bushing) has 16, the core alone 8.
  */
+@EventBusSubscriber(modid = GolemLogixMod.MOD_ID)
 public final class GolemNetwork {
+    private static final Direction[] DIRECTIONS = Direction.values();
     public static final int MAX_NODES = 16384;
     /** The Atlas Core alone, without even a starter tower under it. */
     public static final int BARE_CORE_CHANNELS = 8;
@@ -241,8 +248,12 @@ public final class GolemNetwork {
      */
     @Nullable
     public static GolemNetwork aroundRemoved(Level level, BlockPos pos) {
-        for (Direction d : Direction.values()) {
-            GolemNetwork net = scan(level, pos.relative(d));
+        for (Direction d : DIRECTIONS) {
+            BlockPos n = pos.relative(d);
+            if (!level.isLoaded(n) || !(level.getBlockState(n).getBlock() instanceof GolemNode)) {
+                continue;
+            }
+            GolemNetwork net = scan(level, n);
             if (net.isOnline()) {
                 return net;
             }
@@ -327,10 +338,33 @@ public final class GolemNetwork {
     public static void forgetAll() {
         OrderBackoff.forget();
         BusLoad.forget();
+        CraftLoad.forget();
         EPOCHS.clear();
         SERVER_CACHE.clear();
         CHANGED.clear();
         serverVersion++;
+    }
+
+    /** Client left a world: drop cached client-side networks so their Level instances can be collected. */
+    public static void forgetClient() {
+        CLIENT_CACHE.clear();
+    }
+
+    /**
+     * LevelCache values hold GolemNetwork instances which strongly reference their Level key, so WeakHashMap alone cannot
+     * collect unloaded levels. Evicting on LevelEvent.Unload prevents leaking worlds across disconnects and dimension switches.
+     */
+    @SubscribeEvent
+    public static void onLevelUnload(LevelEvent.Unload event) {
+        if (!(event.getLevel() instanceof Level unloaded)) {
+            return;
+        }
+        if (unloaded.isClientSide()) {
+            CLIENT_CACHE.remove(unloaded);
+        } else {
+            SERVER_CACHE.remove(unloaded);
+            CHANGED.remove(unloaded);
+        }
     }
 
     /**
@@ -375,13 +409,14 @@ public final class GolemNetwork {
         }
         boolean nearNode = false;
         boolean faced = false;
-        for (Direction d : Direction.values()) {
-            BlockPos n = pos.relative(d);
-            Block b = cache.known.get(n);
+        BlockPos.MutableBlockPos neighbor = new BlockPos.MutableBlockPos();
+        for (Direction d : DIRECTIONS) {
+            neighbor.setWithOffset(pos, d);
+            Block b = cache.known.get(neighbor);
             if (b instanceof GolemNode) {
                 nearNode = true;
-                if (b instanceof PeriscopeStorageBusBlock) {
-                    BlockState ns = level.getBlockState(n);
+                if (b instanceof PeriscopeStorageBusBlock && level.isLoaded(neighbor)) {
+                    BlockState ns = level.getBlockState(neighbor);
                     faced |= ns.getBlock() instanceof PeriscopeStorageBusBlock && ns.getValue(PeriscopeStorageBusBlock.FACING) == d.getOpposite();
                 }
             }
@@ -429,14 +464,18 @@ public final class GolemNetwork {
         return net;
     }
 
+    private record SourceCandidate(Level level, BlockPos pos, Direction fromSide) {
+    }
+
     private void doScan() {
         ArrayDeque<Node> queue = new ArrayDeque<>();
         Node first = node(start);
         queue.add(first);
         Set<Node> seen = new HashSet<>();
         seen.add(first);
-        List<Node[]> linkedTo = new ArrayList<>();
+        List<List<Node>> linkedTo = new ArrayList<>();
         List<Node> cores = new ArrayList<>();
+        List<SourceCandidate> sourceCandidates = new ArrayList<>();
 
         while (!queue.isEmpty() && nodeList.size() < MAX_NODES) {
             Node node = queue.poll();
@@ -446,17 +485,26 @@ public final class GolemNetwork {
                 continue;
             }
             BlockState state = lvl.getBlockState(pos);
-            if (!(state.getBlock() instanceof GolemNode)) {
+            Block block = state.getBlock();
+            if (!(block instanceof GolemNode)) {
                 continue;
             }
             nodeIndex.put(node, nodeList.size());
             nodeList.add(node);
             nodeStates.add(state);
 
-            if (state.getBlock() instanceof AtlasCoreBlock) {
+            if (block instanceof AtlasCoreBlock) {
                 cores.add(node);
             }
-            BlockEntity be = lvl.getBlockEntity(pos);
+            com.golemlogix.blockentity.PipeBlockEntity selfPipe = null;
+            BlockEntity be = null;
+            if (state.hasBlockEntity()) {
+                if (block instanceof SnowPipeBlock) {
+                    selfPipe = lvl.getBlockEntity(pos) instanceof com.golemlogix.blockentity.PipeBlockEntity p ? p : null;
+                } else {
+                    be = lvl.getBlockEntity(pos);
+                }
+            }
             if (be instanceof CopperDriveBayBlockEntity bay) {
                 bays.add(bay);
             } else if (be instanceof BusBlockEntity bus) {
@@ -473,7 +521,7 @@ public final class GolemNetwork {
             } else if (be instanceof com.golemlogix.blockentity.SecurityTerminalBlockEntity sec && security == null) {
                 security = sec;
             }
-            if (state.getBlock() instanceof PeriscopeStorageBusBlock) {
+            if (block instanceof PeriscopeStorageBusBlock) {
                 Direction facing = state.getValue(PeriscopeStorageBusBlock.FACING);
                 BlockPos target = pos.relative(facing);
                 if (lvl.isLoaded(target)) {
@@ -490,15 +538,25 @@ public final class GolemNetwork {
             }
 
             List<Node> links = new ArrayList<>(6);
-            for (Direction dir : Direction.values()) {
+            for (Direction dir : DIRECTIONS) {
                 BlockPos next = pos.relative(dir);
+                if (!lvl.isLoaded(next)) {
+                    continue;
+                }
+                BlockState nextState = lvl.getBlockState(next);
                 // a node gets "seen" only if there is a link: a multiblock socket may be reached from another side
-                if (linkable(lvl, pos, state, next, dir)) {
+                boolean linked = GolemNode.linked(state, nextState, dir)
+                        && (selfPipe == null || !selfPipe.isPlugged(dir))
+                        && (!(nextState.getBlock() instanceof SnowPipeBlock)
+                        || !com.golemlogix.blockentity.PipeBlockEntity.plugged(lvl, next, dir.getOpposite()));
+                if (linked) {
                     links.add(new Node(lvl, next));
+                } else if (nextState.hasBlockEntity()) {
+                    sourceCandidates.add(new SourceCandidate(lvl, next, dir.getOpposite()));
                 }
             }
             // a telegraph also links to its distant partners: the host its memory card names and the telegraphs naming it
-            if (state.getBlock() instanceof TelegraphBlock && TelegraphBlock.isMaster(state)) {
+            if (block instanceof TelegraphBlock && TelegraphBlock.isMaster(state)) {
                 for (TelegraphLinks.Partner p : TelegraphLinks.partners(lvl, pos)) {
                     links.add(p.node());
                     if (p.toHost()) {
@@ -511,13 +569,13 @@ public final class GolemNetwork {
                     queue.add(next);
                 }
             }
-            linkedTo.add(links.toArray(new Node[0]));
+            linkedTo.add(links);
         }
         // the links as node indices, in a fixed order on every node (the order decides who gets a channel first)
         int[][] links = new int[nodeList.size()][];
         for (int i = 0; i < links.length; i++) {
-            Node[] targets = linkedTo.get(i);
-            int[] idx = new int[targets.length];
+            List<Node> targets = linkedTo.get(i);
+            int[] idx = new int[targets.size()];
             int n = 0;
             for (Node t : targets) {
                 Integer j = nodeIndex.get(t);
@@ -525,36 +583,37 @@ public final class GolemNetwork {
                     idx[n++] = j;
                 }
             }
-            links[i] = Arrays.copyOf(idx, n);
+            links[i] = n == idx.length ? idx : Arrays.copyOf(idx, n);
         }
 
         // Source sources next to the nodes; the Resonator is not a source for the network, it powers the Chronometers bound to it
         Set<BlockEntity> seenSources = new HashSet<>();
-        for (Node node : nodeList) {
-            Level lvl = node.level;
-            for (Direction dir : Direction.values()) {
-                BlockPos p = node.pos.relative(dir);
-                if (nodeIndex.containsKey(new Node(lvl, p)) || !lvl.isLoaded(p)) {
-                    continue;
-                }
-                BlockEntity be = lvl.getBlockEntity(p);
-                if (be != null && seenSources.add(SourceHelper.owner(be))) {
-                    if (be instanceof com.golemlogix.blockentity.EternalFrostResonatorBlockEntity) {
-                        resonators++;
-                        peripherals.put(new Node(lvl, p), be.getBlockState().getBlock());
-                        continue;
-                    }
-                    SourceHelper.Supplier s;
-                    if (be instanceof com.golemlogix.blockentity.CryoDiodeBlockEntity diode) {
-                        s = diode.asSupplier(dir.getOpposite());
-                    } else {
-                        s = SourceHelper.asSupplier(be);
-                    }
-                    if (s != null) {
-                        sources.add(s);
-                        peripherals.put(new Node(lvl, p), be.getBlockState().getBlock());
-                    }
-                }
+        for (SourceCandidate cand : sourceCandidates) {
+            Node candNode = new Node(cand.level, cand.pos);
+            if (nodeIndex.containsKey(candNode)) {
+                continue;
+            }
+            BlockEntity be = cand.level.getBlockEntity(cand.pos);
+            if (be == null) {
+                continue;
+            }
+            BlockEntity owner = SourceHelper.owner(be);
+            if (seenSources.contains(owner)) {
+                continue;
+            }
+            if (be instanceof com.golemlogix.blockentity.EternalFrostResonatorBlockEntity) {
+                seenSources.add(owner);
+                resonators++;
+                peripherals.put(candNode, be.getBlockState().getBlock());
+                continue;
+            }
+            SourceHelper.Supplier s = be instanceof com.golemlogix.blockentity.CryoDiodeBlockEntity diode
+                    ? diode.asSupplier(cand.fromSide)
+                    : SourceHelper.asSupplier(be);
+            if (s != null) {
+                seenSources.add(owner);
+                sources.add(s);
+                peripherals.put(candNode, be.getBlockState().getBlock());
             }
         }
 
@@ -590,6 +649,14 @@ public final class GolemNetwork {
      */
     @Nullable
     private Node primaryCore(List<Node> cores) {
+        if (cores.isEmpty()) {
+            return null;
+        }
+        if (cores.size() == 1) {
+            Node only = cores.get(0);
+            structure = AtlasStructure.check(only.level, only.pos);
+            return only;
+        }
         Node best = null;
         Comparator<Node> order = Comparator.<Node, String>comparing(n -> n.level.dimension().identifier().toString())
                 .thenComparing(n -> n.pos);
@@ -605,14 +672,6 @@ public final class GolemNetwork {
         return best;
     }
 
-    /** Two neighbouring nodes connect only if each agrees to link with the other (dir = from from to the neighbour). */
-    private static boolean linkable(Level lvl, BlockPos fromPos, BlockState from, BlockPos nextPos, Direction dir) {
-        if (!lvl.isLoaded(nextPos)) {
-            return false;
-        }
-        return GolemNode.linked(lvl, fromPos, from, nextPos, lvl.getBlockState(nextPos), dir);
-    }
-
     /** How many channels the outer face of a Channel Expander gives out (only in a complete array). */
     private int expanderExit(ChannelExpanderBlock ex) {
         if (structure == null || !structure.valid()) {
@@ -623,7 +682,9 @@ public final class GolemNetwork {
 
     /** Capacity of a bushing or an expander exit (for tooltips and tests); the same as {@link #capacityAt} for other nodes. */
     public int exitCapacity(BlockPos pos) {
-        Block b = level.getBlockState(pos).getBlock();
+        Integer idx = nodeIndex.get(node(pos));
+        Block b = idx != null ? nodeStates.get(idx).getBlock()
+                : (level.isLoaded(pos) ? level.getBlockState(pos).getBlock() : null);
         if (b instanceof CableBushingBlock) {
             return lineCapacity;
         }
@@ -671,16 +732,18 @@ public final class GolemNetwork {
         boolean[] needs = new boolean[n];
 
         // the controller nodes in walk order from the core: the walk passes all array cells, or only the conduits of a tower
-        List<Integer> controllers = new ArrayList<>();
+        int[] controllerNodes = new int[n];
+        int controllerCount = 0;
         boolean[] seen = new boolean[n];
-        ArrayDeque<Integer> queue = new ArrayDeque<>();
-        queue.add(coreIdx);
+        int[] queue = new int[n];
+        int qHead = 0, qTail = 0;
+        queue[qTail++] = coreIdx;
         seen[coreIdx] = true;
         controller[coreIdx] = true;
-        while (!queue.isEmpty()) {
-            int i = queue.poll();
+        while (qHead < qTail) {
+            int i = queue[qHead++];
             if (controller[i]) {
-                controllers.add(i);
+                controllerNodes[controllerCount++] = i;
             }
             for (int j : links[i]) {
                 Block b = nodeStates.get(j).getBlock();
@@ -689,7 +752,7 @@ public final class GolemNetwork {
                 if (!seen[j] && inside) {
                     seen[j] = true;
                     controller[j] = conduit;
-                    queue.add(j);
+                    queue[qTail++] = j;
                 }
             }
         }
@@ -727,7 +790,7 @@ public final class GolemNetwork {
             }
         }
         channels = new ChannelCalculation(links, capacities, tiers, needs,
-                controllers.stream().mapToInt(Integer::intValue).toArray(), channelCapacity);
+                Arrays.copyOf(controllerNodes, controllerCount), channelCapacity);
         channelsUsed = channels.used();
         for (int i = 0; i < n; i++) {
             if (channels.granted(i)) {
@@ -982,7 +1045,7 @@ public final class GolemNetwork {
             }
             boolean on = active && channels != null && (node.channelCost(state) > 0 ? channels.granted(i) : channels.reached(i));
             if (state.getValue(GolemProperties.ACTIVE) != on) {
-                n.level.setBlock(n.pos, state.setValue(GolemProperties.ACTIVE, on), 18);
+                n.level.setBlock(n.pos, state.setValue(GolemProperties.ACTIVE, on), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
             }
         }
     }
@@ -990,14 +1053,24 @@ public final class GolemNetwork {
     // ---------------------------------------------------------------- storage
 
     private List<ItemStack> allDisks(boolean fluid) {
+        if (bays.isEmpty()) {
+            return List.of();
+        }
         List<ItemStack> disks = new ArrayList<>();
-        Set<ItemStack> copies = copiedDisks();
+        Set<java.util.UUID> seenIds = new HashSet<>();
         for (CopperDriveBayBlockEntity bay : bays) {
             if (bay.isRemoved()) {
                 continue;
             }
             for (ItemStack disk : bay.getDisks()) {
-                if ((fluid ? DiskStorage.isFluidDisk(disk) : DiskStorage.isItemDisk(disk)) && !copies.contains(disk)) {
+                if (disk.isEmpty()) {
+                    continue;
+                }
+                java.util.UUID id = DiskStorage.diskId(disk);
+                if (id != null && !seenIds.add(id)) {
+                    continue;
+                }
+                if (fluid ? DiskStorage.isFluidDisk(disk) : DiskStorage.isItemDisk(disk)) {
                     disks.add(disk);
                 }
             }
@@ -1010,20 +1083,29 @@ public final class GolemNetwork {
      * shares the original's contents, so it is skipped and nothing is counted or offered twice.
      */
     private Set<ItemStack> copiedDisks() {
+        if (bays.isEmpty()) {
+            return Set.of();
+        }
         Set<java.util.UUID> ids = new HashSet<>();
-        Set<ItemStack> copies = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        Set<ItemStack> copies = null;
         for (CopperDriveBayBlockEntity bay : bays) {
             if (bay.isRemoved()) {
                 continue;
             }
             for (ItemStack disk : bay.getDisks()) {
+                if (disk.isEmpty()) {
+                    continue;
+                }
                 java.util.UUID id = DiskStorage.diskId(disk);
                 if (id != null && !ids.add(id)) {
+                    if (copies == null) {
+                        copies = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+                    }
                     copies.add(disk);
                 }
             }
         }
-        return copies;
+        return copies == null ? Set.of() : copies;
     }
 
     /** Only the cabinets whose disks really changed are marked (it was every cabinet of the network on every move). */
@@ -1065,20 +1147,24 @@ public final class GolemNetwork {
         return ex.owner() == null || ex.owner().mayExtract(f);
     }
 
+    private static boolean isRemoved(External ex) {
+        return ex.owner != null && ex.owner.isRemoved();
+    }
+
     @Nullable
     private static ResourceHandler<ItemResource> itemHandler(External ex) {
         Level lvl = ex.level;
-        if (!lvl.isLoaded(ex.target)) {
+        if (isRemoved(ex) || !lvl.isLoaded(ex.target)) {
             return null;
         }
-        if (ex.owner != null && !ex.owner.isRemoved() && lvl instanceof net.minecraft.server.level.ServerLevel sl) {
+        if (ex.owner != null && lvl instanceof net.minecraft.server.level.ServerLevel sl) {
             return ex.owner.targetCaps(sl, ex.target, ex.face).itemsAnySide();
         }
         ResourceHandler<ItemResource> h = lvl.getCapability(Capabilities.Item.BLOCK, ex.target, ex.face);
         if (h == null) {
             h = lvl.getCapability(Capabilities.Item.BLOCK, ex.target, null);
         }
-        for (Direction d : Direction.values()) {
+        for (Direction d : DIRECTIONS) {
             if (h != null) {
                 break;
             }
@@ -1090,17 +1176,17 @@ public final class GolemNetwork {
     @Nullable
     private static ResourceHandler<FluidResource> fluidHandler(External ex) {
         Level lvl = ex.level;
-        if (!lvl.isLoaded(ex.target)) {
+        if (isRemoved(ex) || !lvl.isLoaded(ex.target)) {
             return null;
         }
-        if (ex.owner != null && !ex.owner.isRemoved() && lvl instanceof net.minecraft.server.level.ServerLevel sl) {
+        if (ex.owner != null && lvl instanceof net.minecraft.server.level.ServerLevel sl) {
             return ex.owner.targetCaps(sl, ex.target, ex.face).fluidsAnySide();
         }
         ResourceHandler<FluidResource> h = lvl.getCapability(Capabilities.Fluid.BLOCK, ex.target, ex.face);
         if (h == null) {
             h = lvl.getCapability(Capabilities.Fluid.BLOCK, ex.target, null);
         }
-        for (Direction d : Direction.values()) {
+        for (Direction d : DIRECTIONS) {
             if (h != null) {
                 break;
             }
@@ -1114,25 +1200,79 @@ public final class GolemNetwork {
     }
 
     private List<Tier> tiers(boolean highestFirst) {
+        boolean hasAny = false;
+        boolean singlePriority = true;
+        int firstPriority = 0;
+        for (CopperDriveBayBlockEntity bay : bays) {
+            if (bay.isRemoved()) {
+                continue;
+            }
+            int p = bay.getPriority();
+            if (!hasAny) {
+                hasAny = true;
+                firstPriority = p;
+            } else if (p != firstPriority) {
+                singlePriority = false;
+                break;
+            }
+        }
+        if (singlePriority) {
+            for (External ex : externals) {
+                if (isRemoved(ex)) {
+                    continue;
+                }
+                int p = ex.priority();
+                if (!hasAny) {
+                    hasAny = true;
+                    firstPriority = p;
+                } else if (p != firstPriority) {
+                    singlePriority = false;
+                    break;
+                }
+            }
+        }
+        if (!hasAny) {
+            return List.of();
+        }
+        if (singlePriority) {
+            List<CopperDriveBayBlockEntity> liveBays = new ArrayList<>(bays.size());
+            for (CopperDriveBayBlockEntity bay : bays) {
+                if (!bay.isRemoved()) {
+                    liveBays.add(bay);
+                }
+            }
+            List<External> liveExts = new ArrayList<>(externals.size());
+            for (External ex : externals) {
+                if (!isRemoved(ex)) {
+                    liveExts.add(ex);
+                }
+            }
+            return List.of(new Tier(firstPriority, liveBays, liveExts));
+        }
         java.util.Comparator<Integer> order = highestFirst ? java.util.Comparator.<Integer>reverseOrder() : java.util.Comparator.<Integer>naturalOrder();
-        java.util.TreeMap<Integer, Tier> map = new java.util.TreeMap<Integer, Tier>(order);
+        java.util.TreeMap<Integer, Tier> map = new java.util.TreeMap<>(order);
         for (CopperDriveBayBlockEntity bay : bays) {
             if (!bay.isRemoved()) {
                 map.computeIfAbsent(bay.getPriority(), p -> new Tier(p, new ArrayList<>(), new ArrayList<>())).bays.add(bay);
             }
         }
         for (External ex : externals) {
-            map.computeIfAbsent(ex.priority(), p -> new Tier(p, new ArrayList<>(), new ArrayList<>())).exts.add(ex);
+            if (!isRemoved(ex)) {
+                map.computeIfAbsent(ex.priority(), p -> new Tier(p, new ArrayList<>(), new ArrayList<>())).exts.add(ex);
+            }
         }
         return new ArrayList<>(map.values());
     }
 
-    private List<DiskRef> disksOf(Tier tier, boolean fluid) {
+    private static List<DiskRef> disksOf(Tier tier, boolean fluid, Set<ItemStack> copies) {
+        if (tier.bays.isEmpty()) {
+            return List.of();
+        }
         List<DiskRef> disks = new ArrayList<>();
-        Set<ItemStack> copies = copiedDisks();
         for (CopperDriveBayBlockEntity bay : tier.bays) {
             for (ItemStack disk : bay.getDisks()) {
-                if ((fluid ? DiskStorage.isFluidDisk(disk) : DiskStorage.isItemDisk(disk)) && !copies.contains(disk)) {
+                if ((fluid ? DiskStorage.isFluidDisk(disk) : DiskStorage.isItemDisk(disk))
+                        && (copies.isEmpty() || !copies.contains(disk))) {
                     disks.add(new DiskRef(bay, disk));
                 }
             }
@@ -1144,7 +1284,7 @@ public final class GolemNetwork {
     public Map<ItemKey, Long> listItems() {
         Map<ItemKey, Long> all = new LinkedHashMap<>();
         for (ItemStack disk : allDisks(false)) {
-            for (Map.Entry<ItemKey, Integer> e : DiskStorage.items(disk).entrySet()) {
+            for (Map.Entry<ItemKey, Integer> e : DiskStorage.rawItems(disk).entrySet()) {
                 all.merge(e.getKey(), (long) e.getValue(), Long::sum);
             }
         }
@@ -1159,7 +1299,7 @@ public final class GolemNetwork {
                 if (!r.isEmpty() && amt > 0) {
                     ItemStack s = r.toStack(1);
                     if (mayExtract(ex, s)) {
-                        all.merge(ItemKey.of(s), (long) amt, Long::sum);
+                        all.merge(ItemKey.ofSingleOwned(s), (long) amt, Long::sum);
                     }
                 }
             }
@@ -1183,23 +1323,29 @@ public final class GolemNetwork {
     }
 
     public long itemCountOf(ItemKey key) {
+        if (key.stack().isEmpty()) {
+            return 0;
+        }
         long n = 0;
         for (ItemStack disk : allDisks(false)) {
-            n += DiskStorage.items(disk).getOrDefault(key, 0);
+            n += DiskStorage.itemCount(disk, key);
         }
+        if (externals.isEmpty()) {
+            return n;
+        }
+        ItemResource want = ItemResource.of(key.stack());
         for (External ex : externals) {
+            if (!mayExtract(ex, key.stack())) {
+                continue;
+            }
             ResourceHandler<ItemResource> h = itemHandler(ex);
             if (h == null) {
                 continue;
             }
             for (int i = 0; i < h.size(); i++) {
-                ItemResource r = h.getResource(i);
                 int amt = h.getAmountAsInt(i);
-                if (!r.isEmpty() && amt > 0 && r.getItem() == key.stack().getItem()) {
-                    ItemStack s = r.toStack(1);
-                    if (key.matches(s) && mayExtract(ex, s)) {
-                        n += amt;
-                    }
+                if (amt > 0 && h.getResource(i).equals(want)) {
+                    n += amt;
                 }
             }
         }
@@ -1256,13 +1402,15 @@ public final class GolemNetwork {
             return ItemStack.EMPTY;
         }
         ItemStack remaining = input.copy();
-        List<Tier> tiers = tiers(true);
 
         if (simulate) {
             if (Gear.is(remaining)) {
                 // equipment takes more of a disk, and small disks have a rule of their own: each disk answers for itself
                 for (ItemStack disk : allDisks(false)) {
                     remaining.shrink(DiskStorage.insertItem(disk, remaining, true));
+                    if (remaining.isEmpty()) {
+                        return ItemStack.EMPTY;
+                    }
                 }
             } else {
                 long free = 0;
@@ -1270,43 +1418,48 @@ public final class GolemNetwork {
                     free += Math.max(0, DiskStorage.capacity(disk) - DiskStorage.storedItems(disk));
                 }
                 remaining.shrink((int) Math.min(free, remaining.getCount()));
-            }
-        } else {
-            Set<CopperDriveBayBlockEntity> touched = new HashSet<>();
-            for (Tier tier : tiers) {
-                List<DiskRef> disks = disksOf(tier, false);
-                for (int pass = 0; pass < 2 && !remaining.isEmpty(); pass++) {
-                    for (DiskRef d : disks) {
-                        if (remaining.isEmpty()) {
-                            break;
-                        }
-                        if (pass == 0 && !DiskStorage.containsItem(d.disk, remaining)) {
-                            continue;
-                        }
-                        int n = DiskStorage.insertItem(d.disk, remaining, false);
-                        if (n > 0) {
-                            remaining.shrink(n);
-                            touched.add(d.bay);
-                        }
-                    }
+                if (remaining.isEmpty()) {
+                    return ItemStack.EMPTY;
                 }
-                remaining = insertIntoExternals(tier, remaining, false, skipTarget);
+            }
+            // simulation: disks are already counted above, the external ones are checked one by one
+            for (Tier tier : tiers(true)) {
                 if (remaining.isEmpty()) {
                     break;
                 }
-            }
-            markBaysChanged(touched);
-            if (remaining.getCount() != input.getCount()) {
-                bumpEpoch();
+                remaining = insertIntoExternals(tier, remaining, true, skipTarget);
             }
             return remaining;
         }
-        // simulation: disks are already counted by the sum of free space, the external ones are checked one by one
-        for (Tier tier : tiers) {
+
+        Set<ItemStack> copies = copiedDisks();
+        ItemKey itemKey = ItemKey.of(remaining);
+        Set<CopperDriveBayBlockEntity> touched = new HashSet<>();
+        for (Tier tier : tiers(true)) {
+            List<DiskRef> disks = disksOf(tier, false, copies);
+            for (int pass = 0; pass < 2 && !remaining.isEmpty(); pass++) {
+                for (DiskRef d : disks) {
+                    if (remaining.isEmpty()) {
+                        break;
+                    }
+                    if (pass == 0 && !DiskStorage.containsItem(d.disk, itemKey)) {
+                        continue;
+                    }
+                    int n = DiskStorage.insertItem(d.disk, remaining, false);
+                    if (n > 0) {
+                        remaining.shrink(n);
+                        touched.add(d.bay);
+                    }
+                }
+            }
+            remaining = insertIntoExternals(tier, remaining, false, skipTarget);
             if (remaining.isEmpty()) {
                 break;
             }
-            remaining = insertIntoExternals(tier, remaining, true, skipTarget);
+        }
+        markBaysChanged(touched);
+        if (remaining.getCount() != input.getCount()) {
+            bumpEpoch();
         }
         return remaining;
     }
@@ -1342,7 +1495,8 @@ public final class GolemNetwork {
             return ItemStack.EMPTY;
         }
         int left = amount;
-        Set<CopperDriveBayBlockEntity> touched = new HashSet<>();
+        Set<CopperDriveBayBlockEntity> touched = simulate ? null : new HashSet<>();
+        Set<ItemStack> copies = copiedDisks();
         ItemResource want = ItemResource.of(template);
 
         try (Transaction tx = Transaction.openRoot()) {
@@ -1350,21 +1504,23 @@ public final class GolemNetwork {
                 if (left <= 0) {
                     break;
                 }
-                for (DiskRef d : disksOf(tier, false)) {
+                for (DiskRef d : disksOf(tier, false, copies)) {
                     if (left <= 0) {
                         break;
                     }
                     int n = DiskStorage.extractItem(d.disk, template, left, simulate);
                     if (n > 0) {
                         left -= n;
-                        touched.add(d.bay);
+                        if (touched != null) {
+                            touched.add(d.bay);
+                        }
                     }
                 }
                 for (External ex : tier.exts) {
                     if (left <= 0) {
                         break;
                     }
-                    if (skips(ex, skipTarget)) {
+                    if (skips(ex, skipTarget) || !mayExtract(ex, template)) {
                         continue;
                     }
                     ResourceHandler<ItemResource> h = itemHandler(ex);
@@ -1374,7 +1530,7 @@ public final class GolemNetwork {
                     for (int i = 0; i < h.size() && left > 0; i++) {
                         ItemResource r = h.getResource(i);
                         int amt = h.getAmountAsInt(i);
-                        if (!r.isEmpty() && amt > 0 && r.equals(want) && mayExtract(ex, r.toStack(1))) {
+                        if (amt > 0 && r.equals(want)) {
                             int got = h.extract(i, r, Math.min(left, amt), tx);
                             left -= got;
                         }
@@ -1396,10 +1552,12 @@ public final class GolemNetwork {
     }
     /** All fluids of the network: type -> mB. */
     public List<FluidStack> listFluids() {
-        List<FluidStack> all = new ArrayList<>();
+        Map<FluidResource, Long> totals = new LinkedHashMap<>();
         for (ItemStack disk : allDisks(true)) {
-            for (FluidStack f : DiskStorage.fluids(disk)) {
-                mergeFluid(all, f);
+            for (FluidStack f : DiskStorage.rawFluids(disk)) {
+                if (!f.isEmpty()) {
+                    totals.merge(FluidResource.of(f), (long) f.getAmount(), Long::sum);
+                }
             }
         }
         for (External ex : externals) {
@@ -1413,25 +1571,18 @@ public final class GolemNetwork {
                 if (r.isEmpty() || amt <= 0) {
                     continue;
                 }
-                FluidStack f = r.toStack(amt);
+                FluidStack f = r.toStack(1);
                 // Liquid Cryo-Source in a tank behind a periscope is not network stock: the network makes its own from Source
                 if (!CryoSource.is(f) && mayExtract(ex, f)) {
-                    mergeFluid(all, f);
+                    totals.merge(r, (long) amt, Long::sum);
                 }
             }
         }
-        return all;
-    }
-
-    private static void mergeFluid(List<FluidStack> all, FluidStack f) {
-        for (int i = 0; i < all.size(); i++) {
-            FluidStack e = all.get(i);
-            if (FluidStack.isSameFluidSameComponents(e, f)) {
-                all.set(i, e.copyWithAmount((int) Math.min((long) e.getAmount() + f.getAmount(), Integer.MAX_VALUE)));
-                return;
-            }
+        List<FluidStack> all = new ArrayList<>(totals.size());
+        for (Map.Entry<FluidResource, Long> e : totals.entrySet()) {
+            all.add(e.getKey().toStack((int) Math.min(e.getValue(), Integer.MAX_VALUE)));
         }
-        all.add(f.copy());
+        return all;
     }
 
     /** Puts fluid into the network (in the same order as items: from the highest priority). Returns how many mB were accepted. */
@@ -1445,20 +1596,24 @@ public final class GolemNetwork {
             return 0;
         }
         int left = input.getAmount();
-        Set<CopperDriveBayBlockEntity> touched = new HashSet<>();
         if (simulate) {
             long free = 0;
             for (ItemStack disk : allDisks(true)) {
-                free += DiskStorage.capacity(disk) - DiskStorage.storedItems(disk);
+                free += Math.max(0, DiskStorage.capacity(disk) - DiskStorage.storedItems(disk));
             }
             left = (int) Math.max(0, input.getAmount() - free);
+            if (left <= 0) {
+                return input.getAmount();
+            }
         }
+        Set<CopperDriveBayBlockEntity> touched = simulate ? null : new HashSet<>();
+        Set<ItemStack> copies = simulate ? Set.of() : copiedDisks();
         for (Tier tier : tiers(true)) {
             if (left <= 0) {
                 break;
             }
             if (!simulate) {
-                List<DiskRef> disks = disksOf(tier, true);
+                List<DiskRef> disks = disksOf(tier, true, copies);
                 for (int pass = 0; pass < 2 && left > 0; pass++) {
                     for (DiskRef d : disks) {
                         if (left <= 0) {
@@ -1490,9 +1645,11 @@ public final class GolemNetwork {
                 left -= n;
             }
         }
-        markBaysChanged(touched);
-        if (!simulate && left != input.getAmount()) {
-            bumpEpoch();
+        if (!simulate) {
+            markBaysChanged(touched);
+            if (left != input.getAmount()) {
+                bumpEpoch();
+            }
         }
         return input.getAmount() - left;
     }
@@ -1510,30 +1667,33 @@ public final class GolemNetwork {
             return extractCryoSource(amount, simulate);
         }
         int left = amount;
-        Set<CopperDriveBayBlockEntity> touched = new HashSet<>();
+        Set<CopperDriveBayBlockEntity> touched = simulate ? null : new HashSet<>();
+        Set<ItemStack> copies = copiedDisks();
         for (Tier tier : tiers(false)) {
             if (left <= 0) {
                 break;
             }
-            for (DiskRef d : disksOf(tier, true)) {
+            for (DiskRef d : disksOf(tier, true, copies)) {
                 if (left <= 0) {
                     break;
                 }
                 int n = DiskStorage.extractFluid(d.disk, template, left, simulate);
                 if (n > 0) {
                     left -= n;
-                    touched.add(d.bay);
+                    if (touched != null) {
+                        touched.add(d.bay);
+                    }
                 }
             }
             for (External ex : tier.exts) {
                 if (left <= 0) {
                     break;
                 }
-                if (skips(ex, skipTarget)) {
+                if (skips(ex, skipTarget) || !mayExtract(ex, template)) {
                     continue;
                 }
                 ResourceHandler<FluidResource> h = fluidHandler(ex);
-                if (h == null || !mayExtract(ex, template)) {
+                if (h == null) {
                     continue;
                 }
                 FluidStack got = Transfers.extractFluid(h, template.copyWithAmount(left), simulate);
@@ -1569,10 +1729,15 @@ public final class GolemNetwork {
     /** Makes Liquid Cryo-Source from the network's Source (all of the amount that the Source covers). */
     private FluidStack extractCryoSource(int amount, boolean simulate) {
         int n = (int) Math.min(amount, cryoSourceAvailable());
+        long per = GolemConfig.CRYO_SOURCE_COST.get();
+        if (per > 0 && SourceHelper.sourceRequired() && !hasInfiniteSource()) {
+            // consumeSource takes an int, so never hand out more mB than an int cost can pay for
+            n = (int) Math.min(n, Integer.MAX_VALUE / per);
+        }
         if (n <= 0) {
             return FluidStack.EMPTY;
         }
-        if (!simulate && !consumeSource((int) Math.min(CryoSource.cost(n), Integer.MAX_VALUE))) {
+        if (!simulate && !consumeSource((int) CryoSource.cost(n))) {
             return FluidStack.EMPTY;
         }
         return CryoSource.stack(n);
@@ -1580,13 +1745,33 @@ public final class GolemNetwork {
 
     /** How much of a fluid the network has (mB); Liquid Cryo-Source counts what the Source can make. */
     public long fluidCountOf(FluidStack fluid) {
+        if (fluid.isEmpty()) {
+            return 0;
+        }
         if (CryoSource.is(fluid)) {
             return cryoSourceAvailable();
         }
         long n = 0;
-        for (FluidStack f : listFluids()) {
-            if (FluidStack.isSameFluidSameComponents(f, fluid)) {
-                n += f.getAmount();
+        for (ItemStack disk : allDisks(true)) {
+            n += DiskStorage.fluidCount(disk, fluid);
+        }
+        if (externals.isEmpty()) {
+            return n;
+        }
+        FluidResource want = FluidResource.of(fluid);
+        for (External ex : externals) {
+            if (!mayExtract(ex, fluid)) {
+                continue;
+            }
+            ResourceHandler<FluidResource> h = fluidHandler(ex);
+            if (h == null) {
+                continue;
+            }
+            for (int i = 0; i < h.size(); i++) {
+                int amt = h.getAmountAsInt(i);
+                if (amt > 0 && h.getResource(i).equals(want)) {
+                    n += amt;
+                }
             }
         }
         return n;
@@ -1636,27 +1821,38 @@ public final class GolemNetwork {
         return patternIndex().containsKey(key);
     }
 
-    @Nullable
     /**
      * Every gateway that can run this step: those holding the very pattern first, then those holding the same recipe with other
      * fuzziness (a player may have the same plate on two gateways, only one of them at the machine).
      */
     public List<PatternProviderBlockEntity> providersFor(PatternData pattern) {
-        List<PatternProviderBlockEntity> exact = new ArrayList<>(), same = new ArrayList<>();
+        List<PatternProviderBlockEntity> exact = new ArrayList<>();
+        List<PatternProviderBlockEntity> same = null;
         for (PatternProviderBlockEntity provider : providers) {
             if (provider.isRemoved()) {
                 continue;
             }
             if (provider.hasPattern(pattern)) {
                 exact.add(provider);
-            } else if (provider.getPatterns().stream().anyMatch(p -> p.sameRecipe(pattern))) {
-                same.add(provider);
+            } else {
+                for (PatternData p : provider.getPatterns()) {
+                    if (p.sameRecipe(pattern)) {
+                        if (same == null) {
+                            same = new ArrayList<>();
+                        }
+                        same.add(provider);
+                        break;
+                    }
+                }
             }
         }
-        exact.addAll(same);
+        if (same != null) {
+            exact.addAll(same);
+        }
         return exact;
     }
 
+    @Nullable
     public PatternProviderBlockEntity providerFor(PatternData pattern) {
         for (PatternProviderBlockEntity provider : providers) {
             if (!provider.isRemoved() && provider.hasPattern(pattern)) {
@@ -1771,9 +1967,21 @@ public final class GolemNetwork {
                 reserved.merge(e.getKey(), got, Long::sum);
             }
             if (got < e.getValue()) {
-                // a race: return what was taken
+                // a race: return what was taken (drop any items that cannot go back into storage so nothing is voided)
+                boolean cpuLocal = contains(level, cpu.cpuPos());
+                Level dropLevel = cpuLocal ? level : coreLevel;
+                BlockPos dropPos = cpuLocal ? cpu.cpuPos() : corePos;
                 for (Map.Entry<ItemKey, Long> r : reserved.entrySet()) {
-                    giveBack(r.getKey(), r.getValue());
+                    long leftover = giveBack(r.getKey(), r.getValue());
+                    if (leftover > 0 && !Ingredients.isFluid(r.getKey()) && dropLevel != null && dropPos != null) {
+                        int maxStack = Math.max(1, r.getKey().stack().getMaxStackSize());
+                        while (leftover > 0) {
+                            int chunk = (int) Math.min(leftover, maxStack);
+                            Containers.dropItemStack(dropLevel, dropPos.getX() + 0.5, dropPos.getY() + 1.0,
+                                    dropPos.getZ() + 0.5, r.getKey().toStack(chunk));
+                            leftover -= chunk;
+                        }
+                    }
                 }
                 return new StartResult(StartType.RESERVE_FAILED, plan);
             }
