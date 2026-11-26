@@ -65,11 +65,20 @@ final class JarWholeRenderer {
     private static final float TOP = 31.4f;
     private static final Identifier GRATE = Identifier.withDefaultNamespace("block/iron_trapdoor");
     private static final int LIGHT_BRASS = 0xFFF5E2B8, DIM_BRASS = 0xFFDCC49A;
+    private static final Vector3f UP = new Vector3f(0f, 1f, 0f);
+    private static final Vector3f FWD_EAST = new Vector3f(1f, 0f, 0f);
+    private static final Vector3f FWD_WEST = new Vector3f(-1f, 0f, 0f);
+    private static final Vector3f FWD_SOUTH = new Vector3f(0f, 0f, 1f);
+    private static final Vector3f THROW_TARGET = new Vector3f(-8f, 19f, 6f);
+    private static final Vector3f SCRATCH_POS = new Vector3f();
+    private static final Vector3f SCRATCH_HAND = new Vector3f();
+    private static final Vector3f SCRATCH_OFF = new Vector3f();
+    private static final org.joml.Quaternionf SCRATCH_QUAT = new org.joml.Quaternionf();
 
     private JarWholeRenderer() {
     }
 
-    static void render(CryoJarBlockEntity be, ModelPart ironGolem, float partialTick, PoseStack pose, MultiBufferSource buffers) {
+    static void render(CryoJarBlockEntity be, CryoJarRenderer.IronGolemParts ironGolem, float partialTick, PoseStack pose, MultiBufferSource buffers) {
         Level level = be.getLevel();
         if (level == null) {
             return;
@@ -314,10 +323,10 @@ final class JarWholeRenderer {
         box(vc, cw, -7.6f, -3f, -0.8f, -4.2f, 3f, 0.8f, BRASS, LIGHT_BRASS, light);
         box(vc, cw, -8.6f, -2f, -0.8f, -7.6f, 2f, 0.8f, BRASS, WHITE, light);
         pose.popPose();
-        Vector3f pin = new Vector3f(crankX + crankRadius * Mth.cos(crank), crankY + crankRadius * Mth.sin(crank), crankZ - 0.6f);
-        Vector3f tail = new Vector3f(beamPivotX + tailArm * Mth.cos(beamAngle), beamPivotY + tailArm * Mth.sin(beamAngle), 19.6f);
-        limb(vc, pose, pin, tail, 0.9f, BRASS, light);
-        box(vc, p, pin.x - 0.7f, pin.y - 0.7f, pin.z - 0.9f, pin.x + 0.7f, pin.y + 0.7f, pin.z + 0.5f, DARK, WHITE, light);
+        float pinX = crankX + crankRadius * Mth.cos(crank), pinY = crankY + crankRadius * Mth.sin(crank), pinZ = crankZ - 0.6f;
+        float tailX = beamPivotX + tailArm * Mth.cos(beamAngle), tailY = beamPivotY + tailArm * Mth.sin(beamAngle);
+        limb(vc, pose, pinX, pinY, pinZ, tailX, tailY, 19.6f, 0.9f, BRASS, light);
+        box(vc, p, pinX - 0.7f, pinY - 0.7f, pinZ - 0.9f, pinX + 0.7f, pinY + 0.7f, pinZ + 0.5f, DARK, WHITE, light);
 
         // the walking beam, the horse head at its near end, snow along the top
         pose.pushPose();
@@ -369,12 +378,14 @@ final class JarWholeRenderer {
         float scale = 0.36f;
         // at the valve, facing it
         float reach = on ? -1.15f + 0.12f * Mth.sin(turn * Mth.DEG_TO_RAD) : -0.9f;
-        CopperGolemPuppet.render(pose, buffers, light, new Vector3f(-1f / 16f, 31.4f / 16f, 3.6f / 16f), new Vector3f(1f, 0f, 0f), new Vector3f(0f, 1f, 0f),
+        SCRATCH_POS.set(-1f / 16f, 31.4f / 16f, 3.6f / 16f);
+        CopperGolemPuppet.render(pose, buffers, light, SCRATCH_POS, FWD_EAST, UP,
                 scale, new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.08f), 1, null,
                 new CopperGolemPuppet.Arms(reach, 0.2f, reach, -0.2f, 0.15f * Mth.sin(time * 0.017f)));
         // at the gauge, looking it over and scratching its antenna
         float look = 0.25f * Mth.sin(time * 0.023f);
-        CopperGolemPuppet.render(pose, buffers, light, new Vector3f(24.5f / 16f, 31.6f / 16f, 3.2f / 16f), new Vector3f(0f, 0f, 1f), new Vector3f(0f, 1f, 0f),
+        SCRATCH_POS.set(24.5f / 16f, 31.6f / 16f, 3.2f / 16f);
+        CopperGolemPuppet.render(pose, buffers, light, SCRATCH_POS, FWD_SOUTH, UP,
                 scale, new CopperGolemPuppet.Anim(time * 0.08f, false, false, 0.03f), 2, null,
                 new CopperGolemPuppet.Arms(-0.5f + 0.2f * Mth.sin(time * 0.05f), 0.15f, -0.2f, -0.1f, look));
         // on the ladder: up, a rest at the top, down, a rest at the bottom; the hands go hand over hand while it moves
@@ -383,7 +394,8 @@ final class JarWholeRenderer {
         float climb = k * k * (3f - 2f * k);
         boolean moving = cycle < 0.4f || (cycle > 0.5f && cycle < 0.9f);
         float hands = moving ? 0.35f * Mth.sin(time * 0.35f) : 0f;
-        CopperGolemPuppet.render(pose, buffers, light, new Vector3f(35.2f / 16f, (7.4f + 17f * climb) / 16f, 22.5f / 16f), new Vector3f(-1f, 0f, 0f), new Vector3f(0f, 1f, 0f),
+        SCRATCH_POS.set(35.2f / 16f, (7.4f + 17f * climb) / 16f, 22.5f / 16f);
+        CopperGolemPuppet.render(pose, buffers, light, SCRATCH_POS, FWD_WEST, UP,
                 scale, new CopperGolemPuppet.Anim(time * 0.15f, false, false, 0f), 0, null,
                 new CopperGolemPuppet.Arms(-1.9f + hands, 0.1f, -1.9f - hands, -0.1f, 0f));
     }
@@ -431,7 +443,7 @@ final class JarWholeRenderer {
         flatRunes(vc, pose.last(), 13f, 35f, TOP + 0.5f, WHITE, 0);
     }
 
-    private static void reactor(PoseStack pose, MultiBufferSource buffers, Meshes meshes, ModelPart ironGolem, int light, float time, float fill, boolean on, boolean crew,
+    private static void reactor(PoseStack pose, MultiBufferSource buffers, Meshes meshes, CryoJarRenderer.IronGolemParts ironGolem, int light, float time, float fill, boolean on, boolean crew,
                                 boolean detail) {
         net.minecraft.client.renderer.rendertype.RenderType solid = RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS);
         float top = TOP;
@@ -514,7 +526,7 @@ final class JarWholeRenderer {
         }
     }
 
-    private static void reactorCrew(PoseStack pose, MultiBufferSource buffers, ModelPart golem, int light, float time, float turn, boolean on,
+    private static void reactorCrew(PoseStack pose, MultiBufferSource buffers, CryoJarRenderer.IronGolemParts golem, int light, float time, float turn, boolean on,
                                     float top, float cx, float cz) {
         // iron golems under the toothed ring like the atlantes of myth: one knee down, the ring across their shoulders, hands up to it
         for (int i = 0; i < 2; i++) {
@@ -525,20 +537,24 @@ final class JarWholeRenderer {
         float reach = on ? -1.15f + 0.12f * Mth.sin(turn * Mth.DEG_TO_RAD) : -0.9f;
         CopperGolemPuppet.Arms arms = new CopperGolemPuppet.Arms(reach, 0.2f, reach, -0.2f, 0.15f * Mth.sin(time * 0.017f));
         float scale = 0.36f;
-        CopperGolemPuppet.render(pose, buffers, light, new Vector3f(18.4f / 16f, top / 16f, 6.2f / 16f), new Vector3f(1f, 0f, 0f), new Vector3f(0f, 1f, 0f),
+        SCRATCH_POS.set(18.4f / 16f, top / 16f, 6.2f / 16f);
+        CopperGolemPuppet.render(pose, buffers, light, SCRATCH_POS, FWD_EAST, UP,
                 scale, new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.08f), 0, null, arms);
-        CopperGolemPuppet.render(pose, buffers, light, new Vector3f(36.2f / 16f, top / 16f, 24f / 16f), new Vector3f(1f, 0f, 0f), new Vector3f(0f, 1f, 0f),
+        SCRATCH_POS.set(36.2f / 16f, top / 16f, 24f / 16f);
+        CopperGolemPuppet.render(pose, buffers, light, SCRATCH_POS, FWD_EAST, UP,
                 scale, new CopperGolemPuppet.Anim(time * 0.09f, false, false, 0.08f), 1, null, arms);
-        CopperGolemPuppet.render(pose, buffers, light, new Vector3f(11.8f / 16f, top / 16f, 24f / 16f), new Vector3f(-1f, 0f, 0f), new Vector3f(0f, 1f, 0f),
+        SCRATCH_POS.set(11.8f / 16f, top / 16f, 24f / 16f);
+        CopperGolemPuppet.render(pose, buffers, light, SCRATCH_POS, FWD_WEST, UP,
                 scale, new CopperGolemPuppet.Anim(time * 0.11f, false, false, 0.08f), 2, null, arms);
         // snow golems on the vents, each throwing with one hand now and then
         for (int i = 0; i < 2; i++) {
             float x = i == 0 ? 39f : 5f, z = i == 0 ? 4f : 39f;
             float yaw = (float) Math.toDegrees(Math.atan2(cx - x, cz - z));
             float k = throwPhase(time, i);
-            Vector3f right = new Vector3f(SnowmanPuppet.REST_RIGHT).lerp(new Vector3f(-8f, 19f, 6f), k);
-            SnowmanPuppet.Pose sp = new SnowmanPuppet.Pose(0.4f * k, 0f, 6f * Mth.sin(time * 0.02f + i), 4f, SnowmanPuppet.REST_LEFT, right);
-            SnowmanPuppet.render(pose, buffers, light, new Vector3f(x / 16f, (top + 0.9f) / 16f, z / 16f), yaw, 0.42f, SnowmanPuppet.Head.PUMPKIN, sp, null);
+            SCRATCH_HAND.set(SnowmanPuppet.REST_RIGHT).lerp(THROW_TARGET, k);
+            SnowmanPuppet.Pose sp = new SnowmanPuppet.Pose(0.4f * k, 0f, 6f * Mth.sin(time * 0.02f + i), 4f, SnowmanPuppet.REST_LEFT, SCRATCH_HAND);
+            SCRATCH_POS.set(x / 16f, (top + 0.9f) / 16f, z / 16f);
+            SnowmanPuppet.render(pose, buffers, light, SCRATCH_POS, yaw, 0.42f, SnowmanPuppet.Head.PUMPKIN, sp, null);
         }
     }
 
@@ -566,27 +582,21 @@ final class JarWholeRenderer {
     }
 
     /** An iron golem on the machine: feet at x, y, z, turned by yaw (0 faces +Z), its arms held forward on the ring. */
-    private static void ironGolem(PoseStack pose, MultiBufferSource buffers, ModelPart golem, float x, float y, float z, float yaw, float scale, float time,
+    private static void ironGolem(PoseStack pose, MultiBufferSource buffers, CryoJarRenderer.IronGolemParts golem, float x, float y, float z, float yaw, float scale, float time,
                                   boolean on, int light) {
-        ModelPart head = golem.getChild("head"), rightArm = golem.getChild("right_arm"), leftArm = golem.getChild("left_arm");
-        ModelPart rightLeg = golem.getChild("right_leg"), leftLeg = golem.getChild("left_leg");
         float strain = on ? 0.05f * Mth.sin(time * 0.05f) : 0f;
-        // the ring lies across the shoulders; each arm is pinned by its own shoulder to the upper back and reaches
-        // up, out and back along the curve of the ring (a V / checkmark), instead of swinging around the spine's
-        // (0, -7, 0) pivot into mid-air above the head
-        poseArm(rightArm, -11f, -9.2f, -6.2f, 1.6f, 0.42f, 0f, 1.74f + strain);
-        poseArm(leftArm, 11f, 9.2f, -6.2f, 1.6f, 0.42f, 0f, -1.74f - strain);
-        // one thigh forward, the other leg back on its knee; the whole golem sinks by what the legs no longer hold up
-        rightLeg.xRot = -1.45f;
-        leftLeg.xRot = 1.25f;
-        head.xRot = 0.55f + strain;
-        head.yRot = 0f;
+        poseArm(golem.rightArm(), -11f, -9.2f, -6.2f, 1.6f, 0.42f, 0f, 1.74f + strain);
+        poseArm(golem.leftArm(), 11f, 9.2f, -6.2f, 1.6f, 0.42f, 0f, -1.74f - strain);
+        golem.rightLeg().xRot = -1.45f;
+        golem.leftLeg().xRot = 1.25f;
+        golem.head().xRot = 0.55f + strain;
+        golem.head().yRot = 0f;
         pose.pushPose();
         pose.translate(x / 16f, (y - 4.4f) / 16f, z / 16f);
         pose.mulPose(Axis.YP.rotationDegrees(yaw + 180f));
         pose.scale(-scale, -scale, scale);
         pose.translate(0f, -1.501f, 0f);
-        golem.render(pose, buffers.getBuffer(RenderTypes.entityCutout(GOLEM)), light, OverlayTexture.NO_OVERLAY);
+        golem.root().render(pose, buffers.getBuffer(RenderTypes.entityCutout(GOLEM)), light, OverlayTexture.NO_OVERLAY);
         pose.popPose();
     }
 
@@ -598,7 +608,7 @@ final class JarWholeRenderer {
         arm.xRot = xRot;
         arm.yRot = yRot;
         arm.zRot = zRot;
-        Vector3f off = new org.joml.Quaternionf().rotationZYX(zRot, yRot, xRot).transform(new Vector3f(boxX, 0f, 0f));
+        Vector3f off = SCRATCH_QUAT.rotationZYX(zRot, yRot, xRot).transform(SCRATCH_OFF.set(boxX, 0f, 0f));
         arm.x = sx - off.x;
         arm.y = sy - off.y;
         arm.z = sz - off.z;
@@ -721,8 +731,8 @@ final class JarWholeRenderer {
                 float t0 = Mth.TWO_PI * i / sides, t1 = Mth.TWO_PI * (i + 1) / sides;
                 float u0 = s.getU((i % 4) / 4f), u1 = s.getU((i % 4 + 1) / 4f);
                 float c0 = Mth.cos(t0), s0 = Mth.sin(t0), c1 = Mth.cos(t1), s1 = Mth.sin(t1);
-                CryoMainframeRenderer.quad(vc, p, new float[]{r1 * c0, y1, r1 * s0}, new float[]{r1 * c1, y1, r1 * s1},
-                        new float[]{r0 * c1, y0, r0 * s1}, new float[]{r0 * c0, y0, r0 * s0}, u0, v0, u1, v1, color, light, 0f, 1f, 0f);
+                CryoMainframeRenderer.quad(vc, p, r1 * c0, y1, r1 * s0, r1 * c1, y1, r1 * s1,
+                        r0 * c1, y0, r0 * s1, r0 * c0, y0, r0 * s0, u0, v0, u1, v1, color, light, 0f, 1f, 0f);
             }
         }
     }
