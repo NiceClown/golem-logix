@@ -33,12 +33,20 @@ public class CryoMixerCategory implements IRecipeCategory<CryoMixerBlockEntity.M
     private final IDrawable slot;
     private final IDrawable arrow;
     private final Component title;
+    private final Component[] timeLines;
 
     public CryoMixerCategory(IGuiHelper guiHelper) {
         this.icon = guiHelper.createDrawableItemLike(ModBlocks.CRYO_MIXER.get());
         this.slot = guiHelper.getSlotDrawable();
         this.arrow = guiHelper.getRecipeArrow();
         this.title = Component.translatable("jei.golem_logix.category.cryo_mixer");
+        CryoMixerBlockEntity.Mode[] modes = CryoMixerBlockEntity.Mode.values();
+        this.timeLines = new Component[modes.length];
+        for (CryoMixerBlockEntity.Mode mode : modes) {
+            this.timeLines[mode.ordinal()] = Component.translatable("jei.golem_logix.mixer.time",
+                    String.format(Locale.ROOT, "%.1f", mode.ticks() / 20f),
+                    Component.translatable("gui.golem_logix.mixer.mode." + mode.name().toLowerCase(Locale.ROOT)));
+        }
     }
 
     /** Both modes, as JEI recipes. */
@@ -89,9 +97,7 @@ public class CryoMixerCategory implements IRecipeCategory<CryoMixerBlockEntity.M
         slot.draw(g, OUT_X, SLOT_Y);
         g.text(font, "+", WATER_X + 21, SLOT_Y + 5, 0xFF6A4A2A, false);
         arrow.draw(g, (CRYO_X + 18 + OUT_X) / 2 - 12, SLOT_Y + 1);
-        Component line = Component.translatable("jei.golem_logix.mixer.time",
-                String.format(Locale.ROOT, "%.1f", mode.ticks() / 20f),
-                Component.translatable("gui.golem_logix.mixer.mode." + mode.name().toLowerCase(Locale.ROOT)));
+        Component line = timeLines[mode.ordinal()];
         g.text(font, line, (W - font.width(line)) / 2, SLOT_Y + 25, 0xFF2A6E8A, false);
     }
 }
