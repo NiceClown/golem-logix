@@ -48,6 +48,8 @@ public class DiskStore extends SavedData {
     }
 
     private final Map<UUID, Disk> disks = new HashMap<>();
+    private static volatile MinecraftServer cachedServer;
+    private static volatile DiskStore cachedStore;
 
     /** Saved as one compound (the format of 1.21.1, now in data/golem_logix/disks.dat) through the server's registries. */
     private static final SavedDataType<DiskStore> TYPE = new SavedDataType<>(
@@ -59,7 +61,18 @@ public class DiskStore extends SavedData {
             });
 
     public static DiskStore get(MinecraftServer server) {
-        return server.getDataStorage().computeIfAbsent(TYPE);
+        if (server == cachedServer && cachedStore != null) {
+            return cachedStore;
+        }
+        DiskStore store = server.getDataStorage().computeIfAbsent(TYPE);
+        cachedServer = server;
+        cachedStore = store;
+        return store;
+    }
+
+    static void forgetCachedServer() {
+        cachedServer = null;
+        cachedStore = null;
     }
 
     private static HolderLookup.Provider registries() {
@@ -91,7 +104,13 @@ public class DiskStore extends SavedData {
     }
 
     public Disk getOrCreate(UUID id) {
-        return disks.computeIfAbsent(id, k -> new Disk());
+        Disk d = disks.get(id);
+        if (d == null) {
+            d = new Disk();
+            disks.put(id, d);
+            DiskStorage.markDiskAllocated();
+        }
+        return d;
     }
 
     /** Recomputes used space and equipment counts after a /reload, in case the golem_logix:not_gear tag changed. */
@@ -110,6 +129,7 @@ public class DiskStore extends SavedData {
             disk.storedItems = sum;
             disk.gearItems = gear;
         }
+        DiskStorage.markItemsMutated();
     }
 
     // ------------------------------------------------------------------ NBT
