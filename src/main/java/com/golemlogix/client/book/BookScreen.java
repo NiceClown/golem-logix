@@ -405,6 +405,9 @@ public class BookScreen extends Screen {
         if (button == 0 && mapView.clickSearchResults(book, searchQuery(), bx, by, this::open)) {
             return true;
         }
+        if (button == 0 && mapView.clickNoMagicBanner(book, bx, by, this::open)) {
+            return true;
+        }
 
         // a right-click on the search field clears it
         if (search != null) {

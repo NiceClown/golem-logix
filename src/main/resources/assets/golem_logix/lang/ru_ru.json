@@ -683,5 +683,9 @@
   "gui.golem_logix.security.owner": "Владелец: %s",
   "gui.golem_logix.security.card_owner": "Карта: %s",
   "block.golem_logix.channel_counter": "Счётчик каналов",
-  "tooltip.golem_logix.channel_counter": "Газоразрядные лампы с числом каналов через трубу или узел, на котором он стоит или висит (бирюзовые, янтарные, красные по заполнению)."
+  "tooltip.golem_logix.channel_counter": "Газоразрядные лампы с числом каналов через трубу или узел, на котором он стоит или висит (бирюзовые, янтарные, красные по заполнению).",
+  "gui.golem_logix.book.no_magic_banner": "! Free-режим: лучше поставить Ars Nouveau / Neo Vitae",
+  "gui.golem_logix.book.no_magic_tip.1": "Моды на магию Source не установлены",
+  "gui.golem_logix.book.no_magic_tip.2": "Не найдены ни Ars Nouveau, ни Neo Vitae — сейчас всё работает даром во Free-режиме.",
+  "gui.golem_logix.book.no_magic_tip.3": "Для полноценной игры лучше поставить хотя бы один из них. Нажмите для подробностей."
 }
