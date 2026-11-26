@@ -15,6 +15,7 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.util.ARGB;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -203,7 +204,7 @@ public final class BerBuffers implements MultiBufferSource {
             f[b + 8] = 0f;
             i[c] = -1;
             i[c + 1] = OverlayTexture.NO_OVERLAY;
-            i[c + 2] = 0xF000F0;
+            i[c + 2] = LightCoordsUtil.FULL_BRIGHT;
             return this;
         }
 

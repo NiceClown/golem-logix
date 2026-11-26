@@ -19,32 +19,37 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import org.joml.Vector3f;
 
+import static com.golemlogix.client.render.PixelMesh.PIXEL;
+import static com.golemlogix.client.render.PixelMesh.modBlock;
+import static com.golemlogix.client.render.PixelMesh.smoothstep;
+
 /**
- * The dynamic part of the 2x2 drive cabinet, everything visible behind the display glass:
- * ten cassettes (label colour = disk capacity, four LEDs = fill level), each with two tape reels
- * (they spin while the network is powered, the tape winds from one reel to the other as the disk fills),
- * copper archivist golems patrolling the shelves, and the pulsing glow of the runes on the front.
- *
- * All sizes are in "cabinet" coordinates (units of 1/16 block): X left to right as seen from the FRONT (0..32),
- * Y up (0..32), Z inwards from the front; the cabinet models use the same frame (tools/Forge2.java).
- * From the main (bottom left) cell the model faces north; {@link Quads#faceModel} rotates it by FACING.
+ * Dynamic interior and doors of the 2x2 Copper Drive Bay cabinet:
+ * ten cassettes (label colour = disk capacity, four LEDs = fill level) with spinning tape reels and glowing windings,
+ * copper archivist golems patrolling the shelves through swinging brass saloon doors, pulsing front runes, and two
+ * hinged glass display doors that swing open while the GUI is open.
+ * <p>
+ * Coordinates are cabinet pixels (1/16 block): X 0..32 left to right as seen from the front, Y 0..32 up, Z inwards.
+ * Drawn from the bottom-left cell facing north; {@link Quads#faceModel} rotates into the block's facing.
  */
 public class DriveBayRenderer extends LegacyBer<CopperDriveBayBlockEntity> {
-    private static final Identifier CASSETTE = tex("bay_cassette");
-    private static final Identifier REEL = tex("bay_reel");
-    private static final Identifier TAPE = tex("bay_tape");
-    private static final Identifier TAPE_GLOW = tex("bay_tape_glow");
-    private static final Identifier WHITE = tex("bay_white");
-    private static final Identifier RUNES = tex("bay_runes_glow");
-    private static final Identifier GLASS_DISPLAY = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/cab_glass_d");
-    private static final Identifier GLASS_GAUGE = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/cab_glass_g");
-    private static final Identifier SAT_BRASS = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/sat_brass");
+    private static final Identifier CASSETTE = entityTex("bay_cassette");
+    private static final Identifier REEL = entityTex("bay_reel");
+    private static final Identifier TAPE = entityTex("bay_tape");
+    private static final Identifier TAPE_GLOW = entityTex("bay_tape_glow");
+    private static final Identifier WHITE = entityTex("bay_white");
+    private static final Identifier RUNES = entityTex("bay_runes_glow");
+    private static final Identifier GLASS_DISPLAY = modBlock("cab_glass_d");
+    private static final Identifier GLASS_GAUGE = modBlock("cab_glass_g");
+    private static final Identifier SAT_BRASS = modBlock("sat_brass");
+
     private static final Vector3f UP = new Vector3f(0f, 1f, 0f);
     private static final Vector3f FWD_RIGHT = new Vector3f(-1f, 0f, 0f);
     private static final Vector3f FWD_LEFT = new Vector3f(1f, 0f, 0f);
@@ -56,21 +61,25 @@ public class DriveBayRenderer extends LegacyBer<CopperDriveBayBlockEntity> {
     /** Fill LEDs: from green to red. */
     private static final int[] LED = {0xFF3CE070, 0xFF9AE040, 0xFFE8D030, 0xFFF08828, 0xFFF03A2A};
     private static final int LED_OFF = 0xFF1E2622;
+    private static final int CASSETTE_SIDE_TINT = 0xFF7C3A1E;
+    private static final int SALOON_BRASS = 0xFFB8862B;
+    private static final int SALOON_PANEL = 0xFF6A4A1A;
 
-    static final int FULL_BRIGHT = 0xF000F0;
-
-    /** The cassette fills almost the whole shelf cell and sticks out to the front (not hidden at the back wall); the reels are almost full height. */
+    /** Cassette and reel layout inside each shelf cell. */
     private static final float COL0 = 8.0f, COL1 = 16.0f, CASSETTE_W = 7.0f, CASSETTE_H = 4.0f;
     private static final float Z_FRONT = 4.6f, Z_BACK = 12.5f;
     private static final float REEL_R = 1.3f, REEL_DY = 2.35f, REEL_X0 = 1.85f, REEL_X1 = 5.15f;
-    /** Doorways in the partition (as in tools/Forge2.java): x of the middle, height above the shelf, z from the glass to the doorway depth. */
+    private static final float SHELF_TOP = 28f, SHELF_PITCH = 4.8f, SHELF_FLOOR_OFFSET = 0.5f;
+    /** Partition doorways (centre X, height above shelf, Z span from glass into cabinet). */
     private static final float DOOR_X = 15.5f, DOOR_H = 3.4f, DOOR_Z0 = 2.5f, DOOR_Z1 = 6.0f;
     private static final int[] GOLEM_ROWS = {0, 2, 4};
+    /** Display and gauge glass door vertical bounds and depth. */
+    private static final float GLASS_Z = 0.8f, GLASS_Y0 = 4f, GLASS_Y1 = 28f;
 
     public DriveBayRenderer(BlockEntityRendererProvider.Context context) {
     }
 
-    private static Identifier tex(String name) {
+    private static Identifier entityTex(String name) {
         return Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/" + name + ".png");
     }
 
@@ -90,64 +99,18 @@ public class DriveBayRenderer extends LegacyBer<CopperDriveBayBlockEntity> {
         return new AABB(p).minmax(new AABB(p.relative(right).above())).inflate(0.25);
     }
 
-    private static int tier(ItemStack disk) {
+    private static int diskTier(ItemStack disk) {
         int cap = DiskStorage.capacity(disk);
         return cap >= 256000 ? 4 : cap >= 64000 ? 3 : cap >= 16000 ? 2 : cap >= 4000 ? 1 : 0;
     }
 
-    // ------------------------------------------------------------------------ primitives in cabinet coordinates
-
-    private static void vertex(VertexConsumer vc, PoseStack.Pose pose, float x, float y, float z, float u, float v,
-                               int color, int light, float nx, float ny, float nz) {
-        vc.addVertex(pose, (16f - x) / 16f, y / 16f, z / 16f).setColor(color).setUv(u, v)
-                .setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, nx, ny, nz);
+    private static float shelfBottomY(int row) {
+        return SHELF_TOP - SHELF_PITCH * (row + 1) + SHELF_FLOOR_OFFSET;
     }
 
-    /** A rectangle facing the viewer at depth z; (u0,v0) is the top left corner of the texture. */
-    private static void front(VertexConsumer vc, PoseStack.Pose pose, float x0, float y0, float x1, float y1, float z,
-                              float u0, float v0, float u1, float v1, int color, int light) {
-        vertex(vc, pose, x0, y1, z, u0, v0, color, light, 0, 0, -1);
-        vertex(vc, pose, x1, y1, z, u1, v0, color, light, 0, 0, -1);
-        vertex(vc, pose, x1, y0, z, u1, v1, color, light, 0, 0, -1);
-        vertex(vc, pose, x0, y0, z, u0, v1, color, light, 0, 0, -1);
+    private static float slotX(int slot) {
+        return slot % 2 == 0 ? COL0 : COL1;
     }
-
-    /** A square with side 2*half around (cx, cy), rotated by angle degrees in the front plane. */
-    private static void spun(VertexConsumer vc, PoseStack.Pose pose, float cx, float cy, float half, float z, float angle,
-                             int color, int light) {
-        float c = Mth.cos(angle * Mth.DEG_TO_RAD) * half, s = Mth.sin(angle * Mth.DEG_TO_RAD) * half;
-        // corners (top left, top right, bottom right, bottom left) rotated by the angle
-        vertex(vc, pose, cx - c - s, cy - s + c, z, 0, 0, color, light, 0, 0, -1);
-        vertex(vc, pose, cx + c - s, cy + s + c, z, 1, 0, color, light, 0, 0, -1);
-        vertex(vc, pose, cx + c + s, cy + s - c, z, 1, 1, color, light, 0, 0, -1);
-        vertex(vc, pose, cx - c + s, cy - s - c, z, 0, 1, color, light, 0, 0, -1);
-    }
-
-    /** Side faces of a cassette (depth). The centre of the WHITE texture is a solid colour. */
-    private static void sides(VertexConsumer vc, PoseStack.Pose pose, float x0, float y0, float x1, float y1, float z0, float z1,
-                              int color, int light) {
-        // top (normal up)
-        vertex(vc, pose, x0, y1, z0, 0.5f, 0.5f, color, light, 0, 1, 0);
-        vertex(vc, pose, x1, y1, z0, 0.5f, 0.5f, color, light, 0, 1, 0);
-        vertex(vc, pose, x1, y1, z1, 0.5f, 0.5f, color, light, 0, 1, 0);
-        vertex(vc, pose, x0, y1, z1, 0.5f, 0.5f, color, light, 0, 1, 0);
-        // bottom
-        vertex(vc, pose, x0, y0, z1, 0.5f, 0.5f, color, light, 0, -1, 0);
-        vertex(vc, pose, x1, y0, z1, 0.5f, 0.5f, color, light, 0, -1, 0);
-        vertex(vc, pose, x1, y0, z0, 0.5f, 0.5f, color, light, 0, -1, 0);
-        vertex(vc, pose, x0, y0, z0, 0.5f, 0.5f, color, light, 0, -1, 0);
-        // left (smaller X) and right
-        vertex(vc, pose, x0, y1, z1, 0.5f, 0.5f, color, light, 1, 0, 0);
-        vertex(vc, pose, x0, y1, z0, 0.5f, 0.5f, color, light, 1, 0, 0);
-        vertex(vc, pose, x0, y0, z0, 0.5f, 0.5f, color, light, 1, 0, 0);
-        vertex(vc, pose, x0, y0, z1, 0.5f, 0.5f, color, light, 1, 0, 0);
-        vertex(vc, pose, x1, y1, z0, 0.5f, 0.5f, color, light, -1, 0, 0);
-        vertex(vc, pose, x1, y1, z1, 0.5f, 0.5f, color, light, -1, 0, 0);
-        vertex(vc, pose, x1, y0, z1, 0.5f, 0.5f, color, light, -1, 0, 0);
-        vertex(vc, pose, x1, y0, z0, 0.5f, 0.5f, color, light, -1, 0, 0);
-    }
-
-    // ------------------------------------------------------------------------------------- rendering
 
     @Override
     public void render(CopperDriveBayBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
@@ -167,190 +130,200 @@ public class DriveBayRenderer extends LegacyBer<CopperDriveBayBlockEntity> {
         PoseStack.Pose p = pose.last();
 
         if (be.getMask() != 0) {
-            cassettes(be, p, buffers, light, active, time);
+            renderCassettes(be, p, buffers, light, active, time);
         }
         boolean walking = active && be.getMask() != 0;
-        doors(p, buffers, light, walking, time);
+        renderSaloonDoors(p, buffers, light, walking, time);
         if (walking) {
-            golems(pose, buffers, light, time);
+            renderArchivistGolems(pose, buffers, light, time);
         }
         if (active) {
-            // the runes on the plinth and the top beam pulse
+            // pulsing runes on the plinth and top beam
             float pulse = 0.55f + 0.45f * Mth.sin(time * 0.09f);
             int a = (int) (255 * pulse);
-            front(buffers.getBuffer(RenderTypes.eyes(RUNES)), p, 0f, 0f, 32f, 32f, -0.03f, 0f, 0f, 1f, 1f, (a << 24) | 0xFFFFFF, FULL_BRIGHT);
+            front(buffers.getBuffer(RenderTypes.eyes(RUNES)), p, 0f, 0f, 32f, 32f, -0.03f, 0f, 0f, 1f, 1f,
+                    (a << 24) | 0xFFFFFF, LightCoordsUtil.FULL_BRIGHT);
         }
-        // the glass display door: open while someone has the cabinet window open
-        float open = Mth.lerp(partialTick, be.doorPrev, be.door);
-        float ease = open * open * (3f - 2f * open);
-        // the big display is hinged at the left post, the narrow right door with the gauges at the right one
-        glassDoor(p, buffers, light, 7.5f, 16f, 1f, GLASS_DISPLAY, ease * 105f);
-        glassDoor(p, buffers, light, 29.5f, 4f, -1f, GLASS_GAUGE, ease * 100f);
+        // hinged display and gauge glass doors (drawn after interior glow so BerBuffers preserves blended order)
+        float ease = smoothstep(Mth.lerp(partialTick, be.doorPrev, be.door));
+        renderGlassDoor(p, buffers, light, 7.5f, 16f, 1f, GLASS_DISPLAY, ease * 105f);
+        renderGlassDoor(p, buffers, light, 29.5f, 4f, -1f, GLASS_GAUGE, ease * 100f);
         pose.popPose();
     }
 
-    private void cassettes(CopperDriveBayBlockEntity be, PoseStack.Pose p, MultiBufferSource buffers, int light, boolean active, float time) {
-        // Buffers of different types cannot be held at once: requesting a new one finishes the previous one. Hence passes by texture.
-        // pass 1: cassette fronts
-        VertexConsumer body = buffers.getBuffer(RenderTypes.entityCutout(CASSETTE));
+    // ------------------------------------------------------------------------------------- cassettes (batched by texture)
+
+    /** Draws all installed cassettes in five texture-batched passes to minimise render-type switches. */
+    private static void renderCassettes(CopperDriveBayBlockEntity be, PoseStack.Pose p, MultiBufferSource buffers,
+                                        int light, boolean active, float time) {
+        renderCassetteFronts(be, p, buffers.getBuffer(RenderTypes.entityCutout(CASSETTE)), light);
+        renderCassetteBodiesAndLeds(be, p, buffers.getBuffer(RenderTypes.entityCutout(WHITE)), light);
+        renderTapeWindings(be, p, buffers.getBuffer(RenderTypes.entityCutout(TAPE)), light, active, time);
+        if (active) {
+            renderTapeGlow(be, p, buffers.getBuffer(RenderTypes.eyes(TAPE_GLOW)), time);
+        }
+        renderReels(be, p, buffers.getBuffer(RenderTypes.entityCutout(REEL)), light, active, time);
+    }
+
+    private static void renderCassetteFronts(CopperDriveBayBlockEntity be, PoseStack.Pose p, VertexConsumer body, int light) {
         for (int slot = 0; slot < CopperDriveBayBlockEntity.SLOTS; slot++) {
             if (be.getDisks().get(slot).isEmpty()) {
                 continue;
             }
-            float x0 = slot % 2 == 0 ? COL0 : COL1, x1 = x0 + CASSETTE_W;
-            float y0 = 28f - 4.8f * (slot / 2 + 1) + 0.5f, y1 = y0 + CASSETTE_H;
+            float x0 = slotX(slot), x1 = x0 + CASSETTE_W;
+            float y0 = shelfBottomY(slot / 2), y1 = y0 + CASSETTE_H;
             front(body, p, x0, y0, x1, y1, Z_FRONT, 0f, 0f, 1f, 1f, 0xFFFFFFFF, light);
         }
-        // pass 2: side faces, labels and LEDs (solid colour)
-        VertexConsumer solid = buffers.getBuffer(RenderTypes.entityCutout(WHITE));
+    }
+
+    private static void renderCassetteBodiesAndLeds(CopperDriveBayBlockEntity be, PoseStack.Pose p, VertexConsumer solid, int light) {
         for (int slot = 0; slot < CopperDriveBayBlockEntity.SLOTS; slot++) {
             ItemStack disk = be.getDisks().get(slot);
             if (disk.isEmpty()) {
                 continue;
             }
-            float x0 = slot % 2 == 0 ? COL0 : COL1, x1 = x0 + CASSETTE_W;
-            float y0 = 28f - 4.8f * (slot / 2 + 1) + 0.5f, y1 = y0 + CASSETTE_H;
+            float x0 = slotX(slot), x1 = x0 + CASSETTE_W;
+            float y0 = shelfBottomY(slot / 2), y1 = y0 + CASSETTE_H;
             boolean fluid = disk.getItem() instanceof MagneticDiskItem d && d.isFluid();
-            int label = (fluid ? FLUID_LABEL : ITEM_LABEL)[tier(disk)];
-            sides(solid, p, x0, y0, x1, y1, Z_FRONT, Z_BACK, 0xFF7C3A1E, light);
-            // label: light paper from the texture with the disk tint on top
+            int label = (fluid ? FLUID_LABEL : ITEM_LABEL)[diskTier(disk)];
+            sides(solid, p, x0, y0, x1, y1, Z_FRONT, Z_BACK, CASSETTE_SIDE_TINT, light);
             front(solid, p, x0 + 0.5f, y1 - 0.75f, x1 - 0.5f, y1 - 0.15f, Z_FRONT - 0.02f, 0.5f, 0.5f, 0.5f, 0.5f, label, light);
-            // fill LEDs
+
             long stored = MagneticDiskItem.getStoredCount(disk);
             long cap = Math.max(1, DiskStorage.capacity(disk));
             int lit = stored <= 0 ? 0 : (int) Math.min(4, 1 + stored * 4 / (cap + 1));
             for (int i = 0; i < 4; i++) {
                 float lx = x1 - 2.05f + i * 0.4f;
-                front(solid, p, lx, y1 - 0.68f, lx + 0.28f, y1 - 0.22f, Z_FRONT - 0.04f, 0.5f, 0.5f, 0.5f, 0.5f, i < lit ? LED[i] : LED_OFF,
-                        i < lit ? FULL_BRIGHT : light);
+                front(solid, p, lx, y1 - 0.68f, lx + 0.28f, y1 - 0.22f, Z_FRONT - 0.04f, 0.5f, 0.5f, 0.5f, 0.5f,
+                        i < lit ? LED[i] : LED_OFF, i < lit ? LightCoordsUtil.FULL_BRIGHT : light);
             }
         }
-        // pass 3: tape wound behind the reels
-        VertexConsumer tape = buffers.getBuffer(RenderTypes.entityCutout(TAPE));
+    }
+
+    private static void renderTapeWindings(CopperDriveBayBlockEntity be, PoseStack.Pose p, VertexConsumer tape,
+                                           int light, boolean active, float time) {
         for (int slot = 0; slot < CopperDriveBayBlockEntity.SLOTS; slot++) {
             ItemStack disk = be.getDisks().get(slot);
             if (disk.isEmpty()) {
                 continue;
             }
-            float x0 = slot % 2 == 0 ? COL0 : COL1;
-            float cy = 28f - 4.8f * (slot / 2 + 1) + 0.5f + CASSETTE_H - REEL_DY;
+            float x0 = slotX(slot);
+            float cy = shelfBottomY(slot / 2) + CASSETTE_H - REEL_DY;
             float fill = Mth.clamp((float) MagneticDiskItem.getStoredCount(disk) / Math.max(1, DiskStorage.capacity(disk)), 0f, 1f);
             float spin = active ? time * 7f + slot * 29f : slot * 29f;
             spun(tape, p, x0 + REEL_X0, cy, 0.55f + 0.7f * fill, Z_FRONT - 0.05f, spin, 0xFFFFFFFF, light);
             spun(tape, p, x0 + REEL_X1, cy, 1.25f - 0.7f * fill, Z_FRONT - 0.05f, -spin, 0xFFFFFFFF, light);
         }
-        // pass 3b: teal glow of the windings (only when the network is powered), on top of the tape
-        if (active) {
-            VertexConsumer glow = buffers.getBuffer(RenderTypes.eyes(TAPE_GLOW));
-            for (int slot = 0; slot < CopperDriveBayBlockEntity.SLOTS; slot++) {
-                ItemStack disk = be.getDisks().get(slot);
-                if (disk.isEmpty()) {
-                    continue;
-                }
-                float x0 = slot % 2 == 0 ? COL0 : COL1;
-                float cy = 28f - 4.8f * (slot / 2 + 1) + 0.5f + CASSETTE_H - REEL_DY;
-                float fill = Mth.clamp((float) MagneticDiskItem.getStoredCount(disk) / Math.max(1, DiskStorage.capacity(disk)), 0f, 1f);
-                float spin = time * 7f + slot * 29f;
-                spun(glow, p, x0 + REEL_X0, cy, 0.55f + 0.7f * fill, Z_FRONT - 0.06f, spin, 0xFFFFFFFF, FULL_BRIGHT);
-                spun(glow, p, x0 + REEL_X1, cy, 1.25f - 0.7f * fill, Z_FRONT - 0.06f, -spin, 0xFFFFFFFF, FULL_BRIGHT);
+    }
+
+    private static void renderTapeGlow(CopperDriveBayBlockEntity be, PoseStack.Pose p, VertexConsumer glow, float time) {
+        for (int slot = 0; slot < CopperDriveBayBlockEntity.SLOTS; slot++) {
+            ItemStack disk = be.getDisks().get(slot);
+            if (disk.isEmpty()) {
+                continue;
             }
+            float x0 = slotX(slot);
+            float cy = shelfBottomY(slot / 2) + CASSETTE_H - REEL_DY;
+            float fill = Mth.clamp((float) MagneticDiskItem.getStoredCount(disk) / Math.max(1, DiskStorage.capacity(disk)), 0f, 1f);
+            float spin = time * 7f + slot * 29f;
+            spun(glow, p, x0 + REEL_X0, cy, 0.55f + 0.7f * fill, Z_FRONT - 0.06f, spin, 0xFFFFFFFF, LightCoordsUtil.FULL_BRIGHT);
+            spun(glow, p, x0 + REEL_X1, cy, 1.25f - 0.7f * fill, Z_FRONT - 0.06f, -spin, 0xFFFFFFFF, LightCoordsUtil.FULL_BRIGHT);
         }
-        // pass 4: reels
-        VertexConsumer reel = buffers.getBuffer(RenderTypes.entityCutout(REEL));
+    }
+
+    private static void renderReels(CopperDriveBayBlockEntity be, PoseStack.Pose p, VertexConsumer reel,
+                                    int light, boolean active, float time) {
         for (int slot = 0; slot < CopperDriveBayBlockEntity.SLOTS; slot++) {
             if (be.getDisks().get(slot).isEmpty()) {
                 continue;
             }
-            float x0 = slot % 2 == 0 ? COL0 : COL1;
-            float cy = 28f - 4.8f * (slot / 2 + 1) + 0.5f + CASSETTE_H - REEL_DY;
+            float x0 = slotX(slot);
+            float cy = shelfBottomY(slot / 2) + CASSETTE_H - REEL_DY;
             float spin = active ? time * 7f + slot * 29f : slot * 29f;
             spun(reel, p, x0 + REEL_X0, cy, REEL_R, Z_FRONT - 0.09f, spin, 0xFFFFFFFF, light);
             spun(reel, p, x0 + REEL_X1, cy, REEL_R, Z_FRONT - 0.09f, -spin * 1.1f, 0xFFFFFFFF, light);
         }
     }
 
-    /** Where archivist i is on the shelf now (x in cabinet coordinates) and whether it walks to the right. */
+    // ------------------------------------------------------------------------------------- partition doors & archivists
+
+    /** Horizontal position of patrolling archivist {@code i} in cabinet pixels. */
     private static float golemX(int i, float time) {
         float phase = (time * 0.0095f + i * 0.37f) % 2f;
-        float t = phase < 1f ? phase : 2f - phase;
-        t = t * t * (3f - 2f * t);
+        float t = smoothstep(phase < 1f ? phase : 2f - phase);
         return 9.2f + 13.6f * t;
     }
 
-    /**
-     * Door leaves in the partition between the shelf columns: a pair of brass "saloon" leaves in each doorway that swing open
-     * when an archivist comes to the doorway (and close behind it).
-     */
-    private void doors(PoseStack.Pose p, MultiBufferSource buffers, int light, boolean walking, float time) {
+    /** Brass saloon doors in the centre partition between columns: swing open as a patrolling archivist approaches. */
+    private static void renderSaloonDoors(PoseStack.Pose p, MultiBufferSource buffers, int light, boolean walking, float time) {
         VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(WHITE));
+        float half = (DOOR_Z1 - DOOR_Z0) / 2f;
         for (int r = 0; r < 5; r++) {
-            float yb = 28f - 4.8f * (r + 1) + 0.5f;
+            float yb = shelfBottomY(r);
             float open = 0f;
             for (int i = 0; walking && i < GOLEM_ROWS.length; i++) {
                 if (GOLEM_ROWS[i] == r) {
                     float dx = Math.abs(golemX(i, time) - DOOR_X);
-                    open = Mth.clamp(1f - (dx - 1.2f) / 1.6f, 0f, 1f);
-                    open = open * open * (3f - 2f * open);
+                    open = smoothstep(Mth.clamp(1f - (dx - 1.2f) / 1.6f, 0f, 1f));
                 }
             }
-            // a leaf is hinged at each edge of the doorway; an open one is turned 80° into the doorway along the partition
-            float half = (DOOR_Z1 - DOOR_Z0) / 2f, a = open * 80f * Mth.DEG_TO_RAD;
+            float a = open * 80f * Mth.DEG_TO_RAD;
             float y0 = yb + 0.3f, y1 = yb + DOOR_H - 0.4f;
             for (int side = 0; side < 2; side++) {
                 float hz = side == 0 ? DOOR_Z0 : DOOR_Z1, dir = side == 0 ? 1f : -1f;
                 float tipX = DOOR_X + Mth.sin(a) * half, tipZ = hz + dir * Mth.cos(a) * half;
-                leaf(vc, p, DOOR_X, hz, tipX, tipZ, y0, y1, light);
+                saloonLeaf(vc, p, DOOR_X, hz, tipX, tipZ, y0, y1, light);
             }
         }
     }
 
-    /** A leaf: a brass board from the hinge (hx, hz) to the edge (tx, tz), with a dark panel. */
-    private static void leaf(VertexConsumer vc, PoseStack.Pose p, float hx, float hz, float tx, float tz, float y0, float y1, int light) {
-        int brass = 0xFFB8862B, panel = 0xFF6A4A1A;
-        quad(vc, p, hx, hz, tx, tz, y0, y1, brass, light);
-        float ix0 = hx + (tx - hx) * 0.2f, iz0 = hz + (tz - hz) * 0.2f, ix1 = hx + (tx - hx) * 0.8f, iz1 = hz + (tz - hz) * 0.8f;
-        quad(vc, p, ix0 - 0.03f, iz0, ix1 - 0.03f, iz1, y0 + 0.4f, y1 - 0.4f, panel, light);
-        quad(vc, p, ix0 + 0.03f, iz0, ix1 + 0.03f, iz1, y0 + 0.4f, y1 - 0.4f, panel, light);
+    private static void saloonLeaf(VertexConsumer vc, PoseStack.Pose p, float hx, float hz, float tx, float tz, float y0, float y1, int light) {
+        verticalQuad(vc, p, hx, hz, tx, tz, y0, y1, SALOON_BRASS, light);
+        float ix0 = hx + (tx - hx) * 0.2f, iz0 = hz + (tz - hz) * 0.2f;
+        float ix1 = hx + (tx - hx) * 0.8f, iz1 = hz + (tz - hz) * 0.8f;
+        verticalQuad(vc, p, ix0 - 0.03f, iz0, ix1 - 0.03f, iz1, y0 + 0.4f, y1 - 0.4f, SALOON_PANEL, light);
+        verticalQuad(vc, p, ix0 + 0.03f, iz0, ix1 + 0.03f, iz1, y0 + 0.4f, y1 - 0.4f, SALOON_PANEL, light);
     }
 
-    /** A vertical double-sided rectangle between the points (x0, z0) and (x1, z1). */
-    private static void quad(VertexConsumer vc, PoseStack.Pose p, float x0, float z0, float x1, float z1, float y0, float y1, int color, int light) {
-        vertex(vc, p, x0, y1, z0, 0.5f, 0.5f, color, light, 1, 0, 0);
-        vertex(vc, p, x1, y1, z1, 0.5f, 0.5f, color, light, 1, 0, 0);
-        vertex(vc, p, x1, y0, z1, 0.5f, 0.5f, color, light, 1, 0, 0);
-        vertex(vc, p, x0, y0, z0, 0.5f, 0.5f, color, light, 1, 0, 0);
+    /** Three copper archivists patrolling shelves 0, 2, and 4 carrying crates left-to-right. */
+    private static void renderArchivistGolems(PoseStack pose, MultiBufferSource buffers, int light, float time) {
+        for (int i = 0; i < GOLEM_ROWS.length; i++) {
+            float phase = (time * 0.0095f + i * 0.37f) % 2f;
+            boolean toRight = phase < 1f;
+            float x = golemX(i, time);
+            float y = shelfBottomY(GOLEM_ROWS[i]);
+            GOLEM_AT.set((16f - x) * PIXEL, y * PIXEL, 3.6f * PIXEL);
+            CopperGolemPuppet.Anim anim = new CopperGolemPuppet.Anim(time * 0.42f + i * 2f, true, toRight, 0f);
+            CopperGolemPuppet.render(pose, buffers, light, GOLEM_AT, toRight ? FWD_RIGHT : FWD_LEFT, UP, 0.115f, anim, i);
+        }
     }
 
-    /** Door glass at depth 0.8 and height 4..28, as it was in the model (tools/Forge2.java): display 7.5..23.5, right one 25.5..29.5. */
-    private static final float GLASS_Z = 0.8f, GLASS_Y0 = 4f, GLASS_Y1 = 28f;
+    // ------------------------------------------------------------------------------------- hinged glass doors
 
-    /**
-     * Door: a brass frame, a handle at the free edge and glass (texture from the block atlas). hinge = x of the hinge, width = width,
-     * dir = which way the leaf goes from the hinge (+1 right, -1 left); angle = how many degrees it is open outwards (towards the viewer).
-     * The cabinet in the world is drawn in the cutout layer (before block entities), so the translucent glass lies over the shelves.
-     */
-    private static void glassDoor(PoseStack.Pose p, MultiBufferSource buffers, int light, float hinge, float width, float dir,
-                                  Identifier glassTex, float angle) {
+    /** Hinged cabinet door: brass frame and handle (cutout), followed by translucent display/gauge glass. */
+    private static void renderGlassDoor(PoseStack.Pose p, MultiBufferSource buffers, int light, float hinge, float width, float dir,
+                                        Identifier glassTex, float angle) {
         var atlas = Sprites.blocks();
         TextureAtlasSprite glass = atlas.getSprite(glassTex);
         TextureAtlasSprite brass = atlas.getSprite(SAT_BRASS);
         float c = Mth.cos(angle * Mth.DEG_TO_RAD), s = Mth.sin(angle * Mth.DEG_TO_RAD);
-        VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
         float f = Math.min(0.7f, width * 0.15f);
-        // frame: top, bottom, at the hinge, at the free edge, on both sides of the glass
+
+        VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
         for (int side = -1; side <= 1; side += 2) {
             float t = side * 0.12f;
-            strip(vc, p, hinge, dir, c, s, 0f, width, GLASS_Y1 - f, GLASS_Y1, t, brass, light);
-            strip(vc, p, hinge, dir, c, s, 0f, width, GLASS_Y0, GLASS_Y0 + f, t, brass, light);
-            strip(vc, p, hinge, dir, c, s, 0f, f, GLASS_Y0, GLASS_Y1, t, brass, light);
-            strip(vc, p, hinge, dir, c, s, width - f, width, GLASS_Y0, GLASS_Y1, t, brass, light);
+            doorStrip(vc, p, hinge, dir, c, s, 0f, width, GLASS_Y1 - f, GLASS_Y1, t, brass, light);
+            doorStrip(vc, p, hinge, dir, c, s, 0f, width, GLASS_Y0, GLASS_Y0 + f, t, brass, light);
+            doorStrip(vc, p, hinge, dir, c, s, 0f, f, GLASS_Y0, GLASS_Y1, t, brass, light);
+            doorStrip(vc, p, hinge, dir, c, s, width - f, width, GLASS_Y0, GLASS_Y1, t, brass, light);
         }
-        // handle: a brass bracket in front of the glass at the free edge
+        // handle bracket at the free edge
         float h0 = width - Math.min(2.2f, width * 0.45f), h1 = h0 + 0.7f;
-        strip(vc, p, hinge, dir, c, s, h0, h1, 14f, 18f, -0.9f, brass, light);
-        strip(vc, p, hinge, dir, c, s, h0, h1, 14f, 18f, -0.5f, brass, light);
-        strip(vc, p, hinge, dir, c, s, h0, h1, 14f, 14.5f, -0.7f, brass, light);
-        // glass
+        doorStrip(vc, p, hinge, dir, c, s, h0, h1, 14f, 18f, -0.9f, brass, light);
+        doorStrip(vc, p, hinge, dir, c, s, h0, h1, 14f, 18f, -0.5f, brass, light);
+        doorStrip(vc, p, hinge, dir, c, s, h0, h1, 14f, 14.5f, -0.7f, brass, light);
+
+        // translucent glass pane
         VertexConsumer gv = buffers.getBuffer(RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
         float d1 = width - f;
         float ax = hinge + dir * (f * c), az = GLASS_Z - f * s;
@@ -368,9 +341,8 @@ public class DriveBayRenderer extends LegacyBer<CopperDriveBayBlockEntity> {
         vertex(gv, p, ax, GLASS_Y0 + f, az, u0, v1, 0xFFFFFFFF, light, 0, 0, -1);
     }
 
-    /** A strip of the door from d0 to d1 (along the leaf) and from y0 to y1, shifted by t along the normal, with the sprite texture. */
-    private static void strip(VertexConsumer vc, PoseStack.Pose p, float hinge, float dir, float c, float s,
-                              float d0, float d1, float y0, float y1, float t, TextureAtlasSprite sprite, int light) {
+    private static void doorStrip(VertexConsumer vc, PoseStack.Pose p, float hinge, float dir, float c, float s,
+                                  float d0, float d1, float y0, float y1, float t, TextureAtlasSprite sprite, int light) {
         float ax = hinge + dir * (d0 * c + t * s), az = GLASS_Z - d0 * s + t * c;
         float bx = hinge + dir * (d1 * c + t * s), bz = GLASS_Z - d1 * s + t * c;
         float u0 = sprite.getU(0f), u1 = sprite.getU(Math.min(1f, (d1 - d0) / 16f));
@@ -381,18 +353,59 @@ public class DriveBayRenderer extends LegacyBer<CopperDriveBayBlockEntity> {
         vertex(vc, p, ax, y0, az, u0, v1, 0xFFFFFFFF, light, 0, 0, -1);
     }
 
-    /** Three archivists walk back and forth along the shelves in front of the cassettes (they take a crate at the left end and leave it at the right). */
-    private void golems(PoseStack pose, MultiBufferSource buffers, int light, float time) {
-        int[] rows = GOLEM_ROWS;
-        for (int i = 0; i < rows.length; i++) {
-            float phase = (time * 0.0095f + i * 0.37f) % 2f;
-            boolean toRight = phase < 1f;
-            float x = golemX(i, time);
-            float y = 28f - 4.8f * (rows[i] + 1) + 0.5f;
-            // forward in the model frame: the viewer looks from the north, their "right" is the model's -x
-            GOLEM_AT.set((16f - x) / 16f, y / 16f, 3.6f / 16f);
-            CopperGolemPuppet.Anim anim = new CopperGolemPuppet.Anim(time * 0.42f + i * 2f, true, toRight, 0f);
-            CopperGolemPuppet.render(pose, buffers, light, GOLEM_AT, toRight ? FWD_RIGHT : FWD_LEFT, UP, 0.115f, anim, i);
-        }
+    // ------------------------------------------------------------------------ primitives in cabinet coordinates
+
+    private static void vertex(VertexConsumer vc, PoseStack.Pose pose, float x, float y, float z, float u, float v,
+                               int color, int light, float nx, float ny, float nz) {
+        vc.addVertex(pose, (16f - x) * PIXEL, y * PIXEL, z * PIXEL).setColor(color).setUv(u, v)
+                .setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, nx, ny, nz);
+    }
+
+    private static void front(VertexConsumer vc, PoseStack.Pose pose, float x0, float y0, float x1, float y1, float z,
+                              float u0, float v0, float u1, float v1, int color, int light) {
+        vertex(vc, pose, x0, y1, z, u0, v0, color, light, 0, 0, -1);
+        vertex(vc, pose, x1, y1, z, u1, v0, color, light, 0, 0, -1);
+        vertex(vc, pose, x1, y0, z, u1, v1, color, light, 0, 0, -1);
+        vertex(vc, pose, x0, y0, z, u0, v1, color, light, 0, 0, -1);
+    }
+
+    private static void spun(VertexConsumer vc, PoseStack.Pose pose, float cx, float cy, float half, float z, float angle,
+                             int color, int light) {
+        float c = Mth.cos(angle * Mth.DEG_TO_RAD) * half, s = Mth.sin(angle * Mth.DEG_TO_RAD) * half;
+        vertex(vc, pose, cx - c - s, cy - s + c, z, 0, 0, color, light, 0, 0, -1);
+        vertex(vc, pose, cx + c - s, cy + s + c, z, 1, 0, color, light, 0, 0, -1);
+        vertex(vc, pose, cx + c + s, cy + s - c, z, 1, 1, color, light, 0, 0, -1);
+        vertex(vc, pose, cx - c + s, cy - s - c, z, 0, 1, color, light, 0, 0, -1);
+    }
+
+    private static void sides(VertexConsumer vc, PoseStack.Pose pose, float x0, float y0, float x1, float y1, float z0, float z1,
+                              int color, int light) {
+        // top
+        vertex(vc, pose, x0, y1, z0, 0.5f, 0.5f, color, light, 0, 1, 0);
+        vertex(vc, pose, x1, y1, z0, 0.5f, 0.5f, color, light, 0, 1, 0);
+        vertex(vc, pose, x1, y1, z1, 0.5f, 0.5f, color, light, 0, 1, 0);
+        vertex(vc, pose, x0, y1, z1, 0.5f, 0.5f, color, light, 0, 1, 0);
+        // bottom
+        vertex(vc, pose, x0, y0, z1, 0.5f, 0.5f, color, light, 0, -1, 0);
+        vertex(vc, pose, x1, y0, z1, 0.5f, 0.5f, color, light, 0, -1, 0);
+        vertex(vc, pose, x1, y0, z0, 0.5f, 0.5f, color, light, 0, -1, 0);
+        vertex(vc, pose, x0, y0, z0, 0.5f, 0.5f, color, light, 0, -1, 0);
+        // left and right
+        vertex(vc, pose, x0, y1, z1, 0.5f, 0.5f, color, light, 1, 0, 0);
+        vertex(vc, pose, x0, y1, z0, 0.5f, 0.5f, color, light, 1, 0, 0);
+        vertex(vc, pose, x0, y0, z0, 0.5f, 0.5f, color, light, 1, 0, 0);
+        vertex(vc, pose, x0, y0, z1, 0.5f, 0.5f, color, light, 1, 0, 0);
+        vertex(vc, pose, x1, y1, z0, 0.5f, 0.5f, color, light, -1, 0, 0);
+        vertex(vc, pose, x1, y1, z1, 0.5f, 0.5f, color, light, -1, 0, 0);
+        vertex(vc, pose, x1, y0, z1, 0.5f, 0.5f, color, light, -1, 0, 0);
+        vertex(vc, pose, x1, y0, z0, 0.5f, 0.5f, color, light, -1, 0, 0);
+    }
+
+    private static void verticalQuad(VertexConsumer vc, PoseStack.Pose p, float x0, float z0, float x1, float z1,
+                                     float y0, float y1, int color, int light) {
+        vertex(vc, p, x0, y1, z0, 0.5f, 0.5f, color, light, 1, 0, 0);
+        vertex(vc, p, x1, y1, z1, 0.5f, 0.5f, color, light, 1, 0, 0);
+        vertex(vc, p, x1, y0, z1, 0.5f, 0.5f, color, light, 1, 0, 0);
+        vertex(vc, p, x0, y0, z0, 0.5f, 0.5f, color, light, 1, 0, 0);
     }
 }

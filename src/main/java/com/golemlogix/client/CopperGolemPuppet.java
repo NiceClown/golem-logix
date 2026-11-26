@@ -1,7 +1,7 @@
 package com.golemlogix.client;
 
-import net.minecraft.client.renderer.rendertype.RenderTypes;
 import com.golemlogix.GolemLogixMod;
+import com.golemlogix.client.render.BerBuffers;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -16,18 +16,26 @@ import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.Blocks;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix3f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
+import java.util.function.Consumer;
+
+import static com.golemlogix.client.render.PixelMesh.PIXEL;
+
 /**
- * Copper golem "puppet" for block entity renderers (orbits around the core, the ring on the top face of the array).
- * The model is the game's own copper golem (the same boxes) with its textures: an 8x6x6 body, a wide head, a ball antenna, long arms.
- * The puppet stands in an "upright" frame: feet at (0,0,0), head up (+Y), face looking forward (+Z).
+ * Copper golem puppet for block-entity renderers (orbits around the Atlas Core, carrier golems on the Saturator, shelf
+ * engineers on the Mainframe, valve tenders on jars/towers/mixers, archivists in the Drive Bay).
+ * Uses the game's copper golem box geometry and oxidation textures (0..3). Stands in an upright frame: feet at {@code (0, 0, 0)},
+ * head up ({@code +Y}), face forward ({@code +Z}).
  */
 public final class CopperGolemPuppet {
     public static final ModelLayerLocation LAYER =
@@ -57,7 +65,7 @@ public final class CopperGolemPuppet {
     private CopperGolemPuppet() {
     }
 
-    /** Model blueprint (coordinates and texture offsets as in the original). */
+    /** Model blueprint matching the vanilla copper golem dimensions and UV layout. */
     public static LayerDefinition createLayer() {
         MeshDefinition mesh = new MeshDefinition();
         PartDefinition root = mesh.getRoot();
@@ -101,14 +109,14 @@ public final class CopperGolemPuppet {
         return root;
     }
 
-    /** Reset the cache on resource reload. */
+    /** Resets the cached baked model on resource reload. */
     public static void invalidate() {
         bakedFrom = null;
         root = null;
         bodyPart = headPart = rightArmPart = leftArmPart = rightLegPart = leftLegPart = null;
     }
 
-    /** Golem pose: phase = step phase (radians), walking = whether it walks, carrying = whether it holds a crate, bow = lean (0..1). */
+    /** Golem pose: {@code phase} = step phase (radians), {@code walking}, {@code carrying}, {@code bow} = forward lean (0..1). */
     public record Anim(float phase, boolean walking, boolean carrying, float bow) {
         public static Anim idle(float time) {
             return new Anim(time * 0.1f, false, false, 0f);
@@ -116,54 +124,41 @@ public final class CopperGolemPuppet {
     }
 
     /**
-     * Draws the golem. pos = feet position, forward = where the face looks, up = where the top of the head points (both in the
-     * current pose frame), scale = scale (1 = one block tall; a real golem is ~1 block without the antenna), variant 0..3 = oxidation stage.
-     */
-    public static void render(PoseStack pose, MultiBufferSource buffers, int light, Vector3f pos, Vector3f forward, Vector3f up,
-                              float scale, Anim anim, int variant) {
-        render(pose, buffers, light, pos, forward, up, scale, anim, variant, null);
-    }
-
-    /**
-     * The same, but when carrying it holds its own thing instead of a crate: held draws it in the "in front of the chest" frame, where 1 is the
-     * golem's height, the origin is the middle of the grip, Y up, Z forward.
-     */
-    public static void render(PoseStack pose, MultiBufferSource buffers, int light, Vector3f pos, Vector3f forward, Vector3f up,
-                              float scale, Anim anim, int variant, @org.jetbrains.annotations.Nullable java.util.function.Consumer<PoseStack> held) {
-        render(pose, buffers, light, pos, forward, up, scale, anim, variant, held, null);
-    }
-
-    /**
-     * Custom pose of arms and head (radians, as in ModelPart: xRot < 0 moves an arm forward and up, zRot > 0 on the right one and < 0 on the left
-     * moves it away from the body; headYaw > 0 turns the head left). Also supports drawing items right in the hands.
+     * Custom arm and head angles (radians, ModelPart convention: {@code xRot < 0} raises forward/up, {@code zRot > 0} right /
+     * {@code < 0} left abducts away from torso, {@code headYaw > 0} turns left) plus optional in-hand prop callbacks.
      */
     public record Arms(float rightX, float rightZ, float leftX, float leftZ, float headYaw,
-                       @org.jetbrains.annotations.Nullable java.util.function.Consumer<PoseStack> heldRight,
-                       @org.jetbrains.annotations.Nullable java.util.function.Consumer<PoseStack> heldLeft) {
+                       @Nullable Consumer<PoseStack> heldRight,
+                       @Nullable Consumer<PoseStack> heldLeft) {
         public Arms(float rightX, float rightZ, float leftX, float leftZ, float headYaw) {
             this(rightX, rightZ, leftX, leftZ, headYaw, null, null);
         }
     }
 
     public static void render(PoseStack pose, MultiBufferSource buffers, int light, Vector3f pos, Vector3f forward, Vector3f up,
-                              float scale, Anim anim, int variant, @org.jetbrains.annotations.Nullable java.util.function.Consumer<PoseStack> held,
-                              @org.jetbrains.annotations.Nullable Arms arms) {
+                              float scale, Anim anim, int variant) {
+        render(pose, buffers, light, pos, forward, up, scale, anim, variant, null);
+    }
+
+    public static void render(PoseStack pose, MultiBufferSource buffers, int light, Vector3f pos, Vector3f forward, Vector3f up,
+                              float scale, Anim anim, int variant, @Nullable Consumer<PoseStack> held) {
+        render(pose, buffers, light, pos, forward, up, scale, anim, variant, held, null);
+    }
+
+    public static void render(PoseStack pose, MultiBufferSource buffers, int light, Vector3f pos, Vector3f forward, Vector3f up,
+                              float scale, Anim anim, int variant, @Nullable Consumer<PoseStack> held, @Nullable Arms arms) {
         render(pose, buffers, light, pos, forward, up, scale, anim, variant, held, arms, null);
     }
 
     /**
-     * The same with a thing worn on the head: onHead draws in the head's model frame (model pixels / 16, Y down, the face to -Z;
-     * the top of the head is y = -5/16), so it turns and nods with the head.
+     * Draws the golem at {@code pos} facing {@code forward} with head toward {@code up}, oxidation {@code variant} (0..3),
+     * optional chest-carried prop {@code held} (defaults to a barrel when {@code anim.carrying}), optional {@code arms}
+     * override, and optional {@code onHead} callback in the head's model frame (Y down, face to -Z).
      */
     public static void render(PoseStack pose, MultiBufferSource buffers, int light, Vector3f pos, Vector3f forward, Vector3f up,
-                              float scale, Anim anim, int variant, @org.jetbrains.annotations.Nullable java.util.function.Consumer<PoseStack> held,
-                              @org.jetbrains.annotations.Nullable Arms arms,
-                              @org.jetbrains.annotations.Nullable java.util.function.Consumer<PoseStack> onHead) {
-        Vector3f f = SCRATCH_F.set(forward).normalize();
-        float dot = up.dot(f);
-        Vector3f u = SCRATCH_U.set(up.x - f.x * dot, up.y - f.y * dot, up.z - f.z * dot).normalize();
-        Vector3f x = SCRATCH_X.set(u).cross(f).normalize();
-        Quaternionf q = SCRATCH_QUAT.setFromNormalized(SCRATCH_MAT.set(x.x, x.y, x.z, u.x, u.y, u.z, f.x, f.y, f.z));
+                              float scale, Anim anim, int variant, @Nullable Consumer<PoseStack> held,
+                              @Nullable Arms arms, @Nullable Consumer<PoseStack> onHead) {
+        Quaternionf q = buildBasisRotation(forward, up);
 
         pose.pushPose();
         pose.translate(pos.x, pos.y, pos.z);
@@ -171,89 +166,103 @@ public final class CopperGolemPuppet {
         pose.scale(scale, scale, scale);
 
         if (anim.carrying) {
-            // a crate in outstretched arms in front of the chest (in the upright frame: Z forward, Y up; 16 pixels = 1)
-            float lift = Mth.sin(anim.phase * 2f) * 0.01f;
-            pose.pushPose();
-            pose.translate(0f, 0.64f - anim.bow * 0.14f + lift, 0.38f + anim.bow * 0.06f);
-            if (held != null) {
-                held.accept(pose);
-            } else {
-                pose.scale(0.34f, 0.34f, 0.34f);
-                pose.translate(-0.5, -0.5, -0.5);
-                com.golemlogix.client.render.BerBuffers.block(buffers, Blocks.BARREL.defaultBlockState(), pose, light);
-            }
-            pose.popPose();
+            renderChestCarry(pose, buffers, light, anim, held);
         }
 
-        // from the "upright" frame into the model frame (Y down, face to -Z): a 180° turn around X
+        // convert from upright frame (+Y up, +Z forward) to ModelPart frame (Y down, face -Z)
         pose.mulPose(ROT_X_180);
 
         ModelPart m = model();
-        ModelPart body = bodyPart;
-        ModelPart head = headPart;
-        ModelPart rightArm = rightArmPart;
-        ModelPart leftArm = leftArmPart;
-        ModelPart rightLeg = rightLegPart;
-        ModelPart leftLeg = leftLegPart;
-
-        float swing = anim.walking ? Mth.sin(anim.phase) * 0.9f : 0f;
-        rightLeg.xRot = swing;
-        leftLeg.xRot = -swing;
-        if (anim.carrying) {
-            float raise = -1.25f + Mth.sin(anim.phase * 2f) * 0.03f;
-            rightArm.xRot = raise;
-            leftArm.xRot = raise;
-            rightArm.zRot = 0.14f;
-            leftArm.zRot = -0.14f;
-        } else {
-            rightArm.xRot = -swing * 0.7f;
-            leftArm.xRot = swing * 0.7f;
-            rightArm.zRot = 0f;
-            leftArm.zRot = 0f;
-        }
-        body.y = -5f - (anim.walking ? Math.abs(Mth.sin(anim.phase)) * 0.6f : 0f);
-        body.xRot = anim.bow * 0.35f;
-        head.xRot = anim.bow * 0.5f + (anim.walking ? 0f : Mth.sin(anim.phase * 0.7f) * 0.05f);
-        head.yRot = 0f;
-        if (arms != null) {
-            rightArm.xRot = arms.rightX();
-            rightArm.zRot = arms.rightZ();
-            leftArm.xRot = arms.leftX();
-            leftArm.zRot = arms.leftZ();
-            head.yRot = arms.headYaw();
-        }
+        applyPose(anim, arms);
 
         int v = Mth.clamp(variant, 0, 3);
         VertexConsumer vc = buffers.getBuffer(RenderTypes.entityCutout(TEXTURES[v]));
         m.render(pose, vc, light, OverlayTexture.NO_OVERLAY);
         VertexConsumer eyes = buffers.getBuffer(RenderTypes.eyes(EYES[v]));
-        m.render(pose, eyes, 0xF000F0, OverlayTexture.NO_OVERLAY);
+        m.render(pose, eyes, LightCoordsUtil.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
 
+        renderAttachments(pose, arms, onHead);
+        pose.popPose();
+    }
+
+    /** Orthonormal basis quaternion aligning local +Z to {@code forward} and +Y to orthogonalized {@code up}. */
+    private static Quaternionf buildBasisRotation(Vector3f forward, Vector3f up) {
+        Vector3f f = SCRATCH_F.set(forward).normalize();
+        float dot = up.dot(f);
+        Vector3f u = SCRATCH_U.set(up.x - f.x * dot, up.y - f.y * dot, up.z - f.z * dot).normalize();
+        Vector3f x = SCRATCH_X.set(u).cross(f).normalize();
+        return SCRATCH_QUAT.setFromNormalized(SCRATCH_MAT.set(x.x, x.y, x.z, u.x, u.y, u.z, f.x, f.y, f.z));
+    }
+
+    private static void renderChestCarry(PoseStack pose, MultiBufferSource buffers, int light, Anim anim,
+                                         @Nullable Consumer<PoseStack> held) {
+        float lift = Mth.sin(anim.phase * 2f) * 0.01f;
+        pose.pushPose();
+        pose.translate(0f, 0.64f - anim.bow * 0.14f + lift, 0.38f + anim.bow * 0.06f);
+        if (held != null) {
+            held.accept(pose);
+        } else {
+            pose.scale(0.34f, 0.34f, 0.34f);
+            pose.translate(-0.5, -0.5, -0.5);
+            BerBuffers.block(buffers, Blocks.BARREL.defaultBlockState(), pose, light);
+        }
+        pose.popPose();
+    }
+
+    private static void applyPose(Anim anim, @Nullable Arms arms) {
+        float swing = anim.walking ? Mth.sin(anim.phase) * 0.9f : 0f;
+        rightLegPart.xRot = swing;
+        leftLegPart.xRot = -swing;
+        if (anim.carrying) {
+            float raise = -1.25f + Mth.sin(anim.phase * 2f) * 0.03f;
+            rightArmPart.xRot = raise;
+            leftArmPart.xRot = raise;
+            rightArmPart.zRot = 0.14f;
+            leftArmPart.zRot = -0.14f;
+        } else {
+            rightArmPart.xRot = -swing * 0.7f;
+            leftArmPart.xRot = swing * 0.7f;
+            rightArmPart.zRot = 0f;
+            leftArmPart.zRot = 0f;
+        }
+        bodyPart.y = -5f - (anim.walking ? Math.abs(Mth.sin(anim.phase)) * 0.6f : 0f);
+        bodyPart.xRot = anim.bow * 0.35f;
+        headPart.xRot = anim.bow * 0.5f + (anim.walking ? 0f : Mth.sin(anim.phase * 0.7f) * 0.05f);
+        headPart.yRot = 0f;
+        if (arms != null) {
+            rightArmPart.xRot = arms.rightX();
+            rightArmPart.zRot = arms.rightZ();
+            leftArmPart.xRot = arms.leftX();
+            leftArmPart.zRot = arms.leftZ();
+            headPart.yRot = arms.headYaw();
+        }
+    }
+
+    private static void renderAttachments(PoseStack pose, @Nullable Arms arms, @Nullable Consumer<PoseStack> onHead) {
         if (onHead != null) {
             pose.pushPose();
-            body.translateAndRotate(pose);
-            head.translateAndRotate(pose);
+            bodyPart.translateAndRotate(pose);
+            headPart.translateAndRotate(pose);
             onHead.accept(pose);
             pose.popPose();
         }
         if (arms != null) {
             if (arms.heldRight() != null) {
                 pose.pushPose();
-                body.translateAndRotate(pose);
-                rightArm.translateAndRotate(pose);
-                pose.translate(-1.5f / 16f, 8.5f / 16f, 0f);
+                bodyPart.translateAndRotate(pose);
+                rightArmPart.translateAndRotate(pose);
+                pose.translate(-1.5f * PIXEL, 8.5f * PIXEL, 0f);
                 arms.heldRight().accept(pose);
                 pose.popPose();
             }
             if (arms.heldLeft() != null) {
                 pose.pushPose();
-                body.translateAndRotate(pose);
-                leftArm.translateAndRotate(pose);
-                pose.translate(1.5f / 16f, 8.5f / 16f, 0f);
+                bodyPart.translateAndRotate(pose);
+                leftArmPart.translateAndRotate(pose);
+                pose.translate(1.5f * PIXEL, 8.5f * PIXEL, 0f);
                 arms.heldLeft().accept(pose);
                 pose.popPose();
             }
         }
-        pose.popPose();
     }
 }

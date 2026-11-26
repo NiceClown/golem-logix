@@ -5,6 +5,7 @@ import com.golemlogix.blockentity.SchematicConcentratorBlockEntity;
 import com.golemlogix.blocks.SchematicConcentratorBlock;
 import com.golemlogix.client.render.GlowTypes;
 import com.golemlogix.client.render.LegacyBer;
+import com.golemlogix.client.render.PixelMesh;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -40,8 +41,7 @@ public class ConcentratorRenderer extends LegacyBer<SchematicConcentratorBlockEn
             return;
         }
         Direction facing = be.getBlockState().getValue(SchematicConcentratorBlock.FACING);
-        float holo = Mth.lerp(partialTick, be.holoPrev, be.holo);
-        holo = holo * holo * (3 - 2 * holo);
+        float holo = PixelMesh.smoothstep(Mth.lerp(partialTick, be.holoPrev, be.holo));
         float spin = Mth.lerp(partialTick, be.spinPrev, be.spin);
         float time = (be.getLevel() == null ? 0L : be.getLevel().getGameTime() % 72000L) + partialTick;
         pose.pushPose();

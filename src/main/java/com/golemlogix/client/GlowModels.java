@@ -1,6 +1,7 @@
 package com.golemlogix.client;
 
 import com.golemlogix.GolemLogixMod;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.builders.UVPair;
 import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.block.BlockAndTintGetter;
@@ -17,9 +18,10 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
+import net.minecraft.util.TriState;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.client.model.DelegateBlockStateModel;
-import net.minecraft.util.TriState;
+import net.neoforged.neoforge.client.model.quad.BakedColors;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
@@ -78,7 +80,7 @@ public final class GlowModels {
             }
             // most textures have no glow layer: ask the atlas only for one that exists (a missing sprite is logged with a stack trace)
             Identifier file = name.withPath(p -> "textures/" + p + "_glow.png");
-            if (net.minecraft.client.Minecraft.getInstance().getResourceManager().getResource(file).isEmpty()) {
+            if (Minecraft.getInstance().getResourceManager().getResource(file).isEmpty()) {
                 return Optional.empty();
             }
             TextureAtlasSprite g = textures.apply(name.withSuffix("_glow"));
@@ -106,7 +108,7 @@ public final class GlowModels {
             BakedQuad.MaterialInfo info = new BakedQuad.MaterialInfo(glow, translucent ? ChunkSectionLayer.TRANSLUCENT : ChunkSectionLayer.CUTOUT,
                     translucent ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockItemSheet(), -1, false, GLOW_LIGHT, false);
             return Optional.of(new BakedQuad(pos[0], pos[1], pos[2], pos[3], uv[0], uv[1], uv[2], uv[3], d, info, q.bakedNormals(),
-                    net.neoforged.neoforge.client.model.quad.BakedColors.DEFAULT));
+                    BakedColors.DEFAULT));
         }).orElse(null);
     }
 

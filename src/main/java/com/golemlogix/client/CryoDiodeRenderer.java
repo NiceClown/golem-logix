@@ -2,6 +2,7 @@ package com.golemlogix.client;
 
 import com.golemlogix.blockentity.CryoDiodeBlockEntity;
 import com.golemlogix.blocks.CryoDiodeBlock;
+import com.golemlogix.client.render.LegacyBer;
 import com.golemlogix.client.render.StandaloneModels;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
@@ -14,7 +15,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
  * Cryo-Diode: 3D crimson-painted iron and brass handwheel on the valve's stem. It turns slowly while Source flows through the
  * valve and stops where it is when the flow stops.
  */
-public class CryoDiodeRenderer extends com.golemlogix.client.render.LegacyBer<CryoDiodeBlockEntity> {
+public class CryoDiodeRenderer extends LegacyBer<CryoDiodeBlockEntity> {
     private static final float SPEED = 2.5f;
 
     public CryoDiodeRenderer(BlockEntityRendererProvider.Context context) {
@@ -37,7 +38,7 @@ public class CryoDiodeRenderer extends com.golemlogix.client.render.LegacyBer<Cr
         }
         float angle = be.wheelAngle + (turning ? SPEED * partialTick : 0f);
         pose.pushPose();
-        FormationBusRenderer.orient(pose, be.getFacing());
+        Quads.orient(pose, be.getFacing());
         pose.translate(0.5f, 0f, 0.5f);
         pose.mulPose(Axis.YP.rotationDegrees(angle));
         pose.translate(-0.5f, 0f, -0.5f);
