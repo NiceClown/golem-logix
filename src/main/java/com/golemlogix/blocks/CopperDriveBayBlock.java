@@ -48,6 +48,8 @@ public class CopperDriveBayBlock extends Block implements com.golemlogix.blocks.
         TOP_LEFT("tl", 0, 1),
         TOP_RIGHT("tr", 1, 1);
 
+        static final Part[] VALUES = values();
+
         private final String key;
         public final int right;
         public final int up;
@@ -59,7 +61,7 @@ public class CopperDriveBayBlock extends Block implements com.golemlogix.blocks.
         }
 
         public static Part of(int right, int up) {
-            return values()[(up << 1) | right];
+            return VALUES[(up << 1) | right];
         }
 
         /** The part mirrored horizontally (for Mirror). */
@@ -115,12 +117,12 @@ public class CopperDriveBayBlock extends Block implements com.golemlogix.blocks.
     /** Places the whole cabinet (for commands, tests and generators); the main part goes to master. */
     public static void place(LevelAccessor level, BlockPos master, Direction facing) {
         Block block = ModBlocks.COPPER_DRIVE_BAY.get();
-        for (Part part : Part.values()) {
+        for (Part part : Part.VALUES) {
             level.setBlock(partPos(master, facing, part),
                     block.defaultBlockState().setValue(FACING, facing).setValue(PART, part), Block.UPDATE_CLIENTS);
         }
         if (level instanceof Level lvl) {
-            for (Part part : Part.values()) {
+            for (Part part : Part.VALUES) {
                 BlockPos p = partPos(master, facing, part);
                 lvl.updateNeighborsAt(p, block);
             }
@@ -133,7 +135,7 @@ public class CopperDriveBayBlock extends Block implements com.golemlogix.blocks.
         Direction facing = context.getHorizontalDirection().getOpposite();
         Level level = context.getLevel();
         BlockPos master = context.getClickedPos();
-        for (Part part : Part.values()) {
+        for (Part part : Part.VALUES) {
             BlockPos p = partPos(master, facing, part);
             if (!level.isInWorldBounds(p) || (part != Part.BOTTOM_LEFT && !level.getBlockState(p).canBeReplaced(context))) {
                 return null;
@@ -145,7 +147,7 @@ public class CopperDriveBayBlock extends Block implements com.golemlogix.blocks.
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
         Direction facing = state.getValue(FACING);
-        for (Part part : Part.values()) {
+        for (Part part : Part.VALUES) {
             if (part != Part.BOTTOM_LEFT) {
                 level.setBlock(partPos(pos, facing, part), state.setValue(PART, part), 3);
             }
@@ -174,7 +176,7 @@ public class CopperDriveBayBlock extends Block implements com.golemlogix.blocks.
             // in creative mode or without the required pickaxe, remove the other parts quietly so the master does not drop via updateShape
             Direction facing = state.getValue(FACING);
             BlockPos master = masterOf(pos, state);
-            for (Part part : Part.values()) {
+            for (Part part : Part.VALUES) {
                 BlockPos other = partPos(master, facing, part);
                 BlockState otherState = level.getBlockState(other);
                 if (!other.equals(pos) && otherState.is(this) && otherState.getValue(PART) == part && otherState.getValue(FACING) == facing) {

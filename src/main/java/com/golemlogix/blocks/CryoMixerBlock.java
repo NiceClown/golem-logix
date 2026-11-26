@@ -2,13 +2,17 @@ package com.golemlogix.blocks;
 
 import com.golemlogix.blockentity.CryoMixerBlockEntity;
 import com.golemlogix.init.ModBlockEntities;
+import com.golemlogix.menu.CryoMixerMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
@@ -18,6 +22,7 @@ import net.minecraft.world.level.ScheduledTickAccess;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.SoundType;
@@ -34,8 +39,9 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.neoforged.neoforge.transfer.fluid.FluidUtil;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Map;
 
 /**
  * Cryo-Mixer, two blocks high, placed with one item: a rune plinth with louvred brass sides around a copper module, a tray in front;
@@ -51,7 +57,7 @@ public class CryoMixerBlock extends Block implements RemovalAware, EntityBlock {
     private static final VoxelShape BASE_SHAPE = Shapes.block();
     private static final VoxelShape FLASKS_NORTH = Shapes.or(Block.box(1.5, 0, 1.5, 7.5, 15, 7.5), Block.box(8.5, 0, 1.5, 14.5, 15, 7.5),
             Block.box(1.5, 0, 8.5, 14.5, 4, 14.5)).optimize();
-    private static final java.util.Map<Direction, VoxelShape> FLASKS_SHAPES = java.util.Map.of(
+    private static final Map<Direction, VoxelShape> FLASKS_SHAPES = Map.of(
             Direction.NORTH, FLASKS_NORTH,
             Direction.EAST, BusLinks.rotateShape(FLASKS_NORTH, Direction.EAST),
             Direction.SOUTH, BusLinks.rotateShape(FLASKS_NORTH, Direction.SOUTH),
@@ -78,35 +84,23 @@ public class CryoMixerBlock extends Block implements RemovalAware, EntityBlock {
     }
 
     public static BlockPos baseOf(BlockPos pos, BlockState state) {
-        return pos.below(state.getValue(SECTION));
+        return VerticalMultiblock.baseOf(pos, state, SECTION);
     }
 
     @Nullable
     public static CryoMixerBlockEntity entityOf(BlockGetter level, BlockPos pos, BlockState state) {
-        if (!state.hasProperty(SECTION)) {
-            return null;
-        }
-        BlockPos base = baseOf(pos, state);
-        if (level instanceof Level l && !l.isLoaded(base)) {
-            return null;
-        }
-        return level.getBlockEntity(base) instanceof CryoMixerBlockEntity m ? m : null;
+        return VerticalMultiblock.baseEntity(level, pos, state, SECTION, CryoMixerBlockEntity.class);
     }
 
     /** Places a whole mixer (commands, tests). */
     public static void place(Level level, BlockPos base, Direction facing, Block block) {
-        for (int i = 0; i < HEIGHT; i++) {
-            level.setBlock(base.above(i), block.defaultBlockState().setValue(FACING, facing).setValue(SECTION, i), 3);
-        }
+        VerticalMultiblock.placeAll(level, base, facing, block, FACING, SECTION, HEIGHT);
     }
 
     @Nullable
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        BlockPos pos = context.getClickedPos();
-        Level level = context.getLevel();
-        BlockPos up = pos.above();
-        if (!level.isInWorldBounds(up) || !level.getBlockState(up).canBeReplaced(context)) {
+        if (!VerticalMultiblock.canPlaceAbove(context, HEIGHT)) {
             return null;
         }
         return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
@@ -114,17 +108,14 @@ public class CryoMixerBlock extends Block implements RemovalAware, EntityBlock {
 
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
-        level.setBlock(pos.above(), state.setValue(SECTION, 1), 3);
+        VerticalMultiblock.placeAbove(level, pos, state, SECTION, HEIGHT);
     }
 
     /** A half whose partner is gone goes too. */
     @Override
-    protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess ticks, BlockPos pos, Direction direction,
-                                     BlockPos neighborPos, BlockState neighbor, net.minecraft.util.RandomSource random) {
-        int s = state.getValue(SECTION);
-        int expected = direction == Direction.UP ? s + 1 : direction == Direction.DOWN ? s - 1 : -1;
-        if (expected >= 0 && expected < HEIGHT && (!neighbor.is(this) || neighbor.getValue(SECTION) != expected
-                || neighbor.getValue(FACING) != state.getValue(FACING))) {
+    protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess ticks, BlockPos pos,
+                                     Direction direction, BlockPos neighborPos, BlockState neighbor, RandomSource random) {
+        if (!VerticalMultiblock.isNeighborValid(this, state, direction, neighbor, FACING, SECTION, HEIGHT)) {
             return Blocks.AIR.defaultBlockState();
         }
         return super.updateShape(state, level, ticks, pos, direction, neighborPos, neighbor, random);
@@ -133,13 +124,7 @@ public class CryoMixerBlock extends Block implements RemovalAware, EntityBlock {
     /** Only the lower block drops the mixer: breaking the flasks breaks the lower block with its drop. */
     @Override
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        if (!level.isClientSide() && state.getValue(SECTION) != 0) {
-            BlockPos base = baseOf(pos, state);
-            BlockState baseState = level.getBlockState(base);
-            if (baseState.is(this) && baseState.getValue(SECTION) == 0 && baseState.getValue(FACING) == state.getValue(FACING)) {
-                level.destroyBlock(base, !player.isCreative(), player);
-            }
-        }
+        VerticalMultiblock.destroyBaseIfUpper(this, level, pos, state, player, FACING, SECTION);
         return super.playerWillDestroy(level, pos, state, player);
     }
 
@@ -149,7 +134,7 @@ public class CryoMixerBlock extends Block implements RemovalAware, EntityBlock {
     }
 
     @Override
-    protected BlockState mirror(BlockState state, net.minecraft.world.level.block.Mirror mirror) {
+    protected BlockState mirror(BlockState state, Mirror mirror) {
         return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 
@@ -157,20 +142,16 @@ public class CryoMixerBlock extends Block implements RemovalAware, EntityBlock {
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
                                           InteractionHand hand, BlockHitResult hit) {
-        if (com.golemlogix.system.Transfers.hasFluidHandler(stack)) {
-            return FluidUtil.interactWithFluidHandler(player, hand, level, pos, hit.getDirection(), null)
-                    ? InteractionResult.SUCCESS : InteractionResult.CONSUME;
-        }
-        return InteractionResult.TRY_WITH_EMPTY_HAND;
+        return VerticalMultiblock.interactFluid(stack, level, pos, player, hand, hit);
     }
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         CryoMixerBlockEntity be = entityOf(level, pos, state);
         if (!level.isClientSide() && be != null) {
-            player.openMenu(new net.minecraft.world.SimpleMenuProvider(
-                    (id, inv, p) -> new com.golemlogix.menu.CryoMixerMenu(id, inv, be.getOutput(), be.getUpgrades(), be.menuData(),
-                            be, net.minecraft.world.inventory.ContainerLevelAccess.create(level, be.getBlockPos())),
+            player.openMenu(new SimpleMenuProvider(
+                    (id, inv, p) -> new CryoMixerMenu(id, inv, be.getOutput(), be.getUpgrades(), be.menuData(),
+                            be, ContainerLevelAccess.create(level, be.getBlockPos())),
                     Component.translatable("block.golem_logix.cryo_mixer")), buf -> buf.writeBlockPos(be.getBlockPos()));
         }
         return InteractionResult.SUCCESS;
