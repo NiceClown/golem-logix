@@ -50,6 +50,9 @@ public abstract class LegacyBer<T extends BlockEntity> implements BlockEntityRen
         if (state.blockEntity == null || state.blockEntity.getLevel() == null) {
             return;
         }
+        if (camera != null && camera.initialized && camera.pos != null) {
+            LegacyBer.camera = camera.pos;
+        }
         BerBuffers buffers = new BerBuffers(collector);
         render(state.blockEntity, state.partialTick, poseStack, buffers, state.lightCoords, OverlayTexture.NO_OVERLAY);
         buffers.flush();

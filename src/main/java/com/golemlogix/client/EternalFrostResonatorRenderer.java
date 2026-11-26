@@ -1,16 +1,16 @@
 package com.golemlogix.client;
 
-import net.minecraft.util.LightCoordsUtil;
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.EternalFrostResonatorBlockEntity;
+import com.golemlogix.client.render.GlowTypes;
+import com.golemlogix.client.render.LegacyBer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.AABB;
 
@@ -19,11 +19,27 @@ import net.minecraft.world.phys.AABB;
  * bottom of the glass chamber, narrow in the exhaust pipe and spread above the roof; a flickering pillar in the middle. While a network
  * is nearby the vortex spins faster and brighter. The ribbons glow by themselves (unlit) and do not hide the chamber glass.
  */
-public class EternalFrostResonatorRenderer extends com.golemlogix.client.render.LegacyBer<EternalFrostResonatorBlockEntity> {
+public class EternalFrostResonatorRenderer extends LegacyBer<EternalFrostResonatorBlockEntity> {
     private static final Identifier VORTEX = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID,
             "textures/entity/resonator_vortex.png");
     private static final int SEGMENTS = 28;
     private static final float Y0 = 9.3f, Y1 = 24f;
+    private static final float[] SEG_Y = new float[SEGMENTS + 1];
+    private static final float[] SEG_R = new float[SEGMENTS + 1];
+    private static final float[] SEG_FADE = new float[SEGMENTS + 1];
+    private static final float[] SEG_ANGLE = new float[SEGMENTS + 1];
+    private static final float[] SEG_V = new float[SEGMENTS + 1];
+
+    static {
+        for (int i = 0; i <= SEGMENTS; i++) {
+            float h = (float) i / SEGMENTS;
+            SEG_Y[i] = Y0 + h * (Y1 - Y0);
+            SEG_R[i] = radius(h);
+            SEG_FADE[i] = fade(h);
+            SEG_ANGLE[i] = h * 4.5f * Mth.PI;
+            SEG_V[i] = h * 2f;
+        }
+    }
 
     public EternalFrostResonatorRenderer(BlockEntityRendererProvider.Context context) {
     }
@@ -59,34 +75,37 @@ public class EternalFrostResonatorRenderer extends com.golemlogix.client.render.
         if (be.getLevel() == null) {
             return;
         }
-        float time = be.getLevel().getGameTime() + partialTick;
+        float time = (be.getLevel().getGameTime() % 72000L) + partialTick;
         float speed = be.clientLinked ? 1f : 0.4f;
         float bright = be.clientLinked ? 1f : 0.7f;
-        VertexConsumer vc = buffers.getBuffer(com.golemlogix.client.render.GlowTypes.glow(VORTEX));
+        VertexConsumer vc = buffers.getBuffer(GlowTypes.glow(VORTEX));
         PoseStack.Pose p = pose.last();
         float scroll = time * 0.02f * (0.5f + speed);
+        float w = 1.7f;
         for (int k = 0; k < 3; k++) {
             float phase = k * Mth.TWO_PI / 3f + time * 0.09f * speed;
+            float a0 = phase + SEG_ANGLE[0];
+            float x0 = 8f + Mth.cos(a0) * SEG_R[0], z0 = 8f + Mth.sin(a0) * SEG_R[0];
+            float y0 = SEG_Y[0], v0 = SEG_V[0] + scroll;
+            int c0 = color(SEG_FADE[0] * bright);
             for (int i = 0; i < SEGMENTS; i++) {
-                float h0 = (float) i / SEGMENTS, h1 = (float) (i + 1) / SEGMENTS;
-                float a0 = phase + h0 * 4.5f * Mth.PI, a1 = phase + h1 * 4.5f * Mth.PI;
-                float r0 = radius(h0), r1 = radius(h1);
-                float y0 = Y0 + h0 * (Y1 - Y0), y1 = Y0 + h1 * (Y1 - Y0);
-                float x0 = 8f + Mth.cos(a0) * r0, z0 = 8f + Mth.sin(a0) * r0, x1 = 8f + Mth.cos(a1) * r1, z1 = 8f + Mth.sin(a1) * r1;
-                float w = 1.7f;
-                int c0 = color(fade(h0) * bright), c1 = color(fade(h1) * bright);
-                float v0 = h0 * 2f + scroll, v1 = h1 * 2f + scroll;
+                float a1 = phase + SEG_ANGLE[i + 1];
+                float x1 = 8f + Mth.cos(a1) * SEG_R[i + 1], z1 = 8f + Mth.sin(a1) * SEG_R[i + 1];
+                float y1 = SEG_Y[i + 1], v1 = SEG_V[i + 1] + scroll;
+                int c1 = color(SEG_FADE[i + 1] * bright);
                 // ribbon: a double-sided quad from a spiral point to the same point w higher
                 quad(vc, p, x0, y0, z0, x1, y1, z1, w, v0, v1, c0, c1);
                 quad(vc, p, x1, y1, z1, x0, y0, z0, w, v1, v0, c1, c0);
+                x0 = x1; y0 = y1; z0 = z1; v0 = v1; c0 = c1;
             }
         }
         // flickering pillar in the middle: two crossed strips
         float pulse = (0.55f + 0.25f * Mth.sin(time * 0.2f)) * bright;
+        int colColor = color(pulse);
         for (int k = 0; k < 2; k++) {
             float dx = k == 0 ? 1.1f : 0f, dz = k == 0 ? 0f : 1.1f;
-            column(vc, p, 8f - dx, 8f - dz, 8f + dx, 8f + dz, Y0, 21f, scroll * 1.5f, color(pulse));
-            column(vc, p, 8f + dx, 8f + dz, 8f - dx, 8f - dz, Y0, 21f, scroll * 1.5f, color(pulse));
+            column(vc, p, 8f - dx, 8f - dz, 8f + dx, 8f + dz, Y0, 21f, scroll * 1.5f, colColor);
+            column(vc, p, 8f + dx, 8f + dz, 8f - dx, 8f - dz, Y0, 21f, scroll * 1.5f, colColor);
         }
     }
 

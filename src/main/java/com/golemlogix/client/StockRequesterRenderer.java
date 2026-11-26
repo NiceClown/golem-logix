@@ -2,6 +2,8 @@ package com.golemlogix.client;
 
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.StockRequesterBlockEntity;
+import com.golemlogix.client.render.BerBuffers;
+import com.golemlogix.client.render.LegacyBer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -9,9 +11,13 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import org.joml.Vector3f;
 
@@ -20,7 +26,7 @@ import org.joml.Vector3f;
  * crafted it bends over the book and scribbles; otherwise it waits, now and then looking round the workshop. Now and then it turns
  * a page. A poppy on its head shows how the orders go: red blinking (ingredients missing), yellow (no pattern), green (all fine).
  */
-public class StockRequesterRenderer extends com.golemlogix.client.render.LegacyBer<StockRequesterBlockEntity> {
+public class StockRequesterRenderer extends LegacyBer<StockRequesterBlockEntity> {
     /** Feet on the walnut top behind the lectern (pixels, the block facing north), about 6.5 pixels tall with the antenna. */
     private static final float SCALE = 0.27f, FEET_Y = 11f, FEET_Z = 14.6f;
 
@@ -34,6 +40,12 @@ public class StockRequesterRenderer extends com.golemlogix.client.render.LegacyB
     private static final int PAGE_EVERY = 240, PAGE_TICKS = 24;
     /** Beyond this (blocks) the pictures on the pages are too small to make out and are not drawn. */
     private static final double PAGE_SIGHT = 24.0;
+    private static final double SIN_225 = Math.sin(Math.toRadians(22.5));
+    private static final double COS_225 = Math.cos(Math.toRadians(22.5));
+    private static final Vector3f GOLEM_POS = new Vector3f(0.5f, FEET_Y / 16f, FEET_Z / 16f);
+    private static final Vector3f FWD_NORTH = new Vector3f(0f, 0f, -1f);
+    private static final Vector3f UP = new Vector3f(0f, 1f, 0f);
+    private static final ItemStack[] KEPT = new ItemStack[StockRequesterBlockEntity.FILTER_SLOTS];
 
     @Override
     public void render(StockRequesterBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
@@ -80,16 +92,15 @@ public class StockRequesterRenderer extends com.golemlogix.client.render.LegacyB
             glow = 0.75f + 0.25f * Mth.sin(time * 0.08f);
         }
         int tint = shade(color, glow);
-        int flowerLight = glow > 0.9f || !(missing || noPattern) ? net.minecraft.util.LightCoordsUtil.FULL_BRIGHT : -1;
+        int flowerLight = glow > 0.9f || !(missing || noPattern) ? LightCoordsUtil.FULL_BRIGHT : -1;
         pose.pushPose();
         FormationBusRenderer.orient(pose, facing);
         int lit = FormationBusRenderer.light(be.getLevel(), be.getBlockPos(), facing);
-        CopperGolemPuppet.render(pose, buffers, lit, new Vector3f(0.5f, FEET_Y / 16f, FEET_Z / 16f), new Vector3f(0f, 0f, -1f),
-                new Vector3f(0f, 1f, 0f), SCALE, anim, 0, null, arms, head -> {
-                    PoseStack.Pose p = head.last();
-                    cross(buffers.getBuffer(RenderTypes.entityCutout(STEM)), p, 0xFFFFFFFF, lit);
-                    cross(buffers.getBuffer(RenderTypes.entityCutout(PETALS)), p, tint, flowerLight < 0 ? lit : flowerLight);
-                });
+        CopperGolemPuppet.render(pose, buffers, lit, GOLEM_POS, FWD_NORTH, UP, SCALE, anim, 0, null, arms, head -> {
+            PoseStack.Pose p = head.last();
+            cross(buffers.getBuffer(RenderTypes.entityCutout(STEM)), p, 0xFFFFFFFF, lit);
+            cross(buffers.getBuffer(RenderTypes.entityCutout(PETALS)), p, tint, flowerLight < 0 ? lit : flowerLight);
+        });
         if (turn >= 0f) {
             page(pose, buffers.getBuffer(RenderTypes.entityCutout(PAGE)), turn, lit);
         }
@@ -104,15 +115,14 @@ public class StockRequesterRenderer extends com.golemlogix.client.render.LegacyB
      * lectern's tilt turns them towards the back of the block).
      */
     private static boolean pagesInSight(StockRequesterBlockEntity be, Direction facing) {
-        net.minecraft.core.BlockPos pos = be.getBlockPos();
+        BlockPos pos = be.getBlockPos();
         double dx = camera.x - (pos.getX() + 0.5), dy = camera.y - (pos.getY() + 12.6 / 16.0), dz = camera.z - (pos.getZ() + 0.5);
         double dist2 = dx * dx + dy * dy + dz * dz;
         if (dist2 > PAGE_SIGHT * PAGE_SIGHT) {
             return false;
         }
         Direction back = facing.getOpposite();
-        double sin = Math.sin(Math.toRadians(22.5)), cos = Math.cos(Math.toRadians(22.5));
-        return dy * cos + (dx * back.getStepX() + dz * back.getStepZ()) * sin > 0.0;
+        return dy * COS_225 + (dx * back.getStepX() + dz * back.getStepZ()) * SIN_225 > 0.0;
     }
 
     /**
@@ -120,25 +130,26 @@ public class StockRequesterRenderer extends com.golemlogix.client.render.LegacyB
      * count allows. The frame is the lectern's part of the model, tilted 22.5 degrees about X round (8, 11, 8), its top y = 12.5.
      */
     private static void pageItems(StockRequesterBlockEntity be, PoseStack pose, MultiBufferSource buffers, int light) {
-        java.util.List<net.minecraft.world.item.ItemStack> kept = new java.util.ArrayList<>();
+        int n = 0;
         for (int i = 0; i < StockRequesterBlockEntity.FILTER_SLOTS; i++) {
-            net.minecraft.world.item.ItemStack stack = be.getFilters().getItem(i);
+            ItemStack stack = be.getFilters().getItem(i);
             if (!stack.isEmpty()) {
-                kept.add(stack);
+                KEPT[n++] = stack;
             }
         }
-        int n = kept.size();
         if (n == 0) {
             return;
         }
         int rows = n <= 2 ? 1 : n <= 4 ? 2 : 3, cols = n <= 6 ? 1 : 2;
         float size = n <= 2 ? 4.4f : n <= 4 ? 3.6f : n <= 6 ? 2.6f : 2.2f;
-        int perPage = rows * cols, onLeft = (n + 1) / 2;
+        int onLeft = (n + 1) / 2;
         pose.pushPose();
         pose.translate(8f / 16f, 11f / 16f, 8f / 16f);
         pose.mulPose(Axis.XP.rotationDegrees(22.5f));
         pose.translate(0f, 1.53f / 16f, 0f);
         for (int i = 0; i < n; i++) {
+            ItemStack stack = KEPT[i];
+            KEPT[i] = null;
             boolean left = i < onLeft;
             int at = left ? i : i - onLeft;
             int row = Math.min(at / cols, rows - 1), col = at % cols;
@@ -151,7 +162,7 @@ public class StockRequesterRenderer extends com.golemlogix.client.render.LegacyB
             pose.mulPose(Axis.XP.rotationDegrees(-90f));
             float s = size / 16f;
             pose.scale(s, s, 0.004f);
-            com.golemlogix.client.render.BerBuffers.item(buffers, kept.get(i), net.minecraft.world.item.ItemDisplayContext.GUI, light, pose, be.getLevel(), 0);
+            BerBuffers.item(buffers, stack, ItemDisplayContext.GUI, light, pose, be.getLevel(), 0);
             pose.popPose();
         }
         pose.popPose();
@@ -159,15 +170,17 @@ public class StockRequesterRenderer extends com.golemlogix.client.render.LegacyB
 
     /** The poppy on top of the antenna's ball (model pixels, Y down; the ball's top is y = -13): two quads crossed at 45 degrees, 8 by 8. */
     private static void cross(VertexConsumer vc, PoseStack.Pose p, int argb, int light) {
-        float cx = 0f, cz = 0f, h = 2.83f / 16f, y0 = -12.6f / 16f, y1 = -20.6f / 16f;
-        float[][] planes = {{h, h}, {h, -h}};
-        for (float[] d : planes) {
-            // one quad a plane: this render type draws both sides, a second quad on top of the first would flicker
-            vert(vc, p, cx - d[0], y1, cz - d[1], 0, 0, argb, light);
-            vert(vc, p, cx - d[0], y0, cz - d[1], 0, 1, argb, light);
-            vert(vc, p, cx + d[0], y0, cz + d[1], 1, 1, argb, light);
-            vert(vc, p, cx + d[0], y1, cz + d[1], 1, 0, argb, light);
-        }
+        float h = 2.83f / 16f, y0 = -12.6f / 16f, y1 = -20.6f / 16f;
+        // one quad a plane: this render type draws both sides, a second quad on top of the first would flicker
+        vert(vc, p, -h, y1, -h, 0f, 0f, argb, light);
+        vert(vc, p, -h, y0, -h, 0f, 1f, argb, light);
+        vert(vc, p, h, y0, h, 1f, 1f, argb, light);
+        vert(vc, p, h, y1, h, 1f, 0f, argb, light);
+
+        vert(vc, p, -h, y1, h, 0f, 0f, argb, light);
+        vert(vc, p, -h, y0, h, 0f, 1f, argb, light);
+        vert(vc, p, h, y0, -h, 1f, 1f, argb, light);
+        vert(vc, p, h, y1, -h, 1f, 0f, argb, light);
     }
 
     /**
@@ -184,10 +197,10 @@ public class StockRequesterRenderer extends com.golemlogix.client.render.LegacyB
         float w = 5.2f / 16f, z0 = -4.2f / 16f, z1 = 4.2f / 16f;
         // lit as if it lay flat all the way over: paper does not go dark while it turns
         float a = Mth.PI * turn, nx = Mth.sin(a), ny = Mth.cos(a);
-        float[][] corners = {{0, z0, 0, 0}, {0, z1, 0, 1}, {w, z1, 1, 1}, {w, z0, 1, 0}};
-        for (float[] c : corners) {
-            vc.addVertex(p, c[0], 0, c[1]).setColor(0xFFFFFFFF).setUv(c[2], c[3]).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(p, nx, ny, 0f);
-        }
+        vc.addVertex(p, 0f, 0f, z0).setColor(0xFFFFFFFF).setUv(0f, 0f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(p, nx, ny, 0f);
+        vc.addVertex(p, 0f, 0f, z1).setColor(0xFFFFFFFF).setUv(0f, 1f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(p, nx, ny, 0f);
+        vc.addVertex(p, w, 0f, z1).setColor(0xFFFFFFFF).setUv(1f, 1f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(p, nx, ny, 0f);
+        vc.addVertex(p, w, 0f, z0).setColor(0xFFFFFFFF).setUv(1f, 0f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(p, nx, ny, 0f);
         pose.popPose();
     }
 
