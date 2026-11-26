@@ -92,13 +92,8 @@ public class PatternProviderBlock extends Block implements GolemNode, EntityBloc
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock())) {
-            if (level.getBlockEntity(pos) instanceof PatternProviderBlockEntity provider) {
-                for (int i = 0; i < PatternProviderBlockEntity.SLOTS; i++) {
-                    ItemStack s = provider.getContainer().getItem(i);
-                    if (!s.isEmpty()) {
-                        Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, s.copy());
-                    }
-                }
+            if (!level.isClientSide() && level.getBlockEntity(pos) instanceof PatternProviderBlockEntity provider) {
+                Containers.dropContents(level, pos, provider.getContainer());
                 Containers.dropContents(level, pos, provider.getReturns());
                 Containers.dropContents(level, pos, provider.getUpgrades());
             }

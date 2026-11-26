@@ -15,26 +15,46 @@ import org.jetbrains.annotations.Nullable;
  */
 public class IncompleteAssemblyItem extends Item {
     private static final ResourceLocation COMPONENT = ResourceLocation.fromNamespaceAndPath("create", "sequenced_assembly");
+    private static final boolean CREATE_LOADED = net.neoforged.fml.ModList.get().isLoaded("create");
     @Nullable
-    private static java.lang.reflect.Method progressMethod;
+    private static volatile DataComponentType<?> cachedType;
+    private static volatile boolean typeLookedUp;
+    @Nullable
+    private static volatile java.lang.reflect.Method progressMethod;
+    private static volatile boolean methodFailed;
 
     public IncompleteAssemblyItem(Properties properties) {
         super(properties.stacksTo(1));
     }
 
+    @Nullable
+    private static DataComponentType<?> componentType() {
+        if (!CREATE_LOADED) {
+            return null;
+        }
+        if (!typeLookedUp) {
+            cachedType = BuiltInRegistries.DATA_COMPONENT_TYPE.get(COMPONENT);
+            typeLookedUp = true;
+        }
+        return cachedType;
+    }
+
     /** 0..1, or -1 if the stack carries no assembly progress. */
     public static float progress(ItemStack stack) {
-        DataComponentType<?> type = BuiltInRegistries.DATA_COMPONENT_TYPE.get(COMPONENT);
+        DataComponentType<?> type = componentType();
         Object value = type == null ? null : stack.get(type);
-        if (value == null) {
+        if (value == null || methodFailed) {
             return -1f;
         }
         try {
-            if (progressMethod == null || progressMethod.getDeclaringClass() != value.getClass()) {
-                progressMethod = value.getClass().getMethod("progress");
+            java.lang.reflect.Method m = progressMethod;
+            if (m == null || m.getDeclaringClass() != value.getClass()) {
+                m = value.getClass().getMethod("progress");
+                progressMethod = m;
             }
-            return ((Number) progressMethod.invoke(value)).floatValue();
+            return ((Number) m.invoke(value)).floatValue();
         } catch (ReflectiveOperationException | ClassCastException e) {
+            methodFailed = true;
             return -1f;
         }
     }

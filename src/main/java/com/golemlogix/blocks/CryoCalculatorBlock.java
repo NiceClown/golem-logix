@@ -75,7 +75,7 @@ public class CryoCalculatorBlock extends Block implements GolemNode, EntityBlock
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock())) {
-            if (level.getBlockEntity(pos) instanceof CryoCalculatorBlockEntity cpu) {
+            if (!level.isClientSide() && level.getBlockEntity(pos) instanceof CryoCalculatorBlockEntity cpu) {
                 cpu.dropContents();
             }
             super.onRemove(state, level, pos, newState, isMoving);

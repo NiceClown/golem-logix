@@ -47,7 +47,7 @@ public class FormationBusBlock extends GolemPlaneBlock {
 
     @Override
     public void onRemoved(BlockState state, Level level, BlockPos pos) {
-        if (level.getBlockEntity(pos) instanceof FormationBusBlockEntity bus) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof FormationBusBlockEntity bus) {
             bus.dropContents();
         }
     }

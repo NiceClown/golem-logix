@@ -1,6 +1,5 @@
 package com.golemlogix.items;
 
-import com.golemlogix.config.GolemConfig;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
@@ -37,8 +36,7 @@ public class TelegraphRangeCardItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("tooltip.golem_logix.telegraph_range." + tier, GolemConfig.LOCAL_WIRELESS_RANGE.get())
-                .withStyle(ChatFormatting.AQUA));
+        tooltip.add(Component.translatable("tooltip.golem_logix.telegraph_range." + tier).withStyle(ChatFormatting.AQUA));
         tooltip.add(Component.translatable("tooltip.golem_logix.telegraph_range.hint").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

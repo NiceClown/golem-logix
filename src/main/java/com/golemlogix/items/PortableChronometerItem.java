@@ -166,17 +166,20 @@ public class PortableChronometerItem extends Item {
         if (level.dimension() != bound.dimension()) {
             ModTriggers.CHRONOMETER_DIMENSION.get().trigger(sp);
         }
-        ServerLevel netLevel = sp.server.getLevel(bound.dimension());
-        if (netLevel == null || !(netLevel.isLoaded(bound.pos()) && netLevel.getBlockState(bound.pos()).getBlock() instanceof AtlasCoreBlock)) {
-            sp.displayClientMessage(Component.translatable(level.dimension() != bound.dimension()
-                    ? "message.golem_logix.chronometer.other_dimension" : "message.golem_logix.chronometer.lost")
+        int tier = getTier(stack).ordinal();
+        if (tier < 2 && level.dimension() != bound.dimension()) {
+            sp.displayClientMessage(Component.translatable("message.golem_logix.chronometer.other_dimension")
                     .withStyle(ChatFormatting.RED), true);
             return false;
         }
-        int tier = getTier(stack).ordinal();
+        ServerLevel netLevel = sp.server.getLevel(bound.dimension());
+        if (netLevel == null || !(netLevel.isLoaded(bound.pos()) && netLevel.getBlockState(bound.pos()).getBlock() instanceof AtlasCoreBlock)) {
+            sp.displayClientMessage(Component.translatable("message.golem_logix.chronometer.lost")
+                    .withStyle(ChatFormatting.RED), true);
+            return false;
+        }
         if (!inRange(tier, level, sp.position(), netLevel, bound.pos())) {
-            sp.displayClientMessage(Component.translatable(level.dimension() != bound.dimension()
-                    ? "message.golem_logix.chronometer.other_dimension" : "message.golem_logix.chronometer.out_of_range")
+            sp.displayClientMessage(Component.translatable("message.golem_logix.chronometer.out_of_range")
                     .withStyle(ChatFormatting.RED), true);
             return false;
         }
@@ -184,6 +187,12 @@ public class PortableChronometerItem extends Item {
         String err = net.accessError(null);
         if (err != null) {
             sp.displayClientMessage(Component.translatable(err), true);
+            return false;
+        }
+        if (!net.hasPermission(sp, com.golemlogix.security.SecurityPermission.INSERT)
+                && !net.hasPermission(sp, com.golemlogix.security.SecurityPermission.EXTRACT)
+                && !net.hasPermission(sp, com.golemlogix.security.SecurityPermission.CRAFT)) {
+            sp.displayClientMessage(Component.translatable("message.golem_logix.security_denied"), true);
             return false;
         }
         // power: the network's Resonator sends Source itself, otherwise the own charge is needed

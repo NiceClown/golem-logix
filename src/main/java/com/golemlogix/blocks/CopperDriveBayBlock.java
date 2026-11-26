@@ -106,7 +106,11 @@ public class CopperDriveBayBlock extends Block implements EntityBlock, GolemNode
     /** Cabinet block entity from any of its four parts. */
     @Nullable
     public static CopperDriveBayBlockEntity entityOf(Level level, BlockPos pos, BlockState state) {
-        return level.getBlockEntity(masterOf(pos, state)) instanceof CopperDriveBayBlockEntity bay ? bay : null;
+        BlockPos master = masterOf(pos, state);
+        if (!level.isLoaded(master)) {
+            return null;
+        }
+        return level.getBlockEntity(master) instanceof CopperDriveBayBlockEntity bay ? bay : null;
     }
 
     /** Places the whole cabinet (for commands, tests and generators); the main part goes to master. */
@@ -168,13 +172,14 @@ public class CopperDriveBayBlock extends Block implements EntityBlock, GolemNode
 
     @Override
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        if (!level.isClientSide() && player.isCreative()) {
-            // in creative mode the other parts are removed quietly so the item does not drop again
+        if (!level.isClientSide() && (player.isCreative() || !player.hasCorrectToolForDrops(state, level, pos))) {
+            // in creative mode or without the required pickaxe, remove the other parts quietly so the master does not drop via updateShape
+            Direction facing = state.getValue(FACING);
             BlockPos master = masterOf(pos, state);
             for (Part part : Part.values()) {
-                BlockPos other = partPos(master, state.getValue(FACING), part);
+                BlockPos other = partPos(master, facing, part);
                 BlockState otherState = level.getBlockState(other);
-                if (!other.equals(pos) && otherState.is(this)) {
+                if (!other.equals(pos) && otherState.is(this) && otherState.getValue(PART) == part && otherState.getValue(FACING) == facing) {
                     level.setBlock(other, Blocks.AIR.defaultBlockState(), 35);
                     level.levelEvent(player, 2001, other, Block.getId(otherState));
                 }
@@ -251,13 +256,8 @@ public class CopperDriveBayBlock extends Block implements EntityBlock, GolemNode
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock())) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof CopperDriveBayBlockEntity bay) {
-                for (ItemStack disk : bay.getDisks()) {
-                    if (!disk.isEmpty()) {
-                        Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, disk.copy());
-                    }
-                }
+            if (!level.isClientSide() && level.getBlockEntity(pos) instanceof CopperDriveBayBlockEntity bay) {
+                Containers.dropContents(level, pos, bay.getContainer());
             }
             super.onRemove(state, level, pos, newState, isMoving);
         }

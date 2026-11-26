@@ -28,7 +28,7 @@ public class PatternEncoderBlock extends HorizontalDirectionalBlock implements G
     /** Blank and finished punch cards drop together with the encoder (the recipe in the grid is a ghost). */
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof com.golemlogix.blockentity.PatternEncoderBlockEntity be) {
+        if (!state.is(newState.getBlock()) && !level.isClientSide() && level.getBlockEntity(pos) instanceof com.golemlogix.blockentity.PatternEncoderBlockEntity be) {
             for (int i : new int[]{PatternEncoderMenu.CARD_IN, PatternEncoderMenu.CARD_OUT}) {
                 net.minecraft.world.Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
                         be.getItems().removeItemNoUpdate(i));

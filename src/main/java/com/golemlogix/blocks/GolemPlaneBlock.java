@@ -65,7 +65,7 @@ public abstract class GolemPlaneBlock extends DirectionalBlock implements GolemN
     @Override
     protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean moving) {
         super.neighborChanged(state, level, pos, block, fromPos, moving);
-        if (level.getBlockEntity(pos) instanceof Waking w) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof Waking w) {
             w.wake();
         }
     }

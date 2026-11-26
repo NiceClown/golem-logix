@@ -128,7 +128,11 @@ public class TelegraphBlock extends Block implements EntityBlock, GolemNode {
 
     @Nullable
     public static TelegraphBlockEntity entityOf(BlockGetter level, BlockPos pos, BlockState state) {
-        return level.getBlockEntity(masterOf(pos, state)) instanceof TelegraphBlockEntity t ? t : null;
+        BlockPos master = masterOf(pos, state);
+        if (level instanceof Level l && !l.isLoaded(master)) {
+            return null;
+        }
+        return level.getBlockEntity(master) instanceof TelegraphBlockEntity t ? t : null;
     }
 
     /** Places the whole telegraph (commands, tests); the main cell goes to master. */
@@ -216,7 +220,9 @@ public class TelegraphBlock extends Block implements EntityBlock, GolemNode {
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide() && state.getValue(PART) != Part.BASE) {
             BlockPos master = masterOf(pos, state);
-            if (level.getBlockState(master).is(this)) {
+            BlockState masterState = level.getBlockState(master);
+            if (masterState.is(this) && masterState.getValue(PART) == Part.BASE
+                    && masterState.getValue(FACING) == state.getValue(FACING)) {
                 level.destroyBlock(master, !player.isCreative(), player);
             }
         }
@@ -270,7 +276,7 @@ public class TelegraphBlock extends Block implements EntityBlock, GolemNode {
 
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof TelegraphBlockEntity be) {
+        if (!state.is(newState.getBlock()) && !level.isClientSide() && level.getBlockEntity(pos) instanceof TelegraphBlockEntity be) {
             be.dropContents();
         }
         super.onRemove(state, level, pos, newState, isMoving);

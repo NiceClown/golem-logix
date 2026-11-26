@@ -152,13 +152,16 @@ public record PatternData(boolean crafting, List<ItemStack> inputs, List<ItemSta
     /** What may stand for input i, or null if only the encoded item will do (the recipe's choice needs the level's recipes). */
     @Nullable
     public Predicate<ItemStack> matcher(int i, @Nullable Level level) {
+        if (i < 0 || i >= inputs.size()) {
+            return null;
+        }
         String spec = spec(i);
         if (spec.isEmpty()) {
             return null;
         }
         Ingredient recipeChoice = null;
         if (spec.equals(Fuzzy.RECIPE)) {
-            if (level == null || !crafting) {
+            if (level == null || !crafting || i >= GRID) {
                 return null;
             }
             recipeChoice = Fuzzy.craftingSubstitutes(level, inputs).get(i);
@@ -170,9 +173,13 @@ public record PatternData(boolean crafting, List<ItemStack> inputs, List<ItemSta
     public record Need(ItemKey key, int amount, @Nullable Predicate<ItemStack> alternatives) {
     }
 
+    private record NeedKey(ItemKey key, String spec, int uniqueSlot) {
+    }
+
     /** The inputs of one execution, identical ones (same item, same fuzziness) summed, in order of appearance. */
     public List<Need> needs(@Nullable Level level) {
-        Map<String, Need> map = new LinkedHashMap<>();
+        Map<NeedKey, Need> map = new LinkedHashMap<>();
+        List<Ingredient> substitutes = null;
         for (int i = 0; i < inputs.size(); i++) {
             ItemStack s = inputs.get(i);
             if (s.isEmpty()) {
@@ -180,14 +187,30 @@ public record PatternData(boolean crafting, List<ItemStack> inputs, List<ItemSta
             }
             ItemKey key = com.golemlogix.system.Ingredients.key(s);
             int amount = com.golemlogix.system.Ingredients.amount(s);
-            Predicate<ItemStack> alt = matcher(i, level);
+            String spec = spec(i);
+            boolean isRecipe = spec.equals(Fuzzy.RECIPE);
+            Predicate<ItemStack> alt;
+            if (spec.isEmpty()) {
+                alt = null;
+            } else if (isRecipe) {
+                if (level == null || !crafting || i >= GRID) {
+                    alt = null;
+                } else {
+                    if (substitutes == null) {
+                        substitutes = Fuzzy.craftingSubstitutes(level, inputs);
+                    }
+                    alt = Fuzzy.matcher(spec, s, substitutes.get(i));
+                }
+            } else {
+                alt = Fuzzy.matcher(spec, s, null);
+            }
             // a recipe's choice differs per cell, so cells with it are not merged
-            String id = key.hashCode() + "|" + spec(i) + (spec(i).equals(Fuzzy.RECIPE) ? "|" + i : "");
+            NeedKey id = new NeedKey(key, spec, isRecipe ? i : -1);
             Need old = map.get(id);
-            if (old != null && old.key().equals(key)) {
+            if (old != null) {
                 map.put(id, new Need(key, old.amount() + amount, old.alternatives()));
             } else {
-                map.put(old == null ? id : id + "|" + i, new Need(key, amount, alt));
+                map.put(id, new Need(key, amount, alt));
             }
         }
         return new ArrayList<>(map.values());

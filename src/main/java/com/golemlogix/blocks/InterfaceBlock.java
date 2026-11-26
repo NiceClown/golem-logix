@@ -94,7 +94,7 @@ public class InterfaceBlock extends Block implements GolemNode, EntityBlock {
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock())) {
-            if (level.getBlockEntity(pos) instanceof InterfaceBlockEntity be) {
+            if (!level.isClientSide() && level.getBlockEntity(pos) instanceof InterfaceBlockEntity be) {
                 Containers.dropContents(level, pos, be.getStock());
                 Containers.dropContents(level, pos, be.getInbox());
                 Containers.dropContents(level, pos, be.getUpgrades());

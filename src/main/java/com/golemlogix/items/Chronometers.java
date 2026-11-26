@@ -55,10 +55,9 @@ public final class Chronometers {
                 out.add(s);
             }
         }
-        for (ItemStack s : player.getInventory().offhand) {
-            if (is(s)) {
-                out.add(s);
-            }
+        ItemStack offhand = player.getOffhandItem();
+        if (is(offhand)) {
+            out.add(offhand);
         }
         ItemStack worn = worn(player);
         if (!worn.isEmpty()) {

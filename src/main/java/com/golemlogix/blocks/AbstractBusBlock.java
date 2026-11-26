@@ -64,7 +64,7 @@ public abstract class AbstractBusBlock extends DirectionalBlock implements Golem
     @Override
     protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean moving) {
         super.neighborChanged(state, level, pos, block, fromPos, moving);
-        if (level.getBlockEntity(pos) instanceof BusBlockEntity bus) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof BusBlockEntity bus) {
             bus.nudge();
         }
     }
@@ -120,7 +120,7 @@ public abstract class AbstractBusBlock extends DirectionalBlock implements Golem
     /** Upgrades drop together with the bus (the filter is a ghost, nothing to drop there). */
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof BusBlockEntity bus) {
+        if (!state.is(newState.getBlock()) && !level.isClientSide() && level.getBlockEntity(pos) instanceof BusBlockEntity bus) {
             net.minecraft.world.Containers.dropContents(level, pos, bus.getUpgrades());
         }
         super.onRemove(state, level, pos, newState, isMoving);
@@ -130,6 +130,16 @@ public abstract class AbstractBusBlock extends DirectionalBlock implements Golem
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         BlockState state = this.defaultBlockState().setValue(FACING, context.getClickedFace().getOpposite());
         return BusLinks.connected(state, context.getLevel(), context.getClickedPos());
+    }
+
+    @Override
+    protected BlockState rotate(BlockState state, net.minecraft.world.level.block.Rotation rotation) {
+        return BusLinks.rotate(state, rotation);
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, net.minecraft.world.level.block.Mirror mirror) {
+        return BusLinks.mirror(state, mirror);
     }
 
     @Override

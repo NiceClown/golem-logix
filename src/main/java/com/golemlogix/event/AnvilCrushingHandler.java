@@ -81,45 +81,11 @@ public class AnvilCrushingHandler {
         Entity victim = event.getEntity();
         Level level = victim.level();
 
-        if (level.isClientSide()) {
+        if (level.isClientSide() || victim.isRemoved()) {
             return;
         }
 
-        // Comprehensive anvil detection
-        boolean isAnvil = false;
-        Entity directSource = event.getSource().getDirectEntity();
-
-        if (directSource instanceof FallingBlockEntity fallingBlock) {
-            if (fallingBlock.getBlockState().getBlock() instanceof AnvilBlock) {
-                isAnvil = true;
-            }
-        }
-
-        if (!isAnvil && (event.getSource().is(DamageTypes.FALLING_ANVIL) || event.getSource().is(DamageTypes.FALLING_BLOCK))) {
-            // Check if there is an anvil block or falling anvil nearby
-            BlockPos pos = victim.blockPosition();
-            if (level.getBlockState(pos).getBlock() instanceof AnvilBlock ||
-                level.getBlockState(pos.above()).getBlock() instanceof AnvilBlock ||
-                level.getBlockState(pos.above(2)).getBlock() instanceof AnvilBlock) {
-                isAnvil = true;
-            } else if (directSource instanceof FallingBlockEntity) {
-                isAnvil = true;
-            }
-        }
-
-        if (!isAnvil) {
-            // Check direct vicinity for falling anvil entities hitting this tick
-            AABB box = victim.getBoundingBox().inflate(1.0, 2.0, 1.0);
-            List<FallingBlockEntity> nearbyFalling = level.getEntitiesOfClass(FallingBlockEntity.class, box);
-            for (FallingBlockEntity fb : nearbyFalling) {
-                if (fb.getBlockState().getBlock() instanceof AnvilBlock) {
-                    isAnvil = true;
-                    break;
-                }
-            }
-        }
-
-        if (!isAnvil) {
+        if (!isAnvilDamage(level, victim, event.getSource())) {
             return;
         }
 
@@ -129,7 +95,7 @@ public class AnvilCrushingHandler {
         // 1. The Wither in its spawn window (in case damage did get through)
         if (victim instanceof WitherBoss wither) {
             int invulTicks = wither.getInvulnerableTicks();
-            if (invulTicks >= WITHER_SPAWN_TICKS - WITHER_WINDOW_TICKS) {
+            if (invulTicks >= WITHER_SPAWN_TICKS - WITHER_WINDOW_TICKS && invulTicks <= WITHER_SPAWN_TICKS) {
                 implodeWither(serverLevel, wither);
                 event.setNewDamage(0.0f);
                 return;
@@ -177,7 +143,7 @@ public class AnvilCrushingHandler {
                     SoundEvents.ANVIL_LAND, SoundSource.BLOCKS, 1.0f, 0.9f);
 
             notifyNearbyPlayers(serverLevel, victim.blockPosition(),
-                    Component.translatable("message.golem_logix.crush_success", rewardName.getString())
+                    Component.translatable("message.golem_logix.crush_success", rewardName)
                             .withStyle(ChatFormatting.AQUA));
             // the first plate made on an anvil opens the Dispel method to everyone who saw it
             for (Player p : serverLevel.getEntitiesOfClass(Player.class, new AABB(victim.blockPosition()).inflate(12.0))) {
@@ -189,6 +155,32 @@ public class AnvilCrushingHandler {
             victim.discard();
             event.setNewDamage(0.0f);
         }
+    }
+
+    private static boolean isAnvilDamage(Level level, Entity victim, net.minecraft.world.damagesource.DamageSource source) {
+        Entity directSource = source.getDirectEntity();
+        if (directSource instanceof FallingBlockEntity fallingBlock) {
+            return fallingBlock.getBlockState().getBlock() instanceof AnvilBlock;
+        }
+        if (source.is(DamageTypes.FALLING_ANVIL)) {
+            return true;
+        }
+        if (!source.is(DamageTypes.FALLING_BLOCK)) {
+            return false;
+        }
+        BlockPos pos = victim.blockPosition();
+        if (level.getBlockState(pos).getBlock() instanceof AnvilBlock
+                || level.getBlockState(pos.above()).getBlock() instanceof AnvilBlock
+                || level.getBlockState(pos.above(2)).getBlock() instanceof AnvilBlock) {
+            return true;
+        }
+        AABB box = victim.getBoundingBox().inflate(1.0, 2.0, 1.0);
+        for (FallingBlockEntity fb : level.getEntitiesOfClass(FallingBlockEntity.class, box)) {
+            if (fb.getBlockState().getBlock() instanceof AnvilBlock) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void notifyNearbyPlayers(ServerLevel level, BlockPos pos, Component message) {

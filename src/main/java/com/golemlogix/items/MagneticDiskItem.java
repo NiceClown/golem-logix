@@ -8,18 +8,18 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 
-import java.text.NumberFormat;
 import java.util.List;
-import java.util.Locale;
 
 public class MagneticDiskItem extends Item {
     private final int capacity;
     private final boolean isFluid;
+    private final String formattedCapacity;
 
     public MagneticDiskItem(int capacity, boolean isFluid, Properties properties) {
         super(properties.stacksTo(1));
         this.capacity = capacity;
         this.isFluid = isFluid;
+        this.formattedCapacity = isFluid ? formatWithCommas(capacity) + " mB" : formatWithCommas(capacity);
     }
 
     public int getCapacity() {
@@ -51,16 +51,28 @@ public class MagneticDiskItem extends Item {
         return Mth.hsvToRgb(0.5F * f, 0.8F, 0.95F);
     }
 
+    private static String formatWithCommas(int value) {
+        String s = Integer.toString(value);
+        int minIndex = value < 0 ? 1 : 0;
+        if (s.length() - minIndex <= 3) {
+            return s;
+        }
+        StringBuilder sb = new StringBuilder(s);
+        for (int i = sb.length() - 3; i > minIndex; i -= 3) {
+            sb.insert(i, ',');
+        }
+        return sb.toString();
+    }
+
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
-        String formattedCap = NumberFormat.getNumberInstance(Locale.US).format(capacity);
-        String formattedStored = NumberFormat.getNumberInstance(Locale.US).format(getStoredCount(stack));
+        String formattedStored = formatWithCommas(getStoredCount(stack));
 
         if (isFluid) {
-            tooltipComponents.add(Component.translatable("tooltip.golem_logix.disk.fluid_capacity", formattedStored + " mB", formattedCap + " mB")
+            tooltipComponents.add(Component.translatable("tooltip.golem_logix.disk.fluid_capacity", formattedStored + " mB", formattedCapacity)
                     .withStyle(ChatFormatting.AQUA));
         } else {
-            tooltipComponents.add(Component.translatable("tooltip.golem_logix.disk.item_capacity", formattedStored, formattedCap)
+            tooltipComponents.add(Component.translatable("tooltip.golem_logix.disk.item_capacity", formattedStored, formattedCapacity)
                     .withStyle(ChatFormatting.GOLD));
         }
 

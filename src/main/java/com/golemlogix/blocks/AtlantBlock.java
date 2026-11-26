@@ -88,11 +88,13 @@ public class AtlantBlock extends HorizontalDirectionalBlock implements AtlasPart
 
     @Override
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        if (!level.isClientSide() && player.isCreative() && state.getValue(HALF) == DoubleBlockHalf.UPPER) {
-            // in creative mode the lower half must not drop the item a second time
+        if (!level.isClientSide() && (player.isCreative() || !player.hasCorrectToolForDrops(state, level, pos))
+                && state.getValue(HALF) == DoubleBlockHalf.UPPER) {
+            // in creative mode or without the required pickaxe, remove the lower half quietly so it does not drop via updateShape
             BlockPos lower = pos.below();
             BlockState lowerState = level.getBlockState(lower);
-            if (lowerState.is(this) && lowerState.getValue(HALF) == DoubleBlockHalf.LOWER) {
+            if (lowerState.is(this) && lowerState.getValue(HALF) == DoubleBlockHalf.LOWER
+                    && lowerState.getValue(FACING) == state.getValue(FACING)) {
                 level.setBlock(lower, Blocks.AIR.defaultBlockState(), 35);
                 level.levelEvent(player, 2001, lower, Block.getId(lowerState));
             }
