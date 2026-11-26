@@ -39,12 +39,14 @@ public class IconButton extends Button {
         if (!visible) {
             return;
         }
-        Component t = tip.get();
-        if (!t.equals(lastTip)) {
-            lastTip = t;
-            setTooltip(Tooltip.create(t));
-        }
         boolean hover = isHoveredOrFocused();
+        if (hover) {
+            Component t = tip.get();
+            if (!t.equals(lastTip)) {
+                lastTip = t;
+                setTooltip(Tooltip.create(t));
+            }
+        }
         g.fill(getX(), getY(), getX() + width, getY() + height, GolemGui.WOOD_DARK);
         g.fill(getX() + 1, getY() + 1, getX() + width - 1, getY() + height - 1, hover ? GolemGui.CYAN : GolemGui.BRASS);
         g.fill(getX() + 2, getY() + 2, getX() + width - 2, getY() + height - 2, lit.getAsBoolean() ? 0xFF1B4A48 : GolemGui.WOOD);

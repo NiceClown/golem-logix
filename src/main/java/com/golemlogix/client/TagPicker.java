@@ -22,16 +22,32 @@ import java.util.Objects;
  */
 final class TagPicker {
     static final int ROW = 12, VISIBLE = 6;
+    private static final Component HEADER = Component.translatable("gui.golem_logix.bus.tag");
+    private static final Component TAG_ANY = Component.translatable("gui.golem_logix.bus.tag_any");
+    private static final Component TAG_ANY_HINT = Component.translatable("gui.golem_logix.bus.tag_any.hint");
 
     private final GolemMenu menu;
     private final int slot;
     private final List<TagKey<Item>> tags;
+    private final Component[] tagNames;
+    private final int[] tagSizes;
+    private final String[] tagSizeLabels;
     private int x, y, w, scroll;
 
     TagPicker(GolemMenu menu, int slot, ItemStack ghost) {
         this.menu = menu;
         this.slot = slot;
         this.tags = Fuzzy.tagsOf(ghost);
+        int n = this.tags.size();
+        this.tagNames = new Component[n];
+        this.tagSizes = new int[n];
+        this.tagSizeLabels = new String[n];
+        for (int i = 0; i < n; i++) {
+            TagKey<Item> t = this.tags.get(i);
+            this.tagNames[i] = tagName(t);
+            this.tagSizes[i] = Fuzzy.tagSize(t);
+            this.tagSizeLabels[i] = Integer.toString(this.tagSizes[i]);
+        }
     }
 
     int rows() {
@@ -60,7 +76,8 @@ final class TagPicker {
         if (mx < x || mx >= x + w || my < listY() || my >= listY() + rows() * ROW) {
             return -1;
         }
-        return scroll + (int) ((my - listY()) / ROW);
+        int idx = scroll + (int) ((my - listY()) / ROW);
+        return idx >= 0 && idx < tags.size() + 1 ? idx : -1;
     }
 
     /** A tag's name: its translation where a mod gives one (c:glass_blocks: "Glass Blocks"), otherwise its id. */
@@ -74,7 +91,7 @@ final class TagPicker {
     }
 
     void extract(GuiGraphicsExtractor g, Font font, ItemStack ghost, int mouseX, int mouseY) {
-        g.text(font, Component.translatable("gui.golem_logix.bus.tag"), x, y, GolemGui.PARCHMENT, false);
+        g.text(font, HEADER, x, y, GolemGui.PARCHMENT, false);
         TagKey<Item> cur = Fuzzy.tag(ghost);
         int hover = choiceAt(mouseX, mouseY);
         for (int r = 0; r < rows(); r++) {
@@ -86,10 +103,10 @@ final class TagPicker {
             } else if (k == hover) {
                 g.fill(x, ry, x + w, ry + ROW, 0x30FFFFFF);
             }
-            Component name = t == null ? Component.translatable("gui.golem_logix.bus.tag_any") : tagName(t);
-            String n = t == null ? "" : Integer.toString(Fuzzy.tagSize(t));
+            Component name = k == 0 ? TAG_ANY : tagNames[k - 1];
+            String n = k == 0 ? "" : tagSizeLabels[k - 1];
             int nw = font.width(n);
-            g.text(font, net.minecraft.locale.Language.getInstance().getVisualOrder(font.substrByWidth(name, w - 10 - nw)), x + 3, ry + 2,
+            g.text(font, net.minecraft.locale.Language.getInstance().getVisualOrder(font.substrByWidth(name, Math.max(0, w - 10 - nw))), x + 3, ry + 2,
                     chosen ? GolemGui.CYAN : GolemGui.PARCHMENT, false);
             g.text(font, n, x + w - 3 - nw, ry + 2, 0xFF8A7A66, false);
         }
@@ -101,11 +118,12 @@ final class TagPicker {
             g.fill(x + w - 1, barY, x + w, barY + barH, 0xFFA89880);
         }
         if (hover >= 1) {
-            TagKey<Item> t = tags.get(hover - 1);
-            g.setComponentTooltipForNextFrame(font, List.of(tagName(t), Component.literal("#" + t.location()).withStyle(ChatFormatting.DARK_GRAY),
-                    Component.translatable("gui.golem_logix.bus.tag_items", Fuzzy.tagSize(t)).withStyle(ChatFormatting.GRAY)), mouseX, mouseY);
+            int ti = hover - 1;
+            TagKey<Item> t = tags.get(ti);
+            g.setComponentTooltipForNextFrame(font, List.of(tagNames[ti], Component.literal("#" + t.location()).withStyle(ChatFormatting.DARK_GRAY),
+                    Component.translatable("gui.golem_logix.bus.tag_items", tagSizes[ti]).withStyle(ChatFormatting.GRAY)), mouseX, mouseY);
         } else if (hover == 0) {
-            g.setTooltipForNextFrame(font, Component.translatable("gui.golem_logix.bus.tag_any.hint"), mouseX, mouseY);
+            g.setTooltipForNextFrame(font, TAG_ANY_HINT, mouseX, mouseY);
         }
     }
 

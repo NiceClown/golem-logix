@@ -9,7 +9,6 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * Client: left-click with the Forge Hammer on the anvil is a strike, not breaking. While the button is held the event comes every tick:
@@ -20,6 +19,10 @@ public final class HammerClientEvents {
     private static long lastStrike = -1000;
 
     private HammerClientEvents() {
+    }
+
+    static void reset() {
+        lastStrike = -1000;
     }
 
     @SubscribeEvent

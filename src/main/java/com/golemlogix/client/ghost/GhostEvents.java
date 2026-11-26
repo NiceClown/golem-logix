@@ -2,10 +2,11 @@ package com.golemlogix.client.ghost;
 
 import com.golemlogix.GolemLogixMod;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
@@ -90,7 +91,7 @@ public class GhostEvents {
         if (mc.level == null || GhostProjection.anchor() == null) {
             return;
         }
-        List<GhostProjection.GhostCell> cells = GhostProjection.missing(mc.level);
+        List<GhostProjection.GhostCell> cells = GhostProjection.cachedMissing(mc.level);
         if (cells.isEmpty()) {
             return;
         }
@@ -98,19 +99,29 @@ public class GhostEvents {
         Vec3 cam = event.getLevelRenderState().cameraRenderState.pos;
         MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
         float pulse = 0.5f + 0.12f * (float) Math.sin((mc.level.getGameTime() + mc.getDeltaTracker().getGameTimeDeltaPartialTick(false)) * 0.12);
+        VertexConsumer base = buffers.getBuffer(Sheets.translucentBlockSheet());
+        GhostVertexConsumer normalGhost = null;
+        GhostVertexConsumer wrongGhost = null;
 
         for (GhostProjection.GhostCell cell : cells) {
             // the expected block is cold teal, a foreign block in the way is red
-            float alpha = cell.wrong() ? 0.6f : pulse;
-            float r = cell.wrong() ? 1.6f : 0.75f;
-            float g = cell.wrong() ? 0.45f : 1.15f;
-            float b = cell.wrong() ? 0.45f : 1.25f;
-            var ghost = new GhostVertexConsumer(buffers.getBuffer(net.minecraft.client.renderer.Sheets.translucentBlockSheet()), alpha, r, g, b);
+            GhostVertexConsumer ghost;
+            if (cell.wrong()) {
+                if (wrongGhost == null) {
+                    wrongGhost = new GhostVertexConsumer(base, 0.6f, 1.6f, 0.45f, 0.45f);
+                }
+                ghost = wrongGhost;
+            } else {
+                if (normalGhost == null) {
+                    normalGhost = new GhostVertexConsumer(base, pulse, 0.75f, 1.15f, 1.25f);
+                }
+                ghost = normalGhost;
+            }
             pose.pushPose();
             pose.translate(cell.pos().getX() - cam.x, cell.pos().getY() - cam.y, cell.pos().getZ() - cam.z);
             com.golemlogix.client.render.BlockQuads.draw(pose.last(), ghost, cell.state(), 0xF000F0, OverlayTexture.NO_OVERLAY);
             pose.popPose();
         }
-        buffers.endBatch(net.minecraft.client.renderer.Sheets.translucentBlockSheet());
+        buffers.endBatch(Sheets.translucentBlockSheet());
     }
 }

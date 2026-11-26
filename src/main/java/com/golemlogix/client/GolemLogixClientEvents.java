@@ -1,11 +1,19 @@
 package com.golemlogix.client;
 
 import com.golemlogix.GolemLogixMod;
+import com.golemlogix.client.book.BookModel;
+import com.golemlogix.client.ghost.GhostProjection;
 import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.init.ModMenus;
+import com.golemlogix.system.StaleLight;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.client.event.ClientResourceLoadFinishedEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
@@ -16,16 +24,25 @@ import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 @EventBusSubscriber(modid = GolemLogixMod.MOD_ID, value = Dist.CLIENT)
 public class GolemLogixClientEvents {
     @SubscribeEvent
-    public static void onClientTick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event) {
-        net.minecraft.client.multiplayer.ClientLevel level = net.minecraft.client.Minecraft.getInstance().level;
+    public static void onClientTick(ClientTickEvent.Post event) {
+        ClientLevel level = Minecraft.getInstance().level;
         if (level != null) {
-            com.golemlogix.system.StaleLight.clientTick(level);
+            StaleLight.clientTick(level);
         }
     }
 
     @SubscribeEvent
-    public static void onClientLogout(net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent.LoggingOut event) {
-        com.golemlogix.system.StaleLight.forgetClient();
+    public static void onClientLogout(ClientPlayerNetworkEvent.LoggingOut event) {
+        StaleLight.forgetClient();
+        GhostProjection.clear();
+        HammerClientEvents.reset();
+        PipeRunners.clear();
+        BookModel.invalidate();
+    }
+
+    @SubscribeEvent
+    public static void onResourceReload(ClientResourceLoadFinishedEvent event) {
+        BookModel.invalidate();
     }
 
 
@@ -93,7 +110,7 @@ public class GolemLogixClientEvents {
 
     /** The runes of the mod's blocks glow (see GlowModels). */
     @SubscribeEvent
-    public static void wrapModels(net.neoforged.neoforge.client.event.ModelEvent.ModifyBakingResult event) {
+    public static void wrapModels(ModelEvent.ModifyBakingResult event) {
         GlowModels.wrap(event.getBakingResult(), event.getTextureGetter());
     }
 

@@ -19,6 +19,8 @@ import java.util.List;
  */
 public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
     private static final int BOX = 8;
+    private static final int[] ROW_Y = {InterfaceMenu.CONFIG_Y, InterfaceMenu.STOCK_Y, InterfaceMenu.INBOX_Y};
+    private static final String[] GEAR_ROWS = {"X.XX.X", ".XXXX.", "XX..XX", "XX..XX", ".XXXX.", "X.XX.X"};
 
     public InterfaceScreen(InterfaceMenu menu, Inventory inv, Component title) {
         super(menu, inv, title, InterfaceMenu.IMAGE_WIDTH, InterfaceMenu.IMAGE_HEIGHT);
@@ -122,7 +124,7 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
 
     @Override
     protected void renderExtraBg(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
-        for (int y : new int[]{InterfaceMenu.CONFIG_Y, InterfaceMenu.STOCK_Y, InterfaceMenu.INBOX_Y}) {
+        for (int y : ROW_Y) {
             GolemGui.inset(g, leftPos + 6, topPos + y - 2, 164, 20);
         }
         int ty = topPos + InterfaceMenu.TOGGLE_Y;
@@ -158,10 +160,10 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
 
     /** A 6x6 gear: teeth at the corners and sides, a hole in the middle. */
     private static void gear(GuiGraphicsExtractor g, int x, int y, int color) {
-        String[] rows = {"X.XX.X", ".XXXX.", "XX..XX", "XX..XX", ".XXXX.", "X.XX.X"};
-        for (int r = 0; r < rows.length; r++) {
-            for (int c = 0; c < rows[r].length(); c++) {
-                if (rows[r].charAt(c) == 'X') {
+        for (int r = 0; r < GEAR_ROWS.length; r++) {
+            String row = GEAR_ROWS[r];
+            for (int c = 0; c < row.length(); c++) {
+                if (row.charAt(c) == 'X') {
                     g.fill(x + c, y + r, x + c + 1, y + r + 1, color);
                 }
             }
@@ -179,7 +181,7 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
             int x = leftPos + 8 + i * 18, y = topPos + InterfaceMenu.STOCK_Y;
             int amount = menu.fluidAmount(i);
             if (amount > 0 && !FluidIcons.drawGhost(g, font, icon, x, y, false)) {
-                g.item(icon.copyWithCount(1), x, y);
+                g.item(icon.getCount() == 1 ? icon : icon.copyWithCount(1), x, y);
             }
             String text = amount >= 1000 ? InterfaceSlotScreen.bucketText(amount) : amount + "";
             small(g, text, x, y, amount > 0 ? 0xFF96F2EE : 0xFF6A7480);
@@ -195,7 +197,6 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
     /** Small label in the bottom right corner of a slot (over the item). */
     private void small(GuiGraphicsExtractor g, String text, int x, int y, int color) {
         g.pose().pushMatrix();
-        g.pose().translate(0, 0);
         g.pose().scale(0.5f, 0.5f);
         g.text(font, text, (x + 17) * 2 - font.width(text), (y + 12) * 2, color, true);
         g.pose().popMatrix();
@@ -217,10 +218,7 @@ public class InterfaceScreen extends GolemScreen<InterfaceMenu> {
                 small(g, n >= 1000 ? InterfaceSlotScreen.bucketText(n) : n + "", x, y, 0xFF96F2EE);
             } else if (n > 1) {
                 String s = Integer.toString(n);
-                g.pose().pushMatrix();
-                g.pose().translate(0, 0);
                 g.text(font, s, x + 17 - font.width(s), y + 9, 0xFFFFFFFF, true);
-                g.pose().popMatrix();
             }
         }
     }

@@ -11,6 +11,14 @@ import net.minecraft.world.item.Items;
 
 /** Annihilation Bus: the filter grid, the tool slot beside it, the click settings in the column on the left. */
 public class AnnihilationBusScreen extends GolemScreen<AnnihilationBusMenu> {
+    private static final ItemStack ICON_LEVER = new ItemStack(Items.LEVER);
+    private static final ItemStack ICON_SWORD = new ItemStack(Items.IRON_SWORD);
+    private static final ItemStack ICON_PICKAXE = new ItemStack(Items.IRON_PICKAXE);
+    private static final ItemStack ICON_BOOTS = new ItemStack(Items.LEATHER_BOOTS);
+    private static final ItemStack ICON_BARRIER = new ItemStack(Items.BARRIER);
+    private static final ItemStack ICON_PAPER = new ItemStack(Items.PAPER);
+    private static final ItemStack ICON_WHEAT = new ItemStack(Items.WHEAT);
+
     public AnnihilationBusScreen(AnnihilationBusMenu menu, Inventory inv, Component title) {
         super(menu, inv, title, AnnihilationBusMenu.IMAGE_WIDTH, AnnihilationBusMenu.IMAGE_HEIGHT);
     }
@@ -19,16 +27,16 @@ public class AnnihilationBusScreen extends GolemScreen<AnnihilationBusMenu> {
     protected void init() {
         super.init();
         addRedstoneButton(menu::redstoneMode);
-        setting(() -> new ItemStack(switch (menu.mode()) {
-                    case AnnihilationBusBlockEntity.RIGHT -> Items.LEVER;
-                    case AnnihilationBusBlockEntity.ATTACK -> Items.IRON_SWORD;
-                    default -> Items.IRON_PICKAXE;
-                }), "click", () -> mode(), () -> true, AnnihilationBusMenu.BUTTON_CLICK);
-        setting(() -> new ItemStack(Items.LEATHER_BOOTS), "sneak", () -> menu.sneak() ? "on" : "off", menu::sneak,
+        setting(() -> switch (menu.mode()) {
+                    case AnnihilationBusBlockEntity.RIGHT -> ICON_LEVER;
+                    case AnnihilationBusBlockEntity.ATTACK -> ICON_SWORD;
+                    default -> ICON_PICKAXE;
+                }, "click", this::mode, () -> true, AnnihilationBusMenu.BUTTON_CLICK);
+        setting(() -> ICON_BOOTS, "sneak", () -> menu.sneak() ? "on" : "off", menu::sneak,
                 AnnihilationBusMenu.BUTTON_SNEAK);
-        setting(() -> new ItemStack(menu.denyList() ? Items.BARRIER : Items.PAPER), "list", () -> menu.denyList() ? "deny" : "allow",
+        setting(() -> menu.denyList() ? ICON_BARRIER : ICON_PAPER, "list", () -> menu.denyList() ? "deny" : "allow",
                 menu::denyList, AnnihilationBusMenu.BUTTON_LIST);
-        setting(() -> new ItemStack(Items.WHEAT), "grown", () -> menu.grownOnly() ? "on" : "off", menu::grownOnly,
+        setting(() -> ICON_WHEAT, "grown", () -> menu.grownOnly() ? "on" : "off", menu::grownOnly,
                 AnnihilationBusMenu.BUTTON_GROWN);
     }
 
@@ -70,7 +78,7 @@ public class AnnihilationBusScreen extends GolemScreen<AnnihilationBusMenu> {
     protected void renderOverlay(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
         if (!menu.getSlot(AnnihilationBusMenu.TOOL_SLOT_INDEX).hasItem()) {
             int x = leftPos + AnnihilationBusMenu.TOOL_X, y = topPos + AnnihilationBusMenu.TOOL_Y;
-            g.item(new ItemStack(menu.mode() == AnnihilationBusBlockEntity.ATTACK ? Items.IRON_SWORD : Items.IRON_PICKAXE), x, y);
+            g.item(menu.mode() == AnnihilationBusBlockEntity.ATTACK ? ICON_SWORD : ICON_PICKAXE, x, y);
             g.fill(x, y, x + 16, y + 16, 0xA8241A12);
         }
     }
