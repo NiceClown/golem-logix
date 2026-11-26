@@ -39,10 +39,7 @@ public class MainframeScreen extends GolemScreen<MainframeMenu> {
             if (!s.hasItem()) {
                 int x = leftPos + s.x, y = topPos + s.y;
                 g.item(CALC, x, y);
-                g.pose().pushMatrix();
-                g.pose().translate(0, 0);
                 g.fill(x, y, x + 16, y + 16, 0xA8241A12);
-                g.pose().popMatrix();
             }
         }
     }

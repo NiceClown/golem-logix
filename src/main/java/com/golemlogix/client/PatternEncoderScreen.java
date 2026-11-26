@@ -16,22 +16,21 @@ public class PatternEncoderScreen extends GolemScreen<PatternEncoderMenu> {
         addRenderableWidget(new GolemButton(leftPos + 28, topPos + 70, 58, 13,
                 () -> Component.translatable(menu.isCraftingMode() ? "gui.golem_logix.encoder.mode_crafting" : "gui.golem_logix.encoder.mode_processing"),
                 () -> Component.translatable("gui.golem_logix.encoder.mode_tooltip"), () -> false,
-                b -> minecraft.gameMode.handleInventoryButtonClick(menu.containerId, PatternEncoderMenu.BUTTON_TOGGLE)));
+                b -> menuButton(PatternEncoderMenu.BUTTON_TOGGLE)));
         // fuzzy mode: lit while on
         addRenderableWidget(new GolemButton(leftPos + 88, topPos + 70, 26, 13,
                 () -> Component.literal("≈"),
                 () -> Component.translatable("gui.golem_logix.encoder.fuzzy_tooltip"), menu::isFuzzy,
-                b -> minecraft.gameMode.handleInventoryButtonClick(menu.containerId, PatternEncoderMenu.BUTTON_FUZZY)));
+                b -> menuButton(PatternEncoderMenu.BUTTON_FUZZY)));
         addRenderableWidget(new GolemButton(leftPos + 88, topPos + 84, 26, 18,
                 Component.translatable("gui.golem_logix.encoder.encode"),
-                b -> minecraft.gameMode.handleInventoryButtonClick(menu.containerId, PatternEncoderMenu.BUTTON_ENCODE)));
+                b -> menuButton(PatternEncoderMenu.BUTTON_ENCODE)));
         addRenderableWidget(new GolemButton(leftPos + 30, topPos + 106, 40, 12,
                 Component.translatable("gui.golem_logix.encoder.clear"),
-                b -> minecraft.gameMode.handleInventoryButtonClick(menu.containerId, PatternEncoderMenu.BUTTON_CLEAR)));
+                b -> menuButton(PatternEncoderMenu.BUTTON_CLEAR)));
         addRenderableWidget(new GolemButton(leftPos + 74, topPos + 106, 40, 12,
                 Component.translatable("gui.golem_logix.encoder.load"),
-                b -> minecraft.gameMode.handleInventoryButtonClick(menu.containerId, PatternEncoderMenu.BUTTON_LOAD)));
-        inventoryLabelY = imageHeight - 94;
+                b -> menuButton(PatternEncoderMenu.BUTTON_LOAD)));
     }
 
     @Override
@@ -45,10 +44,10 @@ public class PatternEncoderScreen extends GolemScreen<PatternEncoderMenu> {
         }
     }
 
-    /** A middle-click on a pattern cell (nine inputs, three outputs) opens its window: how many items or mB, its tag. */
+    /** A middle-click on a processing pattern cell (nine inputs, three outputs) opens its window: count or mB, and tag. */
     @Override
     protected int filterSlots() {
-        return PatternEncoderMenu.OUT_START + 3;
+        return menu.isCraftingMode() ? -1 : PatternEncoderMenu.OUT_START + 3;
     }
 
     @Override

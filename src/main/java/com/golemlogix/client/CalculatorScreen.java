@@ -1,6 +1,8 @@
 package com.golemlogix.client;
 
 import com.golemlogix.crafting.CraftingJob;
+import com.golemlogix.init.ModBlocks;
+import com.golemlogix.init.ModItems;
 import com.golemlogix.menu.CalculatorMenu;
 import com.golemlogix.network.CalculatorStatusPayload;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -8,27 +10,37 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.Locale;
+
 public class CalculatorScreen extends GolemScreen<CalculatorMenu> {
+    private static final ItemStack ICON_COPROCESSOR = new ItemStack(ModBlocks.COOLING_COPROCESSOR.get());
+    private static final ItemStack ICON_COMPRESSED = new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get());
+
     public CalculatorScreen(CalculatorMenu menu, Inventory inv, Component title) {
         super(menu, inv, title, CalculatorMenu.IMAGE_WIDTH, CalculatorMenu.IMAGE_HEIGHT);
     }
 
     private GolemButton cancel;
 
+    private boolean canCancel() {
+        return menu.clientStatus != null && menu.clientStatus.state() >= 0 && !menu.clientStatus.helping();
+    }
+
     @Override
     protected void init() {
         super.init();
         cancel = addRenderableWidget(new GolemButton(leftPos + 58, topPos + 112, 60, 14,
                 Component.translatable("gui.golem_logix.calc.cancel"),
-                b -> minecraft.gameMode.handleInventoryButtonClick(menu.containerId, 0)));
+                b -> menuButton(0)));
+        cancel.visible = canCancel();
         addRedstoneButton(menu::redstoneMode);
     }
 
     @Override
     protected void containerTick() {
         super.containerTick();
-        // "Abort" only when there is something to abort
-        cancel.visible = menu.clientStatus != null && menu.clientStatus.state() >= 0;
+        // "Abort" only when this calculator owns an active job (not idle or lending steps)
+        cancel.visible = canCancel();
     }
 
     /** A 10x10 item icon with a number to the right; returns x after the label. */
@@ -92,7 +104,7 @@ public class CalculatorScreen extends GolemScreen<CalculatorMenu> {
             if (s.helping()) {
                 g.text(font, font.plainSubstrByWidth(Component.translatable("gui.golem_logix.calc.helping").getString(), 148), x, y + 16, GolemGui.CYAN, false);
             } else {
-                g.text(font, Component.translatable("gui.golem_logix.calc.status." + st.name().toLowerCase()), x, y + 16, statusColor(st), false);
+                g.text(font, Component.translatable("gui.golem_logix.calc.status." + st.name().toLowerCase(Locale.ROOT)), x, y + 16, statusColor(st), false);
             }
             double frac = s.total() <= 0 ? 0 : (double) s.done() / s.total();
             GolemGui.bar(g, x, y + 28, 148, 10, frac, GolemGui.CYAN_DARK);
@@ -108,8 +120,8 @@ public class CalculatorScreen extends GolemScreen<CalculatorMenu> {
                 / com.golemlogix.blockentity.CryoCalculatorBlockEntity.WORKERS_PER_COMPRESSED);
         int color = s.online() ? GolemGui.PARCHMENT : GolemGui.RED;
         int px = leftPos + 10, py = topPos + 100;
-        px = smallIcon(g, new ItemStack(com.golemlogix.init.ModBlocks.COOLING_COPROCESSOR.get()), px, py, "" + s.coprocessors(), color);
-        smallIcon(g, new ItemStack(com.golemlogix.init.ModItems.COMPRESSED_COPROCESSOR.get()), px + 6, py, "" + compressed, color);
+        px = smallIcon(g, ICON_COPROCESSOR, px, py, "" + s.coprocessors(), color);
+        smallIcon(g, ICON_COMPRESSED, px + 6, py, "" + compressed, color);
         Component steps = Component.translatable("gui.golem_logix.calc.steps", s.workers());
         g.text(font, steps, leftPos + 166 - font.width(steps), py + 1, color, false);
 

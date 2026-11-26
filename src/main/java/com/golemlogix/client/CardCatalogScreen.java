@@ -11,7 +11,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.PacketDistributor;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
@@ -107,10 +106,7 @@ public class CardCatalogScreen extends GolemScreen<CardCatalogMenu> {
         if (!p.hasItem()) {
             int x = leftPos + p.x, y = topPos + p.y;
             g.item(PROVIDER, x, y);
-            g.pose().pushMatrix();
-            g.pose().translate(0, 0);
             g.fill(x, y, x + 16, y + 16, 0xA8241A12);
-            g.pose().popMatrix();
         }
     }
 

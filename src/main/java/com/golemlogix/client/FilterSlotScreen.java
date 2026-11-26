@@ -31,10 +31,10 @@ public class FilterSlotScreen extends Screen {
     private EditBox amount;
     private int left, top, h;
     private boolean fluid;
+    private boolean initialized;
+    private int syncedAmount;
     /** The fuzzy tag list (with a Fuzzy Card), kept over a resize so its scroll stays. */
     private TagPicker picker;
-    /** After the item/fluid switch the window is rebuilt (the steps differ) once the server has answered. */
-    private int reopenIn = -1;
 
     public FilterSlotScreen(Screen parent, GolemMenu menu, int slot, boolean keep) {
         super(Component.translatable("gui.golem_logix.bus.slot_title", slot + 1));
@@ -53,6 +53,21 @@ public class FilterSlotScreen extends Screen {
 
     private ItemStack filter() {
         return menu.getSlot(slot).getItem();
+    }
+
+    /** Export/import buses treat filled fluid containers as fluid filters; other menus use FluidGhostItem exclusively. */
+    private boolean isFluid(ItemStack f) {
+        return FluidGhostItem.is(f) || (menu instanceof BusMenu && !com.golemlogix.system.Transfers.fluidOf(f).isEmpty());
+    }
+
+    private int currentAmount(ItemStack f) {
+        if (count) {
+            return FluidGhostItem.is(f) ? FluidGhostItem.amount(f) : f.getCount();
+        }
+        if (menu instanceof com.golemlogix.menu.StockManometerMenu mano) {
+            return mano.getThreshold();
+        }
+        return BusMenu.keep(f);
     }
 
     private boolean fuzzy() {
@@ -74,20 +89,27 @@ public class FilterSlotScreen extends Screen {
             picker.place(left + 8, top + tagY(), W - 16);
         }
         ItemStack f = filter();
-        fluid = FluidGhostItem.is(f) || !com.golemlogix.system.Transfers.fluidOf(f).isEmpty();
+        boolean nextFluid = isFluid(f);
+        boolean modeChanged = initialized && nextFluid != fluid;
+        fluid = nextFluid;
+        initialized = true;
         if (keep) {
+            int serverAmount = currentAmount(f);
+            String initial = amount != null && !modeChanged ? amount.getValue() : Integer.toString(serverAmount);
+            syncedAmount = serverAmount;
             amount = new EditBox(font, left + 62, top + 50, 58, 12, Component.empty());
             amount.setBordered(false);
             amount.setMaxLength(8);
             amount.setFilter(s -> s.isEmpty() || s.matches("\\d{1,7}[bBвВ]?"));
             amount.setTextColor(GolemGui.PARCHMENT);
-            amount.setValue(Integer.toString(count ? (FluidGhostItem.is(f) ? FluidGhostItem.amount(f) : f.getCount()) : BusMenu.keep(f)));
+            amount.setValue(initial);
             addRenderableWidget(amount);
             setInitialFocus(amount);
             int[] deltas = fluid ? new int[]{-10_000, -1000, -100, 100, 1000, 10_000} : new int[]{-64, -10, -1, 1, 10, 64};
             for (int k = 0; k < deltas.length; k++) {
                 int d = deltas[k];
-                addRenderableWidget(new GolemButton(left + 8 + k * 27, top + 70, 25, 14, Component.literal(deltaLabel(d)), b -> set(value() + d)));
+                addRenderableWidget(new GolemButton(left + 8 + k * 27, top + 70, 25, 14, Component.literal(deltaLabel(d)),
+                        b -> set((int) Math.max(0L, Math.min(Integer.MAX_VALUE, (long) value() + d)))));
             }
             int stack = Math.max(1, f.getMaxStackSize());
             int[] presets = count ? (fluid ? new int[]{100, 250, 1000, 4000, 16_000} : new int[]{1, 2, 4, 8, 16, 64})
@@ -104,10 +126,9 @@ public class FilterSlotScreen extends Screen {
             // keep the filled containers themselves or the fluid in them (in mB), as the Interface's mode button does
             addRenderableWidget(new GolemButton(left + 8, top + h - 22, 70, 16,
                     () -> Component.translatable(FluidGhostItem.is(filter()) ? "gui.golem_logix.interface.mode_fluid" : "gui.golem_logix.interface.mode_item"),
-                    () -> Component.translatable("gui.golem_logix.interface.toggle_mode"), () -> false, b -> {
-                ClientPacketDistributor.sendToServer(new FilterSlotPayload(menu.containerId, slot, com.golemlogix.menu.StockRequesterMenu.TOGGLE_FLUID));
-                reopenIn = 3;
-            }));
+                    () -> Component.translatable("gui.golem_logix.interface.toggle_mode"), () -> false, b ->
+                ClientPacketDistributor.sendToServer(new FilterSlotPayload(menu.containerId, slot, com.golemlogix.menu.StockRequesterMenu.TOGGLE_FLUID))
+            ));
         }
         addRenderableWidget(new GolemButton(left + 80, top + h - 22, 42, 16, Component.translatable("gui.golem_logix.interface.clear"), b -> {
             ClientPacketDistributor.sendToServer(new FilterSlotPayload(menu.containerId, slot, -1));
@@ -153,13 +174,23 @@ public class FilterSlotScreen extends Screen {
     @Override
     public void tick() {
         super.tick();
-        if (filter().isEmpty()) {
+        ItemStack f = filter();
+        if (f.isEmpty()) {
             onClose();
             return;
         }
-        if (reopenIn > 0 && --reopenIn == 0) {
-            reopenIn = -1;
+        if (isFluid(f) != fluid) {
             rebuildWidgets();
+            return;
+        }
+        if (keep && amount != null) {
+            int now = currentAmount(f);
+            if (now != syncedAmount) {
+                if (amount.getValue().equals(Integer.toString(syncedAmount))) {
+                    amount.setValue(Integer.toString(now));
+                }
+                syncedAmount = now;
+            }
         }
     }
 
@@ -198,11 +229,13 @@ public class FilterSlotScreen extends Screen {
         super.extractRenderState(g, mouseX, mouseY, partialTick);
         g.text(font, title, left + 8, top + 7, GolemGui.PARCHMENT, false);
         ItemStack cfg = filter();
+        ItemStack plain = Fuzzy.plain(cfg);
         if (!FluidIcons.drawGhost(g, font, cfg, left + 9, top + 21, false)) {
-            g.item(Fuzzy.plain(cfg).copyWithCount(1), left + 9, top + 21);
+            g.item(plain.getCount() == 1 ? plain : plain.copyWithCount(1), left + 9, top + 21);
         }
-        g.text(font, Fuzzy.plain(cfg).getHoverName(), left + 30, top + 20, GolemGui.CYAN, false);
-        g.text(font, net.minecraft.locale.Language.getInstance().getVisualOrder(font.substrByWidth(Component.translatable(count
+        var lang = net.minecraft.locale.Language.getInstance();
+        g.text(font, lang.getVisualOrder(font.substrByWidth(plain.getHoverName(), W - 38)), left + 30, top + 20, GolemGui.CYAN, false);
+        g.text(font, lang.getVisualOrder(font.substrByWidth(Component.translatable(count
                 ? "gui.golem_logix.encoder.count_what" : keep ? "gui.golem_logix.bus.keep_what" : "gui.golem_logix.bus.slot_what"), W - 38)),
                 left + 30, top + 30, 0xFFA89880, false);
         if (keep) {

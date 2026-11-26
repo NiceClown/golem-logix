@@ -9,6 +9,11 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 public class PatternProviderScreen extends GolemScreen<PatternProviderMenu> {
+    private static final ItemStack ICON_CLOCK = new ItemStack(Items.CLOCK);
+    private static final ItemStack ICON_HOPPER = new ItemStack(Items.HOPPER);
+    private static final ItemStack ICON_SUNFLOWER = new ItemStack(Items.SUNFLOWER);
+    private static final ItemStack ICON_ARROW = new ItemStack(Items.SPECTRAL_ARROW);
+
     public PatternProviderScreen(PatternProviderMenu menu, Inventory inv, Component title) {
         super(menu, inv, title, PatternProviderMenu.IMAGE_WIDTH, PatternProviderMenu.IMAGE_HEIGHT);
     }
@@ -17,13 +22,13 @@ public class PatternProviderScreen extends GolemScreen<PatternProviderMenu> {
     protected void init() {
         super.init();
         // wait-for-result mode: a clock means it waits, a hopper means it loads without stopping
-        addSideButton(() -> new ItemStack(menu.isBlocking() ? Items.CLOCK : Items.HOPPER),
+        addSideButton(() -> menu.isBlocking() ? ICON_CLOCK : ICON_HOPPER,
                 () -> Component.translatable(menu.isBlocking() ? "gui.golem_logix.provider.blocking_on" : "gui.golem_logix.provider.blocking_off")
                         .append("\n").append(Component.translatable("gui.golem_logix.provider.blocking_hint").withStyle(ChatFormatting.GRAY)),
                 () -> true, menu::isBlocking, PatternProviderMenu.BUTTON_BLOCKING);
         // feeding side: a sunflower means all sides, an arrow means one (the arrows on the block faces show it too);
         // the button goes above the redstone one: that one is visible only with the module and must not leave a hole
-        addSideButton(() -> new ItemStack(menu.output() == com.golemlogix.blocks.ProviderOutput.ALL ? Items.SUNFLOWER : Items.SPECTRAL_ARROW),
+        addSideButton(() -> menu.output() == com.golemlogix.blocks.ProviderOutput.ALL ? ICON_SUNFLOWER : ICON_ARROW,
                 () -> Component.translatable("gui.golem_logix.provider.output").append("\n")
                         .append(Component.translatable(menu.output().key()).withStyle(ChatFormatting.AQUA)).append("\n")
                         .append(Component.translatable("gui.golem_logix.provider.output_hint").withStyle(ChatFormatting.GRAY)),
