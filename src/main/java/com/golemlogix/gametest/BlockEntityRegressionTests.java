@@ -78,9 +78,9 @@ public final class BlockEntityRegressionTests {
             new Test("bereg_duplicatecorenotformed", BlockEntityRegressionTests::duplicateCoreNotFormed, 100),
             new Test("bereg_periscoperedstoneinvalidates", BlockEntityRegressionTests::periscopeRedstoneInvalidates, 120),
             new Test("bereg_towersecondnetworkjar", BlockEntityRegressionTests::towerSecondNetworkJar, 140),
-            new Test("bereg_interfacesleepandcache", BlockEntityRegressionTests::interfaceSleepAndCache, 260),
-            new Test("bereg_busidleandfullimportwake", BlockEntityRegressionTests::busIdleAndFullImportWake, 340),
-            new Test("bereg_coreskipsredundantsync", BlockEntityRegressionTests::coreSkipsRedundantSync, 240),
+            new Test("bereg_interfacesleepandcache", BlockEntityRegressionTests::interfaceSleepAndCache, 340),
+            new Test("bereg_busidleandfullimportwake", BlockEntityRegressionTests::busIdleAndFullImportWake, 420),
+            new Test("bereg_coreskipsredundantsync", BlockEntityRegressionTests::coreSkipsRedundantSync, 260),
             new Test("bereg_drivebaydiskinvalidatescache", BlockEntityRegressionTests::driveBayDiskInvalidatesCache, 80)
     );
 
@@ -463,16 +463,33 @@ public final class BlockEntityRegressionTests {
         helper.runAfterDelay(210, () -> {
             helper.assertTrue(itf.getStock().getItem(2).getCount() == 2,
                     "unsatisfied interface woke on networkEpoch and stocked diamonds, got " + itf.getStock().getItem(2));
+            // Inserting a pre-filled disk must also wake an unsatisfied interface promptly without storageEpoch changing
+            itf.setSlot(3, new ItemStack(Items.EMERALD), 2);
+        });
+
+        helper.runAfterDelay(255, () -> {
+            helper.assertTrue(itf.isStockSleeping(), "unsatisfied interface sleeping on missing emerald");
+            ItemStack prefilled = new ItemStack(ModItems.COPPER_DISK_1K.get());
+            com.golemlogix.system.DiskStorage.insertItem(prefilled, new ItemStack(Items.EMERALD, 4), false);
+            drive.getContainer().setItem(2, prefilled);
+        });
+
+        helper.runAfterDelay(275, () -> {
+            helper.assertTrue(itf.getStock().getItem(3).getCount() == 2,
+                    "unsatisfied interface woke on disk insert and stocked emeralds, got " + itf.getStock().getItem(3));
             helper.succeed();
         });
     }
 
-    /** Idle buses back off past 40t, and import buses stalled on a full network wake immediately when space frees up. */
+    /** Idle buses back off past 40t, and stalled import / sleeping export buses wake on both networkEpoch and bay disk swaps. */
     public static void busIdleAndFullImportWake(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
+        CopperDriveBayBlockEntity drive = helper.getBlockEntity(BAY, CopperDriveBayBlockEntity.class);
         helper.setBlock(BUS_OUT, ModBlocks.INJECTOR_EXPORT_BUS.get().defaultBlockState()
                 .setValue(DirectionalBlock.FACING, Direction.NORTH));
-        put(helper, BUS_OUT.north(), Blocks.BARREL);
+        BlockPos outBarrelPos = BUS_OUT.north();
+        put(helper, outBarrelPos, Blocks.BARREL);
+        var outBarrel = (net.minecraft.world.Container) helper.getBlockEntity(outBarrelPos, net.minecraft.world.level.block.entity.BlockEntity.class);
         BusBlockEntity expBus = helper.getBlockEntity(BUS_OUT, BusBlockEntity.class);
         expBus.getFilters().setItem(0, new ItemStack(Items.NETHER_STAR));
 
@@ -509,13 +526,33 @@ public final class BlockEntityRegressionTests {
             helper.assertTrue(barrel.isEmpty(), "stalled import bus woke on networkEpoch and drained barrel");
             helper.assertTrue(net(helper, bay).itemCountOf(ItemKey.of(new ItemStack(Items.COBBLESTONE))) == 16,
                     "all 16 cobblestone imported");
+            // Re-fill disk to capacity and stall import bus again so we can test bay-disk wakeup for both buses
+            GolemNetwork cur = net(helper, bay);
+            cur.insertItem(new ItemStack(Items.DIRT, 48), false);
+            barrel.setItem(0, new ItemStack(Items.OAK_PLANKS, 8));
+        });
+
+        helper.runAfterDelay(355, () -> {
+            helper.assertTrue(impBus.idle(), "re-stalled import bus sleeping on full network");
+            helper.assertTrue(expBus.idle(), "export bus sleeping on missing nether star");
+            // Insert a disk holding 1 nether star (with plenty of free room) -> wakes BOTH stalled import and sleeping export bus
+            ItemStack prefilled = new ItemStack(ModItems.COPPER_DISK_1K.get());
+            com.golemlogix.system.DiskStorage.insertItem(prefilled, new ItemStack(Items.NETHER_STAR, 1), false);
+            drive.getContainer().setItem(1, prefilled);
+        });
+
+        helper.runAfterDelay(385, () -> {
+            helper.assertTrue(barrel.isEmpty(), "stalled import bus woke on bay disk insert and drained planks");
+            helper.assertTrue(outBarrel.getItem(0).is(Items.NETHER_STAR),
+                    "sleeping export bus woke on bay disk insert and exported nether star");
             helper.succeed();
         });
     }
 
-    /** Atlas Core skips redundant visual syncs and cargo picks across cache TTL rolls when unchanged, but syncs on power change. */
+    /** Atlas Core skips redundant syncs across cache rolls, refreshes cargo on disk swap, and syncs visuals on power change. */
     public static void coreSkipsRedundantSync(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
+        CopperDriveBayBlockEntity drive = helper.getBlockEntity(BAY, CopperDriveBayBlockEntity.class);
         net(helper, bay).insertItem(new ItemStack(Items.DIAMOND, 3), false);
 
         int[] syncs0 = new int[1];
@@ -525,6 +562,7 @@ public final class BlockEntityRegressionTests {
             syncs0[0] = core.visualSyncCount();
             picks0[0] = core.cargoPickCount();
             helper.assertTrue(syncs0[0] >= 1 && picks0[0] >= 1, "initial sync and cargo pick ran");
+            helper.assertTrue(core.cargoItems().stream().anyMatch(s -> s.is(Items.DIAMOND)), "initial cargo has diamond");
         });
 
         helper.runAfterDelay(40, GolemNetwork::clearCache);
@@ -536,11 +574,19 @@ public final class BlockEntityRegressionTests {
                     "unchanged core skipped visual sync across cache rolls: " + core.visualSyncCount() + " vs " + syncs0[0]);
             helper.assertTrue(core.cargoPickCount() == picks0[0],
                     "unchanged core skipped cargo pick across cache rolls: " + core.cargoPickCount() + " vs " + picks0[0]);
+            // Removing the disk on this network must refresh cargo promptly on the next core update
+            drive.getContainer().setItem(0, ItemStack.EMPTY);
+        });
+
+        helper.runAfterDelay(195, () -> {
+            AtlasCoreBlockEntity core = helper.getBlockEntity(CORE, AtlasCoreBlockEntity.class);
+            helper.assertTrue(core.cargoPickCount() > picks0[0], "disk removal triggered cargo refresh");
+            helper.assertTrue(core.cargoItems().isEmpty(), "stale diamond cargo cleared after disk removal");
             // Removing Source breaks power -> must trigger visual sync promptly
             helper.setBlock(JAR, Blocks.AIR);
         });
 
-        helper.runAfterDelay(195, () -> {
+        helper.runAfterDelay(235, () -> {
             AtlasCoreBlockEntity core = helper.getBlockEntity(CORE, AtlasCoreBlockEntity.class);
             helper.assertTrue(!core.isPowered(), "core lost power");
             helper.assertTrue(core.visualSyncCount() > syncs0[0], "power change synced visuals immediately");

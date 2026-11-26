@@ -145,6 +145,8 @@ public class InterfaceBlockEntity extends BlockEntity {
     private boolean stockSatisfied = false;
     private long sleepEpoch = 0;
     private long sleepNetworkEpoch = 0;
+    private long sleepDiskEpoch = 0;
+    private long sleepNetworkDiskEpoch = 0;
     private boolean stockUnsatisfied = false;
     private int restockRuns = 0;
     private long lastSound = -1000;
@@ -462,12 +464,20 @@ public class InterfaceBlockEntity extends BlockEntity {
     }
 
     private boolean wokeFromStorageChange(Level level, BlockPos pos) {
-        if (!stockSleeping || stockSatisfied || sleepEpoch == GolemNetwork.storageEpoch()) {
+        if (!stockSleeping || stockSatisfied) {
             return false;
         }
-        // only wake unsatisfied stock when our own network's storage changed
-        sleepEpoch = GolemNetwork.storageEpoch();
-        if (GolemNetwork.get(level, pos).networkEpoch() == sleepNetworkEpoch) {
+        long globalEpoch = GolemNetwork.storageEpoch();
+        long globalDisk = CopperDriveBayBlockEntity.diskChangeEpoch();
+        if (globalEpoch == sleepEpoch && globalDisk == sleepDiskEpoch) {
+            return false;
+        }
+        // only wake unsatisfied stock when our own network's storage or mounted disks changed
+        sleepEpoch = globalEpoch;
+        sleepDiskEpoch = globalDisk;
+        GolemNetwork net = GolemNetwork.get(level, pos);
+        long netDisk = net.core() != null ? net.core().diskEpoch() : 0L;
+        if (net.networkEpoch() == sleepNetworkEpoch && netDisk == sleepNetworkDiskEpoch) {
             return false;
         }
         wakeStock();
@@ -497,6 +507,8 @@ public class InterfaceBlockEntity extends BlockEntity {
         stockSatisfied = false;
         sleepEpoch = GolemNetwork.storageEpoch();
         sleepNetworkEpoch = net.networkEpoch();
+        sleepDiskEpoch = CopperDriveBayBlockEntity.diskChangeEpoch();
+        sleepNetworkDiskEpoch = net.core() != null ? net.core().diskEpoch() : 0L;
     }
 
     private void signalWork(Level level, BlockPos pos, BlockState state, long now) {

@@ -52,6 +52,9 @@ public class AtlasCoreBlockEntity extends BlockEntity {
     private List<ItemStack> cargoItems = List.of(), cargoFluids = List.of();
     private int secondsSinceCargo = CARGO_SECONDS;
     private long cargoEpoch = Long.MIN_VALUE;
+    private long cargoDiskEpoch = Long.MIN_VALUE;
+    /** Bumped by drive bays on this network when disks are inserted, removed, or swapped. */
+    private long diskEpoch = 0;
     private boolean visualsSynced = false;
     private int secondsSinceSync = 0;
     private int visualSyncCount = 0;
@@ -107,6 +110,14 @@ public class AtlasCoreBlockEntity extends BlockEntity {
 
     public int cargoPickCount() {
         return cargoPickCount;
+    }
+
+    long diskEpoch() {
+        return diskEpoch;
+    }
+
+    void onDiskChanged() {
+        diskEpoch++;
     }
 
     /** Samples up to CARGO_ITEMS items and CARGO_FLUIDS fluid buckets for client visuals. Returns true on change. */
@@ -171,6 +182,7 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         if (duplicate) {
             visualsSynced = false;
             cargoEpoch = Long.MIN_VALUE;
+            cargoDiskEpoch = Long.MIN_VALUE;
         } else if (force || !visualsSynced || newPowered != powered || topologyChanged
                 || ++secondsSinceSync >= VISUAL_RESYNC_SECONDS) {
             net.syncActiveVisuals(newPowered);
@@ -189,12 +201,15 @@ public class AtlasCoreBlockEntity extends BlockEntity {
                 || newInfinite != infiniteSource || newSps != sourcePerSecond;
         boolean cargoChanged = false;
         if (!duplicate) {
-            if (secondsSinceCargo < CARGO_SECONDS) {
+            if (secondsSinceCargo < VISUAL_RESYNC_SECONDS) {
                 secondsSinceCargo++;
             }
             long epoch = net.networkEpoch();
-            if (force || cargoEpoch == Long.MIN_VALUE || (epoch != cargoEpoch && secondsSinceCargo >= CARGO_SECONDS)) {
+            if (force || cargoEpoch == Long.MIN_VALUE || topologyChanged || diskEpoch != cargoDiskEpoch
+                    || (epoch != cargoEpoch && secondsSinceCargo >= CARGO_SECONDS)
+                    || secondsSinceCargo >= VISUAL_RESYNC_SECONDS) {
                 cargoEpoch = epoch;
+                cargoDiskEpoch = diskEpoch;
                 secondsSinceCargo = 0;
                 cargoChanged = pickCargo(net);
             }

@@ -96,6 +96,8 @@ public class BusBlockEntity extends BlockEntity {
     private boolean sleepWaitStorage;
     private long sleepEpoch;
     private long sleepNetworkEpoch;
+    private long sleepDiskEpoch;
+    private long sleepNetworkDiskEpoch;
     private int fluidMoved;
     /** Throughput budget for the current operation. */
     private int opItems, opFluid;
@@ -273,12 +275,20 @@ public class BusBlockEntity extends BlockEntity {
     }
 
     private boolean wokeFromStorageChange(Level level, BlockPos pos) {
-        if (!sleeping || (!isExport() && !sleepWaitStorage) || sleepEpoch == GolemNetwork.storageEpoch()) {
+        if (!sleeping || (!isExport() && !sleepWaitStorage)) {
+            return false;
+        }
+        long globalEpoch = GolemNetwork.storageEpoch();
+        long globalDisk = CopperDriveBayBlockEntity.diskChangeEpoch();
+        if (globalEpoch == sleepEpoch && globalDisk == sleepDiskEpoch) {
             return false;
         }
         // something changed in some network: wake only if it was ours
-        sleepEpoch = GolemNetwork.storageEpoch();
-        if (GolemNetwork.get(level, pos).networkEpoch() == sleepNetworkEpoch) {
+        sleepEpoch = globalEpoch;
+        sleepDiskEpoch = globalDisk;
+        GolemNetwork net = GolemNetwork.get(level, pos);
+        long netDisk = net.core() != null ? net.core().diskEpoch() : 0L;
+        if (net.networkEpoch() == sleepNetworkEpoch && netDisk == sleepNetworkDiskEpoch) {
             return false;
         }
         wake();
@@ -318,6 +328,8 @@ public class BusBlockEntity extends BlockEntity {
             sleeping = true;
             sleepEpoch = GolemNetwork.storageEpoch();
             sleepNetworkEpoch = net.networkEpoch();
+            sleepDiskEpoch = CopperDriveBayBlockEntity.diskChangeEpoch();
+            sleepNetworkDiskEpoch = net.core() != null ? net.core().diskEpoch() : 0L;
             return;
         }
         idleSteps = 0;
