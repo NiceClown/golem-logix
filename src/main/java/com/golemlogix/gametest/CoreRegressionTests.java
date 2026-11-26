@@ -68,7 +68,8 @@ public final class CoreRegressionTests {
             new Test("core_upgrade_oversized_slot_spills_to_strays", CoreRegressionTests::upgradeOversizedSlotSpillsToStrays, 40),
             new Test("core_disk_sync_stored_and_fluid_count", CoreRegressionTests::diskSyncStoredAndFluidCount, 60),
             new Test("core_multiblock_disassemble_respects_facing", CoreRegressionTests::multiblockDisassembleRespectsFacing, 40),
-            new Test("core_telegraph_mutual_link_counted_once", CoreRegressionTests::telegraphMutualLinkCountedOnce, 80)
+            new Test("core_telegraph_mutual_link_counted_once", CoreRegressionTests::telegraphMutualLinkCountedOnce, 80),
+            new Test("core_unrelated_cache_clear_preserves_network_epoch", CoreRegressionTests::unrelatedCacheClearPreservesNetworkEpoch, 60)
     );
 
     private CoreRegressionTests() {
@@ -327,6 +328,34 @@ public final class CoreRegressionTests {
             GolemNetwork net = GolemNetwork.scan(helper.getLevel(), helper.absolutePos(bushing));
             helper.assertTrue(net.contains(helper.absolutePos(telB)), "network must traverse mutual telegraph link");
             helper.assertTrue(net.telegraphLinks() == 1, "mutual telegraph pair must count as 1 link, got " + net.telegraphLinks());
+            helper.succeed();
+        });
+    }
+
+    /** A global serverVersion bump from an unrelated network must not bump an unchanged network's epoch, while a real change must. */
+    private static void unrelatedCacheClearPreservesNetworkEpoch(GameTestHelper helper) {
+        BlockPos bushing = buildTinyNetwork(helper);
+        BlockPos absBushing = helper.absolutePos(bushing);
+
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork before = GolemNetwork.get(helper.getLevel(), absBushing);
+            before.insertItem(new ItemStack(Items.COBBLESTONE, 1), false);
+            long epochBefore = before.networkEpoch();
+            helper.assertTrue(epochBefore > 0, "insert should bump networkEpoch");
+
+            // Simulate an unrelated network invalidating the global server cache version
+            GolemNetwork.clearCache();
+            GolemNetwork afterUnrelated = GolemNetwork.get(helper.getLevel(), absBushing);
+            helper.assertTrue(afterUnrelated != before, "cache clear should trigger a fresh scan");
+            helper.assertTrue(afterUnrelated.networkEpoch() == epochBefore,
+                    "unrelated serverVersion bump must preserve unchanged network's epoch: expected "
+                            + epochBefore + ", got " + afterUnrelated.networkEpoch());
+
+            // A real change to this network's own topology must bump its epoch
+            helper.setBlock(bushing.west(), ModBlocks.BASIC_SNOW_PIPE.get());
+            GolemNetwork afterOwnChange = GolemNetwork.get(helper.getLevel(), absBushing);
+            helper.assertTrue(afterOwnChange.networkEpoch() > epochBefore,
+                    "real topology change on this network must bump networkEpoch");
             helper.succeed();
         });
     }
