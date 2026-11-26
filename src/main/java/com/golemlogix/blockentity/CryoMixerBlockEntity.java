@@ -174,8 +174,13 @@ public class CryoMixerBlockEntity extends BlockEntity {
         return Math.max(1, (int) Math.ceil(mode.ticks() / (double) (1 + upgrades.count(UpgradeType.SPEED))));
     }
 
-    private void changed() {
+    @Override
+    public void setChanged() {
         dirty = true;
+        super.setChanged();
+    }
+
+    private void changed() {
         setChanged();
     }
 
@@ -213,9 +218,9 @@ public class CryoMixerBlockEntity extends BlockEntity {
     }
 
     private void work(boolean hasRedstone, boolean powered, long now) {
-        ItemStack made = mode.output();
+        net.minecraft.world.item.Item expected = mode == Mode.SNOW ? Items.SNOW_BLOCK : Items.ICE;
         ItemStack tray = output.getItem(0);
-        if (!tray.isEmpty() && (!ItemStack.isSameItemSameComponents(tray, made) || tray.getCount() >= tray.getMaxStackSize())) {
+        if (!tray.isEmpty() && (!tray.is(expected) || tray.getCount() >= tray.getMaxStackSize())) {
             status = TRAY_FULL;
             return;
         }
@@ -244,7 +249,7 @@ public class CryoMixerBlockEntity extends BlockEntity {
         consume(water, mode.water());
         consume(cryo, mode.cryo());
         if (tray.isEmpty()) {
-            output.setItem(0, made);
+            output.setItem(0, mode.output());
         } else {
             tray.grow(1);
             output.setChanged();
@@ -294,7 +299,7 @@ public class CryoMixerBlockEntity extends BlockEntity {
     }
 
     public void dropContents() {
-        if (level != null) {
+        if (level != null && !level.isClientSide()) {
             net.minecraft.world.Containers.dropContents(level, worldPosition, output);
             net.minecraft.world.Containers.dropContents(level, worldPosition, upgrades);
         }

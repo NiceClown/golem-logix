@@ -1,13 +1,11 @@
 package com.golemlogix.blockentity;
 
 import com.golemlogix.blocks.CryoJarBlock;
-import com.golemlogix.config.GolemConfig;
 import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.system.SourceHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -98,7 +96,7 @@ public class CryoJarBlockEntity extends BlockEntity implements SourceHelper.Supp
     @Override
     public int available() {
         CryoJarBlockEntity o = owner();
-        return o == null || o.isRemoved() ? 0 : Math.min(o.source, capacity());
+        return o == null || o.isRemoved() ? 0 : Math.min(o.source, o.capacity());
     }
 
     @Override
@@ -121,7 +119,7 @@ public class CryoJarBlockEntity extends BlockEntity implements SourceHelper.Supp
         if (o == null || o.isRemoved() || amount <= 0) {
             return 0;
         }
-        int add = Math.max(0, Math.min(amount, capacity() - o.source));
+        int add = Math.max(0, Math.min(amount, o.capacity() - o.source));
         if (add > 0 && !simulate) {
             o.source += add;
             o.changed();
@@ -139,8 +137,10 @@ public class CryoJarBlockEntity extends BlockEntity implements SourceHelper.Supp
         // the level is shown in steps of 1%: clients get it at most twice a second, and not for every drop
         if (dirty && now - lastSync >= 10) {
             dirty = false;
-            int step = Math.max(1, capacity() / 100);
-            if (sentSource < 0 || Math.abs(source - sentSource) >= step || (source == 0) != (sentSource == 0) || source == capacity()) {
+            int cap = capacity();
+            int step = Math.max(1, cap / 100);
+            if (sentSource < 0 || Math.abs(source - sentSource) >= step || (source == 0) != (sentSource == 0)
+                    || (source == cap) != (sentSource == cap)) {
                 sentSource = source;
                 lastSync = now;
                 level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);

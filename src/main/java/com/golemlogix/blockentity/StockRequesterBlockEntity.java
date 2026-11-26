@@ -10,10 +10,8 @@ import com.golemlogix.system.ItemKey;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.Container;
-import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -85,6 +83,7 @@ public class StockRequesterBlockEntity extends BlockEntity {
         }
 
         boolean changed = false;
+        boolean noCpu = false;
         for (int i = 0; i < FILTER_SLOTS; i++) {
             ItemStack ghost = be.filters.getItem(i);
             if (ghost.isEmpty()) {
@@ -110,7 +109,7 @@ public class StockRequesterBlockEntity extends BlockEntity {
 
             long stock;
             if (FluidGhostItem.is(plainGhost) || Ingredients.isFluid(key)) {
-                var fluid = FluidGhostItem.is(plainGhost) ? FluidGhostItem.fluid(plainGhost).getFluid() : Ingredients.fluid(key, 1).getFluid();
+                var fluid = FluidGhostItem.is(plainGhost) ? FluidGhostItem.fluid(plainGhost) : Ingredients.fluid(key, 1);
                 stock = net.fluidCountOf(fluid);
             } else {
                 stock = net.itemCountOf(key);
@@ -119,27 +118,30 @@ public class StockRequesterBlockEntity extends BlockEntity {
             int oldStatus = be.status[i];
             if (stock >= target) {
                 be.status[i] = STATUS_OK;
+            } else if (net.busCraftPending(pos, key)) {
+                be.status[i] = STATUS_CRAFTING;
+            } else if (!net.canCraft(key)) {
+                be.status[i] = STATUS_NO_PATTERN;
+            } else if (noCpu) {
+                be.status[i] = STATUS_CRAFTING;
             } else {
-                if (net.busCraftPending(pos, key)) {
+                long need = target - stock;
+                // a batch: up to a stack of items, up to 16 buckets of a fluid (in mB)
+                long batch = Math.min(need, Ingredients.isFluid(key) ? 16_000 : 64);
+                Map<ItemKey, Long> order = new LinkedHashMap<>();
+                order.put(key, batch);
+                var result = net.startCrafting(order, null, pos);
+                if (result.type() == GolemNetwork.StartType.STARTED) {
                     be.status[i] = STATUS_CRAFTING;
-                } else if (!net.canCraft(key)) {
+                } else if (result.type() == GolemNetwork.StartType.MISSING || result.type() == GolemNetwork.StartType.RESERVE_FAILED) {
+                    be.status[i] = STATUS_MISSING_INGREDIENTS;
+                } else if (result.type() == GolemNetwork.StartType.NO_PATTERN) {
                     be.status[i] = STATUS_NO_PATTERN;
                 } else {
-                    long need = target - stock;
-                    // a batch: up to a stack of items, up to 16 buckets of a fluid (in mB)
-                    long batch = Math.min(need, Ingredients.isFluid(key) ? 16_000 : 64);
-                    Map<ItemKey, Long> order = new LinkedHashMap<>();
-                    order.put(key, batch);
-                    var result = net.startCrafting(order, null, pos);
-                    if (result.type() == GolemNetwork.StartType.STARTED) {
-                        be.status[i] = STATUS_CRAFTING;
-                    } else if (result.type() == GolemNetwork.StartType.MISSING || result.type() == GolemNetwork.StartType.RESERVE_FAILED) {
-                        be.status[i] = STATUS_MISSING_INGREDIENTS;
-                    } else if (result.type() == GolemNetwork.StartType.NO_PATTERN) {
-                        be.status[i] = STATUS_NO_PATTERN;
-                    } else {
-                        be.status[i] = STATUS_CRAFTING;
+                    if (result.type() == GolemNetwork.StartType.NO_CPU) {
+                        noCpu = true;
                     }
+                    be.status[i] = STATUS_CRAFTING;
                 }
             }
             if (be.status[i] != oldStatus) {
@@ -195,6 +197,7 @@ public class StockRequesterBlockEntity extends BlockEntity {
 
     protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
         filters.fromTag(tag.getListOrEmpty("Filters"), registries);
+        java.util.Arrays.fill(status, STATUS_OK);
         int[] st = tag.getIntArray("Status").orElse(new int[0]);
         for (int i = 0; i < FILTER_SLOTS && i < st.length; i++) {
             status[i] = st[i];

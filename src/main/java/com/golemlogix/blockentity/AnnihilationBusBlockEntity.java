@@ -48,9 +48,9 @@ import java.util.UUID;
  * Annihilation Bus: a small iron golem works the block in front with the tool in its slot - or, with the slot empty, with the
  * strength of every iron tool (the best of the iron pickaxe, axe, shovel, hoe and sword for that block, never worn out).
  * <ul>
- * <li>Left click: it mines the block as a player would, as fast as the tool allows (Compressed Co-Processors speed it up, four of
- * them eightfold), cracks and all. The drops go into the network; while the network cannot take them all it waits. A block the
- * tool cannot harvest is left alone, and a tool about to break is put down.</li>
+ * <li>Left click: it mines the block as a player would, as fast as the tool allows, cracks and all. The drops go into the
+ * network; while the network cannot take them all it waits. A block the tool cannot harvest is left alone, and a tool about to
+ * break is put down.</li>
  * <li>Right click: once an interval it uses the item in its slot (or its empty hand) on the block - a lever, shears, a hoe, bone
  * meal - and whatever falls out in front goes into the network.</li>
  * <li>Attack: once an interval it strikes the creatures in front with the tool (an iron sword when the slot is empty), at full
@@ -74,6 +74,8 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
     /** The iron tools a bare golem brings to every block. */
     private static final net.minecraft.world.item.Item[] IRON_TOOLS = {Items.IRON_PICKAXE, Items.IRON_AXE, Items.IRON_SHOVEL, Items.IRON_HOE,
             Items.IRON_SWORD};
+    @Nullable
+    private static ItemStack[] ironToolStacks;
     /** Click modes: break, use, attack. */
     public static final int LEFT = 0, RIGHT = 1, ATTACK = 2;
     /** The bus whose golem is breaking a block or striking a creature right now: the drops go into its network (onDrops, onLoot). */
@@ -107,6 +109,21 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
             sync();
         }
 
+        @Override
+        public boolean stillValid(net.minecraft.world.entity.player.Player player) {
+            if (isRemoved() || getLevel() != player.level()) {
+                return false;
+            }
+            return player.distanceToSqr(worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5) <= 64.0;
+        }
+
+        /** Updates the slot from internal work (wear, refill, rejected harvest) without changing what the slot refills with. */
+        void setInternal(ItemStack stack) {
+            getItems().set(0, stack);
+            AnnihilationBusBlockEntity.this.setChanged();
+            sync();
+        }
+
         /** The player emptied the slot: nothing to refill. */
         public void forget() {
             if (getItem(0).isEmpty()) {
@@ -133,6 +150,8 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
     private long lastUse = -100;
     private int idleSteps;
     private long sleepUntil;
+    private long nextBreakTry;
+    private long fullStorageEpoch;
 
     public AnnihilationBusBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.ANNIHILATION_BUS.get(), pos, state);
@@ -171,6 +190,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
     public void wake() {
         idleSteps = 0;
         sleepUntil = 0;
+        nextBreakTry = 0;
     }
 
     @Override
@@ -266,8 +286,13 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         }
         Direction facing = state.getValue(DirectionalBlock.FACING);
         BlockPos target = pos.relative(facing);
+        boolean refillDue = refilling() && Math.floorMod(now + pos.asLong(), REFILL_EVERY) == 0;
+        if (!refillDue && now < sleepUntil) {
+            stopMining();
+            return;
+        }
         GolemNetwork net = GolemNetwork.get(level, pos);
-        if (Math.floorMod(now + pos.asLong(), REFILL_EVERY) == 0 && net.isOnline() && net.isDeviceActive(pos) && refill(level, net)) {
+        if (refillDue && net.isOnline() && net.isDeviceActive(pos) && refill(level, net)) {
             sleepUntil = 0;
             idleSteps = 0;
         }
@@ -281,6 +306,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
             stopMining();
             if (Math.floorMod(now + pos.asLong(), interval()) == 0) {
                 if (attack(level, pos, target, facing)) {
+                    idleSteps = 0;
                     redstone.allows(hasRedstone, powered, true);
                 } else {
                     sleep(now);
@@ -297,6 +323,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         if (mode == RIGHT) {
             if (Math.floorMod(now + pos.asLong(), interval()) == 0) {
                 if (use(level, net, pos, target, facing)) {
+                    idleSteps = 0;
                     redstone.allows(hasRedstone, powered, true);
                 } else {
                     sleep(now);
@@ -322,9 +349,16 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
             setSwinging(true);
             level.destroyBlockProgress(fakeId(), target, progress >= 1f ? 9 : (int) (progress * 10f));
         }
-        if (progress >= 1f && breakBlock(level, net, pos, target, facing, front, with)) {
-            redstone.allows(hasRedstone, powered, true);
-            stopMining();
+        if (progress >= 1f && (now >= nextBreakTry || fullStorageEpoch != GolemNetwork.storageEpoch())) {
+            if (breakBlock(level, net, pos, target, facing, front, with)) {
+                idleSteps = 0;
+                redstone.allows(hasRedstone, powered, true);
+                stopMining();
+            } else {
+                // network full (or cannot harvest): avoid running Block.getDrops every tick until space frees or retry elapses
+                nextBreakTry = now + 10;
+                fullStorageEpoch = GolemNetwork.storageEpoch();
+            }
         }
     }
 
@@ -360,6 +394,9 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
                 ItemStack s = k.stack();
                 if (s.is(refill.getItem()) && (best == null || s.getDamageValue() < best.stack().getDamageValue())) {
                     best = k;
+                    if (s.getDamageValue() == 0) {
+                        break;
+                    }
                 }
             }
             ItemStack fresh = best == null ? ItemStack.EMPTY : net.extractItem(best.stack(), 1, false);
@@ -367,7 +404,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
                 order(level, net, ItemKey.of(refill));
                 return false;
             }
-            tool.setItem(0, fresh);
+            tool.setInternal(fresh);
             return true;
         }
         int want = refill.getMaxStackSize() - held.getCount();
@@ -379,7 +416,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
             order(level, net, ItemKey.of(refill));
             return false;
         }
-        tool.setItem(0, held.isEmpty() ? got : held.copyWithCount(held.getCount() + got.getCount()));
+        tool.setInternal(held.isEmpty() ? got : held.copyWithCount(held.getCount() + got.getCount()));
         return true;
     }
 
@@ -407,6 +444,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         }
         mining = null;
         progress = 0f;
+        nextBreakTry = 0;
         setSwinging(false);
     }
 
@@ -450,10 +488,27 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         }
         for (var property : state.getProperties()) {
             if (property instanceof IntegerProperty age && property.getName().equals("age")) {
-                return state.getValue(age) >= age.getPossibleValues().stream().mapToInt(Integer::intValue).max().orElse(0);
+                int max = 0;
+                for (int v : age.getPossibleValues()) {
+                    if (v > max) {
+                        max = v;
+                    }
+                }
+                return state.getValue(age) >= max;
             }
         }
         return true;
+    }
+
+    private static ItemStack[] ironToolStacks() {
+        if (ironToolStacks == null) {
+            ItemStack[] stacks = new ItemStack[IRON_TOOLS.length];
+            for (int i = 0; i < IRON_TOOLS.length; i++) {
+                stacks[i] = new ItemStack(IRON_TOOLS[i]);
+            }
+            ironToolStacks = stacks;
+        }
+        return ironToolStacks;
     }
 
     /** The tool for this block: the one in the slot, or the best iron tool. */
@@ -464,8 +519,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         }
         ItemStack best = ItemStack.EMPTY;
         float bestSpeed = -1f;
-        for (var item : IRON_TOOLS) {
-            ItemStack t = new ItemStack(item);
+        for (ItemStack t : ironToolStacks()) {
             boolean right = harvests(t, state);
             float speed = right ? t.getDestroySpeed(state) : 0f;
             if (speed > bestSpeed) {
@@ -570,31 +624,32 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         boolean own = !tool.getItem(0).isEmpty() && !temper;
         ItemStack hand = temper ? temperedHand(with, state, level.registryAccess()) : own ? tool.getItem(0) : with.copy();
         FakePlayer p = golem(level, pos, facing, hand);
-        if (state.requiresCorrectToolForDrops() && !hand.isCorrectToolForDrops(state)) {
-            // the hand would break it and drop nothing: leave the block be
-            p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
-            return false;
-        }
-        for (ItemStack drop : Block.getDrops(state, level, target, level.getBlockEntity(target), p, hand)) {
-            if (!net.insertItem(drop, true).isEmpty()) {
-                p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        try {
+            if (state.requiresCorrectToolForDrops() && !hand.isCorrectToolForDrops(state)) {
+                // the hand would break it and drop nothing: leave the block be
                 return false;
             }
-        }
-        ItemStack before = hand.copy();
-        level.levelEvent(2001, target, Block.getId(state));
-        breaking = this;
-        try {
-            p.gameMode.destroyBlock(target);
+            for (ItemStack drop : Block.getDrops(state, level, target, level.getBlockEntity(target), p, hand)) {
+                if (!net.insertItem(drop, true).isEmpty()) {
+                    return false;
+                }
+            }
+            ItemStack before = hand.copy();
+            level.levelEvent(2001, target, Block.getId(state));
+            breaking = this;
+            try {
+                p.gameMode.destroyBlock(target);
+            } finally {
+                breaking = null;
+            }
+            if (own) {
+                tool.setInternal(unworn(before, p.getMainHandItem()));
+            }
         } finally {
-            breaking = null;
+            p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            p.setShiftKeyDown(false);
         }
-        if (own) {
-            tool.setItem(0, unworn(before, p.getMainHandItem()));
-        }
-        p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
-        p.setShiftKeyDown(false);
-        sweep(level, new AABB(target).inflate(0.25));
+        sweep(level, net, new AABB(target).inflate(0.25));
         return true;
     }
 
@@ -602,44 +657,41 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
     private boolean use(ServerLevel level, GolemNetwork net, BlockPos pos, BlockPos target, Direction facing) {
         ItemStack before = tool.getItem(0).copy();
         FakePlayer p = golem(level, pos, facing, before.copy());
-        Vec3 hitAt = Vec3.atCenterOf(target).relative(facing.getOpposite(), 0.5);
-        BlockHitResult hit = new BlockHitResult(hitAt, facing.getOpposite(), target, false);
-        var result = p.gameMode.useItemOn(p, level, p.getMainHandItem(), InteractionHand.MAIN_HAND, hit);
-        if (!result.consumesAction() && !p.getMainHandItem().isEmpty() && !level.getFluidState(target).isEmpty()) {
-            // a bucket or a bottle takes a fluid by the item's own use (a look at the fluid), not by a click on the block; the
-            // golem looks from the bus's front face, or its own block would be the first thing the look hits
-            Vec3 eye = Vec3.atCenterOf(pos).relative(facing, 0.55);
-            p.snapTo(eye.x, eye.y - p.getEyeHeight(), eye.z, p.getYRot(), p.getXRot());
-            result = p.gameMode.useItem(p, level, p.getMainHandItem(), InteractionHand.MAIN_HAND);
-        }
-        ItemStack after = p.getMainHandItem().copy();
-        if (!before.isEmpty() && !after.isEmpty() && !after.is(before.getItem()) && !before.isDamageableItem()) {
-            // the item became another (an empty bucket a water bucket): that one is the harvest, into the network; the slot
-            // is left empty for the Autocraft Module to refill with the empty one
-            after = net.insertItem(after, false);
-        }
-        tool.setItem(0, unworn(before, after));
-        p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
-        // anything the golem picked up (a filled bucket's leftovers, a harvest given to the hand) goes into the network
-        for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
-            ItemStack s = p.getInventory().getItem(i);
-            if (!s.isEmpty()) {
-                p.getInventory().setItem(i, ItemStack.EMPTY);
-                ItemStack rest = net.insertItem(s, false);
-                if (!rest.isEmpty()) {
-                    Block.popResource(level, pos, rest);
+        net.minecraft.world.InteractionResult result;
+        try {
+            Vec3 hitAt = Vec3.atCenterOf(target).relative(facing.getOpposite(), 0.5);
+            BlockHitResult hit = new BlockHitResult(hitAt, facing.getOpposite(), target, false);
+            result = p.gameMode.useItemOn(p, level, p.getMainHandItem(), InteractionHand.MAIN_HAND, hit);
+            if (!result.consumesAction() && !p.getMainHandItem().isEmpty() && !level.getFluidState(target).isEmpty()) {
+                // a bucket or a bottle takes a fluid by the item's own use (a look at the fluid), not by a click on the block; the
+                // golem looks from the bus's front face, or its own block would be the first thing the look hits
+                Vec3 eye = Vec3.atCenterOf(pos).relative(facing, 0.55);
+                p.snapTo(eye.x, eye.y - p.getEyeHeight(), eye.z, p.getYRot(), p.getXRot());
+                result = p.gameMode.useItem(p, level, p.getMainHandItem(), InteractionHand.MAIN_HAND);
+            }
+            ItemStack after = p.getMainHandItem().copy();
+            if (!before.isEmpty() && !after.isEmpty() && !after.is(before.getItem()) && !before.isDamageableItem()) {
+                // the item became another (an empty bucket a water bucket): that one is the harvest, into the network; the slot
+                // is left empty for the Autocraft Module to refill with the empty one (setInternal keeps refill intact if full)
+                after = net.insertItem(after, false);
+            }
+            tool.setInternal(unworn(before, after));
+        } finally {
+            p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            // anything the golem picked up (a filled bucket's leftovers, a harvest given to the hand) goes into the network
+            for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
+                ItemStack s = p.getInventory().getItem(i);
+                if (!s.isEmpty()) {
+                    p.getInventory().setItem(i, ItemStack.EMPTY);
+                    ItemStack rest = net.insertItem(s, false);
+                    if (!rest.isEmpty()) {
+                        Block.popResource(level, pos, rest);
+                    }
                 }
             }
+            p.setShiftKeyDown(false);
         }
-        p.setShiftKeyDown(false);
-        for (ItemEntity e : level.getEntitiesOfClass(ItemEntity.class, new AABB(target).inflate(0.25), e -> e.isAlive() && e.getAge() <= 2)) {
-            ItemStack rest = net.insertItem(e.getItem(), false);
-            if (rest.isEmpty()) {
-                e.discard();
-            } else {
-                e.setItem(rest);
-            }
-        }
+        sweep(level, net, new AABB(target).inflate(0.25));
         boolean did = result.consumesAction();
         if (did) {
             lastUse = level.getGameTime();
@@ -703,27 +755,26 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
                 e.setDeltaMovement(0, Math.min(0, e.getDeltaMovement().y), 0);
                 e.hurtMarked = true;
             }
+            if (own) {
+                // with the temper the slot keeps the plain item: the blessings were only on the copy the golem swung, and the tool
+                // does not wear; without it the sword comes back worn, as it should
+                ItemStack after = tempered() ? plain : p.getMainHandItem().copy();
+                tool.setInternal(unworn(plain, after));
+            }
         } finally {
             breaking = null;
             undo.forEach(Runnable::run);
+            p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            p.setShiftKeyDown(false);
         }
-        if (own) {
-            // with the temper the slot keeps the plain item: the blessings were only on the copy the golem swung, and the tool
-            // does not wear; without it the sword comes back worn, as it should
-            ItemStack after = tempered() ? plain : p.getMainHandItem().copy();
-            tool.setItem(0, unworn(plain, after));
-        }
-        p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
-        p.setShiftKeyDown(false);
-        sweep(level, new AABB(target).inflate(1.0));
+        sweep(level, GolemNetwork.get(level, worldPosition), new AABB(target).inflate(1.0));
         lastUse = level.getGameTime();
         sync();
         return true;
     }
 
     /** Items that have just fallen in the box (dropped outside the drop events by some mod) go into the network. */
-    private void sweep(ServerLevel level, AABB box) {
-        GolemNetwork net = GolemNetwork.get(level, worldPosition);
+    private void sweep(ServerLevel level, GolemNetwork net, AABB box) {
         for (ItemEntity e : level.getEntitiesOfClass(ItemEntity.class, box, e -> e.isAlive() && e.getAge() <= 2)) {
             ItemStack rest = net.insertItem(e.getItem(), false);
             if (rest.isEmpty()) {
@@ -742,7 +793,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
     public static void onLoot(net.neoforged.neoforge.event.entity.living.LivingDropsEvent event) {
         AnnihilationBusBlockEntity bus = breaking;
         if (bus == null || !(event.getSource().getEntity() instanceof FakePlayer fp) || !PROFILE.id().equals(fp.getUUID())
-                || bus.level == null) {
+                || bus.level == null || event.getEntity().level() != bus.level) {
             return;
         }
         GolemNetwork net = GolemNetwork.get(bus.level, bus.worldPosition);
@@ -760,7 +811,8 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
     @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
     public static void onDrops(BlockDropsEvent event) {
         AnnihilationBusBlockEntity bus = breaking;
-        if (bus == null || !(event.getBreaker() instanceof FakePlayer fp) || !PROFILE.id().equals(fp.getUUID())) {
+        if (bus == null || !(event.getBreaker() instanceof FakePlayer fp) || !PROFILE.id().equals(fp.getUUID())
+                || event.getLevel() != bus.level) {
             return;
         }
         GolemNetwork net = GolemNetwork.get(event.getLevel(), bus.worldPosition);
@@ -776,7 +828,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
 
     /** Broken or replaced: the tool and the upgrades drop. */
     public void dropContents() {
-        if (level == null) {
+        if (level == null || level.isClientSide()) {
             return;
         }
         stopMining();

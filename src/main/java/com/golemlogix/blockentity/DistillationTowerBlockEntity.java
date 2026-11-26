@@ -4,14 +4,13 @@ import com.golemlogix.blocks.DistillationTowerBlock;
 import com.golemlogix.config.GolemConfig;
 import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.init.ModTags;
-import com.golemlogix.blockentity.CryoJarBlockEntity;
 import com.golemlogix.system.SourceHelper;
 import com.golemlogix.system.Transfers;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.sounds.SoundEvents;
@@ -33,6 +32,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
     public static final int TANK = 8000;
     public static final int TANK_PER_FOUR = 2000;
     private static final int PERIOD = 10;
+    private static final Direction[] DIRECTIONS = Direction.values();
 
     private final FluidStacksResourceHandler tank = new FluidStacksResourceHandler(1, TANK) {
         @Override
@@ -63,6 +63,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
     private boolean dirty;
     private long lastSync = -100;
     private int sentBlood = -1;
+    private int sentCapacity = -1;
     private boolean clientWorkingSent;
     // client
     private int clientBlood;
@@ -86,8 +87,13 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         return Transfers.getFluid(tank, 0);
     }
 
-    private void changed() {
+    @Override
+    public void setChanged() {
         dirty = true;
+        super.setChanged();
+    }
+
+    private void changed() {
         setChanged();
     }
 
@@ -104,8 +110,11 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         if (dirty && now - lastSync >= 10) {
             dirty = false;
             int amount = tank.getAmountAsInt(0);
-            if (sentBlood < 0 || Math.abs(amount - sentBlood) >= capacity() / 50 || (amount == 0) != (sentBlood == 0) || working != clientWorkingSent) {
+            int cap = capacity();
+            if (sentBlood < 0 || cap != sentCapacity || Math.abs(amount - sentBlood) >= cap / 50
+                    || (amount == 0) != (sentBlood == 0) || working != clientWorkingSent) {
                 sentBlood = amount;
+                sentCapacity = cap;
                 clientWorkingSent = working;
                 lastSync = now;
                 level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
@@ -115,6 +124,11 @@ public class DistillationTowerBlockEntity extends BlockEntity {
 
     /** One batch: as much blood as the rate allows, the tank holds and the jars around can take. */
     void distil(long now) {
+        int haveBlood = tank.getAmountAsInt(0);
+        if (carry < 1 && haveBlood <= 0) {
+            status = 0;
+            return;
+        }
         var cells = DistillationTowerBlock.cells(worldPosition);
         var onNetwork = networkJars(cells);
         // the jars of the network the tower does not already reach by standing against them: each is counted once
@@ -126,13 +140,15 @@ public class DistillationTowerBlockEntity extends BlockEntity {
             for (var jar : joined) {
                 put += jar.fill(owed - put, false);
             }
-            carry -= put;
+            if (put > 0) {
+                carry = Math.max(0.0, carry - put);
+                setChanged();
+            }
             if (carry >= 1) {
                 status = 2;
                 return;
             }
         }
-        int haveBlood = tank.getAmountAsInt(0);
         if (haveBlood <= 0) {
             status = 0;
             return;
@@ -161,7 +177,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         tank.set(0, left <= 0 ? FluidResource.EMPTY : tank.getResource(0), left);
         double made = mb * perMb + carry;
         int give = (int) Math.floor(made + 1e-9);
-        carry = made - give;
+        carry = Math.max(0.0, made - give);
         give -= SourceHelper.fillAround(level, cells, give, false);
         for (var jar : joined) {
             give -= jar.fill(give, false);
@@ -175,17 +191,32 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         }
     }
 
-    /** The joined jars of the network this tower touches, if any: the tower need not stand against them. An unpowered network counts, or it could never recover. */
+    /** The joined jars of every network this tower touches: the tower need not stand against them. An unpowered network counts, or it could never recover. */
     private java.util.List<CryoJarBlockEntity> networkJars(java.util.Collection<BlockPos> cells) {
+        java.util.Set<com.golemlogix.system.GolemNetwork> seenNets = null;
+        java.util.List<CryoJarBlockEntity> all = null;
         for (BlockPos cell : cells) {
-            for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+            for (Direction d : DIRECTIONS) {
                 BlockPos p = cell.relative(d);
                 if (!cells.contains(p) && level.isLoaded(p) && level.getBlockState(p).getBlock() instanceof com.golemlogix.system.GolemNode) {
-                    return com.golemlogix.system.GolemNetwork.get(level, p).joinedJars();
+                    var net = com.golemlogix.system.GolemNetwork.get(level, p);
+                    if (seenNets == null) {
+                        seenNets = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+                    }
+                    if (seenNets.add(net)) {
+                        var jars = net.joinedJars();
+                        if (!jars.isEmpty()) {
+                            if (all == null) {
+                                all = new java.util.ArrayList<>(jars);
+                            } else {
+                                all.addAll(jars);
+                            }
+                        }
+                    }
                 }
             }
         }
-        return java.util.List.of();
+        return all == null ? java.util.List.of() : all;
     }
 
     /** The jars of the network but not beside the tower, each whole once (fillAround already fills those beside it). */
@@ -195,7 +226,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         }
         java.util.Set<Object> near = new java.util.HashSet<>();
         for (BlockPos cell : cells) {
-            for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+            for (Direction d : DIRECTIONS) {
                 BlockPos p = cell.relative(d);
                 if (!cells.contains(p) && level.isLoaded(p)) {
                     var be = level.getBlockEntity(p);
@@ -224,8 +255,10 @@ public class DistillationTowerBlockEntity extends BlockEntity {
             }
         }
         for (BlockPos cell : cells) {
-            for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
-                if (level.getBlockEntity(cell.relative(d)) instanceof CryoJarBlockEntity j && j.form() == com.golemlogix.blocks.JarForm.GIGA) {
+            for (Direction d : DIRECTIONS) {
+                BlockPos p = cell.relative(d);
+                if (!cells.contains(p) && level.isLoaded(p)
+                        && level.getBlockEntity(p) instanceof CryoJarBlockEntity j && j.form() == com.golemlogix.blocks.JarForm.GIGA) {
                     return true;
                 }
             }
@@ -276,7 +309,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
     }
 
     public void dropContents() {
-        if (level != null) {
+        if (level != null && !level.isClientSide()) {
             net.minecraft.world.Containers.dropContents(level, worldPosition, upgrades);
         }
     }

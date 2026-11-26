@@ -26,6 +26,9 @@ public class ListeningContainer extends SimpleContainer {
     @Override
     public void setChanged() {
         super.setChanged();
+        if (listeners.isEmpty()) {
+            return;
+        }
         for (Consumer<Container> l : List.copyOf(listeners)) {
             l.accept(this);
         }
