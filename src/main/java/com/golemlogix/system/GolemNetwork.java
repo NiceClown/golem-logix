@@ -151,6 +151,8 @@ public final class GolemNetwork {
     private long sharedListTick = -1;
     private long sharedListEpoch = -1;
     private long sharedListDiskEpoch = -1;
+    @Nullable
+    private NetworkStorage.DiskIndex sharedListIndex;
 
     GolemNetwork(Level level, BlockPos start) {
         this.level = level;
@@ -507,11 +509,14 @@ public final class GolemNetwork {
         long now = level.getServer() != null ? level.getServer().getTickCount() : level.getGameTime();
         long epoch = NetworkCache.storageEpoch();
         long diskEpoch = DiskStorage.itemMutationEpoch();
-        if (sharedList == null || sharedListTick != now || sharedListEpoch != epoch || sharedListDiskEpoch != diskEpoch) {
-            sharedList = listItems();
+        NetworkStorage.DiskIndex curIndex = NetworkStorage.currentIndex(this);
+        if (sharedList == null || sharedListTick != now || sharedListEpoch != epoch
+                || sharedListDiskEpoch != diskEpoch || sharedListIndex != curIndex) {
+            sharedList = NetworkStorage.listItems(this, curIndex);
             sharedListTick = now;
             sharedListEpoch = epoch;
             sharedListDiskEpoch = diskEpoch;
+            sharedListIndex = curIndex;
         }
         return sharedList;
     }

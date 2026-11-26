@@ -399,10 +399,16 @@ public final class CoreRegressionTests {
             helper.assertTrue(DiskStorage.itemCount(beA.getDisks().get(0), iron) == 3, "bayA should retain 3 iron");
             helper.assertTrue(net.itemCountOf(iron) == 3L, "remaining iron count must be 3");
 
-            // 4. Removing a disk from a slot must immediately reflect in counts and capacity
+            // 4. Warm listItemsForPlanning/listItemsShared in the same tick, then remove disk from slot: must invalidate immediately
+            helper.assertTrue(net.listItemsForPlanning().getOrDefault(iron, 0L) == 3L,
+                    "warm listItemsForPlanning should see 3 iron before removal");
             beA.getContainer().setItem(0, ItemStack.EMPTY);
             helper.assertTrue(net.itemCountOf(iron) == 0L, "removing disk from bayA must drop iron count to 0");
             helper.assertTrue(net.itemCountOf(gold) == 0L, "removing disk from bayA must drop gold count to 0");
+            helper.assertTrue(net.listItemsForPlanning().getOrDefault(iron, 0L) == 0L,
+                    "same-tick disk removal must invalidate listItemsForPlanning");
+            helper.assertTrue(net.listItemsShared().getOrDefault(gold, 0L) == 0L,
+                    "same-tick disk removal must invalidate listItemsShared");
             helper.succeed();
         });
     }

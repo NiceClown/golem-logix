@@ -47,9 +47,10 @@ public class DiskStore extends SavedData {
         }
     }
 
+    private record ServerCache(MinecraftServer server, DiskStore store) {}
+
     private final Map<UUID, Disk> disks = new HashMap<>();
-    private static volatile MinecraftServer cachedServer;
-    private static volatile DiskStore cachedStore;
+    private static volatile ServerCache serverCache;
 
     /** Saved as one compound (the format of 1.21.1, now in data/golem_logix/disks.dat) through the server's registries. */
     private static final SavedDataType<DiskStore> TYPE = new SavedDataType<>(
@@ -61,18 +62,17 @@ public class DiskStore extends SavedData {
             });
 
     public static DiskStore get(MinecraftServer server) {
-        if (server == cachedServer && cachedStore != null) {
-            return cachedStore;
+        ServerCache cached = serverCache;
+        if (cached != null && cached.server() == server) {
+            return cached.store();
         }
         DiskStore store = server.getDataStorage().computeIfAbsent(TYPE);
-        cachedServer = server;
-        cachedStore = store;
+        serverCache = new ServerCache(server, store);
         return store;
     }
 
     static void forgetCachedServer() {
-        cachedServer = null;
-        cachedStore = null;
+        serverCache = null;
     }
 
     private static HolderLookup.Provider registries() {

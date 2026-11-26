@@ -290,6 +290,10 @@ final class NetworkStorage {
 
     // ------------------------------------------------------------- disk index
 
+    static DiskIndex currentIndex(GolemNetwork net) {
+        return index(net, DiskStorage.store());
+    }
+
     private static DiskIndex index(GolemNetwork net, @Nullable DiskStore st) {
         DiskIndex cached = net.diskIndex;
         if (cached != null && cached.isValid(net, st)) {
@@ -568,7 +572,10 @@ final class NetworkStorage {
     // ------------------------------------------------------------------ items
 
     static Map<ItemKey, Long> listItems(GolemNetwork net) {
-        DiskIndex idx = index(net, DiskStorage.store());
+        return listItems(net, index(net, DiskStorage.store()));
+    }
+
+    static Map<ItemKey, Long> listItems(GolemNetwork net, DiskIndex idx) {
         int est = 0;
         for (DiskEntry d : idx.itemDisks) {
             if (d.data != null) {
