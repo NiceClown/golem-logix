@@ -1,6 +1,7 @@
 package com.golemlogix.client;
 
-import net.minecraft.client.renderer.rendertype.RenderTypes;
+import com.golemlogix.client.render.BerBuffers;
+import com.golemlogix.client.render.StandaloneModels;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -9,6 +10,8 @@ import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.Sheets;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Blocks;
@@ -125,12 +128,12 @@ public final class SnowmanPuppet {
             if (head == Head.PUMPKIN) {
                 pose.scale(0.625f, 0.625f, 0.625f);
                 pose.translate(-0.5f, -0.5f, -0.5f);
-                com.golemlogix.client.render.BerBuffers.block(buffers, Blocks.CARVED_PUMPKIN.defaultBlockState(), pose, light);
+                BerBuffers.block(buffers, Blocks.CARVED_PUMPKIN.defaultBlockState(), pose, light);
             } else {
                 // the copper atlant head (6x7x6, centred at (8, 9.5, 6)), a little bigger than the snow one, in its place
                 pose.scale(1.2f, 1.2f, 1.2f);
                 pose.translate(-0.5f, -9.5f / 16f, -6f / 16f);
-                com.golemlogix.client.render.StandaloneModels.render(pose.last(), buffers.getBuffer(net.minecraft.client.renderer.Sheets.cutoutBlockSheet()), AtlantHeadRenderer.HEAD, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
+                StandaloneModels.render(pose.last(), buffers.getBuffer(Sheets.cutoutBlockSheet()), AtlantHeadRenderer.HEAD, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
             }
             pose.popPose();
         }

@@ -1,6 +1,8 @@
 package com.golemlogix.client;
 
+import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.CopperTankBlockEntity;
+import com.golemlogix.client.render.LegacyBer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -9,6 +11,8 @@ import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.LightCoordsUtil;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 /**
@@ -16,17 +20,15 @@ import net.neoforged.neoforge.fluids.FluidStack;
  * fluid lighter than air (a gas) hangs from the lid instead; a glowing one (lava) is drawn at full brightness. The needle of the
  * gauge on the front post shows how full it is: from the dial's lower left (empty) round to its lower right (full).
  */
-public class CopperTankRenderer extends com.golemlogix.client.render.LegacyBer<CopperTankBlockEntity> {
+public class CopperTankRenderer extends LegacyBer<CopperTankBlockEntity> {
     /** The inside of the tank (pixels): within the glass chamber (2..14), between the base (top at 3.5) and the lid (underside at 12.5). */
     private static final float IN0 = 2.2f, IN1 = 13.8f, BOTTOM = 3.55f, TOP = 12.45f;
+    private static final Identifier WHITE = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/bay_white.png");
+    /** The gauge's face (pixels): centered on BOTH north (z = 1.35) and south (z = 14.65) glass walls so the dial is always readable. */
+    private static final float GAUGE_X = 8.0f, GAUGE_Y = 8.0f, GAUGE_Z_N = 1.24f, GAUGE_Z_S = 14.76f;
 
     public CopperTankRenderer(BlockEntityRendererProvider.Context context) {
     }
-
-    private static final net.minecraft.resources.Identifier WHITE =
-            net.minecraft.resources.Identifier.fromNamespaceAndPath(com.golemlogix.GolemLogixMod.MOD_ID, "textures/entity/bay_white.png");
-    /** The gauge's face (pixels): centered on BOTH north (z = 1.35) and south (z = 14.65) glass walls so the dial is always readable. */
-    private static final float GAUGE_X = 8.0f, GAUGE_Y = 8.0f, GAUGE_Z_N = 1.24f, GAUGE_Z_S = 14.76f;
 
     /** Needles on both north and south dials: from empty (lower left) around top to full (lower right). */
     private static void needle(PoseStack.Pose p, MultiBufferSource buffers, float fill, int light) {
@@ -72,7 +74,7 @@ public class CopperTankRenderer extends com.golemlogix.client.render.LegacyBer<C
         if ((tint >>> 24) == 0) {
             tint |= 0xFF000000;
         }
-        int lit = fluid.getFluidType().getLightLevel(fluid) > 0 ? 0xF000F0 : light;
+        int lit = fluid.getFluidType().getLightLevel(fluid) > 0 ? LightCoordsUtil.FULL_BRIGHT : light;
         TextureAtlasSprite s = FluidIcons.still(fluid);
         VertexConsumer vc = buffers.getBuffer(RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
         PoseStack.Pose p = pose.last();

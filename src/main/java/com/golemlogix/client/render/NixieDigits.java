@@ -6,6 +6,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.LightCoordsUtil;
 import org.joml.Vector3f;
 
 /**
@@ -49,15 +50,15 @@ public final class NixieDigits {
         float hw = w * 0.5f, hh = h * 0.5f;
         float hrx = rx * hw, hry = ry * hw, hrz = rz * hw;
         float hux = ux * hh, huy = uy * hh, huz = uz * hh;
-        float inv16 = 1f / 16f;
+        float inv16 = PixelMesh.PIXEL;
         vc.addVertex(p, (cx - hrx + hux) * inv16, (cy - hry + huy) * inv16, (cz - hrz + huz) * inv16)
-                .setColor(color).setUv(u0, 0f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(p, nx, ny, nz);
+                .setColor(color).setUv(u0, 0f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(LightCoordsUtil.FULL_BRIGHT).setNormal(p, nx, ny, nz);
         vc.addVertex(p, (cx - hrx - hux) * inv16, (cy - hry - huy) * inv16, (cz - hrz - huz) * inv16)
-                .setColor(color).setUv(u0, 1f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(p, nx, ny, nz);
+                .setColor(color).setUv(u0, 1f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(LightCoordsUtil.FULL_BRIGHT).setNormal(p, nx, ny, nz);
         vc.addVertex(p, (cx + hrx - hux) * inv16, (cy + hry - huy) * inv16, (cz + hrz - huz) * inv16)
-                .setColor(color).setUv(u1, 1f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(p, nx, ny, nz);
+                .setColor(color).setUv(u1, 1f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(LightCoordsUtil.FULL_BRIGHT).setNormal(p, nx, ny, nz);
         vc.addVertex(p, (cx + hrx + hux) * inv16, (cy + hry + huy) * inv16, (cz + hrz + huz) * inv16)
-                .setColor(color).setUv(u1, 0f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(p, nx, ny, nz);
+                .setColor(color).setUv(u1, 0f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(LightCoordsUtil.FULL_BRIGHT).setNormal(p, nx, ny, nz);
     }
 
     /** The shared glow buffer for drawing a batch of nixie digits. */

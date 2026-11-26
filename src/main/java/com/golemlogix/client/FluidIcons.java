@@ -4,6 +4,8 @@ import com.golemlogix.items.FluidGhostItem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.block.FluidModel;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -17,10 +19,10 @@ public final class FluidIcons {
         if (fluid.isEmpty()) {
             return;
         }
-        var m = model(fluid);
+        FluidModel m = model(fluid);
         var source = m.fluidTintSource();
         int tint = source == null ? 0xFFFFFFFF : source.colorAsStack(fluid);
-        g.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, m.stillMaterial().sprite(), x, y, 16, 16,
+        g.blitSprite(RenderPipelines.GUI_TEXTURED, m.stillMaterial().sprite(), x, y, 16, 16,
                 (tint >>> 24) == 0 ? tint | 0xFF000000 : tint);
     }
 
@@ -35,7 +37,7 @@ public final class FluidIcons {
         return source == null ? 0xFFFFFFFF : source.colorAsStack(fluid);
     }
 
-    private static net.minecraft.client.renderer.block.FluidModel model(FluidStack fluid) {
+    private static FluidModel model(FluidStack fluid) {
         return Minecraft.getInstance().getModelManager().getFluidStateModelSet().get(fluid.getFluid().defaultFluidState());
     }
 

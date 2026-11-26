@@ -11,9 +11,13 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
+import net.neoforged.fml.ModList;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.util.function.Function;
 
 /**
@@ -45,9 +49,9 @@ public final class GlowTypes {
      * geometry goes through the game's emissive translucent type, on a copy of the texture whose brightness is its alpha
      * ("<name>_alpha.png").
      */
-    private static final boolean IRIS = net.neoforged.fml.ModList.get().isLoaded("iris");
+    private static final boolean IRIS = ModList.get().isLoaded("iris");
     private static final Function<Identifier, RenderType> SHADER_SAFE = Util.memoize(texture ->
-            net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucentEmissive(Identifier.fromNamespaceAndPath(
+            RenderTypes.entityTranslucentEmissive(Identifier.fromNamespaceAndPath(
                     texture.getNamespace(), texture.getPath().replace(".png", "_alpha.png"))));
 
     /** Whether the shader-safe path is taken (Iris is loaded): translucent geometry drawn by a renderer can then hide the glow behind it. */
@@ -55,7 +59,7 @@ public final class GlowTypes {
         return IRIS;
     }
 
-    private static java.lang.invoke.MethodHandle packInUse;
+    private static MethodHandle packInUse;
     private static boolean packLookupDone;
 
     /** Whether a shader pack is running this moment (Iris can be loaded with shaders off, and they can be switched in game). */
@@ -68,7 +72,7 @@ public final class GlowTypes {
                 packLookupDone = true;
                 Class<?> api = Class.forName("net.irisshaders.iris.api.v0.IrisApi");
                 Object instance = api.getMethod("getInstance").invoke(null);
-                packInUse = java.lang.invoke.MethodHandles.publicLookup().unreflect(api.getMethod("isShaderPackInUse")).bindTo(instance);
+                packInUse = MethodHandles.publicLookup().unreflect(api.getMethod("isShaderPackInUse")).bindTo(instance);
             }
             return packInUse != null && (boolean) packInUse.invoke();
         } catch (Throwable t) {
