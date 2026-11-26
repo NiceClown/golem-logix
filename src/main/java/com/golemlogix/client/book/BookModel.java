@@ -69,6 +69,8 @@ public final class BookModel {
         /** Mod id the entry is about (its integration): the entry is hidden without that mod; empty = always. */
         public final String requires;
         public Category category;
+        /** Title in lower case, for search without per-frame lowercasing. */
+        public final String lowerTitle;
         /** All content in lower case, for search. */
         public final String searchText;
 
@@ -84,7 +86,8 @@ public final class BookModel {
             this.parents = parents;
             this.pages = pages;
             this.secret = secret;
-            StringBuilder sb = new StringBuilder(title.toLowerCase(Locale.ROOT));
+            this.lowerTitle = title.toLowerCase(Locale.ROOT);
+            StringBuilder sb = new StringBuilder(this.lowerTitle);
             for (JsonObject p : pages) {
                 collectText(p, sb);
             }
@@ -145,9 +148,10 @@ public final class BookModel {
         return cached;
     }
 
-    /** Reset the cache (on resource reload). */
+    /** Reset the cache (on resource reload or logout). */
     public static void invalidate() {
         cached = null;
+        cachedLang = null;
     }
 
     public static ItemStack stack(String id) {
