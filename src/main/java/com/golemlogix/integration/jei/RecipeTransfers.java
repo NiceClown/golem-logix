@@ -107,22 +107,35 @@ final class RecipeTransfers {
             if (inputs.size() != 9) {
                 return helper.createInternalError();
             }
+            List<List<ItemStack>> options = new ArrayList<>(9);
             Map<ItemKey, Long> have = new HashMap<>();
             Set<ItemKey> craftable = new HashSet<>();
-            collectAvailable(menu, player, have, craftable);
-
-            List<List<ItemStack>> options = new ArrayList<>(9);
-            List<IRecipeSlotView> missing = new ArrayList<>();
-            // precraft: for every empty cell the first option the network can craft
-            Map<ItemKey, Integer> toOrder = new LinkedHashMap<>();
             for (IRecipeSlotView view : inputs) {
                 List<ItemStack> opts = options(view);
                 options.add(opts);
+                for (ItemStack o : opts) {
+                    ItemKey k = ItemKey.of(o);
+                    if (!have.containsKey(k)) {
+                        TerminalListPayload.Entry entry = menu.clientEntryOf(o);
+                        have.put(k, entry != null && entry.count() > 0 ? entry.count() : 0L);
+                        if (entry != null && entry.craftable()) {
+                            craftable.add(k);
+                        }
+                    }
+                }
+            }
+            addLocalStock(menu, player, have);
+
+            List<IRecipeSlotView> missing = new ArrayList<>();
+            // precraft: for every empty cell the first option the network can craft
+            Map<ItemKey, Integer> toOrder = new LinkedHashMap<>();
+            for (int i = 0; i < inputs.size(); i++) {
+                List<ItemStack> opts = options.get(i);
                 if (opts.isEmpty()) {
                     continue;
                 }
                 if (!consumeOne(opts, have)) {
-                    missing.add(view);
+                    missing.add(inputs.get(i));
                     queuePrecraftOption(opts, craftable, maxTransfer, toOrder);
                 }
             }
@@ -136,15 +149,10 @@ final class RecipeTransfers {
             return missing.isEmpty() ? null : new Missing(missing, !toOrder.isEmpty());
         }
 
-        /** Collects what is available in the network, the player's inventory (excluding lockedSlot), and the crafting grid. */
-        private static void collectAvailable(TerminalMenu menu, Player player, Map<ItemKey, Long> have, Set<ItemKey> craftable) {
-            for (TerminalListPayload.Entry e : menu.clientEntries) {
-                if (e.count() > 0) {
-                    have.merge(ItemKey.of(e.key()), e.count(), Long::sum);
-                }
-                if (e.craftable()) {
-                    craftable.add(ItemKey.of(e.key()));
-                }
+        /** Adds counts from the player's inventory (excluding lockedSlot) and crafting grid for recipe ingredient keys. */
+        private static void addLocalStock(TerminalMenu menu, Player player, Map<ItemKey, Long> have) {
+            if (have.isEmpty()) {
+                return;
             }
             var invItems = player.getInventory().getNonEquipmentItems();
             for (int k = 0; k < invItems.size(); k++) {
@@ -153,14 +161,14 @@ final class RecipeTransfers {
                 }
                 ItemStack s = invItems.get(k);
                 if (!s.isEmpty()) {
-                    have.merge(ItemKey.of(s), (long) s.getCount(), Long::sum);
+                    have.computeIfPresent(ItemKey.of(s), (key, prev) -> prev + s.getCount());
                 }
             }
             // items currently in the crafting grid are returned first and reused by fillGrid
             for (int k = menu.craftGridStart(); k < menu.craftGridStart() + 9 && k < menu.slots.size(); k++) {
                 ItemStack s = menu.slots.get(k).getItem();
                 if (!s.isEmpty()) {
-                    have.merge(ItemKey.of(s), (long) s.getCount(), Long::sum);
+                    have.computeIfPresent(ItemKey.of(s), (key, prev) -> prev + s.getCount());
                 }
             }
         }

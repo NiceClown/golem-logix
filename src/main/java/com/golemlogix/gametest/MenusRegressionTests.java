@@ -3,6 +3,8 @@ package com.golemlogix.gametest;
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.BusBlockEntity;
 import com.golemlogix.blockentity.CardCatalogBlockEntity;
+import com.golemlogix.blockentity.CopperDriveBayBlockEntity;
+import com.golemlogix.blockentity.CopperTankBlockEntity;
 import com.golemlogix.blockentity.CryoMixerBlockEntity;
 import com.golemlogix.blockentity.InterfaceBlockEntity;
 import com.golemlogix.blockentity.PatternEncoderBlockEntity;
@@ -24,7 +26,11 @@ import com.golemlogix.network.CraftPlanPayload;
 import com.golemlogix.network.MonitorPayload;
 import com.golemlogix.network.PrecraftPayload;
 import com.golemlogix.network.RecipeFillPayload;
+import com.golemlogix.network.TerminalActionPayload;
+import com.golemlogix.network.TerminalInfoPayload;
+import com.golemlogix.network.TerminalListPayload;
 import com.golemlogix.security.SecurityPermission;
+import com.golemlogix.system.DiskStorage;
 import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.ItemKey;
 import com.mojang.authlib.GameProfile;
@@ -39,15 +45,22 @@ import net.minecraft.gametest.framework.FunctionGameTestInstance;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.TestData;
 import net.minecraft.gametest.framework.TestEnvironmentDefinition;
+import net.minecraft.network.Connection;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.PacketFlow;
+import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.CommonListenerCookie;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DirectionalBlock;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.material.Fluids;
@@ -59,6 +72,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.gametest.GameTestHooks;
 import net.neoforged.neoforge.network.connection.ConnectionType;
 import net.neoforged.neoforge.registries.RegisterEvent;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -79,7 +93,10 @@ public final class MenusRegressionTests {
             new Entry("menusterminalsecurityinsertbypass", MenusRegressionTests::terminalSecurityInsertBypass, 120),
             new Entry("menussecurityterminalmenuownercheck", MenusRegressionTests::securityTerminalMenuOwnerCheck, 80),
             new Entry("menuscodecboundsrejectmalformed", MenusRegressionTests::codecBoundsRejectMalformed, 40),
-            new Entry("menusslotandghostsafety", MenusRegressionTests::slotAndGhostSafety, 120)
+            new Entry("menusslotandghostsafety", MenusRegressionTests::slotAndGhostSafety, 120),
+            new Entry("menusterminalcachefreshness", MenusRegressionTests::terminalCacheFreshness, 120),
+            new Entry("menusterminalclientindex", MenusRegressionTests::terminalClientIndex, 40),
+            new Entry("menusterminalinfoliverefresh", MenusRegressionTests::terminalInfoLiveRefresh, 120)
     );
 
     private MenusRegressionTests() {
@@ -405,5 +422,269 @@ public final class MenusRegressionTests {
                 "clicking providerSlot with a single renamed provider must not swap below minProviders()");
 
         helper.succeed();
+    }
+
+    /**
+     * Proves TerminalMenu's cached GolemNetwork.get() sees same-tick topology, security, and bay-disk mutations:
+     * placing a Security Terminal, toggling card permissions, inserting a pre-filled disk, and severing a pipe.
+     */
+    private static void terminalCacheFreshness(GameTestHelper helper) {
+        BlockPos bayPos = baseNetwork(helper);
+        put(helper, TERM, ModBlocks.BASIC_SNOW_PIPE.get());
+        BlockPos farTerm = TERM.west();
+        helper.setBlock(farTerm, ModBlocks.ANALOG_TERMINAL.get().defaultBlockState());
+
+        ServerPlayer owner = testPlayer(helper);
+        ServerPlayer stranger = fakePlayer(helper, "menus-cache-stranger");
+        BlockPos absTerm = helper.absolutePos(farTerm);
+
+        helper.runAfterDelay(10, () -> {
+            GolemNetwork n = GolemNetwork.get(helper.getLevel(), absTerm);
+            n.insertItem(new ItemStack(Items.IRON_INGOT, 16), false);
+
+            TerminalMenu ownerMenu = new TerminalMenu(101, owner.getInventory(), helper.getLevel(), absTerm, absTerm,
+                    ModBlocks.ANALOG_TERMINAL.get(), false, false, 0);
+            TerminalMenu strangerMenu = new TerminalMenu(102, stranger.getInventory(), helper.getLevel(), absTerm, absTerm,
+                    ModBlocks.ANALOG_TERMINAL.get(), false, false, 0);
+            ownerMenu.broadcastChanges();
+            TerminalActionPayload takeIron = new TerminalActionPayload(102,
+                    TerminalActionPayload.Action.TAKE_ONE, new ItemStack(Items.IRON_INGOT), FluidStack.EMPTY);
+
+            // Warm cache: unsecured network allows stranger to take 1 iron
+            strangerMenu.handleAction(stranger, takeIron);
+            helper.assertTrue(strangerMenu.getCarried().is(Items.IRON_INGOT) && strangerMenu.getCarried().getCount() == 1,
+                    "unsecured terminal allows extract on warm cache");
+            strangerMenu.setCarried(ItemStack.EMPTY);
+
+            // 1. Placing a Security Terminal invalidates cache synchronously on the same tick
+            helper.setBlock(BUS_OUT, ModBlocks.SECURITY_TERMINAL.get().defaultBlockState()
+                    .setValue(HorizontalDirectionalBlock.FACING, Direction.NORTH));
+            SecurityTerminalBlockEntity sec = helper.getBlockEntity(BUS_OUT, SecurityTerminalBlockEntity.class);
+            sec.setOwner(owner);
+            strangerMenu.handleAction(stranger, takeIron);
+            helper.assertTrue(strangerMenu.getCarried().isEmpty(),
+                    "newly placed Security Terminal must immediately block unauthorized terminal extract");
+
+            // 2. Granting & revoking EXTRACT permission on existing Security Terminal is read live
+            sec.getCards().setItem(0, IdentityPunchCardItem.of(stranger.getUUID(), "menus-cache-stranger",
+                    SecurityPermission.EXTRACT.mask));
+            strangerMenu.handleAction(stranger, takeIron);
+            helper.assertTrue(strangerMenu.getCarried().is(Items.IRON_INGOT) && strangerMenu.getCarried().getCount() == 1,
+                    "adding EXTRACT card must immediately allow extract");
+            strangerMenu.setCarried(ItemStack.EMPTY);
+
+            sec.togglePermission(0, SecurityPermission.EXTRACT);
+            strangerMenu.handleAction(stranger, takeIron);
+            helper.assertTrue(strangerMenu.getCarried().isEmpty(),
+                    "revoking EXTRACT permission must immediately block extract");
+
+            // 3. Inserting a pre-filled disk into an existing Drive Bay is visible immediately on cached network
+            CopperDriveBayBlockEntity bay = helper.getBlockEntity(bayPos, CopperDriveBayBlockEntity.class);
+            ItemStack disk = new ItemStack(ModItems.COPPER_DISK_1K.get());
+            DiskStorage.insertItem(disk, new ItemStack(Items.DIAMOND, 4), false);
+            bay.getContainer().setItem(1, disk);
+            ownerMenu.handleAction(owner, new TerminalActionPayload(101,
+                    TerminalActionPayload.Action.TAKE_ONE, new ItemStack(Items.DIAMOND), FluidStack.EMPTY));
+            helper.assertTrue(ownerMenu.getCarried().is(Items.DIAMOND) && ownerMenu.getCarried().getCount() == 1,
+                    "disk inserted into existing bay must be immediately extractable through cached terminal");
+            ownerMenu.setCarried(ItemStack.EMPTY);
+            ownerMenu.broadcastChanges();
+
+            // 4. Breaking the connecting pipe disconnects the terminal on the same tick
+            helper.setBlock(TERM, Blocks.AIR.defaultBlockState());
+            ownerMenu.handleAction(owner, new TerminalActionPayload(101,
+                    TerminalActionPayload.Action.TAKE_ONE, new ItemStack(Items.IRON_INGOT), FluidStack.EMPTY));
+            helper.assertTrue(ownerMenu.getCarried().isEmpty(),
+                    "severed pipe must immediately disconnect terminal on same tick");
+            ownerMenu.broadcastChanges();
+
+            helper.succeed();
+        });
+    }
+
+    /**
+     * Verifies TerminalMenu.clientReceiveList and clientEntryOf across multi-chunk resets, updates,
+     * interior swap-with-last removals, tail removals, craftable-only entries, and empty resets.
+     */
+    private static void terminalClientIndex(GameTestHelper helper) {
+        ServerPlayer player = testPlayer(helper);
+        TerminalMenu client = new TerminalMenu(103, player.getInventory(), null, null, null, null, false, false, 0);
+
+        int chunkSize = TerminalListPayload.CHUNK;
+        int total = chunkSize + 50;
+        List<TerminalListPayload.Entry> chunk1 = new ArrayList<>(chunkSize);
+        List<TerminalListPayload.Entry> chunk2 = new ArrayList<>(50);
+        ItemStack first = null, middle = null, tail = null;
+        for (int i = 0; i < total; i++) {
+            ItemStack s = new ItemStack(Items.STONE, 1);
+            s.set(DataComponents.CUSTOM_NAME, Component.literal("idx_" + i));
+            if (i == 0) first = s;
+            if (i == 500) middle = s;
+            if (i == total - 1) tail = s;
+            TerminalListPayload.Entry entry = new TerminalListPayload.Entry(s, i + 1, i % 10 == 0);
+            (i < chunkSize ? chunk1 : chunk2).add(entry);
+        }
+
+        client.clientReceiveList(new TerminalListPayload(103, true, chunk1));
+        client.clientReceiveList(new TerminalListPayload(103, false, chunk2));
+        helper.assertTrue(client.clientEntries.size() == total, "multi-chunk reset populated all " + total + " entries");
+        helper.assertTrue(client.clientEntryOf(first) != null && client.clientEntryOf(first).count() == 1 && client.clientEntryOf(first).craftable(),
+                "clientEntryOf finds first entry");
+        helper.assertTrue(client.clientEntryOf(middle) != null && client.clientEntryOf(middle).count() == 501,
+                "clientEntryOf finds middle entry");
+        helper.assertTrue(client.clientEntryOf(tail) != null && client.clientEntryOf(tail).count() == total,
+                "clientEntryOf finds tail entry");
+
+        // Update existing entry
+        client.clientReceiveList(new TerminalListPayload(103, false, List.of(
+                new TerminalListPayload.Entry(middle, 9999, true))));
+        helper.assertTrue(client.clientEntries.size() == total && client.clientEntryOf(middle).count() == 9999 && client.clientEntryOf(middle).craftable(),
+                "updating entry preserves size and updates value");
+
+        // Interior removal swaps tail into middle's slot; tail must stay indexed and updatable/removable
+        client.clientReceiveList(new TerminalListPayload(103, false, List.of(
+                new TerminalListPayload.Entry(middle, 0, false))));
+        helper.assertTrue(client.clientEntries.size() == total - 1 && client.clientEntryOf(middle) == null,
+                "removed interior entry is absent");
+        helper.assertTrue(client.clientEntryOf(tail) != null && client.clientEntryOf(tail).count() == total,
+                "swapped tail entry remains indexed after interior removal");
+
+        client.clientReceiveList(new TerminalListPayload(103, false, List.of(
+                new TerminalListPayload.Entry(tail, 77, false))));
+        helper.assertTrue(client.clientEntryOf(tail) != null && client.clientEntryOf(tail).count() == 77,
+                "swapped entry can be updated cleanly");
+
+        // Remove swapped entry and also remove the current tail entry
+        ItemStack currentTail = client.clientEntries.get(client.clientEntries.size() - 1).key();
+        client.clientReceiveList(new TerminalListPayload(103, false, List.of(
+                new TerminalListPayload.Entry(currentTail, 0, false),
+                new TerminalListPayload.Entry(tail, 0, false),
+                new TerminalListPayload.Entry(new ItemStack(Items.NETHER_STAR), 0, false))));
+        helper.assertTrue(client.clientEntries.size() == total - 3 && client.clientEntryOf(currentTail) == null && client.clientEntryOf(tail) == null,
+                "tail removal, swapped removal, and missing-key removal all maintain consistent index");
+
+        // Craftable-only entry (count=0, craftable=true) is kept
+        ItemStack beacon = new ItemStack(Items.BEACON);
+        client.clientReceiveList(new TerminalListPayload(103, false, List.of(
+                new TerminalListPayload.Entry(beacon, 0, true))));
+        helper.assertTrue(client.clientEntryOf(beacon) != null && client.clientEntryOf(beacon).count() == 0 && client.clientEntryOf(beacon).craftable(),
+                "craftable-only entry stays indexed");
+
+        // Reset clears all entries and index
+        client.clientReceiveList(new TerminalListPayload(103, true, List.of()));
+        helper.assertTrue(client.clientEntries.isEmpty() && client.clientEntryOf(first) == null && client.clientEntryOf(beacon) == null,
+                "empty reset clears entries and index");
+
+        helper.succeed();
+    }
+
+    private static List<TerminalInfoPayload> attachInfoRecorder(ServerPlayer player) {
+        List<TerminalInfoPayload> received = new ArrayList<>();
+        player.connection = new ServerGamePacketListenerImpl(
+                player.level().getServer(),
+                new Connection(PacketFlow.SERVERBOUND),
+                player,
+                CommonListenerCookie.createInitial(player.getGameProfile(), false)) {
+            @Override
+            public void send(Packet<?> packet) {
+                if (packet instanceof ClientboundCustomPayloadPacket custom
+                        && custom.payload() instanceof TerminalInfoPayload info) {
+                    received.add(info);
+                }
+            }
+        };
+        return received;
+    }
+
+    private static int fluidAmount(TerminalInfoPayload info, net.minecraft.world.level.material.Fluid fluid) {
+        for (FluidStack f : info.fluids()) {
+            if (f.getFluid() == fluid) {
+                return f.getAmount();
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Verifies TerminalSync suppresses duplicate TerminalInfoPayload packets when nothing changed, yet immediately
+     * updates on the next broadcastChanges() after inserting an empty item disk, an empty or pre-filled fluid disk,
+     * or externally filling/draining a fluid tank behind a Periscope Storage Bus.
+     */
+    private static void terminalInfoLiveRefresh(GameTestHelper helper) {
+        BlockPos bayPos = baseNetwork(helper);
+        helper.setBlock(TERM, ModBlocks.ANALOG_TERMINAL.get().defaultBlockState());
+        helper.setBlock(BUS_OUT, ModBlocks.PERISCOPE_STORAGE_BUS.get().defaultBlockState()
+                .setValue(DirectionalBlock.FACING, Direction.NORTH));
+        BlockPos tankPos = BUS_OUT.north();
+        helper.setBlock(tankPos, ModBlocks.COPPER_TANK.get().defaultBlockState());
+
+        ServerPlayer player = fakePlayer(helper, "menus-info-recorder");
+        List<TerminalInfoPayload> received = attachInfoRecorder(player);
+        BlockPos absTerm = helper.absolutePos(TERM);
+        int delay = (int) (10 - (helper.getLevel().getGameTime() % 10)) + 10;
+
+        helper.runAfterDelay(delay, () -> {
+            CopperDriveBayBlockEntity bay = helper.getBlockEntity(bayPos, CopperDriveBayBlockEntity.class);
+            CopperTankBlockEntity tank = helper.getBlockEntity(tankPos, CopperTankBlockEntity.class);
+            TerminalMenu menu = new TerminalMenu(104, player.getInventory(), helper.getLevel(), absTerm, absTerm,
+                    ModBlocks.ANALOG_TERMINAL.get(), false, false, 0);
+
+            // Initial sync sends TerminalInfoPayload with 1K item disk and no fluids
+            menu.broadcastChanges();
+            helper.assertTrue(received.size() == 1, "initial sync sends TerminalInfoPayload");
+            long baseItemCap = received.get(0).itemsCapacity();
+            helper.assertTrue(baseItemCap > 0 && received.get(0).fluidsCapacity() == 0 && received.get(0).fluids().isEmpty(),
+                    "initial info reflects 1K item disk and empty fluids");
+
+            // Unchanged sync suppresses redundant TerminalInfoPayload
+            menu.broadcastChanges();
+            helper.assertTrue(received.size() == 1, "unchanged sync must not resend TerminalInfoPayload");
+
+            // 1. Inserting an empty item disk (networkEpoch unchanged, items unchanged) updates itemsCapacity immediately
+            ItemStack emptyItemDisk = new ItemStack(ModItems.COPPER_DISK_16K.get());
+            bay.getContainer().setItem(1, emptyItemDisk);
+            menu.broadcastChanges();
+            helper.assertTrue(received.size() == 2, "empty item disk insert must trigger updated TerminalInfoPayload");
+            helper.assertTrue(received.get(1).itemsCapacity() == baseItemCap + DiskStorage.capacity(emptyItemDisk),
+                    "itemsCapacity reflects newly inserted empty 16K disk");
+
+            // 2. Inserting an empty fluid disk updates fluidsCapacity immediately
+            ItemStack emptyFluidDisk = new ItemStack(ModItems.FLUID_DISK_16K.get());
+            bay.getContainer().setItem(2, emptyFluidDisk);
+            menu.broadcastChanges();
+            helper.assertTrue(received.size() == 3, "empty fluid disk insert must trigger updated TerminalInfoPayload");
+            long fluidDiskCap = DiskStorage.capacity(emptyFluidDisk);
+            helper.assertTrue(received.get(2).fluidsCapacity() == fluidDiskCap && received.get(2).fluidsUsed() == 0,
+                    "fluidsCapacity reflects newly inserted empty fluid disk");
+
+            // 3. Inserting a pre-filled fluid disk updates fluidsUsed and fluids list immediately
+            ItemStack filledFluidDisk = new ItemStack(ModItems.FLUID_DISK_16K.get());
+            DiskStorage.insertFluid(filledFluidDisk, new FluidStack(Fluids.LAVA, 2000), false);
+            bay.getContainer().setItem(3, filledFluidDisk);
+            menu.broadcastChanges();
+            helper.assertTrue(received.size() == 4, "filled fluid disk insert must trigger updated TerminalInfoPayload");
+            helper.assertTrue(received.get(3).fluidsCapacity() == fluidDiskCap * 2
+                            && received.get(3).fluidsUsed() == 2000
+                            && fluidAmount(received.get(3), Fluids.LAVA) == 2000,
+                    "filled fluid disk updates fluidsUsed, fluidsCapacity, and fluid list");
+
+            // 4. Externally filling tank behind Periscope (bypassing GolemNetwork.insertFluid) updates fluids immediately
+            tank.tank().set(0, FluidResource.of(Fluids.WATER), 3000);
+            menu.broadcastChanges();
+            helper.assertTrue(received.size() == 5, "external Periscope tank fill must trigger updated TerminalInfoPayload");
+            helper.assertTrue(fluidAmount(received.get(4), Fluids.WATER) == 3000
+                            && fluidAmount(received.get(4), Fluids.LAVA) == 2000,
+                    "external Periscope tank water appears alongside disk lava");
+
+            // 5. Externally draining tank behind Periscope removes water immediately
+            tank.tank().set(0, FluidResource.EMPTY, 0);
+            menu.broadcastChanges();
+            helper.assertTrue(received.size() == 6, "external Periscope tank drain must trigger updated TerminalInfoPayload");
+            helper.assertTrue(fluidAmount(received.get(5), Fluids.WATER) == 0
+                            && fluidAmount(received.get(5), Fluids.LAVA) == 2000,
+                    "drained Periscope tank fluid disappears while disk lava stays");
+
+            helper.succeed();
+        });
     }
 }
