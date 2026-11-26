@@ -316,4 +316,56 @@ public final class CoreRegressionTests {
             helper.succeed();
         });
     }
+
+    /** Cached DiskIndex must stay consistent across priority changes, slot swaps, duplicate disk removal, and direct DiskStorage writes. */
+    @GameTest(template = T, timeoutTicks = 60)
+    public static void coreDiskIndexTracksLiveMutations(GameTestHelper helper) {
+        BlockPos bushing = buildTinyNetwork(helper);
+        BlockPos bayA = new BlockPos(5, 2, 4);
+        BlockPos bayB = new BlockPos(3, 2, 4);
+        CopperDriveBayBlock.place(helper.getLevel(), helper.absolutePos(bayB), Direction.SOUTH);
+        CopperDriveBayBlockEntity beA = (CopperDriveBayBlockEntity) helper.getBlockEntity(bayA);
+        CopperDriveBayBlockEntity beB = (CopperDriveBayBlockEntity) helper.getBlockEntity(bayB);
+        beB.getContainer().setItem(0, new ItemStack(ModItems.COPPER_DISK_1K.get()));
+
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork net = GolemNetwork.get(helper.getLevel(), helper.absolutePos(bushing));
+            ItemKey iron = ItemKey.of(new ItemStack(Items.IRON_INGOT));
+
+            // 1. Insert into higher-priority bayB, then flip priority so bayA receives the next insert
+            beA.setPriority(0);
+            beB.setPriority(10);
+            net.insertItem(new ItemStack(Items.IRON_INGOT, 20), false);
+            helper.assertTrue(DiskStorage.itemCount(beB.getDisks().get(0), iron) == 20, "high-priority bayB should receive first insert");
+            helper.assertTrue(net.itemCountOf(iron) == 20L, "itemCountOf should reflect 20 iron");
+
+            beA.setPriority(20);
+            net.insertItem(new ItemStack(Items.GOLD_INGOT, 15), false);
+            ItemKey gold = ItemKey.of(new ItemStack(Items.GOLD_INGOT));
+            helper.assertTrue(DiskStorage.itemCount(beA.getDisks().get(0), gold) == 15, "newly higher-priority bayA should receive gold");
+
+            // 2. Direct DiskStorage write bypassing GolemNetwork must be visible immediately
+            DiskStorage.insertItem(beA.getDisks().get(0), new ItemStack(Items.IRON_INGOT, 5), false);
+            helper.assertTrue(net.itemCountOf(iron) == 25L, "direct DiskStorage write must invalidate inverted index: got " + net.itemCountOf(iron));
+
+            // 3. Multi-disk extract must pull lowest priority (bayB) first, then bayA
+            ItemStack taken = net.extractItem(new ItemStack(Items.IRON_INGOT), 22, false);
+            helper.assertTrue(taken.getCount() == 22, "expected 22 iron extracted, got " + taken.getCount());
+            helper.assertTrue(DiskStorage.itemCount(beB.getDisks().get(0), iron) == 0, "lower-priority bayB must drain first");
+            helper.assertTrue(DiskStorage.itemCount(beA.getDisks().get(0), iron) == 3, "bayA should retain 3 iron");
+            helper.assertTrue(net.itemCountOf(iron) == 3L, "remaining iron count must be 3");
+
+            // 4. Warm listItemsForPlanning/listItemsShared in the same tick, then remove disk from slot: must invalidate immediately
+            helper.assertTrue(net.listItemsForPlanning().getOrDefault(iron, 0L) == 3L,
+                    "warm listItemsForPlanning should see 3 iron before removal");
+            beA.getContainer().setItem(0, ItemStack.EMPTY);
+            helper.assertTrue(net.itemCountOf(iron) == 0L, "removing disk from bayA must drop iron count to 0");
+            helper.assertTrue(net.itemCountOf(gold) == 0L, "removing disk from bayA must drop gold count to 0");
+            helper.assertTrue(net.listItemsForPlanning().getOrDefault(iron, 0L) == 0L,
+                    "same-tick disk removal must invalidate listItemsForPlanning");
+            helper.assertTrue(net.listItemsShared().getOrDefault(gold, 0L) == 0L,
+                    "same-tick disk removal must invalidate listItemsShared");
+            helper.succeed();
+        });
+    }
 }

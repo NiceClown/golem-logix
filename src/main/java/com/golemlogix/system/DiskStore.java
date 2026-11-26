@@ -39,11 +39,25 @@ public class DiskStore extends SavedData {
         }
     }
 
+    private record ServerCache(MinecraftServer server, DiskStore store) {
+    }
+
     private final Map<UUID, Disk> disks = new HashMap<>();
+    private static volatile ServerCache serverCache;
 
     public static DiskStore get(MinecraftServer server) {
-        return server.overworld().getDataStorage().computeIfAbsent(
+        ServerCache cached = serverCache;
+        if (cached != null && cached.server() == server) {
+            return cached.store();
+        }
+        DiskStore store = server.overworld().getDataStorage().computeIfAbsent(
                 new SavedData.Factory<>(DiskStore::new, DiskStore::load, null), NAME);
+        serverCache = new ServerCache(server, store);
+        return store;
+    }
+
+    static void forgetCachedServer() {
+        serverCache = null;
     }
 
     public Disk getOrNull(UUID id) {
@@ -51,7 +65,13 @@ public class DiskStore extends SavedData {
     }
 
     public Disk getOrCreate(UUID id) {
-        return disks.computeIfAbsent(id, k -> new Disk());
+        Disk d = disks.get(id);
+        if (d == null) {
+            d = new Disk();
+            disks.put(id, d);
+            DiskStorage.markDiskAllocated();
+        }
+        return d;
     }
 
     /** Recomputes used space and equipment counts after a /reload, in case the golem_logix:not_gear tag changed. */
@@ -70,6 +90,7 @@ public class DiskStore extends SavedData {
             disk.storedItems = sum;
             disk.gearItems = gear;
         }
+        DiskStorage.markItemsMutated();
     }
 
     // ------------------------------------------------------------------ NBT

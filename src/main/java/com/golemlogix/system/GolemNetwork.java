@@ -143,11 +143,16 @@ public final class GolemNetwork {
     Map<ItemKey, PatternRef> patternIndex;
     int patternIndexEpoch;
     long networkEpoch;
+    @Nullable
+    NetworkStorage.DiskIndex diskIndex;
 
     @Nullable
     private Map<ItemKey, Long> sharedList;
     private long sharedListTick = -1;
     private long sharedListEpoch = -1;
+    private long sharedListDiskEpoch = -1;
+    @Nullable
+    private NetworkStorage.DiskIndex sharedListIndex;
 
     GolemNetwork(Level level, BlockPos start) {
         this.level = level;
@@ -503,12 +508,22 @@ public final class GolemNetwork {
     public Map<ItemKey, Long> listItemsShared() {
         long now = level.getServer() != null ? level.getServer().getTickCount() : level.getGameTime();
         long epoch = NetworkCache.storageEpoch();
-        if (sharedList == null || sharedListTick != now || sharedListEpoch != epoch) {
-            sharedList = listItems();
+        long diskEpoch = DiskStorage.itemMutationEpoch();
+        NetworkStorage.DiskIndex curIndex = NetworkStorage.currentIndex(this);
+        if (sharedList == null || sharedListTick != now || sharedListEpoch != epoch
+                || sharedListDiskEpoch != diskEpoch || sharedListIndex != curIndex) {
+            sharedList = NetworkStorage.listItems(this, curIndex);
             sharedListTick = now;
             sharedListEpoch = epoch;
+            sharedListDiskEpoch = diskEpoch;
+            sharedListIndex = curIndex;
         }
         return sharedList;
+    }
+
+    /** Returns the network's item map for planner fuzzy scans (reuses the tick-shared snapshot when no external chests exist). */
+    public Map<ItemKey, Long> listItemsForPlanning() {
+        return externals.isEmpty() ? listItemsShared() : listItems();
     }
 
     public long itemCountOf(ItemKey key) {
