@@ -2,9 +2,9 @@ package com.golemlogix.client;
 
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.PeriscopeBlockEntity;
+import com.golemlogix.client.render.LegacyBer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Axis;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
@@ -19,12 +19,15 @@ import net.minecraft.world.level.block.DirectionalBlock;
  * rhythm (from its position): it holds a glance for 1.5 to 3.5 seconds, then darts to a new spot in a few ticks; now and then it
  * looks straight ahead. Looking aside squeezes the iris a little, and the glass glint stays on top.
  */
-public class PeriscopeEyeRenderer extends com.golemlogix.client.render.LegacyBer<PeriscopeBlockEntity> {
+public class PeriscopeEyeRenderer extends LegacyBer<PeriscopeBlockEntity> {
     private static final Identifier EYE = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/periscope_eye.png");
     /** Iris radius and how far it may look aside (pixels; the glass of the monocle has a radius of 2.58). */
     private static final float IRIS = 1.3f, REACH = 0.8f;
     /** Ticks of a dart to a new spot. */
     private static final float DART = 4f;
+
+    private static final float[] TARGET_FROM = new float[2];
+    private static final float[] TARGET_TO = new float[2];
 
     public PeriscopeEyeRenderer(BlockEntityRendererProvider.Context context) {
     }
@@ -40,43 +43,40 @@ public class PeriscopeEyeRenderer extends com.golemlogix.client.render.LegacyBer
         double time = be.getLevel().getGameTime() + partialTick + Math.floorMod(seed >>> 23, (long) period);
         long glance = (long) Math.floor(time / period);
         float into = (float) (time - glance * period);
-        float[] from = target(seed, glance - 1), to = target(seed, glance);
+        target(seed, glance - 1, TARGET_FROM);
+        target(seed, glance, TARGET_TO);
         float k = Mth.clamp(into / DART, 0f, 1f);
         k = k * k * (3 - 2 * k);
-        float lookX = Mth.lerp(k, from[0], to[0]), lookY = Mth.lerp(k, from[1], to[1]);
+        float lookX = Mth.lerp(k, TARGET_FROM[0], TARGET_TO[0]), lookY = Mth.lerp(k, TARGET_FROM[1], TARGET_TO[1]);
 
         pose.pushPose();
         // the model's front is north (z = 0); turn it to the bus's facing, up and down included
-        pose.translate(0.5f, 0.5f, 0.5f);
-        if (facing == Direction.UP) {
-            pose.mulPose(Axis.XP.rotationDegrees(90f));
-        } else if (facing == Direction.DOWN) {
-            pose.mulPose(Axis.XP.rotationDegrees(-90f));
-        } else {
-            pose.mulPose(Axis.YP.rotationDegrees(180f - facing.toYRot()));
-        }
-        pose.translate(-0.5f, -0.5f, -0.5f);
+        FormationBusRenderer.orient(pose, facing);
         VertexConsumer vc = buffers.getBuffer(RenderTypes.entityTranslucent(EYE));
         // seen from the front the model's +X is on the viewer's left, so "right" is -X
         float squeezeX = 1f - 0.25f * Math.abs(lookX) / REACH, squeezeY = 1f - 0.25f * Math.abs(lookY) / REACH;
-        quad(vc, pose.last(), 8f - lookX, 8f + lookY, -0.05f, IRIS * squeezeX, IRIS * squeezeY, 0f, 0.5f, light);
+        PoseStack.Pose p = pose.last();
+        quad(vc, p, 8f - lookX, 8f + lookY, -0.05f, IRIS * squeezeX, IRIS * squeezeY, 0f, 0.5f, light);
         // the glint on the glass: up and to the viewer's left, over the iris
-        quad(vc, pose.last(), 9.0f, 9.1f, -0.07f, 0.55f, 0.55f, 0.5f, 1f, light);
+        quad(vc, p, 9.0f, 9.1f, -0.07f, 0.55f, 0.55f, 0.5f, 1f, light);
         pose.popPose();
     }
 
     /** Where glance n looks (pixels, x to the viewer's right, y up): a quarter of the glances look straight ahead. */
-    private static float[] target(long seed, long n) {
+    private static void target(long seed, long n, float[] out) {
         long h = seed ^ (n * 0xC2B2AE3D27D4EB4FL);
         h ^= h >>> 33;
         h *= 0xFF51AFD7ED558CCDL;
         h ^= h >>> 33;
         if ((h & 3) == 0) {
-            return new float[]{0f, 0f};
+            out[0] = 0f;
+            out[1] = 0f;
+            return;
         }
         double angle = ((h >>> 8) & 0xFFFF) / 65536.0 * Math.PI * 2;
         double r = REACH * (0.55 + 0.45 * ((h >>> 24) & 0xFF) / 255.0);
-        return new float[]{(float) (Math.cos(angle) * r), (float) (Math.sin(angle) * r)};
+        out[0] = (float) (Math.cos(angle) * r);
+        out[1] = (float) (Math.sin(angle) * r);
     }
 
     /** A square facing -Z centred at (cx, cy) with half-sizes rx, ry (pixels), the texture's u0..u1 across, the whole height. */

@@ -1,13 +1,13 @@
 package com.golemlogix.client;
 
-import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.InterfaceBlockEntity;
+import com.golemlogix.client.render.LegacyBer;
+import com.golemlogix.client.render.StandaloneModels;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
@@ -17,9 +17,10 @@ import net.minecraft.util.Mth;
 /**
  * Moving parts of the Interface: turbines in the funnels on all six sides and pendulums of flat metronomes on the four side faces.
  */
-public class InterfaceRenderer extends com.golemlogix.client.render.LegacyBer<InterfaceBlockEntity> {
-    public static final net.minecraft.resources.Identifier TURBINE = com.golemlogix.client.render.StandaloneModels.TURBINE;
-    public static final net.minecraft.resources.Identifier PENDULUM = com.golemlogix.client.render.StandaloneModels.PENDULUM;
+public class InterfaceRenderer extends LegacyBer<InterfaceBlockEntity> {
+    public static final Identifier TURBINE = StandaloneModels.TURBINE;
+    public static final Identifier PENDULUM = StandaloneModels.PENDULUM;
+    private static final Direction[] DIRS = Direction.values();
     /**
      * Metronomes lying flat on the side faces (as in tools/Interface.java: left of the funnel as seen by the viewer, axis at height 5.2,
      * in front of the body at depth 0.42 from the block plane): x, z of the axis in pixels and the rotation of the pendulum model facing outwards.
@@ -34,15 +35,14 @@ public class InterfaceRenderer extends com.golemlogix.client.render.LegacyBer<In
 
     @Override
     public void render(InterfaceBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
-        var mc = Minecraft.getInstance();
-        net.minecraft.resources.Identifier turbine = TURBINE;
-        net.minecraft.resources.Identifier pendulum = PENDULUM;
-        var buffer = buffers.getBuffer(net.minecraft.client.renderer.Sheets.cutoutBlockSheet());
+        var turbineQuads = StandaloneModels.quads(TURBINE);
+        var pendulumQuads = StandaloneModels.quads(PENDULUM);
+        VertexConsumer buffer = buffers.getBuffer(Sheets.cutoutBlockSheet());
         float spin = Mth.lerp(partialTick, be.spinPrev, be.spin);
         float activity = Mth.lerp(partialTick, be.activityPrev, be.activity);
         float phase = Mth.lerp(partialTick, be.phasePrev, be.phase);
 
-        for (Direction d : Direction.values()) {
+        for (Direction d : DIRS) {
             pose.pushPose();
             pose.translate(0.5, 0.5, 0.5);
             switch (d) {
@@ -57,7 +57,7 @@ public class InterfaceRenderer extends com.golemlogix.client.render.LegacyBer<In
             // neighbouring sides spin in opposite directions, like gears
             pose.mulPose(Axis.ZP.rotationDegrees(d.ordinal() % 2 == 0 ? spin : -spin));
             pose.translate(-0.5, -0.5, -0.5);
-            com.golemlogix.client.render.StandaloneModels.render(pose.last(), buffer, turbine, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
+            StandaloneModels.render(pose.last(), buffer, turbineQuads, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
             pose.popPose();
         }
 
@@ -70,7 +70,7 @@ public class InterfaceRenderer extends com.golemlogix.client.render.LegacyBer<In
             pose.mulPose(Axis.YP.rotationDegrees(m[2]));
             pose.mulPose(Axis.ZP.rotationDegrees(swing));
             pose.translate(-0.5, 0, -0.5);
-            com.golemlogix.client.render.StandaloneModels.render(pose.last(), buffer, pendulum, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
+            StandaloneModels.render(pose.last(), buffer, pendulumQuads, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY);
             pose.popPose();
         }
     }

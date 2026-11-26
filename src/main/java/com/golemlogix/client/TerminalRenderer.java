@@ -1,19 +1,18 @@
 package com.golemlogix.client;
 
-import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.util.LightCoordsUtil;
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.TerminalBlockEntity;
 import com.golemlogix.blocks.AnalogTerminalBlock;
 import com.golemlogix.blocks.GolemProperties;
+import com.golemlogix.client.render.LegacyBer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -23,7 +22,7 @@ import net.minecraft.world.level.block.state.BlockState;
  * (coordinates in texels of the 64x64 sheet, see tools/ArtForge.java), the tint depends on the terminal type.
  * The screen takes 14x14 texels of the front texture (x, y = 9..22 of 32).
  */
-public class TerminalRenderer extends com.golemlogix.client.render.LegacyBer<TerminalBlockEntity> {
+public class TerminalRenderer extends LegacyBer<TerminalBlockEntity> {
     private static final Identifier SHEET = Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/block/terminal_anim.png");
     private static final float SHEET_SIZE = 64f;
     /** Screen size in texels and texel size in block fractions (the front texture is 32x32). */
@@ -34,6 +33,7 @@ public class TerminalRenderer extends com.golemlogix.client.render.LegacyBer<Ter
     private static final float WAVE_TICKS = 110f;
     private static final float TICKS_PER_WAVE_FRAME = 7f;
     private static final float WALK = 52f, PAUSE = 14f, CYCLE = 2 * (WALK + PAUSE);
+    private static final long FOUR_CYCLES = 4L * (long) CYCLE;
 
     private static final int GREEN = 0xFF7DFF8C;
     private static final int AMBER = 0xFFFFB347;
@@ -52,8 +52,12 @@ public class TerminalRenderer extends com.golemlogix.client.render.LegacyBer<Ter
             return;
         }
         BlockState state = be.getBlockState();
+        if (!state.hasProperty(GolemProperties.ACTIVE) || !state.hasProperty(HorizontalDirectionalBlock.FACING)) {
+            return;
+        }
         boolean active = state.getValue(GolemProperties.ACTIVE);
-        float time = be.getLevel().getGameTime() + partialTick;
+        long gameTime = be.getLevel().getGameTime();
+        float time = (gameTime % 72000L) + partialTick;
         // network start: "off -> on" before the player's eyes (the first observation only shows the state)
         if (be.animInitialized && active && !be.lastActive) {
             be.waveStart = time;
@@ -77,7 +81,10 @@ public class TerminalRenderer extends com.golemlogix.client.render.LegacyBer<Ter
         sprite(vc, p, 0, 0, SCREEN, SCREEN, crt ? 0 : 16, 0, SCREEN, SCREEN, false, 0xFFFFFFFF, full, 0);
 
         float sinceWave = time - be.waveStart;
-        if (sinceWave >= 0 && sinceWave < WAVE_TICKS) {
+        if (sinceWave < -36000f) {
+            sinceWave += 72000f;
+        }
+        if (be.waveStart >= 0f && sinceWave >= 0f && sinceWave < WAVE_TICKS) {
             // greeting: a golem across the whole screen waves; at the end it blinks and disappears
             int frame = (int) (sinceWave / TICKS_PER_WAVE_FRAME) % 4;
             boolean blink = sinceWave > WAVE_TICKS - 12f && ((int) (sinceWave / 2f)) % 2 == 0;
@@ -85,7 +92,9 @@ public class TerminalRenderer extends com.golemlogix.client.render.LegacyBer<Ter
                 sprite(vc, p, 0, 0, SCREEN, SCREEN, frame * 16, 32, SCREEN, SCREEN, false, tint, full, 1);
             }
         } else {
-            scene(vc, p, time + (be.getBlockPos().hashCode() & 127), tint, full);
+            be.waveStart = -1000f;
+            float sceneTime = Math.floorMod(gameTime + (be.getBlockPos().hashCode() & 127), FOUR_CYCLES) + partialTick;
+            scene(vc, p, sceneTime, tint, full);
         }
         pose.popPose();
     }
