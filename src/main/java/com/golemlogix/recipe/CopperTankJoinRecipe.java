@@ -28,6 +28,7 @@ public class CopperTankJoinRecipe extends CustomRecipe {
     public static ItemStack join(CraftingInput input) {
         int tanks = 0;
         long capacity = 0;
+        long fluidAmount = 0;
         FluidStack fluid = FluidStack.EMPTY;
         for (int i = 0; i < input.size(); i++) {
             ItemStack s = input.getItem(i);
@@ -45,18 +46,20 @@ public class CopperTankJoinRecipe extends CustomRecipe {
             }
             if (fluid.isEmpty()) {
                 fluid = f.copy();
+                fluidAmount = f.getAmount();
             } else if (FluidStack.isSameFluidSameComponents(fluid, f)) {
-                fluid.grow(f.getAmount());
+                fluidAmount += f.getAmount();
             } else {
                 return ItemStack.EMPTY;
             }
         }
-        if (tanks < 2 || capacity > CopperTankBlockEntity.MAX_CAPACITY) {
+        if (tanks < 2 || capacity <= 0 || capacity > CopperTankBlockEntity.MAX_CAPACITY || fluidAmount > capacity) {
             return ItemStack.EMPTY;
         }
         ItemStack result = new ItemStack(ModBlocks.COPPER_TANK.get());
         result.set(ModDataComponents.TANK_CAPACITY.get(), (int) capacity);
         if (!fluid.isEmpty()) {
+            fluid.setAmount((int) fluidAmount);
             result.set(ModDataComponents.TANK_FLUID.get(), SimpleFluidContent.copyOf(fluid));
         }
         return result;

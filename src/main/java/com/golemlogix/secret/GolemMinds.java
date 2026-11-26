@@ -79,7 +79,8 @@ public final class GolemMinds {
     /** The Dispel on target, by a caster who knows the method or not. */
     public static boolean attempt(@Nullable ServerPlayer caster, Entity target, boolean knows) {
         Kind kind = kind(target);
-        if (kind == null || !(target instanceof LivingEntity golem) || !(target.level() instanceof ServerLevel level)) {
+        if (kind == null || !(target instanceof LivingEntity golem) || !(target.level() instanceof ServerLevel level)
+                || golem.isRemoved() || golem.isDeadOrDying()) {
             return false;
         }
         if (caster == null || !knows) {
@@ -94,14 +95,15 @@ public final class GolemMinds {
             level.sendParticles(ParticleTypes.CRIT, golem.getX(), golem.getY() + 1.0, golem.getZ(), 12, 0.3, 0.4, 0.3, 0.1);
             return true;
         }
-        Item mind = rawMind(kind);
-        level.addFreshEntity(new ItemEntity(level, golem.getX(), golem.getY() + 0.5, golem.getZ(), new ItemStack(mind)));
+        ItemStack mindStack = new ItemStack(rawMind(kind));
+        Component mindName = mindStack.getHoverName();
+        level.addFreshEntity(new ItemEntity(level, golem.getX(), golem.getY() + 0.5, golem.getZ(), mindStack));
         level.sendParticles(ParticleTypes.ENCHANT, golem.getX(), golem.getY() + 1.0, golem.getZ(), 60, 0.4, 0.7, 0.4, 0.6);
         level.sendParticles(ParticleTypes.SNOWFLAKE, golem.getX(), golem.getY() + 0.8, golem.getZ(), 30, 0.3, 0.5, 0.3, 0.04);
         level.sendParticles(ParticleTypes.SOUL, golem.getX(), golem.getY() + 1.2, golem.getZ(), 12, 0.2, 0.3, 0.2, 0.03);
         level.playSound(null, golem.getX(), golem.getY(), golem.getZ(), SoundEvents.ILLUSIONER_MIRROR_MOVE, SoundSource.PLAYERS, 1.0f, 0.8f);
         level.playSound(null, golem.getX(), golem.getY(), golem.getZ(), SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 1.0f, 0.6f);
-        caster.sendOverlayMessage(Component.translatable("message.golem_logix.mind.unbound", mind.getName(new ItemStack(mind)))
+        caster.sendOverlayMessage(Component.translatable("message.golem_logix.mind.unbound", mindName)
                 .withStyle(ChatFormatting.AQUA));
         golem.discard();
         return true;
