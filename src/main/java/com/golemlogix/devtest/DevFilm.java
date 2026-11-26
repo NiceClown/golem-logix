@@ -248,12 +248,22 @@ final class DevFilm {
             copies++;
         }
         try {
-            byte[] data = free.take();
+            byte[] data = null;
+            while (data == null && writing) {
+                data = free.poll(200, java.util.concurrent.TimeUnit.MILLISECONDS);
+            }
+            if (data == null) {
+                log.accept("ERR film " + takeName + ": writer exited early (" + writeError + "), stopping take");
+                stop(mc);
+                return;
+            }
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, ((com.mojang.blaze3d.opengl.GlTexture) target.getColorTexture()).glId());
             GL11.glPixelStorei(GL11.GL_PACK_ALIGNMENT, 1);
             GL11.glGetTexImage(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixels);
             pixels.get(0, data);
-            queue.put(new Frame(data, copies));
+            while (writing && !queue.offer(new Frame(data, copies), 200, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                // wait for writer while it is still alive
+            }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }

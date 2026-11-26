@@ -240,6 +240,11 @@ final class DevBench {
         churn = on;
         if (!listening) {
             listening = true;
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppedEvent e) -> {
+                stressNet = null;
+                churn = false;
+                wide = false;
+            });
             net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.tick.ServerTickEvent.Post e) -> {
                 if (wide && stressNet != null) {
                     if (wideItems == null) {

@@ -259,7 +259,7 @@ public final class DevShots {
             }
             long primary = org.lwjgl.glfw.GLFW.glfwGetPrimaryMonitor();
             org.lwjgl.PointerBuffer monitors = org.lwjgl.glfw.GLFW.glfwGetMonitors();
-            for (int i = 0; i < monitors.limit(); i++) {
+            for (int i = 0; monitors != null && i < monitors.limit(); i++) {
                 long monitor = monitors.get(i);
                 if (monitor == primary) {
                     continue;
@@ -322,8 +322,8 @@ public final class DevShots {
 
     /** Network mode: the same world settings, but as commands to the server (the player is an operator), flight on the client. */
     private static void prepareRemote(Minecraft mc) {
-        for (String c : new String[]{"gamemode creative", "gamerule doDaylightCycle false", "gamerule doWeatherCycle false",
-                "gamerule doMobSpawning false", "time set 6000", "weather clear"}) {
+        for (String c : new String[]{"gamemode creative", "gamerule advance_time false", "gamerule advance_weather false",
+                "gamerule spawn_mobs false", "time set 6000", "weather clear"}) {
             mc.player.connection.sendCommand(c);
         }
         mc.player.getAbilities().flying = true;
