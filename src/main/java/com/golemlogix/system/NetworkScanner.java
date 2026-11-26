@@ -22,6 +22,8 @@ import com.golemlogix.blocks.PeriscopeStorageBusBlock;
 import com.golemlogix.blocks.SnowPipeBlock;
 import com.golemlogix.blocks.TelegraphBlock;
 import com.golemlogix.config.GolemConfig;
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
@@ -30,12 +32,13 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 import javax.annotation.Nullable;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -45,99 +48,206 @@ final class NetworkScanner {
     private record SourceCandidate(Level level, BlockPos pos, Direction fromSide) {
     }
 
+    /** Per-level probe cache for one scan: ensures each BlockState and PipeBlockEntity plug mask is fetched at most once. */
+    private static final class LevelScratch {
+        final Long2ObjectOpenHashMap<BlockState> states = new Long2ObjectOpenHashMap<>(64);
+        final Long2IntOpenHashMap plugMasks = new Long2IntOpenHashMap(64);
+        final Long2IntOpenHashMap seenIds = new Long2IntOpenHashMap(64);
+
+        LevelScratch() {
+            plugMasks.defaultReturnValue(-1);
+            seenIds.defaultReturnValue(-1);
+        }
+
+        int plugMask(Level lvl, BlockPos pos, long posLong) {
+            int mask = plugMasks.get(posLong);
+            if (mask < 0) {
+                mask = lvl.getBlockEntity(pos) instanceof PipeBlockEntity p ? p.plugMask() : 0;
+                plugMasks.put(posLong, mask);
+            }
+            return mask;
+        }
+    }
+
+    /** Flat primitive BFS scratch buffers so graph walking avoids per-node ArrayLists, boxed queues, and hash link lookups. */
+    private static final class WalkState {
+        final Level localLevel;
+        final LevelScratch localScratch = new LevelScratch();
+        @Nullable
+        Map<Level, LevelScratch> otherScratches;
+
+        GolemNetwork.Node[] seenNodes = new GolemNetwork.Node[64];
+        int[] seenToNodeIdx = new int[64];
+        int seenCount;
+
+        int[] queue = new int[64];
+        int qHead, qTail;
+
+        int[] flatLinks = new int[256];
+        int flatLen;
+        int[] linkEnd = new int[64];
+
+        WalkState(Level localLevel) {
+            this.localLevel = localLevel;
+        }
+
+        LevelScratch scratchFor(Level lvl) {
+            if (lvl == localLevel) {
+                return localScratch;
+            }
+            if (otherScratches == null) {
+                otherScratches = new IdentityHashMap<>(2);
+            }
+            return otherScratches.computeIfAbsent(lvl, k -> new LevelScratch());
+        }
+
+        @Nullable
+        LevelScratch scratchIfPresent(Level lvl) {
+            if (lvl == localLevel) {
+                return localScratch;
+            }
+            return otherScratches == null ? null : otherScratches.get(lvl);
+        }
+
+        int enqueue(LevelScratch scratch, Level lvl, BlockPos pos, long posLong) {
+            int id = scratch.seenIds.get(posLong);
+            if (id >= 0) {
+                return id;
+            }
+            id = seenCount++;
+            scratch.seenIds.put(posLong, id);
+            if (id >= seenNodes.length) {
+                int nextCap = seenNodes.length * 2;
+                seenNodes = Arrays.copyOf(seenNodes, nextCap);
+                seenToNodeIdx = Arrays.copyOf(seenToNodeIdx, nextCap);
+            }
+            seenNodes[id] = new GolemNetwork.Node(lvl, pos.immutable());
+            seenToNodeIdx[id] = -1;
+            if (qTail >= queue.length) {
+                queue = Arrays.copyOf(queue, queue.length * 2);
+            }
+            queue[qTail++] = id;
+            return id;
+        }
+
+        void addFlatLink(int targetSeenId) {
+            if (flatLen >= flatLinks.length) {
+                flatLinks = Arrays.copyOf(flatLinks, flatLinks.length * 2);
+            }
+            flatLinks[flatLen++] = targetSeenId;
+        }
+
+        void finishNodeLinks(int nodeIdx) {
+            if (nodeIdx >= linkEnd.length) {
+                linkEnd = Arrays.copyOf(linkEnd, linkEnd.length * 2);
+            }
+            linkEnd[nodeIdx] = flatLen;
+        }
+    }
+
     private NetworkScanner() {
     }
 
     static GolemNetwork scan(Level level, BlockPos start) {
         GolemNetwork net = new GolemNetwork(level, start.immutable());
-        List<List<GolemNetwork.Node>> linkedTo = new ArrayList<>();
+        WalkState walk = new WalkState(level);
         List<GolemNetwork.Node> cores = new ArrayList<>();
         List<SourceCandidate> sourceCandidates = new ArrayList<>();
 
-        walkGraph(net, linkedTo, cores, sourceCandidates);
-        int[][] links = buildLinkTable(net, linkedTo);
-        collectSources(net, sourceCandidates);
+        walkGraph(net, walk, cores, sourceCandidates);
+        int[][] links = buildLinkTable(net, walk);
+        collectSources(net, walk, sourceCandidates);
         configureCore(net, cores, links);
         return net;
     }
 
-    private static void walkGraph(GolemNetwork net, List<List<GolemNetwork.Node>> linkedTo,
+    private static void walkGraph(GolemNetwork net, WalkState walk,
                                   List<GolemNetwork.Node> cores, List<SourceCandidate> sourceCandidates) {
-        ArrayDeque<GolemNetwork.Node> queue = new ArrayDeque<>();
-        GolemNetwork.Node first = net.node(net.start);
-        queue.add(first);
-        Set<GolemNetwork.Node> seen = new HashSet<>();
-        seen.add(first);
+        walk.enqueue(walk.localScratch, net.level, net.start, net.start.asLong());
+        BlockPos.MutableBlockPos probe = new BlockPos.MutableBlockPos();
 
-        while (!queue.isEmpty() && net.nodeList.size() < GolemNetwork.MAX_NODES) {
-            GolemNetwork.Node node = queue.poll();
+        while (walk.qHead < walk.qTail && net.nodeList.size() < GolemNetwork.MAX_NODES) {
+            int curSeenId = walk.queue[walk.qHead++];
+            GolemNetwork.Node node = walk.seenNodes[curSeenId];
             Level lvl = node.level();
             BlockPos pos = node.pos();
-            if (!lvl.isLoaded(pos)) {
-                continue;
+            long posLong = pos.asLong();
+            LevelScratch scratch = walk.scratchFor(lvl);
+
+            BlockState state = scratch.states.get(posLong);
+            if (state == null) {
+                if (!lvl.isLoaded(pos)) {
+                    continue;
+                }
+                state = lvl.getBlockState(pos);
+                scratch.states.put(posLong, state);
             }
-            BlockState state = lvl.getBlockState(pos);
             Block block = state.getBlock();
             if (!(block instanceof GolemNode)) {
                 continue;
             }
-            net.nodeIndex.put(node, net.nodeList.size());
+            int curNodeIdx = net.nodeList.size();
+            walk.seenToNodeIdx[curSeenId] = curNodeIdx;
+            net.nodeIndex.put(node, curNodeIdx);
             net.nodeList.add(node);
             net.nodeStates.add(state);
 
             if (block instanceof AtlasCoreBlock) {
                 cores.add(node);
             }
-            PipeBlockEntity selfPipe = recordNodeBlockEntity(net, lvl, pos, state, block);
+            int selfPlugMask;
+            if (block instanceof SnowPipeBlock) {
+                selfPlugMask = scratch.plugMask(lvl, pos, posLong);
+            } else {
+                selfPlugMask = 0;
+                recordNodeBlockEntity(net, lvl, pos, state, block);
+            }
 
-            List<GolemNetwork.Node> links = new ArrayList<>(6);
             for (Direction dir : GolemNetwork.DIRECTIONS) {
-                BlockPos next = pos.relative(dir);
-                if (!lvl.isLoaded(next)) {
-                    continue;
+                probe.setWithOffset(pos, dir);
+                long nextLong = probe.asLong();
+                BlockState nextState = scratch.states.get(nextLong);
+                if (nextState == null) {
+                    if (!lvl.isLoaded(probe)) {
+                        continue;
+                    }
+                    nextState = lvl.getBlockState(probe);
+                    scratch.states.put(nextLong, nextState);
                 }
-                BlockState nextState = lvl.getBlockState(next);
                 // A node gets "seen" only if there is a link: a multiblock socket may be reached from another side
-                boolean linked = GolemNode.linked(state, nextState, dir)
-                        && (selfPipe == null || !selfPipe.isPlugged(dir))
-                        && (!(nextState.getBlock() instanceof SnowPipeBlock)
-                        || !PipeBlockEntity.plugged(lvl, next, dir.getOpposite()));
+                boolean linked = (selfPlugMask & (1 << dir.ordinal())) == 0
+                        && GolemNode.linked(state, nextState, dir);
+                if (linked && nextState.getBlock() instanceof SnowPipeBlock) {
+                    if ((scratch.plugMask(lvl, probe, nextLong) & (1 << dir.getOpposite().ordinal())) != 0) {
+                        linked = false;
+                    }
+                }
                 if (linked) {
-                    links.add(new GolemNetwork.Node(lvl, next));
-                } else if (nextState.hasBlockEntity()) {
-                    sourceCandidates.add(new SourceCandidate(lvl, next, dir.getOpposite()));
+                    int nextSeenId = walk.enqueue(scratch, lvl, probe, nextLong);
+                    walk.addFlatLink(nextSeenId);
+                } else if (nextState.hasBlockEntity() && !(nextState.getBlock() instanceof SnowPipeBlock)) {
+                    sourceCandidates.add(new SourceCandidate(lvl, probe.immutable(), dir.getOpposite()));
                 }
             }
             // A telegraph also links to its distant partners: the host its memory card names and the telegraphs naming it
             if (block instanceof TelegraphBlock && TelegraphBlock.isMaster(state)) {
                 for (TelegraphLinks.Partner p : TelegraphLinks.partners(lvl, pos)) {
-                    links.add(p.node());
+                    GolemNetwork.Node pn = p.node();
+                    LevelScratch pScratch = walk.scratchFor(pn.level());
+                    int pSeenId = walk.enqueue(pScratch, pn.level(), pn.pos(), pn.pos().asLong());
+                    walk.addFlatLink(pSeenId);
                     if (p.toHost()) {
                         net.telegraphLinks++;
                     }
                 }
             }
-            for (GolemNetwork.Node next : links) {
-                if (seen.add(next)) {
-                    queue.add(next);
-                }
-            }
-            linkedTo.add(links);
+            walk.finishNodeLinks(curNodeIdx);
         }
     }
 
-    /** Registers devices and periscope externals for one visited node; returns the node's PipeBlockEntity if it is a snow pipe. */
-    @Nullable
-    private static PipeBlockEntity recordNodeBlockEntity(GolemNetwork net, Level lvl, BlockPos pos, BlockState state, Block block) {
-        PipeBlockEntity selfPipe = null;
-        BlockEntity be = null;
-        if (state.hasBlockEntity()) {
-            if (block instanceof SnowPipeBlock) {
-                selfPipe = lvl.getBlockEntity(pos) instanceof PipeBlockEntity p ? p : null;
-            } else {
-                be = lvl.getBlockEntity(pos);
-            }
-        }
+    /** Registers devices and periscope externals for one non-pipe visited node. */
+    private static void recordNodeBlockEntity(GolemNetwork net, Level lvl, BlockPos pos, BlockState state, Block block) {
+        BlockEntity be = state.hasBlockEntity() ? lvl.getBlockEntity(pos) : null;
         if (be instanceof CopperDriveBayBlockEntity bay) {
             net.bays.add(bay);
         } else if (be instanceof BusBlockEntity bus) {
@@ -170,34 +280,42 @@ final class NetworkScanner {
                 }
             }
         }
-        return selfPipe;
     }
 
-    /** Converts link targets to node indices in walk order (order decides who gets a channel first). */
-    private static int[][] buildLinkTable(GolemNetwork net, List<List<GolemNetwork.Node>> linkedTo) {
-        int[][] links = new int[net.nodeList.size()][];
-        for (int i = 0; i < links.length; i++) {
-            List<GolemNetwork.Node> targets = linkedTo.get(i);
-            int[] idx = new int[targets.size()];
+    /** Converts flat link seenIds to node indices in walk order (order decides who gets a channel first). */
+    private static int[][] buildLinkTable(GolemNetwork net, WalkState walk) {
+        int count = net.nodeList.size();
+        int[][] links = new int[count][];
+        int start = 0;
+        for (int i = 0; i < count; i++) {
+            int end = walk.linkEnd[i];
+            int[] idx = new int[end - start];
             int n = 0;
-            for (GolemNetwork.Node t : targets) {
-                Integer j = net.nodeIndex.get(t);
-                if (j != null) {
+            for (int k = start; k < end; k++) {
+                int j = walk.seenToNodeIdx[walk.flatLinks[k]];
+                if (j >= 0) {
                     idx[n++] = j;
                 }
             }
             links[i] = n == idx.length ? idx : Arrays.copyOf(idx, n);
+            start = end;
         }
         return links;
     }
 
     /** Resolves Source suppliers and Resonators adjacent to the network's nodes (each supplier counted once by owner). */
-    private static void collectSources(GolemNetwork net, List<SourceCandidate> sourceCandidates) {
+    private static void collectSources(GolemNetwork net, WalkState walk, List<SourceCandidate> sourceCandidates) {
+        if (sourceCandidates.isEmpty()) {
+            return;
+        }
         Set<BlockEntity> seenSources = new HashSet<>();
         for (SourceCandidate cand : sourceCandidates) {
-            GolemNetwork.Node candNode = new GolemNetwork.Node(cand.level, cand.pos);
-            if (net.nodeIndex.containsKey(candNode)) {
-                continue;
+            LevelScratch scratch = walk.scratchIfPresent(cand.level);
+            if (scratch != null) {
+                int sid = scratch.seenIds.get(cand.pos.asLong());
+                if (sid >= 0 && walk.seenToNodeIdx[sid] >= 0) {
+                    continue;
+                }
             }
             BlockEntity be = cand.level.getBlockEntity(cand.pos);
             if (be == null) {
@@ -211,7 +329,7 @@ final class NetworkScanner {
                 // Resonator is not a Source supplier for the network; it powers Chronometers bound to it
                 seenSources.add(owner);
                 net.resonators++;
-                net.peripherals.put(candNode, be.getBlockState().getBlock());
+                net.peripherals.put(new GolemNetwork.Node(cand.level, cand.pos), be.getBlockState().getBlock());
                 continue;
             }
             SourceHelper.Supplier s = be instanceof CryoDiodeBlockEntity diode
@@ -220,7 +338,7 @@ final class NetworkScanner {
             if (s != null) {
                 seenSources.add(owner);
                 net.sources.add(s);
-                net.peripherals.put(candNode, be.getBlockState().getBlock());
+                net.peripherals.put(new GolemNetwork.Node(cand.level, cand.pos), be.getBlockState().getBlock());
             }
         }
     }
