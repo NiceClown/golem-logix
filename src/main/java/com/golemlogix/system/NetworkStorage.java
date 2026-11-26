@@ -4,6 +4,7 @@ import com.golemlogix.blockentity.CopperDriveBayBlockEntity;
 import com.golemlogix.config.GolemConfig;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.NonNullList;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -18,10 +19,9 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,107 +33,452 @@ import java.util.UUID;
  * Item, fluid, Cryo-Source, and Source storage operations over a {@link GolemNetwork}'s drive bays, periscopes, and Source suppliers.
  */
 final class NetworkStorage {
-    /** A disk in its cabinet. */
-    private record DiskRef(CopperDriveBayBlockEntity bay, ItemStack disk) {
+    private static final int FLUID_MAP_THRESHOLD = 16;
+
+    /** One mounted, non-duplicate disk in a drive cabinet, with its resolved server-side backing data. */
+    private static final class DiskEntry {
+        final CopperDriveBayBlockEntity bay;
+        final ItemStack disk;
+        final int capacity;
+        final int orderIndex;
+        int tierIndexHigh;
+        @Nullable
+        final DiskStore.Disk data;
+
+        DiskEntry(CopperDriveBayBlockEntity bay, ItemStack disk, int capacity, int orderIndex, @Nullable DiskStore.Disk data) {
+            this.bay = bay;
+            this.disk = disk;
+            this.capacity = capacity;
+            this.orderIndex = orderIndex;
+            this.data = data;
+        }
     }
 
     /** Storages (cabinets and periscopes) sharing one priority; equal ones go in network walk order. */
-    private record Tier(int priority, List<CopperDriveBayBlockEntity> bays, List<GolemNetwork.External> exts) {
+    private static final class Tier {
+        final int priority;
+        final int indexHigh;
+        final List<DiskEntry> itemDisks;
+        final List<DiskEntry> fluidDisks;
+        final List<GolemNetwork.External> exts;
+
+        Tier(int priority, int indexHigh, List<DiskEntry> itemDisks, List<DiskEntry> fluidDisks, List<GolemNetwork.External> exts) {
+            this.priority = priority;
+            this.indexHigh = indexHigh;
+            this.itemDisks = itemDisks;
+            this.fluidDisks = fluidDisks;
+            this.exts = exts;
+        }
+    }
+
+    /**
+     * Per-network cached snapshot of mounted disks, priority tiers, capacities, and a lazily-built inverted item index.
+     * Validated cheaply against drive-bay slot ItemStack references, bay priorities/removal, periscope removal, and
+     * {@link DiskStorage#diskAllocEpoch()} so slot or priority mutations in a cabinet never read stale data.
+     */
+    static final class DiskIndex {
+        @Nullable
+        final DiskStore store;
+        final long diskAllocEpoch;
+        final int[] bayPriorities;
+        final boolean[] bayRemoved;
+        final ItemStack[] slotStacks;
+        final boolean[] slotEmpty;
+        final boolean[] extRemoved;
+
+        final List<DiskEntry> itemDisks;
+        final List<DiskEntry> fluidDisks;
+        final List<Tier> tiersHigh;
+        final List<Tier> tiersLow;
+        final long itemCapacity;
+        final long fluidCapacity;
+
+        /** Lazily built ItemKey -> DiskEntry (single disk) or List<DiskEntry> (sorted by tierIndexHigh ASC, orderIndex ASC). */
+        @Nullable
+        Map<ItemKey, Object> itemLocations;
+        long itemLocationsEpoch = -1;
+
+        long cachedItemsStored;
+        long cachedItemsStoredEpoch = -1;
+        long cachedFluidsStored;
+        long cachedFluidsStoredEpoch = -1;
+
+        DiskIndex(@Nullable DiskStore store, long diskAllocEpoch, int[] bayPriorities, boolean[] bayRemoved,
+                  ItemStack[] slotStacks, boolean[] slotEmpty, boolean[] extRemoved,
+                  List<DiskEntry> itemDisks, List<DiskEntry> fluidDisks,
+                  List<Tier> tiersHigh, List<Tier> tiersLow,
+                  long itemCapacity, long fluidCapacity) {
+            this.store = store;
+            this.diskAllocEpoch = diskAllocEpoch;
+            this.bayPriorities = bayPriorities;
+            this.bayRemoved = bayRemoved;
+            this.slotStacks = slotStacks;
+            this.slotEmpty = slotEmpty;
+            this.extRemoved = extRemoved;
+            this.itemDisks = itemDisks;
+            this.fluidDisks = fluidDisks;
+            this.tiersHigh = tiersHigh;
+            this.tiersLow = tiersLow;
+            this.itemCapacity = itemCapacity;
+            this.fluidCapacity = fluidCapacity;
+        }
+
+        boolean isValid(GolemNetwork net, @Nullable DiskStore st) {
+            if (store != st || diskAllocEpoch != DiskStorage.diskAllocEpoch()) {
+                return false;
+            }
+            int slotOffset = 0;
+            for (int b = 0; b < net.bays.size(); b++) {
+                CopperDriveBayBlockEntity bay = net.bays.get(b);
+                boolean removed = bay.isRemoved();
+                if (removed != bayRemoved[b]) {
+                    return false;
+                }
+                if (!removed) {
+                    if (bay.getPriority() != bayPriorities[b]) {
+                        return false;
+                    }
+                    NonNullList<ItemStack> disks = bay.getDisks();
+                    for (int s = 0; s < disks.size(); s++) {
+                        ItemStack cur = disks.get(s);
+                        if (cur != slotStacks[slotOffset + s] || cur.isEmpty() != slotEmpty[slotOffset + s]) {
+                            return false;
+                        }
+                    }
+                }
+                slotOffset += CopperDriveBayBlockEntity.SLOTS;
+            }
+            for (int e = 0; e < net.externals.size(); e++) {
+                if (isRemoved(net.externals.get(e)) != extRemoved[e]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        Map<ItemKey, Object> itemLocations() {
+            long epoch = DiskStorage.itemMutationEpoch();
+            if (itemLocations == null || itemLocationsEpoch != epoch) {
+                Map<ItemKey, Object> map = new HashMap<>();
+                for (Tier tier : tiersHigh) {
+                    for (DiskEntry d : tier.itemDisks) {
+                        if (d.data == null || d.data.items.isEmpty()) {
+                            continue;
+                        }
+                        for (ItemKey k : d.data.items.keySet()) {
+                            addLocationUnordered(map, k, d);
+                        }
+                    }
+                }
+                itemLocations = map;
+                itemLocationsEpoch = epoch;
+            }
+            return itemLocations;
+        }
+
+        @SuppressWarnings("unchecked")
+        private static void addLocationUnordered(Map<ItemKey, Object> map, ItemKey key, DiskEntry d) {
+            Object existing = map.get(key);
+            if (existing == null) {
+                map.put(key, d);
+            } else if (existing instanceof DiskEntry first) {
+                List<DiskEntry> list = new ArrayList<>(2);
+                list.add(first);
+                list.add(d);
+                map.put(key, list);
+            } else {
+                ((List<DiskEntry>) existing).add(d);
+            }
+        }
+
+        /** Inserts d into itemLocations in (tierIndexHigh ASC, orderIndex ASC) order if not already present. */
+        @SuppressWarnings("unchecked")
+        void recordPresent(ItemKey key, DiskEntry d) {
+            if (itemLocations == null) {
+                return;
+            }
+            Object existing = itemLocations.get(key);
+            if (existing == null) {
+                itemLocations.put(key, d);
+            } else if (existing instanceof DiskEntry first) {
+                if (first == d) {
+                    return;
+                }
+                List<DiskEntry> list = new ArrayList<>(2);
+                if (compareHighOrder(first, d) <= 0) {
+                    list.add(first);
+                    list.add(d);
+                } else {
+                    list.add(d);
+                    list.add(first);
+                }
+                itemLocations.put(key, list);
+            } else {
+                List<DiskEntry> list = (List<DiskEntry>) existing;
+                int insertAt = list.size();
+                for (int i = 0; i < list.size(); i++) {
+                    DiskEntry cur = list.get(i);
+                    if (cur == d) {
+                        return;
+                    }
+                    if (compareHighOrder(d, cur) < 0) {
+                        insertAt = i;
+                        break;
+                    }
+                }
+                list.add(insertAt, d);
+            }
+        }
+
+        @SuppressWarnings("unchecked")
+        void recordAbsent(ItemKey key, DiskEntry d) {
+            if (itemLocations == null) {
+                return;
+            }
+            Object existing = itemLocations.get(key);
+            if (existing == d) {
+                itemLocations.remove(key);
+            } else if (existing instanceof List<?> raw) {
+                List<DiskEntry> list = (List<DiskEntry>) raw;
+                list.remove(d);
+                if (list.isEmpty()) {
+                    itemLocations.remove(key);
+                } else if (list.size() == 1) {
+                    itemLocations.put(key, list.get(0));
+                }
+            }
+        }
+
+        private static int compareHighOrder(DiskEntry a, DiskEntry b) {
+            int cmp = Integer.compare(a.tierIndexHigh, b.tierIndexHigh);
+            return cmp != 0 ? cmp : Integer.compare(a.orderIndex, b.orderIndex);
+        }
+
+        long itemsStored() {
+            long epoch = DiskStorage.itemMutationEpoch();
+            if (cachedItemsStoredEpoch != epoch) {
+                long sum = 0;
+                for (DiskEntry d : itemDisks) {
+                    if (d.data != null) {
+                        sum += d.data.storedItems;
+                    }
+                }
+                cachedItemsStored = sum;
+                cachedItemsStoredEpoch = epoch;
+            }
+            return cachedItemsStored;
+        }
+
+        long fluidsStored() {
+            long epoch = DiskStorage.fluidMutationEpoch();
+            if (cachedFluidsStoredEpoch != epoch) {
+                long sum = 0;
+                for (DiskEntry d : fluidDisks) {
+                    if (d.data != null) {
+                        sum += d.data.storedFluids;
+                    }
+                }
+                cachedFluidsStored = sum;
+                cachedFluidsStoredEpoch = epoch;
+            }
+            return cachedFluidsStored;
+        }
     }
 
     private NetworkStorage() {
     }
 
-    // ------------------------------------------------------------- disks & tiers
+    // ------------------------------------------------------------- disk index
 
-    private static List<ItemStack> allDisks(GolemNetwork net, boolean fluid) {
-        if (net.bays.isEmpty()) {
-            return List.of();
-        }
-        List<ItemStack> disks = null;
-        UUID firstId = null;
-        Set<UUID> seenIds = null;
-        for (CopperDriveBayBlockEntity bay : net.bays) {
-            if (bay.isRemoved()) {
-                continue;
-            }
-            for (ItemStack disk : bay.getDisks()) {
-                if (disk.isEmpty()) {
-                    continue;
-                }
-                UUID id = DiskStorage.diskId(disk);
-                if (id != null) {
-                    if (seenIds != null) {
-                        if (!seenIds.add(id)) {
-                            continue;
-                        }
-                    } else if (firstId == null) {
-                        firstId = id;
-                    } else if (firstId.equals(id)) {
-                        continue;
-                    } else {
-                        seenIds = new HashSet<>();
-                        seenIds.add(firstId);
-                        seenIds.add(id);
-                    }
-                }
-                if (fluid ? DiskStorage.isFluidDisk(disk) : DiskStorage.isItemDisk(disk)) {
-                    if (disks == null) {
-                        disks = new ArrayList<>();
-                    }
-                    disks.add(disk);
-                }
-            }
-        }
-        return disks == null ? List.of() : disks;
+    static DiskIndex currentIndex(GolemNetwork net) {
+        return index(net, DiskStorage.store());
     }
 
-    /**
-     * Disks whose id is already mounted earlier in the network: a copy (a creative middle-click, an inventory backup, another mod)
-     * shares the original's contents, so it is skipped and nothing is counted or offered twice.
-     */
-    private static Set<ItemStack> copiedDisks(GolemNetwork net) {
-        if (net.bays.isEmpty()) {
-            return Set.of();
+    private static DiskIndex index(GolemNetwork net, @Nullable DiskStore st) {
+        DiskIndex cached = net.diskIndex;
+        if (cached != null && cached.isValid(net, st)) {
+            return cached;
         }
-        UUID firstId = null;
-        Set<UUID> ids = null;
-        Set<ItemStack> copies = null;
-        for (CopperDriveBayBlockEntity bay : net.bays) {
-            if (bay.isRemoved()) {
+        DiskIndex fresh = buildIndex(net, st);
+        net.diskIndex = fresh;
+        return fresh;
+    }
+
+    private static DiskIndex buildIndex(GolemNetwork net, @Nullable DiskStore st) {
+        long allocEpoch = DiskStorage.diskAllocEpoch();
+        int bayCount = net.bays.size();
+        int extCount = net.externals.size();
+        int[] bayPriorities = new int[bayCount];
+        boolean[] bayRemoved = new boolean[bayCount];
+        ItemStack[] slotStacks = new ItemStack[bayCount * CopperDriveBayBlockEntity.SLOTS];
+        boolean[] slotEmpty = new boolean[slotStacks.length];
+        boolean[] extRemoved = new boolean[extCount];
+
+        List<DiskEntry> itemDisks = new ArrayList<>();
+        List<DiskEntry> fluidDisks = new ArrayList<>();
+        long itemCap = 0;
+        long fluidCap = 0;
+
+        // Deduplicate mounted disk UUIDs in network walk order (matching copiedDisks semantics)
+        UUID firstItemId = null;
+        Set<UUID> seenItemIds = null;
+        UUID firstFluidId = null;
+        Set<UUID> seenFluidIds = null;
+
+        boolean hasAny = false;
+        boolean singlePriority = true;
+        int firstPriority = 0;
+        int orderIndex = 0;
+
+        for (int b = 0; b < bayCount; b++) {
+            CopperDriveBayBlockEntity bay = net.bays.get(b);
+            boolean removed = bay.isRemoved();
+            bayRemoved[b] = removed;
+            if (removed) {
                 continue;
             }
-            for (ItemStack disk : bay.getDisks()) {
-                if (disk.isEmpty()) {
+            int p = bay.getPriority();
+            bayPriorities[b] = p;
+            if (!hasAny) {
+                hasAny = true;
+                firstPriority = p;
+            } else if (p != firstPriority) {
+                singlePriority = false;
+            }
+            NonNullList<ItemStack> disks = bay.getDisks();
+            int base = b * CopperDriveBayBlockEntity.SLOTS;
+            for (int s = 0; s < disks.size(); s++) {
+                ItemStack disk = disks.get(s);
+                boolean empty = disk.isEmpty();
+                slotStacks[base + s] = disk;
+                slotEmpty[base + s] = empty;
+                if (empty) {
+                    continue;
+                }
+                boolean isItem = DiskStorage.isItemDisk(disk);
+                boolean isFluid = !isItem && DiskStorage.isFluidDisk(disk);
+                if (!isItem && !isFluid) {
                     continue;
                 }
                 UUID id = DiskStorage.diskId(disk);
-                if (id == null) {
-                    continue;
-                }
-                boolean duplicate;
-                if (ids != null) {
-                    duplicate = !ids.add(id);
-                } else if (firstId == null) {
-                    firstId = id;
-                    duplicate = false;
-                } else if (firstId.equals(id)) {
-                    duplicate = true;
-                } else {
-                    ids = new HashSet<>();
-                    ids.add(firstId);
-                    ids.add(id);
-                    duplicate = false;
-                }
-                if (duplicate) {
-                    if (copies == null) {
-                        copies = Collections.newSetFromMap(new IdentityHashMap<>());
+                if (isItem) {
+                    if (id != null) {
+                        if (seenItemIds != null) {
+                            if (!seenItemIds.add(id)) {
+                                continue;
+                            }
+                        } else if (firstItemId == null) {
+                            firstItemId = id;
+                        } else if (firstItemId.equals(id)) {
+                            continue;
+                        } else {
+                            seenItemIds = new HashSet<>();
+                            seenItemIds.add(firstItemId);
+                            seenItemIds.add(id);
+                        }
                     }
-                    copies.add(disk);
+                    int cap = DiskStorage.capacity(disk);
+                    DiskStore.Disk data = st == null || id == null ? null : st.getOrNull(id);
+                    itemDisks.add(new DiskEntry(bay, disk, cap, orderIndex++, data));
+                    itemCap += cap;
+                } else {
+                    if (id != null) {
+                        if (seenFluidIds != null) {
+                            if (!seenFluidIds.add(id)) {
+                                continue;
+                            }
+                        } else if (firstFluidId == null) {
+                            firstFluidId = id;
+                        } else if (firstFluidId.equals(id)) {
+                            continue;
+                        } else {
+                            seenFluidIds = new HashSet<>();
+                            seenFluidIds.add(firstFluidId);
+                            seenFluidIds.add(id);
+                        }
+                    }
+                    int cap = DiskStorage.capacity(disk);
+                    DiskStore.Disk data = st == null || id == null ? null : st.getOrNull(id);
+                    fluidDisks.add(new DiskEntry(bay, disk, cap, orderIndex++, data));
+                    fluidCap += cap;
                 }
             }
         }
-        return copies == null ? Set.of() : copies;
+
+        List<GolemNetwork.External> liveExts = null;
+        for (int e = 0; e < extCount; e++) {
+            GolemNetwork.External ex = net.externals.get(e);
+            boolean removed = isRemoved(ex);
+            extRemoved[e] = removed;
+            if (removed) {
+                continue;
+            }
+            if (liveExts == null) {
+                liveExts = new ArrayList<>(extCount);
+            }
+            liveExts.add(ex);
+            int p = ex.priority();
+            if (!hasAny) {
+                hasAny = true;
+                firstPriority = p;
+            } else if (p != firstPriority) {
+                singlePriority = false;
+            }
+        }
+
+        List<Tier> tiersHigh;
+        List<Tier> tiersLow;
+        if (!hasAny) {
+            tiersHigh = List.of();
+            tiersLow = List.of();
+        } else if (singlePriority) {
+            Tier only = new Tier(firstPriority, 0, itemDisks, fluidDisks, liveExts == null ? List.of() : liveExts);
+            tiersHigh = List.of(only);
+            tiersLow = tiersHigh;
+        } else {
+            TreeMap<Integer, TempTier> map = new TreeMap<>(Comparator.reverseOrder());
+            for (DiskEntry d : itemDisks) {
+                map.computeIfAbsent(d.bay.getPriority(), TempTier::new).itemDisks.add(d);
+            }
+            for (DiskEntry d : fluidDisks) {
+                map.computeIfAbsent(d.bay.getPriority(), TempTier::new).fluidDisks.add(d);
+            }
+            if (liveExts != null) {
+                for (GolemNetwork.External ex : liveExts) {
+                    map.computeIfAbsent(ex.priority(), TempTier::new).exts.add(ex);
+                }
+            }
+            tiersHigh = new ArrayList<>(map.size());
+            int tIdx = 0;
+            for (TempTier temp : map.values()) {
+                for (DiskEntry d : temp.itemDisks) {
+                    d.tierIndexHigh = tIdx;
+                }
+                for (DiskEntry d : temp.fluidDisks) {
+                    d.tierIndexHigh = tIdx;
+                }
+                tiersHigh.add(new Tier(temp.priority, tIdx, temp.itemDisks, temp.fluidDisks, temp.exts));
+                tIdx++;
+            }
+            tiersLow = new ArrayList<>(tiersHigh.size());
+            for (int i = tiersHigh.size() - 1; i >= 0; i--) {
+                tiersLow.add(tiersHigh.get(i));
+            }
+        }
+
+        return new DiskIndex(st, allocEpoch, bayPriorities, bayRemoved, slotStacks, slotEmpty, extRemoved,
+                itemDisks, fluidDisks, tiersHigh, tiersLow, itemCap, fluidCap);
+    }
+
+    private static final class TempTier {
+        final int priority;
+        final List<DiskEntry> itemDisks = new ArrayList<>();
+        final List<DiskEntry> fluidDisks = new ArrayList<>();
+        final List<GolemNetwork.External> exts = new ArrayList<>();
+
+        TempTier(int priority) {
+            this.priority = priority;
+        }
     }
 
     /** Only the cabinets whose disks really changed are marked (rather than every cabinet in the network). */
@@ -145,87 +490,6 @@ final class NetworkStorage {
             bay.setChanged();
             bay.refreshVisuals();
         }
-    }
-
-    private static List<Tier> tiers(GolemNetwork net, boolean highestFirst) {
-        boolean hasAny = false;
-        boolean singlePriority = true;
-        int firstPriority = 0;
-        for (CopperDriveBayBlockEntity bay : net.bays) {
-            if (bay.isRemoved()) {
-                continue;
-            }
-            int p = bay.getPriority();
-            if (!hasAny) {
-                hasAny = true;
-                firstPriority = p;
-            } else if (p != firstPriority) {
-                singlePriority = false;
-                break;
-            }
-        }
-        if (singlePriority) {
-            for (GolemNetwork.External ex : net.externals) {
-                if (isRemoved(ex)) {
-                    continue;
-                }
-                int p = ex.priority();
-                if (!hasAny) {
-                    hasAny = true;
-                    firstPriority = p;
-                } else if (p != firstPriority) {
-                    singlePriority = false;
-                    break;
-                }
-            }
-        }
-        if (!hasAny) {
-            return List.of();
-        }
-        if (singlePriority) {
-            List<CopperDriveBayBlockEntity> liveBays = new ArrayList<>(net.bays.size());
-            for (CopperDriveBayBlockEntity bay : net.bays) {
-                if (!bay.isRemoved()) {
-                    liveBays.add(bay);
-                }
-            }
-            List<GolemNetwork.External> liveExts = new ArrayList<>(net.externals.size());
-            for (GolemNetwork.External ex : net.externals) {
-                if (!isRemoved(ex)) {
-                    liveExts.add(ex);
-                }
-            }
-            return List.of(new Tier(firstPriority, liveBays, liveExts));
-        }
-        Comparator<Integer> order = highestFirst ? Comparator.reverseOrder() : Comparator.naturalOrder();
-        TreeMap<Integer, Tier> map = new TreeMap<>(order);
-        for (CopperDriveBayBlockEntity bay : net.bays) {
-            if (!bay.isRemoved()) {
-                map.computeIfAbsent(bay.getPriority(), p -> new Tier(p, new ArrayList<>(), new ArrayList<>())).bays.add(bay);
-            }
-        }
-        for (GolemNetwork.External ex : net.externals) {
-            if (!isRemoved(ex)) {
-                map.computeIfAbsent(ex.priority(), p -> new Tier(p, new ArrayList<>(), new ArrayList<>())).exts.add(ex);
-            }
-        }
-        return new ArrayList<>(map.values());
-    }
-
-    private static List<DiskRef> disksOf(Tier tier, boolean fluid, Set<ItemStack> copies) {
-        if (tier.bays.isEmpty()) {
-            return List.of();
-        }
-        List<DiskRef> disks = new ArrayList<>();
-        for (CopperDriveBayBlockEntity bay : tier.bays) {
-            for (ItemStack disk : bay.getDisks()) {
-                if ((fluid ? DiskStorage.isFluidDisk(disk) : DiskStorage.isItemDisk(disk))
-                        && (copies.isEmpty() || !copies.contains(disk))) {
-                    disks.add(new DiskRef(bay, disk));
-                }
-            }
-        }
-        return disks;
     }
 
     // ------------------------------------------------------------- externals
@@ -308,9 +572,22 @@ final class NetworkStorage {
     // ------------------------------------------------------------------ items
 
     static Map<ItemKey, Long> listItems(GolemNetwork net) {
-        Map<ItemKey, Long> all = new LinkedHashMap<>();
-        for (ItemStack disk : allDisks(net, false)) {
-            for (Map.Entry<ItemKey, Integer> e : DiskStorage.rawItems(disk).entrySet()) {
+        return listItems(net, index(net, DiskStorage.store()));
+    }
+
+    static Map<ItemKey, Long> listItems(GolemNetwork net, DiskIndex idx) {
+        int est = 0;
+        for (DiskEntry d : idx.itemDisks) {
+            if (d.data != null) {
+                est += d.data.items.size();
+            }
+        }
+        Map<ItemKey, Long> all = new LinkedHashMap<>(Math.max(16, est * 4 / 3 + 1));
+        for (DiskEntry d : idx.itemDisks) {
+            if (d.data == null) {
+                continue;
+            }
+            for (Map.Entry<ItemKey, Integer> e : d.data.items.entrySet()) {
                 all.merge(e.getKey(), (long) e.getValue(), Long::sum);
             }
         }
@@ -333,13 +610,26 @@ final class NetworkStorage {
         return all;
     }
 
+    @SuppressWarnings("unchecked")
     static long itemCountOf(GolemNetwork net, ItemKey key) {
         if (key.stack().isEmpty()) {
             return 0;
         }
+        DiskIndex idx = index(net, DiskStorage.store());
         long n = 0;
-        for (ItemStack disk : allDisks(net, false)) {
-            n += DiskStorage.itemCount(disk, key);
+        if (!idx.itemDisks.isEmpty()) {
+            Object loc = idx.itemLocations().get(key);
+            if (loc instanceof DiskEntry d) {
+                if (d.data != null) {
+                    n += d.data.items.getOrDefault(key, 0);
+                }
+            } else if (loc instanceof List<?> raw) {
+                for (DiskEntry d : (List<DiskEntry>) raw) {
+                    if (d.data != null) {
+                        n += d.data.items.getOrDefault(key, 0);
+                    }
+                }
+            }
         }
         if (net.externals.isEmpty()) {
             return n;
@@ -364,54 +654,61 @@ final class NetworkStorage {
     }
 
     static long diskCapacity(GolemNetwork net, boolean fluid) {
-        long cap = 0;
-        for (ItemStack disk : allDisks(net, fluid)) {
-            cap += DiskStorage.capacity(disk);
-        }
-        return cap;
+        DiskIndex idx = index(net, DiskStorage.store());
+        return fluid ? idx.fluidCapacity : idx.itemCapacity;
     }
 
     static long diskStored(GolemNetwork net, boolean fluid) {
-        long used = 0;
-        for (ItemStack disk : allDisks(net, fluid)) {
-            used += DiskStorage.storedItems(disk);
-        }
-        return used;
+        DiskIndex idx = index(net, DiskStorage.store());
+        return fluid ? idx.fluidsStored() : idx.itemsStored();
     }
 
+    @SuppressWarnings("unchecked")
     static ItemStack insertItem(GolemNetwork net, ItemStack input, boolean simulate, @Nullable BlockPos skipTarget) {
         if (input.isEmpty()) {
             return ItemStack.EMPTY;
         }
+        DiskStore st = DiskStorage.store();
+        DiskIndex idx = index(net, st);
         ItemStack remaining = input.copy();
+        int cost = Gear.cost(remaining);
         if (simulate) {
-            return simulateInsertItem(net, remaining, skipTarget);
+            return simulateInsertItem(net, st, idx, remaining, cost, skipTarget);
         }
 
-        Set<ItemStack> copies = copiedDisks(net);
         ItemKey itemKey = ItemKey.of(remaining);
+        Map<ItemKey, Object> locations = idx.itemDisks.isEmpty() ? null : idx.itemLocations();
         Set<CopperDriveBayBlockEntity> touched = null;
-        for (Tier tier : tiers(net, true)) {
-            List<DiskRef> disks = disksOf(tier, false, copies);
-            for (int pass = 0; pass < 2 && !remaining.isEmpty(); pass++) {
-                for (DiskRef d : disks) {
-                    if (remaining.isEmpty()) {
-                        break;
+        for (Tier tier : idx.tiersHigh) {
+            if (!tier.itemDisks.isEmpty()) {
+                // Pass 0: disks in this tier that already hold this item (O(1) lookup via itemLocations)
+                Object loc = locations == null ? null : locations.get(itemKey);
+                if (loc instanceof DiskEntry d) {
+                    if (d.tierIndexHigh == tier.indexHigh) {
+                        touched = insertIntoDisk(st, idx, d, itemKey, cost, remaining, touched);
                     }
-                    if (pass == 0 && !DiskStorage.containsItem(d.disk, itemKey)) {
-                        continue;
-                    }
-                    int n = DiskStorage.insertItem(d.disk, remaining, false);
-                    if (n > 0) {
-                        remaining.shrink(n);
-                        if (touched == null) {
-                            touched = new HashSet<>();
+                } else if (loc instanceof List<?> raw) {
+                    List<DiskEntry> holders = (List<DiskEntry>) raw;
+                    for (int i = 0; i < holders.size() && !remaining.isEmpty(); i++) {
+                        DiskEntry d = holders.get(i);
+                        if (d.tierIndexHigh == tier.indexHigh) {
+                            touched = insertIntoDisk(st, idx, d, itemKey, cost, remaining, touched);
                         }
-                        touched.add(d.bay);
                     }
                 }
+                // Pass 1: any disk in this tier with room
+                for (int i = 0; i < tier.itemDisks.size() && !remaining.isEmpty(); i++) {
+                    DiskEntry d = tier.itemDisks.get(i);
+                    if (d.data != null && d.data.storedItems + cost > d.capacity
+                            && !(cost > 1 && d.capacity <= Gear.COST && d.data.gearItems == 0)) {
+                        continue;
+                    }
+                    touched = insertIntoDisk(st, idx, d, itemKey, cost, remaining, touched);
+                }
             }
-            remaining = insertIntoExternals(net, tier, remaining, false, skipTarget);
+            if (!remaining.isEmpty()) {
+                remaining = insertIntoExternals(net, tier, remaining, false, skipTarget);
+            }
             if (remaining.isEmpty()) {
                 break;
             }
@@ -423,27 +720,61 @@ final class NetworkStorage {
         return remaining;
     }
 
-    private static ItemStack simulateInsertItem(GolemNetwork net, ItemStack remaining, @Nullable BlockPos skipTarget) {
-        if (Gear.is(remaining)) {
-            // Equipment takes more of a disk, and small disks have a rule of their own: each disk answers for itself
-            for (ItemStack disk : allDisks(net, false)) {
-                remaining.shrink(DiskStorage.insertItem(disk, remaining, true));
-                if (remaining.isEmpty()) {
-                    return ItemStack.EMPTY;
+    @Nullable
+    private static Set<CopperDriveBayBlockEntity> insertIntoDisk(@Nullable DiskStore st, DiskIndex idx, DiskEntry d,
+                                                                 ItemKey key, int cost, ItemStack remaining,
+                                                                 @Nullable Set<CopperDriveBayBlockEntity> touched) {
+        long prevEpoch = DiskStorage.itemMutationEpoch();
+        long prevStored = d.data == null ? 0L : d.data.storedItems;
+        int n = DiskStorage.insertItemDirect(st, d.disk, d.data, d.capacity, key, cost, remaining.getCount(), false);
+        if (n > 0) {
+            remaining.shrink(n);
+            if (touched == null) {
+                touched = new HashSet<>();
+            }
+            touched.add(d.bay);
+            if (idx.diskAllocEpoch == DiskStorage.diskAllocEpoch()) {
+                long newEpoch = DiskStorage.itemMutationEpoch();
+                if (idx.itemLocationsEpoch == prevEpoch) {
+                    idx.recordPresent(key, d);
+                    idx.itemLocationsEpoch = newEpoch;
+                }
+                if (idx.cachedItemsStoredEpoch == prevEpoch && d.data != null) {
+                    idx.cachedItemsStored += d.data.storedItems - prevStored;
+                    idx.cachedItemsStoredEpoch = newEpoch;
                 }
             }
-        } else {
-            long free = 0;
-            for (ItemStack disk : allDisks(net, false)) {
-                free += Math.max(0, DiskStorage.capacity(disk) - DiskStorage.storedItems(disk));
-            }
-            remaining.shrink((int) Math.min(free, remaining.getCount()));
-            if (remaining.isEmpty()) {
-                return ItemStack.EMPTY;
+        }
+        return touched;
+    }
+
+    private static ItemStack simulateInsertItem(GolemNetwork net, @Nullable DiskStore st, DiskIndex idx,
+                                                ItemStack remaining, int cost, @Nullable BlockPos skipTarget) {
+        if (st != null && !idx.itemDisks.isEmpty()) {
+            if (cost > 1) {
+                // Equipment takes more of a disk, and small disks have a rule of their own: each disk answers for itself
+                for (DiskEntry d : idx.itemDisks) {
+                    int n = DiskStorage.insertItemDirect(st, d.disk, d.data, d.capacity, null, cost, remaining.getCount(), true);
+                    remaining.shrink(n);
+                    if (remaining.isEmpty()) {
+                        return ItemStack.EMPTY;
+                    }
+                }
+            } else {
+                int need = remaining.getCount();
+                long free = 0;
+                for (DiskEntry d : idx.itemDisks) {
+                    long stored = d.data == null ? 0L : d.data.storedItems;
+                    free += Math.max(0L, d.capacity - stored);
+                    if (free >= need) {
+                        return ItemStack.EMPTY;
+                    }
+                }
+                remaining.shrink((int) free);
             }
         }
         // Disks are already counted above; check external containers one by one
-        for (Tier tier : tiers(net, true)) {
+        for (Tier tier : idx.tiersHigh) {
             if (remaining.isEmpty()) {
                 break;
             }
@@ -470,34 +801,143 @@ final class NetworkStorage {
         return remaining;
     }
 
+    @SuppressWarnings("unchecked")
     static ItemStack extractItem(GolemNetwork net, ItemStack template, int amount, boolean simulate, @Nullable BlockPos skipTarget) {
         if (template.isEmpty() || amount <= 0) {
             return ItemStack.EMPTY;
         }
+        DiskStore st = DiskStorage.store();
+        DiskIndex idx = index(net, st);
+        ItemKey key = ItemKey.of(template);
+        Object loc = idx.itemDisks.isEmpty() ? null : idx.itemLocations().get(key);
+        if (loc == null && net.externals.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+
+        int cost = Gear.cost(template);
         int left = amount;
         Set<CopperDriveBayBlockEntity> touched = null;
-        Set<ItemStack> copies = copiedDisks(net);
-        ItemResource want = net.externals.isEmpty() ? null : ItemResource.of(template);
 
+        // Fast path when no external periscopes exist: extract directly from the 1+ disks holding key
+        if (net.externals.isEmpty()) {
+            if (loc instanceof DiskEntry d) {
+                long prevEpoch = DiskStorage.itemMutationEpoch();
+                long prevStored = d.data == null ? 0L : d.data.storedItems;
+                int n = DiskStorage.extractItemDirect(st, d.disk, d.data, key, cost, left, simulate);
+                if (n > 0) {
+                    left -= n;
+                    if (!simulate) {
+                        touched = new HashSet<>(2);
+                        touched.add(d.bay);
+                        updateIndexAfterExtract(idx, d, key, prevEpoch, prevStored);
+                    }
+                }
+            } else if (loc instanceof List<?> raw) {
+                List<DiskEntry> holders = (List<DiskEntry>) raw;
+                if (idx.tiersLow.size() == 1) {
+                    for (int i = 0; i < holders.size() && left > 0; i++) {
+                        DiskEntry d = holders.get(i);
+                        long prevEpoch = DiskStorage.itemMutationEpoch();
+                        long prevStored = d.data == null ? 0L : d.data.storedItems;
+                        int n = DiskStorage.extractItemDirect(st, d.disk, d.data, key, cost, left, simulate);
+                        if (n > 0) {
+                            left -= n;
+                            if (!simulate) {
+                                if (touched == null) {
+                                    touched = new HashSet<>();
+                                }
+                                touched.add(d.bay);
+                                if (updateIndexAfterExtract(idx, d, key, prevEpoch, prevStored)) {
+                                    i--;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    for (Tier tier : idx.tiersLow) {
+                        if (left <= 0) {
+                            break;
+                        }
+                        for (int i = 0; i < holders.size() && left > 0; i++) {
+                            DiskEntry d = holders.get(i);
+                            if (d.tierIndexHigh != tier.indexHigh) {
+                                continue;
+                            }
+                            long prevEpoch = DiskStorage.itemMutationEpoch();
+                            long prevStored = d.data == null ? 0L : d.data.storedItems;
+                            int n = DiskStorage.extractItemDirect(st, d.disk, d.data, key, cost, left, simulate);
+                            if (n > 0) {
+                                left -= n;
+                                if (!simulate) {
+                                    if (touched == null) {
+                                        touched = new HashSet<>();
+                                    }
+                                    touched.add(d.bay);
+                                    if (updateIndexAfterExtract(idx, d, key, prevEpoch, prevStored)) {
+                                        i--;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (!simulate) {
+                markBaysChanged(touched);
+                if (left != amount) {
+                    net.bumpEpoch();
+                }
+            }
+            int taken = amount - left;
+            return taken > 0 ? template.copyWithCount(taken) : ItemStack.EMPTY;
+        }
+
+        // General path with external periscopes: interleave disk extraction and external extraction per priority tier
+        ItemResource want = ItemResource.of(template);
         Transaction tx = null;
         boolean txModified = false;
         try {
-            for (Tier tier : tiers(net, false)) {
+            for (Tier tier : idx.tiersLow) {
                 if (left <= 0) {
                     break;
                 }
-                for (DiskRef d : disksOf(tier, false, copies)) {
-                    if (left <= 0) {
-                        break;
-                    }
-                    int n = DiskStorage.extractItem(d.disk, template, left, simulate);
-                    if (n > 0) {
-                        left -= n;
-                        if (!simulate) {
-                            if (touched == null) {
-                                touched = new HashSet<>();
+                if (loc instanceof DiskEntry d) {
+                    if (d.tierIndexHigh == tier.indexHigh) {
+                        long prevEpoch = DiskStorage.itemMutationEpoch();
+                        long prevStored = d.data == null ? 0L : d.data.storedItems;
+                        int n = DiskStorage.extractItemDirect(st, d.disk, d.data, key, cost, left, simulate);
+                        if (n > 0) {
+                            left -= n;
+                            if (!simulate) {
+                                if (touched == null) {
+                                    touched = new HashSet<>();
+                                }
+                                touched.add(d.bay);
+                                updateIndexAfterExtract(idx, d, key, prevEpoch, prevStored);
                             }
-                            touched.add(d.bay);
+                        }
+                    }
+                } else if (loc instanceof List<?> raw) {
+                    List<DiskEntry> holders = (List<DiskEntry>) raw;
+                    for (int i = 0; i < holders.size() && left > 0; i++) {
+                        DiskEntry d = holders.get(i);
+                        if (d.tierIndexHigh != tier.indexHigh) {
+                            continue;
+                        }
+                        long prevEpoch = DiskStorage.itemMutationEpoch();
+                        long prevStored = d.data == null ? 0L : d.data.storedItems;
+                        int n = DiskStorage.extractItemDirect(st, d.disk, d.data, key, cost, left, simulate);
+                        if (n > 0) {
+                            left -= n;
+                            if (!simulate) {
+                                if (touched == null) {
+                                    touched = new HashSet<>();
+                                }
+                                touched.add(d.bay);
+                                if (updateIndexAfterExtract(idx, d, key, prevEpoch, prevStored)) {
+                                    i--;
+                                }
+                            }
                         }
                     }
                 }
@@ -546,14 +986,47 @@ final class NetworkStorage {
         return taken > 0 ? template.copyWithCount(taken) : ItemStack.EMPTY;
     }
 
+    /** Returns true if d was removed from a multi-disk holders list (so callers iterating by index adjust their cursor). */
+    private static boolean updateIndexAfterExtract(DiskIndex idx, DiskEntry d, ItemKey key, long prevEpoch, long prevStored) {
+        long newEpoch = DiskStorage.itemMutationEpoch();
+        boolean removedFromList = false;
+        if (idx.itemLocationsEpoch == prevEpoch) {
+            if (d.data == null || !d.data.items.containsKey(key)) {
+                boolean wasList = idx.itemLocations != null && idx.itemLocations.get(key) instanceof List<?>;
+                idx.recordAbsent(key, d);
+                removedFromList = wasList;
+            }
+            idx.itemLocationsEpoch = newEpoch;
+        }
+        if (idx.cachedItemsStoredEpoch == prevEpoch && d.data != null) {
+            idx.cachedItemsStored += d.data.storedItems - prevStored;
+            idx.cachedItemsStoredEpoch = newEpoch;
+        }
+        return removedFromList;
+    }
+
     // ----------------------------------------------------------------- fluids
 
     static List<FluidStack> listFluids(GolemNetwork net) {
-        Map<FluidResource, Long> totals = new LinkedHashMap<>();
-        for (ItemStack disk : allDisks(net, true)) {
-            for (FluidStack f : DiskStorage.rawFluids(disk)) {
-                if (!f.isEmpty()) {
+        DiskIndex idx = index(net, DiskStorage.store());
+        List<FluidStack> small = null;
+        Map<FluidResource, Long> totals = null;
+
+        for (DiskEntry d : idx.fluidDisks) {
+            if (d.data == null) {
+                continue;
+            }
+            for (FluidStack f : d.data.fluids) {
+                if (f.isEmpty()) {
+                    continue;
+                }
+                if (totals != null) {
                     totals.merge(FluidResource.of(f), (long) f.getAmount(), Long::sum);
+                } else {
+                    if (small == null) {
+                        small = new ArrayList<>(4);
+                    }
+                    totals = mergeFluidSmall(small, f, f.getAmount());
                 }
             }
         }
@@ -571,15 +1044,48 @@ final class NetworkStorage {
                 FluidStack f = r.toStack(1);
                 // Liquid Cryo-Source in a tank behind a periscope is not network stock: the network makes its own from Source
                 if (!CryoSource.is(f) && mayExtract(ex, f)) {
-                    totals.merge(r, (long) amt, Long::sum);
+                    if (totals != null) {
+                        totals.merge(r, (long) amt, Long::sum);
+                    } else {
+                        if (small == null) {
+                            small = new ArrayList<>(4);
+                        }
+                        totals = mergeFluidSmall(small, f, amt);
+                    }
                 }
             }
         }
-        List<FluidStack> all = new ArrayList<>(totals.size());
-        for (Map.Entry<FluidResource, Long> e : totals.entrySet()) {
-            all.add(e.getKey().toStack((int) Math.min(e.getValue(), Integer.MAX_VALUE)));
+        if (totals != null) {
+            List<FluidStack> all = new ArrayList<>(totals.size());
+            for (Map.Entry<FluidResource, Long> e : totals.entrySet()) {
+                all.add(e.getKey().toStack((int) Math.min(e.getValue(), Integer.MAX_VALUE)));
+            }
+            return all;
         }
-        return all;
+        return small == null ? List.of() : small;
+    }
+
+    /** Linear merge for small fluid counts (0..16 types); upgrades to a LinkedHashMap if a network exceeds the threshold. */
+    @Nullable
+    private static Map<FluidResource, Long> mergeFluidSmall(List<FluidStack> small, FluidStack fluid, int amount) {
+        for (int i = 0; i < small.size(); i++) {
+            FluidStack existing = small.get(i);
+            if (FluidStack.isSameFluidSameComponents(existing, fluid)) {
+                long sum = (long) existing.getAmount() + amount;
+                existing.setAmount((int) Math.min(sum, Integer.MAX_VALUE));
+                return null;
+            }
+        }
+        if (small.size() < FLUID_MAP_THRESHOLD) {
+            small.add(fluid.copyWithAmount(amount));
+            return null;
+        }
+        Map<FluidResource, Long> map = new LinkedHashMap<>(small.size() * 2);
+        for (FluidStack f : small) {
+            map.merge(FluidResource.of(f), (long) f.getAmount(), Long::sum);
+        }
+        map.merge(FluidResource.of(fluid), (long) amount, Long::sum);
+        return map;
     }
 
     static int insertFluid(GolemNetwork net, FluidStack input, boolean simulate, @Nullable BlockPos skipTarget) {
@@ -587,34 +1093,37 @@ final class NetworkStorage {
         if (input.isEmpty() || CryoSource.is(input)) {
             return 0;
         }
+        DiskStore st = DiskStorage.store();
+        DiskIndex idx = index(net, st);
         int left = input.getAmount();
         if (simulate) {
-            long free = 0;
-            for (ItemStack disk : allDisks(net, true)) {
-                free += Math.max(0, DiskStorage.capacity(disk) - DiskStorage.storedItems(disk));
-            }
-            left = (int) Math.max(0, input.getAmount() - free);
-            if (left <= 0) {
-                return input.getAmount();
+            if (st != null) {
+                long free = 0;
+                for (DiskEntry d : idx.fluidDisks) {
+                    long stored = d.data == null ? 0L : d.data.storedFluids;
+                    free += Math.max(0L, d.capacity - stored);
+                    if (free >= left) {
+                        return input.getAmount();
+                    }
+                }
+                left -= (int) free;
             }
         }
         Set<CopperDriveBayBlockEntity> touched = null;
-        Set<ItemStack> copies = simulate ? Set.of() : copiedDisks(net);
-        for (Tier tier : tiers(net, true)) {
+        for (Tier tier : idx.tiersHigh) {
             if (left <= 0) {
                 break;
             }
-            if (!simulate) {
-                List<DiskRef> disks = disksOf(tier, true, copies);
+            if (!simulate && !tier.fluidDisks.isEmpty()) {
                 for (int pass = 0; pass < 2 && left > 0; pass++) {
-                    for (DiskRef d : disks) {
+                    for (DiskEntry d : tier.fluidDisks) {
                         if (left <= 0) {
                             break;
                         }
-                        if (pass == 0 && !DiskStorage.containsFluid(d.disk, input)) {
+                        if (pass == 0 && !DiskStorage.containsFluidDirect(d.data, input)) {
                             continue;
                         }
-                        int n = DiskStorage.insertFluid(d.disk, input.copyWithAmount(left), false);
+                        int n = DiskStorage.insertFluidDirect(st, d.disk, d.data, d.capacity, input, left, false);
                         if (n > 0) {
                             left -= n;
                             if (touched == null) {
@@ -655,18 +1164,19 @@ final class NetworkStorage {
         if (CryoSource.is(template)) {
             return extractCryoSource(net, amount, simulate);
         }
+        DiskStore st = DiskStorage.store();
+        DiskIndex idx = index(net, st);
         int left = amount;
         Set<CopperDriveBayBlockEntity> touched = null;
-        Set<ItemStack> copies = copiedDisks(net);
-        for (Tier tier : tiers(net, false)) {
+        for (Tier tier : idx.tiersLow) {
             if (left <= 0) {
                 break;
             }
-            for (DiskRef d : disksOf(tier, true, copies)) {
+            for (DiskEntry d : tier.fluidDisks) {
                 if (left <= 0) {
                     break;
                 }
-                int n = DiskStorage.extractFluid(d.disk, template, left, simulate);
+                int n = DiskStorage.extractFluidDirect(st, d.disk, d.data, template, left, simulate);
                 if (n > 0) {
                     left -= n;
                     if (!simulate) {
@@ -709,9 +1219,10 @@ final class NetworkStorage {
         if (CryoSource.is(fluid)) {
             return cryoSourceAvailable(net);
         }
+        DiskIndex idx = index(net, DiskStorage.store());
         long n = 0;
-        for (ItemStack disk : allDisks(net, true)) {
-            n += DiskStorage.fluidCount(disk, fluid);
+        for (DiskEntry d : idx.fluidDisks) {
+            n += DiskStorage.fluidCountDirect(d.data, fluid);
         }
         if (net.externals.isEmpty()) {
             return n;

@@ -6,6 +6,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.builders.UVPair;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.OrderedSubmitNodeCollector;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.block.BlockModelRenderState;
 import net.minecraft.client.renderer.block.model.BlockDisplayContext;
@@ -83,10 +84,22 @@ public final class BerBuffers implements MultiBufferSource {
                 collector.submitCustomGeometry(IDENTITY, firstType, (pose, vc) -> r.replay(vc));
             }
         } else {
+            // CustomFeatureRenderer stores blended submits in a HashMap<RenderType, List>, so two blended types at the
+            // same order (e.g. nixie digits inside translucent lamp glass, or tape glow behind drive-bay glass) draw in
+            // hashCode order and the glass depth-culls what sits behind it ~50% of launches. Stepping collector.order()
+            // across blended types preserves each renderer's submission order deterministically.
+            int blendedOrder = 0;
             for (Map.Entry<RenderType, Recorder> e : recorders.entrySet()) {
                 Recorder r = e.getValue();
                 if (r.count > 0) {
-                    collector.submitCustomGeometry(IDENTITY, e.getKey(), (pose, vc) -> r.replay(vc));
+                    RenderType type = e.getKey();
+                    OrderedSubmitNodeCollector target = type.hasBlending() && blendedOrder > 0
+                            ? collector.order(blendedOrder)
+                            : collector;
+                    if (type.hasBlending()) {
+                        blendedOrder++;
+                    }
+                    target.submitCustomGeometry(IDENTITY, type, (pose, vc) -> r.replay(vc));
                 }
             }
             recorders.clear();
