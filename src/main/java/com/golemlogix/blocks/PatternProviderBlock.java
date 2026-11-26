@@ -10,22 +10,24 @@ import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 public class PatternProviderBlock extends Block implements GolemNode, EntityBlock {
     /** Where to feed ingredients: to all sides or to one (the arrows on the faces show the choice). */
-    public static final net.minecraft.world.level.block.state.properties.EnumProperty<ProviderOutput> OUTPUT =
-            net.minecraft.world.level.block.state.properties.EnumProperty.create("output", ProviderOutput.class);
+    public static final EnumProperty<ProviderOutput> OUTPUT = EnumProperty.create("output", ProviderOutput.class);
 
     public PatternProviderBlock(Properties properties) {
         super(properties.sound(SoundType.COPPER).strength(3.0f).requiresCorrectToolForDrops());
@@ -33,19 +35,19 @@ public class PatternProviderBlock extends Block implements GolemNode, EntityBloc
     }
 
     @Override
-    protected void createBlockStateDefinition(net.minecraft.world.level.block.state.StateDefinition.Builder<Block, BlockState> builder) {
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(OUTPUT);
     }
 
     /** Rotating and mirroring structures also rotates the feeding side. */
     @Override
-    protected BlockState rotate(BlockState state, net.minecraft.world.level.block.Rotation rotation) {
+    protected BlockState rotate(BlockState state, Rotation rotation) {
         var d = state.getValue(OUTPUT).direction();
         return d == null || d.getAxis().isVertical() ? state : state.setValue(OUTPUT, ProviderOutput.of(rotation.rotate(d)));
     }
 
     @Override
-    protected BlockState mirror(BlockState state, net.minecraft.world.level.block.Mirror mirror) {
+    protected BlockState mirror(BlockState state, Mirror mirror) {
         var d = state.getValue(OUTPUT).direction();
         return d == null || d.getAxis().isVertical() ? state : state.setValue(OUTPUT, ProviderOutput.of(mirror.mirror(d)));
     }
@@ -75,9 +77,7 @@ public class PatternProviderBlock extends Block implements GolemNode, EntityBloc
         if (level.isClientSide()) {
             return InteractionResult.SUCCESS;
         }
-        com.golemlogix.system.GolemNetwork net = com.golemlogix.system.GolemNetwork.scan(level, pos);
-        if (!net.hasPermission(player, com.golemlogix.security.SecurityPermission.BUILD)) {
-            player.displayClientMessage(Component.translatable("message.golem_logix.security_denied"), true);
+        if (!BlockSecurity.allowBuild(level, pos, player)) {
             return InteractionResult.CONSUME;
         }
         if (level.getBlockEntity(pos) instanceof PatternProviderBlockEntity provider) {

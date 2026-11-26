@@ -8,6 +8,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
@@ -15,9 +16,12 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.DirectionalBlock;
 import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
@@ -71,7 +75,7 @@ public abstract class AbstractBusBlock extends DirectionalBlock implements Golem
 
     /** The contents of a neighbouring container changed (NeoForge calls this for comparator updates): an idle bus looks again. */
     @Override
-    public void onNeighborChange(BlockState state, net.minecraft.world.level.LevelReader level, BlockPos pos, BlockPos neighbor) {
+    public void onNeighborChange(BlockState state, LevelReader level, BlockPos pos, BlockPos neighbor) {
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof BusBlockEntity bus) {
             bus.nudge();
         }
@@ -103,9 +107,7 @@ public abstract class AbstractBusBlock extends DirectionalBlock implements Golem
             return InteractionResult.SUCCESS;
         }
         if (player instanceof ServerPlayer sp && level.getBlockEntity(pos) instanceof BusBlockEntity bus) {
-            com.golemlogix.system.GolemNetwork net = com.golemlogix.system.GolemNetwork.scan(level, pos);
-            if (!net.hasPermission(player, com.golemlogix.security.SecurityPermission.BUILD)) {
-                sp.displayClientMessage(Component.translatable("message.golem_logix.security_denied"), true);
+            if (!BlockSecurity.allowBuild(level, pos, player)) {
                 return InteractionResult.CONSUME;
             }
             int kind = isExportBus() ? BusMenu.KIND_EXPORT : BusMenu.KIND_IMPORT;
@@ -121,7 +123,7 @@ public abstract class AbstractBusBlock extends DirectionalBlock implements Golem
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock()) && !level.isClientSide() && level.getBlockEntity(pos) instanceof BusBlockEntity bus) {
-            net.minecraft.world.Containers.dropContents(level, pos, bus.getUpgrades());
+            Containers.dropContents(level, pos, bus.getUpgrades());
         }
         super.onRemove(state, level, pos, newState, isMoving);
     }
@@ -133,12 +135,12 @@ public abstract class AbstractBusBlock extends DirectionalBlock implements Golem
     }
 
     @Override
-    protected BlockState rotate(BlockState state, net.minecraft.world.level.block.Rotation rotation) {
+    protected BlockState rotate(BlockState state, Rotation rotation) {
         return BusLinks.rotate(state, rotation);
     }
 
     @Override
-    protected BlockState mirror(BlockState state, net.minecraft.world.level.block.Mirror mirror) {
+    protected BlockState mirror(BlockState state, Mirror mirror) {
         return BusLinks.mirror(state, mirror);
     }
 

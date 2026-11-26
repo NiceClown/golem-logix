@@ -12,6 +12,8 @@ public enum ProviderOutput implements StringRepresentable {
     ALL("all", null), DOWN("down", Direction.DOWN), UP("up", Direction.UP), NORTH("north", Direction.NORTH),
     SOUTH("south", Direction.SOUTH), WEST("west", Direction.WEST), EAST("east", Direction.EAST);
 
+    private static final ProviderOutput[] VALUES = values();
+
     private final String name;
     @Nullable
     private final Direction direction;
@@ -28,23 +30,25 @@ public enum ProviderOutput implements StringRepresentable {
     }
 
     public ProviderOutput next() {
-        return values()[(ordinal() + 1) % values().length];
+        return VALUES[(ordinal() + 1) % VALUES.length];
     }
 
     public static ProviderOutput of(@Nullable Direction d) {
         if (d == null) {
             return ALL;
         }
-        for (ProviderOutput o : values()) {
-            if (o.direction == d) {
-                return o;
-            }
-        }
-        return ALL;
+        return switch (d) {
+            case DOWN -> DOWN;
+            case UP -> UP;
+            case NORTH -> NORTH;
+            case SOUTH -> SOUTH;
+            case WEST -> WEST;
+            case EAST -> EAST;
+        };
     }
 
     public static ProviderOutput byId(int id) {
-        return values()[Math.floorMod(id, values().length)];
+        return VALUES[Math.floorMod(id, VALUES.length)];
     }
 
     /** Translation key for tooltips. */

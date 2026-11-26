@@ -1,6 +1,7 @@
 package com.golemlogix.items;
 
 import com.golemlogix.init.ModDataComponents;
+import com.golemlogix.init.ModItems;
 import com.golemlogix.security.SecurityPermission;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -22,6 +23,22 @@ import java.util.UUID;
  * to grant network access permissions (Insert, Extract, Craft, Build).
  */
 public class IdentityPunchCardItem extends Item {
+    /** Precomputed permission badge strings for all 4-bit SecurityPermission masks (0..15). */
+    private static final String[] PERM_BADGES = buildPermBadges();
+
+    private static String[] buildPermBadges() {
+        String[] badges = new String[SecurityPermission.ALL + 1];
+        for (int perms = 0; perms < badges.length; perms++) {
+            StringBuilder sb = new StringBuilder();
+            if (SecurityPermission.INSERT.test(perms)) sb.append(" [↓]");
+            if (SecurityPermission.EXTRACT.test(perms)) sb.append(" [↑]");
+            if (SecurityPermission.CRAFT.test(perms)) sb.append(" [⚙]");
+            if (SecurityPermission.BUILD.test(perms)) sb.append(" [⚒]");
+            badges[perms] = sb.toString().trim();
+        }
+        return badges;
+    }
+
     public IdentityPunchCardItem(Properties properties) {
         super(properties.stacksTo(1));
     }
@@ -49,7 +66,7 @@ public class IdentityPunchCardItem extends Item {
     }
 
     public static ItemStack of(UUID id, String name, int permissions) {
-        ItemStack s = new ItemStack(com.golemlogix.init.ModItems.IDENTITY_PUNCH_CARD.get());
+        ItemStack s = new ItemStack(ModItems.IDENTITY_PUNCH_CARD.get());
         s.set(ModDataComponents.IDENTITY_OWNER_ID.get(), id);
         s.set(ModDataComponents.IDENTITY_OWNER_NAME.get(), name);
         s.set(ModDataComponents.IDENTITY_PERMISSIONS.get(), permissions);
@@ -82,13 +99,8 @@ public class IdentityPunchCardItem extends Item {
         if (isBound(stack)) {
             lines.add(Component.translatable("tooltip.golem_logix.identity_card.bound", getOwnerName(stack))
                     .withStyle(ChatFormatting.GOLD));
-            int perms = getPermissions(stack);
-            StringBuilder sb = new StringBuilder();
-            if (SecurityPermission.INSERT.test(perms)) sb.append(" [↓]");
-            if (SecurityPermission.EXTRACT.test(perms)) sb.append(" [↑]");
-            if (SecurityPermission.CRAFT.test(perms)) sb.append(" [⚙]");
-            if (SecurityPermission.BUILD.test(perms)) sb.append(" [⚒]");
-            lines.add(Component.translatable("tooltip.golem_logix.identity_card.permissions", sb.toString().trim())
+            String badge = PERM_BADGES[getPermissions(stack) & SecurityPermission.ALL];
+            lines.add(Component.translatable("tooltip.golem_logix.identity_card.permissions", badge)
                     .withStyle(ChatFormatting.AQUA));
         } else {
             lines.add(Component.translatable("tooltip.golem_logix.identity_card.blank")
