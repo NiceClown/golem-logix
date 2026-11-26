@@ -37,6 +37,7 @@ import static com.golemlogix.client.MachineParts.ICE;
 import static com.golemlogix.client.MachineParts.RUNES;
 import static com.golemlogix.client.MachineParts.SNOW;
 import static com.golemlogix.client.MachineParts.WHITE;
+import static com.golemlogix.client.render.PixelMesh.PIXEL;
 import static com.golemlogix.client.render.PixelMesh.box;
 import static com.golemlogix.client.render.PixelMesh.fitWall;
 import static com.golemlogix.client.render.PixelMesh.mcBlock;
@@ -44,21 +45,22 @@ import static com.golemlogix.client.render.PixelMesh.scaledRgb;
 import static com.golemlogix.client.render.PixelMesh.sprite;
 
 /**
- * The Cryo-Mixer, two blocks high, drawn from its lower block. Below: a dark brick plinth with a rune band (cyan while it works),
- * louvred brass sides under snow around a verdigris copper module with a gauge and a gear that turns while it works, a brass tray in
- * front with the snow or ice made so far. Above: two glass flasks on brass rings with snowy rims and icicles, water on the left and
- * icy Cryo-Source with a glowing spiral on the right, each piped into the module. A copper golem on its bracket at the side turns the
- * valve (and steps to a free side when something stands there).
+ * The Cryo-Mixer, two blocks high, drawn from its lower block: a dark brick plinth with glowing cyan runes, louvred brass
+ * wings around a verdigris module with a gauge and spinning gear, a front output tray holding snow/ice cubes, twin upper
+ * glass flasks (water left, Cryo-Source with a glowing spiral right), and a copper golem tending the side valve.
  * <p>
- * Pixels in the north-facing frame: the front is Z 0, the viewer's right is -X; Y 0..32 over both blocks.
+ * Pixels in the north-facing frame: front is Z 0, viewer's right is -X; Y 0..32 over both blocks.
  */
 public class CryoMixerRenderer extends LegacyBer<CryoMixerBlockEntity> {
     private static final Identifier WATER = mcBlock("water_still"), GLOW = mcBlock("white_concrete"),
             ICE_BLOCK = mcBlock("ice"), SNOW_BLOCK = mcBlock("snow");
-    private static final int[] SPIRAL = {0x5CE6F8, 0x7A5CFF, 0xC03CB0};
-    /** The flasks' inside (their bottom and top), and their centres across. */
+    private static final int[] SPIRAL_COLORS = {0x5CE6F8, 0x7A5CFF, 0xC03CB0};
+    /** Inner bounds and horizontal centres of the twin upper flasks. */
     private static final float FLASK_BOTTOM = 17.06f, FLASK_TOP = 27.4f, WATER_X = 12.1f, CRYO_X = 3.9f, FLASK_Z = 8f;
-    private static final Vector3f GOLEM_POS = new Vector3f(-2.1f / 16f, 6.6f / 16f, 3.5f / 16f);
+    private static final float[][] SIDE_WINGS = {{1.0f, 5.4f}, {10.6f, 15.0f}};
+    private static final float[] FLASK_CENTERS_X = {WATER_X, CRYO_X};
+
+    private static final Vector3f GOLEM_POS = new Vector3f(-2.1f * PIXEL, 6.6f * PIXEL, 3.5f * PIXEL);
     private static final Vector3f FWD_EAST = new Vector3f(1f, 0f, 0f);
     private static final Vector3f UP = new Vector3f(0f, 1f, 0f);
 
@@ -110,13 +112,12 @@ public class CryoMixerRenderer extends LegacyBer<CryoMixerBlockEntity> {
         Quads.faceModel(pose, facing);
         PoseStack.Pose p = pose.last();
 
-        // static lower body (plinth, louvred sides, module, tray) and upper flask frame/pipes
         baked.lower().draw(buffers, solid, p, light, 0);
         baked.upper().draw(buffers, solid, p, lightTop, 0);
 
-        // spinning brass gear on the module's face
+        // spinning brass gear on the front module
         pose.pushPose();
-        pose.translate(8f / 16f, 8.6f / 16f, 1.6f / 16f);
+        pose.translate(8f * PIXEL, 8.6f * PIXEL, 1.6f * PIXEL);
         pose.mulPose(Axis.ZP.rotationDegrees(phase * 40f));
         baked.gear().draw(buffers, solid, pose.last(), light, 0);
         pose.popPose();
@@ -126,35 +127,42 @@ public class CryoMixerRenderer extends LegacyBer<CryoMixerBlockEntity> {
         int rune = 0xFF000000 | ((int) (0x50 * glow) << 16) | ((int) (0xF0 * glow) << 8) | (int) (0xE8 * glow);
         fitWall(vc, p, 1.6f, 1.7f, 14.4f, 4.6f, 0.94f, RUNES, rune, work > 0.05f ? LightCoordsUtil.FULL_BRIGHT : light);
 
-        // ---- the tray in front with the snow or ice made so far
-        int tray = be.clientTray();
-        if (tray != 0) {
-            TextureAtlasSprite cubeSprite = sprite(tray < 0 ? ICE_BLOCK : SNOW_BLOCK);
-            for (int i = 0; i < Math.min(3, Math.abs(tray)); i++) {
-                float x0 = 10.3f + i * 1.5f;
-                float y0 = 6.2f + (i == 1 ? 0.3f : 0f);
-                box(vc, p, x0, y0, -0.6f + (i % 2) * 0.6f, x0 + 2.2f, y0 + 2.2f, 1.6f + (i % 2) * 0.6f, cubeSprite, WHITE, light);
-            }
+        renderTrayOutput(vc, p, be.clientTray(), light);
+        renderSpiral(vc, pose, cryo, phase, work);
+        renderGolemBracket(vc, pose, buffers, golemTurn, light, work, phase);
+        renderFluidsAndGlass(p, buffers, water, cryo, lightTop);
+        pose.popPose();
+    }
+
+    private static void renderTrayOutput(VertexConsumer vc, PoseStack.Pose p, int tray, int light) {
+        if (tray == 0) {
+            return;
         }
+        TextureAtlasSprite cubeSprite = sprite(tray < 0 ? ICE_BLOCK : SNOW_BLOCK);
+        for (int i = 0; i < Math.min(3, Math.abs(tray)); i++) {
+            float x0 = 10.3f + i * 1.5f;
+            float y0 = 6.2f + (i == 1 ? 0.3f : 0f);
+            box(vc, p, x0, y0, -0.6f + (i % 2) * 0.6f, x0 + 2.2f, y0 + 2.2f, 1.6f + (i % 2) * 0.6f, cubeSprite, WHITE, light);
+        }
+    }
 
-        // ---- the spiral in the Cryo-Source flask, glowing while it works
-        spiral(vc, pose, cryo, phase, work);
-
-        // ---- the golem's corner (the valve on the right front post, its bracket), turned to a free side
+    private static void renderGolemBracket(VertexConsumer vc, PoseStack pose, MultiBufferSource buffers,
+                                           float golemTurn, int light, float work, float phase) {
         float turn = work > 0.05f ? phase * 30f : 0f;
         pose.pushPose();
         pose.rotateAround(Axis.YP.rotationDegrees(golemTurn), 0.5f, 0.5f, 0.5f);
         box(vc, pose.last(), 0.2f, 6.4f, 3.0f, 1.2f, 14.6f, 4.0f, COPPER, WHITE, light);
         MachineParts.wheelX(vc, pose, -0.2f, 10.4f, 3.5f, 2.0f, turn, light);
         MachineParts.platform(vc, pose, -3.8f, 1.0f, 6.0f, 1.6f, 5.4f, 1.4f, 0.4f, light);
-        // the golem last: its own buffer ends the one above
+        // draw puppet last so its own render type ends the cutout block batch cleanly
         float reach = work > 0.05f ? -1.1f + 0.12f * Mth.sin(phase * 0.8f) : -0.85f;
         CopperGolemPuppet.Arms arms = new CopperGolemPuppet.Arms(reach, 0.2f, reach, -0.2f, 0.15f * Mth.sin(phase * 0.05f));
         CopperGolemPuppet.render(pose, buffers, light, GOLEM_POS, FWD_EAST,
                 UP, 0.36f, new CopperGolemPuppet.Anim(phase * 0.5f, false, false, 0.08f), 1, null, arms);
         pose.popPose();
+    }
 
-        // ---- translucent: the water, the Cryo-Source, the glass over them
+    private static void renderFluidsAndGlass(PoseStack.Pose p, MultiBufferSource buffers, float water, float cryo, int lightTop) {
         VertexConsumer tv = buffers.getBuffer(RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
         float span = FLASK_TOP - FLASK_BOTTOM - 0.2f;
         if (water > 0.01f) {
@@ -169,18 +177,15 @@ public class CryoMixerRenderer extends LegacyBer<CryoMixerBlockEntity> {
         TextureAtlasSprite glassSprite = sprite(GLASS);
         box(tv, p, WATER_X - 2.8f, FLASK_BOTTOM, FLASK_Z - 3.3f, WATER_X + 2.8f, FLASK_TOP, FLASK_Z + 3.3f, glassSprite, 0x90E8F8FF, lightTop);
         box(tv, p, CRYO_X - 2.8f, FLASK_BOTTOM, FLASK_Z - 3.3f, CRYO_X + 2.8f, FLASK_TOP, FLASK_Z + 3.3f, glassSprite, 0x90E8F8FF, lightTop);
-        pose.popPose();
     }
 
     private static void bakeLower(VertexConsumer vc, PoseStack pose) {
         PoseStack.Pose p = pose.last();
         int light = 0;
-        // plinth
         box(vc, p, 0.4f, 0, 0.4f, 15.6f, 1.4f, 15.6f, DARK, WHITE, light);
         box(vc, p, 1, 1.4f, 1, 15, 5, 15, BRICK, BRICK_TINT, light);
         box(vc, p, 0.8f, 5, 0.8f, 15.2f, 6, 15.2f, DARK, WHITE, light);
-        // louvred brass sides under snow, with icicles
-        for (float[] s : new float[][]{{1.0f, 5.4f}, {10.6f, 15.0f}}) {
+        for (float[] s : SIDE_WINGS) {
             box(vc, p, s[0], 6, 1.6f, s[1], 15, 14.4f, BRASS, 0xFFD8B880, light);
             for (float y = 6.8f; y < 14.4f; y += 1.5f) {
                 box(vc, p, s[0] - 0.4f, y, 1.2f, s[1] + 0.4f, y + 0.6f, 14.8f, BRASS, WHITE, light);
@@ -190,7 +195,7 @@ public class CryoMixerRenderer extends LegacyBer<CryoMixerBlockEntity> {
                 box(vc, p, i[0], 15 - i[1], 1.0f, i[0] + 0.6f, 15, 1.6f, ICE, WHITE, light);
             }
         }
-        // copper module, gauge, top coupling and front tray
+        // central verdigris module, gauge, coupling, and front tray
         box(vc, p, 5.4f, 6, 2.2f, 10.6f, 16, 13.8f, FRAME, WHITE, light);
         box(vc, p, 5.2f, 15.4f, 2.0f, 10.8f, 16.2f, 14.0f, FRAME, 0xFFB8D8C8, light);
         fitWall(vc, p, 6.0f, 11.2f, 10.0f, 14.6f, 1.8f, GAUGE, WHITE, light);
@@ -204,7 +209,7 @@ public class CryoMixerRenderer extends LegacyBer<CryoMixerBlockEntity> {
     private static void bakeUpper(VertexConsumer vc, PoseStack pose) {
         PoseStack.Pose p = pose.last();
         int light = 0;
-        for (float cx : new float[]{WATER_X, CRYO_X}) {
+        for (float cx : FLASK_CENTERS_X) {
             box(vc, p, cx - 3.1f, 15.8f, FLASK_Z - 3.6f, cx + 3.1f, 17.0f, FLASK_Z + 3.6f, BRASS, 0xFFD8B880, light);
             box(vc, p, cx - 3.2f, FLASK_TOP + 0.04f, FLASK_Z - 3.7f, cx + 3.2f, FLASK_TOP + 1.2f, FLASK_Z + 3.7f, SNOW, WHITE, light);
             for (float[] i : new float[][]{{cx - 2.8f, 1.6f}, {cx - 0.6f, 0.9f}, {cx + 1.6f, 1.3f}}) {
@@ -228,19 +233,19 @@ public class CryoMixerRenderer extends LegacyBer<CryoMixerBlockEntity> {
         }
     }
 
-    /** Three rings of glowing beads climbing the Cryo-Source flask as high as it is full; they turn and pulse while it works. */
-    private static void spiral(VertexConsumer vc, PoseStack pose, float level, float phase, float work) {
+    /** Three rings of glowing beads rising inside the Cryo-Source flask up to the liquid surface. */
+    private static void renderSpiral(VertexConsumer vc, PoseStack pose, float level, float phase, float work) {
         float top = FLASK_BOTTOM + 0.3f + (FLASK_TOP - FLASK_BOTTOM - 1f) * Math.min(1f, level);
         TextureAtlasSprite glowSprite = sprite(GLOW);
-        for (int k = 0; k < SPIRAL.length; k++) {
+        for (int k = 0; k < SPIRAL_COLORS.length; k++) {
             float y = FLASK_BOTTOM + 2.2f + k * 3.0f;
             if (y > top) {
                 break;
             }
             float b = 0.35f + 0.65f * (0.3f + 0.7f * work) * (0.6f + 0.4f * Mth.sin(phase * 1.4f - k * 1.3f));
-            int col = scaledRgb(SPIRAL[k], b);
+            int col = scaledRgb(SPIRAL_COLORS[k], b);
             pose.pushPose();
-            pose.translate(CRYO_X / 16f, y / 16f, FLASK_Z / 16f);
+            pose.translate(CRYO_X * PIXEL, y * PIXEL, FLASK_Z * PIXEL);
             pose.mulPose(Axis.YP.rotationDegrees(phase * 30f + k * 40f));
             PoseStack.Pose p = pose.last();
             for (int i = 0; i < 8; i++) {
