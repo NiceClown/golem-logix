@@ -86,7 +86,7 @@ public class PeriscopeStorageBusBlock extends DirectionalBlock implements com.go
     /** Replaced by another block (see RemovalAware). */
     @Override
     public void onRemoved(BlockState state, Level level, BlockPos pos) {
-        if (level.getBlockEntity(pos) instanceof PeriscopeBlockEntity be) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof PeriscopeBlockEntity be) {
             net.minecraft.world.Containers.dropContents(level, pos, be.getUpgrades());
         }
     }
@@ -105,6 +105,16 @@ public class PeriscopeStorageBusBlock extends DirectionalBlock implements com.go
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         BlockState state = this.defaultBlockState().setValue(FACING, context.getClickedFace().getOpposite());
         return BusLinks.connected(state, context.getLevel(), context.getClickedPos());
+    }
+
+    @Override
+    protected BlockState rotate(BlockState state, net.minecraft.world.level.block.Rotation rotation) {
+        return BusLinks.rotate(state, rotation);
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, net.minecraft.world.level.block.Mirror mirror) {
+        return BusLinks.mirror(state, mirror);
     }
 
     @Override

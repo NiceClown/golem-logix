@@ -38,7 +38,7 @@ public class AnnihilationBusBlock extends GolemPlaneBlock {
 
     @Override
     public void onRemoved(BlockState state, Level level, BlockPos pos) {
-        if (level.getBlockEntity(pos) instanceof AnnihilationBusBlockEntity bus) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof AnnihilationBusBlockEntity bus) {
             bus.dropContents();
         }
     }

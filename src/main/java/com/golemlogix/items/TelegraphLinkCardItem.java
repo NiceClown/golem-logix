@@ -14,7 +14,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 
 import javax.annotation.Nullable;
-import java.util.List;
 
 /**
  * Aetherial Linkage card: in the Write slot of a Cryo-Source Telegraph it records that telegraph (its place and its current seal);
@@ -51,15 +50,14 @@ public class TelegraphLinkCardItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
                                 java.util.function.Consumer<Component> lines, TooltipFlag flag) {
-        List<Component> tooltip = new com.golemlogix.items.TooltipLines(lines);
         Link link = link(stack);
         if (link == null) {
-            tooltip.add(Component.translatable("tooltip.golem_logix.telegraph_link.blank").withStyle(ChatFormatting.GRAY));
+            lines.accept(Component.translatable("tooltip.golem_logix.telegraph_link.blank").withStyle(ChatFormatting.GRAY));
         } else {
-            tooltip.add(Component.translatable("tooltip.golem_logix.telegraph_link.target", link.target().pos().getX(),
+            lines.accept(Component.translatable("tooltip.golem_logix.telegraph_link.target", link.target().pos().getX(),
                     link.target().pos().getY(), link.target().pos().getZ()).withStyle(ChatFormatting.AQUA));
-            tooltip.add(Component.literal(link.target().dimension().identifier().toString()).withStyle(ChatFormatting.DARK_GRAY));
+            lines.accept(Component.literal(link.target().dimension().identifier().toString()).withStyle(ChatFormatting.DARK_GRAY));
         }
-        tooltip.add(Component.translatable("tooltip.golem_logix.telegraph_link.hint").withStyle(ChatFormatting.DARK_GRAY));
+        lines.accept(Component.translatable("tooltip.golem_logix.telegraph_link.hint").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

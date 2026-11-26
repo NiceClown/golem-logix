@@ -54,6 +54,7 @@ public class SnowPipeBlock extends Block implements com.golemlogix.blocks.Remova
     public static final EnumProperty<Link> DOWN = EnumProperty.create("down", Link.class);
 
     public static final Map<Direction, EnumProperty<Link>> LINKS = new EnumMap<>(Direction.class);
+    private static final Direction[] DIRECTIONS = Direction.values();
 
     static {
         LINKS.put(Direction.NORTH, NORTH);
@@ -123,19 +124,15 @@ public class SnowPipeBlock extends Block implements com.golemlogix.blocks.Remova
     /** The axis of a straight pipe (linked on both ends of it and nowhere else), or null. */
     @Nullable
     public static Direction.Axis straightAxis(BlockState state) {
-        for (Direction.Axis axis : Direction.Axis.values()) {
-            Direction pos = Direction.fromAxisAndDirection(axis, Direction.AxisDirection.POSITIVE);
-            if (!linked(state, pos) || !linked(state, pos.getOpposite())) {
-                continue;
-            }
-            boolean other = false;
-            for (Direction d : Direction.values()) {
-                if (d.getAxis() != axis && linked(state, d)) {
-                    other = true;
-                }
-            }
-            return other ? null : axis;
-        }
+        boolean n = state.getValue(NORTH) != Link.NONE;
+        boolean s = state.getValue(SOUTH) != Link.NONE;
+        boolean e = state.getValue(EAST) != Link.NONE;
+        boolean w = state.getValue(WEST) != Link.NONE;
+        boolean u = state.getValue(UP) != Link.NONE;
+        boolean d = state.getValue(DOWN) != Link.NONE;
+        if (n && s && !e && !w && !u && !d) return Direction.Axis.Z;
+        if (e && w && !n && !s && !u && !d) return Direction.Axis.X;
+        if (u && d && !n && !s && !e && !w) return Direction.Axis.Y;
         return null;
     }
 
@@ -202,11 +199,12 @@ public class SnowPipeBlock extends Block implements com.golemlogix.blocks.Remova
 
     private static int mask(BlockState state) {
         int mask = 0;
-        for (Direction dir : Direction.values()) {
-            if (linked(state, dir)) {
-                mask |= 1 << dir.ordinal();
-            }
-        }
+        if (state.getValue(DOWN) != Link.NONE) mask |= 1 << Direction.DOWN.ordinal();
+        if (state.getValue(UP) != Link.NONE) mask |= 1 << Direction.UP.ordinal();
+        if (state.getValue(NORTH) != Link.NONE) mask |= 1 << Direction.NORTH.ordinal();
+        if (state.getValue(SOUTH) != Link.NONE) mask |= 1 << Direction.SOUTH.ordinal();
+        if (state.getValue(WEST) != Link.NONE) mask |= 1 << Direction.WEST.ordinal();
+        if (state.getValue(EAST) != Link.NONE) mask |= 1 << Direction.EAST.ordinal();
         return mask;
     }
 
@@ -225,41 +223,62 @@ public class SnowPipeBlock extends Block implements com.golemlogix.blocks.Remova
         BlockGetter level = context.getLevel();
         BlockPos pos = context.getClickedPos();
         BlockState state = this.defaultBlockState();
-        for (Direction dir : Direction.values()) {
-            state = state.setValue(LINKS.get(dir), linkTo(level, pos, pos.relative(dir), dir));
+        for (Direction dir : DIRECTIONS) {
+            BlockPos neighborPos = pos.relative(dir);
+            state = state.setValue(LINKS.get(dir), linkTo(level, pos, neighborPos, level.getBlockState(neighborPos), dir));
         }
         return state;
     }
 
     @Override
     public BlockState updateShape(BlockState state, net.minecraft.world.level.LevelReader level, net.minecraft.world.level.ScheduledTickAccess ticks, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, net.minecraft.util.RandomSource random) {
-        return state.setValue(LINKS.get(direction), linkTo(level, pos, neighborPos, direction));
+        return state.setValue(LINKS.get(direction), linkTo(level, pos, neighborPos, neighborState, direction));
     }
 
     /** Recompute all sides (after a plug is added or removed). */
     public BlockState relink(BlockState state, BlockGetter level, BlockPos pos) {
-        for (Direction dir : Direction.values()) {
-            state = state.setValue(LINKS.get(dir), linkTo(level, pos, pos.relative(dir), dir));
+        for (Direction dir : DIRECTIONS) {
+            BlockPos neighborPos = pos.relative(dir);
+            state = state.setValue(LINKS.get(dir), linkTo(level, pos, neighborPos, level.getBlockState(neighborPos), dir));
         }
         return state;
     }
 
-    /** Plugs drop together with the pipe. */
-    /** Replaced by another block (see RemovalAware). */
+    @Override
+    protected BlockState rotate(BlockState state, net.minecraft.world.level.block.Rotation rotation) {
+        return state
+                .setValue(LINKS.get(rotation.rotate(Direction.NORTH)), state.getValue(NORTH))
+                .setValue(LINKS.get(rotation.rotate(Direction.EAST)), state.getValue(EAST))
+                .setValue(LINKS.get(rotation.rotate(Direction.SOUTH)), state.getValue(SOUTH))
+                .setValue(LINKS.get(rotation.rotate(Direction.WEST)), state.getValue(WEST));
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, net.minecraft.world.level.block.Mirror mirror) {
+        if (mirror == net.minecraft.world.level.block.Mirror.NONE) {
+            return state;
+        }
+        return state
+                .setValue(LINKS.get(mirror.mirror(Direction.NORTH)), state.getValue(NORTH))
+                .setValue(LINKS.get(mirror.mirror(Direction.EAST)), state.getValue(EAST))
+                .setValue(LINKS.get(mirror.mirror(Direction.SOUTH)), state.getValue(SOUTH))
+                .setValue(LINKS.get(mirror.mirror(Direction.WEST)), state.getValue(WEST));
+    }
+
+    /** Replaced by another block (see RemovalAware): plugs drop together with the pipe. */
     @Override
     public void onRemoved(BlockState state, net.minecraft.world.level.Level level, BlockPos pos) {
-        if (level.getBlockEntity(pos) instanceof PipeBlockEntity be && be.plugCount() > 0) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof PipeBlockEntity be && be.plugCount() > 0) {
             net.minecraft.world.Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
                     new net.minecraft.world.item.ItemStack(com.golemlogix.init.ModItems.PIPE_PLUG.get(), be.plugCount()));
         }
     }
 
-    private Link linkTo(BlockGetter level, BlockPos pos, BlockPos neighborPos, Direction dir) {
+    private Link linkTo(BlockGetter level, BlockPos pos, BlockPos neighborPos, BlockState neighborState, Direction dir) {
         // a side closed by a plug (on this pipe or the neighbouring one) connects to nothing
         if (PipeBlockEntity.plugged(level, pos, dir) || PipeBlockEntity.plugged(level, neighborPos, dir.getOpposite())) {
             return Link.NONE;
         }
-        BlockState neighborState = level.getBlockState(neighborPos);
         // the Eternal Resonator is not a network node (it powers Chronometers), but a pipe reaches it and looks connected
         if (neighborState.getBlock() instanceof EternalFrostResonatorBlock) {
             return Link.DEVICE;

@@ -50,4 +50,22 @@ public class AtlasCasingBlock extends Block implements AtlasPart {
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(PART, FACING);
     }
+
+    @Override
+    protected BlockState rotate(BlockState state, net.minecraft.world.level.block.Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, net.minecraft.world.level.block.Mirror mirror) {
+        if (mirror == net.minecraft.world.level.block.Mirror.NONE) {
+            return state;
+        }
+        Direction facing = state.getValue(FACING);
+        if (state.getValue(PART) == Part.TOP_CORNER) {
+            // a crown corner's rails sit on FACING and its counter-clockwise side; mirroring swaps the two edges
+            return state.setValue(FACING, mirror.mirror(facing.getCounterClockWise()));
+        }
+        return state.rotate(mirror.getRotation(facing));
+    }
 }

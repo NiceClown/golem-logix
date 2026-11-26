@@ -59,7 +59,8 @@ public class CopperTankItem extends ModBlockItem {
     /** 16000 -> "16 000". */
     public static String mb(int amount) {
         StringBuilder sb = new StringBuilder(Integer.toString(amount));
-        for (int i = sb.length() - 3; i > 0; i -= 3) {
+        int minIndex = amount < 0 ? 1 : 0;
+        for (int i = sb.length() - 3; i > minIndex; i -= 3) {
             sb.insert(i, ' ');
         }
         return sb.toString();
@@ -67,13 +68,17 @@ public class CopperTankItem extends ModBlockItem {
 
     /** The fluid inside the item, for buckets, the terminal and machines; the capacity follows the item's. */
     public static final class Contents extends ItemAccessFluidHandler {
+        private static int capacityOf(ItemAccess access) {
+            return access.getResource().getComponents().getOrDefault(ModDataComponents.TANK_CAPACITY.get(), CopperTankBlockEntity.CAPACITY);
+        }
+
         public Contents(ItemAccess access) {
-            super(access, ModDataComponents.TANK_FLUID.get(), capacity(access.getResource().toStack()));
+            super(access, ModDataComponents.TANK_FLUID.get(), capacityOf(access));
         }
 
         @Override
         protected int getCapacity(int index, FluidResource resource) {
-            return capacity(itemAccess.getResource().toStack());
+            return capacityOf(itemAccess);
         }
     }
 
@@ -142,7 +147,7 @@ public class CopperTankItem extends ModBlockItem {
 
     @Override
     public int getBarWidth(ItemStack stack) {
-        return Math.min(13, Math.round(13f * fluid(stack).getAmount() / capacity(stack)));
+        return Math.min(13, Math.round(13f * fluid(stack).getAmount() / Math.max(1, capacity(stack))));
     }
 
     @Override

@@ -26,6 +26,7 @@ public final class BusLinks {
     public enum Device {FUNNEL, NOZZLE, LENS}
 
     public static final Map<Direction, BooleanProperty> PROPS = new EnumMap<>(Direction.class);
+    private static final Direction[] DIRECTIONS = Direction.values();
 
     static {
         PROPS.put(Direction.NORTH, BlockStateProperties.NORTH);
@@ -60,7 +61,7 @@ public final class BusLinks {
 
     /** All six flags from the neighbours (when the block is placed). */
     public static BlockState connected(BlockState state, BlockGetter level, BlockPos pos) {
-        for (Direction d : Direction.values()) {
+        for (Direction d : DIRECTIONS) {
             BlockPos n = pos.relative(d);
             state = state.setValue(PROPS.get(d), GolemNode.linked(level, pos, state, n, level.getBlockState(n), d));
         }
@@ -70,6 +71,27 @@ public final class BusLinks {
     /** A neighbour changed: the side flag follows the link with it (a plug on the neighbouring pipe closes the link). */
     public static BlockState update(BlockState state, Direction direction, BlockState neighbor, BlockGetter level, BlockPos pos) {
         return state.setValue(PROPS.get(direction), GolemNode.linked(level, pos, state, pos.relative(direction), neighbor, direction));
+    }
+
+    public static BlockState rotate(BlockState state, net.minecraft.world.level.block.Rotation rotation) {
+        BlockState rotated = state.setValue(DirectionalBlock.FACING, rotation.rotate(state.getValue(DirectionalBlock.FACING)));
+        return rotated
+                .setValue(PROPS.get(rotation.rotate(Direction.NORTH)), state.getValue(BlockStateProperties.NORTH))
+                .setValue(PROPS.get(rotation.rotate(Direction.EAST)), state.getValue(BlockStateProperties.EAST))
+                .setValue(PROPS.get(rotation.rotate(Direction.SOUTH)), state.getValue(BlockStateProperties.SOUTH))
+                .setValue(PROPS.get(rotation.rotate(Direction.WEST)), state.getValue(BlockStateProperties.WEST));
+    }
+
+    public static BlockState mirror(BlockState state, net.minecraft.world.level.block.Mirror mirror) {
+        if (mirror == net.minecraft.world.level.block.Mirror.NONE) {
+            return state;
+        }
+        BlockState mirrored = state.setValue(DirectionalBlock.FACING, mirror.mirror(state.getValue(DirectionalBlock.FACING)));
+        return mirrored
+                .setValue(PROPS.get(mirror.mirror(Direction.NORTH)), state.getValue(BlockStateProperties.NORTH))
+                .setValue(PROPS.get(mirror.mirror(Direction.EAST)), state.getValue(BlockStateProperties.EAST))
+                .setValue(PROPS.get(mirror.mirror(Direction.SOUTH)), state.getValue(BlockStateProperties.SOUTH))
+                .setValue(PROPS.get(mirror.mirror(Direction.WEST)), state.getValue(BlockStateProperties.WEST));
     }
 
     // ----------------------------------------------------------------------------------------------- shapes
@@ -103,11 +125,12 @@ public final class BusLinks {
     private static long key(BlockState state, Device device) {
         Direction facing = state.getValue(DirectionalBlock.FACING);
         int bits = 0;
-        for (Direction d : Direction.values()) {
-            if (state.getValue(PROPS.get(d))) {
-                bits |= 1 << d.ordinal();
-            }
-        }
+        if (state.getValue(BlockStateProperties.DOWN)) bits |= 1 << Direction.DOWN.ordinal();
+        if (state.getValue(BlockStateProperties.UP)) bits |= 1 << Direction.UP.ordinal();
+        if (state.getValue(BlockStateProperties.NORTH)) bits |= 1 << Direction.NORTH.ordinal();
+        if (state.getValue(BlockStateProperties.SOUTH)) bits |= 1 << Direction.SOUTH.ordinal();
+        if (state.getValue(BlockStateProperties.WEST)) bits |= 1 << Direction.WEST.ordinal();
+        if (state.getValue(BlockStateProperties.EAST)) bits |= 1 << Direction.EAST.ordinal();
         return ((long) device.ordinal() << 16) | ((long) facing.ordinal() << 8) | bits;
     }
 
@@ -120,7 +143,7 @@ public final class BusLinks {
             case NOZZLE -> box(4.6, 4.6, 0, 11.4, 11.4, z0);
             case LENS -> Shapes.or(box(3, 3, 0, 13, 13, 1.4), box(5, 5, 1.4, 11, 11, z0));
         });
-        for (Direction l : Direction.values()) {
+        for (Direction l : DIRECTIONS) {
             if (l == Direction.NORTH) {
                 continue; // the working node is at the front
             }

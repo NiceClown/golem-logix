@@ -75,6 +75,16 @@ public class ChannelCounterBlock extends Block implements EntityBlock {
         builder.add(FACING, MOUNT);
     }
 
+    @Override
+    protected BlockState rotate(BlockState state, net.minecraft.world.level.block.Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, net.minecraft.world.level.block.Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
+    }
+
     /** Where the node it reads stands: under it, or behind it on a side mount. */
     public static BlockPos attached(BlockPos pos, BlockState state) {
         return state.getValue(MOUNT).side() ? pos.relative(state.getValue(FACING).getOpposite()) : pos.below();

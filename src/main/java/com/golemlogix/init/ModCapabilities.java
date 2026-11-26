@@ -19,8 +19,11 @@ public final class ModCapabilities {
         event.registerBlockEntity(Capabilities.Item.BLOCK, ModBlockEntities.MANA_SATURATOR.get(),
                 (be, side) -> be.automationResources());
         event.registerBlock(Capabilities.Item.BLOCK,
-                (level, pos, state, be, side) -> level.getBlockEntity(SaturatorPartBlock.controllerOf(pos, state))
-                        instanceof ManaSaturatorBlockEntity saturator ? saturator.automationResources() : null,
+                (level, pos, state, be, side) -> {
+                    var controller = SaturatorPartBlock.controllerOf(pos, state);
+                    return level.isLoaded(controller) && level.getBlockEntity(controller) instanceof ManaSaturatorBlockEntity saturator
+                            ? saturator.automationResources() : null;
+                },
                 ModBlocks.SATURATOR_PART.get());
         // Pattern Provider: its return slots take what the machines hand back (into the network)
         event.registerBlockEntity(Capabilities.Item.BLOCK, ModBlockEntities.PATTERN_PROVIDER.get(), (be, side) -> be.itemResources());

@@ -5,8 +5,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-import java.util.EnumMap;
-import java.util.Map;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 
 /**
  * Saturator cell shapes. The machine is described by boxes in "machine" coordinates (X left to right as seen from the front,
@@ -37,18 +36,22 @@ public final class SaturatorShapes {
             {21, 45, 5, 27, 48, 11}, // crystal
     };
 
-    private static final Map<Direction, VoxelShape[]> CACHE = new EnumMap<>(Direction.class);
+    private static final int CELLS = SaturatorStructure.CELLS;
+    private static final AtomicReferenceArray<VoxelShape> CACHE =
+            new AtomicReferenceArray<>(Direction.values().length * CELLS);
 
     private SaturatorShapes() {
     }
 
     /** Shape of cell index for a machine facing facing. */
-    public static synchronized VoxelShape of(int index, Direction facing) {
-        VoxelShape[] shapes = CACHE.computeIfAbsent(facing, f -> new VoxelShape[SaturatorStructure.CELLS]);
-        if (shapes[index] == null) {
-            shapes[index] = build(index, facing);
+    public static VoxelShape of(int index, Direction facing) {
+        int slot = facing.ordinal() * CELLS + index;
+        VoxelShape cached = CACHE.get(slot);
+        if (cached != null) {
+            return cached;
         }
-        return shapes[index];
+        VoxelShape built = build(index, facing);
+        return CACHE.compareAndSet(slot, null, built) ? built : CACHE.get(slot);
     }
 
     private static VoxelShape build(int index, Direction facing) {

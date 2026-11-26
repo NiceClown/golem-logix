@@ -18,8 +18,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
-import java.util.List;
-
 /**
  * Forge Hammer: forges blanks on the anvil (an unassembled Mana Saturator) with a left-click on the anvil. Every strike spends
  * Source from the hammer's own charge; the charge is refilled as for the Chronometer, by right-clicking a Source jar with the hammer. Without Ars Nouveau
@@ -111,10 +109,9 @@ public class ForgeHammerItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
                                 java.util.function.Consumer<Component> lines, TooltipFlag flag) {
-        List<Component> tooltip = new com.golemlogix.items.TooltipLines(lines);
-        tooltip.add(Component.translatable("tooltip.golem_logix.forge_hammer").withStyle(ChatFormatting.GRAY));
+        lines.accept(Component.translatable("tooltip.golem_logix.forge_hammer").withStyle(ChatFormatting.GRAY));
         if (SourceHelper.sourceRequired()) {
-            tooltip.add(Component.translatable("tooltip.golem_logix.forge_hammer.charge", getCharge(stack), MAX_CHARGE, STRIKE_COST)
+            lines.accept(Component.translatable("tooltip.golem_logix.forge_hammer.charge", getCharge(stack), MAX_CHARGE, STRIKE_COST)
                     .withStyle(ChatFormatting.LIGHT_PURPLE));
         }
         super.appendHoverText(stack, context, display, lines, flag);

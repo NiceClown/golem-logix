@@ -29,7 +29,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
 
 import javax.annotation.Nullable;
-import java.util.List;
 
 /**
  * Portable Chronometer: a wireless crafting terminal (with a crafting grid) built into a pocket watch.
@@ -165,17 +164,20 @@ public class PortableChronometerItem extends Item {
         if (level.dimension() != bound.dimension()) {
             ModTriggers.CHRONOMETER_DIMENSION.get().trigger(sp);
         }
-        ServerLevel netLevel = sp.level().getServer().getLevel(bound.dimension());
-        if (netLevel == null || !(netLevel.isLoaded(bound.pos()) && netLevel.getBlockState(bound.pos()).getBlock() instanceof AtlasCoreBlock)) {
-            sp.sendOverlayMessage(Component.translatable(level.dimension() != bound.dimension()
-                    ? "message.golem_logix.chronometer.other_dimension" : "message.golem_logix.chronometer.lost")
+        int tier = getTier(stack).ordinal();
+        if (tier < 2 && level.dimension() != bound.dimension()) {
+            sp.sendOverlayMessage(Component.translatable("message.golem_logix.chronometer.other_dimension")
                     .withStyle(ChatFormatting.RED));
             return false;
         }
-        int tier = getTier(stack).ordinal();
+        ServerLevel netLevel = sp.level().getServer().getLevel(bound.dimension());
+        if (netLevel == null || !(netLevel.isLoaded(bound.pos()) && netLevel.getBlockState(bound.pos()).getBlock() instanceof AtlasCoreBlock)) {
+            sp.sendOverlayMessage(Component.translatable("message.golem_logix.chronometer.lost")
+                    .withStyle(ChatFormatting.RED));
+            return false;
+        }
         if (!inRange(tier, level, sp.position(), netLevel, bound.pos())) {
-            sp.sendOverlayMessage(Component.translatable(level.dimension() != bound.dimension()
-                    ? "message.golem_logix.chronometer.other_dimension" : "message.golem_logix.chronometer.out_of_range")
+            sp.sendOverlayMessage(Component.translatable("message.golem_logix.chronometer.out_of_range")
                     .withStyle(ChatFormatting.RED));
             return false;
         }
@@ -183,6 +185,12 @@ public class PortableChronometerItem extends Item {
         String err = net.accessError(null);
         if (err != null) {
             sp.sendOverlayMessage(Component.translatable(err));
+            return false;
+        }
+        if (!net.hasPermission(sp, com.golemlogix.security.SecurityPermission.INSERT)
+                && !net.hasPermission(sp, com.golemlogix.security.SecurityPermission.EXTRACT)
+                && !net.hasPermission(sp, com.golemlogix.security.SecurityPermission.CRAFT)) {
+            sp.sendOverlayMessage(Component.translatable("message.golem_logix.security_denied"));
             return false;
         }
         // power: the network's Resonator sends Source itself, otherwise the own charge is needed
@@ -248,26 +256,25 @@ public class PortableChronometerItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
                                 java.util.function.Consumer<Component> lines, TooltipFlag tooltipFlag) {
-        List<Component> tooltipComponents = new com.golemlogix.items.TooltipLines(lines);
         RangeTier tier = getTier(stack);
-        tooltipComponents.add(Component.translatable("tooltip.golem_logix.chronometer.tier." + tier.getKey())
+        lines.accept(Component.translatable("tooltip.golem_logix.chronometer.tier." + tier.getKey())
                 .withStyle(ChatFormatting.DARK_AQUA));
 
         GlobalPos bound = getBound(stack);
         if (bound != null) {
             BlockPos p = bound.pos();
-            tooltipComponents.add(Component.translatable("tooltip.golem_logix.chronometer.bound", p.getX(), p.getY(), p.getZ(),
+            lines.accept(Component.translatable("tooltip.golem_logix.chronometer.bound", p.getX(), p.getY(), p.getZ(),
                     bound.dimension().identifier().toString()).withStyle(ChatFormatting.GRAY));
         } else {
-            tooltipComponents.add(Component.translatable("tooltip.golem_logix.chronometer.unbound_hint")
+            lines.accept(Component.translatable("tooltip.golem_logix.chronometer.unbound_hint")
                     .withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
         }
         if (SourceHelper.sourceRequired()) {
             if (stack.getOrDefault(ModDataComponents.RESONATOR_LINK.get(), false)) {
-                tooltipComponents.add(Component.translatable("tooltip.golem_logix.chronometer.resonator")
+                lines.accept(Component.translatable("tooltip.golem_logix.chronometer.resonator")
                         .withStyle(ChatFormatting.LIGHT_PURPLE));
             } else {
-                tooltipComponents.add(Component.translatable("tooltip.golem_logix.chronometer.charge", getCharge(stack), MAX_CHARGE)
+                lines.accept(Component.translatable("tooltip.golem_logix.chronometer.charge", getCharge(stack), MAX_CHARGE)
                         .withStyle(ChatFormatting.LIGHT_PURPLE));
             }
         }

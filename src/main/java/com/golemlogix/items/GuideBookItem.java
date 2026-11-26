@@ -10,8 +10,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 
-import java.util.List;
-
 public class GuideBookItem extends Item {
     public GuideBookItem(Properties properties) {
         super(properties.stacksTo(1));
@@ -19,7 +17,6 @@ public class GuideBookItem extends Item {
 
     @Override
     public net.minecraft.world.InteractionResult use(Level level, Player player, InteractionHand hand) {
-        ItemStack stack = player.getItemInHand(hand);
         if (level.isClientSide()) {
             ClientHooks.openGuideBook();
         }
@@ -29,9 +26,8 @@ public class GuideBookItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
                                 java.util.function.Consumer<Component> lines, TooltipFlag tooltipFlag) {
-        List<Component> tooltipComponents = new com.golemlogix.items.TooltipLines(lines);
-        tooltipComponents.add(Component.translatable("tooltip.golem_logix.guide_book").withStyle(ChatFormatting.DARK_AQUA));
-        tooltipComponents.add(Component.translatable("tooltip.golem_logix.guide_book_hint").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
+        lines.accept(Component.translatable("tooltip.golem_logix.guide_book").withStyle(ChatFormatting.DARK_AQUA));
+        lines.accept(Component.translatable("tooltip.golem_logix.guide_book_hint").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
         super.appendHoverText(stack, context, display, lines, tooltipFlag);
     }
 }

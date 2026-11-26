@@ -49,8 +49,13 @@ public class CryoMixerBlock extends Block implements RemovalAware, EntityBlock {
     public static final IntegerProperty SECTION = IntegerProperty.create("section", 0, HEIGHT - 1);
 
     private static final VoxelShape BASE_SHAPE = Shapes.block();
-    private static final VoxelShape FLASKS_SHAPE = Shapes.or(Block.box(1.5, 0, 1.5, 7.5, 15, 7.5), Block.box(8.5, 0, 1.5, 14.5, 15, 7.5),
-            Block.box(1.5, 0, 8.5, 14.5, 4, 14.5));
+    private static final VoxelShape FLASKS_NORTH = Shapes.or(Block.box(1.5, 0, 1.5, 7.5, 15, 7.5), Block.box(8.5, 0, 1.5, 14.5, 15, 7.5),
+            Block.box(1.5, 0, 8.5, 14.5, 4, 14.5)).optimize();
+    private static final java.util.Map<Direction, VoxelShape> FLASKS_SHAPES = java.util.Map.of(
+            Direction.NORTH, FLASKS_NORTH,
+            Direction.EAST, BusLinks.rotateShape(FLASKS_NORTH, Direction.EAST),
+            Direction.SOUTH, BusLinks.rotateShape(FLASKS_NORTH, Direction.SOUTH),
+            Direction.WEST, BusLinks.rotateShape(FLASKS_NORTH, Direction.WEST));
 
     public CryoMixerBlock(Properties properties) {
         super(properties.sound(SoundType.COPPER).strength(3.5f).noOcclusion().pushReaction(PushReaction.BLOCK));
@@ -64,7 +69,7 @@ public class CryoMixerBlock extends Block implements RemovalAware, EntityBlock {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return state.getValue(SECTION) == 0 ? BASE_SHAPE : FLASKS_SHAPE;
+        return state.getValue(SECTION) == 0 ? BASE_SHAPE : FLASKS_SHAPES.getOrDefault(state.getValue(FACING), FLASKS_NORTH);
     }
 
     @Override
@@ -78,7 +83,14 @@ public class CryoMixerBlock extends Block implements RemovalAware, EntityBlock {
 
     @Nullable
     public static CryoMixerBlockEntity entityOf(BlockGetter level, BlockPos pos, BlockState state) {
-        return state.hasProperty(SECTION) && level.getBlockEntity(baseOf(pos, state)) instanceof CryoMixerBlockEntity m ? m : null;
+        if (!state.hasProperty(SECTION)) {
+            return null;
+        }
+        BlockPos base = baseOf(pos, state);
+        if (level instanceof Level l && !l.isLoaded(base)) {
+            return null;
+        }
+        return level.getBlockEntity(base) instanceof CryoMixerBlockEntity m ? m : null;
     }
 
     /** Places a whole mixer (commands, tests). */
@@ -123,7 +135,8 @@ public class CryoMixerBlock extends Block implements RemovalAware, EntityBlock {
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide() && state.getValue(SECTION) != 0) {
             BlockPos base = baseOf(pos, state);
-            if (level.getBlockState(base).is(this)) {
+            BlockState baseState = level.getBlockState(base);
+            if (baseState.is(this) && baseState.getValue(SECTION) == 0 && baseState.getValue(FACING) == state.getValue(FACING)) {
                 level.destroyBlock(base, !player.isCreative(), player);
             }
         }
@@ -133,6 +146,11 @@ public class CryoMixerBlock extends Block implements RemovalAware, EntityBlock {
     @Override
     protected BlockState rotate(BlockState state, Rotation rotation) {
         return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, net.minecraft.world.level.block.Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 
     /** A bucket of water (or any container with a fluid it takes) pours in; an empty hand opens the window. */
@@ -161,7 +179,7 @@ public class CryoMixerBlock extends Block implements RemovalAware, EntityBlock {
     /** Replaced by another block (see RemovalAware): the snow or ice and the upgrades drop. */
     @Override
     public void onRemoved(BlockState state, Level level, BlockPos pos) {
-        if (level.getBlockEntity(pos) instanceof CryoMixerBlockEntity be) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof CryoMixerBlockEntity be) {
             be.dropContents();
         }
     }

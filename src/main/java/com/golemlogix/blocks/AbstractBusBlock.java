@@ -63,7 +63,7 @@ public abstract class AbstractBusBlock extends DirectionalBlock implements com.g
     @Override
     protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, @Nullable net.minecraft.world.level.redstone.Orientation orientation, boolean moving) {
         super.neighborChanged(state, level, pos, block, orientation, moving);
-        if (level.getBlockEntity(pos) instanceof BusBlockEntity bus) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof BusBlockEntity bus) {
             bus.nudge();
         }
     }
@@ -116,11 +116,10 @@ public abstract class AbstractBusBlock extends DirectionalBlock implements com.g
         return InteractionResult.CONSUME;
     }
 
-    /** Upgrades drop together with the bus (the filter is a ghost, nothing to drop there). */
-    /** Replaced by another block (see RemovalAware). */
+    /** Replaced by another block (see RemovalAware): upgrades drop together with the bus (filters are ghosts). */
     @Override
     public void onRemoved(BlockState state, Level level, BlockPos pos) {
-        if (level.getBlockEntity(pos) instanceof BusBlockEntity bus) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof BusBlockEntity bus) {
             net.minecraft.world.Containers.dropContents(level, pos, bus.getUpgrades());
         }
     }
@@ -129,6 +128,16 @@ public abstract class AbstractBusBlock extends DirectionalBlock implements com.g
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         BlockState state = this.defaultBlockState().setValue(FACING, context.getClickedFace().getOpposite());
         return BusLinks.connected(state, context.getLevel(), context.getClickedPos());
+    }
+
+    @Override
+    protected BlockState rotate(BlockState state, net.minecraft.world.level.block.Rotation rotation) {
+        return BusLinks.rotate(state, rotation);
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, net.minecraft.world.level.block.Mirror mirror) {
+        return BusLinks.mirror(state, mirror);
     }
 
     @Override

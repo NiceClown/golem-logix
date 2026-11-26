@@ -96,7 +96,7 @@ public class InterfaceBlock extends Block implements com.golemlogix.blocks.Remov
     /** Replaced by another block (see RemovalAware). */
     @Override
     public void onRemoved(BlockState state, Level level, BlockPos pos) {
-        if (level.getBlockEntity(pos) instanceof InterfaceBlockEntity be) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof InterfaceBlockEntity be) {
             Containers.dropContents(level, pos, be.getStock());
             Containers.dropContents(level, pos, be.getInbox());
             Containers.dropContents(level, pos, be.getUpgrades());
