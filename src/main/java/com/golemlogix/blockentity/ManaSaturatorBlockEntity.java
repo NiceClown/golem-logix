@@ -3,9 +3,15 @@ package com.golemlogix.blockentity;
 import com.golemlogix.blocks.ManaSaturatorBlock;
 import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.init.ModSounds;
+import com.golemlogix.items.ForgeHammerItem;
+import com.golemlogix.secret.SecretKnowledge;
+import com.golemlogix.system.AutoOutput;
 import com.golemlogix.system.GolemNetwork;
+import com.golemlogix.system.NbtBridge;
 import com.golemlogix.system.SaturatorStructure;
 import com.golemlogix.system.SourceHelper;
+import com.golemlogix.upgrade.RedstoneControl;
+import com.golemlogix.upgrade.RedstoneMode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -13,19 +19,27 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.Containers;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.TransferPreconditions;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.SnapshotJournal;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -59,7 +73,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
     private boolean redstoneModule = false;
     /** Auto-output (on by default; the Forge Hammer switches it): finished items leave the right deck by themselves. */
     private boolean autoOutput = true;
-    private final com.golemlogix.upgrade.RedstoneControl redstone = new com.golemlogix.upgrade.RedstoneControl();
+    private final RedstoneControl redstone = new RedstoneControl();
     /** Internal Source buffer: refilled from the network (or neighbouring jars) and spent on saturation. */
     public static final int BUFFER_MAX = 5000;
     /** Source pulled every 5 ticks (times 1 + coolers): 600 a second covers even a Source Gem block (2660 Source in 5 s). */
@@ -105,12 +119,18 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
             return phase == TO_ANVIL || phase == HOP || phase == AT_ANVIL;
         }
 
+        void tickClient() {
+            if (walking() && timer > 0) {
+                timer--;
+            }
+        }
+
         CompoundTag save(HolderLookup.Provider registries) {
             CompoundTag t = new CompoundTag();
             t.putInt("Phase", phase);
             t.putInt("Timer", timer);
             if (!hands.isEmpty()) {
-                t.put("Hands", com.golemlogix.system.NbtBridge.saveItem(hands, registries));
+                t.put("Hands", NbtBridge.saveItem(hands, registries));
             }
             return t;
         }
@@ -118,7 +138,9 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         void load(CompoundTag t, HolderLookup.Provider registries) {
             phase = t.getIntOr("Phase", 0);
             timer = t.getIntOr("Timer", 0);
-            hands = t.contains("Hands") ? com.golemlogix.system.NbtBridge.loadItem(registries, t.getCompoundOrEmpty("Hands")).orElse(ItemStack.EMPTY) : ItemStack.EMPTY;
+            hands = t.contains("Hands")
+                    ? NbtBridge.loadItem(registries, t.getCompoundOrEmpty("Hands")).orElse(ItemStack.EMPTY)
+                    : ItemStack.EMPTY;
         }
     }
 
@@ -210,8 +232,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
             if (!isInput(level, probe)) {
                 return 0;
             }
-            int room = roomInDeck(probe);
-            int n = Math.min(room, amount);
+            int n = Math.min(roomInDeck(probe), amount);
             if (n <= 0) {
                 return 0;
             }
@@ -297,14 +318,20 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
     }
 
     /** Everything inside the machine and in the carriers' hands (dropped when it is broken). */
-    public java.util.List<ItemStack> allItems() {
-        java.util.List<ItemStack> out = new java.util.ArrayList<>();
-        for (ItemStack s : new ItemStack[]{inDeck, heldItem, outDeck, bringer.hands, taker.hands}) {
-            if (!s.isEmpty()) {
-                out.add(s.copy());
-            }
-        }
+    public List<ItemStack> allItems() {
+        List<ItemStack> out = new ArrayList<>(5);
+        addIfNonEmpty(out, inDeck);
+        addIfNonEmpty(out, heldItem);
+        addIfNonEmpty(out, outDeck);
+        addIfNonEmpty(out, bringer.hands);
+        addIfNonEmpty(out, taker.hands);
         return out;
+    }
+
+    private static void addIfNonEmpty(List<ItemStack> out, ItemStack stack) {
+        if (!stack.isEmpty()) {
+            out.add(stack.copy());
+        }
     }
 
     // ------------------------------------------------------------------ forging by hand (the anvil before the machine is built)
@@ -320,13 +347,12 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
     public enum Strike { HIT, DONE, COOLDOWN, NO_SOURCE, NOTHING }
 
     /** What forging by hand gives: the "hand_result" of the blank's Saturator recipe (data packs; by default the three base plates). */
-    public static ItemStack manualOutputFor(@javax.annotation.Nullable Level level, ItemStack input) {
-        com.golemlogix.recipe.SaturatorRecipe r = com.golemlogix.recipe.SaturatorRecipe.find(level, input);
-        return r == null ? ItemStack.EMPTY : r.handResult().copy();
+    public static ItemStack manualOutputFor(@Nullable Level level, ItemStack input) {
+        return SaturatorRecipes.manualOutputFor(level, input);
     }
 
-    public static boolean isManualInput(@javax.annotation.Nullable Level level, ItemStack stack) {
-        return !manualOutputFor(level, stack).isEmpty();
+    public static boolean isManualInput(@Nullable Level level, ItemStack stack) {
+        return SaturatorRecipes.isManualInput(level, stack);
     }
 
     public int manualHits() {
@@ -360,16 +386,16 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         if (now - lastStrike < MANUAL_COOLDOWN) {
             return Strike.COOLDOWN;
         }
-        if (!com.golemlogix.items.ForgeHammerItem.canStrike(hammer)) {
+        if (!ForgeHammerItem.canStrike(hammer)) {
             return Strike.NO_SOURCE;
         }
-        com.golemlogix.items.ForgeHammerItem.spendStrike(hammer);
+        ForgeHammerItem.spendStrike(hammer);
         lastStrike = now;
         manualHits++;
         player.causeFoodExhaustion(0.3f);
         double x = pos.getX() + 0.5, y = pos.getY() + 0.97, z = pos.getZ() + 0.5;
-        level.playSound(null, pos, net.minecraft.sounds.SoundEvents.ANVIL_LAND, SoundSource.BLOCKS, 0.4f, 1.2f + manualHits * 0.06f);
-        level.playSound(null, pos, net.minecraft.sounds.SoundEvents.AMETHYST_BLOCK_HIT, SoundSource.BLOCKS, 0.7f, 1.5f);
+        level.playSound(null, pos, SoundEvents.ANVIL_LAND, SoundSource.BLOCKS, 0.4f, 1.2f + manualHits * 0.06f);
+        level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_HIT, SoundSource.BLOCKS, 0.7f, 1.5f);
         level.sendParticles(ParticleTypes.ENCHANTED_HIT, x, y, z, 3, 0.15, 0.03, 0.15, 0.1);
         level.sendParticles(ParticleTypes.CRIT, x, y, z, 2, 0.1, 0.02, 0.1, 0.15);
         if (manualHits >= MANUAL_HITS) {
@@ -379,19 +405,18 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
             level.playSound(null, pos, ModSounds.ANVIL_CRUSH.get(), SoundSource.BLOCKS, 0.9f, 1.5f);
             changed();
             // the first plate made on an anvil opens the Dispel method
-            if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
-                com.golemlogix.secret.SecretKnowledge.plateMade(sp);
+            if (player instanceof ServerPlayer sp) {
+                SecretKnowledge.plateMade(sp);
             }
             return Strike.DONE;
         }
         changed();
         return Strike.HIT;
     }
+
     private void changed() {
         setChanged();
-        if (level != null && !level.isClientSide()) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-        }
+        BlockEntities.sendUpdate(this);
     }
 
     public float getProgressFraction() {
@@ -416,7 +441,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         return redstoneModule;
     }
 
-    public com.golemlogix.upgrade.RedstoneMode redstoneMode() {
+    public RedstoneMode redstoneMode() {
         return redstone.mode();
     }
 
@@ -425,7 +450,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         boolean installed = !redstoneModule;
         if (installed) {
             redstoneModule = true;
-            redstone.setMode(com.golemlogix.upgrade.RedstoneMode.HIGH);
+            redstone.setMode(RedstoneMode.HIGH);
         } else {
             redstone.setMode(redstone.mode().next(true));
         }
@@ -454,9 +479,10 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         return true;
     }
 
-    /** Whether any cell of the machine gets a redstone signal. */
-    private boolean powered(Level level, BlockPos pos, Direction facing) {
-        for (BlockPos p : SaturatorStructure.cells(pos, facing)) {
+    /** Whether any cell of the machine gets a redstone signal (iterates cell positions without allocating a list). */
+    private static boolean powered(Level level, BlockPos pos, Direction facing) {
+        for (int i = 0; i < SaturatorStructure.CELLS; i++) {
+            BlockPos p = SaturatorStructure.cellPos(pos, facing, i);
             if (level.isLoaded(p) && level.hasNeighborSignal(p)) {
                 return true;
             }
@@ -482,7 +508,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
     }
 
     /** The network connected to any loaded socket of the machine (one that has a core), otherwise the first loaded socket's network. */
-    @javax.annotation.Nullable
+    @Nullable
     public static GolemNetwork network(Level level, BlockPos controller, Direction facing) {
         GolemNetwork first = null;
         for (int port : SaturatorStructure.PORTS) {
@@ -502,14 +528,13 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
     }
 
     /** Refills the buffer: from the network through any socket (if it has a core), otherwise from the jars around the machine. */
-    private void refill(ServerLevel serverLevel, BlockPos pos, BlockState state) {
+    private void refill(ServerLevel serverLevel, BlockPos pos, Direction facing) {
         if (source >= BUFFER_MAX) {
             return;
         }
         // the pull grows with the speed-up: every cooler speeds up the ritual, so Source is spent faster too
         int want = Math.min(PULL_STEP * (1 + coolers), BUFFER_MAX - source);
         int got = 0;
-        Direction facing = state.getValue(ManaSaturatorBlock.FACING);
         GolemNetwork net = network(serverLevel, pos, facing);
         if (!SourceHelper.sourceRequired()) {
             // without Ars Nouveau there is nowhere to take Source from: the machine works for free (see SourceHelper.sourceRequired)
@@ -541,60 +566,53 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
     }
 
     private static boolean allCellsLoaded(Level level, BlockPos pos, Direction facing) {
-        for (int i = 0; i < SaturatorStructure.CELLS; i++) {
-            if (!level.isLoaded(SaturatorStructure.cellPos(pos, facing, i))) {
-                return false;
-            }
-        }
-        return true;
+        return BlockEntities.allLoaded(level, SaturatorStructure.CELLS, i -> SaturatorStructure.cellPos(pos, facing, i));
     }
 
     /** Assembles the machine when the blocks around it stand correctly. */
-    private void tryForm(ServerLevel serverLevel, BlockPos pos, BlockState state) {
-        Direction facing = state.getValue(ManaSaturatorBlock.FACING);
+    private void tryForm(ServerLevel serverLevel, BlockPos pos, Direction facing) {
         if (SaturatorStructure.check(serverLevel, pos, facing).valid()) {
             SaturatorStructure.form(serverLevel, pos, facing);
         }
     }
 
-    /**
-     * Carrier step (server). Bringer: at home with a queue, it takes a blank and walks to its waiting corner; when the anvil is
-     * empty and the taker is off it, it hops on, puts the blank down and goes back. Taker: walks to its corner as soon as a ritual
-     * or a finished result is there, hops on for the result when the bringer is off the anvil and carries it to the right deck (if
-     * foreign plates are there or there is no room, it waits with its load); with nothing to take it goes home from the corner.
-     */
-    private boolean stepCarriers(@javax.annotation.Nullable RecipeInfo heldRecipe) {
-        boolean changed = false;
-        // bringer
-        switch (bringer.phase) {
+    // ------------------------------------------------------------------ carrier step
+
+    /** Advances bringer (left deck -> anvil): takes a blank in advance and waits on its corner until hand-off. */
+    private boolean stepBringer() {
+        return switch (bringer.phase) {
             case HOME -> {
-                if (!inDeck.isEmpty()) {
-                    bringer.hands = inDeck.split(1);
-                    if (inDeck.isEmpty()) {
-                        inDeck = ItemStack.EMPTY;
-                    }
-                    bringer.go(TO_WAIT);
-                    changed = true;
+                if (inDeck.isEmpty()) {
+                    yield false;
                 }
+                bringer.hands = inDeck.split(1);
+                if (inDeck.isEmpty()) {
+                    inDeck = ItemStack.EMPTY;
+                }
+                bringer.go(TO_WAIT);
+                yield true;
             }
             case TO_WAIT -> {
                 if (--bringer.timer <= 0) {
                     bringer.go(AT_WAIT);
-                    changed = true;
+                    yield true;
                 }
+                yield false;
             }
             case AT_WAIT -> {
                 // the anvil is free, or the taker is on its way in for what lies there: a hand-off from both sides
                 if (heldItem.isEmpty() || taker.onAnvil()) {
                     bringer.go(HOP);
-                    changed = true;
+                    yield true;
                 }
+                yield false;
             }
             case TO_ANVIL, HOP -> {
                 if (--bringer.timer <= 0) {
                     bringer.go(AT_ANVIL);
-                    changed = true;
+                    yield true;
                 }
+                yield false;
             }
             case AT_ANVIL -> {
                 if (heldItem.isEmpty()) {
@@ -603,78 +621,92 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
                     ritualProgress = 0;
                     isCrafting = false;
                     bringer.go(TO_DECK);
-                    changed = true;
-                    heldRecipe = resolveRecipe(level, heldItem);
+                    yield true;
                 }
+                yield false;
             }
             default -> {
                 if (--bringer.timer <= 0) {
                     bringer.go(HOME);
-                    changed = true;
+                    yield true;
                 }
+                yield false;
             }
-        }
-        // taker
+        };
+    }
+
+    /** Advances taker (anvil -> right deck): waits on its corner during a ritual and hops in as the last strike falls. */
+    private boolean stepTaker(@Nullable SaturatorRecipes.Info heldRecipe) {
         boolean heldIsInput = heldRecipe != null;
         boolean result = !heldItem.isEmpty() && !heldIsInput;
         int work = heldRecipe != null ? heldRecipe.work() : MAX_PROGRESS;
-        switch (taker.phase) {
+        return switch (taker.phase) {
             case HOME -> {
                 if (isCrafting || result) {
                     taker.go(TO_WAIT);
-                    changed = true;
+                    yield true;
                 }
+                yield false;
             }
             case TO_WAIT -> {
                 if (--taker.timer <= 0) {
                     taker.go(AT_WAIT);
-                    changed = true;
+                    yield true;
                 }
+                yield false;
             }
             case AT_WAIT -> {
-                // hops in so as to land as the last strike falls
                 boolean nearlyDone = isCrafting && (work - ritualProgress) <= HOP_TICKS * speed();
                 if ((result || nearlyDone) && !(bringer.onAnvil() && heldItem.isEmpty())) {
                     taker.go(HOP);
-                    changed = true;
-                } else if (!isCrafting && !result) {
+                    yield true;
+                }
+                if (!isCrafting && !result) {
                     // nothing coming (the anvil was emptied by hand): home from the corner
                     taker.go(BACK);
-                    changed = true;
+                    yield true;
                 }
+                yield false;
             }
             case BACK -> {
                 if (--taker.timer <= 0) {
                     taker.go(HOME);
-                    changed = true;
+                    yield true;
                 }
+                yield false;
             }
             case TO_ANVIL, HOP -> {
                 if (--taker.timer <= 0) {
                     taker.go(AT_ANVIL);
-                    changed = true;
+                    yield true;
                 }
+                yield false;
             }
             case AT_ANVIL -> {
                 if (result) {
                     taker.hands = heldItem;
                     heldItem = ItemStack.EMPTY;
                     taker.go(TO_DECK);
-                    changed = true;
-                } else if (!isCrafting && (heldItem.isEmpty() || !heldIsInput)) {
+                    yield true;
+                }
+                if (!isCrafting && (heldItem.isEmpty() || !heldIsInput)) {
                     // nothing to take (the result was taken by hand): go home empty-handed
                     taker.go(TO_DECK);
-                    changed = true;
+                    yield true;
                 }
+                yield false;
             }
             default -> {
                 if (taker.timer > 0) {
                     taker.timer--;
-                } else if (taker.hands.isEmpty()) {
+                    yield false;
+                }
+                if (taker.hands.isEmpty()) {
                     taker.go(HOME);
-                    changed = true;
-                } else if (outDeck.isEmpty() || ItemStack.isSameItemSameComponents(outDeck, taker.hands)
-                        && outDeck.getCount() + taker.hands.getCount() <= outDeck.getMaxStackSize()) {
+                    yield true;
+                }
+                if (outDeck.isEmpty() || (ItemStack.isSameItemSameComponents(outDeck, taker.hands)
+                        && outDeck.getCount() + taker.hands.getCount() <= outDeck.getMaxStackSize())) {
                     if (outDeck.isEmpty()) {
                         outDeck = taker.hands;
                     } else {
@@ -682,158 +714,178 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
                     }
                     taker.hands = ItemStack.EMPTY;
                     taker.go(HOME);
-                    changed = true;
+                    yield true;
                 }
+                yield false;
             }
-        }
-        return changed;
+        };
     }
+
+    // ------------------------------------------------------------------ tick
 
     public static void tick(Level level, BlockPos pos, BlockState state, ManaSaturatorBlockEntity entity) {
         boolean formed = state.getValue(ManaSaturatorBlock.FORMED);
-        boolean powered = false;
         if (!(level instanceof ServerLevel sl)) {
             if (formed) {
-                RecipeInfo recipe = resolveRecipe(level, entity.heldItem);
+                SaturatorRecipes.Info recipe = SaturatorRecipes.resolve(level, entity.heldItem);
                 entity.walkLamp(level, recipe);
                 entity.clientTick(level, pos, recipe);
             }
             return;
         }
         long t = level.getGameTime() + pos.asLong();
+        Direction facing = state.getValue(ManaSaturatorBlock.FACING);
         if (!formed) {
-            if (t % 20 == 0) {
-                entity.tryForm(sl, pos, state);
-                if (sl.getBlockState(pos).getValue(ManaSaturatorBlock.FORMED)) {
-                    entity.manualHits = 0;
-                }
-            }
-            entity.ritualProgress = 0;
-            entity.isCrafting = false;
+            entity.tickUnformed(sl, pos, facing, t);
             return;
         }
-        Direction facing = state.getValue(ManaSaturatorBlock.FACING);
         if (t % 40 == 0 && allCellsLoaded(level, pos, facing) && !SaturatorStructure.check(level, pos, facing).valid()) {
             SaturatorStructure.disassemble(level, pos, facing, null);
             return;
         }
+        entity.tickFormed(sl, pos, state, facing, t);
+    }
+
+    private void tickUnformed(ServerLevel sl, BlockPos pos, Direction facing, long t) {
+        if (t % 20 == 0) {
+            tryForm(sl, pos, facing);
+            if (sl.getBlockState(pos).getValue(ManaSaturatorBlock.FORMED)) {
+                manualHits = 0;
+            }
+        }
+        ritualProgress = 0;
+        isCrafting = false;
+    }
+
+    private void tickFormed(ServerLevel sl, BlockPos pos, BlockState state, Direction facing, long t) {
         boolean dirty = false;
         boolean needSync = false;
         if (t % 5 == 0) {
-            entity.refill(sl, pos, state);
+            refill(sl, pos, facing);
         }
         if (t % 20 == 0) {
-            int n = SaturatorStructure.coolers(level, pos, facing);
-            if (n != entity.coolers) {
-                entity.coolers = n;
+            int n = SaturatorStructure.coolers(sl, pos, facing);
+            if (n != coolers) {
+                coolers = n;
                 dirty = true;
                 needSync = true;
             }
         }
-        if (entity.redstoneModule) {
-            powered = entity.powered(level, pos, facing);
-            entity.redstone.observe(powered);
+        boolean powered = false;
+        if (redstoneModule) {
+            powered = powered(sl, pos, facing);
+            redstone.observe(powered);
         }
-        needSync |= entity.levelChanged();
+        needSync |= levelChanged();
 
-        ItemStack heldBefore = entity.heldItem;
-        RecipeInfo recipe = resolveRecipe(level, heldBefore);
-        boolean changed = entity.stepCarriers(recipe);
-        if (entity.heldItem != heldBefore) {
-            recipe = resolveRecipe(level, entity.heldItem);
+        ItemStack heldBefore = heldItem;
+        SaturatorRecipes.Info recipe = SaturatorRecipes.resolve(sl, heldBefore);
+        boolean changed = stepBringer();
+        if (heldItem != heldBefore) {
+            heldBefore = heldItem;
+            recipe = SaturatorRecipes.resolve(sl, heldItem);
         }
+        changed |= stepTaker(recipe);
+        if (heldItem != heldBefore) {
+            recipe = SaturatorRecipes.resolve(sl, heldItem);
+        }
+        changed |= tickRitual(sl, pos, recipe, powered);
+        changed |= tickAutoOutput(sl, pos, facing, t);
 
-        ItemStack held = entity.heldItem;
-        if (held.isEmpty() || recipe == null) {
-            if (entity.ritualProgress != 0 || entity.isCrafting) {
-                entity.ritualProgress = 0;
-                entity.isCrafting = false;
-                changed = true;
-            }
-        } else {
-            ItemStack recipeOutput = recipe.output();
-            int requiredSource = recipe.source();
-            int work = recipe.work();
-            // start when the bowl has enough Source (and the Redstone Module allows it), and spend it right away
-            if (!entity.isCrafting && entity.source >= requiredSource && entity.redstone.allows(entity.redstoneModule, powered, true)) {
-                entity.source -= requiredSource;
-                entity.isCrafting = true;
-                entity.ritualProgress = 0;
-                changed = true;
-            }
-            if (entity.isCrafting) {
-                int before = entity.ritualProgress;
-                entity.ritualProgress = Math.min(work, entity.ritualProgress + entity.speed());
-                // a hum every second of the ritual
-                if (before / 200 != entity.ritualProgress / 200) {
-                    sl.playSound(null, pos.getX(), pos.getY(), pos.getZ(), ModSounds.VACUUM_HUM.get(), SoundSource.BLOCKS, 0.6f, 1.2f);
-                }
-                // the golem strikes the blank five times per ritual: the clang of the strike and sparks
-                int hitsBefore = (before * 5 + work / 4) / work;
-                int hitsNow = (entity.ritualProgress * 5 + work / 4) / work;
-                if (hitsNow != hitsBefore && entity.ritualProgress < work) {
-                    sl.playSound(null, pos.getX(), pos.getY(), pos.getZ(), net.minecraft.sounds.SoundEvents.IRON_GOLEM_ATTACK,
-                            SoundSource.BLOCKS, 0.5f, 1.3f);
-                    sl.sendParticles(ParticleTypes.ENCHANTED_HIT, pos.getX() + 0.5, pos.getY() - 0.05, pos.getZ() + 0.5,
-                            2, 0.12, 0.03, 0.12, 0.08);
-                    sl.sendParticles(ParticleTypes.CRIT, pos.getX() + 0.5, pos.getY() - 0.05, pos.getZ() + 0.5, 2, 0.1, 0.02, 0.1, 0.12);
-                }
-                if (entity.ritualProgress >= work) {
-                    held.shrink(1);
-                    if (!held.isEmpty()) {
-                        // in old worlds a stack could lie on the anvil: the extra results go next to it
-                        Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.1, pos.getZ() + 0.5, recipeOutput.copy());
-                    } else {
-                        entity.heldItem = recipeOutput.copy();
-                    }
-                    // a plate is done: a short burst, low and wide, so the smith stays in sight
-                    sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, pos.getX() + 0.5, pos.getY() - 0.05, pos.getZ() + 0.5, 6, 0.35, 0.05, 0.35, 0.03);
-                    sl.sendParticles(ParticleTypes.SNOWFLAKE, pos.getX() + 0.5, pos.getY() + 0.3, pos.getZ() + 0.5, 6, 0.4, 0.1, 0.4, 0.02);
-                    sl.sendParticles(ParticleTypes.END_ROD, pos.getX() + 0.5, pos.getY() + 0.1, pos.getZ() + 0.5, 3, 0.3, 0.05, 0.3, 0.03);
-                    sl.playSound(null, pos.getX(), pos.getY(), pos.getZ(), ModSounds.ANVIL_CRUSH.get(), SoundSource.BLOCKS, 1.0f, 1.4f);
-                    entity.ritualProgress = 0;
-                    entity.isCrafting = false;
-                    changed = true;
-                }
-            }
-        }
-        // auto-output: the finished items go to a neighbouring Pattern Provider first, otherwise into any neighbouring inventory
-        if (entity.autoOutput && !entity.outDeck.isEmpty() && t % com.golemlogix.system.AutoOutput.INTERVAL == 0) {
-            ItemStack rest = com.golemlogix.system.AutoOutput.push(level, SaturatorStructure.cells(pos, facing), entity.outDeck);
-            if (rest.getCount() != entity.outDeck.getCount()) {
-                entity.outDeck = rest;
-                changed = true;
-            }
-        }
         if (changed) {
             dirty = true;
             needSync = true;
         }
         if (dirty) {
-            entity.setChanged();
+            setChanged();
         }
         if (needSync) {
-            entity.syncedLevel = entity.levelEighths();
+            syncedLevel = levelEighths();
             sl.sendBlockUpdated(pos, state, state, 3);
         }
     }
 
-    private static void stepClientCarrier(Carrier c) {
-        if (c.walking() && c.timer > 0) {
-            c.timer--;
+    private boolean tickRitual(ServerLevel sl, BlockPos pos, @Nullable SaturatorRecipes.Info recipe, boolean powered) {
+        if (heldItem.isEmpty() || recipe == null) {
+            if (ritualProgress != 0 || isCrafting) {
+                ritualProgress = 0;
+                isCrafting = false;
+                return true;
+            }
+            return false;
         }
+        boolean changed = false;
+        int work = recipe.work();
+        // start when the bowl has enough Source (and the Redstone Module allows it), spending Source up front
+        if (!isCrafting && source >= recipe.source() && redstone.allows(redstoneModule, powered, true)) {
+            source -= recipe.source();
+            isCrafting = true;
+            ritualProgress = 0;
+            changed = true;
+        }
+        if (!isCrafting) {
+            return changed;
+        }
+        int before = ritualProgress;
+        ritualProgress = Math.min(work, ritualProgress + speed());
+        if (before / 200 != ritualProgress / 200) {
+            sl.playSound(null, pos.getX(), pos.getY(), pos.getZ(), ModSounds.VACUUM_HUM.get(), SoundSource.BLOCKS, 0.6f, 1.2f);
+        }
+        // the golem strikes the blank five times per ritual: clang and sparks
+        int hitsBefore = (before * 5 + work / 4) / work;
+        int hitsNow = (ritualProgress * 5 + work / 4) / work;
+        if (hitsNow != hitsBefore && ritualProgress < work) {
+            sl.playSound(null, pos.getX(), pos.getY(), pos.getZ(), SoundEvents.IRON_GOLEM_ATTACK, SoundSource.BLOCKS, 0.5f, 1.3f);
+            sl.sendParticles(ParticleTypes.ENCHANTED_HIT, pos.getX() + 0.5, pos.getY() - 0.05, pos.getZ() + 0.5, 2, 0.12, 0.03, 0.12, 0.08);
+            sl.sendParticles(ParticleTypes.CRIT, pos.getX() + 0.5, pos.getY() - 0.05, pos.getZ() + 0.5, 2, 0.1, 0.02, 0.1, 0.12);
+        }
+        if (ritualProgress >= work) {
+            completeRitual(sl, pos, recipe.output());
+            changed = true;
+        }
+        return changed;
     }
 
+    private void completeRitual(ServerLevel sl, BlockPos pos, ItemStack recipeOutput) {
+        heldItem.shrink(1);
+        if (!heldItem.isEmpty()) {
+            // in old worlds a stack could lie on the anvil: drop extra results beside it
+            Containers.dropItemStack(sl, pos.getX() + 0.5, pos.getY() + 0.1, pos.getZ() + 0.5, recipeOutput.copy());
+        } else {
+            heldItem = recipeOutput.copy();
+        }
+        sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, pos.getX() + 0.5, pos.getY() - 0.05, pos.getZ() + 0.5, 6, 0.35, 0.05, 0.35, 0.03);
+        sl.sendParticles(ParticleTypes.SNOWFLAKE, pos.getX() + 0.5, pos.getY() + 0.3, pos.getZ() + 0.5, 6, 0.4, 0.1, 0.4, 0.02);
+        sl.sendParticles(ParticleTypes.END_ROD, pos.getX() + 0.5, pos.getY() + 0.1, pos.getZ() + 0.5, 3, 0.3, 0.05, 0.3, 0.03);
+        sl.playSound(null, pos.getX(), pos.getY(), pos.getZ(), ModSounds.ANVIL_CRUSH.get(), SoundSource.BLOCKS, 1.0f, 1.4f);
+        ritualProgress = 0;
+        isCrafting = false;
+    }
+
+    /** Auto-output: pushes finished items to a neighbouring Pattern Provider first, otherwise any neighbouring inventory. */
+    private boolean tickAutoOutput(ServerLevel sl, BlockPos pos, Direction facing, long t) {
+        if (!autoOutput || outDeck.isEmpty() || t % AutoOutput.INTERVAL != 0) {
+            return false;
+        }
+        ItemStack rest = AutoOutput.push(sl, SaturatorStructure.cells(pos, facing), outDeck);
+        if (rest.getCount() != outDeck.getCount()) {
+            outDeck = rest;
+            return true;
+        }
+        return false;
+    }
+
+    // ------------------------------------------------------------------ client visuals
+
     /** Client: ritual progress between packets, sparks at the anvil, carrier steps (phase changes come from the server). */
-    private void clientTick(Level level, BlockPos pos, @javax.annotation.Nullable RecipeInfo recipe) {
-        stepClientCarrier(bringer);
-        stepClientCarrier(taker);
+    private void clientTick(Level level, BlockPos pos, @Nullable SaturatorRecipes.Info recipe) {
+        bringer.tickClient();
+        taker.tickClient();
         int work = recipe != null ? recipe.work() : MAX_PROGRESS;
         if (isCrafting && ritualProgress < work) {
             ritualProgress = Math.min(work, ritualProgress + speed());
         }
-        // while it works: now and then one small particle at the chamber's edges, never a cloud over the smith - a cold flame
-        // licking the anvil's corner, a snowflake drifting down a corner post, a spark off the plate, a mote rising from the rod
+        // while it works: occasional small particle at the chamber edges, never obscuring the smith
         if (isCrafting && level.getGameTime() % 4 == 0) {
             var r = level.getRandom();
             double cx = pos.getX() + 0.5, cy = pos.getY() - 0.1, cz = pos.getZ() + 0.5;
@@ -852,88 +904,71 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
      * around the crystal base (19.5..28.5 x 3.5..12.5) over eight points; during a ritual or when Source is short it stands in front.
      */
     public final LampWalker walker = new LampWalker(24f, 1.8f);
-    private static final float[][] RING = {{17.6f, 1.8f}, {24f, 1.8f}, {30.4f, 1.8f}, {30.4f, 8f}, {30.4f, 14.2f}, {24f, 14.2f},
-            {17.6f, 14.2f}, {17.6f, 8f}};
+    private static final float[][] RING = {
+            {17.6f, 1.8f}, {24f, 1.8f}, {30.4f, 1.8f}, {30.4f, 8f},
+            {30.4f, 14.2f}, {24f, 14.2f}, {17.6f, 14.2f}, {17.6f, 8f}
+    };
+    private final LampWalker.GoalPicker ringGoal = this::pickRingGoal;
 
-    private void walkLamp(Level level, @javax.annotation.Nullable RecipeInfo recipe) {
-        var r = level.getRandom();
-        walker.tick(lampState(recipe) == 0, 24f, 1.8f, r, () -> {
-            // to the next point of the circle (clockwise or counterclockwise): the golem never walks straight through the crystal
-            walker.ring = Math.floorMod(walker.ring + (r.nextInt(4) == 0 ? -1 : 1), RING.length);
-            return RING[walker.ring];
-        });
+    private void pickRingGoal(RandomSource random, float[] out) {
+        // step clockwise or counterclockwise around the crystal so the golem never walks through it
+        walker.ring = Math.floorMod(walker.ring + (random.nextInt(4) == 0 ? -1 : 1), RING.length);
+        out[0] = RING[walker.ring][0];
+        out[1] = RING[walker.ring][1];
+    }
+
+    private void walkLamp(Level level, @Nullable SaturatorRecipes.Info recipe) {
+        walker.tick(lampState(recipe) == 0, 24f, 1.8f, level.getRandom(), ringGoal);
     }
 
     /** Roof lamp signal: 0 = idle, 1 = ritual running, 2 = a blank is waiting but Source is short. */
     public int lampState() {
-        return lampState(resolveRecipe(level, heldItem));
+        return lampState(SaturatorRecipes.resolve(level, heldItem));
     }
 
-    private int lampState(@javax.annotation.Nullable RecipeInfo recipe) {
+    private int lampState(@Nullable SaturatorRecipes.Info recipe) {
         if (isCrafting) {
             return 1;
         }
-        if (recipe != null && source < recipe.source()) {
-            return 2;
-        }
-        return 0;
+        return recipe != null && source < recipe.source() ? 2 : 0;
     }
 
-    /** Resolved recipe output, Source cost and work units for one lookup per tick. */
-    private record RecipeInfo(ItemStack output, int source, int work) {
-    }
-
-    @javax.annotation.Nullable
-    private static RecipeInfo resolveRecipe(@javax.annotation.Nullable Level level, ItemStack input) {
-        if (input.isEmpty()) {
-            return null;
-        }
-        com.golemlogix.recipe.SaturatorRecipe own = com.golemlogix.recipe.SaturatorRecipe.find(level, input);
-        if (own != null) {
-            return new RecipeInfo(own.result(), own.source(), Math.max(1, own.ticks() * BASE_SPEED));
-        }
-        com.golemlogix.integration.ars.ArsImbuement.Entry gem = com.golemlogix.integration.ars.ArsImbuement.find(level, input);
-        if (gem != null) {
-            return new RecipeInfo(gem.output(), gem.source(), Math.max(1, gem.ticks() * BASE_SPEED));
-        }
-        return null;
-    }
+    // ------------------------------------------------------------------ recipe lookups (public API)
 
     /** Whether the item can be pressed (otherwise clicking the machine with it is a normal block placement). */
-    public static boolean isInput(@javax.annotation.Nullable Level level, ItemStack stack) {
-        return resolveRecipe(level, stack) != null;
+    public static boolean isInput(@Nullable Level level, ItemStack stack) {
+        return SaturatorRecipes.isInput(level, stack);
     }
 
     /**
      * What one ritual makes: the mod's own plates and parts, and, with Ars Nouveau, the Imbuement Chamber's Source Gem recipes
      * (amethyst, an amethyst block, lapis), read from the level's recipes.
      */
-    public static ItemStack outputFor(@javax.annotation.Nullable Level level, ItemStack input) {
-        RecipeInfo info = resolveRecipe(level, input);
-        return info == null ? ItemStack.EMPTY : info.output().copy();
+    public static ItemStack outputFor(@Nullable Level level, ItemStack input) {
+        return SaturatorRecipes.outputFor(level, input);
     }
 
     /** Source of one ritual: as its recipe says (1000 for a plate, 2500 for the Occult Matrix), a Source Gem a third more than in the chamber. */
-    public static int requiredSource(@javax.annotation.Nullable Level level, ItemStack input) {
-        RecipeInfo info = resolveRecipe(level, input);
-        return info != null ? info.source() : com.golemlogix.recipe.SaturatorRecipe.DEFAULT_SOURCE;
+    public static int requiredSource(@Nullable Level level, ItemStack input) {
+        return SaturatorRecipes.requiredSource(level, input);
     }
 
     /** Work units of one ritual: the recipe's ticks at the base speed (MAX_PROGRESS for the plates); a Source Gem takes half the chamber's ticks. */
-    public static int ritualWork(@javax.annotation.Nullable Level level, ItemStack input) {
-        RecipeInfo info = resolveRecipe(level, input);
-        return info != null ? info.work() : MAX_PROGRESS;
+    public static int ritualWork(@Nullable Level level, ItemStack input) {
+        return SaturatorRecipes.ritualWork(level, input);
     }
+
+    // ------------------------------------------------------------------ persistence
 
     protected void saveTag(CompoundTag tag, HolderLookup.Provider registries) {
         if (!heldItem.isEmpty()) {
-            tag.put("HeldItem", com.golemlogix.system.NbtBridge.saveItem(heldItem, registries));
+            tag.put("HeldItem", NbtBridge.saveItem(heldItem, registries));
         }
         if (!inDeck.isEmpty()) {
-            tag.put("InDeck", com.golemlogix.system.NbtBridge.saveItem(inDeck, registries));
+            tag.put("InDeck", NbtBridge.saveItem(inDeck, registries));
         }
         if (!outDeck.isEmpty()) {
-            tag.put("OutDeck", com.golemlogix.system.NbtBridge.saveItem(outDeck, registries));
+            tag.put("OutDeck", NbtBridge.saveItem(outDeck, registries));
         }
         tag.put("Bringer", bringer.save(registries));
         tag.put("Taker", taker.save(registries));
@@ -948,20 +983,26 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
     }
 
     protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
-        heldItem = tag.contains("HeldItem") ? com.golemlogix.system.NbtBridge.loadItem(registries, tag.getCompoundOrEmpty("HeldItem")).orElse(ItemStack.EMPTY) : ItemStack.EMPTY;
-        inDeck = tag.contains("InDeck") ? com.golemlogix.system.NbtBridge.loadItem(registries, tag.getCompoundOrEmpty("InDeck")).orElse(ItemStack.EMPTY) : ItemStack.EMPTY;
-        outDeck = tag.contains("OutDeck") ? com.golemlogix.system.NbtBridge.loadItem(registries, tag.getCompoundOrEmpty("OutDeck")).orElse(ItemStack.EMPTY) : ItemStack.EMPTY;
+        heldItem = readOptionalItem(tag, "HeldItem", registries);
+        inDeck = readOptionalItem(tag, "InDeck", registries);
+        outDeck = readOptionalItem(tag, "OutDeck", registries);
         bringer.load(tag.getCompoundOrEmpty("Bringer"), registries);
         taker.load(tag.getCompoundOrEmpty("Taker"), registries);
-        this.ritualProgress = tag.getIntOr("Progress", 0);
-        this.manualHits = tag.getIntOr("ManualHits", 0);
-        this.source = tag.getIntOr("Source", 0);
-        this.syncedLevel = levelEighths();
-        this.isCrafting = tag.getBooleanOr("IsCrafting", false);
-        this.coolers = tag.getIntOr("Coolers", 0);
-        this.redstoneModule = tag.getBooleanOr("RedstoneModule", false);
-        this.autoOutput = tag.getBooleanOr("AutoOutput", true);
+        ritualProgress = tag.getIntOr("Progress", 0);
+        manualHits = tag.getIntOr("ManualHits", 0);
+        source = tag.getIntOr("Source", 0);
+        syncedLevel = levelEighths();
+        isCrafting = tag.getBooleanOr("IsCrafting", false);
+        coolers = tag.getIntOr("Coolers", 0);
+        redstoneModule = tag.getBooleanOr("RedstoneModule", false);
+        autoOutput = tag.getBooleanOr("AutoOutput", true);
         redstone.load(tag);
+    }
+
+    private static ItemStack readOptionalItem(CompoundTag tag, String key, HolderLookup.Provider registries) {
+        return tag.contains(key)
+                ? NbtBridge.loadItem(registries, tag.getCompoundOrEmpty(key)).orElse(ItemStack.EMPTY)
+                : ItemStack.EMPTY;
     }
 
     @Override
@@ -976,29 +1017,22 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         return ClientboundBlockEntityDataPacket.create(this);
     }
 
-    // ---- 1.21.6+: the game's ValueInput/ValueOutput over the CompoundTag code above
-
     @Override
-    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+    protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
-        CompoundTag tag = new CompoundTag();
-        saveTag(tag, com.golemlogix.system.NbtBridge.registries(this));
-        com.golemlogix.system.NbtBridge.write(output, tag);
+        BlockEntities.save(this, output, this::saveTag);
     }
 
     @Override
-    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+    protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
-        loadTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+        BlockEntities.load(input, this::loadTag);
     }
 
-    /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
     @Override
     public void preRemoveSideEffects(BlockPos pos, BlockState state) {
         super.preRemoveSideEffects(pos, state);
-        if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
-            r.onRemoved(state, level, pos);
-        }
+        BlockEntities.onPreRemove(this, pos, state);
         if (level != null && !level.isClientSide()) {
             // clear dropped items so nothing can be re-dropped if preRemoveSideEffects or removal runs twice
             inDeck = ItemStack.EMPTY;

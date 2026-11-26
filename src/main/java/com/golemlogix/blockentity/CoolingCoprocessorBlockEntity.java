@@ -18,15 +18,13 @@ public class CoolingCoprocessorBlockEntity extends BlockEntity {
     public float phase = 0f;
     public float phasePrev = 0f;
 
-    private static final Direction[] DIRECTIONS = Direction.values();
-
     public CoolingCoprocessorBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.COOLING_COPROCESSOR.get(), pos, state);
     }
 
     public static void clientTick(Level level, BlockPos pos, BlockState state, CoolingCoprocessorBlockEntity be) {
         boolean driven = false;
-        for (Direction d : DIRECTIONS) {
+        for (Direction d : BlockEntities.DIRECTIONS) {
             // the neighbouring calculator's ACTIVE state or its visual work window
             BlockPos np = pos.relative(d);
             BlockState ns = level.getBlockState(np);
@@ -56,12 +54,9 @@ public class CoolingCoprocessorBlockEntity extends BlockEntity {
         }
     }
 
-    /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
     @Override
     public void preRemoveSideEffects(BlockPos pos, BlockState state) {
         super.preRemoveSideEffects(pos, state);
-        if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
-            r.onRemoved(state, level, pos);
-        }
+        BlockEntities.onPreRemove(this, pos, state);
     }
 }

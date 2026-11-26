@@ -5,6 +5,10 @@ import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.init.ModSounds;
 import com.golemlogix.system.AtlasStructure;
 import com.golemlogix.system.GolemNetwork;
+import com.golemlogix.system.Ingredients;
+import com.golemlogix.system.ItemKey;
+import com.golemlogix.system.NbtBridge;
+import com.golemlogix.system.SourceHelper;
 import com.golemlogix.system.Transfers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -16,6 +20,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import java.util.ArrayList;
@@ -23,10 +29,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Atlas Core: once a second it rescans the network and draws Source to power it.
- * No Source means the whole network is off.
+ * Atlas Core: once a second validates its array structure, draws Source to power the network, refreshes pipe lights
+ * on state changes, and periodically samples cargo items/fluids for client pipe-carrier visuals.
  */
 public class AtlasCoreBlockEntity extends BlockEntity {
+    private static final int CARGO_SECONDS = 15, CARGO_ITEMS = 12, CARGO_FLUIDS = 4;
+
     private boolean powered = false;
     private int channelsUsed = 0;
     private int channelCapacity = 0;
@@ -37,16 +45,14 @@ public class AtlasCoreBlockEntity extends BlockEntity {
     private boolean wasDuplicate = false;
     private boolean formed = false;
     private boolean initialized = false;
-    /** Client electron animation. */
+    /** Client electron animation phase. */
     public float orbit = 0;
-    /**
-     * A few items and fluid buckets of the network for the snowmen's crates in the pipes. The server picks them now and then and
-     * sends them with the core's update, so client renderers never read the storage (which lives on the server thread).
-     */
+    /** Sampled items and fluid buckets synced to clients for pipe-carrier crates. */
     private List<ItemStack> cargoItems = List.of(), cargoFluids = List.of();
     private int secondsSinceCargo = CARGO_SECONDS;
     private GolemNetwork cargoNetwork;
-    private static final int CARGO_SECONDS = 15, CARGO_ITEMS = 12, CARGO_FLUIDS = 4;
+    private GolemNetwork syncedNetwork;
+    private int secondsSinceSync;
 
     public AtlasCoreBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.ATLAS_CORE.get(), pos, state);
@@ -76,7 +82,6 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         return infiniteSource;
     }
 
-    /** The Atlas Array is complete (synced to the client for rendering). */
     public boolean isFormed() {
         return formed;
     }
@@ -85,24 +90,22 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         return duplicate;
     }
 
-    /** Sample items of the network (count 1), as last sent by the server; for client visuals. */
     public List<ItemStack> cargoItems() {
         return cargoItems;
     }
 
-    /** Sample fluids of the network as filled buckets, as last sent by the server; for client visuals. */
     public List<ItemStack> cargoFluids() {
         return cargoFluids;
     }
 
-    /** Picks up to CARGO_ITEMS item kinds spread over the whole list, and up to CARGO_FLUIDS fluids as buckets. Returns true on a change. */
+    /** Samples up to CARGO_ITEMS items and CARGO_FLUIDS fluid buckets for client visuals. Returns true on change. */
     private boolean pickCargo(GolemNetwork net) {
         List<ItemStack> items = new ArrayList<>();
-        Map<com.golemlogix.system.ItemKey, Long> all = net.listItems();
+        Map<ItemKey, Long> all = net.listItems();
         int step = Math.max(1, all.size() / CARGO_ITEMS);
         int i = 0;
-        for (com.golemlogix.system.ItemKey key : all.keySet()) {
-            if (i++ % step == 0 && !com.golemlogix.system.Ingredients.isFluid(key)) {
+        for (ItemKey key : all.keySet()) {
+            if (i++ % step == 0 && !Ingredients.isFluid(key)) {
                 items.add(key.toStack(1));
                 if (items.size() >= CARGO_ITEMS) {
                     break;
@@ -137,41 +140,17 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         be.update(level, pos, first);
     }
 
-    /** Forced rescan (right-click on the core, tests); the fresh network is shared with every device of it. */
+    /** Forced rescan (right-click on the core, tests); shared with every device on the network. */
     public void refresh(Level level, BlockPos pos) {
         update(level, pos, true);
     }
 
-    /** The network whose lights were last set, and how many seconds ago (they are set again on a change and now and then). */
-    private GolemNetwork syncedNetwork;
-    private int secondsSinceSync;
-
-    /**
-     * Once a second: drains Source and lights the network. The walk itself is the one the devices share and is remembered until
-     * something changes (it used to be repeated every second); the array is checked here, because casings and Atlants are not
-     * network nodes and their changes do not reach the network on their own.
-     */
     private void update(Level level, BlockPos pos, boolean force) {
-        GolemNetwork net = force ? GolemNetwork.refresh(level, pos) : GolemNetwork.get(level, pos);
-        if (!force && net.isPrimaryCore(pos) && AtlasStructure.check(level, pos).valid() != net.structureValid()) {
-            GolemNetwork.nodesChanged(level, pos);
-            net = GolemNetwork.refresh(level, pos);
-        }
-
-        boolean newPowered;
-        int cost = 0;
+        GolemNetwork net = resolveNetwork(level, pos, force);
         duplicate = !net.isPrimaryCore(pos);
-        if (duplicate) {
-            // a second core in the same network does not work (the network chose the other one, the same from every device)
-            newPowered = false;
-        } else {
-            cost = GolemConfig.CORE_SOURCE_PER_SECOND.get()
-                    + (int) Math.ceil(net.channelsUsed() * GolemConfig.CHANNEL_SOURCE_PER_SECOND.get())
-                    + net.telegraphLinks() * GolemConfig.TELEGRAPH_SOURCE_PER_SECOND.get();
-            newPowered = net.consumeSource(cost);
-        }
+        int cost = duplicate ? 0 : powerCost(net);
+        boolean newPowered = !duplicate && net.consumeSource(cost);
 
-        // the lights only change with the network or the power; walking every node every second for nothing was wasted work
         if (!duplicate && (force || net != syncedNetwork || newPowered != powered || ++secondsSinceSync >= 10)) {
             net.syncActiveVisuals(newPowered);
             syncedNetwork = net;
@@ -182,9 +161,9 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         if (newFormed && !formed) {
             AtlasStructure.orientAtlants(level, pos);
         }
-        // the casings wear the assembled look while the array around this core is whole (also a duplicate core's array)
         AtlasStructure.dress(level, pos, newFormed);
-        boolean newInfinite = net.hasInfiniteSource() || !com.golemlogix.system.SourceHelper.sourceRequired();
+
+        boolean newInfinite = net.hasInfiniteSource() || !SourceHelper.sourceRequired();
         int newSps = newInfinite ? 0 : cost;
         boolean persistedChanged = newFormed != formed || newPowered != powered || net.channelsUsed() != channelsUsed
                 || net.channelCapacity() != channelCapacity || net.deviceCount() != devices
@@ -207,8 +186,24 @@ public class AtlasCoreBlockEntity extends BlockEntity {
             setChanged();
         }
         if (persistedChanged || cargoChanged) {
-            level.sendBlockUpdated(pos, getBlockState(), getBlockState(), 3);
+            BlockEntities.sendUpdate(this);
         }
+    }
+
+    private static GolemNetwork resolveNetwork(Level level, BlockPos pos, boolean force) {
+        GolemNetwork net = force ? GolemNetwork.refresh(level, pos) : GolemNetwork.get(level, pos);
+        // casings and Atlants are not GolemNodes, so recheck structure validity here
+        if (!force && net.isPrimaryCore(pos) && AtlasStructure.check(level, pos).valid() != net.structureValid()) {
+            GolemNetwork.nodesChanged(level, pos);
+            net = GolemNetwork.refresh(level, pos);
+        }
+        return net;
+    }
+
+    private static int powerCost(GolemNetwork net) {
+        return GolemConfig.CORE_SOURCE_PER_SECOND.get()
+                + (int) Math.ceil(net.channelsUsed() * GolemConfig.CHANNEL_SOURCE_PER_SECOND.get())
+                + net.telegraphLinks() * GolemConfig.TELEGRAPH_SOURCE_PER_SECOND.get();
     }
 
     protected void saveTag(CompoundTag tag, HolderLookup.Provider registries) {
@@ -251,7 +246,7 @@ public class AtlasCoreBlockEntity extends BlockEntity {
     private static ListTag writeStacks(List<ItemStack> stacks, HolderLookup.Provider registries) {
         ListTag list = new ListTag();
         for (ItemStack s : stacks) {
-            list.add(com.golemlogix.system.NbtBridge.saveItem(s, registries));
+            list.add(NbtBridge.saveItem(s, registries));
         }
         return list;
     }
@@ -259,7 +254,7 @@ public class AtlasCoreBlockEntity extends BlockEntity {
     private static List<ItemStack> readStacks(ListTag list, HolderLookup.Provider registries) {
         List<ItemStack> out = new ArrayList<>();
         for (int i = 0; i < list.size(); i++) {
-            ItemStack s = com.golemlogix.system.NbtBridge.loadItem(registries, list.getCompoundOrEmpty(i)).orElse(ItemStack.EMPTY);
+            ItemStack s = NbtBridge.loadItem(registries, list.getCompoundOrEmpty(i)).orElse(ItemStack.EMPTY);
             if (!s.isEmpty()) {
                 out.add(s);
             }
@@ -272,32 +267,24 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         return ClientboundBlockEntityDataPacket.create(this);
     }
 
-    // ---- 1.21.6+: the game's ValueInput/ValueOutput over the CompoundTag code above
-
     @Override
-    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+    protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
-        CompoundTag tag = new CompoundTag();
-        saveTag(tag, com.golemlogix.system.NbtBridge.registries(this));
-        com.golemlogix.system.NbtBridge.write(output, tag);
+        BlockEntities.save(this, output, this::saveTag);
     }
 
     @Override
-    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+    protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
-        loadTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+        BlockEntities.load(input, this::loadTag);
     }
 
-    /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
     @Override
     public void preRemoveSideEffects(BlockPos pos, BlockState state) {
         super.preRemoveSideEffects(pos, state);
         if (level != null && !level.isClientSide()) {
-            // without its core the array is just blocks again
             AtlasStructure.dress(level, pos, false);
         }
-        if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
-            r.onRemoved(state, level, pos);
-        }
+        BlockEntities.onPreRemove(this, pos, state);
     }
 }

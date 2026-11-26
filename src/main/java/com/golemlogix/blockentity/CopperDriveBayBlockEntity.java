@@ -3,26 +3,37 @@ package com.golemlogix.blockentity;
 import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.items.MagneticDiskItem;
 import com.golemlogix.menu.Priority;
-import net.minecraft.util.Mth;
-import net.minecraft.world.inventory.ContainerData;
 import com.golemlogix.system.DiskStorage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.Container;
+import net.minecraft.world.entity.ContainerUser;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 
 /**
- * Copper Drive Cabinet (2x2 multiblock): 10 slots (2 columns x 5 rows) for magnetic cassettes, item and fluid disks.
- * Lives in the main (bottom left) part of the cabinet.
+ * Copper Drive Cabinet (2x2 multiblock): 10 slots (2 columns x 5 rows) for magnetic item and fluid storage disks.
+ * Lives in the bottom-left master cell; syncs slot occupancy, fill levels, and door open state to tracking clients.
  */
 public class CopperDriveBayBlockEntity extends BlockEntity {
     public static final int SLOTS = 10;
+    public static final int EVENT_VIEWERS = ViewerTracker.EVENT_VIEWERS;
+
+    private final ViewerTracker viewerTracker = new ViewerTracker();
 
     private final OwnedContainer container = new OwnedContainer(SLOTS, this, DiskStorage::isDisk) {
         @Override
@@ -31,72 +42,48 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
             refreshVisuals();
         }
 
-        /** The window was opened: the glass display door swings open (like a chest: by the number of viewers). */
         @Override
-        public void startOpen(net.minecraft.world.entity.ContainerUser user) {
-            if (!(user.getLivingEntity() instanceof net.minecraft.world.entity.player.Player player) || !player.isSpectator()) {
-                viewers++;
-                signalViewers(viewers == 1);
+        public void startOpen(ContainerUser user) {
+            if (!(user.getLivingEntity() instanceof Player player) || !player.isSpectator()) {
+                viewerTracker.open(CopperDriveBayBlockEntity.this, () ->
+                        level.playSound(null, worldPosition, SoundEvents.COPPER_DOOR_OPEN, SoundSource.BLOCKS, 0.6f, 1.25f));
             }
         }
 
         @Override
-        public void stopOpen(net.minecraft.world.entity.ContainerUser user) {
-            if (!(user.getLivingEntity() instanceof net.minecraft.world.entity.player.Player player) || !player.isSpectator()) {
-                if (viewers == 0) {
-                    return;
-                }
-                viewers--;
-                signalViewers(viewers == 0);
+        public void stopOpen(ContainerUser user) {
+            if (!(user.getLivingEntity() instanceof Player player) || !player.isSpectator()) {
+                viewerTracker.close(CopperDriveBayBlockEntity.this, () ->
+                        level.playSound(null, worldPosition, SoundEvents.COPPER_DOOR_CLOSE, SoundSource.BLOCKS, 0.6f, 1.25f));
             }
         }
     };
 
-    /** Block event: how many players look into the window (clients open and close the display door). */
-    public static final int EVENT_VIEWERS = 1;
-    private int viewers = 0;
-    private boolean clientOpen = false;
-    /** Door opening 0..1 (client). */
+    /** Client door opening 0..1. */
     public float door, doorPrev;
-
-    public int viewers() {
-        return viewers;
-    }
-
-    private void signalViewers(boolean edge) {
-        if (level == null || level.isClientSide()) {
-            return;
-        }
-        if (edge) {
-            level.playSound(null, worldPosition, viewers > 0 ? net.minecraft.sounds.SoundEvents.COPPER_DOOR_OPEN
-                    : net.minecraft.sounds.SoundEvents.COPPER_DOOR_CLOSE, net.minecraft.sounds.SoundSource.BLOCKS, 0.6f, 1.25f);
-        }
-        level.blockEvent(worldPosition, getBlockState().getBlock(), EVENT_VIEWERS, viewers);
-    }
-
-    @Override
-    public boolean triggerEvent(int id, int param) {
-        if (id == EVENT_VIEWERS) {
-            clientOpen = param > 0;
-            return true;
-        }
-        return super.triggerEvent(id, param);
-    }
-
-    public static void clientTick(net.minecraft.world.level.Level level, BlockPos pos, BlockState state, CopperDriveBayBlockEntity be) {
-        be.doorPrev = be.door;
-        be.door = Math.max(0f, Math.min(1f, be.door + (be.clientOpen ? 0.1f : -0.08f)));
-    }
-
-    /** Bit mask of occupied slots, the client needs it for rendering. */
+    /** Bit mask of occupied slots (synced to clients). */
     private int mask = 0;
-    /** Signature of the visible state (slots + fill level), so nothing extra is sent. */
+    /** Quantized signature of visible disk states so redundant updates are skipped. */
     private int visualSig = 0;
-    /** Cabinet priority: a bigger number means this cabinet's disks fill earlier and empty later. */
+    /** Higher-priority cabinets fill earlier and empty later. */
     private int priority = 0;
 
     public CopperDriveBayBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.COPPER_DRIVE_BAY.get(), pos, state);
+    }
+
+    public int viewers() {
+        return viewerTracker.viewers();
+    }
+
+    @Override
+    public boolean triggerEvent(int id, int param) {
+        return viewerTracker.handleEvent(id, param) || super.triggerEvent(id, param);
+    }
+
+    public static void clientTick(Level level, BlockPos pos, BlockState state, CopperDriveBayBlockEntity be) {
+        be.doorPrev = be.door;
+        be.door = Math.max(0f, Math.min(1f, be.door + (be.viewerTracker.isClientOpen() ? 0.1f : -0.08f)));
     }
 
     public int getPriority() {
@@ -116,7 +103,6 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
         return container;
     }
 
-    /** Live list of disks (changes to the stacks are saved). */
     public NonNullList<ItemStack> getDisks() {
         return container.getItems();
     }
@@ -125,7 +111,7 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
         return mask;
     }
 
-    /** Recomputes how the cabinet looks from outside and sends it to clients once when the mask or fill levels change. */
+    /** Recomputes slot mask and fill-level signature, broadcasting a single update packet when changed. */
     public void refreshVisuals() {
         int m = 0;
         int sig = 0;
@@ -134,7 +120,6 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
             if (!d.isEmpty()) {
                 m |= 1 << i;
                 int cap = Math.max(1, DiskStorage.capacity(d));
-                // the counter on the disk itself (the client sees it too)
                 long stored = MagneticDiskItem.getStoredCount(d);
                 int level = (int) Math.min(4, stored * 4 / cap + (stored > 0 ? 1 : 0));
                 sig = sig * 31 + (i + 1) * 8 + level + 977 * BuiltInRegistries.ITEM.getId(d.getItem());
@@ -143,8 +128,20 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
         if (m != mask || sig != visualSig) {
             mask = m;
             visualSig = sig;
-            if (level != null && !level.isClientSide()) {
-                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            BlockEntities.sendUpdate(this);
+        }
+    }
+
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        if (level != null && !level.isClientSide()) {
+            boolean changed = false;
+            for (int i = 0; i < container.getContainerSize(); i++) {
+                changed |= DiskStorage.syncStored(container.getItem(i));
+            }
+            if (changed) {
+                container.setChanged();
             }
         }
     }
@@ -152,22 +149,6 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
     protected void saveTag(CompoundTag tag, HolderLookup.Provider registries) {
         tag.put("Disks", container.createTag(registries));
         tag.putInt("Priority", priority);
-    }
-
-    /** Server, once loaded: the disks' counters follow their contents (an older rule may have counted them otherwise). */
-    @Override
-    public void onLoad() {
-        super.onLoad();
-        if (level != null && !level.isClientSide()) {
-            boolean changed = false;
-            for (int i = 0; i < container.getContainerSize(); i++) {
-                changed |= com.golemlogix.system.DiskStorage.syncStored(container.getItem(i));
-            }
-            if (changed) {
-                // the lights on the front show the counters: players nearby need the new ones
-                container.setChanged();
-            }
-        }
     }
 
     protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
@@ -181,13 +162,13 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
         CompoundTag tag = super.getUpdateTag(registries);
         tag.putInt("Mask", mask);
         tag.put("Disks", container.createTag(registries));
-        tag.putBoolean("Open", viewers > 0);
+        tag.putBoolean("Open", viewerTracker.isOpen());
         return tag;
     }
 
     public void readUpdateTag(CompoundTag tag, HolderLookup.Provider lookupProvider) {
         mask = tag.getIntOr("Mask", 0);
-        clientOpen = tag.getBooleanOr("Open", false);
+        viewerTracker.setClientOpen(tag.getBooleanOr("Open", false));
         container.fromTag(tag.getListOrEmpty("Disks"), lookupProvider);
     }
 
@@ -196,38 +177,31 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
         return ClientboundBlockEntityDataPacket.create(this);
     }
 
-    // ---- 1.21.6+: the game's ValueInput/ValueOutput over the CompoundTag code above
-
     @Override
-    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+    protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
-        CompoundTag tag = new CompoundTag();
-        saveTag(tag, com.golemlogix.system.NbtBridge.registries(this));
-        com.golemlogix.system.NbtBridge.write(output, tag);
+        BlockEntities.save(this, output, this::saveTag);
     }
 
     @Override
-    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+    protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
-        loadTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+        BlockEntities.load(input, this::loadTag);
     }
 
     @Override
-    public void handleUpdateTag(net.minecraft.world.level.storage.ValueInput input) {
-        readUpdateTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    public void handleUpdateTag(ValueInput input) {
+        BlockEntities.load(input, this::readUpdateTag);
     }
 
     @Override
-    public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input) {
+    public void onDataPacket(Connection net, ValueInput input) {
         handleUpdateTag(input);
     }
 
-    /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
     @Override
     public void preRemoveSideEffects(BlockPos pos, BlockState state) {
         super.preRemoveSideEffects(pos, state);
-        if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
-            r.onRemoved(state, level, pos);
-        }
+        BlockEntities.onPreRemove(this, pos, state);
     }
 }

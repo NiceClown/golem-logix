@@ -15,8 +15,6 @@ import net.minecraft.world.level.block.state.BlockState;
  * bound to the network it stands next to, so they no longer need charging. It does not power the network or fill Ars Nouveau jars.
  */
 public class EternalFrostResonatorBlockEntity extends BlockEntity {
-    private static final Direction[] DIRECTIONS = Direction.values();
-
     public EternalFrostResonatorBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.ETERNAL_FROST_RESONATOR.get(), pos, state);
     }
@@ -26,7 +24,7 @@ public class EternalFrostResonatorBlockEntity extends BlockEntity {
         if (level == null) {
             return false;
         }
-        for (Direction d : DIRECTIONS) {
+        for (Direction d : BlockEntities.DIRECTIONS) {
             BlockPos p = worldPosition.relative(d);
             if (level.isLoaded(p) && level.getBlockState(p).getBlock() instanceof com.golemlogix.system.GolemNode
                     && GolemNetwork.get(level, p).hasCore()) {
@@ -44,7 +42,7 @@ public class EternalFrostResonatorBlockEntity extends BlockEntity {
         long t = level.getGameTime();
         if ((t + pos.asLong()) % 20 == 0) {
             boolean linked = false;
-            for (Direction d : DIRECTIONS) {
+            for (Direction d : BlockEntities.DIRECTIONS) {
                 if (level.getBlockState(pos.relative(d)).getBlock() instanceof com.golemlogix.system.GolemNode) {
                     linked = true;
                     break;
@@ -56,11 +54,11 @@ public class EternalFrostResonatorBlockEntity extends BlockEntity {
         if (t % (be.clientLinked ? 2 : 5) == 0) {
             double a = r.nextDouble() * Math.PI * 2, rad = 0.12 + r.nextDouble() * 0.2;
             double x = pos.getX() + 0.5 + Math.cos(a) * rad, z = pos.getZ() + 0.5 + Math.sin(a) * rad;
-            level.addParticle(net.minecraft.core.particles.ParticleTypes.SNOWFLAKE, x, pos.getY() + 0.6 + r.nextDouble() * 0.3, z,
+            level.addParticle(ParticleTypes.SNOWFLAKE, x, pos.getY() + 0.6 + r.nextDouble() * 0.3, z,
                     -Math.sin(a) * 0.02, 0.03 + r.nextDouble() * 0.02, Math.cos(a) * 0.02);
         }
         if (t % 9 == 0) {
-            level.addParticle(net.minecraft.core.particles.ParticleTypes.SNOWFLAKE, pos.getX() + 0.5 + (r.nextDouble() - 0.5) * 0.15,
+            level.addParticle(ParticleTypes.SNOWFLAKE, pos.getX() + 0.5 + (r.nextDouble() - 0.5) * 0.15,
                     pos.getY() + 1.25, pos.getZ() + 0.5 + (r.nextDouble() - 0.5) * 0.15, (r.nextDouble() - 0.5) * 0.02, 0.05,
                     (r.nextDouble() - 0.5) * 0.02);
         }
@@ -79,12 +77,9 @@ public class EternalFrostResonatorBlockEntity extends BlockEntity {
         }
     }
 
-    /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
     @Override
     public void preRemoveSideEffects(BlockPos pos, BlockState state) {
         super.preRemoveSideEffects(pos, state);
-        if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
-            r.onRemoved(state, level, pos);
-        }
+        BlockEntities.onPreRemove(this, pos, state);
     }
 }

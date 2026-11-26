@@ -104,25 +104,21 @@ public class ChannelCounterBlockEntity extends BlockEntity {
         return ClientboundBlockEntityDataPacket.create(this);
     }
 
-    // ---- 1.21.6+: the game's ValueInput/ValueOutput over the CompoundTag code above
-
     @Override
     protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput out) {
         super.saveAdditional(out);
-        CompoundTag tag = new CompoundTag();
-        saveTag(tag);
-        com.golemlogix.system.NbtBridge.write(out, tag);
+        BlockEntities.save(out, this::saveTag);
     }
 
     @Override
     protected void loadAdditional(net.minecraft.world.level.storage.ValueInput in) {
         super.loadAdditional(in);
-        loadTag(com.golemlogix.system.NbtBridge.read(in));
+        BlockEntities.load(in, this::loadTag);
     }
 
     @Override
     public void handleUpdateTag(net.minecraft.world.level.storage.ValueInput in) {
-        readUpdateTag(com.golemlogix.system.NbtBridge.read(in));
+        BlockEntities.load(in, this::readUpdateTag);
     }
 
     @Override
