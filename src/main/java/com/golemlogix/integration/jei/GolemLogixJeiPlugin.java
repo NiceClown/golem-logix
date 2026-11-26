@@ -108,6 +108,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
     @Override
     public void onRuntimeUnavailable() {
         runtime = null;
+        AnvilCrushCategory.clearCache();
     }
 
     /** Hide or show the secret recipes by the player's progress. */
@@ -182,6 +183,9 @@ public class GolemLogixJeiPlugin implements IModPlugin {
             return "no runtime";
         }
         var mc = net.minecraft.client.Minecraft.getInstance();
+        if (mc.level == null || mc.player == null) {
+            return "no level";
+        }
         var holder = com.golemlogix.system.Recipes.byId(mc.level, recipeId).orElse(null);
         if (holder == null) {
             return "no recipe " + recipeId;
@@ -294,6 +298,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         });
         // ingredients from JEI into ghost slots (filters, interface settings, encoder grid)
         registration.addGhostIngredientHandler(com.golemlogix.client.BusScreen.class, new GhostTargets<>());
+        registration.addGhostIngredientHandler(com.golemlogix.client.AnnihilationBusScreen.class, new GhostTargets<>());
         registration.addGhostIngredientHandler(com.golemlogix.client.InterfaceScreen.class, new GhostTargets<>());
         registration.addGhostIngredientHandler(com.golemlogix.client.PatternEncoderScreen.class, new GhostTargets<>());
         registration.addGhostIngredientHandler(com.golemlogix.client.StockRequesterScreen.class, new GhostTargets<>());

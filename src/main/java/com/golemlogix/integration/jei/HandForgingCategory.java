@@ -38,11 +38,13 @@ public class HandForgingCategory implements IRecipeCategory<HandForgingCategory.
     private final IDrawable icon;
     private final IDrawable slot;
     private final Component title;
+    private final ItemStack hammerStack;
 
     public HandForgingCategory(IGuiHelper guiHelper) {
         this.icon = guiHelper.createDrawableItemLike(ModItems.FORGE_HAMMER.get());
         this.slot = guiHelper.getSlotDrawable();
         this.title = Component.translatable("jei.golem_logix.category.hand_forging");
+        this.hammerStack = new ItemStack(ModItems.FORGE_HAMMER.get());
     }
 
     @Override
@@ -86,13 +88,12 @@ public class HandForgingCategory implements IRecipeCategory<HandForgingCategory.
         // four strikes: each hammer lights up in turn, then the plate is done and it starts again
         int hits = ManaSaturatorBlockEntity.MANUAL_HITS;
         long step = System.currentTimeMillis() / 450 % (hits + 2);
-        ItemStack hammer = new ItemStack(ModItems.FORGE_HAMMER.get());
         for (int i = 0; i < hits; i++) {
             int x = HAMMER_X + i * 20;
             if (i < step) {
                 g.fill(x - 1, SLOT_Y, x + 17, SLOT_Y + 18, 0x5538D9D6);
             }
-            g.item(hammer, x, SLOT_Y + 1);
+            g.item(hammerStack, x, SLOT_Y + 1);
         }
         int eqX = HAMMER_X + hits * 20 + 2;
         g.text(font, "=", eqX, SLOT_Y + 5, step > hits ? LIT : TEXT, false);

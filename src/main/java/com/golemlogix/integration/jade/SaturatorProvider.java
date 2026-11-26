@@ -26,7 +26,8 @@ public enum SaturatorProvider implements IBlockComponentProvider {
     public void appendTooltip(ITooltip tooltip, BlockAccessor accessor, IPluginConfig config) {
         BlockPos master = accessor.getBlock() instanceof SaturatorPartBlock
                 ? SaturatorPartBlock.controllerOf(accessor.getPosition(), accessor.getBlockState()) : accessor.getPosition();
-        if (!(accessor.getLevel().getBlockEntity(master) instanceof ManaSaturatorBlockEntity sat)
+        if (master == null || !accessor.getLevel().isLoaded(master)
+                || !(accessor.getLevel().getBlockEntity(master) instanceof ManaSaturatorBlockEntity sat)
                 || !sat.getBlockState().getValue(ManaSaturatorBlock.FORMED)) {
             return;
         }

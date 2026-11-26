@@ -23,7 +23,8 @@ public enum CatalogProvider implements IBlockComponentProvider {
     public void appendTooltip(ITooltip tooltip, BlockAccessor accessor, IPluginConfig config) {
         BlockPos master = accessor.getBlock() instanceof CatalogPartBlock
                 ? CatalogPartBlock.controllerOf(accessor.getPosition(), accessor.getBlockState()) : accessor.getPosition();
-        if (!(accessor.getLevel().getBlockEntity(master) instanceof CardCatalogBlockEntity c)) {
+        if (master == null || !accessor.getLevel().isLoaded(master)
+                || !(accessor.getLevel().getBlockEntity(master) instanceof CardCatalogBlockEntity c)) {
             return;
         }
         if (!c.getBlockState().getValue(CardCatalogBlock.FORMED)) {
