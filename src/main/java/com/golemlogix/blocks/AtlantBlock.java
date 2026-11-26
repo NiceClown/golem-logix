@@ -63,7 +63,7 @@ public class AtlantBlock extends HorizontalDirectionalBlock implements AtlasPart
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         BlockPos pos = context.getClickedPos();
         Level level = context.getLevel();
-        if (pos.getY() < level.getMaxY() + 1 - 1 && level.getBlockState(pos.above()).canBeReplaced(context)) {
+        if (pos.getY() < level.getMaxY() && level.getBlockState(pos.above()).canBeReplaced(context)) {
             return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite()).setValue(HALF, DoubleBlockHalf.LOWER);
         }
         return null;
@@ -87,11 +87,13 @@ public class AtlantBlock extends HorizontalDirectionalBlock implements AtlasPart
 
     @Override
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        if (!level.isClientSide() && player.isCreative() && state.getValue(HALF) == DoubleBlockHalf.UPPER) {
-            // in creative mode the lower half must not drop the item a second time
+        if (!level.isClientSide() && (player.preventsBlockDrops() || !player.hasCorrectToolForDrops(state))
+                && state.getValue(HALF) == DoubleBlockHalf.UPPER) {
+            // in creative mode or without the required pickaxe, remove the lower half quietly so it does not drop via updateShape
             BlockPos lower = pos.below();
             BlockState lowerState = level.getBlockState(lower);
-            if (lowerState.is(this) && lowerState.getValue(HALF) == DoubleBlockHalf.LOWER) {
+            if (lowerState.is(this) && lowerState.getValue(HALF) == DoubleBlockHalf.LOWER
+                    && lowerState.getValue(FACING) == state.getValue(FACING)) {
                 level.setBlock(lower, Blocks.AIR.defaultBlockState(), 35);
                 level.levelEvent(player, 2001, lower, Block.getId(lowerState));
             }

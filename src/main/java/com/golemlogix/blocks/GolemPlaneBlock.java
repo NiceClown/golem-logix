@@ -66,7 +66,7 @@ public abstract class GolemPlaneBlock extends DirectionalBlock implements GolemN
     protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block,
                                    @Nullable net.minecraft.world.level.redstone.Orientation orientation, boolean moving) {
         super.neighborChanged(state, level, pos, block, orientation, moving);
-        if (level.getBlockEntity(pos) instanceof Waking w) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof Waking w) {
             w.wake();
         }
     }

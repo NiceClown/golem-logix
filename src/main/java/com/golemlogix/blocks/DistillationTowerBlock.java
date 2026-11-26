@@ -93,7 +93,14 @@ public class DistillationTowerBlock extends Block implements com.golemlogix.bloc
 
     @Nullable
     public static DistillationTowerBlockEntity entityOf(BlockGetter level, BlockPos pos, BlockState state) {
-        return state.hasProperty(SECTION) && level.getBlockEntity(baseOf(pos, state)) instanceof DistillationTowerBlockEntity t ? t : null;
+        if (!state.hasProperty(SECTION)) {
+            return null;
+        }
+        BlockPos base = baseOf(pos, state);
+        if (level instanceof Level l && !l.isLoaded(base)) {
+            return null;
+        }
+        return level.getBlockEntity(base) instanceof DistillationTowerBlockEntity t ? t : null;
     }
 
     /** Places a whole tower (commands, tests). */
@@ -141,7 +148,8 @@ public class DistillationTowerBlock extends Block implements com.golemlogix.bloc
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide() && state.getValue(SECTION) != 0) {
             BlockPos base = baseOf(pos, state);
-            if (level.getBlockState(base).is(this)) {
+            BlockState baseState = level.getBlockState(base);
+            if (baseState.is(this) && baseState.getValue(SECTION) == 0 && baseState.getValue(FACING) == state.getValue(FACING)) {
                 level.destroyBlock(base, !player.isCreative(), player);
             }
         }
@@ -151,6 +159,11 @@ public class DistillationTowerBlock extends Block implements com.golemlogix.bloc
     @Override
     protected BlockState rotate(BlockState state, Rotation rotation) {
         return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, net.minecraft.world.level.block.Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 
     /** A bucket (or any fluid container) pours blood in; an empty hand shows the tank. */
@@ -180,7 +193,7 @@ public class DistillationTowerBlock extends Block implements com.golemlogix.bloc
     /** Replaced by another block (see RemovalAware). */
     @Override
     public void onRemoved(BlockState state, Level level, BlockPos pos) {
-        if (level.getBlockEntity(pos) instanceof DistillationTowerBlockEntity be) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof DistillationTowerBlockEntity be) {
             be.dropContents();
         }
     }

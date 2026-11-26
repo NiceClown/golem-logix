@@ -44,8 +44,9 @@ public class ManaSaturatorBlock extends Block implements com.golemlogix.blocks.R
     /** The machine is assembled: the neighbouring blocks are replaced by parts, and this block's model is a piece of the shared model. */
     public static final BooleanProperty FORMED = BooleanProperty.create("formed");
 
-    /** Compact anvil before assembly. */
-    private static final VoxelShape COMPACT_SHAPE = Block.box(0, 0, 2.5, 16, 15.2, 13.5);
+    /** Compact anvil before assembly (oriented along FACING). */
+    private static final VoxelShape COMPACT_SHAPE_NS = Block.box(0, 0, 2.5, 16, 15.2, 13.5);
+    private static final VoxelShape COMPACT_SHAPE_EW = Block.box(2.5, 0, 0, 13.5, 15.2, 16);
 
     public ManaSaturatorBlock(Properties properties) {
         super(properties.sound(SoundType.NETHERITE_BLOCK).strength(5.0f, 8.0f).noOcclusion().pushReaction(PushReaction.BLOCK)
@@ -64,8 +65,22 @@ public class ManaSaturatorBlock extends Block implements com.golemlogix.blocks.R
     }
 
     @Override
+    protected BlockState rotate(BlockState state, net.minecraft.world.level.block.Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, net.minecraft.world.level.block.Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
+    }
+
+    @Override
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return state.getValue(FORMED) ? SaturatorShapes.of(SaturatorStructure.CONTROLLER, state.getValue(FACING)) : COMPACT_SHAPE;
+        Direction facing = state.getValue(FACING);
+        if (state.getValue(FORMED)) {
+            return SaturatorShapes.of(SaturatorStructure.CONTROLLER, facing);
+        }
+        return facing.getAxis() == Direction.Axis.X ? COMPACT_SHAPE_EW : COMPACT_SHAPE_NS;
     }
 
     @Nullable
@@ -166,8 +181,8 @@ public class ManaSaturatorBlock extends Block implements com.golemlogix.blocks.R
         if (taken.isEmpty()) {
             return false;
         }
-        if (!player.getInventory().add(taken.copy())) {
-            Containers.dropItemStack(level, player.getX(), player.getY(), player.getZ(), taken.copy());
+        if (!player.getInventory().add(taken) && !taken.isEmpty()) {
+            Containers.dropItemStack(level, player.getX(), player.getY(), player.getZ(), taken);
         }
         return true;
     }
@@ -224,7 +239,10 @@ public class ManaSaturatorBlock extends Block implements com.golemlogix.blocks.R
     /** Replaced by another block (see RemovalAware). */
     @Override
     public void onRemoved(BlockState state, Level level, BlockPos pos) {
-        if (!level.isClientSide() && state.getValue(FORMED)) {
+        if (level.isClientSide()) {
+            return;
+        }
+        if (state.getValue(FORMED)) {
             SaturatorStructure.disassemble(level, pos, state.getValue(FACING), null);
         }
         BlockEntity be = level.getBlockEntity(pos);
@@ -232,7 +250,7 @@ public class ManaSaturatorBlock extends Block implements com.golemlogix.blocks.R
             for (ItemStack s : saturator.allItems()) {
                 Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, s);
             }
-            if (saturator.hasRedstoneModule()) {
+            if (saturator.removeRedstoneModule()) {
                 Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
                         new ItemStack(com.golemlogix.init.ModItems.REDSTONE_MODULE.get()));
             }

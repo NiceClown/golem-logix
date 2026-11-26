@@ -110,8 +110,9 @@ public class StockManometerBlock extends DirectionalBlock implements GolemNode, 
 
     @Override
     public int getDirectSignal(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
-        // Direct signal into the block it is attached to (behind it)
-        if (direction == state.getValue(FACING).getOpposite()) {
+        // Direct signal into the block it is attached to (behind it, at pos.relative(FACING.getOpposite())):
+        // SignalGetter.getDirectSignalTo queries from the attached block toward us with direction == FACING.
+        if (direction == state.getValue(FACING)) {
             if (level.getBlockEntity(pos) instanceof StockManometerBlockEntity be) {
                 return be.getSignal();
             }
@@ -141,6 +142,16 @@ public class StockManometerBlock extends DirectionalBlock implements GolemNode, 
     }
 
     @Override
+    protected BlockState rotate(BlockState state, net.minecraft.world.level.block.Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, net.minecraft.world.level.block.Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
+    }
+
+    @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(FACING, POWERED);
     }
@@ -161,7 +172,7 @@ public class StockManometerBlock extends DirectionalBlock implements GolemNode, 
 
     @Override
     public void onRemoved(BlockState state, Level level, BlockPos pos) {
-        if (level.getBlockEntity(pos) instanceof StockManometerBlockEntity be) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof StockManometerBlockEntity be) {
             Containers.dropContents(level, pos, be.getUpgrades());
         }
     }

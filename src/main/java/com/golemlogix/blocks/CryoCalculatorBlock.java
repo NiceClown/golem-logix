@@ -75,7 +75,7 @@ public class CryoCalculatorBlock extends Block implements com.golemlogix.blocks.
     /** Replaced by another block (see RemovalAware). */
     @Override
     public void onRemoved(BlockState state, Level level, BlockPos pos) {
-        if (level.getBlockEntity(pos) instanceof CryoCalculatorBlockEntity cpu) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof CryoCalculatorBlockEntity cpu) {
             cpu.dropContents();
         }
     }

@@ -154,8 +154,13 @@ public class CryoJarBlock extends Block implements EntityBlock, RemovalAware {
     /** Only the lower half drops the jar: breaking the upper one breaks the lower one with its drop. */
     @Override
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        if (!level.isClientSide() && state.getValue(HALF) == DoubleBlockHalf.UPPER && level.getBlockState(pos.below()).is(this)) {
-            level.destroyBlock(pos.below(), !player.isCreative(), player);
+        if (!level.isClientSide() && state.getValue(HALF) == DoubleBlockHalf.UPPER) {
+            BlockPos lower = pos.below();
+            BlockState lowerState = level.getBlockState(lower);
+            if (lowerState.is(this) && lowerState.getValue(HALF) == DoubleBlockHalf.LOWER
+                    && lowerState.getValue(FACING) == state.getValue(FACING)) {
+                level.destroyBlock(lower, !player.isCreative(), player);
+            }
         }
         return super.playerWillDestroy(level, pos, state, player);
     }
@@ -163,6 +168,11 @@ public class CryoJarBlock extends Block implements EntityBlock, RemovalAware {
     @Override
     protected BlockState rotate(BlockState state, Rotation rotation) {
         return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, net.minecraft.world.level.block.Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 
     /** A click shows how much Source is inside. */
@@ -182,7 +192,7 @@ public class CryoJarBlock extends Block implements EntityBlock, RemovalAware {
     @Override
     protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos, Direction direction) {
         return level.getBlockEntity(lowerOf(pos, state)) instanceof CryoJarBlockEntity jar && jar.available() > 0
-                ? 1 + (int) (14L * jar.available() / Math.max(1, jar.capacity())) : 0;
+                ? Math.min(15, 1 + (int) (14L * jar.available() / Math.max(1, jar.capacity()))) : 0;
     }
 
     @Nullable
