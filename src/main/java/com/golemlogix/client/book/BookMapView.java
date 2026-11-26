@@ -27,11 +27,11 @@ import static com.golemlogix.client.book.BookLayout.W;
  * pulsing unread nodes, and live entry search dropdown.
  */
 final class BookMapView {
-    private static final Identifier MAP_BG = BookLayout.tex("textures/gui/book/map_bg.png");
-    private static final Identifier NODES = BookLayout.tex("textures/gui/book/nodes.png");
+    private static final Identifier MAP_BG = BookLayout.tex("map_bg");
+    private static final Identifier NODES = BookLayout.tex("nodes");
     private static final int NODE = 26;
-    private static final int SPACING = 44;
-    private static final double MIN_ZOOM = 0.5, MAX_ZOOM = 2.0;
+    private static final int SPACING = 46;
+    private static final double MIN_ZOOM = 0.4, MAX_ZOOM = 2.2;
     private static final int AX = 8, AY = 30, AW = W - 16, AH = H - 40;
 
     private static final Component SEARCH_NOTHING = Component.translatable("gui.golem_logix.book.nothing");

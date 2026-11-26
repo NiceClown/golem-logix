@@ -30,16 +30,16 @@ import java.util.List;
  * Guide book page geometry, text pagination, pre-built page view models, and layout auditor.
  */
 final class BookLayout {
-    static final int W = 360, H = 228;
-    static final int PAGE_W = 160, PAGE_H = 186;
-    static final int LEFT_PAGE_X = 16, RIGHT_PAGE_X = 184, PAGES_Y = 14;
+    static final int W = 380, H = 240;
+    static final int PAGE_W = 160, PAGE_H = 206;
+    static final int LEFT_PAGE_X = 16, RIGHT_PAGE_X = 204, PAGES_Y = 16;
     static final int LINE_H = 10;
 
-    static final int INK = 0xFF2B1B10;
-    static final int INK_DIM = 0xFF6B5340;
-    static final int INK_GOLD = 0xFF7A4B10;
-    /** Highlight colour for "&l": in the pixel font bold letters blur together, so crimson ink is used instead. */
-    static final int INK_EMPHASIS = 0xFF8C2D12;
+    static final int INK = 0xFF3B2A18;
+    static final int INK_GOLD = 0xFF8A5A0B;
+    static final int INK_DIM = 0xFF7A6446;
+    /** What the book's "&l" marks: a deep copper ink in place of Minecraft's bold, which smears dense (Cyrillic) letters together. */
+    static final int INK_EMPHASIS = 0xFF8E2F12;
 
     enum Kind {TEXT, CRAFTING, IMAGE, RITUAL, BLUEPRINT, TABLE, SPOTLIGHT, CHECKLIST, TASKS}
 
@@ -77,8 +77,8 @@ final class BookLayout {
     private BookLayout() {
     }
 
-    static Identifier tex(String path) {
-        return Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, path);
+    static Identifier tex(String name) {
+        return Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/gui/book/" + name + ".png");
     }
 
     /**

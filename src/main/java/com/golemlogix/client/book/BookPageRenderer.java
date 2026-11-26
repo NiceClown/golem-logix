@@ -39,7 +39,7 @@ import static com.golemlogix.client.book.BookLayout.W;
  * material checklists, trials, illustrations, and page navigation) and handles article clickables.
  */
 final class BookPageRenderer {
-    private static final Identifier PARCHMENT = BookLayout.tex("textures/gui/book/parchment.png");
+    private static final Identifier PARCHMENT = BookLayout.tex("parchment");
     private static final Component PREV_TIP = Component.translatable("gui.golem_logix.book.prev");
     private static final Component NEXT_TIP = Component.translatable("gui.golem_logix.book.next");
     private static final Component MAP_TIP = Component.translatable("gui.golem_logix.book.map");
