@@ -106,6 +106,37 @@ public class CryoMixerMenu extends GolemMenu {
         return false;
     }
 
+    /** The output tray is take-only: shift-clicking from the player inventory only inserts upgrades, never into the tray. */
+    @Override
+    public ItemStack quickMoveStack(Player player, int index) {
+        if (index < 0 || index >= this.slots.size()) {
+            return ItemStack.EMPTY;
+        }
+        boolean fromPlayer = index >= playerStart && index < playerEnd;
+        if (!fromPlayer) {
+            return super.quickMoveStack(player, index);
+        }
+        Slot slot = this.slots.get(index);
+        if (!slot.hasItem()) {
+            return ItemStack.EMPTY;
+        }
+        ItemStack stack = slot.getItem();
+        ItemStack copy = stack.copy();
+        if (!moveUpgradeIn(stack)) {
+            return ItemStack.EMPTY;
+        }
+        if (stack.isEmpty()) {
+            slot.setByPlayer(ItemStack.EMPTY);
+        } else {
+            slot.setChanged();
+        }
+        if (stack.getCount() == copy.getCount()) {
+            return ItemStack.EMPTY;
+        }
+        slot.onTake(player, stack);
+        return copy;
+    }
+
     @Override
     public boolean stillValid(Player player) {
         return stillValid(access, player, ModBlocks.CRYO_MIXER.get());

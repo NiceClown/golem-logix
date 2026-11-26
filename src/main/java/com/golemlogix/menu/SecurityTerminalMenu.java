@@ -74,49 +74,26 @@ public class SecurityTerminalMenu extends GolemMenu {
         return cards;
     }
 
-    public void togglePermission(Player player, int slot, int permMask) {
-        if (slot >= 0 && slot < cards.getContainerSize()) {
-            ItemStack card = cards.getItem(slot);
-            if (!card.isEmpty() && card.getItem() instanceof IdentityPunchCardItem) {
-                int cur = IdentityPunchCardItem.getPermissions(card);
-                IdentityPunchCardItem.setPermissions(card, cur ^ permMask);
-                cards.setItem(slot, card);
-                broadcastChanges();
-            }
-        }
+    private boolean canManage(Player player) {
+        return ownerId == null || ownerId.equals(player.getUUID()) || player.canUseGameMasterBlocks();
     }
 
-    @Override
-    public ItemStack quickMoveStack(Player player, int index) {
-        Slot slot = this.slots.get(index);
-        if (slot == null || !slot.hasItem()) {
-            return ItemStack.EMPTY;
+    public void togglePermission(Player player, int slot, int permMask) {
+        int mask = permMask & SecurityPermission.ALL;
+        if (!canManage(player) || mask == 0 || slot < 0 || slot >= cards.getContainerSize()) {
+            return;
         }
-        ItemStack stack = slot.getItem();
-        ItemStack copy = stack.copy();
-        if (index < containerSlotCount) {
-            if (!this.moveItemStackTo(stack, playerStart, playerEnd, true)) {
-                return ItemStack.EMPTY;
-            }
-        } else {
-            if (stack.getItem() instanceof IdentityPunchCardItem) {
-                if (!this.moveItemStackTo(stack, 0, containerSlotCount, false)) {
-                    return ItemStack.EMPTY;
-                }
-            } else {
-                return ItemStack.EMPTY;
-            }
+        ItemStack card = cards.getItem(slot);
+        if (!card.isEmpty() && card.getItem() instanceof IdentityPunchCardItem && IdentityPunchCardItem.isBound(card)) {
+            int cur = IdentityPunchCardItem.getPermissions(card);
+            IdentityPunchCardItem.setPermissions(card, (cur ^ mask) & SecurityPermission.ALL);
+            cards.setItem(slot, card);
+            broadcastChanges();
         }
-        if (stack.isEmpty()) {
-            slot.set(ItemStack.EMPTY);
-        } else {
-            slot.setChanged();
-        }
-        return copy;
     }
 
     @Override
     public boolean stillValid(Player player) {
-        return cards.stillValid(player);
+        return canManage(player) && cards.stillValid(player);
     }
 }

@@ -62,6 +62,9 @@ public class PatternProviderMenu extends GolemMenu {
     /** Shift-click on a return slot takes its items back into the inventory (shift-clicks from the inventory only fill the card slots). */
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
+        if (index < 0 || index >= this.slots.size()) {
+            return ItemStack.EMPTY;
+        }
         int first = PatternProviderBlockEntity.SLOTS;
         if (index >= first && index < first + PatternProviderBlockEntity.RETURN_SLOTS) {
             Slot slot = this.slots.get(index);
@@ -73,7 +76,15 @@ public class PatternProviderMenu extends GolemMenu {
             if (!this.moveItemStackTo(stack, playerStart, playerEnd, true)) {
                 return ItemStack.EMPTY;
             }
-            slot.setChanged();
+            if (stack.isEmpty()) {
+                slot.setByPlayer(ItemStack.EMPTY);
+            } else {
+                slot.setChanged();
+            }
+            if (stack.getCount() == copy.getCount()) {
+                return ItemStack.EMPTY;
+            }
+            slot.onTake(player, stack);
             return copy;
         }
         return super.quickMoveStack(player, index);

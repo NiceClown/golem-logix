@@ -27,7 +27,7 @@ public record OpenChronometerPayload() implements CustomPacketPayload {
 
     public static void handle(OpenChronometerPayload p, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
-            if (!(ctx.player() instanceof ServerPlayer player) || player.isSpectator()) {
+            if (!(ctx.player() instanceof ServerPlayer player) || player.isSpectator() || !player.isAlive()) {
                 return;
             }
             // a hand, the Curios slot, then anywhere in the inventory

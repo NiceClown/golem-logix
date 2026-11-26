@@ -29,7 +29,7 @@ public record ManometerConfigPayload(int containerId, int mode, int threshold, i
     public static void handle(ManometerConfigPayload p, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (ctx.player() instanceof ServerPlayer player && player.containerMenu instanceof StockManometerMenu menu
-                    && menu.containerId == p.containerId) {
+                    && menu.containerId == p.containerId && menu.stillValid(player)) {
                 menu.setConfig(p.mode, p.threshold, p.hysteresis);
             }
         });

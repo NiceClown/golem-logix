@@ -61,6 +61,9 @@ public class TelegraphMenu extends GolemMenu {
      */
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
+        if (index < 0 || index >= this.slots.size()) {
+            return ItemStack.EMPTY;
+        }
         Slot from = this.slots.get(index);
         if (index < containerSlotCount || from == null || !TelegraphLinkCardItem.isCard(from.getItem())) {
             return super.quickMoveStack(player, index);
@@ -82,6 +85,7 @@ public class TelegraphMenu extends GolemMenu {
         } else {
             from.setChanged();
         }
+        from.onTake(player, stack);
         return copy;
     }
 
@@ -93,6 +97,9 @@ public class TelegraphMenu extends GolemMenu {
             ItemStack carried = getCarried();
             if (write.hasItem() && TelegraphLinkCardItem.isCard(carried) && !ItemStack.isSameItemSameComponents(carried, write.getItem())
                     && addToWrite(write, carried, button == 0 ? carried.getCount() : 1)) {
+                if (carried.isEmpty()) {
+                    setCarried(ItemStack.EMPTY);
+                }
                 return;
             }
         }
@@ -155,7 +162,7 @@ public class TelegraphMenu extends GolemMenu {
     }
 
     public ItemStack slotItem(int slot) {
-        return cards.getItem(slot);
+        return slot >= 0 && slot < cards.getContainerSize() ? cards.getItem(slot) : ItemStack.EMPTY;
     }
 
     public TelegraphLinks.Status status() {
@@ -173,7 +180,7 @@ public class TelegraphMenu extends GolemMenu {
 
     @Override
     public boolean clickMenuButton(Player player, int id) {
-        if (id == BUTTON_RESET && be != null) {
+        if (id == BUTTON_RESET && be != null && !be.isRemoved()) {
             be.reset();
             return true;
         }

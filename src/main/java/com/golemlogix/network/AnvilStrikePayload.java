@@ -30,11 +30,12 @@ public record AnvilStrikePayload(BlockPos pos) implements CustomPacketPayload {
 
     public static void handle(AnvilStrikePayload p, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
-            if (!(ctx.player() instanceof ServerPlayer player)) {
+            if (!(ctx.player() instanceof ServerPlayer player) || player.isSpectator() || !player.isAlive()) {
                 return;
             }
             ItemStack hammer = player.getMainHandItem();
             if (!(hammer.getItem() instanceof ForgeHammerItem) || player.distanceToSqr(p.pos.getCenter()) > 36
+                    || !player.level().isLoaded(p.pos)
                     || !ForgeHammerItem.isAnvil(player.level().getBlockState(p.pos))
                     || !(player.level().getBlockEntity(p.pos) instanceof ManaSaturatorBlockEntity anvil)) {
                 return;

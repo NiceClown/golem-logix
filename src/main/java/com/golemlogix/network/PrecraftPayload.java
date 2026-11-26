@@ -35,7 +35,7 @@ public record PrecraftPayload(int containerId, List<ItemStack> items, List<Integ
             },
             buf -> {
                 int id = buf.readVarInt();
-                int n = Math.min(MAX_ITEMS, buf.readVarInt());
+                int n = PayloadCodecs.readCount(buf, MAX_ITEMS);
                 List<ItemStack> items = new ArrayList<>(n);
                 List<Integer> counts = new ArrayList<>(n);
                 for (int i = 0; i < n; i++) {
@@ -53,7 +53,9 @@ public record PrecraftPayload(int containerId, List<ItemStack> items, List<Integ
     public static void handle(PrecraftPayload payload, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (ctx.player() instanceof ServerPlayer player
-                    && player.containerMenu instanceof TerminalMenu menu && menu.containerId == payload.containerId) {
+                    && player.containerMenu instanceof TerminalMenu menu
+                    && menu.containerId == payload.containerId
+                    && menu.stillValid(player)) {
                 menu.handlePrecraft(player, payload.items(), payload.counts());
             }
         });

@@ -23,6 +23,8 @@ public record TerminalInfoPayload(int containerId, String error, int channelsUse
     public static final Type<TerminalInfoPayload> TYPE =
             new Type<>(Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "terminal_info"));
 
+    public static final int MAX_FLUIDS = 4096;
+
     public static final StreamCodec<RegistryFriendlyByteBuf, TerminalInfoPayload> STREAM_CODEC = StreamCodec.of(
             (buf, p) -> {
                 buf.writeVarInt(p.containerId);
@@ -35,9 +37,10 @@ public record TerminalInfoPayload(int containerId, String error, int channelsUse
                 buf.writeVarLong(p.fluidsCapacity);
                 buf.writeVarInt(p.cpuBusy);
                 buf.writeVarInt(p.cpuTotal);
-                buf.writeVarInt(p.fluids.size());
-                for (FluidStack f : p.fluids) {
-                    FluidStack.STREAM_CODEC.encode(buf, f);
+                int n = Math.min(MAX_FLUIDS, p.fluids.size());
+                buf.writeVarInt(n);
+                for (int i = 0; i < n; i++) {
+                    FluidStack.STREAM_CODEC.encode(buf, p.fluids.get(i));
                 }
                 buf.writeInt(p.charge);
                 buf.writeBoolean(p.resonator);
@@ -53,7 +56,7 @@ public record TerminalInfoPayload(int containerId, String error, int channelsUse
                 long fc = buf.readVarLong();
                 int busy = buf.readVarInt();
                 int total = buf.readVarInt();
-                int n = buf.readVarInt();
+                int n = PayloadCodecs.readCount(buf, MAX_FLUIDS);
                 List<FluidStack> fluids = new ArrayList<>(n);
                 for (int i = 0; i < n; i++) {
                     fluids.add(FluidStack.STREAM_CODEC.decode(buf));

@@ -50,7 +50,7 @@ public class StockRequesterMenu extends GolemMenu {
     }
 
     public int getSlotStatus(int slot) {
-        return data.get(slot);
+        return slot >= 0 && slot < data.getCount() ? data.get(slot) : 0;
     }
 
     /** The slot window's switch on a fluid container: keep the container (filled buckets) or the fluid in it. */
@@ -99,6 +99,7 @@ public class StockRequesterMenu extends GolemMenu {
         }
         if (amount < 0) {
             filters.setItem(slot, ItemStack.EMPTY);
+            broadcastChanges();
             return;
         }
         ItemStack f = filters.getItem(slot).copy();
@@ -121,21 +122,15 @@ public class StockRequesterMenu extends GolemMenu {
 
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
+        if (index < 0 || index >= this.slots.size()) {
+            return ItemStack.EMPTY;
+        }
         ItemStack stack = this.slots.get(index).getItem();
         boolean fromPlayer = index >= playerStart && index < playerEnd;
         if (!fromPlayer || stack.isEmpty()) {
             return super.quickMoveStack(player, index);
         }
-        for (int i = 0; i < containerSlotCount; i++) {
-            ItemStack f = filters.getItem(i);
-            if (!f.isEmpty() && ItemStack.isSameItemSameComponents(f, stack)) {
-                break;
-            }
-            if (f.isEmpty()) {
-                filters.setItem(i, stack.copyWithCount(1));
-                break;
-            }
-        }
+        copyToFilter(filters, containerSlotCount, stack);
         return ItemStack.EMPTY;
     }
 

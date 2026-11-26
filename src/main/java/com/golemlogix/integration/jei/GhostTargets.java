@@ -10,7 +10,6 @@ import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,8 +27,16 @@ public final class GhostTargets<T extends GolemScreen<?>> implements IGhostIngre
         if (stack.isEmpty() || !(screen.getMenu() instanceof GolemMenu menu)) {
             return out;
         }
+        boolean encoderCrafting = menu instanceof com.golemlogix.menu.PatternEncoderMenu enc && enc.isCraftingMode();
+        if (encoderCrafting && com.golemlogix.items.FluidGhostItem.is(stack)) {
+            return out;
+        }
         for (int i = 0; i < menu.slots.size(); i++) {
             if (!menu.isGhost(i)) {
+                continue;
+            }
+            if (encoderCrafting && i >= com.golemlogix.menu.PatternEncoderMenu.OUT_START
+                    && i < com.golemlogix.menu.PatternEncoderMenu.OUT_START + 3) {
                 continue;
             }
             Slot slot = menu.slots.get(i);

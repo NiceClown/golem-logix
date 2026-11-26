@@ -33,7 +33,7 @@ public record FilterSlotPayload(int containerId, int slot, int amount) implement
     public static void handle(FilterSlotPayload p, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (ctx.player() instanceof ServerPlayer player && player.containerMenu instanceof GolemMenu menu
-                    && menu.containerId == p.containerId && menu.isGhost(p.slot)) {
+                    && menu.containerId == p.containerId && menu.stillValid(player) && menu.isGhost(p.slot)) {
                 if (p.amount == com.golemlogix.menu.StockRequesterMenu.TOGGLE_FLUID
                         && menu instanceof com.golemlogix.menu.StockRequesterMenu req) {
                     req.setKeep(p.slot, p.amount);

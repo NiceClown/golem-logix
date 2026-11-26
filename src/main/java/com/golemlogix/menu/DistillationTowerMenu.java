@@ -1,6 +1,5 @@
 package com.golemlogix.menu;
 
-import com.golemlogix.blockentity.DistillationTowerBlockEntity;
 import com.golemlogix.init.ModBlocks;
 import com.golemlogix.init.ModMenus;
 import com.golemlogix.upgrade.UpgradeSpec;
