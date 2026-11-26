@@ -2,9 +2,11 @@ package com.golemlogix.menu;
 
 import com.golemlogix.blockentity.InterfaceBlockEntity;
 import com.golemlogix.init.ModMenus;
+import com.golemlogix.items.FluidGhostItem;
 import com.golemlogix.items.UpgradeItem;
 import com.golemlogix.upgrade.RedstoneMode;
 import com.golemlogix.upgrade.UpgradeSpec;
+import com.golemlogix.upgrade.UpgradeType;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
@@ -94,7 +96,7 @@ public class InterfaceMenu extends GolemMenu {
     /** The config slot keeps fluid (it holds a container with fluid and the mode is "fluid"). */
     public boolean isFluidSlot(int i) {
         ItemStack cfg = config.getItem(i);
-        return com.golemlogix.items.FluidGhostItem.is(cfg) || (!itemMode(i) && !InterfaceBlockEntity.containedFluid(cfg).isEmpty());
+        return FluidGhostItem.is(cfg) || (!itemMode(i) && !InterfaceBlockEntity.containedFluid(cfg).isEmpty());
     }
 
     /** Fluid stock of slot i, mB (accurate to ten). */
@@ -129,8 +131,8 @@ public class InterfaceMenu extends GolemMenu {
 
     /** Default amount for a new ghost: a bucket for fluid, for an item as many as in the cursor stack. */
     private int defaultAmount(int i, ItemStack stack) {
-        if (com.golemlogix.items.FluidGhostItem.is(stack)) {
-            return Math.max(1, com.golemlogix.items.FluidGhostItem.amount(stack));
+        if (FluidGhostItem.is(stack)) {
+            return Math.max(1, FluidGhostItem.amount(stack));
         }
         boolean fluid = !itemMode(i) && !InterfaceBlockEntity.containedFluid(stack).isEmpty();
         return fluid ? stack.getCount() * InterfaceBlockEntity.MB_PER_BUCKET : stack.getCount();
@@ -194,16 +196,7 @@ public class InterfaceMenu extends GolemMenu {
         if (!moveItemStackTo(stack, inboxStart, inboxStart + InterfaceBlockEntity.SLOTS, false)) {
             return ItemStack.EMPTY;
         }
-        if (stack.isEmpty()) {
-            slot.setByPlayer(ItemStack.EMPTY);
-        } else {
-            slot.setChanged();
-        }
-        if (stack.getCount() == copy.getCount()) {
-            return ItemStack.EMPTY;
-        }
-        slot.onTake(player, stack);
-        return copy;
+        return finishQuickMove(slot, stack, copy, player);
     }
 
     @Override
@@ -214,7 +207,7 @@ public class InterfaceMenu extends GolemMenu {
     /** With a Fuzzy Card the item config slots keep anything that matches (any components, or a tag chosen with a middle-click). */
     @Override
     public boolean fuzzyActive(int slotId) {
-        return slotId < com.golemlogix.blockentity.InterfaceBlockEntity.SLOTS && itemGhost(slotId) && !isFluidSlot(slotId)
-                && hasUpgrade(com.golemlogix.upgrade.UpgradeType.FUZZY);
+        return slotId < InterfaceBlockEntity.SLOTS && itemGhost(slotId) && !isFluidSlot(slotId)
+                && hasUpgrade(UpgradeType.FUZZY);
     }
 }

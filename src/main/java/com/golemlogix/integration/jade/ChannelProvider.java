@@ -100,19 +100,23 @@ public enum ChannelProvider implements IBlockComponentProvider {
             describe(tooltip, state.getBlock(), data.getCompoundOrEmpty(TAG));
         }
         if (accessor.getBlockEntity() instanceof PipeBlockEntity be && be.plugMask() != 0) {
-            MutableComponent sides = Component.empty();
-            boolean first = true;
-            for (Direction d : Direction.values()) {
-                if (be.isPlugged(d)) {
-                    if (!first) {
-                        sides.append(", ");
-                    }
-                    sides.append(Component.translatable("direction.golem_logix." + d.getName()));
-                    first = false;
-                }
-            }
-            tooltip.add(Component.translatable("jade.golem_logix.plugs", sides).withStyle(ChatFormatting.AQUA));
+            appendPlugs(tooltip, be);
         }
+    }
+
+    private static void appendPlugs(ITooltip tooltip, PipeBlockEntity be) {
+        MutableComponent sides = Component.empty();
+        boolean first = true;
+        for (Direction d : Direction.values()) {
+            if (be.isPlugged(d)) {
+                if (!first) {
+                    sides.append(", ");
+                }
+                sides.append(Component.translatable("direction.golem_logix." + d.getName()));
+                first = false;
+            }
+        }
+        tooltip.add(Component.translatable("jade.golem_logix.plugs", sides).withStyle(ChatFormatting.AQUA));
     }
 
     private static void describe(ITooltip tooltip, Block block, CompoundTag t) {
@@ -123,32 +127,44 @@ public enum ChannelProvider implements IBlockComponentProvider {
         int used = t.getIntOr("used", 0);
         int max = t.getIntOr("max", 0);
         if (block instanceof CableBushingBlock) {
-            if (!core) {
-                tooltip.add(Component.translatable("jade.golem_logix.device.no_core").withStyle(ChatFormatting.RED));
-                return;
-            }
-            tooltip.add(Component.translatable("jade.golem_logix.line", used, max));
-            tooltip.add(Component.translatable("jade.golem_logix.network", t.getIntOr("netUsed", 0), t.getIntOr("netMax", 0)));
+            describeBushing(tooltip, t, core, used, max);
+        } else if (block instanceof ChannelExpanderBlock) {
+            describeExpander(tooltip, core, used, max);
+        } else if (block instanceof SnowPipeBlock) {
+            describePipe(tooltip, core, used, max);
+        } else {
+            describeDevice(tooltip, t, core, used, max);
+        }
+    }
+
+    private static void describeBushing(ITooltip tooltip, CompoundTag t, boolean core, int used, int max) {
+        if (!core) {
+            tooltip.add(Component.translatable("jade.golem_logix.device.no_core").withStyle(ChatFormatting.RED));
             return;
         }
-        if (block instanceof ChannelExpanderBlock) {
-            if (!core) {
-                tooltip.add(Component.translatable("jade.golem_logix.device.no_core").withStyle(ChatFormatting.RED));
-            } else if (max <= 0) {
-                tooltip.add(Component.translatable("jade.golem_logix.expander.closed").withStyle(ChatFormatting.GRAY));
-            } else {
-                tooltip.add(Component.translatable("jade.golem_logix.expander", used, max));
-            }
-            return;
+        tooltip.add(Component.translatable("jade.golem_logix.line", used, max));
+        tooltip.add(Component.translatable("jade.golem_logix.network", t.getIntOr("netUsed", 0), t.getIntOr("netMax", 0)));
+    }
+
+    private static void describeExpander(ITooltip tooltip, boolean core, int used, int max) {
+        if (!core) {
+            tooltip.add(Component.translatable("jade.golem_logix.device.no_core").withStyle(ChatFormatting.RED));
+        } else if (max <= 0) {
+            tooltip.add(Component.translatable("jade.golem_logix.expander.closed").withStyle(ChatFormatting.GRAY));
+        } else {
+            tooltip.add(Component.translatable("jade.golem_logix.expander", used, max));
         }
-        if (block instanceof SnowPipeBlock) {
-            if (!core) {
-                tooltip.add(Component.translatable("jade.golem_logix.device.no_core").withStyle(ChatFormatting.RED));
-            } else {
-                tooltip.add(channels(used, max));
-            }
-            return;
+    }
+
+    private static void describePipe(ITooltip tooltip, boolean core, int used, int max) {
+        if (!core) {
+            tooltip.add(Component.translatable("jade.golem_logix.device.no_core").withStyle(ChatFormatting.RED));
+        } else {
+            tooltip.add(channels(used, max));
         }
+    }
+
+    private static void describeDevice(ITooltip tooltip, CompoundTag t, boolean core, int used, int max) {
         boolean needs = t.getBooleanOr("needs", false);
         boolean has = t.getBooleanOr("has", false);
         if (needs) {

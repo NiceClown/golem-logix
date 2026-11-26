@@ -3,6 +3,8 @@ package com.golemlogix.menu;
 import com.golemlogix.blockentity.StockRequesterBlockEntity;
 import com.golemlogix.init.ModDataComponents;
 import com.golemlogix.init.ModMenus;
+import com.golemlogix.items.FluidGhostItem;
+import com.golemlogix.system.Transfers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.Container;
@@ -58,16 +60,15 @@ public class StockRequesterMenu extends GolemMenu {
 
     /** A filled container (or a fluid ghost) can be kept either way. */
     public static boolean fluidSwitchable(ItemStack ghost) {
-        return com.golemlogix.items.FluidGhostItem.is(ghost)
-                || !com.golemlogix.system.Transfers.fluidOf(ghost).isEmpty();
+        return FluidGhostItem.is(ghost) || !Transfers.fluidOf(ghost).isEmpty();
     }
 
     /** Bucket -> its fluid (the amount in buckets becomes mB) and back (a fluid without a bucket stays a fluid). */
     private static ItemStack switched(ItemStack ghost) {
         int keep = ghost.getOrDefault(ModDataComponents.KEEP_AMOUNT.get(), 0);
         ItemStack out;
-        if (com.golemlogix.items.FluidGhostItem.is(ghost)) {
-            var fluid = com.golemlogix.items.FluidGhostItem.fluid(ghost);
+        if (FluidGhostItem.is(ghost)) {
+            var fluid = FluidGhostItem.fluid(ghost);
             ItemStack bucket = new ItemStack(fluid.getFluid().getBucket());
             if (bucket.isEmpty() || !fluidSwitchable(bucket)) {
                 return ghost;
@@ -75,11 +76,11 @@ public class StockRequesterMenu extends GolemMenu {
             out = bucket;
             keep = keep <= 0 ? 0 : Math.max(1, keep / 1000);
         } else {
-            var fluid = com.golemlogix.system.Transfers.fluidOf(ghost);
+            var fluid = Transfers.fluidOf(ghost);
             if (fluid.isEmpty()) {
                 return ghost;
             }
-            out = com.golemlogix.items.FluidGhostItem.of(fluid.copyWithAmount(1000));
+            out = FluidGhostItem.of(fluid.copyWithAmount(1000));
             keep = (int) Math.min(Integer.MAX_VALUE, keep * 1000L);
         }
         if (keep > 0) {

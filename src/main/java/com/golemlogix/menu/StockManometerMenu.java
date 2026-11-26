@@ -6,6 +6,7 @@ import com.golemlogix.items.UpgradeItem;
 import com.golemlogix.upgrade.UpgradeSpec;
 import com.golemlogix.upgrade.UpgradeType;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
@@ -14,7 +15,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.SimpleContainerData;
-import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 public class StockManometerMenu extends GolemMenu {
@@ -86,7 +86,7 @@ public class StockManometerMenu extends GolemMenu {
         return data.get(5);
     }
 
-    public int getBridgeMode(net.minecraft.core.Direction side) {
+    public int getBridgeMode(Direction side) {
         return StockManometerBlockEntity.bridgeMode(data.get(8), side);
     }
 
@@ -99,14 +99,14 @@ public class StockManometerMenu extends GolemMenu {
     /** Server side: the mode, where the signal switches on and where off again (0: at the same point). */
     public void setConfig(int mode, int threshold, int hysteresis) {
         data.set(0, mode);
-        data.set(com.golemlogix.blockentity.StockManometerBlockEntity.SET_THRESHOLD, threshold);
-        data.set(com.golemlogix.blockentity.StockManometerBlockEntity.SET_SECOND, hysteresis);
+        data.set(StockManometerBlockEntity.SET_THRESHOLD, threshold);
+        data.set(StockManometerBlockEntity.SET_SECOND, hysteresis);
         broadcastChanges();
     }
 
     public void setKeep(int slot, int amount) {
         if (slot == 0) {
-            data.set(com.golemlogix.blockentity.StockManometerBlockEntity.SET_THRESHOLD, amount);
+            data.set(StockManometerBlockEntity.SET_THRESHOLD, amount);
             broadcastChanges();
         }
     }

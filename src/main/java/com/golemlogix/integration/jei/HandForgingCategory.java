@@ -39,12 +39,15 @@ public class HandForgingCategory implements IRecipeCategory<HandForgingCategory.
     private final IDrawable slot;
     private final Component title;
     private final ItemStack hammerStack;
+    private final Component costLine;
 
     public HandForgingCategory(IGuiHelper guiHelper) {
         this.icon = guiHelper.createDrawableItemLike(ModItems.FORGE_HAMMER.get());
         this.slot = guiHelper.getSlotDrawable();
         this.title = Component.translatable("jei.golem_logix.category.hand_forging");
         this.hammerStack = new ItemStack(ModItems.FORGE_HAMMER.get());
+        int hits = ManaSaturatorBlockEntity.MANUAL_HITS;
+        this.costLine = Component.translatable("jei.golem_logix.hand_forging.cost", hits, hits * ForgeHammerItem.STRIKE_COST);
     }
 
     @Override
@@ -76,7 +79,7 @@ public class HandForgingCategory implements IRecipeCategory<HandForgingCategory.
     public void setRecipe(IRecipeLayoutBuilder builder, Recipe recipe, IFocusGroup focuses) {
         builder.addSlot(RecipeIngredientRole.INPUT, IN_X + 1, SLOT_Y + 1).addItemStacks(recipe.inputs());
         builder.addSlot(RecipeIngredientRole.OUTPUT, OUT_X + 1, SLOT_Y + 1).addItemStack(recipe.output());
-        builder.addInvisibleIngredients(RecipeIngredientRole.CRAFTING_STATION).addItemStack(new ItemStack(ModItems.FORGE_HAMMER.get()));
+        builder.addInvisibleIngredients(RecipeIngredientRole.CRAFTING_STATION).addItemStack(hammerStack.copy());
     }
 
     @Override
@@ -97,7 +100,6 @@ public class HandForgingCategory implements IRecipeCategory<HandForgingCategory.
         }
         int eqX = HAMMER_X + hits * 20 + 2;
         g.text(font, "=", eqX, SLOT_Y + 5, step > hits ? LIT : TEXT, false);
-        Component cost = Component.translatable("jei.golem_logix.hand_forging.cost", hits, hits * ForgeHammerItem.STRIKE_COST);
-        g.text(font, cost, (W - font.width(cost)) / 2, SLOT_Y + 24, TEXT, false);
+        g.text(font, costLine, (W - font.width(costLine)) / 2, SLOT_Y + 24, TEXT, false);
     }
 }
