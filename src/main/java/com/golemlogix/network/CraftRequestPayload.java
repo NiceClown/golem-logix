@@ -39,7 +39,9 @@ public record CraftRequestPayload(int containerId, ItemStack key, int amount, bo
     public static void handle(CraftRequestPayload payload, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (ctx.player() instanceof ServerPlayer player
-                    && player.containerMenu instanceof TerminalMenu menu && menu.containerId == payload.containerId) {
+                    && player.containerMenu instanceof TerminalMenu menu
+                    && menu.containerId == payload.containerId
+                    && menu.stillValid(player)) {
                 menu.handleCraftRequest(player, payload);
             }
         });

@@ -183,7 +183,8 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
             }
             List<PatternData> pats = p.getPatterns();
             boolean allCrafting = !pats.isEmpty() && pats.stream().allMatch(PatternData::crafting);
-            ItemStack machine = allCrafting ? ItemStack.EMPTY : machineOf(level, p);
+            Level providerLevel = p.getLevel() != null ? p.getLevel() : level;
+            ItemStack machine = allCrafting ? ItemStack.EMPTY : machineOf(providerLevel, p);
             Category cat;
             if (allCrafting || (machine.isEmpty() && pats.isEmpty())) {
                 cat = cats.computeIfAbsent("0", k -> new Category(new RowInfo(true, new ItemStack(Items.CRAFTING_TABLE), craftTitle, 0), true));
@@ -217,7 +218,7 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
                 }
                 Component label = Component.translatable("gui.golem_logix.concentrator.catalog", posText(c.getBlockPos()), start + 1, start + count);
                 cat.rows.add(new Entry(new RowInfo(false, start == 0 ? new ItemStack(ModBlocks.CARD_CATALOG.get()) : ItemStack.EMPTY, label, count),
-                        c.getCards(), c, start, true, "C" + c.getBlockPos().asLong() + ":" + start));
+                        c.getCards(), c, start, true, "C" + c.getBlockPos().asLong() + ":" + start + ":" + count));
             }
         }
         List<Entry> out = new ArrayList<>();
@@ -238,7 +239,21 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
     }
 
     private static boolean live(Entry e) {
-        return e != null && e.container != null && e.owner != null && !e.owner.isRemoved();
+        if (e == null || e.container == null || e.owner == null || e.owner.isRemoved()) {
+            return false;
+        }
+        return !(e.owner instanceof CardCatalogBlockEntity cat) || cat.formed();
+    }
+
+    private static boolean liveSlot(Entry e, int col) {
+        if (!live(e) || col < 0 || col >= e.info.count()) {
+            return false;
+        }
+        int abs = e.start + col;
+        if (abs < 0 || abs >= e.container.getContainerSize()) {
+            return false;
+        }
+        return !(e.owner instanceof CardCatalogBlockEntity cat) || abs < cat.capacity();
     }
 
     /** The window slots look into the list rows shifted by the first visible row. */
@@ -246,7 +261,7 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
         @Nullable
         private Entry at(int i) {
             Entry e = entry(row + i / COLS);
-            return live(e) && i % COLS < e.info.count() ? e : null;
+            return liveSlot(e, i % COLS) ? e : null;
         }
 
         @Override
@@ -352,8 +367,7 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
     boolean slotActive(int i) {
         int r = row() + i / COLS;
         if (level != null) {
-            Entry e = entry(r);
-            return live(e) && i % COLS < e.info.count();
+            return liveSlot(entry(r), i % COLS);
         }
         RowInfo info = r >= 0 && r < clientRows.size() ? clientRows.get(r) : null;
         return info != null && !info.header() && i % COLS < info.count();
@@ -424,6 +438,9 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
 
     @Override
     public ItemStack quickMoveStack(Player p, int index) {
+        if (index < 0 || index >= this.slots.size()) {
+            return ItemStack.EMPTY;
+        }
         Slot slot = this.slots.get(index);
         if (index < containerSlotCount || slot == null || !slot.hasItem()) {
             return super.quickMoveStack(p, index);
@@ -444,7 +461,7 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
                     continue;
                 }
                 for (int k = 0; k < e.info.count() && !stack.isEmpty(); k++) {
-                    if (e.container.getItem(e.start + k).isEmpty()) {
+                    if (liveSlot(e, k) && e.container.getItem(e.start + k).isEmpty()) {
                         e.container.setItem(e.start + k, stack.split(1));
                     }
                 }
@@ -458,20 +475,27 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
         } else {
             slot.setChanged();
         }
+        slot.onTake(p, stack);
         return copy;
     }
 
     @Override
     public void removed(Player p) {
         super.removed(p);
-        if (level != null && level.getBlockEntity(pos) instanceof SchematicConcentratorBlockEntity be) {
+        if (level != null && pos != null && level.isLoaded(pos)
+                && level.getBlockEntity(pos) instanceof SchematicConcentratorBlockEntity be) {
             be.stopOpen();
         }
     }
 
     @Override
     public boolean stillValid(Player p) {
-        return level == null || (level.getBlockState(pos).is(ModBlocks.SCHEMATIC_CONCENTRATOR.get())
-                && p.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) <= 64.0);
+        if (level == null) {
+            return true;
+        }
+        return pos != null && p.level() == level && level.isLoaded(pos)
+                && level.getBlockState(pos).is(ModBlocks.SCHEMATIC_CONCENTRATOR.get())
+                && p.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) <= 64.0
+                && hasBuildPermission(p, level, pos);
     }
 }

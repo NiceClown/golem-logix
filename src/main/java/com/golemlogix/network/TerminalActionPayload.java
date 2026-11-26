@@ -57,7 +57,9 @@ public record TerminalActionPayload(int containerId, Action action, ItemStack ke
     public static void handle(TerminalActionPayload payload, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (ctx.player() instanceof ServerPlayer player
-                    && player.containerMenu instanceof TerminalMenu menu && menu.containerId == payload.containerId) {
+                    && player.containerMenu instanceof TerminalMenu menu
+                    && menu.containerId == payload.containerId
+                    && menu.stillValid(player)) {
                 menu.handleAction(player, payload);
             }
         });

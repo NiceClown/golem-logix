@@ -24,6 +24,8 @@ public record CalculatorStatusPayload(int containerId, int state, long done, lon
     public static final Type<CalculatorStatusPayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "calculator_status"));
 
+    public static final int MAX_CONTENTS = 64;
+
     public static final StreamCodec<RegistryFriendlyByteBuf, CalculatorStatusPayload> STREAM_CODEC = StreamCodec.of(
             (buf, p) -> {
                 buf.writeVarInt(p.containerId);
@@ -36,9 +38,10 @@ public record CalculatorStatusPayload(int containerId, int state, long done, lon
                 buf.writeBoolean(p.online);
                 ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, p.target);
                 buf.writeVarLong(p.amount);
-                buf.writeVarInt(p.contents.size());
-                for (ItemStack s : p.contents) {
-                    ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, s);
+                int n = Math.min(MAX_CONTENTS, p.contents.size());
+                buf.writeVarInt(n);
+                for (int i = 0; i < n; i++) {
+                    ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, p.contents.get(i));
                 }
                 buf.writeBoolean(p.helping);
             },
@@ -53,7 +56,7 @@ public record CalculatorStatusPayload(int containerId, int state, long done, lon
                 boolean online = buf.readBoolean();
                 ItemStack target = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
                 long amount = buf.readVarLong();
-                int n = buf.readVarInt();
+                int n = PayloadCodecs.readCount(buf, MAX_CONTENTS);
                 List<ItemStack> contents = new ArrayList<>(n);
                 for (int i = 0; i < n; i++) {
                     contents.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(buf));

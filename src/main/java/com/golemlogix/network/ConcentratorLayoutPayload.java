@@ -22,11 +22,15 @@ public record ConcentratorLayoutPayload(int containerId, List<ConcentratorMenu.R
     public static final Type<ConcentratorLayoutPayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "concentrator_layout"));
 
+    public static final int MAX_ROWS = 4096;
+
     public static final StreamCodec<RegistryFriendlyByteBuf, ConcentratorLayoutPayload> STREAM_CODEC = StreamCodec.of(
             (buf, p) -> {
                 buf.writeVarInt(p.containerId);
-                buf.writeVarInt(p.rows.size());
-                for (ConcentratorMenu.RowInfo r : p.rows) {
+                int n = Math.min(MAX_ROWS, p.rows.size());
+                buf.writeVarInt(n);
+                for (int i = 0; i < n; i++) {
+                    ConcentratorMenu.RowInfo r = p.rows.get(i);
                     buf.writeBoolean(r.header());
                     ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, r.icon());
                     ComponentSerialization.STREAM_CODEC.encode(buf, r.title());
@@ -35,13 +39,14 @@ public record ConcentratorLayoutPayload(int containerId, List<ConcentratorMenu.R
             },
             buf -> {
                 int id = buf.readVarInt();
-                int n = buf.readVarInt();
+                int n = PayloadCodecs.readCount(buf, MAX_ROWS);
                 List<ConcentratorMenu.RowInfo> rows = new ArrayList<>(n);
                 for (int i = 0; i < n; i++) {
                     boolean header = buf.readBoolean();
                     ItemStack icon = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
                     Component title = ComponentSerialization.STREAM_CODEC.decode(buf);
-                    rows.add(new ConcentratorMenu.RowInfo(header, icon, title, buf.readByte()));
+                    int count = Math.clamp(buf.readByte(), 0, ConcentratorMenu.COLS);
+                    rows.add(new ConcentratorMenu.RowInfo(header, icon, title, count));
                 }
                 return new ConcentratorLayoutPayload(id, rows);
             });

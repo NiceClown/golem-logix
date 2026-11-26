@@ -25,9 +25,9 @@ import net.minecraft.world.level.block.Blocks;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
+import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.WeakHashMap;
 
 /**
  * The anvil ritual as a little animated scene (like Flux Networks' in-world crafting): the anvil hangs above the golem, falls along the
@@ -53,14 +53,22 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
     private final IDrawable icon;
     private final IDrawable slot;
     private final Component title;
-    /** Display copies of the golems, per level (one of each kind). */
-    private static final Map<Level, Map<EntityType<?>, Entity>> MODELS = new WeakHashMap<>();
+    private final ItemStack anvilStack;
+    /** Display copies of the golems for the active client level only (cleared when level changes so old levels can GC). */
+    private static WeakReference<Level> cachedLevel = new WeakReference<>(null);
+    private static final Map<EntityType<?>, Entity> MODELS = new HashMap<>();
 
     public AnvilCrushCategory(IGuiHelper guiHelper) {
         this.background = guiHelper.createBlankDrawable(W, H);
         this.icon = guiHelper.createDrawableItemLike(Blocks.ANVIL);
         this.slot = guiHelper.getSlotDrawable();
         this.title = Component.translatable("jei.golem_logix.category.anvil_crushing");
+        this.anvilStack = new ItemStack(Blocks.ANVIL);
+    }
+
+    static void clearCache() {
+        MODELS.clear();
+        cachedLevel = new WeakReference<>(null);
     }
 
     @Override
@@ -139,7 +147,7 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
         }
         g.pose().pushPose();
         g.pose().translate(0, anvilY, 100);
-        g.renderItem(new ItemStack(Blocks.ANVIL), GX - 8, 0);
+        g.renderItem(anvilStack, GX - 8, 0);
         g.pose().popPose();
 
         // the blow: sparks and frost flying off
@@ -223,12 +231,16 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
         }
     }
 
-    /** A display copy of the golem (made once per kind and level); null if it is no living entity or there is no level. */
+    /** A display copy of the golem (made once per kind for the active level); null if it is no living entity or there is no level. */
     private static LivingEntity model(Level level, EntityType<?> type) {
         if (level == null || type == null) {
             return null;
         }
-        Entity e = MODELS.computeIfAbsent(level, l -> new HashMap<>()).computeIfAbsent(type, ty -> ty.create(level));
+        if (cachedLevel.get() != level) {
+            MODELS.clear();
+            cachedLevel = new WeakReference<>(level);
+        }
+        Entity e = MODELS.computeIfAbsent(type, ty -> ty.create(level));
         return e instanceof LivingEntity living ? living : null;
     }
 }

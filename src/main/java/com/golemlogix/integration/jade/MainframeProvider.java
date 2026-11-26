@@ -23,7 +23,8 @@ public enum MainframeProvider implements IBlockComponentProvider {
     public void appendTooltip(ITooltip tooltip, BlockAccessor accessor, IPluginConfig config) {
         BlockPos master = accessor.getBlock() instanceof MainframePartBlock
                 ? MainframePartBlock.controllerOf(accessor.getPosition(), accessor.getBlockState()) : accessor.getPosition();
-        if (!(accessor.getLevel().getBlockEntity(master) instanceof CryoMainframeBlockEntity mf)) {
+        if (master == null || !accessor.getLevel().isLoaded(master)
+                || !(accessor.getLevel().getBlockEntity(master) instanceof CryoMainframeBlockEntity mf)) {
             return;
         }
         if (!mf.getBlockState().getValue(CryoMainframeBlock.FORMED)) {

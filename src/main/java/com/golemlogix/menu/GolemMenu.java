@@ -209,22 +209,27 @@ public abstract class GolemMenu extends AbstractContainerMenu {
      */
     @Override
     protected boolean moveItemStackTo(ItemStack stack, int startSlot, int endSlot, boolean backwards) {
+        int from = Math.max(0, startSlot);
+        int to = Math.min(endSlot, this.slots.size());
+        if (from >= to) {
+            return false;
+        }
         boolean ghosts = false;
-        for (int i = Math.max(0, startSlot); i < endSlot && i < this.slots.size(); i++) {
+        for (int i = from; i < to; i++) {
             if (this.slots.get(i) instanceof GhostSlot) {
                 ghosts = true;
                 break;
             }
         }
         if (!ghosts) {
-            return super.moveItemStackTo(stack, startSlot, endSlot, backwards);
+            return super.moveItemStackTo(stack, from, to, backwards);
         }
         // runs of real slots between the ghosts, in the same order the game walks them
         boolean changed = false;
         java.util.List<int[]> runs = new java.util.ArrayList<>();
         int runStart = -1;
-        for (int i = startSlot; i <= endSlot; i++) {
-            boolean real = i < endSlot && !(this.slots.get(i) instanceof GhostSlot);
+        for (int i = from; i <= to; i++) {
+            boolean real = i < to && !(this.slots.get(i) instanceof GhostSlot);
             if (real && runStart < 0) {
                 runStart = i;
             } else if (!real && runStart >= 0) {
@@ -235,7 +240,7 @@ public abstract class GolemMenu extends AbstractContainerMenu {
         if (backwards) {
             java.util.Collections.reverse(runs);
         }
-        // first top up stacks in every run, then fill an empty slot (as the game does over the whole range)
+        // first top up stacks in every run, then fill empty slots (as the game does over the whole range)
         for (int[] r : runs) {
             if (stack.isEmpty()) {
                 break;
@@ -248,7 +253,6 @@ public abstract class GolemMenu extends AbstractContainerMenu {
             }
             if (super.moveItemStackTo(stack, r[0], r[1], backwards)) {
                 changed = true;
-                break;
             }
         }
         return changed;
@@ -263,8 +267,8 @@ public abstract class GolemMenu extends AbstractContainerMenu {
         for (int k = 0; k < end - start && !stack.isEmpty(); k++) {
             Slot slot = this.slots.get(backwards ? end - 1 - k : start + k);
             ItemStack target = slot.getItem();
-            if (!target.isEmpty() && ItemStack.isSameItemSameComponents(stack, target)) {
-                int max = slot.getMaxStackSize(target);
+            if (!target.isEmpty() && slot.mayPlace(stack) && ItemStack.isSameItemSameComponents(stack, target)) {
+                int max = Math.min(slot.getMaxStackSize(target), target.getMaxStackSize());
                 int move = Math.min(stack.getCount(), max - target.getCount());
                 if (move > 0) {
                     target.grow(move);
@@ -279,8 +283,11 @@ public abstract class GolemMenu extends AbstractContainerMenu {
 
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
+        if (index < 0 || index >= this.slots.size()) {
+            return ItemStack.EMPTY;
+        }
         Slot slot = this.slots.get(index);
-        if (slot == null || !slot.hasItem()) {
+        if (slot == null || !slot.hasItem() || slot instanceof GhostSlot) {
             return ItemStack.EMPTY;
         }
         ItemStack stack = slot.getItem();
@@ -307,6 +314,53 @@ public abstract class GolemMenu extends AbstractContainerMenu {
         slot.onTake(player, stack);
         return copy;
     }
+
+    @Override
+    public boolean canTakeItemForPickAll(ItemStack stack, Slot slot) {
+        return !(slot instanceof GhostSlot) && super.canTakeItemForPickAll(stack, slot);
+    }
+
+    @Override
+    public boolean canDragTo(Slot slot) {
+        return !(slot instanceof GhostSlot) && super.canDragTo(slot);
+    }
+
+    /** Copies stack into the first empty filter slot unless an equivalent item is already present in any filter slot. */
+    protected static boolean copyToFilter(Container filters, int filterCount, ItemStack stack) {
+        if (stack.isEmpty()) {
+            return false;
+        }
+        int limit = Math.min(filterCount, filters.getContainerSize());
+        int firstEmpty = -1;
+        for (int i = 0; i < limit; i++) {
+            ItemStack f = filters.getItem(i);
+            if (f.isEmpty()) {
+                if (firstEmpty < 0) {
+                    firstEmpty = i;
+                }
+            } else if (ItemStack.isSameItemSameComponents(com.golemlogix.system.Fuzzy.plain(f), stack)) {
+                return false;
+            }
+        }
+        if (firstEmpty >= 0) {
+            filters.setItem(firstEmpty, stack.copyWithCount(1));
+            return true;
+        }
+        return false;
+    }
+
+    /** Server-side BUILD check for network-device menus when a Security Terminal is present on the network. */
+    protected static boolean hasBuildPermission(Player player, @Nullable net.minecraft.world.level.Level level,
+                                                @Nullable net.minecraft.core.BlockPos pos) {
+        if (level == null || pos == null || level.isClientSide() || !level.isLoaded(pos)) {
+            return true;
+        }
+        return com.golemlogix.system.GolemNetwork.get(level, pos)
+                .hasPermission(player, com.golemlogix.security.SecurityPermission.BUILD);
+    }
+
+    /** Upper bound on fluid ghost amounts (1 000 buckets in mB) to prevent overflow in crafting calculations. */
+    public static final int MAX_FLUID_GHOST = 1_000_000;
 
     /** A "ghost" slot: keeps a copy of an item for a filter/pattern without consuming anything. */
     public static class GhostSlot extends Slot {
@@ -340,7 +394,16 @@ public abstract class GolemMenu extends AbstractContainerMenu {
             return;
         }
         Slot slot = this.slots.get(slotId);
-        slot.set(stack.isEmpty() ? ItemStack.EMPTY : stack.copyWithCount(Math.max(1, Math.min(stack.getCount(), slot.getMaxStackSize()))));
+        if (stack.isEmpty()) {
+            slot.set(ItemStack.EMPTY);
+            return;
+        }
+        if (com.golemlogix.items.FluidGhostItem.is(stack)) {
+            int mb = Math.clamp(com.golemlogix.items.FluidGhostItem.amount(stack), 1, MAX_FLUID_GHOST);
+            slot.set(com.golemlogix.items.FluidGhostItem.withAmount(stack, mb));
+            return;
+        }
+        slot.set(stack.copyWithCount(Math.clamp(stack.getCount(), 1, slot.getMaxStackSize())));
     }
 
     /**

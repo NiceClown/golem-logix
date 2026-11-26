@@ -115,7 +115,7 @@ public final class ArsImbuement {
                     continue;
                 }
                 Ingredient input = o.has("input") ? Ingredient.CODEC_NONEMPTY.parse(ops, o.get("input")).result().orElse(null) : null;
-                int source = o.has("source") ? o.get("source").getAsInt() : 0;
+                int source = o.has("source") ? Math.max(0, o.get("source").getAsInt()) : 0;
                 if (input == null || input.isEmpty()) {
                     continue;
                 }

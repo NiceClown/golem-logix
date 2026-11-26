@@ -33,7 +33,7 @@ public record GhostSetPayload(int containerId, int slot, ItemStack stack) implem
     public static void handle(GhostSetPayload p, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (ctx.player() instanceof ServerPlayer player && player.containerMenu instanceof GolemMenu menu
-                    && menu.containerId == p.containerId && p.slot >= 0 && p.slot < menu.slots.size()) {
+                    && menu.containerId == p.containerId && menu.stillValid(player) && menu.isGhost(p.slot)) {
                 menu.setGhost(player, p.slot, p.stack);
                 menu.broadcastChanges();
             }

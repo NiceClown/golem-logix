@@ -28,8 +28,10 @@ public record TerminalListPayload(int containerId, boolean reset, List<Entry> en
             (buf, p) -> {
                 buf.writeVarInt(p.containerId);
                 buf.writeBoolean(p.reset);
-                buf.writeVarInt(p.entries.size());
-                for (Entry e : p.entries) {
+                int n = Math.min(CHUNK, p.entries.size());
+                buf.writeVarInt(n);
+                for (int i = 0; i < n; i++) {
+                    Entry e = p.entries.get(i);
                     ItemStack.STREAM_CODEC.encode(buf, e.key);
                     buf.writeVarLong(e.count);
                     buf.writeBoolean(e.craftable);
@@ -38,7 +40,7 @@ public record TerminalListPayload(int containerId, boolean reset, List<Entry> en
             buf -> {
                 int id = buf.readVarInt();
                 boolean reset = buf.readBoolean();
-                int n = buf.readVarInt();
+                int n = PayloadCodecs.readCount(buf, CHUNK);
                 List<Entry> list = new ArrayList<>(n);
                 for (int i = 0; i < n; i++) {
                     ItemStack key = ItemStack.STREAM_CODEC.decode(buf);

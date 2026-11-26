@@ -46,9 +46,10 @@ final class RecipeTransfers {
     /** Ingredient options of a cell: the one JEI shows right now comes first. */
     static List<ItemStack> options(IRecipeSlotView view) {
         List<ItemStack> out = new ArrayList<>();
-        view.getDisplayedItemStack().ifPresent(s -> out.add(s.copy()));
+        view.getDisplayedItemStack().filter(s -> !s.isEmpty()).ifPresent(s -> out.add(s.copy()));
         view.getItemStacks().forEach(s -> {
-            if (out.size() < RecipeFillPayload.MAX_OPTIONS && out.stream().noneMatch(o -> ItemStack.isSameItemSameComponents(o, s))) {
+            if (!s.isEmpty() && out.size() < RecipeFillPayload.MAX_OPTIONS
+                    && out.stream().noneMatch(o -> ItemStack.isSameItemSameComponents(o, s))) {
                 out.add(s.copy());
             }
         });
@@ -101,7 +102,19 @@ final class RecipeTransfers {
                     craftable.add(ItemKey.of(e.key()));
                 }
             }
-            for (ItemStack s : player.getInventory().items) {
+            var invItems = player.getInventory().items;
+            for (int k = 0; k < invItems.size(); k++) {
+                if (k == menu.lockedSlot) {
+                    continue;
+                }
+                ItemStack s = invItems.get(k);
+                if (!s.isEmpty()) {
+                    have.merge(ItemKey.of(s), (long) s.getCount(), Long::sum);
+                }
+            }
+            // items currently in the crafting grid are returned first and reused by fillGrid
+            for (int k = menu.craftGridStart(); k < menu.craftGridStart() + 9 && k < menu.slots.size(); k++) {
+                ItemStack s = menu.slots.get(k).getItem();
                 if (!s.isEmpty()) {
                     have.merge(ItemKey.of(s), (long) s.getCount(), Long::sum);
                 }

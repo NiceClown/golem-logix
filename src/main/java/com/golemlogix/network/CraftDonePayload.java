@@ -18,16 +18,20 @@ public record CraftDonePayload(List<ItemStack> items) implements CustomPacketPay
     public static final Type<CraftDonePayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "craft_done"));
 
+    public static final int MAX_ITEMS = 8;
+
     public static final StreamCodec<RegistryFriendlyByteBuf, CraftDonePayload> STREAM_CODEC = StreamCodec.of(
             (buf, p) -> {
-                buf.writeVarInt(p.items.size());
-                for (ItemStack s : p.items) {
+                int n = Math.min(MAX_ITEMS, p.items.size());
+                buf.writeVarInt(n);
+                for (int i = 0; i < n; i++) {
+                    ItemStack s = p.items.get(i);
                     ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, s.copyWithCount(1));
                     buf.writeVarInt(s.getCount());
                 }
             },
             buf -> {
-                int n = Math.min(8, buf.readVarInt());
+                int n = PayloadCodecs.readCount(buf, MAX_ITEMS);
                 List<ItemStack> items = new ArrayList<>(n);
                 for (int i = 0; i < n; i++) {
                     ItemStack s = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);

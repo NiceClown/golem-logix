@@ -165,6 +165,9 @@ public class BusMenu extends GolemMenu {
             data.set(2, (access() + 1) % 3);
             return true;
         }
+        if (isFormation()) {
+            return false;
+        }
         return Priority.handle(new ContainerData() {
             @Override
             public int get(int index) {
@@ -193,24 +196,16 @@ public class BusMenu extends GolemMenu {
 
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
+        if (index < 0 || index >= this.slots.size()) {
+            return ItemStack.EMPTY;
+        }
         ItemStack stack = this.slots.get(index).getItem();
         boolean fromPlayer = index >= playerStart && index < playerEnd;
         // upgrades go into their slots (and back), everything else from the inventory is copied into the filter
         if (!fromPlayer || stack.getItem() instanceof UpgradeItem) {
             return super.quickMoveStack(player, index);
         }
-        if (!stack.isEmpty()) {
-            for (int i = 0; i < containerSlotCount; i++) {
-                ItemStack f = filters.getItem(i);
-                if (!f.isEmpty() && ItemStack.isSameItemSameComponents(f, stack)) {
-                    break;
-                }
-                if (f.isEmpty()) {
-                    filters.setItem(i, stack.copyWithCount(1));
-                    break;
-                }
-            }
-        }
+        copyToFilter(filters, containerSlotCount, stack);
         return ItemStack.EMPTY;
     }
 

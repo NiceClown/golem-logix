@@ -32,7 +32,8 @@ public record InterfaceAmountPayload(int containerId, int slot, int amount) impl
     public static void handle(InterfaceAmountPayload p, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (ctx.player() instanceof ServerPlayer player && player.containerMenu instanceof InterfaceMenu menu
-                    && menu.containerId == p.containerId) {
+                    && menu.containerId == p.containerId && menu.stillValid(player)
+                    && p.slot >= 0 && p.slot < com.golemlogix.blockentity.InterfaceBlockEntity.SLOTS) {
                 if (p.amount < 0) {
                     menu.clearSlot(p.slot);
                 } else {

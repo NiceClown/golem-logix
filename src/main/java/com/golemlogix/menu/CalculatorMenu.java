@@ -66,6 +66,13 @@ public class CalculatorMenu extends GolemMenu {
     @Override
     public boolean clickMenuButton(Player player, int id) {
         if (id == 0 && be != null && !be.isRemoved()) {
+            if (be.getLevel() != null && !be.getLevel().isClientSide()) {
+                GolemNetwork net = GolemNetwork.get(be.getLevel(), be.getBlockPos());
+                if (!net.hasPermission(player, com.golemlogix.security.SecurityPermission.CRAFT)
+                        && !net.hasPermission(player, com.golemlogix.security.SecurityPermission.BUILD)) {
+                    return false;
+                }
+            }
             be.cancelJob();
             return true;
         }
@@ -113,10 +120,29 @@ public class CalculatorMenu extends GolemMenu {
                     be.getCoprocessors(), be.getWorkers(), job.awaitingTotal(), online,
                     job.target().toStack(1), job.amount(), contents, false);
         }
-        if (!p.equals(lastSent)) {
+        if (!sameStatus(p, lastSent)) {
             lastSent = p;
             PacketDistributor.sendToPlayer(sp, p);
         }
+    }
+
+    /** Compares payloads by ItemStack contents (ItemStack does not override Object.equals). */
+    private static boolean sameStatus(CalculatorStatusPayload a, @Nullable CalculatorStatusPayload b) {
+        if (b == null || a.containerId() != b.containerId() || a.state() != b.state()
+                || a.done() != b.done() || a.total() != b.total()
+                || a.coprocessors() != b.coprocessors() || a.workers() != b.workers()
+                || a.awaiting() != b.awaiting() || a.online() != b.online()
+                || a.amount() != b.amount() || a.helping() != b.helping()
+                || !ItemStack.matches(a.target(), b.target())
+                || a.contents().size() != b.contents().size()) {
+            return false;
+        }
+        for (int i = 0; i < a.contents().size(); i++) {
+            if (!ItemStack.matches(a.contents().get(i), b.contents().get(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override

@@ -125,6 +125,9 @@ public class AnnihilationBusMenu extends GolemMenu {
      */
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
+        if (index < 0 || index >= slots.size()) {
+            return ItemStack.EMPTY;
+        }
         Slot slot = slots.get(index);
         if (!slot.hasItem()) {
             return ItemStack.EMPTY;
@@ -135,21 +138,17 @@ public class AnnihilationBusMenu extends GolemMenu {
             return super.quickMoveStack(player, index);
         }
         Slot tool = slots.get(toolSlot);
-        if (stack.isDamageableItem() && !tool.hasItem()) {
-            tool.setByPlayer(stack.split(stack.getCount()));
-            slot.setChanged();
+        if (stack.isDamageableItem() && !tool.hasItem() && tool.mayPlace(stack)) {
+            int n = Math.min(stack.getCount(), tool.getMaxStackSize(stack));
+            tool.setByPlayer(stack.split(n));
+            if (stack.isEmpty()) {
+                slot.setByPlayer(ItemStack.EMPTY);
+            } else {
+                slot.setChanged();
+            }
             return ItemStack.EMPTY;
         }
-        for (int i = 0; i < filters.getContainerSize(); i++) {
-            ItemStack f = filters.getItem(i);
-            if (!f.isEmpty() && ItemStack.isSameItemSameComponents(f, stack)) {
-                break;
-            }
-            if (f.isEmpty()) {
-                filters.setItem(i, stack.copyWithCount(1));
-                break;
-            }
-        }
+        copyToFilter(filters, filters.getContainerSize(), stack);
         return ItemStack.EMPTY;
     }
 

@@ -33,7 +33,7 @@ public record MenuScrollPayload(int containerId, int row, String filter) impleme
     public static void handle(MenuScrollPayload p, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (ctx.player() instanceof ServerPlayer player && player.containerMenu instanceof ScrollableMenu menu
-                    && player.containerMenu.containerId == p.containerId) {
+                    && player.containerMenu.containerId == p.containerId && player.containerMenu.stillValid(player)) {
                 menu.view(p.row, p.filter);
                 player.containerMenu.broadcastChanges();
             }

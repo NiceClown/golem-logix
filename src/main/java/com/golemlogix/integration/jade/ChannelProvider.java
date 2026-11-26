@@ -67,7 +67,9 @@ public enum ChannelProvider implements IBlockComponentProvider, IServerDataProvi
         if (ch.bottleneck() != null) {
             BlockPos b = ch.bottleneck();
             t.putIntArray("bpos", new int[]{b.getX(), b.getY(), b.getZ()});
-            t.putString("bblock", BuiltInRegistries.BLOCK.getKey(accessor.getLevel().getBlockState(b).getBlock()).toString());
+            if (accessor.getLevel().isLoaded(b)) {
+                t.putString("bblock", BuiltInRegistries.BLOCK.getKey(accessor.getLevel().getBlockState(b).getBlock()).toString());
+            }
         }
         t.putInt("netUsed", net.channelsUsed());
         t.putInt("netMax", net.channelCapacity());
@@ -180,7 +182,7 @@ public enum ChannelProvider implements IBlockComponentProvider, IServerDataProvi
             case BOTTLENECK -> {
                 int[] p = t.getIntArray("bpos");
                 ResourceLocation id = ResourceLocation.tryParse(t.getString("bblock"));
-                Block b = id == null ? null : BuiltInRegistries.BLOCK.get(id);
+                Block b = id == null ? null : BuiltInRegistries.BLOCK.getOptional(id).orElse(null);
                 Component name = b == null ? Component.literal("?") : b.getName();
                 yield p.length == 3 ? Component.translatable("jade.golem_logix.why.bottleneck", name, p[0], p[1], p[2])
                         .withStyle(ChatFormatting.RED) : null;

@@ -176,7 +176,14 @@ public class InterfaceMenu extends GolemMenu {
 
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
-        ItemStack stack = this.slots.get(index).getItem();
+        if (index < 0 || index >= this.slots.size()) {
+            return ItemStack.EMPTY;
+        }
+        Slot slot = this.slots.get(index);
+        if (!slot.hasItem()) {
+            return ItemStack.EMPTY;
+        }
+        ItemStack stack = slot.getItem();
         boolean fromPlayer = index >= playerStart && index < playerEnd;
         if (!fromPlayer || stack.getItem() instanceof UpgradeItem) {
             return super.quickMoveStack(player, index);
@@ -187,7 +194,15 @@ public class InterfaceMenu extends GolemMenu {
         if (!moveItemStackTo(stack, inboxStart, inboxStart + InterfaceBlockEntity.SLOTS, false)) {
             return ItemStack.EMPTY;
         }
-        this.slots.get(index).setChanged();
+        if (stack.isEmpty()) {
+            slot.setByPlayer(ItemStack.EMPTY);
+        } else {
+            slot.setChanged();
+        }
+        if (stack.getCount() == copy.getCount()) {
+            return ItemStack.EMPTY;
+        }
+        slot.onTake(player, stack);
         return copy;
     }
 

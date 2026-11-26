@@ -76,6 +76,10 @@ public class RecipeMonitorMenu extends GolemMenu {
         if (net.accessError(pos) != null) {
             return false;
         }
+        if (!net.hasPermission(player, com.golemlogix.security.SecurityPermission.CRAFT)
+                && !net.hasPermission(player, com.golemlogix.security.SecurityPermission.BUILD)) {
+            return false;
+        }
         CraftingCpu target = sentOrder.get(index);
         for (CraftingCpu cpu : net.cpus()) {
             if (cpu == target && !cpu.isRemoved()) {
@@ -110,11 +114,46 @@ public class RecipeMonitorMenu extends GolemMenu {
             }
         }
         MonitorPayload p = new MonitorPayload(containerId, err == null ? "" : err, list);
-        if (!p.equals(lastSent)) {
+        sentOrder = order;
+        if (!samePayload(p, lastSent)) {
             lastSent = p;
-            sentOrder = order;
             PacketDistributor.sendToPlayer(sp, p);
         }
+    }
+
+    /** Compares snapshots by ItemStack contents (ItemStack uses reference equality). */
+    private static boolean samePayload(MonitorPayload a, @Nullable MonitorPayload b) {
+        if (b == null || a.containerId() != b.containerId() || !a.error().equals(b.error())
+                || a.cpus().size() != b.cpus().size()) {
+            return false;
+        }
+        for (int i = 0; i < a.cpus().size(); i++) {
+            if (!sameCpu(a.cpus().get(i), b.cpus().get(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean sameCpu(MonitorPayload.Cpu a, MonitorPayload.Cpu b) {
+        return a.pos().equals(b.pos()) && a.core() == b.core() && a.state() == b.state()
+                && a.coprocessors() == b.coprocessors() && a.done() == b.done() && a.total() == b.total()
+                && ItemStack.matches(a.current(), b.current())
+                && sameSteps(a.targets(), b.targets())
+                && sameSteps(a.steps(), b.steps())
+                && sameSteps(a.waiting(), b.waiting());
+    }
+
+    private static boolean sameSteps(List<MonitorPayload.Step> a, List<MonitorPayload.Step> b) {
+        if (a.size() != b.size()) {
+            return false;
+        }
+        for (int i = 0; i < a.size(); i++) {
+            if (a.get(i).left() != b.get(i).left() || !ItemStack.matches(a.get(i).item(), b.get(i).item())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static MonitorPayload.Cpu describe(CraftingCpu cpu) {

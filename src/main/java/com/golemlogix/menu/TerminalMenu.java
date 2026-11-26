@@ -120,6 +120,7 @@ public class TerminalMenu extends GolemMenu {
     private Set<ItemKey> lastCraftable = null;
     private TerminalInfoPayload lastInfo = null;
     private boolean forceSync = true;
+    private long lastDrainTick = -1;
 
     // --- crafting
     private final CraftingContainer craftSlots;
@@ -480,14 +481,16 @@ public class TerminalMenu extends GolemMenu {
             return;
         }
         GolemNetwork net = network();
-        // with a Security Terminal, taking the ingredients out of the network needs the EXTRACT right
-        boolean netOk = accessError(net) == null && net.hasPermission(sp, com.golemlogix.security.SecurityPermission.EXTRACT);
+        boolean netOnline = accessError(net) == null;
+        // returning items from the grid requires INSERT; pulling ingredients requires EXTRACT
+        boolean canInsert = netOnline && net.hasPermission(sp, com.golemlogix.security.SecurityPermission.INSERT);
+        boolean canExtract = netOnline && net.hasPermission(sp, com.golemlogix.security.SecurityPermission.EXTRACT);
         for (int i = 0; i < 9; i++) {
             ItemStack s = craftSlots.removeItemNoUpdate(i);
             if (s.isEmpty()) {
                 continue;
             }
-            if (netOk) {
+            if (canInsert) {
                 s = net.insertItem(s, false);
             }
             if (!s.isEmpty()) {
@@ -502,12 +505,18 @@ public class TerminalMenu extends GolemMenu {
                 }
                 ItemStack key = opt.copyWithCount(1);
                 int want = max ? key.getMaxStackSize() : 1;
-                int have = netOk ? net.extractItem(key, want, false).getCount() : 0;
+                int have = canExtract ? net.extractItem(key, want, false).getCount() : 0;
                 for (int k = 0; k < inv.items.size() && have < want; k++) {
+                    if (k == lockedSlot) {
+                        continue;
+                    }
                     ItemStack st = inv.items.get(k);
                     if (ItemStack.isSameItemSameComponents(st, key)) {
                         int take = Math.min(want - have, st.getCount());
                         st.shrink(take);
+                        if (st.isEmpty()) {
+                            inv.setItem(k, ItemStack.EMPTY);
+                        }
                         have += take;
                     }
                 }
@@ -527,6 +536,10 @@ public class TerminalMenu extends GolemMenu {
         if (id == 0 && player instanceof ServerPlayer sp && netLevel != null) {
             GolemNetwork net = network();
             if (checkAccess(sp, net)) {
+                if (!net.hasPermission(sp, com.golemlogix.security.SecurityPermission.INSERT)) {
+                    sp.displayClientMessage(Component.translatable("message.golem_logix.security_denied"), true);
+                    return true;
+                }
                 clearGrid(net, sp);
                 forceSync = true;
             }
@@ -611,11 +624,13 @@ public class TerminalMenu extends GolemMenu {
             return;
         }
         GolemNetwork net = network();
-        if (!checkAccess(sp, net) || !net.hasPermission(sp, com.golemlogix.security.SecurityPermission.CRAFT)) {
+        if (!checkAccess(sp, net)) {
             sendPlan(sp, p.request(), CraftPlanPayload.Status.OFFLINE, null);
-            if (!net.hasPermission(sp, com.golemlogix.security.SecurityPermission.CRAFT)) {
-                sp.displayClientMessage(Component.translatable("message.golem_logix.security_denied"), true);
-            }
+            return;
+        }
+        if (!net.hasPermission(sp, com.golemlogix.security.SecurityPermission.CRAFT)) {
+            sendPlan(sp, p.request(), CraftPlanPayload.Status.OFFLINE, null);
+            sp.displayClientMessage(Component.translatable("message.golem_logix.security_denied"), true);
             return;
         }
         ItemKey key = ItemKey.of(p.key());
@@ -777,7 +792,8 @@ public class TerminalMenu extends GolemMenu {
     /** The player's Chronometer this terminal was opened through (bound to our core). */
     @Nullable
     private ItemStack chronometer() {
-        if (lockedSlot >= 0 && player.getInventory().getItem(lockedSlot).getItem() instanceof PortableChronometerItem) {
+        if (lockedSlot >= 0 && lockedSlot < player.getInventory().getContainerSize()
+                && player.getInventory().getItem(lockedSlot).getItem() instanceof PortableChronometerItem) {
             return player.getInventory().getItem(lockedSlot);
         }
         // the inventory, the offhand and the Curios slot: the one bound to this network, or else any
@@ -828,7 +844,8 @@ public class TerminalMenu extends GolemMenu {
         GolemNetwork net = force ? network() : GolemNetwork.get(netLevel, anchor);
         String err = accessError(net);
 
-        if (wireless && tick % 20 == 0 && err == null) {
+        if (wireless && tick % 20 == 0 && tick != lastDrainTick && err == null) {
+            lastDrainTick = tick;
             drainCharge(sp, net);
         }
 
@@ -986,6 +1003,9 @@ public class TerminalMenu extends GolemMenu {
 
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
+        if (index < 0 || index >= this.slots.size()) {
+            return ItemStack.EMPTY;
+        }
         Slot slot = this.slots.get(index);
         if (slot == null || !slot.hasItem() || slot instanceof LockedSlot) {
             return ItemStack.EMPTY;
@@ -1007,7 +1027,7 @@ public class TerminalMenu extends GolemMenu {
             }
             if (netLevel != null) {
                 GolemNetwork net = network();
-                if (accessError(net) == null) {
+                if (accessError(net) == null && net.hasPermission(player, com.golemlogix.security.SecurityPermission.INSERT)) {
                     ItemStack rest = net.insertItem(stack.copy(), false);
                     stack.setCount(rest.getCount());
                     forceSync = true;
@@ -1023,9 +1043,16 @@ public class TerminalMenu extends GolemMenu {
                 return ItemStack.EMPTY;
             }
             GolemNetwork net = network();
-            if (accessError(net) != null) {
+            String err = accessError(net);
+            if (err != null) {
                 if (player instanceof ServerPlayer sp) {
-                    sp.displayClientMessage(Component.translatable(accessError(net)), true);
+                    sp.displayClientMessage(Component.translatable(err), true);
+                }
+                return ItemStack.EMPTY;
+            }
+            if (!net.hasPermission(player, com.golemlogix.security.SecurityPermission.INSERT)) {
+                if (player instanceof ServerPlayer sp) {
+                    sp.displayClientMessage(Component.translatable("message.golem_logix.security_denied"), true);
                 }
                 return ItemStack.EMPTY;
             }
@@ -1062,26 +1089,32 @@ public class TerminalMenu extends GolemMenu {
         if (netLevel == null) {
             return true;
         }
-        if (wireless) {
-            boolean held = lockedSlot >= 0 ? player.getInventory().getItem(lockedSlot).getItem() instanceof PortableChronometerItem
-                    : !com.golemlogix.items.Chronometers.carried(player).isEmpty();
-            if (!held) {
-                return false;
-            }
-            return PortableChronometerItem.inRange(wirelessTier, player.level(), player.position(), netLevel, anchor);
-        }
-        if (netLevel != null) {
-            GolemNetwork net = network();
-            if (net.hasSecurityTerminal() && !net.hasPermission(player, com.golemlogix.security.SecurityPermission.INSERT)
-                    && !net.hasPermission(player, com.golemlogix.security.SecurityPermission.EXTRACT)
-                    && !net.hasPermission(player, com.golemlogix.security.SecurityPermission.CRAFT)) {
-                return false;
-            }
-        }
-        if (devicePos == null || expectedBlock == null || !netLevel.getBlockState(devicePos).is(expectedBlock)) {
+        if (anchor == null || !netLevel.isLoaded(anchor)) {
             return false;
         }
-        return player.distanceToSqr(devicePos.getX() + 0.5, devicePos.getY() + 0.5, devicePos.getZ() + 0.5) <= 64.0;
+        if (wireless) {
+            boolean held = lockedSlot >= 0
+                    ? lockedSlot < player.getInventory().getContainerSize()
+                            && player.getInventory().getItem(lockedSlot).getItem() instanceof PortableChronometerItem
+                    : !com.golemlogix.items.Chronometers.carried(player).isEmpty();
+            if (!held || !PortableChronometerItem.inRange(wirelessTier, player.level(), player.position(), netLevel, anchor)) {
+                return false;
+            }
+        } else {
+            if (player.level() != netLevel || devicePos == null || expectedBlock == null
+                    || !netLevel.isLoaded(devicePos) || !netLevel.getBlockState(devicePos).is(expectedBlock)
+                    || player.distanceToSqr(devicePos.getX() + 0.5, devicePos.getY() + 0.5, devicePos.getZ() + 0.5) > 64.0) {
+                return false;
+            }
+        }
+        GolemNetwork net = GolemNetwork.get(netLevel, anchor);
+        if (net.hasSecurityTerminal()
+                && !net.hasPermission(player, com.golemlogix.security.SecurityPermission.INSERT)
+                && !net.hasPermission(player, com.golemlogix.security.SecurityPermission.EXTRACT)
+                && !net.hasPermission(player, com.golemlogix.security.SecurityPermission.CRAFT)) {
+            return false;
+        }
+        return true;
     }
 
     @Override
@@ -1089,7 +1122,8 @@ public class TerminalMenu extends GolemMenu {
         super.removed(player);
         if (crafting && !player.level().isClientSide() && player instanceof ServerPlayer sp) {
             GolemNetwork net = netLevel != null ? network() : null;
-            boolean netOk = net != null && accessError(net) == null;
+            boolean netOk = net != null && accessError(net) == null
+                    && net.hasPermission(sp, com.golemlogix.security.SecurityPermission.INSERT);
             for (int i = 0; i < 9; i++) {
                 ItemStack s = craftSlots.removeItemNoUpdate(i);
                 if (s.isEmpty()) {
