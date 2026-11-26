@@ -4,8 +4,19 @@ import com.golemlogix.menu.BusMenu;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 public class BusScreen extends GolemScreen<BusMenu> {
+    private static final ItemStack ICON_BARRIER = new ItemStack(Items.BARRIER);
+    private static final ItemStack ICON_ITEM_FRAME = new ItemStack(Items.ITEM_FRAME);
+    private static final ItemStack ICON_HOPPER = new ItemStack(Items.HOPPER);
+    private static final ItemStack ICON_DROPPER = new ItemStack(Items.DROPPER);
+    private static final ItemStack ICON_CHEST = new ItemStack(Items.CHEST);
+    private static final ItemStack ICON_CLOCK = new ItemStack(Items.CLOCK);
+    private static final ItemStack ICON_ENDER_PEARL = new ItemStack(Items.ENDER_PEARL);
+    private static final ItemStack ICON_PAPER = new ItemStack(Items.PAPER);
+
     public BusScreen(BusMenu menu, Inventory inv, Component title) {
         super(menu, inv, title, BusMenu.IMAGE_WIDTH, BusMenu.IMAGE_HEIGHT);
     }
@@ -19,8 +30,7 @@ public class BusScreen extends GolemScreen<BusMenu> {
         }
         addRedstoneButton(menu::redstoneMode);
         if (menu.hasList()) {
-            addSideButton(() -> new net.minecraft.world.item.ItemStack(menu.denyList() ? net.minecraft.world.item.Items.BARRIER
-                            : net.minecraft.world.item.Items.ITEM_FRAME),
+            addSideButton(() -> menu.denyList() ? ICON_BARRIER : ICON_ITEM_FRAME,
                     () -> {
                         String key = "gui.golem_logix.bus.list." + (menu.denyList() ? "deny" : "allow");
                         return Component.translatable("gui.golem_logix.bus.list").append("\n").append(Component.translatable(key))
@@ -29,11 +39,11 @@ public class BusScreen extends GolemScreen<BusMenu> {
                     () -> true, menu::denyList, BusMenu.BUTTON_LIST);
         }
         if (menu.isPeriscope()) {
-            addSideButton(() -> new net.minecraft.world.item.ItemStack(switch (menu.access()) {
-                        case com.golemlogix.blockentity.PeriscopeBlockEntity.INSERT_ONLY -> net.minecraft.world.item.Items.HOPPER;
-                        case com.golemlogix.blockentity.PeriscopeBlockEntity.EXTRACT_ONLY -> net.minecraft.world.item.Items.DROPPER;
-                        default -> net.minecraft.world.item.Items.CHEST;
-                    }),
+            addSideButton(() -> switch (menu.access()) {
+                        case com.golemlogix.blockentity.PeriscopeBlockEntity.INSERT_ONLY -> ICON_HOPPER;
+                        case com.golemlogix.blockentity.PeriscopeBlockEntity.EXTRACT_ONLY -> ICON_DROPPER;
+                        default -> ICON_CHEST;
+                    },
                     () -> {
                         String key = "gui.golem_logix.bus.access." + switch (menu.access()) {
                             case com.golemlogix.blockentity.PeriscopeBlockEntity.INSERT_ONLY -> "insert";
@@ -46,11 +56,11 @@ public class BusScreen extends GolemScreen<BusMenu> {
                     () -> true, () -> menu.access() != com.golemlogix.blockentity.PeriscopeBlockEntity.BOTH, BusMenu.BUTTON_ACCESS);
         }
         if (menu.hasOrder()) {
-            addSideButton(() -> new net.minecraft.world.item.ItemStack(switch (menu.order()) {
-                        case com.golemlogix.blockentity.FormationBusBlockEntity.ROUND_ROBIN -> net.minecraft.world.item.Items.CLOCK;
-                        case com.golemlogix.blockentity.FormationBusBlockEntity.RANDOM -> net.minecraft.world.item.Items.ENDER_PEARL;
-                        default -> net.minecraft.world.item.Items.PAPER;
-                    }),
+            addSideButton(() -> switch (menu.order()) {
+                        case com.golemlogix.blockentity.FormationBusBlockEntity.ROUND_ROBIN -> ICON_CLOCK;
+                        case com.golemlogix.blockentity.FormationBusBlockEntity.RANDOM -> ICON_ENDER_PEARL;
+                        default -> ICON_PAPER;
+                    },
                     () -> {
                         String key = "gui.golem_logix.bus.order." + switch (menu.order()) {
                             case com.golemlogix.blockentity.FormationBusBlockEntity.ROUND_ROBIN -> "round";

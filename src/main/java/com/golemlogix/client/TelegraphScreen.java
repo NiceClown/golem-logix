@@ -19,6 +19,7 @@ import java.util.List;
  */
 public class TelegraphScreen extends GolemScreen<TelegraphMenu> {
     private static final int STATUS_Y = 56;
+    private static final int[] BAY_X = {TelegraphMenu.RANGE_X, TelegraphMenu.WRITE_X, TelegraphMenu.MEMORY_X};
 
     public TelegraphScreen(TelegraphMenu menu, Inventory inv, Component title) {
         super(menu, inv, title, TelegraphMenu.IMAGE_WIDTH, TelegraphMenu.IMAGE_HEIGHT);
@@ -33,7 +34,7 @@ public class TelegraphScreen extends GolemScreen<TelegraphMenu> {
     @Override
     protected void renderExtraBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
         // the three card bays and the status window
-        for (int x : new int[]{TelegraphMenu.RANGE_X, TelegraphMenu.WRITE_X, TelegraphMenu.MEMORY_X}) {
+        for (int x : BAY_X) {
             GolemGui.inset(g, leftPos + x - 14, topPos + 18, 44, 34);
         }
         GolemGui.inset(g, leftPos + 7, topPos + STATUS_Y, 162, 40);
@@ -144,13 +145,15 @@ public class TelegraphScreen extends GolemScreen<TelegraphMenu> {
             g.fill(getX() + 1, getY() + 1, getX() + width - 1, getY() + height - 1, hover ? GolemGui.BRASS_L : GolemGui.BRASS);
             g.fill(getX() + 2, getY() + 2, getX() + width - 2, getY() + height - 2, hover ? 0xFF9A2E24 : 0xFF6E1F18);
             // rivets in the corners
-            for (int[] r : new int[][]{{4, 4}, {width - 6, 4}, {4, height - 6}, {width - 6, height - 6}}) {
-                g.fill(getX() + r[0], getY() + r[1], getX() + r[0] + 2, getY() + r[1] + 2, GolemGui.BRASS_L);
-            }
+            g.fill(getX() + 4, getY() + 4, getX() + 6, getY() + 6, GolemGui.BRASS_L);
+            g.fill(getX() + width - 6, getY() + 4, getX() + width - 4, getY() + 6, GolemGui.BRASS_L);
+            g.fill(getX() + 4, getY() + height - 6, getX() + 6, getY() + height - 4, GolemGui.BRASS_L);
+            g.fill(getX() + width - 6, getY() + height - 6, getX() + width - 4, getY() + height - 4, GolemGui.BRASS_L);
             var font = net.minecraft.client.Minecraft.getInstance().font;
+            float scale = Math.min(1.25f, (width - 12f) / Math.max(1, font.width(getMessage())));
             g.pose().pushPose();
             g.pose().translate(getX() + width / 2f, getY() + height / 2f, 0);
-            g.pose().scale(1.25f, 1.25f, 1f);
+            g.pose().scale(scale, scale, 1f);
             g.drawCenteredString(font, getMessage(), 0, -4, hover ? 0xFFFFE6A0 : GolemGui.PARCHMENT);
             g.pose().popPose();
         }

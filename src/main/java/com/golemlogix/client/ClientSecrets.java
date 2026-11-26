@@ -57,8 +57,12 @@ public final class ClientSecrets {
 
     @SubscribeEvent
     public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
+        boolean hadAny = wither || dimension || mind;
         wither = false;
         dimension = false;
         mind = false;
+        if (hadAny) {
+            com.golemlogix.client.book.BookModel.invalidate();
+        }
     }
 }

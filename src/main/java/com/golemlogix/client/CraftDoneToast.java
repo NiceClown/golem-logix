@@ -14,10 +14,23 @@ import java.util.List;
  */
 public class CraftDoneToast implements Toast {
     private static final long SHOW_MS = 5000L;
-    private final List<ItemStack> items;
+    private static final Component TITLE = Component.translatable("toast.golem_logix.craft_done");
+
+    private final List<ItemStack> icons;
+    private final String[] labels;
+    private String[] fittedLabels;
+    private int fittedWidth = -1;
 
     public CraftDoneToast(List<ItemStack> items) {
-        this.items = items;
+        int n = items.size();
+        this.icons = new java.util.ArrayList<>(n);
+        this.labels = new String[n];
+        String suffix = n > 1 ? "  +" + (n - 1) : "";
+        for (int i = 0; i < n; i++) {
+            ItemStack s = items.get(i);
+            this.icons.add(s.isEmpty() ? ItemStack.EMPTY : s.copyWithCount(1));
+            this.labels[i] = s.isEmpty() ? "" : s.getCount() + "× " + s.getHoverName().getString() + suffix;
+        }
     }
 
     @Override
@@ -27,18 +40,23 @@ public class CraftDoneToast implements Toast {
         g.fill(1, 1, w - 1, h - 1, GolemGui.BRASS);
         g.fill(2, 2, w - 2, h - 2, GolemGui.WOOD);
         g.fill(2, 2, 4, h - 2, GolemGui.CYAN);
-        ItemStack shown = items.isEmpty() ? ItemStack.EMPTY : items.get((int) (time / 1200L % items.size()));
+        int idx = icons.isEmpty() ? -1 : Math.floorMod((int) (time / 1200L), icons.size());
+        ItemStack shown = idx < 0 ? ItemStack.EMPTY : icons.get(idx);
         if (!shown.isEmpty()) {
-            g.renderFakeItem(shown.copyWithCount(1), 8, 8);
+            g.renderFakeItem(shown, 8, 8);
         }
         var font = toasts.getMinecraft().font;
-        g.drawString(font, Component.translatable("toast.golem_logix.craft_done"), 30, 7, GolemGui.CYAN, false);
+        g.drawString(font, TITLE, 30, 7, GolemGui.CYAN, false);
         if (!shown.isEmpty()) {
-            String line = shown.getCount() + "× " + shown.getHoverName().getString();
-            if (items.size() > 1) {
-                line += "  +" + (items.size() - 1);
+            int maxW = w - 36;
+            if (fittedLabels == null || fittedWidth != maxW) {
+                fittedWidth = maxW;
+                fittedLabels = new String[labels.length];
+                for (int i = 0; i < labels.length; i++) {
+                    fittedLabels[i] = font.plainSubstrByWidth(labels[i], maxW);
+                }
             }
-            g.drawString(font, font.plainSubstrByWidth(line, w - 36), 30, 18, GolemGui.PARCHMENT, false);
+            g.drawString(font, fittedLabels[idx], 30, 18, GolemGui.PARCHMENT, false);
         }
         return time >= SHOW_MS ? Visibility.HIDE : Visibility.SHOW;
     }

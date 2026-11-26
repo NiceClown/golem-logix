@@ -22,6 +22,10 @@ public final class HammerClientEvents {
     private HammerClientEvents() {
     }
 
+    static void reset() {
+        lastStrike = -1000;
+    }
+
     @SubscribeEvent
     public static void onLeftClick(PlayerInteractEvent.LeftClickBlock event) {
         if (!event.getLevel().isClientSide() || !(event.getEntity().getMainHandItem().getItem() instanceof ForgeHammerItem)

@@ -6,7 +6,9 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class StockRequesterScreen extends GolemScreen<StockRequesterMenu> {
@@ -44,22 +46,21 @@ public class StockRequesterScreen extends GolemScreen<StockRequesterMenu> {
         }
     }
 
-    /** A filled order slot shows its item and its status instead of the item tooltip. */
     @Override
-    protected void renderTooltip(GuiGraphics g, int mouseX, int mouseY) {
-        Slot slot = hoveredSlot;
-        if (slot != null && menu.getCarried().isEmpty() && slot.index < StockRequesterBlockEntity.FILTER_SLOTS && slot.hasItem()) {
-            int st = menu.getSlotStatus(slot.index);
+    protected List<Component> getTooltipFromContainerItem(ItemStack stack) {
+        List<Component> lines = super.getTooltipFromContainerItem(stack);
+        if (hoveredSlot != null && hoveredSlot.index < StockRequesterBlockEntity.FILTER_SLOTS && hoveredSlot.getItem() == stack) {
+            int st = menu.getSlotStatus(hoveredSlot.index);
             String key = "gui.golem_logix.requester.status." + switch (st) {
                 case StockRequesterBlockEntity.STATUS_CRAFTING -> "crafting";
                 case StockRequesterBlockEntity.STATUS_NO_PATTERN -> "no_pattern";
                 case StockRequesterBlockEntity.STATUS_MISSING_INGREDIENTS -> "missing";
                 default -> "ok";
             };
-            g.renderComponentTooltip(font, List.of(slot.getItem().getHoverName(), Component.translatable(key)), mouseX, mouseY);
-            return;
+            lines = new ArrayList<>(lines);
+            lines.add(Math.min(1, lines.size()), Component.translatable(key));
         }
-        super.renderTooltip(g, mouseX, mouseY);
+        return lines;
     }
 
     @Override

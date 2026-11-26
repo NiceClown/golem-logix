@@ -1,11 +1,14 @@
 package com.golemlogix.client;
 
 import com.golemlogix.config.GolemClientConfig;
+import com.golemlogix.items.FluidGhostItem;
 import com.golemlogix.menu.TerminalMenu;
 import com.golemlogix.network.TerminalActionPayload;
 import com.golemlogix.network.TerminalActionPayload.Action;
 import com.golemlogix.network.TerminalInfoPayload;
 import com.golemlogix.network.TerminalListPayload;
+import com.golemlogix.system.Gear;
+import com.golemlogix.system.ItemKey;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -67,7 +70,8 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     }
 
     /** A list row: either an item with a count or a fluid (then fluid is not empty). */
-    private record Row(ItemStack stack, long count, boolean craftable, FluidStack fluid, String name, String namespace) {
+    private record Row(ItemStack stack, long count, boolean craftable, FluidStack fluid, String name, String namespace,
+                       String countText, boolean gear) {
         boolean isFluid() {
             return !fluid.isEmpty();
         }
@@ -76,6 +80,10 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         double units() {
             return isFluid() ? fluid.getAmount() / 1000.0 : count;
         }
+    }
+
+    /** Cached per-ItemKey display metadata so periodic network sync rebuilds skip hover-name/tag/gear recomputation. */
+    private record ItemMeta(String lowerName, String namespace, boolean gear) {
     }
 
     /** Ingredient under the cursor for JEI (R and U keys): an ItemStack or FluidStack and its place on the screen. */
@@ -90,7 +98,8 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     private int builtVersion = -1;
     private boolean dirty = true;
     private final List<Row> rows = new ArrayList<>();
-    private final Map<ItemStack, String> nameCache = new HashMap<>();
+    private final Map<ItemKey, ItemMeta> metaCache = new HashMap<>();
+    private final Map<ItemKey, String> tooltipCache = new HashMap<>();
 
     public TerminalScreen(TerminalMenu menu, Inventory inv, Component title) {
         super(menu, inv, title);
@@ -119,6 +128,22 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         }
     }
 
+    private static void setJeiSync(GolemClientConfig.JeiSync mode) {
+        try {
+            GolemClientConfig.JEI_SYNC.set(mode);
+            GolemClientConfig.JEI_SYNC.save();
+        } catch (IllegalStateException ignored) {
+        }
+    }
+
+    private static void setSizeMode(GolemClientConfig.TerminalSize mode) {
+        try {
+            GolemClientConfig.TERMINAL_SIZE.set(mode);
+            GolemClientConfig.TERMINAL_SIZE.save();
+        } catch (IllegalStateException ignored) {
+        }
+    }
+
     /** How many list rows to show for the selected size and screen height. */
     private int wantedRows() {
         int base = TerminalMenu.defaultRows(crafting);
@@ -133,6 +158,8 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
 
     @Override
     protected void init() {
+        metaCache.clear();
+        tooltipCache.clear();
         menu.relayout(wantedRows());
         this.imageHeight = TerminalMenu.imageHeight(crafting, rows());
         super.init();
@@ -198,8 +225,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
                 () -> Component.translatable("gui.golem_logix.size." + sizeMode().name().toLowerCase(Locale.ROOT)),
                 () -> Component.translatable("gui.golem_logix.size.tooltip"), () -> sizeMode() != GolemClientConfig.TerminalSize.NORMAL,
                 b -> {
-                    GolemClientConfig.TERMINAL_SIZE.set(sizeMode().next());
-                    GolemClientConfig.TERMINAL_SIZE.save();
+                    setSizeMode(sizeMode().next());
                     rebuildWidgets();
                 }));
         // search sync with JEI (the button is visible only when JEI is installed)
@@ -208,8 +234,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
                     () -> Component.translatable("gui.golem_logix.jei_sync." + jeiSync().name().toLowerCase(Locale.ROOT)),
                     () -> Component.translatable("gui.golem_logix.jei_sync.tooltip"), () -> jeiSync() != GolemClientConfig.JeiSync.OFF,
                     b -> {
-                        GolemClientConfig.JEI_SYNC.set(jeiSync().next());
-                        GolemClientConfig.JEI_SYNC.save();
+                        setJeiSync(jeiSync().next());
                         if (jeiSync().sendsToJei()) {
                             ClientHooks.jeiSetSearch.accept(search.getValue());
                             lastJei = search.getValue();
@@ -222,66 +247,101 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
             addRenderableWidget(new GolemButton(leftPos + TerminalMenu.LIST_X, cy + 36, 18, 16,
                     () -> Component.literal("v"),
                     () -> Component.translatable("gui.golem_logix.clear_grid"), () -> false,
-                    b -> minecraft.gameMode.handleInventoryButtonClick(menu.containerId, 0)));
+                    b -> {
+                        if (minecraft != null && minecraft.gameMode != null) {
+                            minecraft.gameMode.handleInventoryButtonClick(menu.containerId, 0);
+                        }
+                    }));
         }
         scroll = Math.max(0, Math.min(scroll, maxScroll()));
     }
 
     // ------------------------------------------------------------------ data
 
-    private String nameOf(ItemStack stack) {
-        return nameCache.computeIfAbsent(stack, s -> s.getHoverName().getString().toLowerCase(Locale.ROOT));
+    private ItemMeta metaOf(ItemKey key, ItemStack stack) {
+        if (metaCache.size() > 8192) {
+            metaCache.clear();
+            tooltipCache.clear();
+        }
+        return metaCache.computeIfAbsent(key, k -> new ItemMeta(
+                stack.getHoverName().getString().toLowerCase(Locale.ROOT),
+                BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace(),
+                Gear.is(stack)));
+    }
+
+    private String tooltipTextOf(ItemKey key, ItemStack stack) {
+        return tooltipCache.computeIfAbsent(key, k -> {
+            StringBuilder sb = new StringBuilder();
+            for (Component line : getTooltipFromItem(minecraft, stack)) {
+                sb.append(line.getString().toLowerCase(Locale.ROOT)).append('\n');
+            }
+            return sb.toString();
+        });
     }
 
     private void rebuild() {
         dirty = false;
         builtVersion = menu.clientVersion;
         rows.clear();
-        nameCache.clear();
 
-        String query = search.getValue().trim().toLowerCase(Locale.ROOT);
+        String query = search != null ? search.getValue().trim().toLowerCase(Locale.ROOT) : "";
+        String craftShort = Component.translatable("gui.golem_logix.craft_short").getString();
+        TerminalInfoPayload info = menu.clientInfo;
+        boolean showItems = viewMode != ViewMode.FLUIDS;
+        boolean showFluids = viewMode != ViewMode.ITEMS && info != null;
 
         // craftable fluids come as fluid ghost keys among the items: they go with the fluids
-        List<ItemStack> craftFluids = new ArrayList<>();
+        List<ItemStack> craftFluids = showFluids ? new ArrayList<>() : null;
         for (TerminalListPayload.Entry e : menu.clientEntries) {
-            if (e.craftable() && com.golemlogix.items.FluidGhostItem.is(e.key())) {
-                craftFluids.add(e.key());
+            ItemStack keyStack = e.key();
+            if (FluidGhostItem.is(keyStack)) {
+                if (craftFluids != null && e.craftable()) {
+                    craftFluids.add(keyStack);
+                }
+                continue;
+            }
+            if (!showItems || (craftableOnly && !e.craftable())) {
+                continue;
+            }
+            ItemKey key = ItemKey.of(keyStack);
+            ItemMeta meta = metaOf(key, keyStack);
+            if (matches(key, keyStack, meta, query)) {
+                String countText = e.count() > 0 ? GolemGui.formatCount(e.count()) : craftShort;
+                rows.add(new Row(keyStack, e.count(), e.craftable(), FluidStack.EMPTY, meta.lowerName(), meta.namespace(), countText, meta.gear()));
             }
         }
-        if (viewMode != ViewMode.FLUIDS) {
-            for (TerminalListPayload.Entry e : menu.clientEntries) {
-                if (craftableOnly && !e.craftable() || com.golemlogix.items.FluidGhostItem.is(e.key())) {
+        if (showFluids) {
+            for (FluidStack f : info.fluids()) {
+                if (f.isEmpty()) {
                     continue;
                 }
-                if (matches(e.key(), query)) {
-                    rows.add(new Row(e.key(), e.count(), e.craftable(), FluidStack.EMPTY, nameOf(e.key()),
-                            BuiltInRegistries.ITEM.getKey(e.key().getItem()).getNamespace()));
+                ItemStack ghost = ItemStack.EMPTY;
+                for (int i = 0; i < craftFluids.size(); i++) {
+                    if (FluidStack.isSameFluidSameComponents(FluidGhostItem.fluid(craftFluids.get(i)), f)) {
+                        ghost = craftFluids.remove(i);
+                        break;
+                    }
                 }
-            }
-        }
-        TerminalInfoPayload info = menu.clientInfo;
-        if (viewMode != ViewMode.ITEMS && info != null) {
-            List<ItemStack> unseen = new ArrayList<>(craftFluids);
-            for (FluidStack f : info.fluids()) {
-                ItemStack ghost = unseen.stream().filter(k -> FluidStack.isSameFluidSameComponents(
-                        com.golemlogix.items.FluidGhostItem.fluid(k), f)).findFirst().orElse(ItemStack.EMPTY);
-                unseen.remove(ghost);
                 if (craftableOnly && ghost.isEmpty()) {
                     continue;
                 }
                 String name = f.getHoverName().getString().toLowerCase(Locale.ROOT);
                 String ns = BuiltInRegistries.FLUID.getKey(f.getFluid()).getNamespace();
                 if (matchesFluid(name, ns, query)) {
-                    rows.add(new Row(ghost, f.getAmount(), !ghost.isEmpty(), f, name, ns));
+                    String countText = viewMode == ViewMode.FLUIDS ? GolemGui.formatCount(f.getAmount()) : GolemGui.formatBuckets(f.getAmount());
+                    rows.add(new Row(ghost, f.getAmount(), !ghost.isEmpty(), f, name, ns, countText, false));
                 }
             }
             // none of it in the network, but a pattern makes it: a row to order it from
-            for (ItemStack ghost : unseen) {
-                FluidStack f = com.golemlogix.items.FluidGhostItem.fluid(ghost);
+            for (ItemStack ghost : craftFluids) {
+                FluidStack f = FluidGhostItem.fluid(ghost);
+                if (f.isEmpty()) {
+                    continue;
+                }
                 String name = f.getHoverName().getString().toLowerCase(Locale.ROOT);
                 String ns = BuiltInRegistries.FLUID.getKey(f.getFluid()).getNamespace();
                 if (matchesFluid(name, ns, query)) {
-                    rows.add(new Row(ghost, 0, true, f.copyWithAmount(1), name, ns));
+                    rows.add(new Row(ghost, 0, true, f.copyWithAmount(1), name, ns, craftShort, false));
                 }
             }
         }
@@ -324,23 +384,17 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         return name.contains(query);
     }
 
-    private boolean matches(ItemStack stack, String query) {
+    private boolean matches(ItemKey key, ItemStack stack, ItemMeta meta, String query) {
         if (query.isEmpty()) {
             return true;
         }
         if (query.startsWith("@")) {
-            return BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace().contains(query.substring(1));
+            return meta.namespace().contains(query.substring(1));
         }
         if (query.startsWith("#")) {
-            String q = query.substring(1);
-            for (Component line : getTooltipFromItem(minecraft, stack)) {
-                if (line.getString().toLowerCase(Locale.ROOT).contains(q)) {
-                    return true;
-                }
-            }
-            return false;
+            return tooltipTextOf(key, stack).contains(query.substring(1));
         }
-        return nameOf(stack).contains(query);
+        return meta.lowerName().contains(query);
     }
 
     private int totalEntries() {
@@ -392,7 +446,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
             GolemGui.slot(g, leftPos + slot.x - 1, topPos + slot.y - 1);
         }
         // the slot of the Chronometer the window was opened through is locked: a teal frame outlines it
-        if (menu.lockedMenuSlot() >= 0) {
+        if (menu.lockedMenuSlot() >= 0 && menu.lockedMenuSlot() < menu.slots.size()) {
             Slot lock = menu.slots.get(menu.lockedMenuSlot());
             int x = leftPos + lock.x - 1, y = topPos + lock.y - 1;
             g.fill(x, y, x + 18, y + 1, GolemGui.CYAN);
@@ -426,7 +480,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         g.fill(x, y, x + 10, y + h, GolemGui.SLOT_BG);
         int fill = (int) Math.round((h - 2) * frac);
         if (fill > 0) {
-            float t = minecraft.level == null ? 0 : (minecraft.level.getGameTime() % 40) / 40f;
+            float t = minecraft == null || minecraft.level == null ? 0 : (minecraft.level.getGameTime() % 40) / 40f;
             int top = y + h - 1 - fill;
             g.fill(x + 1, top, x + 9, y + h - 1, 0xFF6A4FC8);
             g.fill(x + 1, top, x + 3, y + h - 1, 0xFF9E80F8);
@@ -515,6 +569,16 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         return List.of(new Rect2i(leftPos + imageWidth, topPos + 2, 40, 110));
     }
 
+    @Override
+    protected boolean hasClickedOutside(double mouseX, double mouseY, int guiLeft, int guiTop, int button) {
+        for (Rect2i r : extraAreas()) {
+            if (r.contains((int) mouseX, (int) mouseY)) {
+                return false;
+            }
+        }
+        return super.hasClickedOutside(mouseX, mouseY, guiLeft, guiTop, button);
+    }
+
     private void renderEntries(GuiGraphics g, int mouseX, int mouseY) {
         int lx = leftPos + TerminalMenu.LIST_X;
         int ly = topPos + TerminalMenu.LIST_Y;
@@ -532,27 +596,17 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
                 if (row.isFluid()) {
                     drawFluid(g, row.fluid(), x, y);
                     drawDrop(g, x, y);
-                    if (row.count() <= 0) {
-                        drawCount(g, Component.translatable("gui.golem_logix.craft_short").getString(), x, y, GolemGui.CYAN);
-                    } else {
-                        String text = viewMode == ViewMode.FLUIDS ? GolemGui.formatCount(row.fluid().getAmount())
-                                : GolemGui.formatBuckets(row.fluid().getAmount());
-                        drawCount(g, text, x, y, 0xFFFFFFFF);
-                        if (row.craftable()) {
-                            g.fill(x - 1, y - 1, x + 3, y + 3, GolemGui.CYAN);
-                        }
-                    }
-                } else {
-                    g.renderItem(row.stack(), x, y);
-                    if (row.count() > 0) {
-                        drawCount(g, GolemGui.formatCount(row.count()), x, y, 0xFFFFFFFF);
-                    } else {
-                        drawCount(g, Component.translatable("gui.golem_logix.craft_short").getString(), x, y, GolemGui.CYAN);
-                    }
+                    drawCount(g, row.countText(), x, y, row.count() <= 0 ? GolemGui.CYAN : 0xFFFFFFFF);
                     if (row.craftable() && row.count() > 0) {
                         g.fill(x - 1, y - 1, x + 3, y + 3, GolemGui.CYAN);
                     }
-                    if (com.golemlogix.system.Gear.is(row.stack())) {
+                } else {
+                    g.renderItem(row.stack(), x, y);
+                    drawCount(g, row.countText(), x, y, row.count() > 0 ? 0xFFFFFFFF : GolemGui.CYAN);
+                    if (row.craftable() && row.count() > 0) {
+                        g.fill(x - 1, y - 1, x + 3, y + 3, GolemGui.CYAN);
+                    }
+                    if (row.gear()) {
                         // a yellow exclamation mark in the top right corner: see overGearMark
                         g.pose().pushPose();
                         g.pose().translate(0, 0, 300);
@@ -612,7 +666,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     /** Whether the cursor is on the exclamation mark of a piece of equipment in the list. */
     private boolean overGearMark(double mouseX, double mouseY) {
         int idx = hoveredIndex(mouseX, mouseY);
-        if (idx < 0 || rows.get(idx).isFluid() || !com.golemlogix.system.Gear.is(rows.get(idx).stack())) {
+        if (idx < 0 || !rows.get(idx).gear()) {
             return false;
         }
         double cx = (mouseX - (leftPos + TerminalMenu.LIST_X)) % 18, cy = (mouseY - (topPos + TerminalMenu.LIST_Y)) % 18;
@@ -755,8 +809,12 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         if (button == 0 && menu.getCarried().isEmpty() && overGearMark(mouseX, mouseY)) {
             // the terminal is closed first (as Escape would): left open behind the book, the server kept the menu and a wireless
             // terminal's charge running, and the inventory ignored clicks afterwards because the client still had the terminal's menu
-            minecraft.player.closeContainer();
-            minecraft.setScreen(com.golemlogix.client.book.BookScreen.openAt("st_gear"));
+            if (minecraft != null) {
+                if (minecraft.player != null) {
+                    minecraft.player.closeContainer();
+                }
+                minecraft.setScreen(com.golemlogix.client.book.BookScreen.openAt("st_gear"));
+            }
             return true;
         }
         if (overList(mouseX, mouseY)) {
@@ -765,7 +823,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
             }
         }
         boolean handled = super.mouseClicked(mouseX, mouseY, button);
-        if (!search.isHovered() && search.isFocused() && button == 0) {
+        if (!search.isMouseOver(mouseX, mouseY) && search.isFocused() && button == 0) {
             search.setFocused(false);
         }
         return handled;
@@ -779,7 +837,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         IFluidHandlerItem handler = carried.isEmpty() ? null : carried.copyWithCount(1).getCapability(Capabilities.FluidHandler.ITEM);
         boolean fullContainer = handler != null && !handler.drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.SIMULATE).isEmpty();
 
-        if (viewMode == ViewMode.FLUIDS) {
+        if (viewMode == ViewMode.FLUIDS && !carried.isEmpty()) {
             // in the fluid list any click with a container: a full one empties into the network, an empty one takes the selected fluid
             if (handler == null) {
                 return true;
@@ -816,14 +874,18 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         boolean ctrl = hasControlDown();
         if (row.isFluid()) {
             if (row.craftable() && (ctrl || row.count() <= 0) && button == 0) {
-                minecraft.setScreen(new CraftRequestScreen(this, menu, row.stack()));
-            } else if (minecraft.player != null) {
+                if (minecraft != null) {
+                    minecraft.setScreen(new CraftRequestScreen(this, menu, row.stack()));
+                }
+            } else if (minecraft != null && minecraft.player != null) {
                 minecraft.player.displayClientMessage(Component.translatable("gui.golem_logix.fluid_need_container"), true);
             }
             return true;
         }
         if (row.craftable() && (ctrl || row.count() <= 0) && button == 0) {
-            minecraft.setScreen(new CraftRequestScreen(this, menu, row.stack()));
+            if (minecraft != null) {
+                minecraft.setScreen(new CraftRequestScreen(this, menu, row.stack()));
+            }
             return true;
         }
         if (row.count() <= 0) {
@@ -867,9 +929,10 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (overList(mouseX, mouseY) || mouseX < leftPos + imageWidth) {
+        if (scrollY != 0 && mouseX >= leftPos && mouseX < leftPos + imageWidth
+                && mouseY >= topPos + TerminalMenu.LIST_Y && mouseY < topPos + TerminalMenu.LIST_Y + rows() * 18) {
             int max = maxScroll();
-            if (max > 0 && mouseY < topPos + TerminalMenu.LIST_Y + rows() * 18) {
+            if (max > 0) {
                 scroll = Math.max(0, Math.min(max, scroll - (int) Math.signum(scrollY)));
                 return true;
             }

@@ -150,5 +150,14 @@ public class GolemLogixClientEvents {
             com.golemlogix.integration.ars.ArsImbuement.clearCache();
             com.golemlogix.system.Fuzzy.clearCache();
         }
+
+        /** Clear world-bound client caches when leaving a world / server. */
+        @SubscribeEvent
+        public static void onClientLogout(net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent.LoggingOut event) {
+            com.golemlogix.client.ghost.GhostProjection.clear();
+            HammerClientEvents.reset();
+            PipeRunners.clear();
+            com.golemlogix.client.book.BookModel.invalidate();
+        }
     }
 }

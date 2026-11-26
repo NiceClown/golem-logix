@@ -11,7 +11,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.network.PacketDistributor;
+import org.lwjgl.glfw.GLFW;
 
 /**
  * Stock Manometer window: the ghost of what it watches, the mode as a side button (above the threshold / below it /
@@ -19,9 +22,16 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * words what the signal does, with the stock now. A fluid counts in mB.
  */
 public class StockManometerScreen extends GolemScreen<StockManometerMenu> {
+    private static final ItemStack ICON_ABOVE = new ItemStack(Items.REDSTONE_TORCH);
+    private static final ItemStack ICON_BELOW = new ItemStack(Items.LEVER);
+    private static final ItemStack ICON_ANALOG = new ItemStack(Items.COMPARATOR);
+    private static final ItemStack ICON_BARRIER = new ItemStack(Items.BARRIER);
+
     private EditBox low, high;
     /** What this window last sent: a field is overwritten from the server only when someone else changed the value. */
     private int sentLow, sentHigh;
+    private final Block[] cachedNeighbourBlocks = new Block[6];
+    private final ItemStack[] cachedNeighbourIcons = new ItemStack[6];
 
     public StockManometerScreen(StockManometerMenu menu, Inventory inv, Component title) {
         super(menu, inv, title, StockManometerMenu.IMAGE_WIDTH, StockManometerMenu.IMAGE_HEIGHT);
@@ -30,11 +40,11 @@ public class StockManometerScreen extends GolemScreen<StockManometerMenu> {
     @Override
     protected void init() {
         super.init();
-        addSideButton(() -> new ItemStack(switch (menu.getMode()) {
-                    case StockManometerBlockEntity.MODE_BELOW -> Items.LEVER;
-                    case StockManometerBlockEntity.MODE_ANALOG -> Items.COMPARATOR;
-                    default -> Items.REDSTONE_TORCH;
-                }),
+        addSideButton(() -> switch (menu.getMode()) {
+                    case StockManometerBlockEntity.MODE_BELOW -> ICON_BELOW;
+                    case StockManometerBlockEntity.MODE_ANALOG -> ICON_ANALOG;
+                    default -> ICON_ABOVE;
+                },
                 () -> {
                     String key = "gui.golem_logix.manometer.mode." + modeName();
                     return Component.translatable("gui.golem_logix.manometer.mode").append("\n").append(Component.translatable(key))
@@ -42,17 +52,31 @@ public class StockManometerScreen extends GolemScreen<StockManometerMenu> {
                 },
                 () -> true, () -> menu.getMode() != StockManometerBlockEntity.MODE_ABOVE, StockManometerMenu.BUTTON_MODE);
         for (net.minecraft.core.Direction side : net.minecraft.core.Direction.values()) {
-            addSideButton(() -> menu.getBridgeMode(side) == StockManometerBlockEntity.BRIDGE_OFF ? new ItemStack(Items.BARRIER) : new ItemStack(neighbour(side).getBlock()),
+            addSideButton(() -> menu.getBridgeMode(side) == StockManometerBlockEntity.BRIDGE_OFF ? ICON_BARRIER : neighbourIcon(side),
                     () -> bridgeTip(side), () -> !neighbour(side).isAir(), () -> bridged(side), StockManometerMenu.BUTTON_BRIDGE + side.ordinal());
         }
         sentLow = menu.getThreshold();
         sentHigh = menu.getHysteresis();
         low = number(leftPos + 122, topPos + 22, sentLow);
         high = number(leftPos + 122, topPos + 40, sentHigh);
+        high.visible = menu.getMode() != StockManometerBlockEntity.MODE_ANALOG;
     }
 
     private net.minecraft.world.level.block.state.BlockState neighbour(net.minecraft.core.Direction side) {
+        if (minecraft == null || minecraft.level == null) {
+            return Blocks.AIR.defaultBlockState();
+        }
         return minecraft.level.getBlockState(menu.getDevicePos().relative(side));
+    }
+
+    private ItemStack neighbourIcon(net.minecraft.core.Direction side) {
+        int i = side.ordinal();
+        Block b = neighbour(side).getBlock();
+        if (cachedNeighbourBlocks[i] != b || cachedNeighbourIcons[i] == null) {
+            cachedNeighbourBlocks[i] = b;
+            cachedNeighbourIcons[i] = new ItemStack(b);
+        }
+        return cachedNeighbourIcons[i];
     }
 
     /** Whether the bridge is there (the window's mode, not the block entity's: it answers at once for the player clicking). */
@@ -60,7 +84,8 @@ public class StockManometerScreen extends GolemScreen<StockManometerMenu> {
         return switch (menu.getBridgeMode(side)) {
             case StockManometerBlockEntity.BRIDGE_ON -> true;
             case StockManometerBlockEntity.BRIDGE_OFF -> false;
-            default -> com.golemlogix.blocks.StockManometerBlock.isReceiver(minecraft.level, menu.getDevicePos(), side);
+            default -> minecraft != null && minecraft.level != null
+                    && com.golemlogix.blocks.StockManometerBlock.isReceiver(minecraft.level, menu.getDevicePos(), side);
         };
     }
 
@@ -116,6 +141,39 @@ public class StockManometerScreen extends GolemScreen<StockManometerMenu> {
         }
     }
 
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        boolean handled = super.mouseClicked(mouseX, mouseY, button);
+        if (low != null && !low.isMouseOver(mouseX, mouseY) && low.isFocused()) {
+            low.setFocused(false);
+        }
+        if (high != null && !high.isMouseOver(mouseX, mouseY) && high.isFocused()) {
+            high.setFocused(false);
+        }
+        return handled;
+    }
+
+    @Override
+    public boolean keyPressed(int key, int scanCode, int modifiers) {
+        if (key == GLFW.GLFW_KEY_ESCAPE) {
+            return super.keyPressed(key, scanCode, modifiers);
+        }
+        EditBox focused = low != null && low.isFocused() ? low : high != null && high.visible && high.isFocused() ? high : null;
+        if (focused != null) {
+            if (key == GLFW.GLFW_KEY_TAB) {
+                return super.keyPressed(key, scanCode, modifiers);
+            }
+            if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
+                send();
+                focused.setFocused(false);
+                return true;
+            }
+            focused.keyPressed(key, scanCode, modifiers);
+            return true;
+        }
+        return super.keyPressed(key, scanCode, modifiers);
+    }
+
     /** Whatever is typed when the window closes is kept. */
     @Override
     public void removed() {
@@ -137,6 +195,9 @@ public class StockManometerScreen extends GolemScreen<StockManometerMenu> {
             high.setValue(Integer.toString(sentHigh));
         }
         high.visible = menu.getMode() != StockManometerBlockEntity.MODE_ANALOG;
+        if (!high.visible && high.isFocused()) {
+            high.setFocused(false);
+        }
     }
 
     @Override

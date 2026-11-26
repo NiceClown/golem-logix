@@ -45,6 +45,15 @@ public final class GhostProjection {
     private static int completeTicks;
     @Nullable
     private static ResourceKey<Level> dimension;
+    @Nullable
+    private static List<AtlasBlueprint.Cell> cachedBlueprint;
+    @Nullable
+    private static Variant cachedBlueprintVariant;
+    @Nullable
+    private static Direction cachedBlueprintFacing;
+    private static List<GhostCell> cachedCells = List.of();
+    private static Map<Item, Integer> cachedItems = Map.of();
+    private static boolean cacheDirty = true;
 
     private GhostProjection() {
     }
@@ -78,6 +87,10 @@ public final class GhostProjection {
         completeTicks = 0;
         Minecraft mc = Minecraft.getInstance();
         dimension = mc.level != null ? mc.level.dimension() : null;
+        cachedBlueprint = null;
+        cachedCells = List.of();
+        cachedItems = Map.of();
+        cacheDirty = true;
     }
 
     public static void clear() {
@@ -85,6 +98,14 @@ public final class GhostProjection {
         anchor = null;
         locked = false;
         completeTicks = 0;
+        dimension = null;
+        cachedBlueprint = null;
+        cachedBlueprintVariant = null;
+        cachedBlueprintFacing = null;
+        cachedCells = List.of();
+        cachedItems = Map.of();
+        cacheDirty = true;
+        GhostHud.clearCache();
     }
 
     public static void toggleLock() {
@@ -114,9 +135,16 @@ public final class GhostProjection {
             }
         }
         if (anchor == null) {
+            cachedCells = List.of();
+            cachedItems = Map.of();
+            cacheDirty = false;
             return;
         }
-        if (missing(mc.level).isEmpty()) {
+        List<GhostCell> now = missing(mc.level);
+        cachedCells = now;
+        cachedItems = summarizeItems(now);
+        cacheDirty = false;
+        if (now.isEmpty()) {
             if (++completeTicks == 1) {
                 mc.player.displayClientMessage(Component.translatable("gui.golem_logix.ghost.complete"), true);
             }
@@ -161,6 +189,32 @@ public final class GhostProjection {
         }
     }
 
+    /** Cached per-tick missing cells for world rendering (avoids scanning every frame). */
+    static List<GhostCell> cachedMissing(Level level) {
+        if (anchor == null) {
+            return List.of();
+        }
+        if (cacheDirty) {
+            cachedCells = missing(level);
+            cachedItems = summarizeItems(cachedCells);
+            cacheDirty = false;
+        }
+        return cachedCells;
+    }
+
+    /** Cached per-tick missing item counts for HUD rendering. */
+    static Map<Item, Integer> cachedMissingItems(Level level) {
+        if (anchor == null) {
+            return Map.of();
+        }
+        if (cacheDirty) {
+            cachedCells = missing(level);
+            cachedItems = summarizeItems(cachedCells);
+            cacheDirty = false;
+        }
+        return cachedItems;
+    }
+
     /** All cells that do not match the blueprint yet. */
     public static List<GhostCell> missing(Level level) {
         List<GhostCell> out = new ArrayList<>();
@@ -181,16 +235,21 @@ public final class GhostProjection {
 
     /** How many of which items still have to be placed (an Atlant is one item for two cells). */
     public static Map<Item, Integer> missingItems(Level level) {
+        return anchor == null ? Map.of() : summarizeItems(missing(level));
+    }
+
+    private static Map<Item, Integer> summarizeItems(List<GhostCell> cells) {
         Map<Item, Integer> out = new LinkedHashMap<>();
-        if (anchor == null) {
-            return out;
-        }
-        Set<String> atlants = new HashSet<>();
-        for (GhostCell g : missing(level)) {
+        Set<Long> atlants = null;
+        var atlantBlock = ModBlocks.ATLAS_ATLANT.get();
+        for (GhostCell g : cells) {
             Item item = g.state().getBlock().asItem();
-            if (g.state().getBlock() == ModBlocks.ATLAS_ATLANT.get()) {
-                String key = (g.pos().getX()) + "," + (g.pos().getZ());
-                if (!atlants.add(key)) {
+            if (g.state().getBlock() == atlantBlock) {
+                if (atlants == null) {
+                    atlants = new HashSet<>();
+                }
+                long colKey = (((long) g.pos().getX()) << 32) | (g.pos().getZ() & 0xFFFFFFFFL);
+                if (!atlants.add(colKey)) {
                     continue;
                 }
             }
@@ -200,12 +259,17 @@ public final class GhostProjection {
     }
 
     private static List<AtlasBlueprint.Cell> currentCells() {
-        return switch (variant) {
-            case SATURATOR -> SaturatorBlueprint.cells(facing);
-            case MAINFRAME -> com.golemlogix.system.MainframeBlueprint.cells(facing);
-            case CATALOG -> com.golemlogix.system.CatalogBlueprint.cells(facing);
-            default -> AtlasBlueprint.cells(variant);
-        };
+        if (cachedBlueprint == null || cachedBlueprintVariant != variant || cachedBlueprintFacing != facing) {
+            cachedBlueprintVariant = variant;
+            cachedBlueprintFacing = facing;
+            cachedBlueprint = switch (variant) {
+                case SATURATOR -> SaturatorBlueprint.cells(facing);
+                case MAINFRAME -> com.golemlogix.system.MainframeBlueprint.cells(facing);
+                case CATALOG -> com.golemlogix.system.CatalogBlueprint.cells(facing);
+                default -> AtlasBlueprint.cells(variant);
+            };
+        }
+        return cachedBlueprint;
     }
 
     public static int totalCells() {

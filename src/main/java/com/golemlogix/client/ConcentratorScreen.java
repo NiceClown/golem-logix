@@ -88,7 +88,7 @@ public class ConcentratorScreen extends GolemScreen<ConcentratorMenu> {
         int gx = leftPos + ConcentratorMenu.GRID_X, gy = topPos + ConcentratorMenu.GRID_Y;
         for (int r = 0; r < ConcentratorMenu.ROWS; r++) {
             int idx = menu.row() + r;
-            if (idx >= rows.size()) {
+            if (idx < 0 || idx >= rows.size()) {
                 break;
             }
             ConcentratorMenu.RowInfo info = rows.get(idx);
@@ -117,7 +117,7 @@ public class ConcentratorScreen extends GolemScreen<ConcentratorMenu> {
         int ix = leftPos + ConcentratorMenu.ICON_X, gy = topPos + ConcentratorMenu.GRID_Y;
         if (menu.getCarried().isEmpty() && mouseX >= ix - 1 && mouseX < ix + 17 && mouseY >= gy && mouseY < gy + ConcentratorMenu.ROWS * 18) {
             int idx = menu.row() + (mouseY - gy) / 18;
-            if (idx < menu.clientRows().size()) {
+            if (idx >= 0 && idx < menu.clientRows().size()) {
                 ConcentratorMenu.RowInfo info = menu.clientRows().get(idx);
                 if (!info.icon().isEmpty()) {
                     g.renderTooltip(font, info.title(), mouseX, mouseY);

@@ -1,9 +1,9 @@
 package com.golemlogix.client;
 
 import com.golemlogix.crafting.CraftingJob;
+import com.golemlogix.init.ModBlocks;
 import com.golemlogix.menu.RecipeMonitorMenu;
 import com.golemlogix.network.MonitorPayload;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.core.BlockPos;
@@ -24,6 +24,10 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
     private static final int H = 206;
     private static final int LIST_X = 8, LIST_Y = 20, ROW_H = 22, ROWS = 8, LIST_W = 112;
     private static final int DX = 126;
+    private static final ItemStack ICON_MAINFRAME = new ItemStack(ModBlocks.CRYO_MAINFRAME.get());
+    private static final ItemStack ICON_CALCULATOR = new ItemStack(ModBlocks.CRYO_CALCULATOR.get());
+    private static final ItemStack ICON_COPROCESSOR = new ItemStack(ModBlocks.COOLING_COPROCESSOR.get());
+    private static final Component NOW_LABEL = Component.translatable("gui.golem_logix.monitor.now");
 
     private int scroll = 0;
     @Nullable
@@ -49,6 +53,7 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
                 menuButton(RecipeMonitorMenu.BUTTON_CANCEL_BASE + idx);
             }
         }));
+        cancel.active = false;
     }
 
     private List<MonitorPayload.Cpu> cpus() {
@@ -121,7 +126,7 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
         boolean idle = c.state() < 0;
         int color = idle ? 0xFF5C6B70 : CalculatorScreen.statusColor(CalculatorScreen.status(c.state()));
         g.fill(x + 1, y + 2, x + 3, y + ROW_H - 2, color);
-        ItemStack icon = idle ? new ItemStack(c.core() > 0 ? com.golemlogix.init.ModBlocks.CRYO_MAINFRAME.get() : com.golemlogix.init.ModBlocks.CRYO_CALCULATOR.get())
+        ItemStack icon = idle ? (c.core() > 0 ? ICON_MAINFRAME : ICON_CALCULATOR)
                 : !c.current().isEmpty() ? c.current() : c.targets().isEmpty() ? ItemStack.EMPTY : c.targets().get(0).item();
         g.renderItem(icon, x + 5, y + 3);
         if (!idle && mx >= x + 5 && mx < x + 21 && my >= y + 3 && my < y + 19) {
@@ -193,8 +198,8 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
         g.drawCenteredString(font, c.done() + " / " + c.total(), x + w / 2, y + 1, GolemGui.PARCHMENT);
         y += 13;
         if (!c.current().isEmpty()) {
-            g.drawString(font, Component.translatable("gui.golem_logix.monitor.now"), x, y + 4, GolemGui.PARCHMENT, false);
-            int nx = x + font.width(Component.translatable("gui.golem_logix.monitor.now")) + 3;
+            g.drawString(font, NOW_LABEL, x, y + 4, GolemGui.PARCHMENT, false);
+            int nx = x + font.width(NOW_LABEL) + 3;
             g.renderItem(c.current(), nx, y);
             if (mx >= nx && mx < nx + 16 && my >= y && my < y + 16) {
                 hoverStack = c.current();
@@ -217,11 +222,10 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
     }
 
     private void drawCoprocessors(GuiGraphics g, String count, int x, int y, int mx, int my) {
-        ItemStack icon = new ItemStack(com.golemlogix.init.ModBlocks.COOLING_COPROCESSOR.get());
-        g.renderItem(icon, x, y);
+        g.renderItem(ICON_COPROCESSOR, x, y);
         g.drawString(font, count, x + 17, y + 5, GolemGui.PARCHMENT, false);
         if (mx >= x && mx < x + 16 && my >= y && my < y + 16) {
-            hoverStack = icon;
+            hoverStack = ICON_COPROCESSOR;
             hoverArea = new Rect2i(x, y, 16, 16);
         }
     }
@@ -291,7 +295,7 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         int lx = leftPos + LIST_X, ly = topPos + LIST_Y;
-        if (mouseX >= lx && mouseX < lx + LIST_W && mouseY >= ly && mouseY < ly + ROWS * ROW_H) {
+        if (button == 0 && mouseX >= lx && mouseX < lx + LIST_W && mouseY >= ly && mouseY < ly + ROWS * ROW_H) {
             int idx = scroll + (int) ((mouseY - ly) / ROW_H);
             List<MonitorPayload.Cpu> list = cpus();
             if (idx >= 0 && idx < list.size()) {
@@ -306,7 +310,7 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         int lx = leftPos + LIST_X, ly = topPos + LIST_Y;
-        if (mouseX >= lx && mouseX < lx + LIST_W && mouseY >= ly && mouseY < ly + ROWS * ROW_H) {
+        if (scrollY != 0 && mouseX >= lx && mouseX < lx + LIST_W && mouseY >= ly && mouseY < ly + ROWS * ROW_H) {
             scroll = Math.max(0, Math.min(Math.max(0, cpus().size() - ROWS), scroll - (int) Math.signum(scrollY)));
             return true;
         }
@@ -316,10 +320,5 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
     @Override
     public List<Rect2i> extraAreas() {
         return List.of();
-    }
-
-    @SuppressWarnings("unused")
-    private static Component hint(String key) {
-        return Component.translatable(key).withStyle(ChatFormatting.GRAY);
     }
 }

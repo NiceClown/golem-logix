@@ -20,6 +20,8 @@ public class CryoMixerScreen extends GolemScreen<CryoMixerMenu> {
     private static final int WATER = 0xFF2A62B4, WATER_LIGHT = 0xFF62A0E6, CRYO = 0xFF38C8D6, CRYO_LIGHT = 0xFFB8F4FA;
     private static final int TANK_Y = 18, TANK_H = 58;
     private static final ItemStack COPROCESSOR = new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get());
+    private static final ItemStack ICON_HOPPER = new ItemStack(Items.HOPPER);
+    private static final ItemStack ICON_CHEST = new ItemStack(Items.CHEST);
 
     public CryoMixerScreen(CryoMixerMenu menu, Inventory inv, Component title) {
         super(menu, inv, title, CryoMixerMenu.IMAGE_WIDTH, CryoMixerMenu.IMAGE_HEIGHT);
@@ -31,9 +33,9 @@ public class CryoMixerScreen extends GolemScreen<CryoMixerMenu> {
         addRenderableWidget(new GolemButton(leftPos + 52, topPos + 63, 84, 14,
                 () -> Component.translatable("gui.golem_logix.mixer.mode." + menu.mode().name().toLowerCase(Locale.ROOT)),
                 () -> Component.translatable("gui.golem_logix.mixer.mode_tip"), () -> false,
-                b -> minecraft.gameMode.handleInventoryButtonClick(menu.containerId, CryoMixerMenu.BUTTON_MODE)));
+                b -> menuButton(CryoMixerMenu.BUTTON_MODE)));
         // auto-output: a hopper hands the blocks out (to a Pattern Provider first), a chest keeps them in the tray
-        addSideButton(() -> new ItemStack(menu.autoOutput() ? Items.HOPPER : Items.CHEST),
+        addSideButton(() -> menu.autoOutput() ? ICON_HOPPER : ICON_CHEST,
                 () -> Component.translatable("gui.golem_logix.auto_output.title").append("\n")
                         .append(Component.translatable(menu.autoOutput() ? "gui.golem_logix.auto_output.on" : "gui.golem_logix.auto_output.off")
                                 .withStyle(net.minecraft.ChatFormatting.AQUA)).append("\n")

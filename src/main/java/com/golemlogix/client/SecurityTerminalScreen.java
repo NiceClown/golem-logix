@@ -51,7 +51,8 @@ public class SecurityTerminalScreen extends GolemScreen<SecurityTerminalMenu> {
     }
 
     private void toggle(SecurityPermission perm) {
-        if (!selected().isEmpty()) {
+        ItemStack card = selected();
+        if (!card.isEmpty() && IdentityPunchCardItem.isBound(card)) {
             PacketDistributor.sendToServer(new SecurityTogglePayload(menu.containerId, selectedSlot, perm.mask));
         }
     }
@@ -71,7 +72,7 @@ public class SecurityTerminalScreen extends GolemScreen<SecurityTerminalMenu> {
 
     @Override
     protected void renderExtraBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
-        if (selectedSlot >= 0 && selectedSlot < menu.getCards().getContainerSize()) {
+        if (selectedSlot >= 0 && selectedSlot < menu.getCards().getContainerSize() && selectedSlot < menu.slots.size()) {
             var slot = menu.getSlot(selectedSlot);
             g.fill(leftPos + slot.x - 1, topPos + slot.y - 1, leftPos + slot.x + 17, topPos + slot.y + 17, 0x6038B0A8);
         }

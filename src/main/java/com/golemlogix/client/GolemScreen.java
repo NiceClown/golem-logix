@@ -24,6 +24,12 @@ import java.util.function.Supplier;
  * Base of the mod's screens: panel, background of all slots, labels; the upgrade column to the right of the window and settings buttons on the left.
  */
 public abstract class GolemScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> {
+    private static final ItemStack ICON_REDSTONE = new ItemStack(Items.REDSTONE);
+    private static final ItemStack ICON_REDSTONE_TORCH = new ItemStack(Items.REDSTONE_TORCH);
+    private static final ItemStack ICON_LEVER = new ItemStack(Items.LEVER);
+    private static final ItemStack ICON_REPEATER = new ItemStack(Items.REPEATER);
+    private static final Component PRIORITY_LABEL = Component.translatable("gui.golem_logix.priority");
+
     protected GolemScreen(T menu, Inventory inv, Component title, int width, int height) {
         super(menu, inv, title);
         this.imageWidth = width;
@@ -34,6 +40,9 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
     private int priorityX, priorityY;
     private int sideButtons = 0;
     protected final List<IconButton> sideButtonWidgets = new ArrayList<>();
+    private com.golemlogix.upgrade.UpgradeSpec cachedHintsSpec;
+    private boolean cachedHintsSecrets;
+    private List<ItemStack> cachedHints = List.of();
 
     /**
      * Priority panel (label, number, buttons -10 -1 +1 +10 and reset). Coordinates are from the top left corner of the window;
@@ -68,12 +77,12 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
 
     /** Redstone mode button: visible only when a Redstone Module sits in the upgrade slots. */
     protected void addRedstoneButton(Supplier<RedstoneMode> mode) {
-        addSideButton(() -> new ItemStack(switch (mode.get()) {
-                    case IGNORE -> Items.REDSTONE;
-                    case HIGH -> Items.REDSTONE_TORCH;
-                    case LOW -> Items.LEVER;
-                    case PULSE -> Items.REPEATER;
-                }),
+        addSideButton(() -> switch (mode.get()) {
+                    case IGNORE -> ICON_REDSTONE;
+                    case HIGH -> ICON_REDSTONE_TORCH;
+                    case LOW -> ICON_LEVER;
+                    case PULSE -> ICON_REPEATER;
+                },
                 () -> Component.translatable("gui.golem_logix.redstone.title").append("\n")
                         .append(Component.translatable(mode.get().key())).append("\n")
                         .append(Component.translatable(mode.get().key() + ".hint").withStyle(net.minecraft.ChatFormatting.GRAY)),
@@ -159,7 +168,7 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
         }
         if (up != null && menu instanceof GolemMenu gm && gm.upgradeSpec() != null) {
             // empty upgrade slots: a translucent "projection" of the one kind of upgrade the slot takes
-            List<ItemStack> hints = upgradeHints(gm.upgradeSpec());
+            List<ItemStack> hints = cachedUpgradeHints(gm.upgradeSpec());
             for (int i = gm.upgradeStart(); i < gm.upgradeEnd(); i++) {
                 Slot s = menu.slots.get(i);
                 int k = i - gm.upgradeStart();
@@ -176,9 +185,19 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
         renderOverlay(g, partialTick, mouseX, mouseY);
     }
 
+    private List<ItemStack> cachedUpgradeHints(com.golemlogix.upgrade.UpgradeSpec spec) {
+        boolean secrets = ClientSecrets.all();
+        if (cachedHintsSpec != spec || cachedHintsSecrets != secrets) {
+            cachedHintsSpec = spec;
+            cachedHintsSecrets = secrets;
+            cachedHints = upgradeHints(spec, secrets);
+        }
+        return cachedHints;
+    }
+
     /** The ghost of each upgrade slot: the kind of upgrade it is for (the Plasma Temper's only once its secret is known). */
-    private static List<ItemStack> upgradeHints(com.golemlogix.upgrade.UpgradeSpec spec) {
-        List<ItemStack> out = new ArrayList<>();
+    private static List<ItemStack> upgradeHints(com.golemlogix.upgrade.UpgradeSpec spec, boolean secretsUnlocked) {
+        List<ItemStack> out = new ArrayList<>(spec.slots());
         for (int i = 0; i < spec.slots(); i++) {
             UpgradeType t = spec.typeAt(i);
             out.add(t == null ? ItemStack.EMPTY : new ItemStack(switch (t) {
@@ -186,7 +205,7 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
                 case CRAFTING -> com.golemlogix.init.ModItems.AUTOCRAFT_MODULE.get();
                 case REDSTONE -> com.golemlogix.init.ModItems.REDSTONE_MODULE.get();
                 case FUZZY -> com.golemlogix.init.ModItems.FUZZY_CARD.get();
-                case TEMPER -> ClientSecrets.all() ? com.golemlogix.init.ModItems.PLASMA_TEMPER.get() : net.minecraft.world.item.Items.AIR;
+                case TEMPER -> secretsUnlocked ? com.golemlogix.init.ModItems.PLASMA_TEMPER.get() : net.minecraft.world.item.Items.AIR;
             }));
         }
         return out;
@@ -284,17 +303,20 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
         List<Component> lines = super.getTooltipFromContainerItem(stack);
         if (menu instanceof com.golemlogix.menu.GolemMenu gm && hoveredSlot != null && hoveredSlot.getItem() == stack) {
             Component line = gm.fuzzyLine(hoveredSlot.index);
-            if (line != null) {
+            boolean canCycle = gm.canCycleFuzzy(hoveredSlot.index);
+            boolean slotWindowHint = hoveredSlot.index < filterSlots() && !canCycle;
+            if (line != null || slotWindowHint) {
                 lines = new java.util.ArrayList<>(lines);
-                lines.add(line);
-                if (gm.canCycleFuzzy(hoveredSlot.index)) {
-                    lines.add(Component.translatable(hoveredSlot.index < filterSlots() ? "tooltip.golem_logix.fuzzy.hint_bus"
-                            : "tooltip.golem_logix.fuzzy.hint").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+                if (line != null) {
+                    lines.add(line);
+                    if (canCycle) {
+                        lines.add(Component.translatable(hoveredSlot.index < filterSlots() ? "tooltip.golem_logix.fuzzy.hint_bus"
+                                : "tooltip.golem_logix.fuzzy.hint").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+                    }
                 }
-            }
-            if (hoveredSlot.index < filterSlots() && !gm.canCycleFuzzy(hoveredSlot.index)) {
-                lines = new java.util.ArrayList<>(lines);
-                lines.add(Component.translatable("tooltip.golem_logix.slot_window_hint").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+                if (slotWindowHint) {
+                    lines.add(Component.translatable("tooltip.golem_logix.slot_window_hint").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+                }
             }
         }
         return lines;
@@ -309,8 +331,7 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
         g.drawString(font, title, titleLabelX, titleLabelY, GolemGui.PARCHMENT, false);
         g.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, GolemGui.PARCHMENT, false);
         if (priorityValue != null) {
-            Component label = Component.translatable("gui.golem_logix.priority");
-            g.drawString(font, label, priorityX + (54 - font.width(label)) / 2, priorityY, GolemGui.PARCHMENT, false);
+            g.drawString(font, PRIORITY_LABEL, priorityX + (54 - font.width(PRIORITY_LABEL)) / 2, priorityY, GolemGui.PARCHMENT, false);
             String v = Integer.toString(priorityValue.getAsInt());
             g.drawString(font, v, priorityX + (54 - font.width(v)) / 2, priorityY + 11, GolemGui.CYAN, false);
         }

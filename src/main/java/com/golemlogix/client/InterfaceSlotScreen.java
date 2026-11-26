@@ -7,6 +7,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -32,9 +33,9 @@ public class InterfaceSlotScreen extends Screen {
     private EditBox amount;
     private int left, top, h;
     private TagPicker picker;
-    /** The mode the window was opened in: if it changed, the server recomputed the number, and it is picked up a couple of ticks later. */
+    /** The mode the window was opened in: when the server flips it, tick() rebuilds the window with the new steps. */
     private boolean fluid;
-    private int reloadIn = -1;
+    private boolean initialized;
     /** Last number from the server: until the player edits it, the field follows it. */
     private int synced;
 
@@ -54,15 +55,19 @@ public class InterfaceSlotScreen extends Screen {
         if (picker != null) {
             picker.place(left + 8, top + TAG_Y, W - 16);
         }
-        fluid = menu.isFluidSlot(slot);
+        boolean nextFluid = menu.isFluidSlot(slot);
+        boolean modeChanged = initialized && nextFluid != fluid;
+        fluid = nextFluid;
+        initialized = true;
         synced = menu.amount(slot);
+        String initial = amount != null && !modeChanged ? amount.getValue() : Integer.toString(synced);
 
         amount = new EditBox(font, left + 62, top + 50, 58, 12, Component.empty());
         amount.setBordered(false);
         amount.setMaxLength(7);
         amount.setFilter(s -> s.isEmpty() || s.matches("\\d{1,6}[bBвВ]?"));
         amount.setTextColor(GolemGui.PARCHMENT);
-        amount.setValue(Integer.toString(synced));
+        amount.setValue(initial);
         addRenderableWidget(amount);
         setInitialFocus(amount);
 
@@ -162,7 +167,6 @@ public class InterfaceSlotScreen extends Screen {
         if (minecraft != null && minecraft.gameMode != null) {
             minecraft.gameMode.handleInventoryButtonClick(menu.containerId, InterfaceMenu.BUTTON_MODE + slot);
         }
-        reloadIn = 4;
     }
 
     @Override
@@ -172,9 +176,8 @@ public class InterfaceSlotScreen extends Screen {
             onClose();
             return;
         }
-        if (reloadIn > 0 && --reloadIn == 0) {
-            // the mode changed: the server converted the number into the new units, so the window is rebuilt (the step buttons differ)
-            reloadIn = -1;
+        if (menu.isFluidSlot(slot) != fluid) {
+            // the mode changed on the server: rebuild with the new units and step buttons
             rebuildWidgets();
             return;
         }
@@ -223,14 +226,15 @@ public class InterfaceSlotScreen extends Screen {
 
         ItemStack cfg = menu.configItem(slot);
         if (!FluidIcons.drawGhost(g, font, cfg, left + 9, top + 21, false)) {
-            g.renderItem(cfg.copyWithCount(1), left + 9, top + 21);
+            g.renderItem(cfg.getCount() == 1 ? cfg : cfg.copyWithCount(1), left + 9, top + 21);
         }
-        g.drawString(font, cfg.getHoverName(), left + 30, top + 20, GolemGui.CYAN, false);
+        Language lang = Language.getInstance();
+        g.drawString(font, lang.getVisualOrder(font.substrByWidth(cfg.getHoverName(), W - 38)), left + 30, top + 20, GolemGui.CYAN, false);
         var contained = InterfaceBlockEntity.containedFluid(cfg);
         Component mode = fluid
                 ? Component.translatable("gui.golem_logix.interface.keep_fluid", contained.getHoverName())
                 : Component.translatable("gui.golem_logix.interface.keep_items");
-        g.drawString(font, mode, left + 30, top + 30, 0xFFA89880, false);
+        g.drawString(font, lang.getVisualOrder(font.substrByWidth(mode, W - 38)), left + 30, top + 30, 0xFFA89880, false);
 
         g.drawString(font, Component.translatable("gui.golem_logix.interface.amount"), left + 8, top + 52, GolemGui.PARCHMENT, false);
         g.drawString(font, Component.translatable(fluid ? "gui.golem_logix.interface.unit_mb" : "gui.golem_logix.interface.unit_items"),
@@ -240,8 +244,8 @@ public class InterfaceSlotScreen extends Screen {
         Component info = fluid
                 ? Component.translatable("gui.golem_logix.interface.fluid_info", bucketText(v), bucketText(menu.maxAmount(slot)))
                 : Component.translatable("gui.golem_logix.interface.item_info", menu.maxAmount(slot));
-        g.drawString(font, info, left + 8, top + 106, 0xFF8A7A66, false);
-        g.drawString(font, Component.translatable("gui.golem_logix.interface.type_hint").withStyle(ChatFormatting.ITALIC),
+        g.drawString(font, lang.getVisualOrder(font.substrByWidth(info, W - 16)), left + 8, top + 106, 0xFF8A7A66, false);
+        g.drawString(font, lang.getVisualOrder(font.substrByWidth(Component.translatable("gui.golem_logix.interface.type_hint").withStyle(ChatFormatting.ITALIC), W - 16)),
                 left + 8, top + 115, 0xFF6A5A48, false);
 
         if (picker != null) {

@@ -13,15 +13,21 @@ import java.util.function.Supplier;
  */
 public class GolemButton extends Button {
     private final Supplier<Component> label;
+    private final Supplier<Component> tooltip;
     private final Supplier<Boolean> highlighted;
+    private Component lastTooltip;
 
     public GolemButton(int x, int y, int w, int h, Supplier<Component> label, Supplier<Component> tooltip,
                        Supplier<Boolean> highlighted, OnPress onPress) {
         super(x, y, w, h, label.get(), onPress, DEFAULT_NARRATION);
         this.label = label;
+        this.tooltip = tooltip;
         this.highlighted = highlighted;
         if (tooltip != null) {
-            setTooltip(Tooltip.create(tooltip.get()));
+            lastTooltip = tooltip.get();
+            if (lastTooltip != null) {
+                setTooltip(Tooltip.create(lastTooltip));
+            }
         }
     }
 
@@ -32,7 +38,20 @@ public class GolemButton extends Button {
     @Override
     protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partial) {
         setMessage(label.get());
-        boolean hover = isHoveredOrFocused() && active;
+        boolean hoveredOrFocused = isHoveredOrFocused();
+        if (tooltip != null && hoveredOrFocused) {
+            Component t = tooltip.get();
+            if (t == null) {
+                if (lastTooltip != null) {
+                    lastTooltip = null;
+                    setTooltip(null);
+                }
+            } else if (!t.equals(lastTooltip)) {
+                lastTooltip = t;
+                setTooltip(Tooltip.create(t));
+            }
+        }
+        boolean hover = hoveredOrFocused && active;
         int edge = hover ? GolemGui.CYAN : GolemGui.BRASS;
         int fill = !active ? 0xFF2A2018 : hover ? GolemGui.WOOD_LIGHT : GolemGui.WOOD;
         g.fill(getX(), getY(), getX() + width, getY() + height, GolemGui.WOOD_DARK);
