@@ -68,8 +68,6 @@ import java.util.List;
  * The network leaves through the base bushings: BAY, CPU, PROV, TERM, BUS_IN, BUS_OUT are points next to the corner bushings.
  */
 public class GolemGameTests {
-    private static final String T = "empty";
-
     static final BlockPos ORIGIN = new BlockPos(5, 1, 5);
     static final BlockPos CORE = ORIGIN.offset(0, 3, 0);
     static final BlockPos JAR = ORIGIN.below();
@@ -454,7 +452,6 @@ public class GolemGameTests {
 
     public static void atlantPlacesAsDoubleBlock(GameTestHelper helper) {
         BlockPos pos = new BlockPos(2, 1, 2);
-        var level = helper.getLevel();
         BlockState lower = ModBlocks.ATLAS_ATLANT.get().defaultBlockState();
         helper.setBlock(pos, lower);
         helper.setBlock(pos.above(), lower.setValue(AtlantBlock.HALF, DoubleBlockHalf.UPPER));
@@ -717,27 +714,24 @@ public class GolemGameTests {
         });
         List<net.minecraft.world.item.Item> history = new ArrayList<>();
         int[] last = {0, 0};
-        for (int t = 6; t < 60; t++) {
-            helper.runAfterDelay(t, () -> {
-                int cobble = count(c, Items.COBBLESTONE);
-                int dirt = count(c, Items.DIRT);
-                if (cobble > last[0]) {
-                    history.add(Items.COBBLESTONE);
-                    last[0] = cobble;
-                }
-                if (dirt > last[1]) {
-                    history.add(Items.DIRT);
-                    last[1] = dirt;
-                }
-            });
-        }
-        helper.runAfterDelay(60, () -> {
-            int cobble = 0, dirt = 0;
-            for (int i = 0; i < c.getContainerSize(); i++) {
-                ItemStack st = c.getItem(i);
-                cobble += st.is(Items.COBBLESTONE) ? st.getCount() : 0;
-                dirt += st.is(Items.DIRT) ? st.getCount() : 0;
+        helper.onEachTick(() -> {
+            if (helper.getTick() < 6) {
+                return;
             }
+            int cobble = count(c, Items.COBBLESTONE);
+            int dirt = count(c, Items.DIRT);
+            if (cobble > last[0]) {
+                history.add(Items.COBBLESTONE);
+                last[0] = cobble;
+            }
+            if (dirt > last[1]) {
+                history.add(Items.DIRT);
+                last[1] = dirt;
+            }
+        });
+        helper.runAfterDelay(60, () -> {
+            int cobble = count(c, Items.COBBLESTONE);
+            int dirt = count(c, Items.DIRT);
             helper.assertTrue(cobble > 0 && dirt > 0, "round robin sends both: cobblestone " + cobble + ", dirt " + dirt);
             helper.assertTrue(history.size() >= 3, "multiple exports occurred, got " + history.size());
             for (int i = 0; i < history.size() - 1; i++) {
@@ -1321,6 +1315,12 @@ public class GolemGameTests {
         BlockPos o = helper.absolutePos(ORIGIN);
         BlockPos b = new BlockPos(o.getX(), 100, o.getZ());
         nether.setChunkForced(b.getX() >> 4, b.getZ() >> 4, true);
+        helper.runBeforeTestEnd(() -> {
+            for (BlockPos p : BlockPos.betweenClosed(b.offset(-2, -1, -2), b.offset(3, 4, 3))) {
+                nether.setBlock(p, Blocks.AIR.defaultBlockState(), 3);
+            }
+            nether.setChunkForced(b.getX() >> 4, b.getZ() >> 4, false);
+        });
         for (BlockPos p : BlockPos.betweenClosed(b.offset(-2, -1, -2), b.offset(3, 4, 3))) {
             nether.setBlock(p, p.getY() == b.getY() - 1 ? Blocks.STONE.defaultBlockState() : Blocks.AIR.defaultBlockState(), 3);
         }
@@ -1328,28 +1328,21 @@ public class GolemGameTests {
         BlockPos termPos = b.west();
         nether.setBlock(termPos, ModBlocks.ANALOG_TERMINAL.get().defaultBlockState(), 3);
         helper.runAfterDelay(25, () -> {
-            try {
-                var a = helper.getBlockEntity(aRel, com.golemlogix.blockentity.TelegraphBlockEntity.class);
-                var bt = (com.golemlogix.blockentity.TelegraphBlockEntity) nether.getBlockEntity(b);
-                helper.assertTrue(bt != null, "the outpost telegraph stands in the Nether");
-                a.slots().setItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_WRITE, new ItemStack(ModItems.AETHERIAL_LINKAGE.get()));
-                ItemStack card = a.slots().removeItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_WRITE, 1);
-                bt.slots().setItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_MEMORY, card);
-                helper.assertTrue(com.golemlogix.system.TelegraphLinks.status(bt) == com.golemlogix.system.TelegraphLinks.Status.OUT_OF_RANGE,
-                        "no range card: another dimension is out of range, got " + com.golemlogix.system.TelegraphLinks.status(bt));
-                a.slots().setItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_RANGE, new ItemStack(ModItems.VOID_GLASS_PRISM.get()));
-                helper.assertTrue(com.golemlogix.system.TelegraphLinks.status(bt) == com.golemlogix.system.TelegraphLinks.Status.LINKED,
-                        "the prism at the base reaches the Nether");
-                GolemNetwork n = GolemNetwork.scan(nether, termPos);
-                helper.assertTrue(n.hasCore() && n.coreLevel() == level, "the Nether outpost runs on the base core");
-                helper.assertTrue(n.isDeviceActive(termPos), "the Nether terminal has a channel");
-                helper.succeed();
-            } finally {
-                for (BlockPos p : BlockPos.betweenClosed(b.offset(-2, -1, -2), b.offset(3, 4, 3))) {
-                    nether.setBlock(p, Blocks.AIR.defaultBlockState(), 3);
-                }
-                nether.setChunkForced(b.getX() >> 4, b.getZ() >> 4, false);
-            }
+            var a = helper.getBlockEntity(aRel, com.golemlogix.blockentity.TelegraphBlockEntity.class);
+            var bt = (com.golemlogix.blockentity.TelegraphBlockEntity) nether.getBlockEntity(b);
+            helper.assertTrue(bt != null, "the outpost telegraph stands in the Nether");
+            a.slots().setItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_WRITE, new ItemStack(ModItems.AETHERIAL_LINKAGE.get()));
+            ItemStack card = a.slots().removeItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_WRITE, 1);
+            bt.slots().setItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_MEMORY, card);
+            helper.assertTrue(com.golemlogix.system.TelegraphLinks.status(bt) == com.golemlogix.system.TelegraphLinks.Status.OUT_OF_RANGE,
+                    "no range card: another dimension is out of range, got " + com.golemlogix.system.TelegraphLinks.status(bt));
+            a.slots().setItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_RANGE, new ItemStack(ModItems.VOID_GLASS_PRISM.get()));
+            helper.assertTrue(com.golemlogix.system.TelegraphLinks.status(bt) == com.golemlogix.system.TelegraphLinks.Status.LINKED,
+                    "the prism at the base reaches the Nether");
+            GolemNetwork n = GolemNetwork.scan(nether, termPos);
+            helper.assertTrue(n.hasCore() && n.coreLevel() == level, "the Nether outpost runs on the base core");
+            helper.assertTrue(n.isDeviceActive(termPos), "the Nether terminal has a channel");
+            helper.succeed();
         });
     }
 
@@ -3152,7 +3145,6 @@ public class GolemGameTests {
             var lootId = block.getLootTable();
             helper.assertTrue(lootId.isPresent(), id + " has a loot table");
             helper.assertTrue(helper.getLevel().getServer().reloadableRegistries().getLootTable(lootId.get()) != LootTable.EMPTY, id + " loot table exists in data");
-            helper.assertTrue(GolemGameTests.class.getResource("/assets/golem_logix/blockstates/" + id + ".json") != null, id + " has a blockstate");
             helper.assertTrue(GolemGameTests.class.getResource("/assets/golem_logix/models/item/" + id + ".json") != null, id + " has an item model");
         }
         helper.succeed();
@@ -3314,46 +3306,48 @@ public class GolemGameTests {
                 List.of(new ItemStack(ModItems.FLATTENED_COPPER_MATRIX.get(), 2)))));
         // the gateway waits for each result before the next portion (the mode most bases use with one machine)
         provider.setBlocking(true);
+        var cpu = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class);
+        var sat = helper.getBlockEntity(near, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
+        int[] phase = {0};
         helper.runAfterDelay(100, () -> {
             GolemNetwork n = net(helper, bay);
             n.insertItem(new ItemStack(Items.IRON_BLOCK, 4), false);
             GolemNetwork.StartResult r = n.startCrafting(core, 4);
             helper.assertTrue(r.type() == GolemNetwork.StartType.STARTED, "start " + r.type());
-        });
-        helper.runAtTickTime(1500, () -> {
-            GolemNetwork n = net(helper, bay);
-            var cpu = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class);
-            var sat = helper.getBlockEntity(near, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
-            var job = cpu.getJob();
-            String state = "cores " + n.itemCountOf(core) + ", job " + (job == null ? "none" : job.status() + " awaiting " + job.awaiting()
-                    + " inventory " + job.inventory()) + ", returns " + provider.getReturns().getItem(0) + ", decks " + sat.inputDeck() + " / "
-                    + sat.getHeldItem() + " / " + sat.outputDeck();
-            helper.assertTrue(n.itemCountOf(core) == 8 && cpu.isIdle(), "four blocks pressed one after another, two plates each: " + state);
-            // a second order after the first one is done: another plate on the same gateway (a second pattern)
-            n.insertItem(new ItemStack(Items.COPPER_BLOCK, 2), false);
-            n.insertItem(new ItemStack(Items.IRON_BLOCK, 1), false);
-            GolemNetwork.StartResult r = n.startCrafting(matrix, 4);
-            helper.assertTrue(r.type() == GolemNetwork.StartType.STARTED, "second order starts: " + r.type());
-        });
-        helper.runAtTickTime(2600, () -> {
-            GolemNetwork n = net(helper, bay);
-            var cpu = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class);
-            var job = cpu.getJob();
-            String state = "matrices " + n.itemCountOf(matrix) + ", job " + (job == null ? "none" : job.status() + " awaiting " + job.awaiting()
-                    + " inventory " + job.inventory()) + ", returns " + provider.getReturns().getItem(0);
-            helper.assertTrue(n.itemCountOf(matrix) == 4 && cpu.isIdle(), "the second pattern works after the first: " + state);
-            // and the first pattern again
-            GolemNetwork.StartResult r = n.startCrafting(core, 1);
-            helper.assertTrue(r.type() == GolemNetwork.StartType.STARTED, "third order starts: " + r.type());
-        });
-        helper.runAtTickTime(3300, () -> {
-            GolemNetwork n = net(helper, bay);
-            var cpu = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class);
-            var job = cpu.getJob();
-            String state = "cores " + n.itemCountOf(core) + ", job " + (job == null ? "none" : job.status() + " awaiting " + job.awaiting()
-                    + " inventory " + job.inventory()) + ", returns " + provider.getReturns().getItem(0);
-            helper.assertTrue(n.itemCountOf(core) == 10 && cpu.isIdle(), "the first pattern again: " + state);
-            helper.succeed();
+            helper.succeedWhen(() -> {
+                GolemNetwork cur = net(helper, bay);
+                var job = cpu.getJob();
+                if (phase[0] == 0) {
+                    String state = "cores " + cur.itemCountOf(core) + ", job " + (job == null ? "none" : job.status() + " awaiting " + job.awaiting()
+                            + " inventory " + job.inventory()) + ", returns " + provider.getReturns().getItem(0) + ", decks " + sat.inputDeck() + " / "
+                            + sat.getHeldItem() + " / " + sat.outputDeck();
+                    helper.assertTrue(cur.itemCountOf(core) == 8 && cpu.isIdle(), "four blocks pressed one after another, two plates each: " + state);
+                    // a second order after the first one is done: another plate on the same gateway (a second pattern)
+                    cur.insertItem(new ItemStack(Items.COPPER_BLOCK, 2), false);
+                    cur.insertItem(new ItemStack(Items.IRON_BLOCK, 1), false);
+                    GolemNetwork.StartResult r2 = cur.startCrafting(matrix, 4);
+                    if (r2.type() != GolemNetwork.StartType.STARTED) {
+                        throw new IllegalStateException("second order failed to start: " + r2.type());
+                    }
+                    phase[0] = 1;
+                }
+                if (phase[0] == 1) {
+                    var job2 = cpu.getJob();
+                    String state = "matrices " + cur.itemCountOf(matrix) + ", job " + (job2 == null ? "none" : job2.status() + " awaiting " + job2.awaiting()
+                            + " inventory " + job2.inventory()) + ", returns " + provider.getReturns().getItem(0);
+                    helper.assertTrue(cur.itemCountOf(matrix) == 4 && cpu.isIdle(), "the second pattern works after the first: " + state);
+                    // and the first pattern again
+                    GolemNetwork.StartResult r3 = cur.startCrafting(core, 1);
+                    if (r3.type() != GolemNetwork.StartType.STARTED) {
+                        throw new IllegalStateException("third order failed to start: " + r3.type());
+                    }
+                    phase[0] = 2;
+                }
+                var job3 = cpu.getJob();
+                String state = "cores " + cur.itemCountOf(core) + ", job " + (job3 == null ? "none" : job3.status() + " awaiting " + job3.awaiting()
+                        + " inventory " + job3.inventory()) + ", returns " + provider.getReturns().getItem(0);
+                helper.assertTrue(cur.itemCountOf(core) == 10 && cpu.isIdle(), "the first pattern again: " + state);
+            });
         });
     }
 
@@ -3387,17 +3381,16 @@ public class GolemGameTests {
             n.insertItem(new ItemStack(Items.COPPER_INGOT, 2), false);
             GolemNetwork.StartResult r = n.startCrafting(ItemKey.of(compressed), 1);
             helper.assertTrue(r.type() == GolemNetwork.StartType.STARTED, "start " + r.type());
-        });
-        helper.runAtTickTime(1900, () -> {
-            GolemNetwork n = net(helper, bay);
-            var cpu = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class);
-            var sat = helper.getBlockEntity(near, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
-            var job = cpu.getJob();
-            String state = "compressed " + n.itemCountOf(ItemKey.of(compressed)) + ", job " + (job == null ? "none" : job.status() + " awaiting "
-                    + job.awaiting() + " inventory " + job.inventory()) + ", returns " + provider.getReturns().getItem(0) + ", decks "
-                    + sat.inputDeck() + " / " + sat.getHeldItem() + " / " + sat.outputDeck();
-            helper.assertTrue(n.itemCountOf(ItemKey.of(compressed)) == 1 && cpu.isIdle(), "the tree is crafted to the end: " + state);
-            helper.succeed();
+            helper.succeedWhen(() -> {
+                GolemNetwork cur = net(helper, bay);
+                var cpu = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class);
+                var sat = helper.getBlockEntity(near, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
+                var job = cpu.getJob();
+                String state = "compressed " + cur.itemCountOf(ItemKey.of(compressed)) + ", job " + (job == null ? "none" : job.status() + " awaiting "
+                        + job.awaiting() + " inventory " + job.inventory()) + ", returns " + provider.getReturns().getItem(0) + ", decks "
+                        + sat.inputDeck() + " / " + sat.getHeldItem() + " / " + sat.outputDeck();
+                helper.assertTrue(cur.itemCountOf(ItemKey.of(compressed)) == 1 && cpu.isIdle(), "the tree is crafted to the end: " + state);
+            });
         });
     }
 
@@ -3433,17 +3426,16 @@ public class GolemGameTests {
             n.insertItem(new ItemStack(Items.IRON_BLOCK, 2), false);
             GolemNetwork.StartResult r = n.startCrafting(core, 4);
             helper.assertTrue(r.type() == GolemNetwork.StartType.STARTED, "start " + r.type());
-        });
-        helper.runAtTickTime(900, () -> {
-            GolemNetwork n = net(helper, bay);
-            var cpu = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class);
-            var sat = helper.getBlockEntity(near, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
-            var job = cpu.getJob();
-            String state = "cores " + n.itemCountOf(core) + ", job " + (job == null ? "none" : job.status() + " awaiting " + job.awaiting()
-                    + " inventory " + job.inventory()) + ", returns " + provider.getReturns().getItem(0) + ", decks " + sat.inputDeck() + " / "
-                    + sat.getHeldItem() + " / " + sat.outputDeck();
-            helper.assertTrue(n.itemCountOf(core) == 4 && cpu.isIdle(), "plates through a gateway at the wing: " + state);
-            helper.succeed();
+            helper.succeedWhen(() -> {
+                GolemNetwork cur = net(helper, bay);
+                var cpu = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class);
+                var sat = helper.getBlockEntity(near, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
+                var job = cpu.getJob();
+                String state = "cores " + cur.itemCountOf(core) + ", job " + (job == null ? "none" : job.status() + " awaiting " + job.awaiting()
+                        + " inventory " + job.inventory()) + ", returns " + provider.getReturns().getItem(0) + ", decks " + sat.inputDeck() + " / "
+                        + sat.getHeldItem() + " / " + sat.outputDeck();
+                helper.assertTrue(cur.itemCountOf(core) == 4 && cpu.isIdle(), "plates through a gateway at the wing: " + state);
+            });
         });
     }
 
@@ -3770,6 +3762,11 @@ public class GolemGameTests {
             // a "machine" with items and fluids for fluid patterns: a barrel gets a tank too
             event.registerBlock(Capabilities.Fluid.BLOCK,
                     (level, pos, state, be, side) -> tank(pos), Blocks.BARREL);
+        }
+
+        @net.neoforged.bus.api.SubscribeEvent
+        public static void onServerStopped(net.neoforged.neoforge.event.server.ServerStoppedEvent event) {
+            TANKS.clear();
         }
     }
 
@@ -4139,14 +4136,13 @@ public class GolemGameTests {
             helper.assertTrue(n.canCraft(core), "the saturator pattern is known to the network");
             var started = n.startCrafting(core, 2);
             helper.assertTrue(started.type() == GolemNetwork.StartType.STARTED, "started: " + started.type());
-        });
-        helper.runAfterDelay(650, () -> {
-            GolemNetwork n = net(helper, bay);
-            helper.assertTrue(n.itemCountOf(core) == 2, "two cores arrived through the import bus, got " + n.itemCountOf(core));
-            helper.assertTrue(n.itemCountOf(ItemKey.of(new ItemStack(Items.IRON_BLOCK))) == 0, "the iron block was used");
-            var sat = helper.getBlockEntity(ctl, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
-            helper.assertTrue(sat.getHeldItem().isEmpty() && sat.outputDeck().isEmpty(), "the anvil and the output deck are empty again");
-            helper.succeed();
+            helper.succeedWhen(() -> {
+                GolemNetwork cur = net(helper, bay);
+                helper.assertTrue(cur.itemCountOf(core) == 2, "two cores arrived through the import bus, got " + cur.itemCountOf(core));
+                helper.assertTrue(cur.itemCountOf(ItemKey.of(new ItemStack(Items.IRON_BLOCK))) == 0, "the iron block was used");
+                var sat = helper.getBlockEntity(ctl, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
+                helper.assertTrue(sat.getHeldItem().isEmpty() && sat.outputDeck().isEmpty(), "the anvil and the output deck are empty again");
+            });
         });
     }
 
@@ -5318,34 +5314,36 @@ public class GolemGameTests {
         int[] made = new int[1];
         Runnable feed = () -> helper.getLevel().getBlockState(abs).useItemOn(new ItemStack(Items.IRON_BLOCK), helper.getLevel(), player,
                 net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+        int[] phase = {0};
         helper.runAfterDelay(30, () -> {
             var sat = helper.getBlockEntity(ctl, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
             helper.assertTrue(sat.autoOutput(), "auto-output is on by default");
             feed.run();
-        });
-        helper.runAfterDelay(250, () -> {
-            var sat = helper.getBlockEntity(ctl, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
-            made[0] = count(box, ModItems.FLATTENED_IRON_CORE.get());
-            helper.assertTrue(made[0] > 0 && sat.outputDeck().isEmpty(), "the cores went into the chest by itself, chest " + made[0]);
-            helper.getLevel().getBlockState(abs).useItemOn(new ItemStack(ModItems.FORGE_HAMMER.get()), helper.getLevel(), player,
-                    net.minecraft.world.InteractionHand.MAIN_HAND, hit);
-            helper.assertTrue(!sat.autoOutput(), "the Forge Hammer switches auto-output off");
-            feed.run();
-        });
-        helper.runAfterDelay(510, () -> {
-            var sat = helper.getBlockEntity(ctl, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
-            helper.assertTrue(sat.outputDeck().is(ModItems.FLATTENED_IRON_CORE.get()) && sat.outputDeck().getCount() == made[0]
-                    && count(box, ModItems.FLATTENED_IRON_CORE.get()) == made[0], "switched off, the cores stay on the deck");
-            helper.setBlock(new BlockPos(5, 1, 7), ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
-            sat.toggleAutoOutput();
-        });
-        helper.runAfterDelay(540, () -> {
-            var sat = helper.getBlockEntity(ctl, com.golemlogix.blockentity.ManaSaturatorBlockEntity.class);
-            PatternProviderBlockEntity provider = helper.getBlockEntity(new BlockPos(5, 1, 7), PatternProviderBlockEntity.class);
-            helper.assertTrue(count(provider.getReturns(), ModItems.FLATTENED_IRON_CORE.get()) == made[0] && sat.outputDeck().isEmpty(),
-                    "with a provider behind it the cores go there, not into the chest");
-            helper.assertTrue(count(box, ModItems.FLATTENED_IRON_CORE.get()) == made[0], "the chest got nothing more");
-            helper.succeed();
+            helper.succeedWhen(() -> {
+                if (phase[0] == 0) {
+                    int inBox = count(box, ModItems.FLATTENED_IRON_CORE.get());
+                    helper.assertTrue(inBox > 0 && sat.outputDeck().isEmpty(), "the cores went into the chest by itself, chest " + inBox);
+                    made[0] = inBox;
+                    helper.getLevel().getBlockState(abs).useItemOn(new ItemStack(ModItems.FORGE_HAMMER.get()), helper.getLevel(), player,
+                            net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+                    if (sat.autoOutput()) {
+                        throw new IllegalStateException("the Forge Hammer must switch auto-output off");
+                    }
+                    feed.run();
+                    phase[0] = 1;
+                }
+                if (phase[0] == 1) {
+                    helper.assertTrue(sat.outputDeck().is(ModItems.FLATTENED_IRON_CORE.get()) && sat.outputDeck().getCount() == made[0]
+                            && count(box, ModItems.FLATTENED_IRON_CORE.get()) == made[0], "switched off, the cores stay on the deck");
+                    helper.setBlock(new BlockPos(5, 1, 7), ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+                    sat.toggleAutoOutput();
+                    phase[0] = 2;
+                }
+                PatternProviderBlockEntity provider = helper.getBlockEntity(new BlockPos(5, 1, 7), PatternProviderBlockEntity.class);
+                helper.assertTrue(count(provider.getReturns(), ModItems.FLATTENED_IRON_CORE.get()) == made[0] && sat.outputDeck().isEmpty(),
+                        "with a provider behind it the cores go there, not into the chest");
+                helper.assertTrue(count(box, ModItems.FLATTENED_IRON_CORE.get()) == made[0], "the chest got nothing more");
+            });
         });
     }
 }

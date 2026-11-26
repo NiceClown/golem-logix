@@ -373,27 +373,30 @@ public final class GolemGameTestsExtra {
                 .getOrThrow(Enchantments.EFFICIENCY);
         efficient.enchant(eff, 5);
         be.getTool().setItem(0, efficient);
+        be.wake();
 
-        // Efficiency V breaks iron block in ~5 ticks, well before tick 12
-        helper.runAfterDelay(12, () -> {
+        int[] phase = {0};
+        long[] startTick = {helper.getTick()};
+        long[] effTicks = {0};
+        helper.succeedWhen(() -> {
+            if (phase[0] == 0) {
+                helper.assertBlockPresent(Blocks.AIR, front);
+                effTicks[0] = helper.getTick() - startTick[0];
+                helper.assertTrue(net(helper, bay).itemCountOf(ItemKey.of(new ItemStack(Items.IRON_BLOCK))) >= 1,
+                        "iron block mined with Efficiency V");
+                // Reset with a plain un-enchanted diamond pickaxe and measure its mining duration
+                helper.setBlock(front, Blocks.IRON_BLOCK);
+                be.getTool().setItem(0, new ItemStack(Items.DIAMOND_PICKAXE));
+                be.wake();
+                startTick[0] = helper.getTick();
+                phase[0] = 1;
+            }
             helper.assertBlockPresent(Blocks.AIR, front);
-            helper.assertTrue(net(helper, bay).itemCountOf(ItemKey.of(new ItemStack(Items.IRON_BLOCK))) >= 1,
-                    "iron block mined quickly with Efficiency V");
-
-            // Now reset with normal un-enchanted pickaxe
-            helper.setBlock(front, Blocks.IRON_BLOCK);
-            be.getTool().setItem(0, new ItemStack(Items.DIAMOND_PICKAXE));
-        });
-
-        // 10 ticks later (at tick 22), normal pickaxe has not finished yet (needs ~19 ticks)
-        helper.runAfterDelay(22, () -> {
-            helper.assertBlockPresent(Blocks.IRON_BLOCK, front);
-        });
-
-        // By tick 35 (23 ticks later), normal pickaxe has finished
-        helper.runAfterDelay(35, () -> {
-            helper.assertBlockPresent(Blocks.AIR, front);
-            helper.succeed();
+            long plainTicks = helper.getTick() - startTick[0];
+            helper.assertTrue(net(helper, bay).itemCountOf(ItemKey.of(new ItemStack(Items.IRON_BLOCK))) >= 2,
+                    "iron block mined with plain pickaxe");
+            helper.assertTrue(effTicks[0] < plainTicks,
+                    "Efficiency V must mine faster than plain pickaxe (eff=" + effTicks[0] + "t, plain=" + plainTicks + "t)");
         });
     }
 
@@ -708,7 +711,7 @@ public final class GolemGameTestsExtra {
         });
     }
 
-    /** Attack strikes apply no knockback (entity delta movement stays 0 on horizontal axes). */
+    /** Attack strikes apply no knockback (entity delta movement and horizontal position stay unchanged on hit). */
     public static void annihilationBusAttackNoKnockback(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
         BlockPos bus = BUS_OUT, front = BUS_OUT.north();
@@ -721,11 +724,20 @@ public final class GolemGameTestsExtra {
         helper.setBlock(front, Blocks.AIR);
 
         var ironGolem = helper.spawnWithNoFreeWill(EntityType.IRON_GOLEM, front);
+        double startX = ironGolem.getX();
+        double startZ = ironGolem.getZ();
+        float startHp = ironGolem.getHealth();
 
-        helper.runAfterDelay(30, () -> {
+        // Fail immediately if any tick imparts horizontal velocity or displacement
+        helper.onEachTick(() -> {
             helper.assertTrue(ironGolem.getDeltaMovement().x == 0 && ironGolem.getDeltaMovement().z == 0,
-                    "no horizontal knockback on attacked mob");
-            helper.succeed();
+                    "no horizontal knockback velocity on attacked mob: " + ironGolem.getDeltaMovement());
+            helper.assertTrue(Math.abs(ironGolem.getX() - startX) < 1e-4 && Math.abs(ironGolem.getZ() - startZ) < 1e-4,
+                    "attacked mob must not move horizontally");
+        });
+        helper.succeedWhen(() -> {
+            helper.assertTrue(be.lastUse() > 0 && ironGolem.getHealth() < startHp,
+                    "bus must actually strike the iron golem (hp=" + ironGolem.getHealth() + "/" + startHp + ")");
         });
     }
 
@@ -856,17 +868,18 @@ public final class GolemGameTestsExtra {
         var be = helper.getBlockEntity(bus, AnnihilationBusBlockEntity.class);
         be.getTool().setItem(0, new ItemStack(Items.DIAMOND_PICKAXE));
 
-        helper.runAfterDelay(20, () -> {
-            // Break the bus block while mining obsidian
-            helper.setBlock(bus, Blocks.AIR);
-        });
-
-        helper.runAfterDelay(40, () -> {
-            // Tool must have dropped in the world
+        boolean[] broken = {false};
+        helper.succeedWhen(() -> {
+            if (!broken[0]) {
+                helper.assertTrue(be.swinging(), "bus started mining obsidian");
+                // Break the bus block while actively mid-mining obsidian
+                helper.setBlock(bus, Blocks.AIR);
+                broken[0] = true;
+            }
+            helper.assertBlockPresent(Blocks.OBSIDIAN, front);
             boolean pickDropped = helper.getEntities(EntityType.ITEM).stream()
                     .anyMatch(e -> e.getItem().is(Items.DIAMOND_PICKAXE));
             helper.assertTrue(pickDropped, "pickaxe dropped when bus was broken");
-            helper.succeed();
         });
     }
 
@@ -1584,7 +1597,8 @@ public final class GolemGameTestsExtra {
         put(helper, b2.offset(0, 1, 0), ModBlocks.ATLAS_CONDUIT.get());
         put(helper, b2.offset(0, 2, 0), ModBlocks.ATLAS_CONDUIT.get());
         put(helper, b2.offset(0, 3, 0), ModBlocks.ATLAS_CORE.get());
-        BlockPos bay2 = b2.west();
+        // The cabinet is 2x2 (extends east and up): place east of b2 so it touches the bushing without overwriting it or touching Net 1
+        BlockPos bay2 = b2.east();
         putBay(helper, bay2);
         CopperDriveBayBlockEntity drive2 = helper.getBlockEntity(bay2, CopperDriveBayBlockEntity.class);
         drive2.getContainer().setItem(0, new ItemStack(ModItems.COPPER_DISK_1K.get()));
@@ -1599,11 +1613,19 @@ public final class GolemGameTestsExtra {
             GolemNetwork net1 = net(helper, bay1);
             GolemNetwork net2 = net(helper, bay2);
 
+            helper.assertTrue(net1.hasCore() && net1.isOnline(), "network 1 has core and is online");
+            helper.assertTrue(net2.hasCore() && net2.isOnline(), "network 2 has its own core and is online through diode");
+            helper.assertTrue(!net1.corePos().equals(net2.corePos()), "networks have distinct cores");
+
             ItemKey diamond = ItemKey.of(new ItemStack(Items.DIAMOND));
+            ItemKey emerald = ItemKey.of(new ItemStack(Items.EMERALD));
             net1.insertItem(new ItemStack(Items.DIAMOND, 25), false);
+            net2.insertItem(new ItemStack(Items.EMERALD, 12), false);
 
             helper.assertTrue(net1.itemCountOf(diamond) == 25, "network 1 has 25 diamonds");
             helper.assertTrue(net2.itemCountOf(diamond) == 0, "network 2 has 0 diamonds (storage isolated across diode)");
+            helper.assertTrue(net2.itemCountOf(emerald) == 12, "network 2 stores its own emeralds");
+            helper.assertTrue(net1.itemCountOf(emerald) == 0, "network 1 has 0 emeralds (storage isolated across diode)");
 
             ItemKey planks = ItemKey.of(new ItemStack(Items.OAK_PLANKS));
             helper.assertTrue(net1.canCraft(planks), "network 1 can craft planks");
@@ -1862,13 +1884,13 @@ public final class GolemGameTestsExtra {
                 new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "creative-op"));
         creativeOp.setGameMode(net.minecraft.world.level.GameType.CREATIVE);
         net.minecraft.world.level.GameType.CREATIVE.updatePlayerAbilities(creativeOp.getAbilities());
-        helper.getLevel().getServer().getPlayerList().op(
-                creativeOp.nameAndId(),
-                java.util.Optional.of(net.minecraft.server.permissions.LevelBasedPermissionSet.ADMIN),
-                java.util.Optional.empty()
-        );
 
         helper.runAfterDelay(10, () -> {
+            helper.getLevel().getServer().getPlayerList().op(
+                    creativeOp.nameAndId(),
+                    java.util.Optional.of(net.minecraft.server.permissions.LevelBasedPermissionSet.ADMIN),
+                    java.util.Optional.empty()
+            );
             try {
                 BlockPos absBay = helper.absolutePos(bay);
                 var state = helper.getLevel().getBlockState(absBay);
@@ -2179,16 +2201,17 @@ public final class GolemGameTestsExtra {
     /** A pipe loop around the array: the network takes the loop in one pass, the devices on it are active, nothing hangs. */
     public static void pipeLoopJoinsOnce(GameTestHelper helper) {
         BlockPos bay = baseNetwork(helper);
-        // out of the corner bushing (4,1,4), around the array, back into the corner bushing (4,1,6)
-        for (BlockPos p : new BlockPos[]{new BlockPos(3, 1, 4), new BlockPos(3, 1, 5), new BlockPos(3, 1, 6), new BlockPos(4, 1, 6)}) {
+        // out of the corner bushing (4,1,4), around the west side of the array, back into the corner bushing (4,1,6)
+        for (BlockPos p : new BlockPos[]{new BlockPos(3, 1, 4), new BlockPos(3, 1, 5), new BlockPos(3, 1, 6)}) {
             put(helper, p, ModBlocks.BASIC_SNOW_PIPE.get());
         }
         put(helper, new BlockPos(2, 1, 5), ModBlocks.ANALOG_TERMINAL.get());
         helper.runAfterDelay(20, () -> {
             GolemNetwork n = net(helper, GolemGameTests.ORIGIN);
+            helper.assertTrue(n.structure().valid(), "the Atlas Array stays intact");
             helper.assertTrue(n.isOnline(), "the loop did not break the network");
-            helper.assertTrue(n.deviceCount() >= 1, "the terminal on the loop is in the network: " + n.deviceCount());
-            helper.assertTrue(n.isDeviceActive(helper.absolutePos(new BlockPos(2, 1, 5))), "and it has a channel");
+            helper.assertTrue(n.deviceCount() >= 2, "the bay and terminal on the loop are in the network: " + n.deviceCount());
+            helper.assertTrue(n.isDeviceActive(helper.absolutePos(new BlockPos(2, 1, 5))), "and the terminal has a channel");
             helper.succeed();
         });
     }
@@ -2486,18 +2509,21 @@ public final class GolemGameTestsExtra {
         helper.runAfterDelay(50, () -> helper.assertTrue(inMachine.getAsInt() == 1,
                 "it still waits for that portion after the reload (in the machine: " + inMachine.getAsInt() + ")"));
         // From now on the machine works
-        for (int t = 51; t <= 350; t++) {
-            helper.runAfterDelay(t, () -> {
-                for (int i = 0; i < machine.getContainerSize(); i++) {
-                    ItemStack in = machine.getItem(i);
-                    if (in.is(Items.RAW_IRON)) {
-                        int count = in.getCount();
-                        machine.setItem(i, ItemStack.EMPTY);
-                        net(helper, bay).insertFromMachine(new ItemStack(Items.IRON_INGOT, count));
-                    }
+        boolean[] machineRunning = {false};
+        helper.runAfterDelay(51, () -> machineRunning[0] = true);
+        helper.onEachTick(() -> {
+            if (!machineRunning[0]) {
+                return;
+            }
+            for (int i = 0; i < machine.getContainerSize(); i++) {
+                ItemStack in = machine.getItem(i);
+                if (in.is(Items.RAW_IRON)) {
+                    int count = in.getCount();
+                    machine.setItem(i, ItemStack.EMPTY);
+                    net(helper, bay).insertFromMachine(new ItemStack(Items.IRON_INGOT, count));
                 }
-            });
-        }
+            }
+        });
         helper.runAfterDelay(52, () -> helper.succeedWhen(() -> {
             GolemNetwork n = net(helper, bay);
             helper.assertTrue(n.itemCountOf(block) == 1, "the block was made (got " + n.itemCountOf(block) + ")");
@@ -3244,6 +3270,7 @@ public final class GolemGameTestsExtra {
         ItemKey plank = ItemKey.of(new ItemStack(Items.OAK_PLANKS));
         ItemKey log = ItemKey.of(new ItemStack(Items.OAK_LOG));
 
+        boolean[] started = {false};
         helper.runAfterDelay(5, () -> {
             GolemNetwork n = net(helper, bay);
             n.insertItem(new ItemStack(Items.OAK_LOG, 100_000), false);
@@ -3258,16 +3285,18 @@ public final class GolemGameTestsExtra {
             helper.assertTrue(job.status() == CraftingJob.Status.RUNNING, "and the job goes on: " + job.status());
             job.tick(n, 1_000_000);
             helper.assertTrue(job.doneExecutions() > first, "past the limit a job still does a step");
+            started[0] = true;
         });
         // the limit is shared with all the other jobs on the server: this takes a part of it, to leave them theirs
-        for (int t = 6; t <= 1400; t++) {
-            helper.runAfterDelay(t, () -> {
-                CraftingJob job = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class).getJob();
-                if (job != null) {
-                    job.tick(net(helper, bay), 1000);
-                }
-            });
-        }
+        helper.onEachTick(() -> {
+            if (!started[0]) {
+                return;
+            }
+            CraftingJob job = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class).getJob();
+            if (job != null) {
+                job.tick(net(helper, bay), 1000);
+            }
+        });
         helper.runAfterDelay(7, () -> helper.succeedWhen(() -> {
             GolemNetwork n = net(helper, bay);
             helper.assertTrue(helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class).isIdle(), "the calculator finishes");
@@ -3452,40 +3481,43 @@ public final class GolemGameTestsExtra {
         ChestBlockEntity machine = helper.getBlockEntity(PROV.east(), ChestBlockEntity.class);
         ItemKey ingot = ItemKey.of(new ItemStack(Items.IRON_INGOT));
 
+        boolean[] started = {false};
         helper.runAfterDelay(5, () -> {
             GolemNetwork n = net(helper, bay);
             n.insertItem(new ItemStack(Items.RAW_IRON, 1500), false);
             helper.assertTrue(n.startCrafting(ingot, 1500).type() == GolemNetwork.StartType.STARTED, "the order started");
+            started[0] = true;
         });
         boolean[] reloaded = new boolean[1];
-        for (int t = 6; t <= 1700; t++) {
-            helper.runAfterDelay(t, () -> {
-                CraftingJob job = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class).getJob();
-                if (job != null && job.remainingExecutions() > 0) {
-                    job.tick(net(helper, bay), 1500);
-                    return;
+        helper.onEachTick(() -> {
+            if (!started[0]) {
+                return;
+            }
+            CraftingJob job = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class).getJob();
+            if (job != null && job.remainingExecutions() > 0) {
+                job.tick(net(helper, bay), 1500);
+                return;
+            }
+            if (job == null) {
+                return;
+            }
+            // all are out: first the save, then the machine hands everything back
+            if (!reloaded[0]) {
+                reloaded[0] = true;
+                helper.assertTrue(job.awaitingTotal() == 1500, "1500 portions are out, got " + job.awaitingTotal());
+                int chars = job.save(helper.getLevel().registryAccess()).toString().length();
+                helper.assertTrue(chars < 3000, "the job's save stays small (" + chars + " characters)");
+                reload(helper, CPU, CryoCalculatorBlockEntity.class);
+                return;
+            }
+            for (int i = 0; i < machine.getContainerSize(); i++) {
+                int count = machine.getItem(i).getCount();
+                if (count > 0) {
+                    machine.setItem(i, ItemStack.EMPTY);
+                    net(helper, bay).insertFromMachine(new ItemStack(Items.IRON_INGOT, count));
                 }
-                if (job == null) {
-                    return;
-                }
-                // all are out: first the save, then the machine hands everything back
-                if (!reloaded[0]) {
-                    reloaded[0] = true;
-                    helper.assertTrue(job.awaitingTotal() == 1500, "1500 portions are out, got " + job.awaitingTotal());
-                    int chars = job.save(helper.getLevel().registryAccess()).toString().length();
-                    helper.assertTrue(chars < 3000, "the job's save stays small (" + chars + " characters)");
-                    reload(helper, CPU, CryoCalculatorBlockEntity.class);
-                    return;
-                }
-                for (int i = 0; i < machine.getContainerSize(); i++) {
-                    int count = machine.getItem(i).getCount();
-                    if (count > 0) {
-                        machine.setItem(i, ItemStack.EMPTY);
-                        net(helper, bay).insertFromMachine(new ItemStack(Items.IRON_INGOT, count));
-                    }
-                }
-            });
-        }
+            }
+        });
         helper.runAfterDelay(7, () -> helper.succeedWhen(() -> {
             helper.assertTrue(reloaded[0], "the portions went out and the job was reloaded");
             helper.assertTrue(helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class).isIdle(), "the job finishes");
@@ -3641,50 +3673,55 @@ public final class GolemGameTestsExtra {
         req.getFilters().setItem(0, reqFilter);
 
         boolean[] sawCrafting = new boolean[1];
-        for (int t = 1; t <= 280; t++) {
-            helper.runAfterDelay(t, () -> {
-                if (req.getSlotStatus(0) == StockRequesterBlockEntity.STATUS_CRAFTING) {
-                    sawCrafting[0] = true;
-                }
-                GolemNetwork n = net(helper, bay);
-                for (int i = 0; i < machine.getContainerSize(); i++) {
-                    ItemStack in = machine.getItem(i);
-                    if (in.is(Items.ICE)) {
-                        int count = in.getCount();
-                        machine.setItem(i, ItemStack.EMPTY);
-                        n.insertFluidFromMachine(new FluidStack(Fluids.WATER, 1000 * count), null);
-                    }
-                }
-            });
-        }
-
-        // It reaches the target, for exactly the ice that takes, and then it stops
-        helper.runAfterDelay(100, () -> {
+        helper.onEachTick(() -> {
+            if (req.getSlotStatus(0) == StockRequesterBlockEntity.STATUS_CRAFTING) {
+                sawCrafting[0] = true;
+            }
             GolemNetwork n = net(helper, bay);
-            helper.assertTrue(sawCrafting[0], "the ledger reported that it was crafting");
-            long water = n.fluidCountOf(Fluids.WATER);
-            helper.assertTrue(water == 2000, "water reaches the target of 2000 mB exactly (got " + water + ")");
-            helper.assertTrue(n.itemCountOf(iceKey) == 8, "two ice were used (left " + n.itemCountOf(iceKey) + ")");
+            for (int i = 0; i < machine.getContainerSize(); i++) {
+                ItemStack in = machine.getItem(i);
+                if (in.is(Items.ICE)) {
+                    int count = in.getCount();
+                    machine.setItem(i, ItemStack.EMPTY);
+                    n.insertFluidFromMachine(new FluidStack(Fluids.WATER, 1000 * count), null);
+                }
+            }
         });
-        helper.runAfterDelay(140, () -> {
+
+        // It reaches the target, for exactly the ice that takes, holds steady, and refills after extraction
+        int[] phase = {0};
+        long[] settledTick = {0};
+        helper.succeedWhen(() -> {
             GolemNetwork n = net(helper, bay);
             CryoCalculatorBlockEntity cpu = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class);
-            helper.assertTrue(cpu.isIdle(), "no further job once the target is reached");
-            helper.assertTrue(req.getSlotStatus(0) == StockRequesterBlockEntity.STATUS_OK, "status is OK once the target is reached");
-            helper.assertTrue(n.fluidCountOf(Fluids.WATER) == 2000, "no further water was ordered");
-            helper.assertTrue(n.itemCountOf(iceKey) == 8, "no further ice was used");
+            if (phase[0] == 0) {
+                helper.assertTrue(sawCrafting[0], "the ledger reported that it was crafting");
+                long water = n.fluidCountOf(Fluids.WATER);
+                helper.assertTrue(water == 2000 && cpu.isIdle() && req.getSlotStatus(0) == StockRequesterBlockEntity.STATUS_OK,
+                        "water reaches target 2000 mB and settles (water=" + water + ", status=" + req.getSlotStatus(0) + ")");
+                helper.assertTrue(n.itemCountOf(iceKey) == 8, "two ice were used (left " + n.itemCountOf(iceKey) + ")");
+                settledTick[0] = helper.getTick();
+                phase[0] = 1;
+            }
+            if (phase[0] == 1) {
+                // Wait 20 ticks (two requester cycles) to confirm it does not over-order once at target
+                helper.assertTrue(helper.getTick() - settledTick[0] >= 20, "waiting to confirm requester stays idle at target");
+                helper.assertTrue(cpu.isIdle(), "no further job once the target is reached");
+                helper.assertTrue(req.getSlotStatus(0) == StockRequesterBlockEntity.STATUS_OK, "status stays OK at target");
+                helper.assertTrue(n.fluidCountOf(Fluids.WATER) == 2000, "no further water was ordered");
+                helper.assertTrue(n.itemCountOf(iceKey) == 8, "no further ice was used");
 
-            // Use some water: it keeps the stock, so it orders just what is missing
-            FluidStack taken = n.extractFluid(new FluidStack(Fluids.WATER, 1000), 1000, false);
-            helper.assertTrue(taken.getAmount() == 1000, "took 1000 mB out of the network");
-        });
-        helper.runAfterDelay(260, () -> {
-            GolemNetwork n = net(helper, bay);
+                // Use some water: it keeps the stock, so it orders just what is missing
+                FluidStack taken = n.extractFluid(new FluidStack(Fluids.WATER, 1000), 1000, false);
+                if (taken.getAmount() != 1000) {
+                    throw new IllegalStateException("expected to extract 1000 mB, got " + taken.getAmount());
+                }
+                phase[0] = 2;
+            }
             long water = n.fluidCountOf(Fluids.WATER);
-            helper.assertTrue(water == 2000, "the used water was made again (got " + water + ")");
+            helper.assertTrue(water == 2000 && cpu.isIdle(),
+                    "the used water was made again and calculator is idle (water=" + water + ", idle=" + cpu.isIdle() + ")");
             helper.assertTrue(n.itemCountOf(iceKey) == 7, "one more ice was used (left " + n.itemCountOf(iceKey) + ")");
-            helper.assertTrue(helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class).isIdle(), "and the calculator is idle again");
-            helper.succeed();
         });
     }
 
@@ -3928,6 +3965,12 @@ public final class GolemGameTestsExtra {
         BlockPos o = helper.absolutePos(ORIGIN);
         BlockPos b = new BlockPos(o.getX(), 100, o.getZ());
         nether.setChunkForced(b.getX() >> 4, b.getZ() >> 4, true);
+        helper.runBeforeTestEnd(() -> {
+            for (BlockPos p : BlockPos.betweenClosed(b.offset(-2, -1, -2), b.offset(3, 4, 3))) {
+                nether.setBlock(p, Blocks.AIR.defaultBlockState(), 3);
+            }
+            nether.setChunkForced(b.getX() >> 4, b.getZ() >> 4, false);
+        });
         for (BlockPos p : BlockPos.betweenClosed(b.offset(-2, -1, -2), b.offset(3, 4, 3))) {
             nether.setBlock(p, p.getY() == b.getY() - 1 ? Blocks.STONE.defaultBlockState() : Blocks.AIR.defaultBlockState(), 3);
         }
@@ -3936,37 +3979,30 @@ public final class GolemGameTestsExtra {
         nether.setBlock(termPos, ModBlocks.ANALOG_TERMINAL.get().defaultBlockState(), 3);
 
         helper.runAfterDelay(25, () -> {
-            try {
-                var a = helper.getBlockEntity(aRel, com.golemlogix.blockentity.TelegraphBlockEntity.class);
-                var bt = (com.golemlogix.blockentity.TelegraphBlockEntity) nether.getBlockEntity(b);
-                helper.assertTrue(bt != null, "outpost telegraph placed in Nether");
-                a.slots().setItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_WRITE, new ItemStack(ModItems.AETHERIAL_LINKAGE.get()));
-                ItemStack card = a.slots().removeItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_WRITE, 1);
-                bt.slots().setItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_MEMORY, card);
-                a.slots().setItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_RANGE, new ItemStack(ModItems.VOID_GLASS_PRISM.get()));
-                helper.assertTrue(com.golemlogix.system.TelegraphLinks.status(bt) == com.golemlogix.system.TelegraphLinks.Status.LINKED,
-                        "cross-dimension telegraph linked");
+            var a = helper.getBlockEntity(aRel, com.golemlogix.blockentity.TelegraphBlockEntity.class);
+            var bt = (com.golemlogix.blockentity.TelegraphBlockEntity) nether.getBlockEntity(b);
+            helper.assertTrue(bt != null, "outpost telegraph placed in Nether");
+            a.slots().setItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_WRITE, new ItemStack(ModItems.AETHERIAL_LINKAGE.get()));
+            ItemStack card = a.slots().removeItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_WRITE, 1);
+            bt.slots().setItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_MEMORY, card);
+            a.slots().setItem(com.golemlogix.blockentity.TelegraphBlockEntity.SLOT_RANGE, new ItemStack(ModItems.VOID_GLASS_PRISM.get()));
+            helper.assertTrue(com.golemlogix.system.TelegraphLinks.status(bt) == com.golemlogix.system.TelegraphLinks.Status.LINKED,
+                    "cross-dimension telegraph linked");
 
-                GolemNetwork owNet = GolemNetwork.refresh(level, helper.absolutePos(bay));
-                GolemNetwork netherNet = GolemNetwork.refresh(nether, termPos);
-                helper.assertTrue(owNet.hasCore() && netherNet.hasCore() && netherNet.corePos().equals(owNet.corePos()),
-                        "both sides share the same core");
-                long epBefore = netherNet.networkEpoch();
-                helper.assertTrue(epBefore == owNet.networkEpoch(), "initial cross-dim epochs match: " + epBefore + " vs " + owNet.networkEpoch());
+            GolemNetwork owNet = GolemNetwork.refresh(level, helper.absolutePos(bay));
+            GolemNetwork netherNet = GolemNetwork.refresh(nether, termPos);
+            helper.assertTrue(owNet.hasCore() && netherNet.hasCore() && netherNet.corePos().equals(owNet.corePos()),
+                    "both sides share the same core");
+            long epBefore = netherNet.networkEpoch();
+            helper.assertTrue(epBefore == owNet.networkEpoch(), "initial cross-dim epochs match: " + epBefore + " vs " + owNet.networkEpoch());
 
-                owNet.insertItem(new ItemStack(Items.COBBLESTONE, 1), false);
-                long epAfterOw = owNet.networkEpoch();
-                long epAfterNetherCached = netherNet.networkEpoch();
-                helper.assertTrue(epAfterOw > epBefore, "Overworld epoch bumped on insert");
-                helper.assertTrue(epAfterNetherCached == epAfterOw,
-                        "Nether cached network immediately sees bumped shared epoch: " + epAfterNetherCached + " vs " + epAfterOw);
-                helper.succeed();
-            } finally {
-                for (BlockPos p : BlockPos.betweenClosed(b.offset(-2, -1, -2), b.offset(3, 4, 3))) {
-                    nether.setBlock(p, Blocks.AIR.defaultBlockState(), 3);
-                }
-                nether.setChunkForced(b.getX() >> 4, b.getZ() >> 4, false);
-            }
+            owNet.insertItem(new ItemStack(Items.COBBLESTONE, 1), false);
+            long epAfterOw = owNet.networkEpoch();
+            long epAfterNetherCached = netherNet.networkEpoch();
+            helper.assertTrue(epAfterOw > epBefore, "Overworld epoch bumped on insert");
+            helper.assertTrue(epAfterNetherCached == epAfterOw,
+                    "Nether cached network immediately sees bumped shared epoch: " + epAfterNetherCached + " vs " + epAfterOw);
+            helper.succeed();
         });
     }
 
@@ -4129,15 +4165,15 @@ public final class GolemGameTestsExtra {
         be.getUpgrades().setItem(UpgradeSpec.ANNIHILATION_BUS.slotOf(UpgradeType.TEMPER), new ItemStack(ModItems.PLASMA_TEMPER.get()));
 
         var sheep = helper.spawnWithNoFreeWill(EntityType.SHEEP, front);
+        sheep.setColor(net.minecraft.world.item.DyeColor.WHITE);
         ItemKey wool = ItemKey.of(new ItemStack(Items.WHITE_WOOL));
-        helper.runAfterDelay(80, () -> {
+        helper.succeedWhen(() -> {
             helper.assertTrue(!sheep.isAlive(), "tempered golem killed the sheep");
             GolemNetwork n = net(helper, bay);
             helper.assertTrue(n.itemCountOf(wool) >= 1, "guaranteed sheep wool went into storage, got " + n.itemCountOf(wool));
             ItemStack kept = be.getTool().getItem(0);
             helper.assertTrue(!kept.isEnchanted() && kept.getDamageValue() == 0,
                     "kept sword stays unenchanted and undamaged: " + kept);
-            helper.succeed();
         });
     }
 }
