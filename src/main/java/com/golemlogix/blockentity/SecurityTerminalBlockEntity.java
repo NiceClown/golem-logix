@@ -5,12 +5,8 @@ import com.golemlogix.items.IdentityPunchCardItem;
 import com.golemlogix.security.SecurityPermission;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.world.Container;
-import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -127,6 +123,7 @@ public class SecurityTerminalBlockEntity extends BlockEntity {
     }
 
     protected void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
+        ownerId = null;
         tag.getString("OwnerId").ifPresent(str -> {
             try {
                 ownerId = UUID.fromString(str);

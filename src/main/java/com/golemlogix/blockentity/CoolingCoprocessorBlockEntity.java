@@ -18,13 +18,15 @@ public class CoolingCoprocessorBlockEntity extends BlockEntity {
     public float phase = 0f;
     public float phasePrev = 0f;
 
+    private static final Direction[] DIRECTIONS = Direction.values();
+
     public CoolingCoprocessorBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.COOLING_COPROCESSOR.get(), pos, state);
     }
 
     public static void clientTick(Level level, BlockPos pos, BlockState state, CoolingCoprocessorBlockEntity be) {
         boolean driven = false;
-        for (Direction d : Direction.values()) {
+        for (Direction d : DIRECTIONS) {
             // the neighbouring calculator's ACTIVE state or its visual work window
             BlockPos np = pos.relative(d);
             BlockState ns = level.getBlockState(np);

@@ -38,7 +38,7 @@ public class CopperTankBlockEntity extends BlockEntity {
     }
 
     public FluidStack fluid() {
-        return tank.copyToList().getFirst();
+        return com.golemlogix.system.Transfers.getFluid(tank, 0);
     }
 
     public int capacity() {
@@ -47,8 +47,8 @@ public class CopperTankBlockEntity extends BlockEntity {
 
     /** The comparator: 1 for any fluid, 15 when full. */
     public int signal() {
-        int amount = fluid().getAmount();
-        return amount <= 0 ? 0 : 1 + (int) (14L * amount / capacity());
+        int amount = tank.getAmountAsInt(0);
+        return amount <= 0 ? 0 : Math.min(15, 1 + (int) (14L * amount / capacity()));
     }
 
     private final class Tank extends FluidStacksResourceHandler {
@@ -105,7 +105,7 @@ public class CopperTankBlockEntity extends BlockEntity {
     @Override
     protected void applyImplicitComponents(DataComponentGetter components) {
         super.applyImplicitComponents(components);
-        tank.setCapacity(components.getOrDefault(ModDataComponents.TANK_CAPACITY.get(), CAPACITY));
+        tank.setCapacity(Math.max(1, components.getOrDefault(ModDataComponents.TANK_CAPACITY.get(), CAPACITY)));
         FluidStack fluid = components.getOrDefault(ModDataComponents.TANK_FLUID.get(), SimpleFluidContent.EMPTY).copy();
         tank.set(0, FluidResource.of(fluid), Math.min(fluid.getAmount(), tank.capacity()));
     }

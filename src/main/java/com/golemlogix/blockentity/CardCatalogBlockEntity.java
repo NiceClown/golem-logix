@@ -20,7 +20,6 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -55,7 +54,9 @@ public class CardCatalogBlockEntity extends BlockEntity {
             super.setChanged();
             patterns = null;
             summaryDirty = true;
-            com.golemlogix.system.GolemNetwork.patternsChanged();
+            if (level == null || !level.isClientSide()) {
+                com.golemlogix.system.GolemNetwork.patternsChanged();
+            }
         }
     };
     private final OwnedContainer providers = new OwnedContainer(1, this, s -> s.is(ModBlocks.PATTERN_PROVIDER.get().asItem())) {
@@ -74,7 +75,9 @@ public class CardCatalogBlockEntity extends BlockEntity {
             super.setChanged();
             patterns = null;
             summaryDirty = true;
-            com.golemlogix.system.GolemNetwork.patternsChanged();
+            if (level == null || !level.isClientSide()) {
+                com.golemlogix.system.GolemNetwork.patternsChanged();
+            }
         }
     };
     private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.REDSTONE_ONLY, this);
@@ -185,6 +188,9 @@ public class CardCatalogBlockEntity extends BlockEntity {
 
     /** Oxidation of the golem on this side (0 = left, 1 = right), taken from the statue it was built from. */
     public int golemOxidation(int side) {
+        if (side < 0 || side > 1) {
+            return 0;
+        }
         if (level != null && level.isClientSide()) {
             return clientGolems[side];
         }
@@ -225,15 +231,18 @@ public class CardCatalogBlockEntity extends BlockEntity {
 
     public void startOpen() {
         viewers++;
-        if (viewers == 1 && level != null) {
+        if (viewers == 1 && level != null && !level.isClientSide()) {
             level.playSound(null, worldPosition, SoundEvents.CHISELED_BOOKSHELF_PICKUP, SoundSource.BLOCKS, 0.8f, 0.9f);
         }
         signalViewers();
     }
 
     public void stopOpen() {
-        viewers = Math.max(0, viewers - 1);
-        if (viewers == 0 && level != null) {
+        if (viewers == 0) {
+            return;
+        }
+        viewers--;
+        if (viewers == 0 && level != null && !level.isClientSide()) {
             level.playSound(null, worldPosition, SoundEvents.CHISELED_BOOKSHELF_INSERT, SoundSource.BLOCKS, 0.8f, 0.9f);
         }
         signalViewers();
@@ -255,7 +264,7 @@ public class CardCatalogBlockEntity extends BlockEntity {
     }
 
     public void dropContents() {
-        if (level == null) {
+        if (level == null || level.isClientSide()) {
             return;
         }
         double x = worldPosition.getX() + 0.5, y = worldPosition.getY() + 0.5, z = worldPosition.getZ() + 0.5;
@@ -268,10 +277,19 @@ public class CardCatalogBlockEntity extends BlockEntity {
         Containers.dropContents(level, worldPosition, upgrades);
     }
 
+    private static boolean allCellsLoaded(Level level, BlockPos pos, Direction facing) {
+        for (int i = 0; i < CatalogStructure.CELLS.length; i++) {
+            if (!level.isLoaded(CatalogStructure.cellPos(pos, facing, i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public static void serverTick(Level level, BlockPos pos, BlockState state, CardCatalogBlockEntity be) {
         long time = level.getGameTime();
         Direction facing = state.getValue(CardCatalogBlock.FACING);
-        if ((time + pos.asLong()) % 20 == 0) {
+        if ((time + pos.asLong()) % 20 == 0 && allCellsLoaded(level, pos, facing)) {
             boolean valid = CatalogStructure.valid(level, pos, facing);
             if (be.formed() && !valid) {
                 CatalogStructure.disassemble(level, pos, facing, null);
@@ -289,7 +307,7 @@ public class CardCatalogBlockEntity extends BlockEntity {
         if (enabled != be.enabled) {
             be.enabled = enabled;
             be.patterns = null;
-            GolemNetwork.clearCache();
+            GolemNetwork.patternsChanged();
         }
         if (be.summaryDirty && time - be.lastSync >= 10) {
             be.summaryDirty = false;
@@ -315,7 +333,7 @@ public class CardCatalogBlockEntity extends BlockEntity {
         be.drawers = Math.max(0f, Math.min(1f, be.drawers + (be.clientOpen ? 0.08f : -0.06f)));
         be.drumsPrev = be.drums;
         // the drums click to the next letter every second and a half; while the window is open they flip quickly
-        be.drums += be.clientOpen ? 0.12f : ((level.getGameTime() + pos.asLong()) % 30 < 6 ? 0.05f : 0f);
+        be.drums += be.clientOpen ? 0.12f : (Math.floorMod(level.getGameTime() + pos.asLong(), 30) < 6 ? 0.05f : 0f);
         // steam from the roof pipe: in puffs while the window is open, now and then when idle
         if (be.formed() && level.getGameTime() % (be.clientOpen ? 4 : 23) == 0) {
             var r = level.getRandom();

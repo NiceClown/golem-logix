@@ -15,6 +15,8 @@ import net.minecraft.world.level.block.state.BlockState;
  * bound to the network it stands next to, so they no longer need charging. It does not power the network or fill Ars Nouveau jars.
  */
 public class EternalFrostResonatorBlockEntity extends BlockEntity {
+    private static final Direction[] DIRECTIONS = Direction.values();
+
     public EternalFrostResonatorBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.ETERNAL_FROST_RESONATOR.get(), pos, state);
     }
@@ -24,7 +26,7 @@ public class EternalFrostResonatorBlockEntity extends BlockEntity {
         if (level == null) {
             return false;
         }
-        for (Direction d : Direction.values()) {
+        for (Direction d : DIRECTIONS) {
             BlockPos p = worldPosition.relative(d);
             if (level.isLoaded(p) && level.getBlockState(p).getBlock() instanceof com.golemlogix.system.GolemNode
                     && GolemNetwork.get(level, p).hasCore()) {
@@ -42,9 +44,10 @@ public class EternalFrostResonatorBlockEntity extends BlockEntity {
         long t = level.getGameTime();
         if ((t + pos.asLong()) % 20 == 0) {
             boolean linked = false;
-            for (Direction d : Direction.values()) {
+            for (Direction d : DIRECTIONS) {
                 if (level.getBlockState(pos.relative(d)).getBlock() instanceof com.golemlogix.system.GolemNode) {
                     linked = true;
+                    break;
                 }
             }
             be.clientLinked = linked;
