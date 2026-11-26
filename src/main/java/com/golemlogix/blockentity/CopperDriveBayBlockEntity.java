@@ -4,6 +4,7 @@ import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.items.MagneticDiskItem;
 import com.golemlogix.menu.Priority;
 import com.golemlogix.system.DiskStorage;
+import com.golemlogix.system.GolemNetwork;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
@@ -40,6 +41,9 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
         public void setChanged() {
             super.setChanged();
             refreshVisuals();
+            if (level != null && !level.isClientSide()) {
+                GolemNetwork.clearCache();
+            }
         }
 
         @Override
@@ -93,6 +97,9 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
     public void setPriority(int value) {
         this.priority = Mth.clamp(value, -Priority.MAX, Priority.MAX);
         setChanged();
+        if (level != null && !level.isClientSide()) {
+            GolemNetwork.clearCache();
+        }
     }
 
     public ContainerData priorityData() {
