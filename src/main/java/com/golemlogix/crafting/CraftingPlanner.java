@@ -1,12 +1,10 @@
 package com.golemlogix.crafting;
 
 import com.golemlogix.data.PatternData;
-import com.golemlogix.system.CryoSource;
 import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.Ingredients;
 import com.golemlogix.system.ItemKey;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.fluids.FluidStack;
 
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -68,7 +66,9 @@ public final class CraftingPlanner {
     }
 
     private final GolemNetwork net;
+    /** Lazily populated remaining stock per touched key; full item list is loaded only if a fuzzy input scans alternatives. */
     private final Map<ItemKey, Long> stock = new HashMap<>();
+    private boolean allItemsLoaded;
     private final Map<ItemKey, List<Byproduct>> surplus = new HashMap<>();
     private final Map<ItemKey, Long> fromStorage = new LinkedHashMap<>();
     private final Map<ItemKey, Long> missing = new LinkedHashMap<>();
@@ -80,16 +80,16 @@ public final class CraftingPlanner {
 
     private CraftingPlanner(GolemNetwork net) {
         this.net = net;
-        for (Map.Entry<ItemKey, Long> e : net.listItems().entrySet()) {
-            stock.put(e.getKey(), e.getValue());
+    }
+
+    /** Loads all network items into stock (preserving any already-queried/depleted keys) when a fuzzy input needs alternatives. */
+    private void ensureAllItemsLoaded() {
+        if (allItemsLoaded) {
+            return;
         }
-        // Fluids count in mB under fluid keys; Liquid Cryo-Source is what the network's Source can make
-        for (FluidStack f : net.listFluids()) {
-            stock.merge(Ingredients.fluidKey(f), (long) f.getAmount(), Long::sum);
-        }
-        long cryo = net.cryoSourceAvailable();
-        if (cryo > 0) {
-            stock.put(Ingredients.fluidKey(CryoSource.stack(1)), cryo);
+        allItemsLoaded = true;
+        for (Map.Entry<ItemKey, Long> e : net.listItemsForPlanning().entrySet()) {
+            stock.putIfAbsent(e.getKey(), e.getValue());
         }
     }
 
@@ -359,6 +359,7 @@ public final class CraftingPlanner {
                 }
             }
             if (rest > 0) {
+                ensureAllItemsLoaded();
                 for (ItemKey k : alternatives(stock, alt, in.key())) {
                     rest -= takeStock(k, rest);
                     if (rest <= 0) {
@@ -454,14 +455,25 @@ public final class CraftingPlanner {
         return sum < 0 ? Long.MAX_VALUE : sum;
     }
 
-    /** Takes up to want of key from network stock and records it in fromStorage. Returns how many were taken. */
+    /** Takes up to want of key from network stock (loaded lazily via net.countOf) and records it in fromStorage. Returns how many were taken. */
     private long takeStock(ItemKey key, long want) {
         if (want <= 0) {
             return 0;
         }
-        long n = Math.min(stock.getOrDefault(key, 0L), want);
+        Long haveObj = stock.get(key);
+        long have;
+        if (haveObj == null) {
+            if (allItemsLoaded && !Ingredients.isFluid(key)) {
+                return 0;
+            }
+            have = net.countOf(key);
+            stock.put(key, have);
+        } else {
+            have = haveObj;
+        }
+        long n = Math.min(have, want);
         if (n > 0) {
-            stock.merge(key, -n, Long::sum);
+            stock.put(key, have - n);
             fromStorage.merge(key, n, Long::sum);
         }
         return Math.max(0, n);
