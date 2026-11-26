@@ -1,6 +1,8 @@
 package com.golemlogix.client;
 
 import com.golemlogix.GolemLogixMod;
+import com.golemlogix.client.render.Baked;
+import com.golemlogix.client.render.PixelMesh;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -18,14 +20,18 @@ import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.level.block.Blocks;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix3f;
+import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
+import java.util.Arrays;
 import java.util.function.Consumer;
 
 import static com.golemlogix.client.render.PixelMesh.PIXEL;
@@ -43,12 +49,22 @@ public final class CopperGolemPuppet {
     private static final ResourceLocation[] TEXTURES = new ResourceLocation[4];
     private static final ResourceLocation[] EYES = new ResourceLocation[4];
     private static final Quaternionf ROT_X_180 = Axis.XP.rotationDegrees(180f);
-    /** Scratch math objects on the render thread to avoid per-golem allocations every frame. */
+    /** Scratch math objects on the render thread to avoid per-golem allocations and PoseStack mixin overhead every frame. */
     private static final Vector3f SCRATCH_F = new Vector3f();
     private static final Vector3f SCRATCH_U = new Vector3f();
     private static final Vector3f SCRATCH_X = new Vector3f();
     private static final Matrix3f SCRATCH_MAT = new Matrix3f();
     private static final Quaternionf SCRATCH_QUAT = new Quaternionf();
+    private static final Quaternionf SCRATCH_PART_QUAT = new Quaternionf();
+    private static final Matrix4f BASE_MAT = new Matrix4f();
+    private static final Matrix3f BASE_NORM = new Matrix3f();
+    private static final Matrix4f MODEL_MAT = new Matrix4f();
+    private static final Matrix3f MODEL_NORM = new Matrix3f();
+    private static final Matrix4f BODY_MAT = new Matrix4f();
+    private static final Matrix3f BODY_NORM = new Matrix3f();
+    private static final Matrix4f PART_MAT = new Matrix4f();
+    private static final Matrix3f PART_NORM = new Matrix3f();
+    private static final PoseStack BARREL_POSE = new PoseStack();
 
     static {
         String[] prefix = {"", "exposed_", "weathered_", "oxidized_"};
@@ -60,6 +76,9 @@ public final class CopperGolemPuppet {
 
     private static EntityModelSet bakedFrom;
     private static ModelPart root, bodyPart, headPart, rightArmPart, leftArmPart, rightLegPart, leftLegPart;
+    private static PartMesh bodyMesh, headMesh, eyesMesh, rightArmMesh, leftArmMesh, rightLegMesh, leftLegMesh;
+    private static TextureAtlasSprite barrelAtlasMark;
+    private static Baked carriedBarrelMesh;
 
     private CopperGolemPuppet() {
     }
@@ -93,7 +112,7 @@ public final class CopperGolemPuppet {
         return LayerDefinition.create(mesh, 64, 64);
     }
 
-    private static ModelPart model() {
+    private static void ensureBaked() {
         EntityModelSet current = Minecraft.getInstance().getEntityModels();
         if (root == null || bakedFrom != current) {
             bakedFrom = current;
@@ -104,15 +123,43 @@ public final class CopperGolemPuppet {
             leftArmPart = bodyPart.getChild("left_arm");
             rightLegPart = root.getChild("right_leg");
             leftLegPart = root.getChild("left_leg");
+
+            bodyMesh = capturePart(bodyPart, false, headPart, rightArmPart, leftArmPart);
+            headMesh = capturePart(headPart, false);
+            eyesMesh = capturePart(headPart, true);
+            rightArmMesh = capturePart(rightArmPart, false);
+            leftArmMesh = capturePart(leftArmPart, false);
+            rightLegMesh = capturePart(rightLegPart, false);
+            leftLegMesh = capturePart(leftLegPart, false);
         }
-        return root;
     }
 
-    /** Resets the cached baked model on resource reload. */
+    private static Baked carriedBarrel() {
+        TextureAtlasSprite mark = PixelMesh.sprite(MachineParts.BRASS);
+        if (carriedBarrelMesh == null || barrelAtlasMark != mark) {
+            barrelAtlasMark = mark;
+            carriedBarrelMesh = Baked.bake((vc, p) -> {
+                p.scale(0.34f, 0.34f, 0.34f);
+                p.translate(-0.5f, -0.5f, -0.5f);
+                Baked.drawBlock(p.last(), vc, Blocks.BARREL.defaultBlockState());
+            });
+        }
+        return carriedBarrelMesh;
+    }
+
+    /** Resets the cached baked model and carried-barrel mesh on resource reload. */
     public static void invalidate() {
         bakedFrom = null;
         root = null;
         bodyPart = headPart = rightArmPart = leftArmPart = rightLegPart = leftLegPart = null;
+        bodyMesh = headMesh = eyesMesh = rightArmMesh = leftArmMesh = rightLegMesh = leftLegMesh = null;
+        barrelAtlasMark = null;
+        carriedBarrelMesh = null;
+    }
+
+    /** Alias for {@link #invalidate()}. */
+    public static void clearCache() {
+        invalidate();
     }
 
     /** Golem pose: {@code phase} = step phase (radians), {@code walking}, {@code carrying}, {@code bow} = forward lean (0..1). */
@@ -157,31 +204,120 @@ public final class CopperGolemPuppet {
     public static void render(PoseStack pose, MultiBufferSource buffers, int light, Vector3f pos, Vector3f forward, Vector3f up,
                               float scale, Anim anim, int variant, @Nullable Consumer<PoseStack> held,
                               @Nullable Arms arms, @Nullable Consumer<PoseStack> onHead) {
+        ensureBaked();
         Quaternionf q = buildBasisRotation(forward, up);
 
-        pose.pushPose();
-        pose.translate(pos.x, pos.y, pos.z);
-        pose.mulPose(q);
-        pose.scale(scale, scale, scale);
+        PoseStack.Pose caller = pose.last();
+        BASE_MAT.set(caller.pose()).translate(pos.x, pos.y, pos.z).rotate(q).scale(scale);
+        BASE_NORM.set(caller.normal()).rotate(q);
 
-        if (anim.carrying) {
-            renderChestCarry(pose, buffers, light, anim, held);
+        if (anim.carrying && held == null) {
+            float lift = Mth.sin(anim.phase * 2f) * 0.01f;
+            PoseStack.Pose bp = BARREL_POSE.last();
+            bp.pose().set(BASE_MAT).translate(0f, 0.64f - anim.bow * 0.14f + lift, 0.38f + anim.bow * 0.06f);
+            bp.normal().set(BASE_NORM);
+            carriedBarrel().draw(buffers, RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS), bp, light, 0);
         }
 
-        // convert from upright frame (+Y up, +Z forward) to ModelPart frame (Y down, face -Z)
-        pose.mulPose(ROT_X_180);
+        // Compute joint angles (matching ModelPart conventions)
+        float swing = anim.walking ? Mth.sin(anim.phase) * 0.9f : 0f;
+        float rightLegX = swing;
+        float leftLegX = -swing;
+        float rightArmX, rightArmZ, leftArmX, leftArmZ;
+        if (anim.carrying) {
+            float raise = -1.25f + Mth.sin(anim.phase * 2f) * 0.03f;
+            rightArmX = raise;
+            leftArmX = raise;
+            rightArmZ = 0.14f;
+            leftArmZ = -0.14f;
+        } else {
+            rightArmX = -swing * 0.7f;
+            leftArmX = swing * 0.7f;
+            rightArmZ = 0f;
+            leftArmZ = 0f;
+        }
+        float bodyY = -5f - (anim.walking ? Math.abs(Mth.sin(anim.phase)) * 0.6f : 0f);
+        float bodyX = anim.bow * 0.35f;
+        float headX = anim.bow * 0.5f + (anim.walking ? 0f : Mth.sin(anim.phase * 0.7f) * 0.05f);
+        float headYaw = 0f;
+        if (arms != null) {
+            rightArmX = arms.rightX();
+            rightArmZ = arms.rightZ();
+            leftArmX = arms.leftX();
+            leftArmZ = arms.leftZ();
+            headYaw = arms.headYaw();
+        }
 
-        ModelPart m = model();
-        applyPose(anim, arms);
+        // Convert from upright frame (+Y up, +Z forward) to ModelPart frame (+Y down, face -Z) without PoseStack.pushPose
+        MODEL_MAT.set(BASE_MAT).rotateX(Mth.PI);
+        MODEL_NORM.set(BASE_NORM).rotateX(Mth.PI);
 
         int v = Mth.clamp(variant, 0, 3);
         VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(TEXTURES[v]));
-        m.render(pose, vc, light, OverlayTexture.NO_OVERLAY);
-        VertexConsumer eyes = buffers.getBuffer(RenderType.eyes(EYES[v]));
-        m.render(pose, eyes, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
 
-        renderAttachments(pose, arms, onHead);
-        pose.popPose();
+        // Legs (children of root)
+        PART_MAT.set(MODEL_MAT).translate(0f, -5f * PIXEL, 0f).rotateX(rightLegX);
+        PART_NORM.set(MODEL_NORM).rotateX(rightLegX);
+        rightLegMesh.emit(vc, PART_MAT, PART_NORM, light);
+
+        PART_MAT.set(MODEL_MAT).translate(0f, -5f * PIXEL, 0f).rotateX(leftLegX);
+        PART_NORM.set(MODEL_NORM).rotateX(leftLegX);
+        leftLegMesh.emit(vc, PART_MAT, PART_NORM, light);
+
+        // Body (child of root)
+        BODY_MAT.set(MODEL_MAT).translate(0f, bodyY * PIXEL, 0f).rotateX(bodyX);
+        BODY_NORM.set(MODEL_NORM).rotateX(bodyX);
+        bodyMesh.emit(vc, BODY_MAT, BODY_NORM, light);
+
+        // Arms (children of body)
+        SCRATCH_PART_QUAT.rotationZYX(rightArmZ, 0f, rightArmX);
+        PART_MAT.set(BODY_MAT).translate(-4f * PIXEL, -6f * PIXEL, 0f).rotate(SCRATCH_PART_QUAT);
+        PART_NORM.set(BODY_NORM).rotate(SCRATCH_PART_QUAT);
+        rightArmMesh.emit(vc, PART_MAT, PART_NORM, light);
+
+        SCRATCH_PART_QUAT.rotationZYX(leftArmZ, 0f, leftArmX);
+        PART_MAT.set(BODY_MAT).translate(4f * PIXEL, -6f * PIXEL, 0f).rotate(SCRATCH_PART_QUAT);
+        PART_NORM.set(BODY_NORM).rotate(SCRATCH_PART_QUAT);
+        leftArmMesh.emit(vc, PART_MAT, PART_NORM, light);
+
+        // Head (child of body) + single-quad glowing eyes reuse the exact same head matrices
+        SCRATCH_PART_QUAT.rotationZYX(0f, headYaw, headX);
+        PART_MAT.set(BODY_MAT).translate(0f, -6f * PIXEL, 0f).rotate(SCRATCH_PART_QUAT);
+        PART_NORM.set(BODY_NORM).rotate(SCRATCH_PART_QUAT);
+        headMesh.emit(vc, PART_MAT, PART_NORM, light);
+
+        VertexConsumer eyes = buffers.getBuffer(RenderType.eyes(EYES[v]));
+        eyesMesh.emit(eyes, PART_MAT, PART_NORM, LightTexture.FULL_BRIGHT);
+
+        boolean hasHeldCallback = anim.carrying && held != null;
+        boolean hasAttachmentCallbacks = onHead != null
+                || (arms != null && (arms.heldRight() != null || arms.heldLeft() != null));
+        if (hasHeldCallback || hasAttachmentCallbacks) {
+            pose.pushPose();
+            pose.translate(pos.x, pos.y, pos.z);
+            pose.mulPose(q);
+            pose.scale(scale, scale, scale);
+            if (hasHeldCallback) {
+                float lift = Mth.sin(anim.phase * 2f) * 0.01f;
+                pose.pushPose();
+                pose.translate(0f, 0.64f - anim.bow * 0.14f + lift, 0.38f + anim.bow * 0.06f);
+                held.accept(pose);
+                pose.popPose();
+            }
+            if (hasAttachmentCallbacks) {
+                bodyPart.y = bodyY;
+                bodyPart.xRot = bodyX;
+                headPart.xRot = headX;
+                headPart.yRot = headYaw;
+                rightArmPart.xRot = rightArmX;
+                rightArmPart.zRot = rightArmZ;
+                leftArmPart.xRot = leftArmX;
+                leftArmPart.zRot = leftArmZ;
+                pose.mulPose(ROT_X_180);
+                renderAttachments(pose, arms, onHead);
+            }
+            pose.popPose();
+        }
     }
 
     /** Orthonormal basis quaternion aligning local +Z to {@code forward} and +Y to orthogonalized {@code up}. */
@@ -193,49 +329,24 @@ public final class CopperGolemPuppet {
         return SCRATCH_QUAT.setFromNormalized(SCRATCH_MAT.set(x.x, x.y, x.z, u.x, u.y, u.z, f.x, f.y, f.z));
     }
 
-    private static void renderChestCarry(PoseStack pose, MultiBufferSource buffers, int light, Anim anim,
-                                         @Nullable Consumer<PoseStack> held) {
-        float lift = Mth.sin(anim.phase * 2f) * 0.01f;
-        pose.pushPose();
-        pose.translate(0f, 0.64f - anim.bow * 0.14f + lift, 0.38f + anim.bow * 0.06f);
-        if (held != null) {
-            held.accept(pose);
-        } else {
-            pose.scale(0.34f, 0.34f, 0.34f);
-            pose.translate(-0.5, -0.5, -0.5);
-            Minecraft.getInstance().getBlockRenderer().renderSingleBlock(Blocks.BARREL.defaultBlockState(), pose, buffers, light,
-                    OverlayTexture.NO_OVERLAY);
+    private static PartMesh capturePart(ModelPart part, boolean filterEyes, ModelPart... childrenToHide) {
+        for (ModelPart c : childrenToHide) {
+            c.visible = false;
         }
-        pose.popPose();
-    }
-
-    private static void applyPose(Anim anim, @Nullable Arms arms) {
-        float swing = anim.walking ? Mth.sin(anim.phase) * 0.9f : 0f;
-        rightLegPart.xRot = swing;
-        leftLegPart.xRot = -swing;
-        if (anim.carrying) {
-            float raise = -1.25f + Mth.sin(anim.phase * 2f) * 0.03f;
-            rightArmPart.xRot = raise;
-            leftArmPart.xRot = raise;
-            rightArmPart.zRot = 0.14f;
-            leftArmPart.zRot = -0.14f;
-        } else {
-            rightArmPart.xRot = -swing * 0.7f;
-            leftArmPart.xRot = swing * 0.7f;
-            rightArmPart.zRot = 0f;
-            leftArmPart.zRot = 0f;
+        part.resetPose();
+        part.x = 0f;
+        part.y = 0f;
+        part.z = 0f;
+        part.xRot = 0f;
+        part.yRot = 0f;
+        part.zRot = 0f;
+        CaptureConsumer cap = new CaptureConsumer();
+        part.render(new PoseStack(), cap, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+        part.resetPose();
+        for (ModelPart c : childrenToHide) {
+            c.visible = true;
         }
-        bodyPart.y = -5f - (anim.walking ? Math.abs(Mth.sin(anim.phase)) * 0.6f : 0f);
-        bodyPart.xRot = anim.bow * 0.35f;
-        headPart.xRot = anim.bow * 0.5f + (anim.walking ? 0f : Mth.sin(anim.phase * 0.7f) * 0.05f);
-        headPart.yRot = 0f;
-        if (arms != null) {
-            rightArmPart.xRot = arms.rightX();
-            rightArmPart.zRot = arms.rightZ();
-            leftArmPart.xRot = arms.leftX();
-            leftArmPart.zRot = arms.leftZ();
-            headPart.yRot = arms.headYaw();
-        }
+        return cap.toMesh(filterEyes);
     }
 
     private static void renderAttachments(PoseStack pose, @Nullable Arms arms, @Nullable Consumer<PoseStack> onHead) {
@@ -263,6 +374,151 @@ public final class CopperGolemPuppet {
                 arms.heldLeft().accept(pose);
                 pose.popPose();
             }
+        }
+    }
+
+    /** Pre-baked rigid ModelPart vertices (stride 8: x, y, z, u, v, nx, ny, nz). */
+    private static final class PartMesh {
+        private final float[] data;
+        private final int vertexCount;
+
+        PartMesh(float[] data, int vertexCount) {
+            this.data = data;
+            this.vertexCount = vertexCount;
+        }
+
+        void emit(VertexConsumer vc, Matrix4f m, Matrix3f nm, int light) {
+            float m00 = m.m00(), m01 = m.m01(), m02 = m.m02();
+            float m10 = m.m10(), m11 = m.m11(), m12 = m.m12();
+            float m20 = m.m20(), m21 = m.m21(), m22 = m.m22();
+            float m30 = m.m30(), m31 = m.m31(), m32 = m.m32();
+            float n00 = nm.m00(), n01 = nm.m01(), n02 = nm.m02();
+            float n10 = nm.m10(), n11 = nm.m11(), n12 = nm.m12();
+            float n20 = nm.m20(), n21 = nm.m21(), n22 = nm.m22();
+            float[] d = this.data;
+            int total = this.vertexCount;
+            int ov = OverlayTexture.NO_OVERLAY;
+            float tnx = 0f, tny = 1f, tnz = 0f;
+            for (int v = 0, b = 0; v < total; v++, b += 8) {
+                if ((v & 3) == 0) {
+                    float nx = d[b + 5], ny = d[b + 6], nz = d[b + 7];
+                    tnx = n00 * nx + n10 * ny + n20 * nz;
+                    tny = n01 * nx + n11 * ny + n21 * nz;
+                    tnz = n02 * nx + n12 * ny + n22 * nz;
+                    float lenSq = tnx * tnx + tny * tny + tnz * tnz;
+                    if (Math.abs(lenSq - 1f) > 1e-3f && lenSq > 1e-8f) {
+                        float inv = Mth.invSqrt(lenSq);
+                        tnx *= inv;
+                        tny *= inv;
+                        tnz *= inv;
+                    }
+                }
+                float x = d[b], y = d[b + 1], z = d[b + 2];
+                vc.addVertex(
+                                m00 * x + m10 * y + m20 * z + m30,
+                                m01 * x + m11 * y + m21 * z + m31,
+                                m02 * x + m12 * y + m22 * z + m32)
+                        .setColor(-1).setUv(d[b + 3], d[b + 4]).setOverlay(ov).setLight(light).setNormal(tnx, tny, tnz);
+            }
+        }
+    }
+
+    private static final class CaptureConsumer implements VertexConsumer {
+        private float[] buf = new float[8 * 128];
+        private int count;
+
+        @Override
+        public VertexConsumer addVertex(float x, float y, float z) {
+            int b = count++ * 8;
+            if (b + 8 > buf.length) {
+                buf = Arrays.copyOf(buf, buf.length * 2);
+            }
+            buf[b] = x;
+            buf[b + 1] = y;
+            buf[b + 2] = z;
+            return this;
+        }
+
+        @Override
+        public void addVertex(float x, float y, float z, int color, float u, float v, int overlayCoords, int lightCoords,
+                              float nx, float ny, float nz) {
+            int b = count++ * 8;
+            if (b + 8 > buf.length) {
+                buf = Arrays.copyOf(buf, buf.length * 2);
+            }
+            buf[b] = x;
+            buf[b + 1] = y;
+            buf[b + 2] = z;
+            buf[b + 3] = u;
+            buf[b + 4] = v;
+            buf[b + 5] = nx;
+            buf[b + 6] = ny;
+            buf[b + 7] = nz;
+        }
+
+        @Override
+        public VertexConsumer setColor(int r, int g, int b, int a) {
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setColor(int color) {
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv(float u, float v) {
+            int b = (count - 1) * 8;
+            buf[b + 3] = u;
+            buf[b + 4] = v;
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv1(int u, int v) {
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv2(int u, int v) {
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setNormal(float x, float y, float z) {
+            int b = (count - 1) * 8;
+            buf[b + 5] = x;
+            buf[b + 6] = y;
+            buf[b + 7] = z;
+            return this;
+        }
+
+        PartMesh toMesh(boolean filterEyes) {
+            if (!filterEyes) {
+                return new PartMesh(Arrays.copyOf(buf, count * 8), count);
+            }
+            // In *copper_golem_eyes.png (64x64), only pixels x=[11..16], y=[12..13] have non-zero alpha (head front quad).
+            float[] out = new float[count * 8];
+            int outVerts = 0;
+            for (int v = 0; v + 3 < count; v += 4) {
+                float minU = 1f, maxU = 0f, minV = 1f, maxV = 0f;
+                for (int k = 0; k < 4; k++) {
+                    float u = buf[(v + k) * 8 + 3];
+                    float vt = buf[(v + k) * 8 + 4];
+                    if (u < minU) minU = u;
+                    if (u > maxU) maxU = u;
+                    if (vt < minV) minV = vt;
+                    if (vt > maxV) maxV = vt;
+                }
+                if (maxU > 10.5f / 64f && minU < 17.5f / 64f && maxV > 11.5f / 64f && minV < 14.5f / 64f) {
+                    System.arraycopy(buf, v * 8, out, outVerts * 8, 4 * 8);
+                    outVerts += 4;
+                }
+            }
+            if (outVerts == 0) {
+                return new PartMesh(Arrays.copyOf(buf, count * 8), count);
+            }
+            return new PartMesh(Arrays.copyOf(out, outVerts * 8), outVerts);
         }
     }
 }

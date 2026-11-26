@@ -4,6 +4,7 @@ import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.ManaSaturatorBlockEntity;
 import com.golemlogix.blocks.ManaSaturatorBlock;
 import com.golemlogix.blocks.SaturatorPartBlock;
+import com.golemlogix.client.render.Baked;
 import com.golemlogix.client.render.PixelMesh;
 import com.golemlogix.system.SaturatorStructure;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -31,6 +32,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import org.joml.Quaternionf;
 
 /**
  * The living part of the assembled Saturator: two glass columns fill with Source, in the chamber on the anvil a small
@@ -54,6 +56,29 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
     static final float ANVIL_TOP = 29.5f;
     private static final float GOLEM_Z = 11.2f;
     static final float ITEM_Z = 6.2f;
+    private static final Quaternionf SCRATCH_FAN_QUAT = new Quaternionf();
+    private static final PoseStack SCRATCH_FAN_POSE = new PoseStack();
+    private static Baked fanMesh;
+
+    public static void clearBaked() {
+        fanMesh = null;
+    }
+
+    private static Baked fanMesh() {
+        if (fanMesh == null) {
+            fanMesh = Baked.bake((vc, pose) -> {
+                for (int b = 0; b < 4; b++) {
+                    pose.pushPose();
+                    pose.mulPose(Axis.YP.rotationDegrees(b * 90f));
+                    pose.mulPose(Axis.XP.rotationDegrees(14f));
+                    Quads.box(vc, pose.last(), -0.03f, -0.006f, 0.04f, 0.03f, 0.006f, 0.19f, 0.1f, 0.1f, 0.4f, 0.9f, 0xFFFFFFFF, 0);
+                    pose.popPose();
+                }
+                Quads.box(vc, pose.last(), -0.045f, -0.01f, -0.045f, 0.045f, 0.02f, 0.045f, 0.6f, 0.6f, 0.9f, 0.9f, 0xFFFFE6A0, 0);
+            });
+        }
+        return fanMesh;
+    }
 
     private final ItemRenderer itemRenderer;
     private final ModelPart golem;
@@ -265,31 +290,25 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
     private void renderFans(ManaSaturatorBlockEntity entity, Level level, Direction facing, PoseStack pose, MultiBufferSource buffers,
                             int light, float time) {
         BlockPos controller = entity.getBlockPos();
-        VertexConsumer vc = null;
         float speed = entity.isCrafting() ? 22f : 3f;
+        RenderType pressType = RenderType.entityCutoutNoCull(PRESS);
+        Baked fan = null;
+        PoseStack.Pose basePose = pose.last();
+        PoseStack.Pose fp = SCRATCH_FAN_POSE.last();
         for (int vent : SaturatorStructure.VENTS) {
             BlockState s = level.getBlockState(SaturatorStructure.cellPos(controller, facing, vent));
             if (!(s.getBlock() instanceof SaturatorPartBlock) || !s.getValue(SaturatorPartBlock.COOLER)) {
                 continue;
             }
-            if (vc == null) {
-                vc = buffers.getBuffer(RenderType.entityCutoutNoCull(PRESS));
+            if (fan == null) {
+                fan = fanMesh();
             }
             float cx = 16f * SaturatorStructure.col(vent) + 8f;
             float cz = 16f * SaturatorStructure.dep(vent) + 8f;
-            pose.pushPose();
-            pose.translate(lx(cx), ly(47.15f), lz(cz));
-            pose.mulPose(Axis.YP.rotationDegrees((time * speed + vent * 37f) % 360f));
-            PoseStack.Pose p = pose.last();
-            for (int b = 0; b < 4; b++) {
-                pose.pushPose();
-                pose.mulPose(Axis.YP.rotationDegrees(b * 90f));
-                pose.mulPose(Axis.XP.rotationDegrees(14f));
-                Quads.box(vc, pose.last(), -0.03f, -0.006f, 0.04f, 0.03f, 0.006f, 0.19f, 0.1f, 0.1f, 0.4f, 0.9f, 0xFFFFFFFF, light);
-                pose.popPose();
-            }
-            Quads.box(vc, p, -0.045f, -0.01f, -0.045f, 0.045f, 0.02f, 0.045f, 0.6f, 0.6f, 0.9f, 0.9f, 0xFFFFE6A0, light);
-            pose.popPose();
+            SCRATCH_FAN_QUAT.rotationY(((time * speed + vent * 37f) % 360f) * Mth.DEG_TO_RAD);
+            fp.pose().set(basePose.pose()).translate(lx(cx), ly(47.15f), lz(cz)).rotate(SCRATCH_FAN_QUAT);
+            fp.normal().set(basePose.normal()).rotate(SCRATCH_FAN_QUAT);
+            fan.draw(buffers, pressType, fp, light, 0);
         }
     }
 

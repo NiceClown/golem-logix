@@ -6,6 +6,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.DirectionalBlock;
@@ -17,6 +18,9 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -25,9 +29,32 @@ import org.jetbrains.annotations.Nullable;
  * placing it, takes one channel and joins the network on every side but the front.
  */
 public abstract class GolemPlaneBlock extends DirectionalBlock implements GolemNode, EntityBlock {
+    /** Non-full-cube bounds matching the inset chassis so placing an opaque block in front never triggers cubic-face light blackouts. */
+    private static final VoxelShape SHAPE = Block.box(0.5, 0.0, 0.5, 15.5, 15.5, 15.5);
+
     protected GolemPlaneBlock(Properties properties) {
         super(properties.sound(SoundType.COPPER).strength(2.5f).requiresCorrectToolForDrops());
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
+    }
+
+    @Override
+    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return SHAPE;
+    }
+
+    @Override
+    protected VoxelShape getBlockSupportShape(BlockState state, BlockGetter level, BlockPos pos) {
+        return Shapes.block();
+    }
+
+    @Override
+    protected boolean propagatesSkylightDown(BlockState state, BlockGetter level, BlockPos pos) {
+        return true;
+    }
+
+    @Override
+    protected float getShadeBrightness(BlockState state, BlockGetter level, BlockPos pos) {
+        return 1.0f;
     }
 
     @Override

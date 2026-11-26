@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.2.2 (1.21.1) — Multiblock Visual Polish, Pillar Gradients & Client FPS Optimization
+
+- **Seamless Atlas Array Pillars & Smooth Multi-Tone Gradients:**
+  - **Continuous Light Columns:** `Atlas Conduit` blocks in vertical runs and assembled `Atlas Array` pillars now merge into a single uninterrupted glowing ice-crystal light column without horizontal copper dividers, anchored by bronze end sockets (`AtlasConduitBlock`, `atlas_conduit_*` models).
+  - **Formed Expander Pillars:** `Channel Expander` and `Quantum Channel Expander` keep their standalone block appearance when placed individually, and automatically transform into glowing `Atlas Array` columns when assembled — deep Blue Ice (`conduit_blue`) for `Channel Expander` and animated shimmering Violet (`conduit_quantum`) for `Quantum Channel Expander` (`ChannelExpanderBlock`, `AtlasStructure`, `AtlasCoreBlock`).
+  - **Smooth Pillar Color Gradients:** adjacent `Atlas Conduit`, `Channel Expander`, and `Quantum Channel Expander` blocks in the same `Atlas Array` pillar blend seamlessly across block boundaries via `ModelData`-driven C1 Hermite (`smoothstep`) translucent per-vertex alpha gradients (`GlowModels`).
+- **Multiblock Exterior Architecture & Z-Fighting Fixes:**
+  - **Cryo-Mainframe:** eliminated casing/frame Z-fighting and replaced the flat rear wall with a sculpted 3-bay Cryo-Radiator & Arcane Backplane featuring recessed slate vents, bronze cooling fins, vertical frost manifolds, a glowing central rune-matrix inspection window, and recessed side cryo sight-glasses (`MainframeCabinetMesh`, `CryoMainframeRenderer`).
+  - **Punch Card Catalog:** eliminated corner/roof Z-fighting and added 3D rear Archivist Vault bay doors, vertical frosted manifolds, a central glowing CRT status porthole, and side brass index plaques (`CatalogCabinetMesh`, `CardCatalogRenderer`).
+- **Bus Lighting Fix:**
+  - Fixed `Formation Bus` and `Annihilation Bus` darkening or flickering when solid blocks are placed or broken directly in front of their open face (`GolemPlaneBlock`, `FormationBusBlock`, `MachineParts`).
+- **Major Client FPS & GC Optimization (Modpack-Scale Rendering):**
+  - **Hoisted Matrix Replay & Format-Safe Vertex Submission:** hoisted matrix and normal transforms out of per-vertex loops in `Baked`, `PixelMesh`, and `Quads` (computing one normal per quad and preserving `.setNormal` compatibility across `DefaultVertexFormat.BLOCK`, `NEW_ENTITY`, Sodium/Embeddium, and Iris).
+  - **Direct-Matrix Golem Puppets:** replaced per-frame `ModelPart.render` and `PoseStack.pushPose()` calls in `CopperGolemPuppet` with one-time `PartMesh` vertex capture, direct JOML matrix transforms (bypassing modpack `PoseStack` mixins and `CallbackInfo` allocations), a single-quad `EYES` pass (`4` vertices instead of `216`), and pre-baked carried barrels.
+  - **Interior Culling, Pre-Baked Meshes & Distance LODs:** added closed-door front-hemisphere interior occlusion culling and `22`-block interior detail LOD to `DriveBayRenderer`; pre-baked all 6 orientations of pipe plugs, miniature warehouse docks/interiors, courier boxes, heat-lamp housings, distillation coils, jar/tower side brackets & wheels, and saturator roof cooler fans into `Baked` meshes with smooth distance LODs (`SnowPipeRenderer`, `PipeWarehouseRenderer`, `PipeRunnerRenderer`, `CryoJarRenderer`, `DistillationTowerRenderer`, `ManaSaturatorRenderer`, `GolemLogixClientEvents`).
+
 ## 2.2.1 (1.21.1) — Security, Bugfixes, Major Optimization & Codebase Refactoring
 
 - **Standalone Free Mode & Guide Book Notice:**

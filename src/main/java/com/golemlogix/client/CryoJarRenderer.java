@@ -6,6 +6,7 @@ import com.golemlogix.blocks.JarForm;
 import com.golemlogix.client.render.Baked;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -22,6 +23,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import static com.golemlogix.client.MachineParts.BRASS;
@@ -63,17 +66,30 @@ public class CryoJarRenderer implements BlockEntityRenderer<CryoJarBlockEntity> 
     private static final float[] VALVE_X = {10.2f, 12.6f};
     private static final float[][] FRAME_POSTS = {{2f, 2f}, {12.8f, 2f}, {2f, 12.8f}, {12.8f, 12.8f}};
     private static final float[][] CAP_ICICLES = {{2.4f, 1.6f}, {5.2f, 0.9f}, {8.6f, 2.1f}, {11.8f, 1.2f}};
+    private static final double CREW_SIGHT_SQ = 36.0 * 36.0;
+    private static final Quaternionf SCRATCH_QUAT = new Quaternionf();
+    private static final PoseStack SCRATCH_POSE = new PoseStack();
 
     /** Pre-baked static parts of a single jar (invalidated automatically when the block atlas reloads). */
-    private record SingleMeshes(TextureAtlasSprite atlasMark, Baked body) {
+    private record SingleMeshes(TextureAtlasSprite atlasMark, Baked body, Baked bracket, Baked wheel) {
     }
 
     private static SingleMeshes singleMeshes;
 
+    public static void clearBaked() {
+        singleMeshes = null;
+    }
+
     private static SingleMeshes singleMeshes() {
         TextureAtlasSprite mark = sprite(BRASS);
         if (singleMeshes == null || singleMeshes.atlasMark() != mark) {
-            singleMeshes = new SingleMeshes(mark, Baked.bake(CryoJarRenderer::bakeSingleBody));
+            singleMeshes = new SingleMeshes(mark,
+                    Baked.bake(CryoJarRenderer::bakeSingleBody),
+                    Baked.bake((vc, p) -> {
+                        box(vc, p.last(), 1.1f, 9f, 2.3f, 2.1f, 20.5f, 3.3f, COPPER, WHITE, 0);
+                        MachineParts.platform(vc, p, -3.4f, 2.0f, 10.6f, 1.2f, 4.4f, 6.8f, 0.8f, 0);
+                    }),
+                    Baked.bake((vc, p) -> MachineParts.wheelX(vc, p, 0f, 0f, 0f, 2.1f, 0f, 0)));
         }
         return singleMeshes;
     }
@@ -133,25 +149,35 @@ public class CryoJarRenderer implements BlockEntityRenderer<CryoJarBlockEntity> 
         float time = ((level.getGameTime() + Math.floorMod(pos.asLong(), 61L)) % 72000L) + partialTick;
         boolean charged = be.clientSource() > 0;
         RenderType solid = RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS);
+        Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        boolean showCrew = cam.distanceToSqr(pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5) < CREW_SIGHT_SQ;
 
         pose.pushPose();
         Quads.faceModel(pose, state.getValue(CryoJarBlock.FACING));
         PoseStack.Pose p = pose.last();
 
-        // static plinth, valves, gauge, frame, valve pipe, louvred cap, vent pipe and golem bracket
-        singleMeshes().body().draw(buffers, solid, p, light, 0);
+        SingleMeshes baked = singleMeshes();
+        baked.body().draw(buffers, solid, p, light, 0);
 
         VertexConsumer vc = buffers.getBuffer(solid);
         int rune = MachineParts.cyanRuneColor(time, charged);
         fitWall(vc, p, 1.6f, 1.8f, 14.4f, 4.4f, 0.94f, RUNES, rune, charged ? LightTexture.FULL_BRIGHT : light);
 
-        // the golem on its bracket at the right side, its hands on the wheel; now and then it gives it a turn
-        float turn = MachineParts.valveTurnAngle(time, charged);
-        MachineParts.wheelX(vc, pose, 0.6f, 14.2f, 2.8f, 2.1f, turn, light);
-        float reach = charged ? -1.15f + 0.12f * Mth.sin(turn * Mth.DEG_TO_RAD) : -0.9f;
-        CopperGolemPuppet.Arms arms = new CopperGolemPuppet.Arms(reach, 0.2f, reach, -0.2f, 0.15f * Mth.sin(time * 0.017f));
-        CopperGolemPuppet.render(pose, buffers, light, GOLEM_POS, FWD_EAST,
-                UP, 0.36f, new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.08f), 1, null, arms);
+        if (showCrew) {
+            float turn = MachineParts.valveTurnAngle(time, charged);
+            baked.bracket().draw(buffers, solid, p, light, 0);
+
+            PoseStack.Pose wp = SCRATCH_POSE.last();
+            SCRATCH_QUAT.rotationX(turn * Mth.DEG_TO_RAD);
+            wp.pose().set(p.pose()).translate(0.6f * PIXEL, 14.2f * PIXEL, 2.8f * PIXEL).rotate(SCRATCH_QUAT);
+            wp.normal().set(p.normal()).rotate(SCRATCH_QUAT);
+            baked.wheel().draw(buffers, solid, wp, light, 0);
+
+            float reach = charged ? -1.15f + 0.12f * Mth.sin(turn * Mth.DEG_TO_RAD) : -0.9f;
+            CopperGolemPuppet.Arms arms = new CopperGolemPuppet.Arms(reach, 0.2f, reach, -0.2f, 0.15f * Mth.sin(time * 0.017f));
+            CopperGolemPuppet.render(pose, buffers, light, GOLEM_POS, FWD_EAST,
+                    UP, 0.36f, new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.08f), 1, null, arms);
+        }
 
         // the Cryo-Source and the glass over it
         VertexConsumer tv = buffers.getBuffer(RenderType.entityTranslucent(InventoryMenu.BLOCK_ATLAS));
@@ -159,7 +185,7 @@ public class CryoJarRenderer implements BlockEntityRenderer<CryoJarBlockEntity> 
             float top = FLASK_BOTTOM + (FLASK_TOP - FLASK_BOTTOM) * Math.min(1f, fill);
             box(tv, p, 3.4f, FLASK_BOTTOM, 3.4f, 12.6f, top, 12.6f, CRYO, 0xE0FFFFFF, LightTexture.FULL_BRIGHT);
         }
-        box(tv, p, 3.0f, 8.5f, 3.0f, 13.0f, 21.5f, 13.0f, GLASS, 0x90E8F8FF, light);
+        box(tv, p, 3.0f, 8.53f, 3.0f, 13.0f, 21.47f, 13.0f, GLASS, 0x90E8F8FF, light);
         pose.popPose();
     }
 
@@ -176,13 +202,12 @@ public class CryoJarRenderer implements BlockEntityRenderer<CryoJarBlockEntity> 
         }
         fitWall(vc, p, 2.2f, 4.2f, 5.8f, 7.8f, 0.5f, GAUGE, WHITE, light);
         box(vc, p, 3.6f, 3.6f, 0.6f, 4.4f, 4.3f, 1f, BRASS, WHITE, light);
-        // frame: four verdigris posts, two rings, and the valve pipe on the right front post
+        // frame: four verdigris posts and two rings
         for (float[] c : FRAME_POSTS) {
             box(vc, p, c[0], 7.6f, c[1], c[0] + 1.2f, 22.4f, c[1] + 1.2f, FRAME, WHITE, light);
         }
         box(vc, p, 1.8f, 7.6f, 1.8f, 14.2f, 8.5f, 14.2f, FRAME, WHITE, light);
         box(vc, p, 1.8f, 21.5f, 1.8f, 14.2f, 22.4f, 14.2f, FRAME, WHITE, light);
-        box(vc, p, 1.1f, 9f, 2.3f, 2.1f, 20.5f, 3.3f, COPPER, WHITE, light);
         // cap: brass with louvres, snow on top, icicles, vent pipe
         box(vc, p, 2.2f, 22.4f, 2.2f, 13.8f, 28f, 13.8f, BRASS, 0xFFD8B880, light);
         for (float y = 23.2f; y < 27.5f; y += 1.4f) {
@@ -194,7 +219,5 @@ public class CryoJarRenderer implements BlockEntityRenderer<CryoJarBlockEntity> 
         }
         box(vc, p, 6.8f, 29.4f, 6.8f, 9.2f, 31.4f, 9.2f, BRASS, WHITE, light);
         box(vc, p, 6.6f, 31.4f, 6.6f, 9.4f, 32.4f, 9.4f, ICE, WHITE, light);
-        // golem's fixed bracket platform on the right side
-        MachineParts.platform(vc, pose, -3.4f, 2.0f, 10.6f, 1.2f, 4.4f, 6.8f, 0.8f, light);
     }
 }

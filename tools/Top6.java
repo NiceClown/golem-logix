@@ -218,7 +218,7 @@ final class Top6 {
             }
         }
         Models.model(name, false, "exp_copper", texList.toArray(new String[0][]), l.toArray(new Models.El[0]));
-        Models.single(name, name);
+        Models.expanderBlockstate(name);
         Models.item(name, name);
     }
 

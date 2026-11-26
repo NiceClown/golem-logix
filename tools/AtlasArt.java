@@ -397,12 +397,87 @@ final class AtlasArt {
         return p;
     }
 
-    /** Glowing faceted packed-ice core column texture for Atlas Conduit. */
+    /** Glowing faceted packed-ice core column texture for Atlas Conduit (vertically seamless). */
     static Paint conduitIce() {
         Paint p = new Paint(16, 16, K);
-        ice(p, 0, 0, 16, 16, 29);
-        p.glowRect(6.25, 0, 9.75, 16, 0.4, rgb(Paint.CYAN[4]), 140);
-        p.rect(7.0, 0, 9.0, 16, rgb(0xdcf6ff));
+        for (int j = 0; j < p.h; j++) {
+            double ang = (j * 2.0 * Math.PI) / p.h;
+            int pj = (int) Math.round(16 + 10 * Math.sin(ang));
+            int qj = (int) Math.round(16 + 10 * Math.cos(ang));
+            for (int i = 0; i < p.w; i++) {
+                double facet = Atlant.noise(i + pj, qj - i, 7, 29);
+                p.px(i, j, rgb(ICE[(int) Math.min(ICE.length - 2, 1 + facet * 4)]));
+                if (((i + j) & 7) == 0 && Atlant.hash(i / 2, j / 2, 29) > 0.65) {
+                    p.px(i, j, rgb(ICE[6]));
+                }
+            }
+        }
+        p.rect(6.0, 0, 10.0, 16, rgb(Paint.CYAN[4]));
+        p.rect(6.9, 0, 9.1, 16, rgb(0xdcf6ff));
+        return p;
+    }
+
+    /** Deep Blue-Ice / Sapphire core column texture for formed Channel Expander inside the Atlas Array (vertically seamless). */
+    static Paint conduitBlue() {
+        int[] DEEP_BLUE = {0x0d2558, 0x153a82, 0x1f53ad, 0x2f70d8, 0x4e92f0, 0x82bcff, 0xd2ecff};
+        Paint p = new Paint(16, 16, K);
+        for (int j = 0; j < p.h; j++) {
+            double ang = (j * 2.0 * Math.PI) / p.h;
+            int pj = (int) Math.round(20 + 10 * Math.sin(ang));
+            int qj = (int) Math.round(20 + 10 * Math.cos(ang));
+            for (int i = 0; i < p.w; i++) {
+                double facet = Atlant.noise(i + pj, qj - i, 7, 73);
+                p.px(i, j, rgb(DEEP_BLUE[(int) Math.min(DEEP_BLUE.length - 2, 1 + facet * 4.2)]));
+                if (((i * 3 + j) & 7) == 0 && Atlant.hash(i / 2, j / 2, 73) > 0.62) {
+                    p.px(i, j, rgb(DEEP_BLUE[5]));
+                }
+            }
+        }
+        p.rect(5.75, 0, 10.25, 16, rgb(0x2d74eb));
+        p.rect(6.75, 0, 9.25, 16, rgb(0x70b8ff));
+        p.rect(7.45, 0, 8.55, 16, rgb(0xcce8ff));
+        return p;
+    }
+
+    /** Animated shimmering royal-violet crystal column texture for formed Quantum Channel Expander (vertically seamless). */
+    static Paint conduitQuantum() {
+        int[] QVIOLET = {0x1a0d3d, 0x2e1966, 0x492a9c, 0x6a44cf, 0x8f66f0, 0xb998ff, 0xf2e6ff};
+        Paint p = new Paint(16, 16, K);
+        p.animFrames = 24;
+        p.frameTime = 2;
+        p.interpolate = true;
+        p.animate(0, 0, 16, 16, (c, t) -> {
+            double phase = t * 2.0 * Math.PI;
+            for (int j = 0; j < c.h; j++) {
+                double vy = (double) j / c.h;
+                double ang = vy * 2.0 * Math.PI;
+                int pj = (int) Math.round(24 + 10 * Math.sin(ang));
+                int qj = (int) Math.round(24 + 10 * Math.cos(ang));
+                // Smooth upward energy wave + secondary harmonic
+                double wave = 0.5 + 0.5 * Math.sin(ang * 2.0 + phase) * 0.7 + 0.3 * Math.cos(ang * 3.0 - phase * 2.0);
+                for (int i = 0; i < c.w; i++) {
+                    double u = (i + 0.5) / c.k;
+                    double centerDist = Math.abs(u - 8.0);
+                    double facet = Atlant.noise(i + pj, qj - i, 7, 137);
+                    int base = QVIOLET[(int) Math.min(QVIOLET.length - 2, Math.max(0, 1 + facet * 3.8))];
+                    if (centerDist < 2.6) {
+                        double beam = (1.0 - centerDist / 2.6) * (0.78 + 0.22 * wave);
+                        int coreCol = centerDist < 0.7 ? 0xf6ecff : centerDist < 1.5 ? 0xd2afff : 0x9660ff;
+                        base = Paint.mix(rgb(base), rgb(coreCol), Math.min(1.0, 0.55 + beam * 0.45)) & 0xFFFFFF;
+                    }
+                    // Twinkling crystal starlight glints distributed across the violet facets
+                    double spSeed = Atlant.hash(i, j, 991);
+                    if (spSeed > 0.945) {
+                        double twinkle = 0.5 + 0.5 * Math.sin(phase * 2.0 + spSeed * 43.0 + i * 0.7);
+                        if (twinkle > 0.55) {
+                            double k = (twinkle - 0.55) / 0.45;
+                            base = Paint.mix(rgb(base), rgb(0xf8f0ff), k * 0.92) & 0xFFFFFF;
+                        }
+                    }
+                    c.px(i, j, rgb(base));
+                }
+            }
+        });
         return p;
     }
 
@@ -417,6 +492,8 @@ final class AtlasArt {
         coreCrystal().save(Forge2.tex("core_crystal"));
         bushingCore().save(Forge2.tex("bushing_core"));
         conduitIce().save(Forge2.tex("conduit_ice"));
+        conduitBlue().save(Forge2.tex("conduit_blue"));
+        conduitQuantum().save(Forge2.tex("conduit_quantum"));
         conduit().save(Forge2.tex("atlas_conduit"));
         bushing().save(Forge2.tex("cable_bushing"));
         column().save(Forge2.tex("atlas_ice_column"));

@@ -132,12 +132,18 @@ public class GolemLogixClientEvents {
                 com.golemlogix.client.ghost.GhostHud::render);
     }
 
-    /** Reset cached puppet models and guidebook pages on client resource reload (F3+T / resource pack change). */
+    /** Reset cached puppet models, baked renderer meshes, and guidebook pages on client resource reload (F3+T / resource pack change). */
     @SubscribeEvent
     public static void registerReloadListeners(net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent event) {
         event.registerReloadListener((net.minecraft.server.packs.resources.ResourceManagerReloadListener) rm -> {
-            CopperGolemPuppet.invalidate();
+            CopperGolemPuppet.clearCache();
             SnowmanPuppet.invalidate();
+            SnowPipeRenderer.clearBaked();
+            CryoJarRenderer.clearBaked();
+            DistillationTowerRenderer.clearBaked();
+            ManaSaturatorRenderer.clearBaked();
+            CatalogCabinetMesh.clearBaked();
+            CryoMainframeRenderer.clearBaked();
             com.golemlogix.client.book.BookModel.invalidate();
         });
     }

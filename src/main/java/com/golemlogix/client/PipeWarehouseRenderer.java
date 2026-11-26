@@ -1,12 +1,12 @@
 package com.golemlogix.client;
 
 import com.golemlogix.blockentity.PipeBlockEntity;
+import com.golemlogix.client.render.Baked;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import it.unimi.dsi.fastutil.longs.Long2BooleanOpenHashMap;
-import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.block.BlockRenderDispatcher;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
@@ -27,7 +27,6 @@ final class PipeWarehouseRenderer {
     private static final int WAREHOUSE_RADIUS = 3;
     private static final long CACHE_TTL_TICKS = 40L;
     private static final int MAX_CACHE_ENTRIES = 1024;
-    private static final int WARM_LIGHT = LightTexture.FULL_BRIGHT;
 
     private static final Long2BooleanOpenHashMap[] WAREHOUSE_CACHE = new Long2BooleanOpenHashMap[6];
     static {
@@ -120,116 +119,87 @@ final class PipeWarehouseRenderer {
         return (x * 73856093L) ^ (y * 19349663L) ^ (z * 83492791L) ^ (dir.ordinal() * 1000003L);
     }
 
-    /**
-     * Victorian industrial warehouse interior inside an elected pipe dead end: plank deck, arched copper trusses, left ledger
-     * rack, right distribution gauge, hanging lantern, stacked cargo, and ceiling monorail (central aisle stays clear).
-     */
-    static void renderDecorations(PoseStack pose, BlockRenderDispatcher dispatcher, MultiBufferSource buffers,
-                                  boolean dense, int light) {
+    /** Renders the single ENTITYBLOCK_ANIMATED corner parcel chest inside an elected 1.21.1 warehouse dock. */
+    static void renderCornerChest(PoseStack pose, Direction dir, MultiBufferSource buffers, boolean dense, int light, int overlay) {
+        float floorY = dense ? 0.14f : 0.27f;
+        float leftX = dense ? 0.15f : 0.28f;
+        float chestS = dense ? 0.15f : 0.09f;
+        pose.pushPose();
+        Quads.orient(pose, dir);
+        renderBlockBox(pose, Minecraft.getInstance().getBlockRenderer(), buffers, Blocks.CHEST.defaultBlockState(),
+                leftX + (dense ? 0.12f : 0.08f), floorY + (dense ? 0.08f : 0.05f), 0.28f, chestS, light, overlay);
+        pose.popPose();
+    }
+
+    /** Bakes the static warehouse interior into {@code vc} (split by ambient vs full-bright warm props). */
+    static void bakeDecorations(PoseStack pose, VertexConsumer vc, boolean dense, boolean warmOnly) {
         float floorY = dense ? 0.14f : 0.27f;
         float ceilY = dense ? 0.86f : 0.73f;
         float leftX = dense ? 0.15f : 0.28f;
         float rightX = dense ? 0.85f : 0.72f;
+        float rackDepth = dense ? 0.09f : 0.05f;
+        float rackX = leftX + rackDepth / 2f;
 
-        renderDeckAndTrusses(pose, dispatcher, buffers, dense, floorY, ceilY, leftX, rightX, light);
-        renderWallRackAndGauge(pose, dispatcher, buffers, dense, floorY, leftX, rightX, light);
-        renderLanternAndCargo(pose, dispatcher, buffers, dense, floorY, ceilY, leftX, rightX, light);
-        renderMonorail(pose, dispatcher, buffers, dense, ceilY, light);
-    }
+        if (warmOnly) {
+            if (dense) {
+                bakeBox(pose, vc, Blocks.AMETHYST_CLUSTER.defaultBlockState(), rackX, floorY + 0.20f, 0.38f, rackDepth * 0.8f, 0.11f, 0.12f);
+            }
+            float lanternY = ceilY - (dense ? 0.15f : 0.10f);
+            bakeBox(pose, vc, Blocks.CHAIN.defaultBlockState(), 0.50f, ceilY - (dense ? 0.05f : 0.03f), 0.32f, 0.025f, dense ? 0.06f : 0.04f, 0.025f);
+            bakeBox(pose, vc, Blocks.LANTERN.defaultBlockState(), 0.50f, lanternY, 0.32f, dense ? 0.10f : 0.07f, dense ? 0.12f : 0.08f, dense ? 0.10f : 0.07f);
+            return;
+        }
 
-    private static void renderDeckAndTrusses(PoseStack pose, BlockRenderDispatcher dispatcher, MultiBufferSource buffers,
-                                             boolean dense, float floorY, float ceilY, float leftX, float rightX, int light) {
-        int ov = OverlayTexture.NO_OVERLAY;
         float deckWidth = dense ? 0.60f : 0.30f;
-        renderBlockBox(pose, dispatcher, buffers, Blocks.DARK_OAK_PLANKS.defaultBlockState(),
-                0.50f, floorY + 0.01f, 0.54f, deckWidth, 0.02f, 0.54f, light, ov);
+        bakeBox(pose, vc, Blocks.DARK_OAK_PLANKS.defaultBlockState(), 0.50f, floorY + 0.01f, 0.54f, deckWidth, 0.02f, 0.54f);
 
         float pillarThick = dense ? 0.04f : 0.028f;
         float pillarH = ceilY - floorY;
         float pillarMidY = (floorY + ceilY) / 2f;
         BlockState rib = Blocks.CUT_COPPER_SLAB.defaultBlockState();
-
-        // two pairs of side trusses with top tie beams (clear of the dock shutter)
         for (float z : new float[]{0.28f, 0.68f}) {
-            renderBlockBox(pose, dispatcher, buffers, rib, leftX + pillarThick / 2f, pillarMidY, z, pillarThick, pillarH, pillarThick, light, ov);
-            renderBlockBox(pose, dispatcher, buffers, rib, rightX - pillarThick / 2f, pillarMidY, z, pillarThick, pillarH, pillarThick, light, ov);
-            renderBlockBox(pose, dispatcher, buffers, rib, 0.50f, ceilY - 0.02f, z, deckWidth, 0.03f, pillarThick, light, ov);
+            bakeBox(pose, vc, rib, leftX + pillarThick / 2f, pillarMidY, z, pillarThick, pillarH, pillarThick);
+            bakeBox(pose, vc, rib, rightX - pillarThick / 2f, pillarMidY, z, pillarThick, pillarH, pillarThick);
+            bakeBox(pose, vc, rib, 0.50f, ceilY - 0.02f, z, deckWidth, 0.03f, pillarThick);
         }
-    }
 
-    private static void renderWallRackAndGauge(PoseStack pose, BlockRenderDispatcher dispatcher, MultiBufferSource buffers,
-                                               boolean dense, float floorY, float leftX, float rightX, int light) {
-        int ov = OverlayTexture.NO_OVERLAY;
-        // left wall ledger rack
-        float rackDepth = dense ? 0.09f : 0.05f;
-        float rackX = leftX + rackDepth / 2f;
-        renderBlockBox(pose, dispatcher, buffers, Blocks.DARK_OAK_SLAB.defaultBlockState(),
-                rackX, floorY + 0.12f, 0.46f, rackDepth, 0.02f, 0.32f, light, ov);
-        renderBlockBox(pose, dispatcher, buffers, Blocks.BOOKSHELF.defaultBlockState(),
-                rackX, floorY + 0.07f, 0.38f, rackDepth * 0.9f, 0.09f, 0.14f, light, ov);
-        renderBlockBox(pose, dispatcher, buffers, Blocks.CHISELED_BOOKSHELF.defaultBlockState(),
-                rackX, floorY + 0.07f, 0.52f, rackDepth * 0.9f, 0.09f, 0.14f, light, ov);
-
+        bakeBox(pose, vc, Blocks.DARK_OAK_SLAB.defaultBlockState(), rackX, floorY + 0.12f, 0.46f, rackDepth, 0.02f, 0.32f);
+        bakeBox(pose, vc, Blocks.BOOKSHELF.defaultBlockState(), rackX, floorY + 0.07f, 0.38f, rackDepth * 0.9f, 0.09f, 0.14f);
+        bakeBox(pose, vc, Blocks.CHISELED_BOOKSHELF.defaultBlockState(), rackX, floorY + 0.07f, 0.52f, rackDepth * 0.9f, 0.09f, 0.14f);
         if (dense) {
-            // upper shelf (dense pipes only) with glowing crystal and brass scale plate
-            renderBlockBox(pose, dispatcher, buffers, Blocks.DARK_OAK_SLAB.defaultBlockState(),
-                    rackX, floorY + 0.26f, 0.46f, rackDepth, 0.02f, 0.32f, light, ov);
-            renderBlockBox(pose, dispatcher, buffers, Blocks.AMETHYST_CLUSTER.defaultBlockState(),
-                    rackX, floorY + 0.20f, 0.38f, rackDepth * 0.8f, 0.11f, 0.12f, WARM_LIGHT, ov);
-            renderBlockBox(pose, dispatcher, buffers, Blocks.LIGHT_WEIGHTED_PRESSURE_PLATE.defaultBlockState(),
-                    rackX, floorY + 0.28f, 0.52f, rackDepth * 0.8f, 0.02f, 0.12f, light, ov);
+            bakeBox(pose, vc, Blocks.DARK_OAK_SLAB.defaultBlockState(), rackX, floorY + 0.26f, 0.46f, rackDepth, 0.02f, 0.32f);
+            bakeBox(pose, vc, Blocks.LIGHT_WEIGHTED_PRESSURE_PLATE.defaultBlockState(), rackX, floorY + 0.28f, 0.52f, rackDepth * 0.8f, 0.02f, 0.12f);
         }
 
-        // right wall distribution manifold and vertical copper gauge stem
         float rightWallDist = dense ? 0.06f : 0.04f;
-        renderBlockBox(pose, dispatcher, buffers, Blocks.COPPER_BLOCK.defaultBlockState(),
-                rightX - rightWallDist / 2f, floorY + (dense ? 0.28f : 0.16f), 0.42f, rightWallDist, dense ? 0.18f : 0.12f, 0.14f, light, ov);
-        renderBlockBox(pose, dispatcher, buffers, Blocks.LIGHTNING_ROD.defaultBlockState(),
-                rightX - rightWallDist / 2f, floorY + (dense ? 0.42f : 0.26f), 0.42f, 0.025f, dense ? 0.10f : 0.06f, 0.025f, light, ov);
-    }
+        bakeBox(pose, vc, Blocks.COPPER_BLOCK.defaultBlockState(), rightX - rightWallDist / 2f, floorY + (dense ? 0.28f : 0.16f), 0.42f, rightWallDist, dense ? 0.18f : 0.12f, 0.14f);
+        bakeBox(pose, vc, Blocks.LIGHTNING_ROD.defaultBlockState(), rightX - rightWallDist / 2f, floorY + (dense ? 0.42f : 0.26f), 0.42f, 0.025f, dense ? 0.10f : 0.06f, 0.025f);
 
-    private static void renderLanternAndCargo(PoseStack pose, BlockRenderDispatcher dispatcher, MultiBufferSource buffers,
-                                              boolean dense, float floorY, float ceilY, float leftX, float rightX, int light) {
-        int ov = OverlayTexture.NO_OVERLAY;
-        // hanging Victorian brass lantern on a chain
-        float lanternY = ceilY - (dense ? 0.15f : 0.10f);
-        renderBlockBox(pose, dispatcher, buffers, Blocks.CHAIN.defaultBlockState(),
-                0.50f, ceilY - (dense ? 0.05f : 0.03f), 0.32f, 0.025f, dense ? 0.06f : 0.04f, 0.025f, WARM_LIGHT, ov);
-        renderBlockBox(pose, dispatcher, buffers, Blocks.LANTERN.defaultBlockState(),
-                0.50f, lanternY, 0.32f, dense ? 0.10f : 0.07f, dense ? 0.12f : 0.08f, dense ? 0.10f : 0.07f, WARM_LIGHT, ov);
-
-        // right corner oak barrels
-        renderBlockBox(pose, dispatcher, buffers, Blocks.BARREL.defaultBlockState(),
-                rightX - (dense ? 0.12f : 0.08f), floorY + (dense ? 0.10f : 0.06f), 0.28f, dense ? 0.16f : 0.10f, light, ov);
+        float barrelS = dense ? 0.16f : 0.10f;
+        bakeBox(pose, vc, Blocks.BARREL.defaultBlockState(), rightX - (dense ? 0.12f : 0.08f), floorY + (dense ? 0.10f : 0.06f), 0.28f, barrelS, barrelS, barrelS);
         if (dense) {
-            renderBlockBox(pose, dispatcher, buffers, Blocks.BARREL.defaultBlockState(),
-                    rightX - 0.11f, floorY + 0.07f, 0.44f, 0.13f, light, ov);
+            bakeBox(pose, vc, Blocks.BARREL.defaultBlockState(), rightX - 0.11f, floorY + 0.07f, 0.44f, 0.13f, 0.13f, 0.13f);
         }
+        float rawS = dense ? 0.09f : 0.05f;
+        bakeBox(pose, vc, Blocks.RAW_COPPER_BLOCK.defaultBlockState(), leftX + (dense ? 0.11f : 0.07f), floorY + (dense ? 0.20f : 0.12f), 0.28f, rawS, rawS, rawS);
+        bakeBox(pose, vc, Blocks.HEAVY_CORE.defaultBlockState(), leftX + (dense ? 0.12f : 0.08f), floorY + 0.04f, 0.65f, dense ? 0.08f : 0.05f, dense ? 0.05f : 0.03f, dense ? 0.08f : 0.05f);
 
-        // left corner parcel chest, copper crate, and cast-iron platform scales
-        renderBlockBox(pose, dispatcher, buffers, Blocks.CHEST.defaultBlockState(),
-                leftX + (dense ? 0.12f : 0.08f), floorY + (dense ? 0.08f : 0.05f), 0.28f, dense ? 0.15f : 0.09f, light, ov);
-        renderBlockBox(pose, dispatcher, buffers, Blocks.RAW_COPPER_BLOCK.defaultBlockState(),
-                leftX + (dense ? 0.11f : 0.07f), floorY + (dense ? 0.20f : 0.12f), 0.28f, dense ? 0.09f : 0.05f, light, ov);
-        renderBlockBox(pose, dispatcher, buffers, Blocks.HEAVY_CORE.defaultBlockState(),
-                leftX + (dense ? 0.12f : 0.08f), floorY + 0.04f, 0.65f, dense ? 0.08f : 0.05f, dense ? 0.05f : 0.03f, dense ? 0.08f : 0.05f, light, ov);
-    }
-
-    private static void renderMonorail(PoseStack pose, BlockRenderDispatcher dispatcher, MultiBufferSource buffers,
-                                       boolean dense, float ceilY, int light) {
-        int ov = OverlayTexture.NO_OVERLAY;
         float railSpan = dense ? 0.09f : 0.055f;
         float railY = ceilY - 0.035f;
         float railThick = dense ? 0.035f : 0.022f;
-        // twin ceiling rails starting clear of the shutter at Z = 0.27
-        renderBlockBox(pose, dispatcher, buffers, Blocks.CUT_COPPER_SLAB.defaultBlockState(),
-                0.50f - railSpan, railY, 0.54f, railThick, railThick, 0.54f, light, ov);
-        renderBlockBox(pose, dispatcher, buffers, Blocks.CUT_COPPER_SLAB.defaultBlockState(),
-                0.50f + railSpan, railY, 0.54f, railThick, railThick, 0.54f, light, ov);
-        // copper buffer stopper and manipulator carriage
-        renderBlockBox(pose, dispatcher, buffers, Blocks.COPPER_BLOCK.defaultBlockState(),
-                0.50f, railY - 0.005f, 0.26f, railSpan * 2f + railThick * 1.5f, railThick * 1.4f, 0.04f, light, ov);
-        renderBlockBox(pose, dispatcher, buffers, Blocks.COPPER_BLOCK.defaultBlockState(),
-                0.50f, railY - 0.02f, 0.40f, dense ? 0.14f : 0.09f, dense ? 0.04f : 0.025f, dense ? 0.12f : 0.08f, light, ov);
+        bakeBox(pose, vc, rib, 0.50f - railSpan, railY, 0.54f, railThick, railThick, 0.54f);
+        bakeBox(pose, vc, rib, 0.50f + railSpan, railY, 0.54f, railThick, railThick, 0.54f);
+        bakeBox(pose, vc, Blocks.COPPER_BLOCK.defaultBlockState(), 0.50f, railY - 0.005f, 0.26f, railSpan * 2f + railThick * 1.5f, railThick * 1.4f, 0.04f);
+        bakeBox(pose, vc, Blocks.COPPER_BLOCK.defaultBlockState(), 0.50f, railY - 0.02f, 0.40f, dense ? 0.14f : 0.09f, dense ? 0.04f : 0.025f, dense ? 0.12f : 0.08f);
+    }
+
+    private static void bakeBox(PoseStack pose, VertexConsumer vc, BlockState state,
+                                float x, float y, float z, float sx, float sy, float sz) {
+        pose.pushPose();
+        pose.translate(x, y, z);
+        pose.scale(sx, sy, sz);
+        pose.translate(-0.5f, -0.5f, -0.5f);
+        Baked.drawBlock(pose.last(), vc, state);
+        pose.popPose();
     }
 }

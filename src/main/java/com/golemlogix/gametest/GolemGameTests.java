@@ -2280,7 +2280,7 @@ public class GolemGameTests {
                         String id = e.get("id").getAsString();
                         // an entry about another mod's integration names that mod's items: they exist only when it is installed
                         String requires = e.has("requires") ? e.get("requires").getAsString() : "";
-                        boolean items = requires.isEmpty() || net.neoforged.fml.ModList.get().isLoaded(requires);
+                        boolean items = requires.isEmpty() || "no_source_mod".equals(requires) || net.neoforged.fml.ModList.get().isLoaded(requires);
                         if (items) {
                             checkItem(helper, e.get("icon").getAsString(), id);
                         }
@@ -2299,7 +2299,7 @@ public class GolemGameTests {
                             var page = pe.getAsJsonObject();
                             String type = page.get("type").getAsString();
                             String when = page.has("when") ? page.get("when").getAsString() : "";
-                            helper.assertTrue(java.util.List.of("", "wither", "dimension", "!wither", "!dimension", "both", "one").contains(when),
+                            helper.assertTrue(java.util.List.of("", "wither", "dimension", "!wither", "!dimension", "both", "one", "no_source_mod").contains(when),
                                     "entry " + id + ": bad page condition " + when);
                             sig.append(type).append(page.has("recipe") ? page.get("recipe").getAsString() : "")
                                     .append(page.has("texture") ? page.get("texture").getAsString() : "")

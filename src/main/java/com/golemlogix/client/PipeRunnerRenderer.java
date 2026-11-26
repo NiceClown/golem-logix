@@ -1,14 +1,18 @@
 package com.golemlogix.client;
 
 import com.golemlogix.blocks.SnowPipeBlock;
+import com.golemlogix.client.render.Baked;
+import com.golemlogix.client.render.PixelMesh;
 import com.golemlogix.init.ModItems;
 import com.golemlogix.system.GolemNetwork;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.entity.ItemRenderer;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
@@ -19,6 +23,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
@@ -63,8 +68,64 @@ final class PipeRunnerRenderer {
     private static final Vector3f HAND_L = new Vector3f();
     private static final Vector3f HAND_R = new Vector3f();
     private static final BlockPos.MutableBlockPos CONTAINER_POS = new BlockPos.MutableBlockPos();
+    private static final PoseStack SCRATCH_BOX_POSE = new PoseStack();
+    private static final double RUNNER_SIGHT_SQ = 32.0 * 32.0;
 
     private static BlockState[] cargoBoxes;
+
+    private record RunnerBlockMeshes(TextureAtlasSprite atlasMark, Baked pumpkin, Baked barrel,
+                                     Baked copperBlock, Baked cutCopperSlab, Baked rawCopper) {
+    }
+
+    private static RunnerBlockMeshes blockMeshes;
+
+    static void clearBaked() {
+        blockMeshes = null;
+    }
+
+    private static RunnerBlockMeshes blockMeshes() {
+        TextureAtlasSprite mark = PixelMesh.sprite(MachineParts.BRASS);
+        if (blockMeshes == null || blockMeshes.atlasMark() != mark) {
+            blockMeshes = new RunnerBlockMeshes(mark,
+                    bakeUnitBlock(Blocks.CARVED_PUMPKIN.defaultBlockState()),
+                    bakeUnitBlock(Blocks.BARREL.defaultBlockState()),
+                    bakeUnitBlock(Blocks.COPPER_BLOCK.defaultBlockState()),
+                    bakeUnitBlock(Blocks.CUT_COPPER_SLAB.defaultBlockState()),
+                    bakeUnitBlock(Blocks.RAW_COPPER_BLOCK.defaultBlockState()));
+        }
+        return blockMeshes;
+    }
+
+    private static Baked bakeUnitBlock(BlockState state) {
+        return Baked.bake((vc, p) -> {
+            p.translate(-0.5f, -0.5f, -0.5f);
+            Baked.drawBlock(p.last(), vc, state);
+        });
+    }
+
+    private static void drawBakedBox(PoseStack pose, MultiBufferSource buffers, Baked mesh,
+                                     double x, double y, double z, float sx, float sy, float sz, int light) {
+        PoseStack.Pose p = SCRATCH_BOX_POSE.last();
+        p.pose().set(pose.last().pose()).translate((float) x, (float) y, (float) z).scale(sx, sy, sz);
+        p.normal().set(pose.last().normal());
+        mesh.draw(buffers, RenderType.cutout(), p, light, 0);
+    }
+
+    private static void drawCargoState(PoseStack pose, BlockRenderDispatcher dispatcher, MultiBufferSource buffers,
+                                       BlockState state, double x, double y, double z, float size, int light, int overlay) {
+        RunnerBlockMeshes m = blockMeshes();
+        Baked mesh;
+        if (state.is(Blocks.BARREL)) {
+            mesh = m.barrel();
+        } else if (state.is(Blocks.COPPER_BLOCK)) {
+            mesh = m.copperBlock();
+        } else {
+            // Blocks.CHEST uses ENTITYBLOCK_ANIMATED in 1.21.1, so let dispatcher render its real chest model
+            renderBlockBox(pose, dispatcher, buffers, state, x, y, z, size, light, overlay);
+            return;
+        }
+        drawBakedBox(pose, buffers, mesh, x, y, z, size, size, size, light);
+    }
 
     private static final List<ItemStack> FLUID_BUCKETS = List.of(
             new ItemStack(Items.WATER_BUCKET),
@@ -116,6 +177,10 @@ final class PipeRunnerRenderer {
     /** Renders the network's snowman courier if it currently occupies {@code pos}. */
     static void renderRunner(Level level, BlockPos pos, BlockState state, float partialTick,
                              PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
+        Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        if (cam.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > RUNNER_SIGHT_SQ) {
+            return;
+        }
         float time = (level.getGameTime() % 24000L) + partialTick;
         PipeRunners.Spot spot = PipeRunners.locate(level, pos, state, level.getGameTime(), partialTick);
         if (spot == null) {
@@ -150,7 +215,7 @@ final class PipeRunnerRenderer {
             // ceiling mechanical arm + copper golem oriented strictly along the pipe axis
             pose.pushPose();
             pose.mulPose(Axis.YP.rotationDegrees(baseYaw));
-            renderMechanicalArmAndGolem(pose, dispatcher, buffers, itemRenderer, level, outItem, dense, turn, time, light, overlay);
+            renderMechanicalArmAndGolem(pose, buffers, itemRenderer, level, outItem, dense, turn, time, light, overlay);
             pose.popPose();
 
             if (!vertical && turn >= PHASE_UNLOAD_END) {
@@ -239,9 +304,9 @@ final class PipeRunnerRenderer {
                                            ItemRenderer itemRenderer, Level level,
                                            ItemStack inItem, ItemStack outItem, BlockState carriedBox,
                                            boolean turning, float turn, float tripProgress, float time, int light, int overlay) {
-        BlockState pumpkin = Blocks.CARVED_PUMPKIN.defaultBlockState();
+        Baked pumpkin = blockMeshes().pumpkin();
         if (!turning) {
-            renderBlockBox(pose, dispatcher, buffers, pumpkin, 0, 0, 0, BASIC_PUMPKIN_SCALE, light, overlay);
+            drawBakedBox(pose, buffers, pumpkin, 0, 0, 0, BASIC_PUMPKIN_SCALE, BASIC_PUMPKIN_SCALE, BASIC_PUMPKIN_SCALE, light);
             renderMorphingCargo(pose, dispatcher, buffers, itemRenderer, level, outItem, carriedBox, tripProgress,
                     0.15, 0.16, BASIC_ITEM_SCALE, BASIC_BOX_SCALE, time, light, overlay);
             return;
@@ -250,7 +315,7 @@ final class PipeRunnerRenderer {
             // phase 1: hop flings the old item forward and down onto the floor
             float pDown = turn / PHASE_UNLOAD_END;
             float hop = (float) Math.sin(pDown * Math.PI) * 0.03f;
-            renderBlockBox(pose, dispatcher, buffers, pumpkin, 0, hop, 0, BASIC_PUMPKIN_SCALE, light, overlay);
+            drawBakedBox(pose, buffers, pumpkin, 0, hop, 0, BASIC_PUMPKIN_SCALE, BASIC_PUMPKIN_SCALE, BASIC_PUMPKIN_SCALE, light);
 
             float flingP = Mth.clamp(pDown / 0.85f, 0f, 1f);
             float flingY = Mth.lerp(flingP * flingP, 0.15f + hop, -0.14f);
@@ -261,12 +326,12 @@ final class PipeRunnerRenderer {
             }
         } else if (turn < PHASE_REACH_END) {
             // phases 2 & 3a: empty turn, then wait for the drop from above
-            renderBlockBox(pose, dispatcher, buffers, pumpkin, 0, 0, 0, BASIC_PUMPKIN_SCALE, light, overlay);
+            drawBakedBox(pose, buffers, pumpkin, 0, 0, 0, BASIC_PUMPKIN_SCALE, BASIC_PUMPKIN_SCALE, BASIC_PUMPKIN_SCALE, light);
         } else {
             // phase 3b: catch on top of the pumpkin with soft bounce
             float pSettle = (turn - PHASE_REACH_END) / 0.20f;
             float squashHop = (float) -Math.sin((1f - pSettle) * Math.PI) * 0.03f;
-            renderBlockBox(pose, dispatcher, buffers, pumpkin, 0, squashHop, 0, BASIC_PUMPKIN_SCALE, light, overlay);
+            drawBakedBox(pose, buffers, pumpkin, 0, squashHop, 0, BASIC_PUMPKIN_SCALE, BASIC_PUMPKIN_SCALE, BASIC_PUMPKIN_SCALE, light);
             renderItem(itemRenderer, buffers, level, outItem, pose, 0, 0.15f + squashHop, 0, BASIC_ITEM_SCALE, time * 3f, light, overlay);
         }
     }
@@ -280,7 +345,7 @@ final class PipeRunnerRenderer {
         if (tripProgress < MORPH_START) {
             renderItem(itemRenderer, buffers, level, outItem, pose, 0, itemY, 0, itemScale, time * 3f, light, overlay);
         } else if (tripProgress > MORPH_END) {
-            renderBlockBox(pose, dispatcher, buffers, carriedBox, 0, boxY, 0, boxScale, light, overlay);
+            drawCargoState(pose, dispatcher, buffers, carriedBox, 0, boxY, 0, boxScale, light, overlay);
         } else {
             float m = (tripProgress - MORPH_START) / (MORPH_END - MORPH_START);
             if (m < 0.5f) {
@@ -288,7 +353,7 @@ final class PipeRunnerRenderer {
                 renderItem(itemRenderer, buffers, level, outItem, pose, 0, itemY, 0, (1f - p) * itemScale, time * (3f + p * 12f), light, overlay);
             } else {
                 float p = (m - 0.5f) / 0.5f;
-                renderBlockBox(pose, dispatcher, buffers, carriedBox, 0, boxY, 0, p * boxScale, light, overlay);
+                drawCargoState(pose, dispatcher, buffers, carriedBox, 0, boxY, 0, p * boxScale, light, overlay);
             }
         }
     }
@@ -297,7 +362,7 @@ final class PipeRunnerRenderer {
      * Hanging ceiling manipulator and copper golem at every station turn: extends downward, holds the next cargo item, opens
      * its hands at {@code DROP_START}, and lets the item free-fall into the waiting snowman's hands.
      */
-    private static void renderMechanicalArmAndGolem(PoseStack pose, BlockRenderDispatcher dispatcher, MultiBufferSource buffers,
+    private static void renderMechanicalArmAndGolem(PoseStack pose, MultiBufferSource buffers,
                                                     ItemRenderer itemRenderer, @Nullable Level level, ItemStack outItem,
                                                     boolean dense, float turn, float time, int light, int overlay) {
         float ceilingY = dense ? 0.28f : 0.165f;
@@ -305,11 +370,11 @@ final class PipeRunnerRenderer {
         float retractedFeetY = dense ? 0.10f : 0.07f;
         float golemScale = dense ? 0.095f : 0.055f;
         float railThick = dense ? 0.035f : 0.022f;
+        RunnerBlockMeshes m = blockMeshes();
 
         // compact ceiling flange mounting the carriage
         float bracketSize = dense ? 0.18f : 0.12f;
-        renderBlockBox(pose, dispatcher, buffers, Blocks.CUT_COPPER_SLAB.defaultBlockState(),
-                0, ceilingY + 0.02f, 0, bracketSize, railThick, bracketSize, light, overlay);
+        drawBakedBox(pose, buffers, m.cutCopperSlab(), 0, ceilingY + 0.02f, 0, bracketSize, railThick, bracketSize, light);
 
         // extension profile: lower -> hold -> retract (uses quintic Mth.smoothstep)
         float ext;
@@ -324,16 +389,16 @@ final class PipeRunnerRenderer {
         float currentFeetY = Mth.lerp(ext, retractedFeetY, targetFeetY);
 
         // ceiling carriage, telescopic rod, and copper cradle
-        renderBlockBox(pose, dispatcher, buffers, Blocks.COPPER_BLOCK.defaultBlockState(),
-                0, ceilingY, 0, dense ? 0.13f : 0.08f, dense ? 0.035f : 0.022f, dense ? 0.11f : 0.07f, light, overlay);
+        drawBakedBox(pose, buffers, m.copperBlock(), 0, ceilingY, 0,
+                dense ? 0.13f : 0.08f, dense ? 0.035f : 0.022f, dense ? 0.11f : 0.07f, light);
         float rodTop = ceilingY - 0.015f;
         float rodBottom = currentFeetY + golemScale * 1.15f;
         if (rodTop > rodBottom) {
-            renderBlockBox(pose, dispatcher, buffers, Blocks.CUT_COPPER_SLAB.defaultBlockState(),
-                    0, (rodTop + rodBottom) / 2f, 0, dense ? 0.035f : 0.022f, rodTop - rodBottom, dense ? 0.035f : 0.022f, light, overlay);
+            drawBakedBox(pose, buffers, m.cutCopperSlab(), 0, (rodTop + rodBottom) / 2f, 0,
+                    dense ? 0.035f : 0.022f, rodTop - rodBottom, dense ? 0.035f : 0.022f, light);
         }
-        renderBlockBox(pose, dispatcher, buffers, Blocks.RAW_COPPER_BLOCK.defaultBlockState(),
-                0, rodBottom, 0, dense ? 0.06f : 0.038f, 0.02f, dense ? 0.06f : 0.038f, light, overlay);
+        drawBakedBox(pose, buffers, m.rawCopper(), 0, rodBottom, 0,
+                dense ? 0.06f : 0.038f, 0.02f, dense ? 0.06f : 0.038f, light);
 
         // hanging copper golem carrying the next cargo until DROP_START
         boolean holding = turn < DROP_START;

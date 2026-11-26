@@ -62,6 +62,10 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
 
     private static Meshes meshes;
 
+    public static void clearBaked() {
+        meshes = null;
+    }
+
     private static Meshes meshes() {
         TextureAtlasSprite mark = sprite(BRASS);
         if (meshes == null || meshes.atlasMark() != mark) {
@@ -119,8 +123,10 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
         // static hull, frame, shelves, interior furniture, atlant pedestals, crest, gauge and rear pipes
         baked.cabinet().draw(buffers, solid, p, light, 0);
 
-        // full-bright teal matrix across the back wall and vanilla interior props
-        wall(buffers.getBuffer(solid), p, -14, 3, 30, 28, 28.9f, MATRIX, WHITE, LightTexture.FULL_BRIGHT);
+        // full-bright teal matrix across the back wall, exterior rear & side sight-glasses, and vanilla interior props
+        VertexConsumer vc = buffers.getBuffer(solid);
+        wall(vc, p, -13.95f, 3.05f, 29.95f, 28f, 28.9f, MATRIX, WHITE, LightTexture.FULL_BRIGHT);
+        renderExteriorGlows(vc, p, time, spin);
         MainframeCabinetMesh.furnishBlocks(pose, buffers, light);
 
         renderInstalledCalculators(be, pose, buffers, light, spin);
@@ -187,6 +193,22 @@ public class CryoMainframeRenderer implements BlockEntityRenderer<CryoMainframeB
             }
             pose.popPose();
         }
+    }
+
+    /** Glowing exterior rear matrix inspection window and side cryo-sight glasses (full bright). */
+    private static void renderExteriorGlows(VertexConsumer vc, PoseStack.Pose p, float time, float spin) {
+        TextureAtlasSprite matrixSprite = sprite(MATRIX);
+        TextureAtlasSprite panelSprite = sprite(PANEL);
+        // Rear center inspection window (+Z face at z = 32.85f)
+        PixelMesh.quad(vc, p,
+                3.2f, 18.6f, 32.85f, 12.8f, 18.6f, 32.85f, 12.8f, 27.0f, 32.85f, 3.2f, 27.0f, 32.85f,
+                matrixSprite.getU0(), matrixSprite.getV0(), matrixSprite.getU1(), matrixSprite.getV1(),
+                WHITE, LightTexture.FULL_BRIGHT, 0, 0, 1);
+        float pulse = spin > 0.01f ? 0.75f + 0.25f * Mth.sin(time * 0.25f) : 0.45f + 0.12f * Mth.sin(time * 0.06f);
+        int cyan = 0xFF000000 | ((int) (0x38 * pulse) << 16) | ((int) (0xF2 * pulse) << 8) | (int) (0xEC * pulse);
+        // Left & right side cryo-load sight-glass columns inside the brass bezels
+        box(vc, p, -16.92f, 18.8f, 27.3f, -16.32f, 26.2f, 28.7f, panelSprite, cyan, LightTexture.FULL_BRIGHT);
+        box(vc, p, 32.32f, 18.8f, 27.3f, 32.92f, 26.2f, 28.7f, panelSprite, cyan, LightTexture.FULL_BRIGHT);
     }
 
     /** Row of 14 teal indicator lights above the doors: chases while working, breathes gently when idle. */

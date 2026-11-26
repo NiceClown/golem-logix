@@ -24,11 +24,6 @@ public class FormationBusBlock extends GolemPlaneBlock {
     }
 
     @Override
-    protected boolean propagatesSkylightDown(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos) {
-        return true;
-    }
-
-    @Override
     protected MapCodec<? extends DirectionalBlock> codec() {
         return CODEC;
     }

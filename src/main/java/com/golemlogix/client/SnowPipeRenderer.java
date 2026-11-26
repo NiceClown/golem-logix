@@ -4,17 +4,20 @@ import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.PipeBlockEntity;
 import com.golemlogix.blocks.GolemProperties;
 import com.golemlogix.blocks.SnowPipeBlock;
+import com.golemlogix.client.render.Baked;
 import com.golemlogix.client.render.NixieDigits;
+import com.golemlogix.client.render.PixelMesh;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.core.BlockPos;
@@ -23,7 +26,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.client.model.data.ModelData;
+import org.joml.Quaternionf;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,6 +53,80 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
     public static final ModelResourceLocation LAMP_GLASS_DENSE = plugModel("dense_frost_pipe_lamp_glass");
 
     static final Direction[] DIRS = Direction.values();
+    private static final Quaternionf ROT_LAMP_X = Axis.YP.rotationDegrees(-90f);
+    private static final PoseStack LAMP_DIGIT_POSE = new PoseStack();
+    private static final double WAREHOUSE_DECOR_SIGHT_SQ = 28.0 * 28.0;
+
+    /** Pre-baked directional plugs, warehouse docks/interiors, and heat-lamp housings (rebuilt on resource reload). */
+    private record PipeMeshes(TextureAtlasSprite atlasMark, BakedModel modelMark,
+                              Baked[][] plugs, Baked[][] docks,
+                              Baked[][] warehouseDecor, Baked[][] warehouseWarm,
+                              Baked[][] lamps, Baked[][] lampGlass) {
+    }
+
+    private static PipeMeshes pipeMeshes;
+
+    private static PipeMeshes pipeMeshes() {
+        TextureAtlasSprite atlasMark = PixelMesh.sprite(MachineParts.BRASS);
+        BakedModel modelMark = Minecraft.getInstance().getModelManager().getModel(PLUG_BASIC);
+        if (pipeMeshes == null || pipeMeshes.atlasMark() != atlasMark || pipeMeshes.modelMark() != modelMark) {
+            Baked[][] plugs = new Baked[2][6];
+            Baked[][] docks = new Baked[2][6];
+            Baked[][] warehouseDecor = new Baked[2][6];
+            Baked[][] warehouseWarm = new Baked[2][6];
+            Baked[][] lamps = new Baked[2][2];
+            Baked[][] lampGlass = new Baked[2][2];
+            for (int d = 0; d < 2; d++) {
+                boolean dense = d == 1;
+                ModelResourceLocation plugId = dense ? PLUG_DENSE : PLUG_BASIC;
+                ModelResourceLocation dockId = dense ? DOCK_DENSE : DOCK_BASIC;
+                ModelResourceLocation lampId = dense ? LAMP_DENSE : LAMP_BASIC;
+                ModelResourceLocation glassId = dense ? LAMP_GLASS_DENSE : LAMP_GLASS_BASIC;
+                for (int i = 0; i < DIRS.length; i++) {
+                    Direction dir = DIRS[i];
+                    plugs[d][i] = Baked.bake((vc, p) -> {
+                        Quads.orient(p, dir);
+                        Baked.drawModel(p.last(), vc, plugId);
+                    });
+                    docks[d][i] = Baked.bake((vc, p) -> {
+                        Quads.orient(p, dir);
+                        Baked.drawModel(p.last(), vc, dockId);
+                    });
+                    if (dir.getAxis().isHorizontal()) {
+                        warehouseDecor[d][i] = Baked.bake((vc, p) -> {
+                            Quads.orient(p, dir);
+                            PipeWarehouseRenderer.bakeDecorations(p, vc, dense, false);
+                        });
+                        warehouseWarm[d][i] = Baked.bake((vc, p) -> {
+                            Quads.orient(p, dir);
+                            PipeWarehouseRenderer.bakeDecorations(p, vc, dense, true);
+                        });
+                    }
+                }
+                for (int ax = 0; ax < 2; ax++) {
+                    boolean axisX = ax == 1;
+                    lamps[d][ax] = Baked.bake((vc, p) -> {
+                        if (axisX) {
+                            p.translate(0.5f, 0.5f, 0.5f);
+                            p.mulPose(ROT_LAMP_X);
+                            p.translate(-0.5f, -0.5f, -0.5f);
+                        }
+                        Baked.drawModel(p.last(), vc, lampId);
+                    });
+                    lampGlass[d][ax] = Baked.bake((vc, p) -> {
+                        if (axisX) {
+                            p.translate(0.5f, 0.5f, 0.5f);
+                            p.mulPose(ROT_LAMP_X);
+                            p.translate(-0.5f, -0.5f, -0.5f);
+                        }
+                        Baked.drawModel(p.last(), vc, glassId);
+                    });
+                }
+            }
+            pipeMeshes = new PipeMeshes(atlasMark, modelMark, plugs, docks, warehouseDecor, warehouseWarm, lamps, lampGlass);
+        }
+        return pipeMeshes;
+    }
 
     public SnowPipeRenderer(BlockEntityRendererProvider.Context context) {
     }
@@ -86,6 +163,12 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
     public static void clearCaches() {
         PipeWarehouseRenderer.clearCache();
         PipeRunnerRenderer.clearCache();
+    }
+
+    /** Clears pre-baked meshes on client resource reload. */
+    public static void clearBaked() {
+        pipeMeshes = null;
+        PipeRunnerRenderer.clearBaked();
     }
 
     /** Bitmask of terminal directions ({@code 1 << dir.ordinal()}); avoids list/array allocations per pipe. */
@@ -159,7 +242,7 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
             return;
         }
         BlockState state = be.getBlockState();
-        renderPlugsAndWarehouses(be, state, pose, buffers, light);
+        renderPlugsAndWarehouses(be, state, pose, buffers, light, overlay);
         if (SnowPipeBlock.hasLamp(state, be.getBlockPos())) {
             renderHeatLamp(be, state, pose, buffers, light);
         }
@@ -169,44 +252,37 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
         PipeRunnerRenderer.renderRunner(level, be.getBlockPos(), state, partialTick, pose, buffers, light, overlay);
     }
 
-    /** Plugs and warehouse docks on closed sides and dead ends (north-facing standalone model oriented to each side). */
-    private static void renderPlugsAndWarehouses(PipeBlockEntity be, BlockState state, PoseStack pose, MultiBufferSource buffers, int light) {
+    /** Plugs and warehouse docks on closed sides and dead ends (pre-baked per orientation to avoid per-frame quad transforms). */
+    private static void renderPlugsAndWarehouses(PipeBlockEntity be, BlockState state, PoseStack pose,
+                                                 MultiBufferSource buffers, int light, int overlay) {
         int mask = terminalMask(be, state);
         if (mask == 0) {
             return;
         }
         boolean dense = state.getBlock() instanceof SnowPipeBlock p && p.isDense();
-        var mc = Minecraft.getInstance();
-        BakedModel plugModel = null;
-        BakedModel dockModel = null;
-        var dispatcher = mc.getBlockRenderer();
-        var renderer = dispatcher.getModelRenderer();
+        int dIdx = dense ? 1 : 0;
+        PipeMeshes meshes = pipeMeshes();
+        RenderType cutout = RenderType.cutout();
+        PoseStack.Pose current = pose.last();
+        BlockPos pos = be.getBlockPos();
+        Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        boolean nearDecor = cam.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) < WAREHOUSE_DECOR_SIGHT_SQ;
         for (int i = 0; i < DIRS.length; i++) {
             if ((mask & (1 << i)) == 0) {
                 continue;
             }
             Direction d = DIRS[i];
-            boolean warehouse = be.getLevel() != null && PipeWarehouseRenderer.isWarehouse(be.getLevel(), be.getBlockPos(), d);
-            BakedModel model;
+            boolean warehouse = be.getLevel() != null && PipeWarehouseRenderer.isWarehouse(be.getLevel(), pos, d);
             if (warehouse) {
-                if (dockModel == null) {
-                    dockModel = mc.getModelManager().getModel(dense ? DOCK_DENSE : DOCK_BASIC);
+                meshes.docks()[dIdx][i].draw(buffers, cutout, current, light, 0);
+                if (nearDecor && meshes.warehouseDecor()[dIdx][i] != null) {
+                    meshes.warehouseDecor()[dIdx][i].draw(buffers, cutout, current, light, 0);
+                    meshes.warehouseWarm()[dIdx][i].draw(buffers, cutout, current, LightTexture.FULL_BRIGHT, 0);
+                    PipeWarehouseRenderer.renderCornerChest(pose, d, buffers, dense, light, overlay);
                 }
-                model = dockModel;
             } else {
-                if (plugModel == null) {
-                    plugModel = mc.getModelManager().getModel(dense ? PLUG_DENSE : PLUG_BASIC);
-                }
-                model = plugModel;
+                meshes.plugs()[dIdx][i].draw(buffers, cutout, current, light, 0);
             }
-            pose.pushPose();
-            Quads.orient(pose, d);
-            renderer.renderModel(pose.last(), buffers.getBuffer(RenderType.cutout()), null, model, 1f, 1f, 1f, light,
-                    OverlayTexture.NO_OVERLAY, ModelData.EMPTY, RenderType.cutout());
-            if (warehouse) {
-                PipeWarehouseRenderer.renderDecorations(pose, dispatcher, buffers, dense, light);
-            }
-            pose.popPose();
         }
     }
 
@@ -216,17 +292,21 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
      */
     private static void renderHeatLamp(PipeBlockEntity be, BlockState state, PoseStack pose, MultiBufferSource buffers, int light) {
         boolean dense = state.getBlock() instanceof SnowPipeBlock p && p.isDense();
-        var mc = Minecraft.getInstance();
-        var renderer = mc.getBlockRenderer().getModelRenderer();
-        BakedModel lampModel = mc.getModelManager().getModel(dense ? LAMP_DENSE : LAMP_BASIC);
-        pose.pushPose();
-        if (SnowPipeBlock.straightAxis(state) == Direction.Axis.X) {
-            pose.translate(0.5, 0.5, 0.5);
-            pose.mulPose(Axis.YP.rotationDegrees(-90));
-            pose.translate(-0.5, -0.5, -0.5);
+        int dIdx = dense ? 1 : 0;
+        boolean axisX = SnowPipeBlock.straightAxis(state) == Direction.Axis.X;
+        int axIdx = axisX ? 1 : 0;
+        PipeMeshes meshes = pipeMeshes();
+        PoseStack.Pose basePose = pose.last();
+
+        meshes.lamps()[dIdx][axIdx].draw(buffers, RenderType.cutout(), basePose, light, 0);
+
+        PoseStack.Pose digitPose = basePose;
+        if (axisX) {
+            digitPose = LAMP_DIGIT_POSE.last();
+            digitPose.pose().set(basePose.pose()).translate(0.5f, 0.5f, 0.5f).rotate(ROT_LAMP_X).translate(-0.5f, -0.5f, -0.5f);
+            digitPose.normal().set(basePose.normal()).rotate(ROT_LAMP_X);
         }
-        renderer.renderModel(pose.last(), buffers.getBuffer(RenderType.cutout()), null, lampModel, 1f, 1f, 1f, light,
-                OverlayTexture.NO_OVERLAY, ModelData.EMPTY, RenderType.cutout());
+
         // the digits face east, in front of the tubes' mesh planes; seen from there the tens tube is on the left (south)
         int load = Math.min(99, be.lampLoad());
         int color = NixieDigits.loadColor(load, be.lampCapacity());
@@ -234,16 +314,13 @@ public class SnowPipeRenderer implements BlockEntityRenderer<PipeBlockEntity> {
         float x = (dense ? 14.7f : 12.6f) + 3.65f;
         VertexConsumer nixie = NixieDigits.buffer(buffers);
         if (load >= 10) {
-            NixieDigits.digit(pose.last(), nixie, load / 10, x, 8f, 9.35f, 2.2f, 4.4f, 0f, 0f, -1f, 0f, 1f, 0f, color);
+            NixieDigits.digit(digitPose, nixie, load / 10, x, 8f, 9.35f, 2.2f, 4.4f, 0f, 0f, -1f, 0f, 1f, 0f, color);
         }
-        NixieDigits.digit(pose.last(), nixie, load % 10, x, 8f, 6.65f, 2.2f, 4.4f, 0f, 0f, -1f, 0f, 1f, 0f, color);
+        NixieDigits.digit(digitPose, nixie, load % 10, x, 8f, 6.65f, 2.2f, 4.4f, 0f, 0f, -1f, 0f, 1f, 0f, color);
         // under Iris/Oculus shader packs, translucent glass can wash out or hide emissive digits behind it: skip glass then
         if (!JarWholeRenderer.shaderPackActive()) {
-            BakedModel glassModel = mc.getModelManager().getModel(dense ? LAMP_GLASS_DENSE : LAMP_GLASS_BASIC);
-            renderer.renderModel(pose.last(), buffers.getBuffer(RenderType.translucent()), null, glassModel, 1f, 1f, 1f, light,
-                    OverlayTexture.NO_OVERLAY, ModelData.EMPTY, RenderType.translucent());
+            meshes.lampGlass()[dIdx][axIdx].draw(buffers, RenderType.translucent(), basePose, light, 0);
         }
-        pose.popPose();
     }
 
     /** Renders a cube block of {@code size} centred at {@code (x, y, z)} in the current pose frame. */

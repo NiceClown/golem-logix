@@ -6,7 +6,7 @@ import com.golemlogix.client.render.Baked;
 import com.golemlogix.client.render.PixelMesh;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -21,6 +21,8 @@ import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import static com.golemlogix.client.MachineParts.BRASS;
@@ -60,18 +62,32 @@ public class DistillationTowerRenderer implements BlockEntityRenderer<Distillati
     private static final Vector3f GOLEM_POS = new Vector3f(-3.2f * PIXEL, 18f * PIXEL, 3.9f * PIXEL);
     private static final Vector3f FWD_EAST = new Vector3f(1f, 0f, 0f);
     private static final Vector3f UP = new Vector3f(0f, 1f, 0f);
+    private static final double CREW_SIGHT_SQ = 40.0 * 40.0;
+    private static final Quaternionf SCRATCH_QUAT = new Quaternionf();
+    private static final PoseStack SCRATCH_POSE = new PoseStack();
 
-    private record Meshes(TextureAtlasSprite atlasMark, Baked lower, Baked head) {
+    private record Meshes(TextureAtlasSprite atlasMark, Baked lower, Baked head,
+                          Baked coilRing, Baked bracket, Baked wheel) {
     }
 
     private static Meshes meshes;
+
+    public static void clearBaked() {
+        meshes = null;
+    }
 
     private static Meshes meshes() {
         TextureAtlasSprite mark = sprite(BRASS);
         if (meshes == null || meshes.atlasMark() != mark) {
             meshes = new Meshes(mark,
                     Baked.bake(DistillationTowerRenderer::bakeLower),
-                    Baked.bake(DistillationTowerRenderer::bakeHead));
+                    Baked.bake(DistillationTowerRenderer::bakeHead),
+                    Baked.bake(DistillationTowerRenderer::bakeCoilRing),
+                    Baked.bake((vc, p) -> {
+                        box(vc, p.last(), -0.6f, 14.4f, 3.2f, 0.8f, 34f, 4.6f, COPPER, WHITE, 0);
+                        MachineParts.platform(vc, p, -5f, 1.2f, 17.4f, 2.2f, 5.8f, 13.6f, 0.2f, 0);
+                    }),
+                    Baked.bake((vc, p) -> MachineParts.wheelX(vc, p, 0f, 0f, 0f, 2.4f, 0f, 0)));
         }
         return meshes;
     }
@@ -107,12 +123,14 @@ public class DistillationTowerRenderer implements BlockEntityRenderer<Distillati
         float time = ((level.getGameTime() + Math.floorMod(pos.asLong(), 53L)) % 72000L) + partialTick;
         Meshes baked = meshes();
         RenderType solid = RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS);
+        Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        boolean showCrew = cam.distanceToSqr(pos.getX() + 0.5, pos.getY() + 1.5, pos.getZ() + 0.5) < CREW_SIGHT_SQ;
 
         pose.pushPose();
         Quads.faceModel(pose, state.getValue(DistillationTowerBlock.FACING));
         PoseStack.Pose p = pose.last();
 
-        // static plinth, column frame, feed pipe, golem bracket and static louvred head
+        // static plinth, column frame, and static louvred head
         baked.lower().draw(buffers, solid, p, light, 0);
         baked.head().draw(buffers, solid, p, lightTop, 0);
 
@@ -121,16 +139,26 @@ public class DistillationTowerRenderer implements BlockEntityRenderer<Distillati
         int rune = 0xFF000000 | ((int) (0xF0 * runeGlow) << 16) | ((int) (0x30 * runeGlow) << 8) | (int) (0x28 * runeGlow);
         fitWall(vc, p, 1.2f, 2.4f, 14.8f, 5.6f, 0.54f, RUNES, rune, LightTexture.FULL_BRIGHT);
 
-        // valve wheel on the feed pipe, then coil inside the glass
-        float turn = work > 0.05f ? phase * 14f : 0f;
-        MachineParts.wheelX(vc, pose, -1.2f, 24f, 3.9f, 2.4f, turn, light);
-        renderCoil(vc, pose, phase, work, time);
+        if (showCrew) {
+            float turn = work > 0.05f ? phase * 14f : 0f;
+            baked.bracket().draw(buffers, solid, p, light, 0);
+
+            PoseStack.Pose wp = SCRATCH_POSE.last();
+            SCRATCH_QUAT.rotationX(turn * Mth.DEG_TO_RAD);
+            wp.pose().set(p.pose()).translate(-1.2f * PIXEL, 24f * PIXEL, 3.9f * PIXEL).rotate(SCRATCH_QUAT);
+            wp.normal().set(p.normal()).rotate(SCRATCH_QUAT);
+            baked.wheel().draw(buffers, solid, wp, light, 0);
+        }
+
+        renderCoil(buffers.getBuffer(solid), buffers, solid, baked.coilRing(), p, phase, work, time);
 
         // side golem last: its own buffer closes the block-atlas cutout buffer
-        float reach = work > 0.05f ? -1.2f + 0.15f * Mth.sin(phase * 0.7f) : -0.85f;
-        CopperGolemPuppet.Arms arms = new CopperGolemPuppet.Arms(reach, 0.25f, reach, -0.25f, 0.2f * Mth.sin(time * 0.013f));
-        CopperGolemPuppet.render(pose, buffers, light, GOLEM_POS, FWD_EAST,
-                UP, 0.45f, new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.1f), 1, null, arms);
+        if (showCrew) {
+            float reach = work > 0.05f ? -1.2f + 0.15f * Mth.sin(phase * 0.7f) : -0.85f;
+            CopperGolemPuppet.Arms arms = new CopperGolemPuppet.Arms(reach, 0.25f, reach, -0.25f, 0.2f * Mth.sin(time * 0.013f));
+            CopperGolemPuppet.render(pose, buffers, light, GOLEM_POS, FWD_EAST,
+                    UP, 0.45f, new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.1f), 1, null, arms);
+        }
 
         // translucent blood pool and column glass
         VertexConsumer tv = buffers.getBuffer(RenderType.entityTranslucent(InventoryMenu.BLOCK_ATLAS));
@@ -156,14 +184,12 @@ public class DistillationTowerRenderer implements BlockEntityRenderer<Distillati
         }
         fitWall(vc, p, 2.2f, 6.6f, 7.4f, 11.8f, 0.5f, GAUGE, WHITE, light);
         box(vc, p, 4.4f, 5.8f, 0.2f, 5.2f, 6.6f, 0.6f, BRASS, WHITE, light);
-        // column frame, feed pipe and golem bracket platform
+        // column frame
         for (float[] c : COLUMN_POSTS) {
             box(vc, p, c[0], 14.4f, c[1], c[0] + 1.4f, 34.4f, c[1] + 1.4f, FRAME, WHITE, light);
         }
         box(vc, p, 1, 14.4f, 1, 15, 15.4f, 15, FRAME, WHITE, light);
         box(vc, p, 1, 33.4f, 1, 15, 34.4f, 15, FRAME, WHITE, light);
-        box(vc, p, -0.6f, 14.4f, 3.2f, 0.8f, 34f, 4.6f, COPPER, WHITE, light);
-        MachineParts.platform(vc, pose, -5f, 1.2f, 17.4f, 2.2f, 5.8f, 13.6f, 0.2f, light);
     }
 
     private static void bakeHead(VertexConsumer vc, PoseStack pose) {
@@ -185,31 +211,34 @@ public class DistillationTowerRenderer implements BlockEntityRenderer<Distillati
         box(vc, p, 6.2f, 50.2f, 6.2f, 9.8f, 50.8f, 9.8f, ICE, WHITE, light);
     }
 
-    /** The coil: five glowing rings stacked up the column, a pulse running up them while the tower works. */
-    private static void renderCoil(VertexConsumer vc, PoseStack pose, float phase, float work, float time) {
+    private static void bakeCoilRing(VertexConsumer vc, PoseStack pose) {
+        PoseStack.Pose p = pose.last();
         TextureAtlasSprite glowSprite = sprite(GLOW);
+        for (int i = 0; i < 12; i++) {
+            float a = i * Mth.TWO_PI / 12f;
+            float cx = Mth.cos(a) * 3.9f, cz = Mth.sin(a) * 3.9f;
+            float dy = (i / 12f) * 1.2f;
+            box(vc, p, cx - 0.75f, dy - 0.45f, cz - 0.75f, cx + 0.75f, dy + 0.45f, cz + 0.75f, glowSprite, WHITE, 0);
+        }
+    }
+
+    /** The coil: five glowing rings stacked up the column, a pulse running up them while the tower works. */
+    private static void renderCoil(VertexConsumer vc, MultiBufferSource buffers, RenderType solid, Baked coilRing,
+                                   PoseStack.Pose basePose, float phase, float work, float time) {
+        PoseStack.Pose cp = SCRATCH_POSE.last();
         for (int k = 0; k < COIL.length; k++) {
             float y = COLUMN_BOTTOM + 2.6f + k * 3.6f;
             float pulse = 0.5f + 0.5f * Mth.sin(phase * 1.6f - k * 1.2f);
             float b = 0.35f + 0.65f * (0.25f + 0.75f * work) * (0.55f + 0.45f * pulse);
             int col = PixelMesh.scaledRgb(COIL[k], b);
-            pose.pushPose();
-            pose.translate(8f * PIXEL, y * PIXEL, 8f * PIXEL);
-            pose.mulPose(Axis.YP.rotationDegrees(phase * 22f + k * 17f));
-            PoseStack.Pose p = pose.last();
-            float r = 3.9f;
-            for (int i = 0; i < 12; i++) {
-                float a = i * Mth.TWO_PI / 12f;
-                float cx = Mth.cos(a) * r, cz = Mth.sin(a) * r;
-                // a slight helix: each ring leans towards the next one
-                float dy = (i / 12f) * 1.2f;
-                box(vc, p, cx - 0.75f, dy - 0.45f, cz - 0.75f, cx + 0.75f, dy + 0.45f, cz + 0.75f, glowSprite, col, LightTexture.FULL_BRIGHT);
-            }
-            pose.popPose();
+            SCRATCH_QUAT.rotationY((phase * 22f + k * 17f) * Mth.DEG_TO_RAD);
+            cp.pose().set(basePose.pose()).translate(8f * PIXEL, y * PIXEL, 8f * PIXEL).rotate(SCRATCH_QUAT);
+            cp.normal().set(basePose.normal()).rotate(SCRATCH_QUAT);
+            coilRing.draw(buffers, solid, cp, LightTexture.FULL_BRIGHT, col);
         }
         // the core of the column: a faint cold glow that brightens with the work
         float g = 0.2f + 0.5f * work * (0.8f + 0.2f * Mth.sin(time * 0.2f));
         int core = 0xFF000000 | ((int) (0x60 * g) << 16) | ((int) (0xC8 * g) << 8) | (int) (0xFF * g);
-        box(vc, pose.last(), 7.4f, COLUMN_BOTTOM + 2f, 7.4f, 8.6f, COLUMN_TOP - 1.5f, 8.6f, glowSprite, core, LightTexture.FULL_BRIGHT);
+        box(vc, basePose, 7.4f, COLUMN_BOTTOM + 2f, 7.4f, 8.6f, COLUMN_TOP - 1.5f, 8.6f, sprite(GLOW), core, LightTexture.FULL_BRIGHT);
     }
 }
