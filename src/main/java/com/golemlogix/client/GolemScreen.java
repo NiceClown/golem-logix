@@ -29,6 +29,11 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
     private static final ItemStack ICON_LEVER = new ItemStack(Items.LEVER);
     private static final ItemStack ICON_REPEATER = new ItemStack(Items.REPEATER);
     private static final Component PRIORITY_LABEL = Component.translatable("gui.golem_logix.priority");
+    private static final Component PRIORITY_RESET = Component.translatable("gui.golem_logix.priority.reset");
+    private static final Component PRIORITY_TOOLTIP = Component.translatable("gui.golem_logix.priority.tooltip");
+    private static final Component FUZZY_HINT_BUS = Component.translatable("tooltip.golem_logix.fuzzy.hint_bus").withStyle(net.minecraft.ChatFormatting.DARK_GRAY);
+    private static final Component FUZZY_HINT = Component.translatable("tooltip.golem_logix.fuzzy.hint").withStyle(net.minecraft.ChatFormatting.DARK_GRAY);
+    private static final Component SLOT_WINDOW_HINT = Component.translatable("tooltip.golem_logix.slot_window_hint").withStyle(net.minecraft.ChatFormatting.DARK_GRAY);
 
     protected GolemScreen(T menu, Inventory inv, Component title, int width, int height) {
         super(menu, inv, title);
@@ -40,6 +45,9 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
     private int priorityX, priorityY;
     private int sideButtons = 0;
     protected final List<IconButton> sideButtonWidgets = new ArrayList<>();
+    private Rect2i cachedUpgradePanel;
+    private List<Rect2i> cachedExtraAreas = List.of();
+    private int cachedExtraAreasSideButtons = -1;
     private com.golemlogix.upgrade.UpgradeSpec cachedHintsSpec;
     private boolean cachedHintsSecrets;
     private List<ItemStack> cachedHints = List.of();
@@ -57,8 +65,8 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
         addRenderableWidget(new GolemButton(bx + 28, by + 22, 26, 14, Component.literal("+1"), b -> menuButton(Priority.BUTTON_PLUS_1)));
         addRenderableWidget(new GolemButton(bx, by + 38, 26, 14, Component.literal("-10"), b -> menuButton(Priority.BUTTON_MINUS_10)));
         addRenderableWidget(new GolemButton(bx + 28, by + 38, 26, 14, Component.literal("+10"), b -> menuButton(Priority.BUTTON_PLUS_10)));
-        addRenderableWidget(new GolemButton(bx, by + 54, 54, 12, () -> Component.translatable("gui.golem_logix.priority.reset"),
-                () -> Component.translatable("gui.golem_logix.priority.tooltip"), () -> false, b -> menuButton(Priority.BUTTON_RESET)));
+        addRenderableWidget(new GolemButton(bx, by + 54, 54, 12, () -> PRIORITY_RESET,
+                () -> PRIORITY_TOOLTIP, () -> false, b -> menuButton(Priority.BUTTON_RESET)));
     }
 
     protected void menuButton(int id) {
@@ -95,10 +103,21 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
         super.init();
         this.sideButtonWidgets.clear();
         this.sideButtons = 0;
+        this.cachedUpgradePanel = computeUpgradePanel();
+        this.cachedExtraAreasSideButtons = -1;
         this.titleLabelX = 8;
         this.titleLabelY = 6;
         this.inventoryLabelX = 8;
         this.inventoryLabelY = this.imageHeight - 94;
+    }
+
+    private Rect2i computeUpgradePanel() {
+        if (!(menu instanceof GolemMenu gm) || !gm.hasUpgradeSlots()) {
+            return null;
+        }
+        Slot first = menu.slots.get(gm.upgradeStart());
+        int n = gm.upgradeEnd() - gm.upgradeStart();
+        return new Rect2i(leftPos + first.x - 5, topPos + first.y - 5, GolemMenu.UPGRADE_COLUMN, n * 18 + 8);
     }
 
     /** Recomputes visibility and packs the side buttons vertically without gaps. */
@@ -122,25 +141,28 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
 
     /** The upgrade column (to the right of the window), if the menu has one: x, y, width, height in screen coordinates. */
     protected Rect2i upgradePanel() {
-        if (!(menu instanceof GolemMenu gm) || !gm.hasUpgradeSlots()) {
-            return null;
-        }
-        Slot first = menu.slots.get(gm.upgradeStart());
-        int n = gm.upgradeEnd() - gm.upgradeStart();
-        return new Rect2i(leftPos + first.x - 5, topPos + first.y - 5, GolemMenu.UPGRADE_COLUMN, n * 18 + 8);
+        return cachedUpgradePanel;
     }
 
     /** Areas outside the window that belong to it (upgrade column, buttons on the left): JEI avoids them, and a click on them is not "outside the window". */
     public List<Rect2i> extraAreas() {
-        List<Rect2i> out = new ArrayList<>();
-        Rect2i up = upgradePanel();
-        if (up != null) {
-            out.add(up);
+        if (cachedExtraAreasSideButtons != sideButtons) {
+            cachedExtraAreasSideButtons = sideButtons;
+            Rect2i up = upgradePanel();
+            if (up == null && sideButtons == 0) {
+                cachedExtraAreas = List.of();
+            } else {
+                List<Rect2i> out = new ArrayList<>(2);
+                if (up != null) {
+                    out.add(up);
+                }
+                if (sideButtons > 0) {
+                    out.add(new Rect2i(leftPos - 23, topPos + 2, 23, sideButtons * 20 + 2));
+                }
+                cachedExtraAreas = out;
+            }
         }
-        if (sideButtons > 0) {
-            out.add(new Rect2i(leftPos - 23, topPos + 2, 23, sideButtons * 20 + 2));
-        }
-        return out;
+        return cachedExtraAreas;
     }
 
     @Override
@@ -266,12 +288,11 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
         return -1;
     }
 
-    /** The window a middle-click on a filled ghost slot opens. */
+    /** The window a middle-click on a filled ghost filter slot opens. */
     protected FilterSlotScreen slotWindow(com.golemlogix.menu.GolemMenu gm, int slot) {
         return new FilterSlotScreen(this, gm, slot, keepsAmounts());
     }
 
-    /** A middle-click on a filled bus filter slot opens its settings window. True if it did. */
     protected boolean slotWindowClick(double x, double y, int button) {
         int i = button == 2 ? filterSlotAt(x, y) : -1;
         if (i >= 0 && menu.getSlot(i).hasItem() && minecraft != null && menu instanceof com.golemlogix.menu.GolemMenu gm) {
@@ -310,12 +331,11 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
                 if (line != null) {
                     lines.add(line);
                     if (canCycle) {
-                        lines.add(Component.translatable(hoveredSlot.index < filterSlots() ? "tooltip.golem_logix.fuzzy.hint_bus"
-                                : "tooltip.golem_logix.fuzzy.hint").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+                        lines.add(hoveredSlot.index < filterSlots() ? FUZZY_HINT_BUS : FUZZY_HINT);
                     }
                 }
                 if (slotWindowHint) {
-                    lines.add(Component.translatable("tooltip.golem_logix.slot_window_hint").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+                    lines.add(SLOT_WINDOW_HINT);
                 }
             }
         }
