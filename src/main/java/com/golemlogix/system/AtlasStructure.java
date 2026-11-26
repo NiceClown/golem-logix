@@ -69,9 +69,12 @@ public final class AtlasStructure {
                 net.minecraft.core.Direction face = dz < 0 ? net.minecraft.core.Direction.NORTH : net.minecraft.core.Direction.SOUTH;
                 for (int dy = 1; dy <= 2; dy++) {
                     BlockPos pos = origin.offset(dx, dy, dz);
+                    if (!level.isLoaded(pos)) {
+                        continue;
+                    }
                     BlockState s = level.getBlockState(pos);
                     if (s.is(ModBlocks.ATLAS_ATLANT.get()) && s.getValue(AtlantBlock.FACING) != face) {
-                        level.setBlock(pos, s.setValue(AtlantBlock.FACING, face), 18);
+                        level.setBlock(pos, s.setValue(AtlantBlock.FACING, face), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
                     }
                 }
             }
@@ -118,7 +121,7 @@ public final class AtlasStructure {
                         }
                     }
                     if (want != state) {
-                        level.setBlock(pos, want, 18);
+                        level.setBlock(pos, want, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
                     }
                 }
             }
@@ -127,7 +130,8 @@ public final class AtlasStructure {
 
     /** The starter tower: the core on two Atlas Conduits and a Cable Bushing, one above the other (the first step to the array). */
     public static boolean isTower(Level level, BlockPos corePos) {
-        return level.getBlockState(corePos.below()).is(ModBlocks.ATLAS_CONDUIT.get())
+        return level.isLoaded(corePos)
+                && level.getBlockState(corePos.below()).is(ModBlocks.ATLAS_CONDUIT.get())
                 && level.getBlockState(corePos.below(2)).is(ModBlocks.ATLAS_CONDUIT.get())
                 && level.getBlockState(corePos.below(3)).is(ModBlocks.CABLE_BUSHING.get());
     }

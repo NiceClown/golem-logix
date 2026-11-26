@@ -44,15 +44,22 @@ public record UpgradeSpec(int slots, int maxSpeed, boolean crafting, boolean red
     /** Stock Manometer: Autocraft Module (emit while craft running) and Fuzzy Card. */
     public static final UpgradeSpec MANOMETER = new UpgradeSpec(2, 0, true, false, true);
 
+    private static final UpgradeType[] SINGLE_TYPES = {
+            UpgradeType.CRAFTING, UpgradeType.REDSTONE, UpgradeType.FUZZY, UpgradeType.TEMPER
+    };
+
     /** The kind of upgrade slot slot is for. */
     public UpgradeType typeAt(int slot) {
+        if (slot < 0 || slot >= slots) {
+            return null;
+        }
         int k = slot;
         int speedSlots = speedStacks ? Math.min(1, maxSpeed) : maxSpeed;
         if (k < speedSlots) {
             return UpgradeType.SPEED;
         }
         k -= speedSlots;
-        for (UpgradeType t : new UpgradeType[]{UpgradeType.CRAFTING, UpgradeType.REDSTONE, UpgradeType.FUZZY, UpgradeType.TEMPER}) {
+        for (UpgradeType t : SINGLE_TYPES) {
             if (max(t) > 0 && k-- == 0) {
                 return t;
             }

@@ -49,9 +49,12 @@ public final class CatalogBlueprint {
             } else if (!CatalogStructure.isShelf(i)) {
                 accepted.addAll(CatalogStructure.COPPER);
             }
-            accepted.add(CatalogStructure.fallback(i));
+            Block fallback = CatalogStructure.fallback(i);
+            if (!accepted.contains(fallback)) {
+                accepted.add(fallback);
+            }
             accepted.add(ModBlocks.CATALOG_PART.get());
-            BlockState ghost = CatalogStructure.fallback(i).defaultBlockState();
+            BlockState ghost = fallback.defaultBlockState();
             if (ghost.hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
                 ghost = ghost.setValue(BlockStateProperties.HORIZONTAL_FACING, facing);
             }

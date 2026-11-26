@@ -16,28 +16,37 @@ import java.util.List;
  * and Ars Nouveau jars / tiles (ISourceTile, through reflection, so Ars Nouveau stays optional).
  */
 public class SourceHelper {
+    private static final Direction[] DIRECTIONS = Direction.values();
     private static Class<?> sourceTileClass = null;
     private static Method getSourceMethod = null;
+    private static Method getMaxSourceMethod = null;
     private static Method removeSourceMethod = null;
     private static Method addSourceMethod = null;
     private static Method canProvideMethod = null;
     private static Method canAcceptMethod = null;
-    private static boolean checkedArsNouveau = false;
+    private static volatile boolean checkedArsNouveau = false;
 
     private static void initArsNouveau() {
         if (checkedArsNouveau) {
             return;
         }
-        checkedArsNouveau = true;
-        try {
-            sourceTileClass = Class.forName("com.hollingsworth.arsnouveau.api.source.ISourceTile");
-            getSourceMethod = sourceTileClass.getMethod("getSource");
-            removeSourceMethod = sourceTileClass.getMethod("removeSource", int.class, boolean.class);
-            addSourceMethod = sourceTileClass.getMethod("addSource", int.class, boolean.class);
-            canProvideMethod = sourceTileClass.getMethod("canProvideSource");
-            canAcceptMethod = sourceTileClass.getMethod("canAcceptSource");
-        } catch (Throwable ignored) {
-            sourceTileClass = null;
+        synchronized (SourceHelper.class) {
+            if (checkedArsNouveau) {
+                return;
+            }
+            try {
+                Class<?> cls = Class.forName("com.hollingsworth.arsnouveau.api.source.ISourceTile");
+                getSourceMethod = cls.getMethod("getSource");
+                getMaxSourceMethod = cls.getMethod("getMaxSource");
+                removeSourceMethod = cls.getMethod("removeSource", int.class, boolean.class);
+                addSourceMethod = cls.getMethod("addSource", int.class, boolean.class);
+                canProvideMethod = cls.getMethod("canProvideSource");
+                canAcceptMethod = cls.getMethod("canAcceptSource");
+                sourceTileClass = cls;
+            } catch (Throwable ignored) {
+                sourceTileClass = null;
+            }
+            checkedArsNouveau = true;
         }
     }
 
@@ -106,6 +115,9 @@ public class SourceHelper {
 
         @Override
         public int available() {
+            if (be.isRemoved()) {
+                return 0;
+            }
             try {
                 if (!(boolean) canProvideMethod.invoke(be)) {
                     return 0;
@@ -118,6 +130,9 @@ public class SourceHelper {
 
         @Override
         public int drain(int amount) {
+            if (be.isRemoved() || amount <= 0) {
+                return 0;
+            }
             int take = Math.min(amount, available());
             if (take <= 0) {
                 return 0;
@@ -155,7 +170,7 @@ public class SourceHelper {
     /** All Source suppliers directly adjacent to the position. */
     public static List<Supplier> adjacentSuppliers(Level level, BlockPos pos) {
         List<Supplier> list = new ArrayList<>(0);
-        for (Direction dir : Direction.values()) {
+        for (Direction dir : DIRECTIONS) {
             BlockPos p = pos.relative(dir);
             if (!level.isLoaded(p)) {
                 continue;
@@ -214,6 +229,7 @@ public class SourceHelper {
      */
     public static int drainNearby(Level level, BlockPos origin, int amount) {
         int taken = 0;
+        java.util.Set<BlockEntity> seen = new java.util.HashSet<>();
         BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
         for (int dx = -2; dx <= 2 && taken < amount; dx++) {
             for (int dy = -1; dy <= 2 && taken < amount; dy++) {
@@ -223,7 +239,10 @@ public class SourceHelper {
                         continue;
                     }
                     BlockEntity be = level.getBlockEntity(m);
-                    Supplier s = be == null ? null : asSupplier(be);
+                    if (be == null || !seen.add(owner(be))) {
+                        continue;
+                    }
+                    Supplier s = asSupplier(be);
                     if (s == null) {
                         continue;
                     }
@@ -243,16 +262,19 @@ public class SourceHelper {
      */
     public static int drainAround(Level level, java.util.Collection<BlockPos> region, int amount) {
         java.util.Set<BlockPos> inside = new java.util.HashSet<>(region);
-        java.util.Set<BlockPos> seen = new java.util.HashSet<>();
+        java.util.Set<BlockEntity> seen = new java.util.HashSet<>();
         int taken = 0;
         for (BlockPos cell : region) {
-            for (Direction dir : Direction.values()) {
+            for (Direction dir : DIRECTIONS) {
                 BlockPos p = cell.relative(dir);
-                if (inside.contains(p) || !seen.add(p) || !level.isLoaded(p)) {
+                if (inside.contains(p) || !level.isLoaded(p)) {
                     continue;
                 }
                 BlockEntity be = level.getBlockEntity(p);
-                Supplier s = be == null ? null : asSupplier(be);
+                if (be == null || !seen.add(owner(be))) {
+                    continue;
+                }
+                Supplier s = asSupplier(be);
                 if (s == null) {
                     continue;
                 }
@@ -297,7 +319,7 @@ public class SourceHelper {
             if (!(boolean) canAcceptMethod.invoke(be)) {
                 return 0;
             }
-            int max = (int) sourceTileClass.getMethod("getMaxSource").invoke(be);
+            int max = (int) getMaxSourceMethod.invoke(be);
             int cur = (int) getSourceMethod.invoke(be);
             int add = Math.max(0, Math.min(amount, max - cur));
             if (add > 0 && !simulate) {
@@ -323,7 +345,7 @@ public class SourceHelper {
         java.util.Set<Object> seen = new java.util.HashSet<>();
         int left = amount;
         for (BlockPos cell : region) {
-            for (Direction dir : Direction.values()) {
+            for (Direction dir : DIRECTIONS) {
                 if (left <= 0) {
                     return amount - left;
                 }
