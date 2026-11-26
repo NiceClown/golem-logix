@@ -18,6 +18,7 @@ import net.minecraft.world.level.Level;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -94,33 +95,42 @@ public final class ArsImbuement {
         }
         DynamicOps<JsonElement> ops = level.registryAccess().createSerializationContext(JsonOps.INSTANCE);
         List<Entry> out = new ArrayList<>();
-        for (RecipeHolder<?> holder : (java.util.Collection<RecipeHolder<?>>) (java.util.Collection) manager.byType((RecipeType) type)) {
-            try {
-                Recipe<?> recipe = holder.value();
-                MapCodec<Recipe<?>> codec = (MapCodec<Recipe<?>>) (MapCodec) recipe.getSerializer().codec();
-                JsonElement json = codec.codec().encodeStart(ops, recipe).result().orElse(null);
-                if (json == null || !json.isJsonObject()) {
-                    continue;
-                }
-                JsonObject o = json.getAsJsonObject();
-                if (o.has("pedestalItems") && o.get("pedestalItems").isJsonArray() && !o.getAsJsonArray("pedestalItems").isEmpty()) {
-                    continue;
-                }
-                ItemStack result = o.has("output") ? ItemStack.CODEC.parse(ops, o.get("output")).result().orElse(ItemStack.EMPTY) : ItemStack.EMPTY;
-                if (result.isEmpty() || !OUTPUTS.contains(BuiltInRegistries.ITEM.getKey(result.getItem()))) {
-                    continue;
-                }
-                Ingredient input = o.has("input") ? Ingredient.CODEC.parse(ops, o.get("input")).result().orElse(null) : null;
-                int source = o.has("source") ? Math.max(0, o.get("source").getAsInt()) : 0;
-                if (input == null || input.isEmpty()) {
-                    continue;
-                }
-                int chamber = chamberTicks(source);
-                out.add(new Entry(input, result, source, chamber, Math.round(source * SOURCE_FACTOR), Math.max(1, chamber / 2)));
-            } catch (RuntimeException e) {
-                // a recipe this reader does not understand is skipped; the others still work
+        for (RecipeHolder<?> holder : (Collection<RecipeHolder<?>>) (Collection) manager.byType((RecipeType) type)) {
+            Entry entry = parseRecipe(holder.value(), ops);
+            if (entry != null) {
+                out.add(entry);
             }
         }
         return List.copyOf(out);
+    }
+
+    @Nullable
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static Entry parseRecipe(Recipe<?> recipe, DynamicOps<JsonElement> ops) {
+        try {
+            MapCodec<Recipe<?>> codec = (MapCodec<Recipe<?>>) (MapCodec) recipe.getSerializer().codec();
+            JsonElement json = codec.codec().encodeStart(ops, recipe).result().orElse(null);
+            if (json == null || !json.isJsonObject()) {
+                return null;
+            }
+            JsonObject o = json.getAsJsonObject();
+            if (o.has("pedestalItems") && o.get("pedestalItems").isJsonArray() && !o.getAsJsonArray("pedestalItems").isEmpty()) {
+                return null;
+            }
+            ItemStack result = o.has("output") ? ItemStack.CODEC.parse(ops, o.get("output")).result().orElse(ItemStack.EMPTY) : ItemStack.EMPTY;
+            if (result.isEmpty() || !OUTPUTS.contains(BuiltInRegistries.ITEM.getKey(result.getItem()))) {
+                return null;
+            }
+            Ingredient input = o.has("input") ? Ingredient.CODEC.parse(ops, o.get("input")).result().orElse(null) : null;
+            int source = o.has("source") ? Math.max(0, o.get("source").getAsInt()) : 0;
+            if (input == null || input.isEmpty()) {
+                return null;
+            }
+            int chamber = chamberTicks(source);
+            return new Entry(input, result, source, chamber, Math.round(source * SOURCE_FACTOR), Math.max(1, chamber / 2));
+        } catch (RuntimeException e) {
+            // a recipe this reader does not understand is skipped; the others still work
+            return null;
+        }
     }
 }

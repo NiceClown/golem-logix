@@ -1,21 +1,26 @@
 package com.golemlogix.integration.jei;
 
 import com.golemlogix.init.ModMenus;
+import com.golemlogix.items.FluidGhostItem;
 import com.golemlogix.menu.PatternEncoderMenu;
 import com.golemlogix.menu.TerminalMenu;
+import com.golemlogix.network.PrecraftPayload;
 import com.golemlogix.network.RecipeFillPayload;
 import com.golemlogix.network.TerminalListPayload;
 import com.golemlogix.system.ItemKey;
 import mezz.jei.api.constants.RecipeTypes;
+import mezz.jei.api.gui.builder.ITooltipBuilder;
 import mezz.jei.api.gui.ingredient.IRecipeSlotView;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
+import mezz.jei.api.neoforge.NeoForgeTypes;
 import mezz.jei.api.recipe.RecipeIngredientRole;
-import mezz.jei.api.recipe.types.IRecipeType;
 import mezz.jei.api.recipe.transfer.IRecipeTransferError;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
 import mezz.jei.api.recipe.transfer.IUniversalRecipeTransferHandler;
+import mezz.jei.api.recipe.types.IRecipeType;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
@@ -23,13 +28,17 @@ import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * JEI "+" button for the mod's windows: the crafting terminal lays the recipe out on the grid from the network and the inventory,
@@ -47,12 +56,20 @@ final class RecipeTransfers {
         List<ItemStack> out = new ArrayList<>();
         view.getDisplayedItemStack().filter(s -> !s.isEmpty()).ifPresent(s -> out.add(s.copy()));
         view.getItemStacks().forEach(s -> {
-            if (!s.isEmpty() && out.size() < RecipeFillPayload.MAX_OPTIONS
-                    && out.stream().noneMatch(o -> ItemStack.isSameItemSameComponents(o, s))) {
+            if (!s.isEmpty() && out.size() < RecipeFillPayload.MAX_OPTIONS && !containsSameItem(out, s)) {
                 out.add(s.copy());
             }
         });
         return out;
+    }
+
+    private static boolean containsSameItem(List<ItemStack> list, ItemStack target) {
+        for (ItemStack existing : list) {
+            if (ItemStack.isSameItemSameComponents(existing, target)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // ---------------------------------------------------------------------------------- crafting terminal
@@ -90,9 +107,37 @@ final class RecipeTransfers {
             if (inputs.size() != 9) {
                 return helper.createInternalError();
             }
-            // what there is: the network list (sent by the server) and the player's inventory; what the network can craft
             Map<ItemKey, Long> have = new HashMap<>();
-            java.util.Set<ItemKey> craftable = new java.util.HashSet<>();
+            Set<ItemKey> craftable = new HashSet<>();
+            collectAvailable(menu, player, have, craftable);
+
+            List<List<ItemStack>> options = new ArrayList<>(9);
+            List<IRecipeSlotView> missing = new ArrayList<>();
+            // precraft: for every empty cell the first option the network can craft
+            Map<ItemKey, Integer> toOrder = new LinkedHashMap<>();
+            for (IRecipeSlotView view : inputs) {
+                List<ItemStack> opts = options(view);
+                options.add(opts);
+                if (opts.isEmpty()) {
+                    continue;
+                }
+                if (!consumeOne(opts, have)) {
+                    missing.add(view);
+                    queuePrecraftOption(opts, craftable, maxTransfer, toOrder);
+                }
+            }
+            if (doTransfer) {
+                if ((Minecraft.getInstance().hasControlDown() || devCtrl) && !toOrder.isEmpty()) {
+                    sendPrecraft(menu, toOrder);
+                } else {
+                    ClientPacketDistributor.sendToServer(new RecipeFillPayload(menu.containerId, true, maxTransfer, options, List.of()));
+                }
+            }
+            return missing.isEmpty() ? null : new Missing(missing, !toOrder.isEmpty());
+        }
+
+        /** Collects what is available in the network, the player's inventory (excluding lockedSlot), and the crafting grid. */
+        private static void collectAvailable(TerminalMenu menu, Player player, Map<ItemKey, Long> have, Set<ItemKey> craftable) {
             for (TerminalListPayload.Entry e : menu.clientEntries) {
                 if (e.count() > 0) {
                     have.merge(ItemKey.of(e.key()), e.count(), Long::sum);
@@ -118,50 +163,38 @@ final class RecipeTransfers {
                     have.merge(ItemKey.of(s), (long) s.getCount(), Long::sum);
                 }
             }
-            List<List<ItemStack>> options = new ArrayList<>();
-            List<IRecipeSlotView> missing = new ArrayList<>();
-            // precraft: for every empty cell the first option the network can craft
-            Map<ItemKey, Integer> toOrder = new java.util.LinkedHashMap<>();
-            for (IRecipeSlotView view : inputs) {
-                List<ItemStack> opts = options(view);
-                options.add(opts);
-                if (opts.isEmpty()) {
-                    continue;
-                }
-                boolean found = false;
-                for (ItemStack o : opts) {
-                    ItemKey k = ItemKey.of(o);
-                    if (have.getOrDefault(k, 0L) > 0) {
-                        have.merge(k, -1L, Long::sum);
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
-                    missing.add(view);
-                    for (ItemStack o : opts) {
-                        ItemKey k = ItemKey.of(o);
-                        if (craftable.contains(k)) {
-                            toOrder.merge(k, maxTransfer ? Math.min(64, o.getMaxStackSize()) : 1, Integer::sum);
-                            break;
-                        }
-                    }
+        }
+
+        private static boolean consumeOne(List<ItemStack> opts, Map<ItemKey, Long> have) {
+            for (ItemStack o : opts) {
+                ItemKey k = ItemKey.of(o);
+                if (have.getOrDefault(k, 0L) > 0) {
+                    have.merge(k, -1L, Long::sum);
+                    return true;
                 }
             }
-            if (doTransfer) {
-                if ((net.minecraft.client.Minecraft.getInstance().hasControlDown() || devCtrl) && !toOrder.isEmpty()) {
-                    List<ItemStack> items = new ArrayList<>();
-                    List<Integer> counts = new ArrayList<>();
-                    for (Map.Entry<ItemKey, Integer> e : toOrder.entrySet()) {
-                        items.add(e.getKey().stack());
-                        counts.add(e.getValue());
-                    }
-                    net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new com.golemlogix.network.PrecraftPayload(menu.containerId, items, counts));
-                } else {
-                    net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new RecipeFillPayload(menu.containerId, true, maxTransfer, options, List.of()));
+            return false;
+        }
+
+        private static void queuePrecraftOption(List<ItemStack> opts, Set<ItemKey> craftable, boolean maxTransfer,
+                                                Map<ItemKey, Integer> toOrder) {
+            for (ItemStack o : opts) {
+                ItemKey k = ItemKey.of(o);
+                if (craftable.contains(k)) {
+                    toOrder.merge(k, maxTransfer ? Math.min(64, o.getMaxStackSize()) : 1, Integer::sum);
+                    return;
                 }
             }
-            return missing.isEmpty() ? null : new Missing(missing, !toOrder.isEmpty());
+        }
+
+        private static void sendPrecraft(TerminalMenu menu, Map<ItemKey, Integer> toOrder) {
+            List<ItemStack> items = new ArrayList<>(toOrder.size());
+            List<Integer> counts = new ArrayList<>(toOrder.size());
+            for (Map.Entry<ItemKey, Integer> e : toOrder.entrySet()) {
+                items.add(e.getKey().stack());
+                counts.add(e.getValue());
+            }
+            ClientPacketDistributor.sendToServer(new PrecraftPayload(menu.containerId, items, counts));
         }
     }
 
@@ -181,7 +214,7 @@ final class RecipeTransfers {
         }
 
         @Override
-        public void getTooltip(mezz.jei.api.gui.builder.ITooltipBuilder tooltip) {
+        public void getTooltip(ITooltipBuilder tooltip) {
             tooltip.add(Component.translatable("jei.golem_logix.transfer.missing").withStyle(ChatFormatting.GOLD));
             if (canOrder) {
                 tooltip.add(Component.translatable("jei.golem_logix.transfer.precraft").withStyle(ChatFormatting.AQUA));
@@ -232,11 +265,11 @@ final class RecipeTransfers {
                 return helper.createInternalError();
             }
             if (doTransfer) {
-                List<List<ItemStack>> options = new ArrayList<>();
+                List<List<ItemStack>> options = new ArrayList<>(9);
                 for (IRecipeSlotView view : inputs) {
                     options.add(options(view));
                 }
-                net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new RecipeFillPayload(menu.containerId, true, false, options, List.of()));
+                ClientPacketDistributor.sendToServer(new RecipeFillPayload(menu.containerId, true, false, options, List.of()));
             }
             return null;
         }
@@ -268,6 +301,21 @@ final class RecipeTransfers {
                 // a golem cannot be put into a machine
                 return helper.createInternalError();
             }
+            List<List<ItemStack>> inputs = collectInputs(slots);
+            List<ItemStack> outputs = collectOutputs(slots);
+            if (inputs.isEmpty() || outputs.isEmpty()) {
+                return helper.createUserErrorWithTooltip(Component.translatable("jei.golem_logix.transfer.no_items"));
+            }
+            if (inputs.size() > 9) {
+                inputs = inputs.subList(0, 9);
+            }
+            if (doTransfer) {
+                ClientPacketDistributor.sendToServer(new RecipeFillPayload(menu.containerId, false, false, inputs, outputs));
+            }
+            return null;
+        }
+
+        private static List<List<ItemStack>> collectInputs(IRecipeSlotsView slots) {
             List<List<ItemStack>> inputs = new ArrayList<>();
             for (IRecipeSlotView view : slots.getSlotViews(RecipeIngredientRole.INPUT)) {
                 List<ItemStack> opts = options(view);
@@ -276,11 +324,15 @@ final class RecipeTransfers {
                     continue;
                 }
                 // a fluid ingredient (a Create basin, a mixer...): a fluid ghost with the recipe's amount
-                var fluid = view.getDisplayedIngredient(mezz.jei.api.neoforge.NeoForgeTypes.FLUID_STACK);
+                var fluid = view.getDisplayedIngredient(NeoForgeTypes.FLUID_STACK);
                 if (fluid.isPresent() && !fluid.get().isEmpty()) {
-                    inputs.add(List.of(com.golemlogix.items.FluidGhostItem.of(fluid.get().copy())));
+                    inputs.add(List.of(FluidGhostItem.of(fluid.get().copy())));
                 }
             }
+            return inputs;
+        }
+
+        private static List<ItemStack> collectOutputs(IRecipeSlotsView slots) {
             List<ItemStack> outputs = new ArrayList<>();
             for (IRecipeSlotView view : slots.getSlotViews(RecipeIngredientRole.OUTPUT)) {
                 if (outputs.size() >= RecipeFillPayload.MAX_OUTPUTS) {
@@ -292,21 +344,12 @@ final class RecipeTransfers {
                     continue;
                 }
                 // a fluid result (a melter, a squeezer...): a fluid ghost with its amount
-                var fluid = view.getDisplayedIngredient(mezz.jei.api.neoforge.NeoForgeTypes.FLUID_STACK);
+                var fluid = view.getDisplayedIngredient(NeoForgeTypes.FLUID_STACK);
                 if (fluid.isPresent() && !fluid.get().isEmpty()) {
-                    outputs.add(com.golemlogix.items.FluidGhostItem.of(fluid.get().copy()));
+                    outputs.add(FluidGhostItem.of(fluid.get().copy()));
                 }
             }
-            if (inputs.isEmpty() || outputs.isEmpty()) {
-                return helper.createUserErrorWithTooltip(Component.translatable("jei.golem_logix.transfer.no_items"));
-            }
-            if (inputs.size() > 9) {
-                inputs = inputs.subList(0, 9);
-            }
-            if (doTransfer) {
-                net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new RecipeFillPayload(menu.containerId, false, false, inputs, outputs));
-            }
-            return null;
+            return outputs;
         }
     }
 }

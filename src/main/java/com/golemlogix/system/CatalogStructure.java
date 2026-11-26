@@ -4,9 +4,11 @@ import com.golemlogix.blockentity.CardCatalogBlockEntity;
 import com.golemlogix.blocks.CardCatalogBlock;
 import com.golemlogix.blocks.CatalogPartBlock;
 import com.golemlogix.init.ModBlocks;
+import com.golemlogix.init.ModTags;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
@@ -41,10 +43,6 @@ public final class CatalogStructure {
         return RESTORING.get();
     }
 
-    private static boolean isLoaded(LevelReader level, BlockPos pos) {
-        return level instanceof Level l ? l.isLoaded(pos) : level.hasChunkAt(pos);
-    }
-
     public static BlockPos cellPos(BlockPos controller, Direction facing, int cell) {
         return MainframeStructure.cellPos(controller, facing, cell);
     }
@@ -59,7 +57,7 @@ public final class CatalogStructure {
 
     /** A copper golem statue of any oxidation stage: the tag golem_logix:copper_golem_statues (modpacks add their own), or any "..copper_golem_statue" block. */
     public static boolean isStatue(BlockState s) {
-        return s.is(com.golemlogix.init.ModTags.COPPER_GOLEM_STATUES) || BuiltInRegistries.BLOCK.getKey(s.getBlock()).getPath().endsWith("copper_golem_statue");
+        return s.is(ModTags.COPPER_GOLEM_STATUES) || BuiltInRegistries.BLOCK.getKey(s.getBlock()).getPath().endsWith("copper_golem_statue");
     }
 
     /** Oxidation stage of a statue (0 new, 3 oxidized): the golems of the assembled catalog are coloured this way. */
@@ -93,7 +91,7 @@ public final class CatalogStructure {
             return Blocks.BOOKSHELF;
         }
         if (isStatueCell(cell)) {
-            Block statue = BuiltInRegistries.BLOCK.getValue(net.minecraft.resources.Identifier.withDefaultNamespace("copper_golem_statue"));
+            Block statue = BuiltInRegistries.BLOCK.getValue(Identifier.withDefaultNamespace("copper_golem_statue"));
             return statue == Blocks.AIR ? Blocks.COPPER_BLOCK : statue;
         }
         return Blocks.COPPER_BLOCK;
@@ -113,7 +111,7 @@ public final class CatalogStructure {
         List<Missing> out = new ArrayList<>();
         for (int i = 0; i < CELLS.length; i++) {
             BlockPos p = cellPos(controller, facing, i);
-            if (!isLoaded(level, p) || !matches(level.getBlockState(p), i, facing)) {
+            if (!MainframeStructure.isLoaded(level, p) || !matches(level.getBlockState(p), i, facing)) {
                 out.add(new Missing(p, fallback(i)));
             }
         }
@@ -126,13 +124,9 @@ public final class CatalogStructure {
 
     /** Assemble: remember the former blocks in the owner, all cells become parts, the owner becomes FORMED. */
     public static void form(Level level, BlockPos controller, Direction facing) {
-        if (!level.isLoaded(controller) || !(level.getBlockEntity(controller) instanceof CardCatalogBlockEntity be)) {
+        if (!MainframeStructure.allLoaded(level, controller, facing)
+                || !(level.getBlockEntity(controller) instanceof CardCatalogBlockEntity be)) {
             return;
-        }
-        for (int i = 0; i < CELLS.length; i++) {
-            if (!level.isLoaded(cellPos(controller, facing, i))) {
-                return;
-            }
         }
         RESTORING.set(true);
         try {
@@ -145,7 +139,7 @@ public final class CatalogStructure {
                         .setValue(CatalogPartBlock.FACING, facing).setValue(CatalogPartBlock.CELL, i),
                         Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
             }
-            notifyAll(level, controller, facing);
+            MainframeStructure.notifyAll(level, controller, facing);
         } finally {
             RESTORING.set(false);
         }
@@ -178,7 +172,7 @@ public final class CatalogStructure {
                     level.setBlock(p, original != null ? original : fallback(i).defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
                 }
             }
-            notifyAll(level, controller, facing);
+            MainframeStructure.notifyAll(level, controller, facing);
         } finally {
             RESTORING.set(false);
         }
@@ -189,17 +183,5 @@ public final class CatalogStructure {
             }
         }
         GolemNetwork.nodesChanged(level, controller);
-    }
-
-    private static void notifyAll(Level level, BlockPos controller, Direction facing) {
-        for (int i = 0; i < CELLS.length; i++) {
-            BlockPos p = cellPos(controller, facing, i);
-            if (!level.isLoaded(p)) {
-                continue;
-            }
-            BlockState s = level.getBlockState(p);
-            s.updateNeighbourShapes(level, p, Block.UPDATE_ALL);
-            level.updateNeighborsAt(p, s.getBlock());
-        }
     }
 }

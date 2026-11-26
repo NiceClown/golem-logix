@@ -1,9 +1,20 @@
 package com.golemlogix.menu;
 
+import com.golemlogix.init.ModBlocks;
+import com.golemlogix.items.FluidGhostItem;
 import com.golemlogix.items.UpgradeItem;
+import com.golemlogix.security.SecurityPermission;
+import com.golemlogix.system.CryoSource;
+import com.golemlogix.system.Fuzzy;
+import com.golemlogix.system.GolemNetwork;
+import com.golemlogix.system.Ingredients;
 import com.golemlogix.upgrade.UpgradeContainer;
 import com.golemlogix.upgrade.UpgradeSpec;
 import com.golemlogix.upgrade.UpgradeType;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -12,13 +23,19 @@ import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Common base of the mod's menus: player slots, the usual shift-click and "ghost" filter slots.
  */
 public abstract class GolemMenu extends AbstractContainerMenu {
+    private static final Identifier ARS_SOURCE_JAR = Identifier.fromNamespaceAndPath("ars_nouveau", "source_jar");
+
     protected int containerSlotCount = 0;
     protected int playerStart = 0;
     protected int playerEnd = 0;
@@ -91,17 +108,17 @@ public abstract class GolemMenu extends AbstractContainerMenu {
 
     /** The tooltip line of a fuzzy ghost slot (null: none). */
     @Nullable
-    public net.minecraft.network.chat.Component fuzzyLine(int slotId) {
+    public Component fuzzyLine(int slotId) {
         ItemStack s = slotId >= 0 && slotId < this.slots.size() ? this.slots.get(slotId).getItem() : ItemStack.EMPTY;
-        return fuzzyActive(slotId) && !s.isEmpty() ? com.golemlogix.system.Fuzzy.describe(s) : null;
+        return fuzzyActive(slotId) && !s.isEmpty() ? Fuzzy.describe(s) : null;
     }
 
     /** Server: the next tag of a fuzzy ghost (FuzzyCyclePayload). */
     public void cycleFuzzy(int slotId) {
         if (isGhost(slotId) && canCycleFuzzy(slotId)) {
             Slot slot = this.slots.get(slotId);
-            if (!slot.getItem().isEmpty() && !com.golemlogix.items.FluidGhostItem.is(slot.getItem())) {
-                slot.set(com.golemlogix.system.Fuzzy.cycle(slot.getItem()));
+            if (!slot.getItem().isEmpty() && !FluidGhostItem.is(slot.getItem())) {
+                slot.set(Fuzzy.cycle(slot.getItem()));
             }
         }
     }
@@ -113,16 +130,16 @@ public abstract class GolemMenu extends AbstractContainerMenu {
         }
         Slot slot = this.slots.get(slotId);
         ItemStack s = slot.getItem();
-        if (s.isEmpty() || com.golemlogix.items.FluidGhostItem.is(s)) {
+        if (s.isEmpty() || FluidGhostItem.is(s)) {
             return;
         }
         if (tagId.isEmpty()) {
-            slot.set(com.golemlogix.system.Fuzzy.withTag(s, null));
+            slot.set(Fuzzy.withTag(s, null));
             return;
         }
-        for (var t : com.golemlogix.system.Fuzzy.tagsOf(s)) {
+        for (var t : Fuzzy.tagsOf(s)) {
             if (t.location().toString().equals(tagId)) {
-                slot.set(com.golemlogix.system.Fuzzy.withTag(s, t));
+                slot.set(Fuzzy.withTag(s, t));
                 return;
             }
         }
@@ -134,7 +151,7 @@ public abstract class GolemMenu extends AbstractContainerMenu {
             return false;
         }
         ItemStack s = this.slots.get(slotId).getItem();
-        return !s.isEmpty() && !com.golemlogix.items.FluidGhostItem.is(s);
+        return !s.isEmpty() && !FluidGhostItem.is(s);
     }
 
     /** Shift-click with an upgrade from the inventory goes to a free suitable upgrade slot. */
@@ -179,7 +196,7 @@ public abstract class GolemMenu extends AbstractContainerMenu {
 
         @Override
         public int getMaxStackSize() {
-            com.golemlogix.upgrade.UpgradeType type = spec.typeAt(getContainerSlot());
+            UpgradeType type = spec.typeAt(getContainerSlot());
             return type == null ? 1 : spec.perSlot(type);
         }
 
@@ -226,7 +243,7 @@ public abstract class GolemMenu extends AbstractContainerMenu {
         }
         // runs of real slots between the ghosts, in the same order the game walks them
         boolean changed = false;
-        java.util.List<int[]> runs = new java.util.ArrayList<>();
+        List<int[]> runs = new ArrayList<>();
         int runStart = -1;
         for (int i = from; i <= to; i++) {
             boolean real = i < to && !(this.slots.get(i) instanceof GhostSlot);
@@ -238,7 +255,7 @@ public abstract class GolemMenu extends AbstractContainerMenu {
             }
         }
         if (backwards) {
-            java.util.Collections.reverse(runs);
+            Collections.reverse(runs);
         }
         // first top up stacks in every run, then fill empty slots (as the game does over the whole range)
         for (int[] r : runs) {
@@ -281,6 +298,20 @@ public abstract class GolemMenu extends AbstractContainerMenu {
         return changed;
     }
 
+    /** Finalizes a quickMoveStack transfer after moving items out of slot; returns copy or EMPTY if nothing moved. */
+    protected static ItemStack finishQuickMove(Slot slot, ItemStack stack, ItemStack copy, Player player) {
+        if (stack.getCount() == copy.getCount()) {
+            return ItemStack.EMPTY;
+        }
+        if (stack.isEmpty()) {
+            slot.setByPlayer(ItemStack.EMPTY);
+        } else {
+            slot.setChanged();
+        }
+        slot.onTake(player, stack);
+        return copy;
+    }
+
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
         if (index < 0 || index >= this.slots.size()) {
@@ -303,16 +334,7 @@ public abstract class GolemMenu extends AbstractContainerMenu {
             return ItemStack.EMPTY;
         }
 
-        if (stack.isEmpty()) {
-            slot.setByPlayer(ItemStack.EMPTY);
-        } else {
-            slot.setChanged();
-        }
-        if (stack.getCount() == copy.getCount()) {
-            return ItemStack.EMPTY;
-        }
-        slot.onTake(player, stack);
-        return copy;
+        return finishQuickMove(slot, stack, copy, player);
     }
 
     @Override
@@ -338,7 +360,7 @@ public abstract class GolemMenu extends AbstractContainerMenu {
                 if (firstEmpty < 0) {
                     firstEmpty = i;
                 }
-            } else if (ItemStack.isSameItemSameComponents(com.golemlogix.system.Fuzzy.plain(f), stack)) {
+            } else if (ItemStack.isSameItemSameComponents(Fuzzy.plain(f), stack)) {
                 return false;
             }
         }
@@ -350,13 +372,11 @@ public abstract class GolemMenu extends AbstractContainerMenu {
     }
 
     /** Server-side BUILD check for network-device menus when a Security Terminal is present on the network. */
-    protected static boolean hasBuildPermission(Player player, @Nullable net.minecraft.world.level.Level level,
-                                                @Nullable net.minecraft.core.BlockPos pos) {
+    protected static boolean hasBuildPermission(Player player, @Nullable Level level, @Nullable BlockPos pos) {
         if (level == null || pos == null || level.isClientSide() || !level.isLoaded(pos)) {
             return true;
         }
-        return com.golemlogix.system.GolemNetwork.get(level, pos)
-                .hasPermission(player, com.golemlogix.security.SecurityPermission.BUILD);
+        return GolemNetwork.get(level, pos).hasPermission(player, SecurityPermission.BUILD);
     }
 
     /** Upper bound on fluid ghost amounts (1 000 buckets in mB) to prevent overflow in crafting calculations. */
@@ -398,9 +418,9 @@ public abstract class GolemMenu extends AbstractContainerMenu {
             slot.set(ItemStack.EMPTY);
             return;
         }
-        if (com.golemlogix.items.FluidGhostItem.is(stack)) {
-            int mb = Math.clamp(com.golemlogix.items.FluidGhostItem.amount(stack), 1, MAX_FLUID_GHOST);
-            slot.set(com.golemlogix.items.FluidGhostItem.withAmount(stack, mb));
+        if (FluidGhostItem.is(stack)) {
+            int mb = Math.clamp(FluidGhostItem.amount(stack), 1, MAX_FLUID_GHOST);
+            slot.set(FluidGhostItem.withAmount(stack, mb));
             return;
         }
         slot.set(stack.copyWithCount(Math.clamp(stack.getCount(), 1, slot.getMaxStackSize())));
@@ -429,7 +449,7 @@ public abstract class GolemMenu extends AbstractContainerMenu {
         }
         carried = ghostFor(carried);
         if (!carried.isEmpty()) {
-            if (!cur.isEmpty() && com.golemlogix.system.Ingredients.key(cur).equals(com.golemlogix.system.Ingredients.key(carried))) {
+            if (!cur.isEmpty() && Ingredients.key(cur).equals(Ingredients.key(carried))) {
                 adjust(slot, cur, button == 1 ? -1 : 1);
             } else {
                 slot.set(carried.copyWithCount(1));
@@ -451,18 +471,18 @@ public abstract class GolemMenu extends AbstractContainerMenu {
         if (carried.isEmpty()) {
             return carried;
         }
-        net.minecraft.resources.Identifier id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(carried.getItem());
-        boolean jar = id.equals(net.minecraft.resources.Identifier.fromNamespaceAndPath("ars_nouveau", "source_jar"))
-                || carried.is(com.golemlogix.init.ModBlocks.CREATIVE_SOURCE_JAR.get().asItem())
-                || carried.is(com.golemlogix.init.ModBlocks.CRYO_SOURCE_JAR.get().asItem());
-        return jar ? com.golemlogix.items.FluidGhostItem.of(com.golemlogix.system.CryoSource.stack(FLUID_GHOST_STEP)) : carried;
+        Identifier id = BuiltInRegistries.ITEM.getKey(carried.getItem());
+        boolean jar = id.equals(ARS_SOURCE_JAR)
+                || carried.is(ModBlocks.CREATIVE_SOURCE_JAR.get().asItem())
+                || carried.is(ModBlocks.CRYO_SOURCE_JAR.get().asItem());
+        return jar ? FluidGhostItem.of(CryoSource.stack(FLUID_GHOST_STEP)) : carried;
     }
 
     private void adjust(Slot slot, ItemStack cur, int delta) {
-        if (com.golemlogix.items.FluidGhostItem.is(cur)) {
+        if (FluidGhostItem.is(cur)) {
             // a fluid ghost counts mB: a click changes it by a step
-            int mb = com.golemlogix.items.FluidGhostItem.amount(cur) + delta * FLUID_GHOST_STEP;
-            slot.set(mb <= 0 ? ItemStack.EMPTY : com.golemlogix.items.FluidGhostItem.withAmount(cur, Math.min(mb, 64_000)));
+            int mb = FluidGhostItem.amount(cur) + delta * FLUID_GHOST_STEP;
+            slot.set(mb <= 0 ? ItemStack.EMPTY : FluidGhostItem.withAmount(cur, Math.min(mb, 64_000)));
             return;
         }
         int n = cur.getCount() + delta;

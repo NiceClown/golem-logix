@@ -4,6 +4,7 @@ import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.ItemKey;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -30,7 +31,7 @@ public interface CraftingCpu {
     ItemStack absorb(ItemStack stack);
 
     /** Accept a fluid a machine gives back: returns the mB the job took. */
-    default int absorbFluid(net.neoforged.neoforge.fluids.FluidStack fluid) {
+    default int absorbFluid(FluidStack fluid) {
         CraftingJob job = getJob();
         return job == null ? 0 : job.absorbFluid(fluid);
     }

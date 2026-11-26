@@ -13,6 +13,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.sounds.SoundEvents;
@@ -28,21 +29,28 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * The main cell of a Cryo-Source Telegraph: the range card, the Write slot and the Memory slot (one excludes the other), and the
- * seal written on its cards (Reset gives a new one, so every card written before stops working). The link itself is resolved by
- * TelegraphLinks; the network walk follows it. Every second the server checks whether the telegraph works (linked and its network
- * is online) and tells the clients, which play the operator's Morse rhythm on their own: no per-tick traffic.
+ * Cryo-Source Telegraph: holds range, Write, and Memory linkage cards plus a unique seal. Links distant
+ * network segments via {@link TelegraphLinks}; syncs only active state changes so clients drive the Morse animation locally.
  */
 public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
     public static final int SLOT_RANGE = 0, SLOT_WRITE = 1, SLOT_MEMORY = 2;
-    /** The Write slot takes a whole stack of linkage cards and writes them all at once; Range and Memory take one card (the menu). */
     public static final int WRITE_STACK = 16;
+
+    /** Client Morse rhythm timing constants. */
+    public static final int UNIT = 2;
+    public static final int FLASH = 12;
+    private static final boolean[] MESSAGE = morse("GOLEM");
+    public static final int CYCLE = FLASH + MESSAGE.length * UNIT + 20 * UNIT;
 
     private final OwnedContainer slots = new OwnedContainer(3, this, s -> true) {
         @Override
@@ -61,17 +69,36 @@ public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
             slotsChanged();
         }
     };
-    /** The seal written on this telegraph's cards. 0 = not chosen yet. */
+
     private int seal;
-    /** Server: working now (as sent to clients), the partners of the last link state (they are told when it changes). */
     private boolean active;
     private List<GolemNetwork.Node> lastEnds = new ArrayList<>();
     private boolean announce;
 
     // --- client
     private boolean clientActive;
-    /** 0..1: the telegraph wakes up and falls asleep smoothly (renderer). */
     public float wake, wakePrev;
+
+    private final ContainerData data = new ContainerData() {
+        @Override
+        public int get(int index) {
+            return switch (index) {
+                case 0 -> TelegraphLinks.status(TelegraphBlockEntity.this).ordinal();
+                case 1 -> TelegraphLinks.linkedReceivers(TelegraphBlockEntity.this);
+                case 2 -> active ? 1 : 0;
+                default -> 0;
+            };
+        }
+
+        @Override
+        public void set(int index, int value) {
+        }
+
+        @Override
+        public int getCount() {
+            return 3;
+        }
+    };
 
     public TelegraphBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.TELEGRAPH.get(), pos, state);
@@ -96,7 +123,6 @@ public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
         return slots.getItem(SLOT_MEMORY);
     }
 
-    /** 0 without a range card, 1 the whole dimension, 2 any dimension. */
     public int rangeTier() {
         return TelegraphRangeCardItem.tierOf(slots.getItem(SLOT_RANGE));
     }
@@ -112,7 +138,7 @@ public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
     private static int newSeal(int old) {
         int s;
         do {
-            s = java.util.concurrent.ThreadLocalRandom.current().nextInt();
+            s = ThreadLocalRandom.current().nextInt();
         } while (s == 0 || s == old);
         return s;
     }
@@ -121,7 +147,6 @@ public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
         return GlobalPos.of(level.dimension(), worldPosition);
     }
 
-    /** A card in the Write slot always holds this telegraph; the link state may have changed: tell both ends of every link. */
     private void slotsChanged() {
         if (level == null || level.isClientSide()) {
             return;
@@ -136,7 +161,6 @@ public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
         linksChanged();
     }
 
-    /** Re-registers the link and makes the networks at this telegraph and at the old and new partners recompute. */
     private void linksChanged() {
         TelegraphLinks.track(this);
         List<GolemNetwork.Node> ends = ends();
@@ -155,7 +179,6 @@ public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
         for (TelegraphLinks.Partner p : TelegraphLinks.partners(level, worldPosition)) {
             out.add(p.node());
         }
-        // the host this card names, even when the link does not work (it may have just stopped working)
         TelegraphLinkCardItem.Link link = TelegraphLinkCardItem.link(memoryCard());
         if (link != null && level.getServer() != null) {
             Level hostLevel = level.getServer().getLevel(link.target().dimension());
@@ -166,10 +189,7 @@ public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
         return out;
     }
 
-    /**
-     * The big Reset button: erases the card in the Memory slot, gives the telegraph a new seal (every card written for it stops
-     * working, its receivers drop) and writes the card in the Write slot again with the new seal.
-     */
+    /** Clears Memory card link, rotates seal (invalidating old cards), and re-stamps any Write slot card. */
     public void reset() {
         if (level == null || level.isClientSide()) {
             return;
@@ -207,7 +227,6 @@ public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
         super.onLoad();
         if (level != null && !level.isClientSide()) {
             TelegraphLinks.track(this);
-            // the networks on both sides are told on the first tick, not in the middle of loading a chunk
             announce = true;
         }
     }
@@ -243,7 +262,7 @@ public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
         if (on != be.active) {
             be.active = on;
             be.setChanged();
-            level.sendBlockUpdated(pos, state, state, 3);
+            BlockEntities.sendUpdate(be);
         }
     }
 
@@ -251,17 +270,10 @@ public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
         return level != null && level.isClientSide() ? clientActive : active;
     }
 
-    // ------------------------------------------------------------------ the operator's rhythm (client)
-
-    /** Ticks of one Morse unit: the operator keys fast and crisp. */
-    public static final int UNIT = 2;
-    /** At the start of every message the incoming Source strikes the top crystal; the keying starts after it. */
-    public static final int FLASH = 12;
-    private static final boolean[] MESSAGE = morse("GOLEM");
-    public static final int CYCLE = FLASH + MESSAGE.length * UNIT + 20 * UNIT;
+    // ------------------------------------------------------------------ client Morse rhythm
 
     private static boolean[] morse(String text) {
-        java.util.Map<Character, String> code = java.util.Map.of('G', "--.", 'O', "---", 'L', ".-..", 'E', ".", 'M', "--");
+        Map<Character, String> code = Map.of('G', "--.", 'O', "---", 'L', ".-..", 'E', ".", 'M', "--");
         List<Boolean> units = new ArrayList<>();
         for (int i = 0; i < text.length(); i++) {
             String c = code.get(text.charAt(i));
@@ -287,7 +299,6 @@ public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
         return out;
     }
 
-    /** The key is pressed at this tick of the cycle (time in ticks, any value). */
     public static boolean keyDown(long time) {
         long t = Math.floorMod(time, CYCLE) - FLASH;
         if (t < 0) {
@@ -297,12 +308,10 @@ public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
         return u < MESSAGE.length && MESSAGE[(int) u];
     }
 
-    /** The key went down at exactly this tick. */
     public static boolean keyPressed(long time) {
         return keyDown(time) && !keyDown(time - 1);
     }
 
-    /** 0..1 flash of the top crystal at the start of each message. */
     public static float crystalFlash(float time) {
         float t = time - (float) Math.floor(time / CYCLE) * CYCLE;
         return t < FLASH + 6 ? 1f - Math.max(0f, t - 2f) / (FLASH + 4f) : 0f;
@@ -325,27 +334,6 @@ public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
 
     // ------------------------------------------------------------------ menu
 
-    private final ContainerData data = new ContainerData() {
-        @Override
-        public int get(int index) {
-            return switch (index) {
-                case 0 -> TelegraphLinks.status(TelegraphBlockEntity.this).ordinal();
-                case 1 -> TelegraphLinks.linkedReceivers(TelegraphBlockEntity.this);
-                case 2 -> active ? 1 : 0;
-                default -> 0;
-            };
-        }
-
-        @Override
-        public void set(int index, int value) {
-        }
-
-        @Override
-        public int getCount() {
-            return 3;
-        }
-    };
-
     @Override
     public Component getDisplayName() {
         return Component.translatable("block.golem_logix.cryo_source_telegraph");
@@ -355,6 +343,10 @@ public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
     @Override
     public AbstractContainerMenu createMenu(int id, Inventory inv, Player player) {
         return new TelegraphMenu(id, inv, this, slots, data, ContainerLevelAccess.create(level, worldPosition));
+    }
+
+    public TelegraphBlock.Part part() {
+        return TelegraphBlock.Part.BASE;
     }
 
     // ------------------------------------------------------------------ save and sync
@@ -388,43 +380,31 @@ public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
         return ClientboundBlockEntityDataPacket.create(this);
     }
 
-    /** The cell of a telegraph block entity is always the main one. */
-    public TelegraphBlock.Part part() {
-        return TelegraphBlock.Part.BASE;
-    }
-
-    // ---- 1.21.6+: the game's ValueInput/ValueOutput over the CompoundTag code above
-
     @Override
-    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+    protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
-        CompoundTag tag = new CompoundTag();
-        saveTag(tag, com.golemlogix.system.NbtBridge.registries(this));
-        com.golemlogix.system.NbtBridge.write(output, tag);
+        BlockEntities.save(this, output, this::saveTag);
     }
 
     @Override
-    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+    protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
-        loadTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+        BlockEntities.load(input, this::loadTag);
     }
 
     @Override
-    public void handleUpdateTag(net.minecraft.world.level.storage.ValueInput input) {
-        readUpdateTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    public void handleUpdateTag(ValueInput input) {
+        BlockEntities.load(input, this::readUpdateTag);
     }
 
     @Override
-    public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input) {
+    public void onDataPacket(Connection net, ValueInput input) {
         handleUpdateTag(input);
     }
 
-    /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
     @Override
     public void preRemoveSideEffects(BlockPos pos, BlockState state) {
         super.preRemoveSideEffects(pos, state);
-        if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
-            r.onRemoved(state, level, pos);
-        }
+        BlockEntities.onPreRemove(this, pos, state);
     }
 }

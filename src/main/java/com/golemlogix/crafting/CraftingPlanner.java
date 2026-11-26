@@ -1,16 +1,22 @@
 package com.golemlogix.crafting;
 
 import com.golemlogix.data.PatternData;
+import com.golemlogix.system.CryoSource;
 import com.golemlogix.system.GolemNetwork;
+import com.golemlogix.system.Ingredients;
 import com.golemlogix.system.ItemKey;
+import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.fluids.FluidStack;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 
 /**
  * Planner: lays the recipes the wanted items need out as a list of steps, each with how many times to run it.
@@ -32,7 +38,7 @@ public final class CraftingPlanner {
         final ItemKey key;
         int id;
         /** Every node this one depends on (direct or transitive): used so a step never uses a by-product from a step that waits on it. */
-        final java.util.BitSet deps = new java.util.BitSet();
+        final BitSet deps = new BitSet();
         /** Null for an item nothing makes. */
         PatternData pattern;
         List<PatternData.Need> needs = List.of();
@@ -77,13 +83,13 @@ public final class CraftingPlanner {
         for (Map.Entry<ItemKey, Long> e : net.listItems().entrySet()) {
             stock.put(e.getKey(), e.getValue());
         }
-        // fluids count in mB under fluid keys; Liquid Cryo-Source is what the network's Source can make
-        for (net.neoforged.neoforge.fluids.FluidStack f : net.listFluids()) {
-            stock.merge(com.golemlogix.system.Ingredients.fluidKey(f), (long) f.getAmount(), Long::sum);
+        // Fluids count in mB under fluid keys; Liquid Cryo-Source is what the network's Source can make
+        for (FluidStack f : net.listFluids()) {
+            stock.merge(Ingredients.fluidKey(f), (long) f.getAmount(), Long::sum);
         }
         long cryo = net.cryoSourceAvailable();
         if (cryo > 0) {
-            stock.put(com.golemlogix.system.Ingredients.fluidKey(com.golemlogix.system.CryoSource.stack(1)), cryo);
+            stock.put(Ingredients.fluidKey(CryoSource.stack(1)), cryo);
         }
     }
 
@@ -102,14 +108,22 @@ public final class CraftingPlanner {
                 wanted.add(t);
             }
         }
-        // the last visited comes first when settling: backwards, so the first order is settled first
+        // The last visited comes first when settling: visit backwards so the first target settles first
         for (int i = wanted.size() - 1; i >= 0; i--) {
             p.visit(wanted.get(i).getKey(), 0).ordered += wanted.get(i).getValue();
         }
-        // every node remembers everything it depends on (until fixed point so cycles of any length propagate too)
-        for (int pass = 0; pass < p.postOrder.size(); pass++) {
+        p.propagateDependencies();
+        for (int i = p.postOrder.size() - 1; i >= 0; i--) {
+            p.settle(p.postOrder.get(i));
+        }
+        return new CraftingPlan(new LinkedHashMap<>(targets), p.fromStorage, p.buildSteps(), p.missing);
+    }
+
+    /** Computes transitive dependencies for every node (iterated to fixed point so cycles of any length propagate). */
+    private void propagateDependencies() {
+        for (int pass = 0; pass < postOrder.size(); pass++) {
             boolean changed = false;
-            for (Node n : p.postOrder) {
+            for (Node n : postOrder) {
                 int before = n.deps.cardinality();
                 for (Node child : n.sources) {
                     n.deps.set(child.id);
@@ -123,21 +137,21 @@ public final class CraftingPlanner {
                 break;
             }
         }
-        for (int i = p.postOrder.size() - 1; i >= 0; i--) {
-            p.settle(p.postOrder.get(i));
-        }
-        // steps in dependency order: what the following ones need comes first
+    }
+
+    /** Emits steps in dependency order: what later steps need comes first. */
+    private List<CraftingPlan.Step> buildSteps() {
         LinkedHashMap<PatternData, Long> steps = new LinkedHashMap<>();
-        for (Node n : p.postOrder) {
+        for (Node n : postOrder) {
             if (n.crafts > 0) {
                 steps.merge(n.pattern, n.crafts, Long::sum);
             }
         }
-        List<CraftingPlan.Step> list = new ArrayList<>();
+        List<CraftingPlan.Step> list = new ArrayList<>(steps.size());
         for (Map.Entry<PatternData, Long> e : steps.entrySet()) {
             list.add(new CraftingPlan.Step(e.getKey(), e.getValue()));
         }
-        return new CraftingPlan(new LinkedHashMap<>(targets), p.fromStorage, list, p.missing);
+        return list;
     }
 
     /** Depth-first over the recipes: an item is added to the post order after everything it is made from. */
@@ -154,7 +168,7 @@ public final class CraftingPlanner {
             n.pattern = ref.data();
             n.needs = ref.data().needs(net.level());
             Node[] sources = new Node[n.needs.size()];
-            // backwards: of two ingredients the first is settled first, and may leave by-products for the second
+            // Backwards: of two ingredients the first settles first and may leave by-products for the second
             for (int i = sources.length - 1; i >= 0; i--) {
                 sources[i] = visit(craftedFor(n.needs.get(i)), depth + 1);
             }
@@ -168,10 +182,10 @@ public final class CraftingPlanner {
 
     /** What gets crafted for an input: the encoded item or, when a fuzzy input has no pattern for it, another one that will do. */
     private ItemKey craftedFor(PatternData.Need in) {
-        java.util.function.Predicate<net.minecraft.world.item.ItemStack> alt = in.alternatives();
+        Predicate<ItemStack> alt = in.alternatives();
         if (alt != null && net.patternIndex().get(in.key()) == null) {
             for (ItemKey k : net.patternIndex().keySet()) {
-                if (!k.equals(in.key()) && !com.golemlogix.system.Ingredients.isFluid(k) && alt.test(k.stack()) && !onPath.contains(k)) {
+                if (!k.equals(in.key()) && !Ingredients.isFluid(k) && alt.test(k.stack()) && !onPath.contains(k)) {
                     return k;
                 }
             }
@@ -185,7 +199,7 @@ public final class CraftingPlanner {
         long need = n.demand;
         long takenBefore = takeSurplus(n, n.key, need);
         need -= takenBefore;
-        long fromStockBefore = take(stock, n.key, need, true);
+        long fromStockBefore = takeStock(n.key, need);
         takenBefore += fromStockBefore;
         need -= fromStockBefore;
         need = saturatedAdd(need, n.ordered);
@@ -196,8 +210,22 @@ public final class CraftingPlanner {
             missing.merge(n.key, need, CraftingPlanner::saturatedAdd);
             return;
         }
-        long selfIn = 0;
         Map<ItemKey, Long> exactIn = new HashMap<>();
+        long selfIn = collectExactInputs(n, exactIn);
+        long crafts = computeCrafts(n, need, selfIn);
+        if (crafts < 0) {
+            return;
+        }
+        executions += crafts;
+        n.crafts = crafts;
+
+        Map<ItemKey, Long> upfrontNeed = planOutputsAndCatalysts(n, need, takenBefore, crafts, exactIn);
+        requestIngredients(n, crafts, upfrontNeed);
+    }
+
+    /** Sums exact (non-fuzzy) input quantities into exactIn and returns how much of n.key the pattern consumes itself. */
+    private static long collectExactInputs(Node n, Map<ItemKey, Long> exactIn) {
+        long selfIn = 0;
         for (PatternData.Need in : n.needs) {
             if (in.alternatives() == null) {
                 exactIn.merge(in.key(), (long) in.amount(), Long::sum);
@@ -206,71 +234,90 @@ public final class CraftingPlanner {
                 }
             }
         }
+        return selfIn;
+    }
+
+    /** Returns how many executions of n.pattern produce at least need net output, or -1 (recording missing) if impossible/overflowing. */
+    private long computeCrafts(Node n, long need, long selfIn) {
         int per = Math.max(1, n.pattern.outputCount(n.key));
         long denom;
         if (selfIn > 0) {
             if (selfIn >= per) {
                 missing.merge(n.key, need, CraftingPlanner::saturatedAdd);
-                return;
+                return -1;
             }
             denom = per - selfIn;
         } else {
             denom = per;
         }
-        // overflow-safe ceiling division for any positive need up to Long.MAX_VALUE
+        // Overflow-safe ceiling division for any positive need up to Long.MAX_VALUE
         long crafts = (need - 1) / denom + 1;
         if (crafts > MAX_EXECUTIONS - executions) {
             missing.merge(n.key, need, CraftingPlanner::saturatedAdd);
-            return;
+            return -1;
         }
-        executions += crafts;
-        n.crafts = crafts;
+        return crafts;
+    }
 
-        // by-products and leftovers are available to steps that do not feed this one; returned catalysts only need an upfront seed
+    /**
+     * Registers leftovers and by-products into surplus for downstream steps, and computes upfront seed quantities for
+     * recycled inputs / catalysts (items appearing in both inputs and outputs of the same pattern).
+     */
+    private Map<ItemKey, Long> planOutputsAndCatalysts(Node n, long need, long takenBefore, long crafts,
+                                                       Map<ItemKey, Long> exactIn) {
         Map<ItemKey, Long> upfrontNeed = new HashMap<>();
         for (Map.Entry<ItemKey, Integer> out : n.pattern.outputTotals().entrySet()) {
             ItemKey outKey = out.getKey();
-            long b = out.getValue();
-            Long aObj = exactIn.get(outKey);
-            if (aObj != null && aObj > 0) {
-                long a = aObj;
-                if (outKey.equals(n.key)) {
-                    long upfront = Math.max(0L, a - takenBefore);
-                    upfrontNeed.put(outKey, upfront);
-                    try {
-                        long netProduced = Math.multiplyExact(b - a, crafts);
-                        long leftover = saturatedAdd(upfront, netProduced - need);
-                        addSurplus(n, outKey, leftover);
-                    } catch (ArithmeticException tooMuch) {
-                        // no surplus if netProduced overflows
-                    }
-                } else {
-                    try {
-                        long totalIn = Math.multiplyExact(a, crafts);
-                        long totalOut = Math.multiplyExact(b, crafts);
-                        long recycled = totalOut - b;
-                        long upfront = Math.max(a, totalIn - recycled);
-                        upfrontNeed.put(outKey, upfront);
-                        long leftover = totalOut >= totalIn
-                                ? saturatedAdd(upfront, totalOut - totalIn)
-                                : upfront - (totalIn - totalOut);
-                        addSurplus(n, outKey, leftover);
-                    } catch (ArithmeticException tooMuch) {
-                        upfrontNeed.put(outKey, Long.MAX_VALUE);
-                    }
-                }
+            long outPerCraft = out.getValue();
+            Long inPerCraftObj = exactIn.get(outKey);
+            if (inPerCraftObj != null && inPerCraftObj > 0) {
+                planCatalystOutput(n, outKey, inPerCraftObj, outPerCraft, need, takenBefore, crafts, upfrontNeed);
             } else {
                 try {
-                    long produced = Math.multiplyExact(crafts, b);
+                    long produced = Math.multiplyExact(crafts, outPerCraft);
                     if (outKey.equals(n.key)) {
                         produced -= need;
                     }
                     addSurplus(n, outKey, produced);
                 } catch (ArithmeticException tooMuch) {
-                    // overflow leaves no usable surplus count
+                    // Overflow leaves no usable surplus count
                 }
             }
         }
+        return upfrontNeed;
+    }
+
+    private void planCatalystOutput(Node n, ItemKey outKey, long a, long b, long need, long takenBefore, long crafts,
+                                    Map<ItemKey, Long> upfrontNeed) {
+        if (outKey.equals(n.key)) {
+            long upfront = Math.max(0L, a - takenBefore);
+            upfrontNeed.put(outKey, upfront);
+            try {
+                long netProduced = Math.multiplyExact(b - a, crafts);
+                long leftover = saturatedAdd(upfront, netProduced - need);
+                addSurplus(n, outKey, leftover);
+            } catch (ArithmeticException tooMuch) {
+                // No surplus if netProduced overflows
+            }
+        } else {
+            try {
+                long totalIn = Math.multiplyExact(a, crafts);
+                long totalOut = Math.multiplyExact(b, crafts);
+                long recycled = totalOut - b;
+                long upfront = Math.max(a, totalIn - recycled);
+                upfrontNeed.put(outKey, upfront);
+                long leftover = totalOut >= totalIn
+                        ? saturatedAdd(upfront, totalOut - totalIn)
+                        : upfront - (totalIn - totalOut);
+                addSurplus(n, outKey, leftover);
+            } catch (ArithmeticException tooMuch) {
+                upfrontNeed.put(outKey, Long.MAX_VALUE);
+            }
+        }
+    }
+
+    /** Passes demand for every ingredient of n to surplus, stock, or child nodes. */
+    private void requestIngredients(Node n, long crafts, Map<ItemKey, Long> upfrontNeed) {
         for (int i = 0; i < n.needs.size(); i++) {
             PatternData.Need in = n.needs.get(i);
             long wanted;
@@ -299,10 +346,10 @@ public final class CraftingPlanner {
      */
     private void ask(Node consumer, PatternData.Need in, Node source, long need) {
         long rest = need;
-        java.util.function.Predicate<net.minecraft.world.item.ItemStack> alt = in.alternatives();
+        Predicate<ItemStack> alt = in.alternatives();
         if (alt != null) {
             rest -= takeSurplus(consumer, in.key(), rest);
-            rest -= take(stock, in.key(), rest, true);
+            rest -= takeStock(in.key(), rest);
             if (rest > 0) {
                 for (ItemKey k : surplusAlternatives(consumer, alt, in.key())) {
                     rest -= takeSurplus(consumer, k, rest);
@@ -313,7 +360,7 @@ public final class CraftingPlanner {
             }
             if (rest > 0) {
                 for (ItemKey k : alternatives(stock, alt, in.key())) {
-                    rest -= take(stock, k, rest, true);
+                    rest -= takeStock(k, rest);
                     if (rest <= 0) {
                         break;
                     }
@@ -327,9 +374,9 @@ public final class CraftingPlanner {
             source.demand = saturatedAdd(source.demand, rest);
             return;
         }
-        // around a cycle: this item was settled before this consumer spoke, so only what is on hand can serve it
+        // Around a cycle: this item was settled before this consumer spoke, so only what is on hand can serve it
         rest -= takeSurplus(consumer, source.key, rest);
-        rest -= take(stock, source.key, rest, true);
+        rest -= takeStock(source.key, rest);
         if (rest > 0) {
             missing.merge(source.key, rest, CraftingPlanner::saturatedAdd);
         }
@@ -359,7 +406,7 @@ public final class CraftingPlanner {
             if (n > 0) {
                 b.amount -= n;
                 got += n;
-                // consumer now depends on b.producer: propagate so later steps cannot form a mutual byproduct deadlock
+                // Consumer now depends on b.producer: propagate so later steps cannot form a mutual byproduct deadlock
                 recordDependency(consumer, b.producer);
                 if (got >= want) {
                     break;
@@ -380,12 +427,11 @@ public final class CraftingPlanner {
         }
     }
 
-    private List<ItemKey> surplusAlternatives(Node consumer, java.util.function.Predicate<net.minecraft.world.item.ItemStack> alt,
-                                              ItemKey encoded) {
+    private List<ItemKey> surplusAlternatives(Node consumer, Predicate<ItemStack> alt, ItemKey encoded) {
         Map<ItemKey, Long> available = new HashMap<>();
         for (Map.Entry<ItemKey, List<Byproduct>> e : surplus.entrySet()) {
             ItemKey k = e.getKey();
-            if (k.equals(encoded) || com.golemlogix.system.Ingredients.isFluid(k) || !alt.test(k.stack())) {
+            if (k.equals(encoded) || Ingredients.isFluid(k) || !alt.test(k.stack())) {
                 continue;
             }
             long sum = 0;
@@ -408,28 +454,25 @@ public final class CraftingPlanner {
         return sum < 0 ? Long.MAX_VALUE : sum;
     }
 
-    /** Takes up to want of key from leftovers or stock (stock also counts as taken from storage). Returns how many. */
-    private long take(Map<ItemKey, Long> from, ItemKey key, long want, boolean storage) {
+    /** Takes up to want of key from network stock and records it in fromStorage. Returns how many were taken. */
+    private long takeStock(ItemKey key, long want) {
         if (want <= 0) {
             return 0;
         }
-        long n = Math.min(from.getOrDefault(key, 0L), want);
+        long n = Math.min(stock.getOrDefault(key, 0L), want);
         if (n > 0) {
-            from.merge(key, -n, Long::sum);
-            if (storage) {
-                fromStorage.merge(key, n, Long::sum);
-            }
+            stock.merge(key, -n, Long::sum);
+            fromStorage.merge(key, n, Long::sum);
         }
         return Math.max(0, n);
     }
 
     /** The item types (not fluids) in the map that may stand for an input, apart from the encoded one; the ones with most first. */
-    private static List<ItemKey> alternatives(Map<ItemKey, Long> in, java.util.function.Predicate<net.minecraft.world.item.ItemStack> alt,
-                                              ItemKey encoded) {
+    private static List<ItemKey> alternatives(Map<ItemKey, Long> in, Predicate<ItemStack> alt, ItemKey encoded) {
         List<ItemKey> out = new ArrayList<>();
         for (Map.Entry<ItemKey, Long> e : in.entrySet()) {
             ItemKey k = e.getKey();
-            if (e.getValue() > 0 && !k.equals(encoded) && !com.golemlogix.system.Ingredients.isFluid(k) && alt.test(k.stack())) {
+            if (e.getValue() > 0 && !k.equals(encoded) && !Ingredients.isFluid(k) && alt.test(k.stack())) {
                 out.add(k);
             }
         }

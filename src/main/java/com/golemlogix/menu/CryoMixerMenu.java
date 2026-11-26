@@ -15,6 +15,7 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Cryo-Mixer window: the two flasks (water, Liquid Cryo-Source), the mode (snow or ice), the pace, what it is doing, the tray with
@@ -36,7 +37,7 @@ public class CryoMixerMenu extends GolemMenu {
     }
 
     public CryoMixerMenu(int id, Inventory inv, Container output, Container upgrades, ContainerData data,
-                         @org.jetbrains.annotations.Nullable CryoMixerBlockEntity be, ContainerLevelAccess access) {
+                         @Nullable CryoMixerBlockEntity be, ContainerLevelAccess access) {
         super(ModMenus.CRYO_MIXER.get(), id);
         this.access = access;
         this.data = data;
@@ -125,16 +126,7 @@ public class CryoMixerMenu extends GolemMenu {
         if (!moveUpgradeIn(stack)) {
             return ItemStack.EMPTY;
         }
-        if (stack.isEmpty()) {
-            slot.setByPlayer(ItemStack.EMPTY);
-        } else {
-            slot.setChanged();
-        }
-        if (stack.getCount() == copy.getCount()) {
-            return ItemStack.EMPTY;
-        }
-        slot.onTake(player, stack);
-        return copy;
+        return finishQuickMove(slot, stack, copy, player);
     }
 
     @Override

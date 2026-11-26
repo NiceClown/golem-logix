@@ -10,6 +10,7 @@ import com.golemlogix.init.ModSounds;
 import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.ItemKey;
 import com.golemlogix.system.MainframeStructure;
+import com.golemlogix.system.NbtBridge;
 import com.golemlogix.upgrade.RedstoneControl;
 import com.golemlogix.upgrade.RedstoneMode;
 import com.golemlogix.upgrade.UpgradeContainer;
@@ -20,15 +21,20 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Containers;
 import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -37,13 +43,12 @@ import java.util.Map;
 
 /**
  * Cryo-Mainframe: a cabinet of Cryo-Calculators. Every calculator inside gives several independent cores (autocraft
- * processors, one job per core), every Compressed Co-Processor counts as several and speeds up all cores at once. In the
- * network the whole cabinet is one device on one channel. The cabinet doors open while someone has its window open.
+ * processors, one job per core), and every Compressed Co-Processor scales up all cores at once. In the network the
+ * whole cabinet counts as one device on one channel.
  */
 public class CryoMainframeBlockEntity extends BlockEntity {
     public static final int CALC_SLOTS = 12;
-    /** Block event: how many players look into the window (clients open and close the doors). */
-    public static final int EVENT_VIEWERS = 1;
+    public static final int EVENT_VIEWERS = ViewerTracker.EVENT_VIEWERS;
     private static final int BOOST_HOLD = 60;
 
     private final OwnedContainer calculators = new OwnedContainer(CALC_SLOTS, this,
@@ -61,30 +66,36 @@ public class CryoMainframeBlockEntity extends BlockEntity {
     };
     private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.MAINFRAME, this);
     private final RedstoneControl redstone = new RedstoneControl();
+    private final ViewerTracker viewerTracker = new ViewerTracker();
     private final List<Core> cores = new ArrayList<>();
-    private int viewers = 0;
     private boolean active = false;
     private boolean boosted = false;
     private long boostUntil = 0;
-    /** Until when its idle cores count as lending their steps to a job (see the calculator). */
     private long helpUntil = 0;
-    /** What was last sent to clients (so it is only sent on change). */
-    private String sentSummary = "";
     private long lastSync = -100;
-    /** Displays of the two shelves: even an instant core order stays visible for at least VisualHold.TICKS ticks (crafting is not slowed down). */
+    /** Last-synced client summary values (avoids allocating a summary String on every 10-tick check). */
+    private int sentCores = -1, sentBusy = -1, sentCalcs = -1, sentWorkers = -1;
+    private boolean sentActive, sentBoosted;
+    @Nullable
+    private Item sentItem0, sentItem1;
     private final VisualHold[] holds = {new VisualHold(), new VisualHold()};
 
     // --- client
     private int clientCores, clientBusy, clientCalcs, clientWorkers;
-    private boolean clientBoosted, clientOpen;
-    /** Ticks the foreman still stays at least, and whether he was called last tick (as on the calculator). */
-    private int foremanLeft;
-    private boolean foremanCalled;
+    private boolean clientBoosted;
     private final ItemStack[] clientCurrent = {ItemStack.EMPTY, ItemStack.EMPTY};
-    /** Door opening 0..1, work spin-up 0..1 and foremen (as on the calculator). */
+    private final ItemStack[] visualItems = {ItemStack.EMPTY, ItemStack.EMPTY};
+    private final CraftingCpus.Animation animation = new CraftingCpus.Animation();
+    /** Door opening 0..1, work spin-up 0..1, and foreman visibility 0..1 (read by renderer). */
     public float doors, doorsPrev, spin, spinPrev, foreman, foremanPrev;
+    public int visualWorkTimer = 0;
     /** Smoothed poses of the three copper golems (shelves 0 and 1, roof): x, y, z, yaw, last frame time, "already set". */
     public final float[][] golemSmooth = new float[3][6];
+    /** Heads of the built-in atlants (left, right): {yaw, pitch}, current and previous tick. */
+    public final float[][] heads = {{0f, 0f}, {0f, 0f}}, headsPrev = {{0f, 0f}, {0f, 0f}};
+
+    private boolean devWorking = false;
+    private ItemStack devItem0 = ItemStack.EMPTY, devItem1 = ItemStack.EMPTY;
 
     public CryoMainframeBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.CRYO_MAINFRAME.get(), pos, state);
@@ -125,13 +136,11 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         return GolemConfig.MAINFRAME_COPROCESSOR_MULTIPLIER.get();
     }
 
-    /** Steps per cycle for each core: as on the calculator, but every coprocessor counts as several. */
     public int workersPerCore() {
         return CryoCalculatorBlockEntity.BASE_WORKERS
                 + CryoCalculatorBlockEntity.WORKERS_PER_COMPRESSED * upgrades.count(UpgradeType.SPEED) * coprocessorMultiplier();
     }
 
-    /** Server: whether the co-processors sped the work up lately (the foreman is shown). */
     public boolean isBoosted() {
         return boosted;
     }
@@ -146,7 +155,7 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         return n;
     }
 
-    /** The number of cores follows the number of calculators; jobs of extra cores are cancelled (contents go back to the network). */
+    /** Adjusts core count to match installed calculators, refunding jobs from removed cores when {@code refund} is true. */
     private void syncCores(boolean refund) {
         int target = calculatorCount() * coresPerCalculator();
         boolean changed = cores.size() != target;
@@ -159,14 +168,14 @@ public class CryoMainframeBlockEntity extends BlockEntity {
                 gone.refund();
             }
         }
-        // the remembered networks list the cores they found: they are stale now
         if (changed && level != null && !level.isClientSide()) {
             GolemNetwork.clearCache();
         }
     }
 
     // ------------------------------------------------------------------------------------------------ core
-    /** A core is an independent processor; all cores share one block and one channel. */
+
+    /** Independent autocraft processor inside the cabinet; all cores share one block and channel. */
     public final class Core implements CraftingCpu {
         private final int index;
         @Nullable
@@ -204,10 +213,7 @@ public class CryoMainframeBlockEntity extends BlockEntity {
                 job = null;
                 return;
             }
-            GolemNetwork net = GolemNetwork.get(level, worldPosition);
-            for (ItemStack s : job.refundAll(net)) {
-                Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 1.0, worldPosition.getZ() + 0.5, s);
-            }
+            CraftingCpus.refundAndDrop(level, worldPosition, job, GolemNetwork.get(level, worldPosition), 1.0);
             job = null;
         }
 
@@ -229,7 +235,7 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         }
 
         @Override
-        public int absorbFluid(net.neoforged.neoforge.fluids.FluidStack fluid) {
+        public int absorbFluid(FluidStack fluid) {
             int n = job == null ? 0 : job.absorbFluid(fluid);
             if (n > 0) {
                 setChanged();
@@ -274,6 +280,7 @@ public class CryoMainframeBlockEntity extends BlockEntity {
     }
 
     // ------------------------------------------------------------------------------------------------ window
+
     /** Window data: 0 = redstone mode, 1 = cores, 2 = busy, 3 = steps per core, 4 = calculators, 5 = multiplier. */
     public ContainerData menuData() {
         return new ContainerData() {
@@ -305,198 +312,70 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         };
     }
 
-    /** How many players are looking into the window now (server). */
     public int viewers() {
-        return viewers;
+        return viewerTracker.viewers();
     }
 
-    /** A player opened the window: the doors swing open. */
     public void startOpen() {
-        viewers++;
-        if (viewers == 1 && level != null && !level.isClientSide()) {
+        viewerTracker.open(this, () -> {
             level.playSound(null, worldPosition, SoundEvents.IRON_DOOR_OPEN, SoundSource.BLOCKS, 0.7f, 1.3f);
             level.playSound(null, worldPosition, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 0.6f, 1.6f);
-        }
-        signalViewers();
+        });
     }
 
     public void stopOpen() {
-        if (viewers == 0) {
-            return;
-        }
-        viewers--;
-        if (viewers == 0 && level != null && !level.isClientSide()) {
-            level.playSound(null, worldPosition, SoundEvents.IRON_DOOR_CLOSE, SoundSource.BLOCKS, 0.7f, 1.3f);
-        }
-        signalViewers();
-    }
-
-    private void signalViewers() {
-        if (level != null && !level.isClientSide()) {
-            level.blockEvent(worldPosition, getBlockState().getBlock(), EVENT_VIEWERS, viewers);
-        }
+        viewerTracker.close(this, () ->
+                level.playSound(null, worldPosition, SoundEvents.IRON_DOOR_CLOSE, SoundSource.BLOCKS, 0.7f, 1.3f));
     }
 
     @Override
     public boolean triggerEvent(int id, int param) {
-        if (id == EVENT_VIEWERS) {
-            clientOpen = param > 0;
-            return true;
-        }
-        return super.triggerEvent(id, param);
+        return viewerTracker.handleEvent(id, param) || super.triggerEvent(id, param);
     }
 
-    /** Drop the calculators, coprocessors and job contents (when the owner is broken). */
+    /** Refunds running jobs to the network (dropping overflow) and drops calculators and upgrades. */
     public void dropContents() {
         if (level == null || level.isClientSide()) {
             return;
         }
-        double x = worldPosition.getX() + 0.5, y = worldPosition.getY() + 0.5, z = worldPosition.getZ() + 0.5;
-        // the jobs' items go back to the network first, as on a cancel; only what does not fit drops (see CryoCalculatorBlockEntity)
         GolemNetwork refundTo = GolemNetwork.aroundRemoved(level, worldPosition);
         for (Core c : cores) {
-            if (c.job == null) {
-                continue;
-            }
-            for (ItemStack s : c.job.refundAll(refundTo)) {
-                Containers.dropItemStack(level, x, y, z, s);
-            }
-            c.job = null;
-        }
-        for (int i = 0; i < calculators.getContainerSize(); i++) {
-            if (!calculators.getItem(i).isEmpty()) {
-                Containers.dropItemStack(level, x, y, z, calculators.removeItemNoUpdate(i));
+            if (c.job != null) {
+                CraftingCpus.refundAndDrop(level, worldPosition, c.job, refundTo, 0.5);
+                c.job = null;
             }
         }
-        for (int i = 0; i < upgrades.getContainerSize(); i++) {
-            if (!upgrades.getItem(i).isEmpty()) {
-                Containers.dropItemStack(level, x, y, z, upgrades.removeItemNoUpdate(i));
-            }
-        }
+        double x = worldPosition.getX() + 0.5, y = worldPosition.getY() + 0.5, z = worldPosition.getZ() + 0.5;
+        dropContainer(calculators, x, y, z);
+        dropContainer(upgrades, x, y, z);
         cores.clear();
     }
 
-    private static boolean allCellsLoaded(Level level, BlockPos pos, Direction facing) {
-        for (int i = 0; i < MainframeStructure.CELLS.length; i++) {
-            if (!level.isLoaded(MainframeStructure.cellPos(pos, facing, i))) {
-                return false;
+    private void dropContainer(net.minecraft.world.Container container, double x, double y, double z) {
+        for (int i = 0; i < container.getContainerSize(); i++) {
+            if (!container.getItem(i).isEmpty()) {
+                Containers.dropItemStack(level, x, y, z, container.removeItemNoUpdate(i));
             }
         }
-        return true;
     }
 
     // ------------------------------------------------------------------------------------------------ work
+
     public static void serverTick(Level level, BlockPos pos, BlockState state, CryoMainframeBlockEntity be) {
         long time = level.getGameTime();
-        Direction facing = state.getValue(CryoMainframeBlock.FACING);
-        if ((time + pos.asLong()) % 20 == 0 && allCellsLoaded(level, pos, facing)) {
-            boolean valid = MainframeStructure.valid(level, pos, facing);
-            if (be.formed() && !valid) {
-                MainframeStructure.disassemble(level, pos, facing, null);
-            } else if (!be.formed() && valid) {
-                MainframeStructure.form(level, pos, facing);
-            }
+        if ((time + pos.asLong()) % 20 == 0) {
+            be.checkStructure(level, pos, state.getValue(CryoMainframeBlock.FACING));
         }
         boolean hasRedstone = be.upgrades.has(UpgradeType.REDSTONE);
-        boolean powered = hasRedstone && level.hasNeighborSignal(pos);
-        if (hasRedstone) {
-            be.redstone.observe(powered);
-        }
+        boolean powered = BlockEntities.pollRedstone(level, pos, hasRedstone, be.redstone);
         boolean wasActive = be.active;
         boolean needSync = false;
         if ((time + pos.asLong()) % CryoCalculatorBlockEntity.CYCLE_TICKS == 0) {
-            int busyBefore = be.busyCores();
-            boolean hasOwnJob = busyBefore > 0;
-            boolean formed = be.formed();
-            if (!formed || (!hasOwnJob && (be.cores.isEmpty() || hasRedstone))) {
-                be.active = false;
-                needSync |= be.summaryChanged(time);
-            } else {
-                GolemNetwork net = GolemNetwork.get(level, pos);
-                boolean ok = net.isOnline() && net.isDeviceActive(pos);
-                // only consume a redstone pulse when there is actually a job of our own to step
-                boolean allowed = be.redstone.allows(hasRedstone, powered, ok && hasOwnJob);
-                boolean clicked = false;
-                int workers = be.workersPerCore();
-                int shelf = 0;
-                for (Core core : be.cores) {
-                    CraftingJob job = core.job;
-                    if (job == null) {
-                        continue;
-                    }
-                    // the first two busy cores are shown on the shelves: the display keeps their item even after the order ends
-                    int myShelf = shelf < be.holds.length ? shelf++ : -1;
-                    if (myShelf >= 0) {
-                        needSync |= be.holds[myShelf].show(job.current().stack(), time);
-                    }
-                    if (!ok) {
-                        continue;
-                    }
-                    if (!allowed) {
-                        if (job.status() != CraftingJob.Status.PAUSED) {
-                            job.setStatus(CraftingJob.Status.PAUSED);
-                            needSync = true;
-                        }
-                        continue;
-                    }
-                    CraftingJob.Status before = job.status();
-                    long doneBefore = job.doneExecutions();
-                    job.tick(net, workers);
-                    if (myShelf >= 0) {
-                        be.holds[myShelf].show(job.current().stack(), time);
-                    }
-                    long done = job.doneExecutions() - doneBefore;
-                    clicked |= done > 0;
-                    if (done > CryoCalculatorBlockEntity.BASE_WORKERS) {
-                        be.boostUntil = time + BOOST_HOLD;
-                    }
-                    if (job.isDone()) {
-                        CryoCalculatorBlockEntity.notifyFinished(level, job);
-                        core.job = null;
-                        needSync = true;
-                    } else if (job.status() != before) {
-                        needSync = true;
-                    }
-                }
-                // idle cores work on whatever job could use more steps, and stay free for a new order
-                if (ok && !hasRedstone) {
-                    for (int idle = be.cores.size() - be.busyCores(); idle > 0; idle--) {
-                        CraftingJob target = net.jobWantingHelp();
-                        if (target == null) {
-                            break;
-                        }
-                        long before = target.doneExecutions();
-                        target.tick(net, workers);
-                        long done = target.doneExecutions() - before;
-                        if (done <= 0) {
-                            break;
-                        }
-                        clicked = true;
-                        be.helpUntil = time + 20;
-                        if (done > CryoCalculatorBlockEntity.BASE_WORKERS) {
-                            be.boostUntil = time + BOOST_HOLD;
-                        }
-                        if (shelf < be.holds.length) {
-                            needSync |= be.holds[shelf++].show(target.current().stack(), time);
-                        }
-                    }
-                }
-                if (clicked) {
-                    level.playSound(null, pos, ModSounds.RELAY_CLICK.get(), SoundSource.BLOCKS, 0.3f, 1.0f);
-                }
-                if (hasOwnJob) {
-                    be.setChanged();
-                }
-                be.active = ok && allowed && (be.busyCores() > 0 || time < be.helpUntil);
-                if (!needSync) {
-                    needSync = be.summaryChanged(time);
-                }
-            }
+            needSync = be.tickCycle(level, pos, hasRedstone, powered, time);
         }
-        // orders the co-processors finished at once (on a big speed-up: in one cycle) still call the foreman: they were sped up
-        boolean boosted = time < be.boostUntil && (be.active || be.busyCores() == 0);
-        if (boosted != be.boosted || wasActive != be.active) {
-            be.boosted = boosted;
+        boolean boostedNow = time < be.boostUntil && (be.active || be.busyCores() == 0);
+        if (boostedNow != be.boosted || wasActive != be.active) {
+            be.boosted = boostedNow;
             needSync = true;
         }
         for (VisualHold h : be.holds) {
@@ -507,32 +386,171 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         }
     }
 
-    private String summary() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(cores.size()).append('/').append(busyCores()).append('/').append(active).append('/').append(boosted)
-                .append('/').append(calculatorCount()).append('/').append(workersPerCore());
-        int shown = 0;
-        for (Core c : cores) {
-            if (c.job != null && shown < 2) {
-                sb.append('/').append(c.job.current().stack().getItem());
-                shown++;
+    private void checkStructure(Level level, BlockPos pos, Direction facing) {
+        if (!BlockEntities.allLoaded(level, MainframeStructure.CELLS.length, i -> MainframeStructure.cellPos(pos, facing, i))) {
+            return;
+        }
+        boolean valid = MainframeStructure.valid(level, pos, facing);
+        if (formed() && !valid) {
+            MainframeStructure.disassemble(level, pos, facing, null);
+        } else if (!formed() && valid) {
+            MainframeStructure.form(level, pos, facing);
+        }
+    }
+
+    /** Reusable per-cycle tracking fields (avoids allocating a scratch array every 4-tick cycle). */
+    private int cycleShelf;
+    private boolean cycleClicked;
+    private boolean cycleNeedSync;
+
+    private boolean tickCycle(Level level, BlockPos pos, boolean hasRedstone, boolean powered, long time) {
+        boolean hasOwnJob = busyCores() > 0;
+        if (!formed() || (!hasOwnJob && (cores.isEmpty() || hasRedstone))) {
+            active = false;
+            return summaryChanged(time);
+        }
+        GolemNetwork net = GolemNetwork.get(level, pos);
+        boolean ok = net.isOnline() && net.isDeviceActive(pos);
+        // only consume a redstone pulse when an owned job is ready to step
+        boolean allowed = redstone.allows(hasRedstone, powered, ok && hasOwnJob);
+        int workers = workersPerCore();
+
+        cycleShelf = 0;
+        cycleClicked = false;
+        cycleNeedSync = false;
+        tickOwnCores(level, net, ok, allowed, workers, time);
+        if (ok && !hasRedstone) {
+            lendIdleCores(net, workers, time);
+        }
+        if (cycleClicked) {
+            level.playSound(null, pos, ModSounds.RELAY_CLICK.get(), SoundSource.BLOCKS, 0.3f, 1.0f);
+        }
+        if (hasOwnJob) {
+            setChanged();
+        }
+        active = ok && allowed && (busyCores() > 0 || time < helpUntil);
+        return cycleNeedSync || summaryChanged(time);
+    }
+
+    private void tickOwnCores(Level level, GolemNetwork net, boolean ok, boolean allowed, int workers, long time) {
+        for (Core core : cores) {
+            CraftingJob job = core.job;
+            if (job == null) {
+                continue;
+            }
+            int myShelf = cycleShelf < holds.length ? cycleShelf++ : -1;
+            if (myShelf >= 0 && holds[myShelf].show(job.current().stack(), time)) {
+                cycleNeedSync = true;
+            }
+            if (!ok) {
+                continue;
+            }
+            if (!allowed) {
+                if (job.status() != CraftingJob.Status.PAUSED) {
+                    job.setStatus(CraftingJob.Status.PAUSED);
+                    cycleNeedSync = true;
+                }
+                continue;
+            }
+            CraftingJob.Status before = job.status();
+            long doneBefore = job.doneExecutions();
+            job.tick(net, workers);
+            if (myShelf >= 0) {
+                holds[myShelf].show(job.current().stack(), time);
+            }
+            long done = job.doneExecutions() - doneBefore;
+            if (done > 0) {
+                cycleClicked = true;
+            }
+            if (done > CryoCalculatorBlockEntity.BASE_WORKERS) {
+                boostUntil = time + BOOST_HOLD;
+            }
+            if (job.isDone()) {
+                CryoCalculatorBlockEntity.notifyFinished(level, job);
+                core.job = null;
+                cycleNeedSync = true;
+            } else if (job.status() != before) {
+                cycleNeedSync = true;
             }
         }
-        return sb.toString();
+    }
+
+    private void lendIdleCores(GolemNetwork net, int workers, long time) {
+        for (int idle = cores.size() - busyCores(); idle > 0; idle--) {
+            CraftingJob target = net.jobWantingHelp();
+            if (target == null) {
+                break;
+            }
+            long before = target.doneExecutions();
+            target.tick(net, workers);
+            long done = target.doneExecutions() - before;
+            if (done <= 0) {
+                break;
+            }
+            cycleClicked = true;
+            helpUntil = time + 20;
+            if (done > CryoCalculatorBlockEntity.BASE_WORKERS) {
+                boostUntil = time + BOOST_HOLD;
+            }
+            if (cycleShelf < holds.length && holds[cycleShelf++].show(target.current().stack(), time)) {
+                cycleNeedSync = true;
+            }
+        }
     }
 
     private boolean summaryChanged(long time) {
-        return time - lastSync >= 10 && !summary().equals(sentSummary);
+        if (time - lastSync < 10) {
+            return false;
+        }
+        int busy = 0;
+        Item item0 = null, item1 = null;
+        for (Core c : cores) {
+            if (c.job != null) {
+                if (busy == 0) {
+                    item0 = c.job.current().stack().getItem();
+                } else if (busy == 1) {
+                    item1 = c.job.current().stack().getItem();
+                }
+                busy++;
+            }
+        }
+        return cores.size() != sentCores || busy != sentBusy || active != sentActive || boosted != sentBoosted
+                || calculatorCount() != sentCalcs || workersPerCore() != sentWorkers
+                || item0 != sentItem0 || item1 != sentItem1;
+    }
+
+    private void recordSentSummary() {
+        int busy = 0;
+        Item item0 = null, item1 = null;
+        for (Core c : cores) {
+            if (c.job != null) {
+                if (busy == 0) {
+                    item0 = c.job.current().stack().getItem();
+                } else if (busy == 1) {
+                    item1 = c.job.current().stack().getItem();
+                }
+                busy++;
+            }
+        }
+        sentCores = cores.size();
+        sentBusy = busy;
+        sentActive = active;
+        sentBoosted = boosted;
+        sentCalcs = calculatorCount();
+        sentWorkers = workersPerCore();
+        sentItem0 = item0;
+        sentItem1 = item1;
     }
 
     private void syncNow() {
         if (level != null && !level.isClientSide()) {
             lastSync = level.getGameTime();
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            BlockEntities.sendUpdate(this);
         }
     }
 
     // ------------------------------------------------------------------------------------------------ client
+
     public int clientCores() {
         return clientCores;
     }
@@ -549,26 +567,13 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         return clientWorkers;
     }
 
-    /** What the first two busy cores are making (projections on the cabinet shelves). */
     public ItemStack clientCurrent(int shelf) {
         return clientCurrent[shelf];
     }
 
-    // Visual timer for the minimum work duration (at least 32 ticks = 1.6 seconds)
-    // Makes sure an instant craft still plays the whole assembly animation
-    // and returns smoothly to rest, without sudden disappearances or teleports.
-    public int visualWorkTimer = 0;
-    private final ItemStack[] visualItems = {ItemStack.EMPTY, ItemStack.EMPTY};
-
     public ItemStack clientDisplayItem(int shelf) {
-        if (!clientCurrent[shelf].isEmpty()) {
-            return clientCurrent[shelf];
-        }
-        return visualItems[shelf];
+        return !clientCurrent[shelf].isEmpty() ? clientCurrent[shelf] : visualItems[shelf];
     }
-
-    /** Heads of the built-in atlants (left, right): {yaw, pitch}, current and previous tick. */
-    public final float[][] heads = {{0f, 0f}, {0f, 0f}}, headsPrev = {{0f, 0f}, {0f, 0f}};
 
     public static void clientTick(Level level, BlockPos pos, BlockState state, CryoMainframeBlockEntity be) {
         if (state.getValue(CryoMainframeBlock.FORMED)) {
@@ -581,48 +586,30 @@ public class CryoMainframeBlockEntity extends BlockEntity {
             }
         }
         be.doorsPrev = be.doors;
-        be.spinPrev = be.spin;
-        be.foremanPrev = be.foreman;
-        be.doors = Math.max(0f, Math.min(1f, be.doors + (be.clientOpen ? 0.09f : -0.07f)));
+        be.doors = Math.max(0f, Math.min(1f, be.doors + (be.viewerTracker.isClientOpen() ? 0.09f : -0.07f)));
 
         boolean on = be.clientBusy > 0 || !be.clientCurrent[0].isEmpty() || !be.clientCurrent[1].isEmpty();
         if (on) {
-            be.visualWorkTimer = Math.max(be.visualWorkTimer, 32);
             for (int i = 0; i < 2; i++) {
                 if (!be.clientCurrent[i].isEmpty()) {
-                    be.visualItems[i] = be.clientCurrent[i].copy();
+                    be.visualItems[i] = be.clientCurrent[i];
                 }
             }
-        } else if (be.visualWorkTimer > 0) {
-            be.visualWorkTimer--;
         }
-        be.foremanLeft = be.clientBoosted && !be.foremanCalled ? CryoCalculatorBlockEntity.FOREMAN_MIN_TICKS
-                : Math.max(0, be.foremanLeft - 1);
-        be.foremanCalled = be.clientBoosted;
-        // the crews keep working while the foreman urges them on
-        be.visualWorkTimer = Math.max(be.visualWorkTimer, be.foremanLeft);
-
-        boolean activeVisually = on || be.visualWorkTimer > 0;
-        if (activeVisually) {
-            // Energetic spin-up to the maximum
-            be.spin += (1f - be.spin) * 0.14f;
-            if (be.spin > 0.98f) {
-                be.spin = 1f;
-            }
-        } else {
-            // Smooth return to idle
-            be.spin += (0f - be.spin) * 0.05f;
-            if (be.spin < 0.005f) {
-                be.spin = 0f;
-                be.visualItems[0] = ItemStack.EMPTY;
-                be.visualItems[1] = ItemStack.EMPTY;
-            }
+        be.animation.visualWorkTimer = be.visualWorkTimer;
+        if (be.animation.tick(on, be.clientBoosted)) {
+            be.visualItems[0] = ItemStack.EMPTY;
+            be.visualItems[1] = ItemStack.EMPTY;
         }
-        boolean foremanWanted = (be.clientBoosted || be.foremanLeft > 0) && be.spin > 0.4f;
-        be.foreman = Math.max(0f, Math.min(1f, be.foreman + (foremanWanted ? 0.08f : -0.05f)));
+        be.spin = be.animation.spin;
+        be.spinPrev = be.animation.spinPrev;
+        be.foreman = be.animation.foreman;
+        be.foremanPrev = be.animation.foremanPrev;
+        be.visualWorkTimer = be.animation.visualWorkTimer;
     }
 
     // ------------------------------------------------------------------------------------------------ saving
+
     protected void saveTag(CompoundTag tag, HolderLookup.Provider registries) {
         tag.put("Calculators", calculators.createTag(registries));
         tag.put("Upgrades", upgrades.createTag(registries));
@@ -655,23 +642,10 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         redstone.load(tag);
     }
 
-    private boolean devWorking = false;
-    private ItemStack devItem0 = ItemStack.EMPTY, devItem1 = ItemStack.EMPTY;
-
     public void setVisualWorkForDev(boolean on, @Nullable String item0, @Nullable String item1) {
         this.devWorking = on;
-        if (item0 != null) {
-            var i0 = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(net.minecraft.resources.Identifier.parse(item0));
-            this.devItem0 = new ItemStack(i0);
-        } else {
-            this.devItem0 = ItemStack.EMPTY;
-        }
-        if (item1 != null) {
-            var i1 = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(net.minecraft.resources.Identifier.parse(item1));
-            this.devItem1 = new ItemStack(i1);
-        } else {
-            this.devItem1 = ItemStack.EMPTY;
-        }
+        this.devItem0 = CraftingCpus.resolveDevItem(item0);
+        this.devItem1 = CraftingCpus.resolveDevItem(item1);
         setChanged();
         syncNow();
     }
@@ -689,13 +663,13 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         tag.putInt("Calcs", calculatorCount());
         tag.putInt("Workers", workersPerCore());
         tag.putBoolean("Boosted", devWorking || boosted);
-        tag.putBoolean("Open", viewers > 0);
+        tag.putBoolean("Open", viewerTracker.isOpen());
         if (devWorking) {
             if (!devItem0.isEmpty()) {
-                tag.put("Cur0", com.golemlogix.system.NbtBridge.saveItem(devItem0, registries));
+                tag.put("Cur0", NbtBridge.saveItem(devItem0, registries));
             }
             if (!devItem1.isEmpty()) {
-                tag.put("Cur1", com.golemlogix.system.NbtBridge.saveItem(devItem1, registries));
+                tag.put("Cur1", NbtBridge.saveItem(devItem1, registries));
             }
         } else {
             int shown = 0;
@@ -703,20 +677,19 @@ public class CryoMainframeBlockEntity extends BlockEntity {
                 if (c.job != null && shown < 2) {
                     ItemStack cur = c.job.current().stack();
                     if (!cur.isEmpty()) {
-                        tag.put("Cur" + shown, com.golemlogix.system.NbtBridge.saveItem(cur, registries));
+                        tag.put("Cur" + shown, NbtBridge.saveItem(cur, registries));
                     }
                     shown++;
                 }
             }
-            // shelves without a busy core show the item from the display until it fades
             for (int i = shown; i < 2; i++) {
                 ItemStack held = holds[i].item(now);
                 if (!held.isEmpty()) {
-                    tag.put("Cur" + i, com.golemlogix.system.NbtBridge.saveItem(held, registries));
+                    tag.put("Cur" + i, NbtBridge.saveItem(held, registries));
                 }
             }
         }
-        sentSummary = summary();
+        recordSentSummary();
         return tag;
     }
 
@@ -726,9 +699,11 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         clientCalcs = tag.getIntOr("Calcs", 0);
         clientWorkers = tag.getIntOr("Workers", 0);
         clientBoosted = tag.getBooleanOr("Boosted", false);
-        clientOpen = tag.getBooleanOr("Open", false);
+        viewerTracker.setClientOpen(tag.getBooleanOr("Open", false));
         for (int i = 0; i < 2; i++) {
-            clientCurrent[i] = tag.contains("Cur" + i) ? com.golemlogix.system.NbtBridge.loadItem(registries, tag.getCompoundOrEmpty("Cur" + i)).orElse(ItemStack.EMPTY)
+            String key = "Cur" + i;
+            clientCurrent[i] = tag.contains(key)
+                    ? NbtBridge.loadItem(registries, tag.getCompoundOrEmpty(key)).orElse(ItemStack.EMPTY)
                     : ItemStack.EMPTY;
         }
     }
@@ -738,43 +713,35 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         return ClientboundBlockEntityDataPacket.create(this);
     }
 
-    /** Summary of the cabinet for Jade tooltips and checks. */
     public Map<String, Integer> stats() {
         return Map.of("cores", cores.size(), "busy", busyCores(), "workers", workersPerCore(), "calcs", calculatorCount());
     }
 
-    // ---- 1.21.6+: the game's ValueInput/ValueOutput over the CompoundTag code above
-
     @Override
-    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+    protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
-        CompoundTag tag = new CompoundTag();
-        saveTag(tag, com.golemlogix.system.NbtBridge.registries(this));
-        com.golemlogix.system.NbtBridge.write(output, tag);
+        BlockEntities.save(this, output, this::saveTag);
     }
 
     @Override
-    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+    protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
-        loadTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+        BlockEntities.load(input, this::loadTag);
     }
 
     @Override
-    public void handleUpdateTag(net.minecraft.world.level.storage.ValueInput input) {
-        readUpdateTag(com.golemlogix.system.NbtBridge.read(input), input.lookup());
+    public void handleUpdateTag(ValueInput input) {
+        BlockEntities.load(input, this::readUpdateTag);
     }
 
     @Override
-    public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input) {
+    public void onDataPacket(Connection net, ValueInput input) {
         handleUpdateTag(input);
     }
 
-    /** Since 1.21.5 the block's removal side effects run from here, while this entity and its contents are still in place. */
     @Override
     public void preRemoveSideEffects(BlockPos pos, BlockState state) {
         super.preRemoveSideEffects(pos, state);
-        if (level != null && state.getBlock() instanceof com.golemlogix.blocks.RemovalAware r) {
-            r.onRemoved(state, level, pos);
-        }
+        BlockEntities.onPreRemove(this, pos, state);
     }
 }

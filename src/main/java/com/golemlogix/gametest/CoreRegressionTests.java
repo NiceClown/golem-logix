@@ -23,6 +23,7 @@ import com.golemlogix.system.MainframeStructure;
 import com.golemlogix.system.NbtBridge;
 import com.golemlogix.system.TelegraphLinks;
 import com.golemlogix.upgrade.UpgradeSpec;
+import com.golemlogix.upgrade.UpgradeType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
@@ -231,7 +232,7 @@ public final class CoreRegressionTests {
         helper.setBlock(busPos, ModBlocks.INJECTOR_EXPORT_BUS.get().defaultBlockState().setValue(DirectionalBlock.FACING, Direction.EAST));
         BusBlockEntity bus = helper.getBlockEntity(busPos, BusBlockEntity.class);
 
-        int redstoneSlot = UpgradeSpec.EXPORT_BUS.slotOf(com.golemlogix.upgrade.UpgradeType.REDSTONE);
+        int redstoneSlot = UpgradeSpec.EXPORT_BUS.slotOf(UpgradeType.REDSTONE);
         ListTag list = new ListTag();
         CompoundTag entry = new CompoundTag();
         entry.putByte("Slot", (byte) redstoneSlot);
