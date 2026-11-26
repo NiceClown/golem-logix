@@ -37,6 +37,7 @@ public class GolemLogixClientEvents {
         GhostProjection.clear();
         HammerClientEvents.reset();
         PipeRunners.clear();
+        SnowPipeRenderer.clearCaches();
         BookModel.invalidate();
     }
 
@@ -44,7 +45,6 @@ public class GolemLogixClientEvents {
     public static void onResourceReload(ClientResourceLoadFinishedEvent event) {
         BookModel.invalidate();
     }
-
 
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {

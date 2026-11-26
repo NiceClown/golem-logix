@@ -1,13 +1,9 @@
 package com.golemlogix.client;
 
 import com.golemlogix.menu.ConcentratorMenu;
-import com.golemlogix.network.MenuScrollPayload;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 
@@ -15,10 +11,9 @@ import java.util.List;
  * Cryo Schematic Concentrator window: the network's providers by category (the header is the machine's icon and name, the rows are the
  * provider's icon and its nine slots), a scroll bar and search by punch card results.
  */
-public class ConcentratorScreen extends GolemScreen<ConcentratorMenu> {
-    private EditBox search;
-    private int row = 0;
-    private boolean dragging = false;
+public class ConcentratorScreen extends ScrollSearchScreen<ConcentratorMenu> {
+    private static final Component LABEL_EMPTY = Component.translatable("gui.golem_logix.concentrator.empty");
+    private static final Component LABEL_NOT_FOUND = Component.translatable("gui.golem_logix.catalog.not_found");
 
     public ConcentratorScreen(ConcentratorMenu menu, Inventory inv, Component title) {
         super(menu, inv, title, ConcentratorMenu.IMAGE_WIDTH, ConcentratorMenu.IMAGE_HEIGHT);
@@ -27,57 +22,45 @@ public class ConcentratorScreen extends GolemScreen<ConcentratorMenu> {
     @Override
     protected void init() {
         super.init();
-        String old = search != null ? search.getValue() : "";
-        search = new EditBox(font, leftPos + ConcentratorMenu.GRID_X + 2, topPos + ConcentratorMenu.INFO_Y + 2, 158, 10,
-                Component.translatable("gui.golem_logix.search"));
-        search.setBordered(false);
-        search.setMaxLength(48);
-        search.setTextColor(GolemGui.PARCHMENT);
-        search.setHint(Component.translatable("gui.golem_logix.concentrator.search").withStyle(ChatFormatting.DARK_GRAY));
-        search.setValue(old);
-        search.setResponder(s -> {
-            row = 0;
-            send();
-        });
-        addRenderableWidget(search);
-    }
-
-    private void send() {
-        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new MenuScrollPayload(menu.containerId, row, search.getValue()));
-    }
-
-    private void scrollTo(int r) {
-        int n = Math.max(0, Math.min(menu.maxRow(), r));
-        if (n != row) {
-            row = n;
-            send();
-        }
+        initSearchBox(ConcentratorMenu.GRID_X + 2, ConcentratorMenu.INFO_Y + 2, 158, "gui.golem_logix.concentrator.search");
     }
 
     @Override
-    protected void containerTick() {
-        super.containerTick();
-        if (row > menu.maxRow()) {
-            row = menu.maxRow();
-        }
+    protected int visibleRows() {
+        return ConcentratorMenu.ROWS;
+    }
+
+    @Override
+    protected int maxRow() {
+        return menu.maxRow();
+    }
+
+    @Override
+    protected int totalRows() {
+        return menu.totalRows();
+    }
+
+    @Override
+    protected int scrollBarX() {
+        return ConcentratorMenu.SCROLL_X;
+    }
+
+    @Override
+    protected int gridY() {
+        return ConcentratorMenu.GRID_Y;
+    }
+
+    @Override
+    protected boolean isOverScrollArea(double mx, double my) {
+        int gy = topPos + ConcentratorMenu.GRID_Y;
+        return mx >= leftPos && mx < leftPos + imageWidth && my >= gy - 3 && my < gy + ConcentratorMenu.ROWS * 18 + 3;
     }
 
     @Override
     protected void renderExtraBg(GuiGraphicsExtractor g, float partialTick, int mouseX, int mouseY) {
         int gx = leftPos + ConcentratorMenu.GRID_X, gy = topPos + ConcentratorMenu.GRID_Y, h = ConcentratorMenu.ROWS * 18;
         GolemGui.inset(g, leftPos + ConcentratorMenu.ICON_X - 3, gy - 3, gx - leftPos - ConcentratorMenu.ICON_X + 9 * 18 + 6, h + 4);
-        int sx = leftPos + ConcentratorMenu.SCROLL_X;
-        GolemGui.inset(g, sx - 1, gy - 1, 8, h + 2);
-        int max = menu.maxRow();
-        if (max > 0) {
-            int handle = Math.max(12, h * ConcentratorMenu.ROWS / menu.totalRows());
-            int hy = gy + (h - handle) * Math.min(menu.row(), max) / max;
-            g.fill(sx, hy, sx + 6, hy + handle, GolemGui.BRASS);
-            g.fill(sx, hy, sx + 6, hy + 1, GolemGui.BRASS_L);
-            g.fill(sx, hy + handle - 1, sx + 6, hy + handle, GolemGui.BRASS_DARK);
-        } else {
-            g.fill(sx, gy, sx + 6, gy + h, GolemGui.BRASS_DARK);
-        }
+        drawScrollbar(g, menu.row());
         GolemGui.inset(g, gx - 1, topPos + ConcentratorMenu.INFO_Y, 9 * 18 + 2, 13);
     }
 
@@ -105,9 +88,7 @@ public class ConcentratorScreen extends GolemScreen<ConcentratorMenu> {
             }
         }
         if (rows.isEmpty()) {
-            Component empty = Component.translatable(search.getValue().isBlank()
-                    ? "gui.golem_logix.concentrator.empty" : "gui.golem_logix.catalog.not_found");
-            g.centeredText(font, empty, gx + 81, gy + 50, 0xFF8A7A60);
+            g.centeredText(font, search.getValue().isBlank() ? LABEL_EMPTY : LABEL_NOT_FOUND, gx + 81, gy + 50, 0xFF8A7A60);
         }
     }
 
@@ -125,90 +106,5 @@ public class ConcentratorScreen extends GolemScreen<ConcentratorMenu> {
             }
         }
         super.extractTooltip(g, mouseX, mouseY);
-    }
-
-    private boolean overScrollbar(double mx, double my) {
-        int sx = leftPos + ConcentratorMenu.SCROLL_X, gy = topPos + ConcentratorMenu.GRID_Y;
-        return mx >= sx - 1 && mx < sx + 7 && my >= gy && my < gy + ConcentratorMenu.ROWS * 18;
-    }
-
-    private void drag(double my) {
-        int gy = topPos + ConcentratorMenu.GRID_Y, h = ConcentratorMenu.ROWS * 18;
-        scrollTo((int) Math.round(Math.max(0, Math.min(1, (my - gy) / h)) * menu.maxRow()));
-    }
-
-    @Override
-    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
-        double mx = event.x(), my = event.y();
-        int button = event.button();
-        if (button == 0 && overScrollbar(mx, my) && menu.maxRow() > 0) {
-            dragging = true;
-            drag(my);
-            return true;
-        }
-        if (button == 1 && search.isMouseOver(mx, my)) {
-            search.setValue("");
-            return true;
-        }
-        boolean handled = super.mouseClicked(event, doubleClick);
-        if (!search.isMouseOver(mx, my) && search.isFocused()) {
-            search.setFocused(false);
-        }
-        return handled;
-    }
-
-    @Override
-    public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event, double dx, double dy) {
-        double mx = event.x(), my = event.y();
-        int button = event.button();
-        if (dragging) {
-            drag(my);
-            return true;
-        }
-        return super.mouseDragged(event, dx, dy);
-    }
-
-    @Override
-    public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event) {
-        double mx = event.x(), my = event.y();
-        int button = event.button();
-        dragging = false;
-        return super.mouseReleased(event);
-    }
-
-    @Override
-    public boolean mouseScrolled(double mx, double my, double sx, double sy) {
-        int gy = topPos + ConcentratorMenu.GRID_Y;
-        if (mx >= leftPos && mx < leftPos + imageWidth && my >= gy - 3 && my < gy + ConcentratorMenu.ROWS * 18 + 3) {
-            scrollTo(row - (int) Math.signum(sy) * (net.minecraft.client.Minecraft.getInstance().hasShiftDown() ? ConcentratorMenu.ROWS : 1));
-            return true;
-        }
-        return super.mouseScrolled(mx, my, sx, sy);
-    }
-
-    @Override
-    public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
-        int key = event.key(), scanCode = event.scancode(), modifiers = event.modifiers();
-        if (key == GLFW.GLFW_KEY_ESCAPE) {
-            return super.keyPressed(event);
-        }
-        if (search.isFocused()) {
-            search.keyPressed(event);
-            return true;
-        }
-        if (key == GLFW.GLFW_KEY_PAGE_DOWN || key == GLFW.GLFW_KEY_PAGE_UP) {
-            scrollTo(row + (key == GLFW.GLFW_KEY_PAGE_DOWN ? ConcentratorMenu.ROWS : -ConcentratorMenu.ROWS));
-            return true;
-        }
-        return super.keyPressed(event);
-    }
-
-    @Override
-    public boolean charTyped(net.minecraft.client.input.CharacterEvent event) {
-        char c = (char) event.codepoint();
-        if (search.isFocused()) {
-            return search.charTyped(event);
-        }
-        return super.charTyped(event);
     }
 }
