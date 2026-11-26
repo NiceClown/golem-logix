@@ -18,26 +18,27 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.fluids.FluidStack;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.Arrays;
 
+/**
+ * Stock Requester: maintains target stock levels for up to 9 configured items or fluids by dispatching
+ * autocraft orders whenever network stock drops below the slot's keep amount.
+ */
 public class StockRequesterBlockEntity extends BlockEntity {
     public static final int FILTER_SLOTS = 9;
-
     public static final int STATUS_OK = 0;
     public static final int STATUS_CRAFTING = 1;
     public static final int STATUS_NO_PATTERN = 2;
     public static final int STATUS_MISSING_INGREDIENTS = 3;
 
-    /** The clients see the list too: the ledger's pages show it. */
+    /** Synced to clients so the ledger pages render the configured entries. */
     private final OwnedContainer filters = new OwnedContainer(FILTER_SLOTS, this, s -> true) {
         @Override
         public void setChanged() {
             super.setChanged();
-            if (level != null && !level.isClientSide()) {
-                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-            }
+            BlockEntities.sendUpdate(StockRequesterBlockEntity.this);
         }
     };
 
@@ -60,93 +61,85 @@ public class StockRequesterBlockEntity extends BlockEntity {
             return;
         }
         GolemNetwork net = GolemNetwork.get(level, pos);
-        boolean active = net.isOnline() && net.isDeviceActive(pos);
-        if (!active) {
-            boolean reset = false;
-            for (int i = 0; i < FILTER_SLOTS; i++) {
-                if (be.status[i] != STATUS_OK) {
-                    be.status[i] = STATUS_OK;
-                    reset = true;
-                }
-            }
-            if (reset) {
-                be.setChanged();
-                level.sendBlockUpdated(pos, state, state, 3);
-            }
+        if (!net.isOnline() || !net.isDeviceActive(pos)) {
+            be.resetOffline(level, pos, state);
             return;
         }
 
         boolean changed = false;
         boolean noCpu = false;
         for (int i = 0; i < FILTER_SLOTS; i++) {
-            ItemStack ghost = be.filters.getItem(i);
-            if (ghost.isEmpty()) {
-                if (be.status[i] != STATUS_OK) {
-                    be.status[i] = STATUS_OK;
-                    changed = true;
-                }
-                continue;
-            }
-
-            // no amount set (or 0): the slot only names the item and orders nothing
-            int target = ghost.getOrDefault(ModDataComponents.KEEP_AMOUNT.get(), 0);
-            if (target <= 0) {
-                if (be.status[i] != STATUS_OK) {
-                    be.status[i] = STATUS_OK;
-                    changed = true;
-                }
-                continue;
-            }
-            ItemStack plainGhost = Fuzzy.plain(ghost);
-            // a fluid's key is the fluid with 1 mB, as the patterns index it (Ingredients.key)
-            ItemKey key = Ingredients.key(plainGhost);
-
-            long stock;
-            if (FluidGhostItem.is(plainGhost) || Ingredients.isFluid(key)) {
-                var fluid = FluidGhostItem.is(plainGhost) ? FluidGhostItem.fluid(plainGhost) : Ingredients.fluid(key, 1);
-                stock = net.fluidCountOf(fluid);
-            } else {
-                stock = net.itemCountOf(key);
-            }
-
             int oldStatus = be.status[i];
-            if (stock >= target) {
-                be.status[i] = STATUS_OK;
-            } else if (net.busCraftPending(pos, key)) {
-                be.status[i] = STATUS_CRAFTING;
-            } else if (!net.canCraft(key)) {
-                be.status[i] = STATUS_NO_PATTERN;
-            } else if (noCpu) {
-                be.status[i] = STATUS_CRAFTING;
-            } else {
-                long need = target - stock;
-                // a batch: up to a stack of items, up to 16 buckets of a fluid (in mB)
-                long batch = Math.min(need, Ingredients.isFluid(key) ? 16_000 : 64);
-                Map<ItemKey, Long> order = new LinkedHashMap<>();
-                order.put(key, batch);
-                var result = net.startCrafting(order, null, pos);
-                if (result.type() == GolemNetwork.StartType.STARTED) {
-                    be.status[i] = STATUS_CRAFTING;
-                } else if (result.type() == GolemNetwork.StartType.MISSING || result.type() == GolemNetwork.StartType.RESERVE_FAILED) {
-                    be.status[i] = STATUS_MISSING_INGREDIENTS;
-                } else if (result.type() == GolemNetwork.StartType.NO_PATTERN) {
-                    be.status[i] = STATUS_NO_PATTERN;
-                } else {
-                    if (result.type() == GolemNetwork.StartType.NO_CPU) {
-                        noCpu = true;
-                    }
-                    be.status[i] = STATUS_CRAFTING;
-                }
+            int newStatus = be.evaluateSlot(net, pos, i, noCpu);
+            if (newStatus < 0) {
+                noCpu = true;
+                newStatus = STATUS_CRAFTING;
             }
-            if (be.status[i] != oldStatus) {
+            if (newStatus != oldStatus) {
+                be.status[i] = newStatus;
                 changed = true;
             }
         }
-
         if (changed) {
             be.setChanged();
             level.sendBlockUpdated(pos, state, state, 3);
         }
+    }
+
+    private void resetOffline(Level level, BlockPos pos, BlockState state) {
+        boolean reset = false;
+        for (int i = 0; i < FILTER_SLOTS; i++) {
+            if (status[i] != STATUS_OK) {
+                status[i] = STATUS_OK;
+                reset = true;
+            }
+        }
+        if (reset) {
+            setChanged();
+            level.sendBlockUpdated(pos, state, state, 3);
+        }
+    }
+
+    /** Evaluates one filter slot; returns the new status, or {@code -1} to signal NO_CPU (stored as STATUS_CRAFTING). */
+    private int evaluateSlot(GolemNetwork net, BlockPos pos, int slot, boolean noCpu) {
+        ItemStack ghost = filters.getItem(slot);
+        if (ghost.isEmpty()) {
+            return STATUS_OK;
+        }
+        int target = ghost.getOrDefault(ModDataComponents.KEEP_AMOUNT.get(), 0);
+        if (target <= 0) {
+            return STATUS_OK;
+        }
+        ItemStack plainGhost = Fuzzy.plain(ghost);
+        ItemKey key = Ingredients.key(plainGhost);
+        long stock;
+        if (FluidGhostItem.is(plainGhost) || Ingredients.isFluid(key)) {
+            FluidStack fluid = FluidGhostItem.is(plainGhost) ? FluidGhostItem.fluid(plainGhost) : Ingredients.fluid(key, 1);
+            stock = net.fluidCountOf(fluid);
+        } else {
+            stock = net.itemCountOf(key);
+        }
+        if (stock >= target) {
+            return STATUS_OK;
+        }
+        if (net.busCraftPending(pos, key)) {
+            return STATUS_CRAFTING;
+        }
+        if (!net.canCraft(key)) {
+            return STATUS_NO_PATTERN;
+        }
+        if (noCpu) {
+            return STATUS_CRAFTING;
+        }
+        long batch = Math.min(target - stock, Ingredients.isFluid(key) ? 16_000 : 64);
+        GolemNetwork.StartType result = BlockEntities.requestCraft(net, pos, key, batch).type();
+        return switch (result) {
+            case STARTED -> STATUS_CRAFTING;
+            case MISSING, RESERVE_FAILED -> STATUS_MISSING_INGREDIENTS;
+            case NO_PATTERN -> STATUS_NO_PATTERN;
+            case NO_CPU -> -1;
+            default -> STATUS_CRAFTING;
+        };
     }
 
     public ContainerData menuData() {
@@ -181,11 +174,9 @@ public class StockRequesterBlockEntity extends BlockEntity {
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         filters.fromTag(tag.getList("Filters", Tag.TAG_COMPOUND), registries);
-        java.util.Arrays.fill(status, STATUS_OK);
+        Arrays.fill(status, STATUS_OK);
         int[] st = tag.getIntArray("Status");
-        for (int i = 0; i < FILTER_SLOTS && i < st.length; i++) {
-            status[i] = st[i];
-        }
+        System.arraycopy(st, 0, status, 0, Math.min(st.length, FILTER_SLOTS));
     }
 
     @Override

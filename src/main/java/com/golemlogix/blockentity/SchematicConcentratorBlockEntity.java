@@ -4,23 +4,26 @@ import com.golemlogix.init.ModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Cryo Schematic Concentrator: has no contents of its own (the window shows the punch cards of all providers in the network); the block
- * entity is needed for the animation: while the window is open the hologram above the screen unfolds and spins faster.
+ * Cryo Schematic Concentrator: holds no inventory of its own; tracks active screen viewers so the client unfolds
+ * and accelerates the roof hologram animation while someone views the network's patterns.
  */
 public class SchematicConcentratorBlockEntity extends BlockEntity {
-    public static final int EVENT_VIEWERS = 1;
-    private int viewers = 0;
-    private boolean clientOpen;
-    /** How unfolded the hologram is 0..1 and the angle of its rings (client). */
+    public static final int EVENT_VIEWERS = ViewerTracker.EVENT_VIEWERS;
+
+    private final ViewerTracker viewerTracker = new ViewerTracker();
+    /** Client hologram unfold 0..1 and ring rotation angle. */
     public float holo, holoPrev, spin, spinPrev;
 
     public SchematicConcentratorBlockEntity(BlockPos pos, BlockState state) {
@@ -28,55 +31,36 @@ public class SchematicConcentratorBlockEntity extends BlockEntity {
     }
 
     public int viewers() {
-        return viewers;
+        return viewerTracker.viewers();
     }
 
     public void startOpen() {
-        viewers++;
-        if (viewers == 1 && level != null && !level.isClientSide()) {
-            level.playSound(null, worldPosition, SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 0.35f, 1.8f);
-        }
-        signal();
+        viewerTracker.open(this, () ->
+                level.playSound(null, worldPosition, SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 0.35f, 1.8f));
     }
 
     public void stopOpen() {
-        if (viewers == 0) {
-            return;
-        }
-        viewers--;
-        if (viewers == 0 && level != null && !level.isClientSide()) {
-            level.playSound(null, worldPosition, SoundEvents.BEACON_DEACTIVATE, SoundSource.BLOCKS, 0.3f, 1.8f);
-        }
-        signal();
-    }
-
-    private void signal() {
-        if (level != null && !level.isClientSide()) {
-            level.blockEvent(worldPosition, getBlockState().getBlock(), EVENT_VIEWERS, viewers);
-        }
+        viewerTracker.close(this, () ->
+                level.playSound(null, worldPosition, SoundEvents.BEACON_DEACTIVATE, SoundSource.BLOCKS, 0.3f, 1.8f));
     }
 
     @Override
     public boolean triggerEvent(int id, int param) {
-        if (id == EVENT_VIEWERS) {
-            clientOpen = param > 0;
-            return true;
-        }
-        return super.triggerEvent(id, param);
+        return viewerTracker.handleEvent(id, param) || super.triggerEvent(id, param);
     }
 
     public static void clientTick(Level level, BlockPos pos, BlockState state, SchematicConcentratorBlockEntity be) {
+        boolean open = be.viewerTracker.isClientOpen();
         be.holoPrev = be.holo;
-        be.holo = Math.max(0f, Math.min(1f, be.holo + (be.clientOpen ? 0.1f : -0.07f)));
+        be.holo = Math.max(0f, Math.min(1f, be.holo + (open ? 0.1f : -0.07f)));
         be.spinPrev = be.spin;
         be.spin += 1.2f + be.holo * 4.5f;
-        if (level.getGameTime() % (be.clientOpen ? 5 : 31) == 0) {
+        if (level.getGameTime() % (open ? 5 : 31) == 0) {
             var r = level.random;
-            // steam from the frosted pipe on the roof (its mouth in pixels of the north-facing model: x 10.75, z 11.6)
-            Direction f = state.getValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING);
+            Direction f = state.getValue(HorizontalDirectionalBlock.FACING);
             double a = Math.toRadians(180 - f.toYRot()), dx = 10.75 / 16 - 0.5, dz = 11.6 / 16 - 0.5;
             double wx = dx * Math.cos(a) + dz * Math.sin(a), wz = -dx * Math.sin(a) + dz * Math.cos(a);
-            level.addParticle(net.minecraft.core.particles.ParticleTypes.WHITE_SMOKE, pos.getX() + 0.5 + wx + (r.nextDouble() - 0.5) * 0.06,
+            level.addParticle(ParticleTypes.WHITE_SMOKE, pos.getX() + 0.5 + wx + (r.nextDouble() - 0.5) * 0.06,
                     pos.getY() + 1.28, pos.getZ() + 0.5 + wz + (r.nextDouble() - 0.5) * 0.06, 0, 0.03, 0);
         }
     }
@@ -84,17 +68,17 @@ public class SchematicConcentratorBlockEntity extends BlockEntity {
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = super.getUpdateTag(registries);
-        tag.putBoolean("Open", viewers > 0);
+        tag.putBoolean("Open", viewerTracker.isOpen());
         return tag;
     }
 
     @Override
     public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
-        clientOpen = tag.getBoolean("Open");
+        viewerTracker.setClientOpen(tag.getBoolean("Open"));
     }
 
     @Override
-    public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider registries) {
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider registries) {
         handleUpdateTag(pkt.getTag(), registries);
     }
 

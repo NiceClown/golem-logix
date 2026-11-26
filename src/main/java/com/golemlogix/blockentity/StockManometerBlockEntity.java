@@ -1,8 +1,10 @@
 package com.golemlogix.blockentity;
 
 import com.golemlogix.blocks.StockManometerBlock;
+import com.golemlogix.crafting.CraftingCpu;
 import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.items.FluidGhostItem;
+import com.golemlogix.system.CryoSource;
 import com.golemlogix.system.Fuzzy;
 import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.Ingredients;
@@ -25,27 +27,29 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.fluids.FluidStack;
 
+import java.util.Set;
+
+/**
+ * Stock Manometer: monitors network stock of one item or fluid (with optional Fuzzy Card matching) and emits a
+ * redstone signal in above/below (with hysteresis), analog, or active-autocraft mode.
+ */
 public class StockManometerBlockEntity extends BlockEntity {
-    /**
-     * Client: where the golem on the bridge of each side (Direction order) is - 0..1 on the way to the receiver with redstone dust,
-     * 1..2 back empty-handed, 0 waiting at the clock - and the game time they were last advanced.
-     */
+    public static final int BRIDGE_AUTO = 0, BRIDGE_ON = 1, BRIDGE_OFF = 2;
+    public static final int MODE_ABOVE = 0, MODE_BELOW = 1, MODE_ANALOG = 2;
+    /** menuData().set indices taking whole values rather than 16-bit slots. */
+    public static final int SET_THRESHOLD = 10, SET_SECOND = 11, SET_BRIDGE_NEXT = 12;
+
+    private static final int[] POW3 = {1, 3, 9, 27, 81, 243};
+
+    /** Client golem bridge animation state per Direction ordinal. */
     public final float[] bridgePhase = new float[6];
     public long bridgeTick;
-    /** A side's bridge: by what the block there looks like, always (while something stands there), never. */
-    public static final int BRIDGE_AUTO = 0, BRIDGE_ON = 1, BRIDGE_OFF = 2;
-    /** The modes of the six sides (Direction order), three to a digit: it fits one window data slot. */
-    private int bridgeModes = 0;
-
-    public static final int MODE_ABOVE = 0;
-    public static final int MODE_BELOW = 1;
-    public static final int MODE_ANALOG = 2;
-    /** menuData().set indices that take whole numbers (not window slots). */
-    public static final int SET_THRESHOLD = 10, SET_SECOND = 11, SET_BRIDGE_NEXT = 12;
 
     private final OwnedContainer filter = new OwnedContainer(1, this, s -> true);
     private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.MANOMETER, this);
 
+    /** Packed base-3 bridge modes across the 6 faces. */
+    private int bridgeModes = 0;
     private int mode = MODE_ABOVE;
     private int threshold = 100;
     private int hysteresis = 0;
@@ -100,8 +104,6 @@ public class StockManometerBlockEntity extends BlockEntity {
         return stockCount;
     }
 
-    private static final int[] POW3 = {1, 3, 9, 27, 81, 243};
-
     public static int bridgeMode(int packed, Direction side) {
         return packed / POW3[side.ordinal()] % 3;
     }
@@ -113,12 +115,9 @@ public class StockManometerBlockEntity extends BlockEntity {
     public void setBridgeMode(Direction side, int mode) {
         bridgeModes += (Math.floorMod(mode, 3) - getBridgeMode(side)) * POW3[side.ordinal()];
         setChanged();
-        if (level != null && !level.isClientSide()) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-        }
+        BlockEntities.sendUpdate(this);
     }
 
-    /** Whether a bridge runs to that side now. */
     public boolean hasBridge(Direction side) {
         if (level == null) {
             return false;
@@ -142,19 +141,16 @@ public class StockManometerBlockEntity extends BlockEntity {
             return;
         }
         GolemNetwork net = GolemNetwork.get(level, pos);
-        boolean active = net.isOnline() && net.isDeviceActive(pos);
-        if (!active) {
+        if (!net.isOnline() || !net.isDeviceActive(pos)) {
             be.updateSignal(level, pos, state, 0, 0, false);
             return;
         }
-
         ItemStack ghost = be.filter.getItem(0);
         if (ghost.isEmpty()) {
             be.updateSignal(level, pos, state, 0, 0, false);
             return;
         }
 
-        boolean hasCraftingUpgrade = be.upgrades.count(UpgradeType.CRAFTING) > 0;
         boolean fuzzy = be.upgrades.has(UpgradeType.FUZZY);
         ItemStack plainGhost = Fuzzy.plain(ghost);
         // normalize fluid ghosts to 1 mB so CraftingJob targets and fluid checks agree
@@ -164,36 +160,38 @@ public class StockManometerBlockEntity extends BlockEntity {
                 ? (FluidGhostItem.is(plainGhost) ? FluidGhostItem.fluid(plainGhost) : Ingredients.fluid(key, 1))
                 : FluidStack.EMPTY;
 
-        if (hasCraftingUpgrade) {
-            boolean running = !fuzzy && net.busCraftPending(pos, key);
-            if (!running) {
-                for (com.golemlogix.crafting.CraftingCpu cpu : net.cpus()) {
-                    var job = cpu.isRemoved() ? null : cpu.getJob();
-                    if (job != null && !job.isDone() && matchesCraftTarget(job.targets().keySet(), ghost, key, isFluid, fluid, fuzzy)) {
-                        running = true;
-                        break;
-                    }
-                }
-            }
-            int newSignal = running ? 15 : 0;
-            be.updateSignal(level, pos, state, newSignal, be.stockCount, running);
+        if (be.upgrades.count(UpgradeType.CRAFTING) > 0) {
+            boolean running = isCraftRunning(net, pos, ghost, key, isFluid, fluid, fuzzy);
+            be.updateSignal(level, pos, state, running ? 15 : 0, be.stockCount, running);
             return;
         }
-
-        long stock;
-        if (isFluid) {
-            stock = fuzzy ? countFuzzyFluid(net, fluid) : net.fluidCountOf(fluid);
-        } else if (fuzzy) {
-            stock = countFuzzyItem(net, ghost);
-        } else {
-            stock = net.itemCountOf(key);
-        }
-
-        int newSignal = be.computeSignal(stock);
-        be.updateSignal(level, pos, state, newSignal, stock, false);
+        long stock = countStock(net, ghost, key, isFluid, fluid, fuzzy);
+        be.updateSignal(level, pos, state, be.computeSignal(stock), stock, false);
     }
 
-    private static boolean matchesCraftTarget(java.util.Set<ItemKey> targets, ItemStack ghost, ItemKey key,
+    private static boolean isCraftRunning(GolemNetwork net, BlockPos pos, ItemStack ghost, ItemKey key,
+                                          boolean isFluid, FluidStack fluid, boolean fuzzy) {
+        if (!fuzzy && net.busCraftPending(pos, key)) {
+            return true;
+        }
+        for (CraftingCpu cpu : net.cpus()) {
+            var job = cpu.isRemoved() ? null : cpu.getJob();
+            if (job != null && !job.isDone() && matchesCraftTarget(job.targets().keySet(), ghost, key, isFluid, fluid, fuzzy)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static long countStock(GolemNetwork net, ItemStack ghost, ItemKey key,
+                                   boolean isFluid, FluidStack fluid, boolean fuzzy) {
+        if (isFluid) {
+            return fuzzy ? countFuzzyFluid(net, fluid) : net.fluidCountOf(fluid);
+        }
+        return fuzzy ? countFuzzyItem(net, ghost) : net.itemCountOf(key);
+    }
+
+    private static boolean matchesCraftTarget(Set<ItemKey> targets, ItemStack ghost, ItemKey key,
                                               boolean isFluid, FluidStack fluid, boolean fuzzy) {
         if (!fuzzy) {
             return targets.contains(key);
@@ -221,7 +219,7 @@ public class StockManometerBlockEntity extends BlockEntity {
     }
 
     private static long countFuzzyFluid(GolemNetwork net, FluidStack fluid) {
-        if (com.golemlogix.system.CryoSource.is(fluid)) {
+        if (CryoSource.is(fluid)) {
             return net.cryoSourceAvailable();
         }
         long total = 0;
@@ -233,32 +231,35 @@ public class StockManometerBlockEntity extends BlockEntity {
         return total;
     }
 
-    /**
-     * threshold = where the signal switches ON, hysteresis = where it switches OFF again (0: at the same point). Above: on from
-     * the threshold, off at the second point or less (it lies below); Below: on at the threshold or less, off from the second
-     * point (it lies above); in between the signal holds - a farm runs from 500 up to 2 000, not on and off at 500.
-     */
+    /** Computes 0..15 output strength according to mode, threshold, and hysteresis band. */
     private int computeSignal(long stock) {
         int on = threshold, off = hysteresis;
         if (mode == MODE_ABOVE) {
             if (off > 0 && off < on) {
-                if (stock >= on) return 15;
-                if (stock <= off) return 0;
-                return signal > 0 ? 15 : 0;   // holds on or off (a level left over from analog mode is not a state)
+                if (stock >= on) {
+                    return 15;
+                }
+                if (stock <= off) {
+                    return 0;
+                }
+                return signal > 0 ? 15 : 0;
             }
             return stock >= on ? 15 : 0;
-        } else if (mode == MODE_BELOW) {
+        }
+        if (mode == MODE_BELOW) {
             if (off > on) {
-                if (stock <= on) return 15;
-                if (stock >= off) return 0;
+                if (stock <= on) {
+                    return 15;
+                }
+                if (stock >= off) {
+                    return 0;
+                }
                 return signal > 0 ? 15 : 0;
             }
             return stock <= on ? 15 : 0;
-        } else {
-            // Analog mode: 0..15 proportional to stock / threshold
-            double max = Math.max(1, (double) threshold);
-            return (int) Math.clamp(Math.round(15.0 * stock / max), 0, 15);
         }
+        double max = Math.max(1, (double) threshold);
+        return (int) Math.clamp(Math.round(15.0 * stock / max), 0, 15);
     }
 
     private void updateSignal(Level level, BlockPos pos, BlockState state, int newSignal, long newStock, boolean running) {
@@ -288,7 +289,6 @@ public class StockManometerBlockEntity extends BlockEntity {
         return new ContainerData() {
             @Override
             public int get(int index) {
-                // window data slots carry 16 bits: the numbers go in two halves each
                 int clampedStock = (int) Math.min(stockCount, Integer.MAX_VALUE);
                 return switch (index) {
                     case 0 -> mode;
@@ -304,7 +304,6 @@ public class StockManometerBlockEntity extends BlockEntity {
                 };
             }
 
-            /** From the window (server side): 0 the mode, SET_THRESHOLD / SET_SECOND whole numbers. */
             @Override
             public void set(int index, int value) {
                 switch (index) {
@@ -312,7 +311,7 @@ public class StockManometerBlockEntity extends BlockEntity {
                     case SET_THRESHOLD -> threshold = Math.max(1, value);
                     case SET_SECOND -> hysteresis = Math.max(0, value);
                     case SET_BRIDGE_NEXT -> {
-                        Direction side = Direction.values()[Math.floorMod(value, 6)];
+                        Direction side = BlockEntities.DIRECTIONS[Math.floorMod(value, 6)];
                         setBridgeMode(side, getBridgeMode(side) + 1);
                         return;
                     }

@@ -16,11 +16,13 @@ import com.golemlogix.upgrade.UpgradeType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -33,16 +35,16 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
- * Punch Card Catalog: storage for punch cards with crafting-table recipes (the Cryo-Calculators run them themselves, no machine needed).
- * Capacity comes from the Pattern Providers in a separate slot: each gives {@link #slotsPerProvider()} places, up to 64 providers.
- * A Redstone Module can switch the catalog's patterns on and off by signal. The former blocks of the assembled cabinet are kept here.
+ * Punch Card Catalog: storage for crafting-table punch cards. Capacity scales with installed Pattern Providers
+ * ({@link #slotsPerProvider()} each, up to 64 providers); an optional Redstone Module gates pattern visibility.
  */
 public class CardCatalogBlockEntity extends BlockEntity {
     public static final int MAX_PROVIDERS = 64, MAX_SLOTS = MAX_PROVIDERS * 27;
-    public static final int EVENT_VIEWERS = 1;
+    public static final int EVENT_VIEWERS = ViewerTracker.EVENT_VIEWERS;
 
     private final OwnedContainer cards = new OwnedContainer(MAX_SLOTS, this, CardCatalogBlockEntity::isCraftingCard) {
         @Override
@@ -53,11 +55,7 @@ public class CardCatalogBlockEntity extends BlockEntity {
         @Override
         public void setChanged() {
             super.setChanged();
-            patterns = null;
-            summaryDirty = true;
-            if (level == null || !level.isClientSide()) {
-                com.golemlogix.system.GolemNetwork.patternsChanged();
-            }
+            invalidatePatterns();
         }
     };
     private final OwnedContainer providers = new OwnedContainer(1, this, s -> s.is(ModBlocks.PATTERN_PROVIDER.get().asItem())) {
@@ -74,37 +72,39 @@ public class CardCatalogBlockEntity extends BlockEntity {
         @Override
         public void setChanged() {
             super.setChanged();
-            patterns = null;
-            summaryDirty = true;
-            if (level == null || !level.isClientSide()) {
-                com.golemlogix.system.GolemNetwork.patternsChanged();
-            }
+            invalidatePatterns();
         }
     };
     private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.REDSTONE_ONLY, this);
     private final RedstoneControl redstone = new RedstoneControl();
+    private final ViewerTracker viewerTracker = new ViewerTracker();
     private final BlockState[] originals = new BlockState[CatalogStructure.CELLS.length];
     @Nullable
     private List<PatternData> patterns;
     private boolean enabled = true;
-    private int viewers = 0;
     private long lastSync = -100;
-    private String sentSummary = "";
-    /** The cards or providers changed since the last sync check (counting 1728 places every tick was wasted work). */
+    private int sentCards = -1, sentCapacity = -1;
+    /** Cards or providers changed since the last sync check (avoids scanning 1728 slots every tick). */
     private boolean summaryDirty = true;
 
     // --- client
     private int clientCards, clientCapacity;
-    private boolean clientOpen;
     private final int[] clientGolems = {0, 0};
-    /** Pulled-out drawers 0..1 and rotation of the letter drums on the roof (client). */
+    /** Pulled-out drawers 0..1 and roof letter-drum angle (client). */
     public float drawers, drawersPrev, drums, drumsPrev;
 
     public CardCatalogBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.CARD_CATALOG.get(), pos, state);
     }
 
-    /** A card with a crafting-table recipe (machine recipes need a provider next to the machine, they do not go into the catalog). */
+    private void invalidatePatterns() {
+        patterns = null;
+        summaryDirty = true;
+        if (level == null || !level.isClientSide()) {
+            GolemNetwork.patternsChanged();
+        }
+    }
+
     public static boolean isCraftingCard(ItemStack stack) {
         PatternData data = stack.get(ModDataComponents.PATTERN.get());
         return data != null && data.isValid() && data.crafting();
@@ -131,7 +131,6 @@ public class CardCatalogBlockEntity extends BlockEntity {
         return s.hasProperty(CardCatalogBlock.FORMED) && s.getValue(CardCatalogBlock.FORMED);
     }
 
-    /** How many card places there are now (by the number of providers). */
     public int capacity() {
         return Math.min(MAX_SLOTS, providers.getItem(0).getCount() * slotsPerProvider());
     }
@@ -146,7 +145,7 @@ public class CardCatalogBlockEntity extends BlockEntity {
         return n;
     }
 
-    /** Fewer providers than this cannot be left: otherwise occupied places would end up beyond the capacity. */
+    /** Minimum provider count required to keep every currently occupied card slot within capacity. */
     public int minProviders() {
         int last = -1;
         for (int i = cards.getContainerSize() - 1; i >= 0; i--) {
@@ -158,7 +157,7 @@ public class CardCatalogBlockEntity extends BlockEntity {
         return last < 0 ? 0 : last / slotsPerProvider() + 1;
     }
 
-    /** Catalog patterns for the network: only within capacity, when assembled and allowed by redstone. */
+    /** Patterns exposed to the network: only within capacity, when formed and enabled by redstone. */
     public List<PatternData> patterns() {
         if (!formed() || !enabled) {
             return List.of();
@@ -187,7 +186,7 @@ public class CardCatalogBlockEntity extends BlockEntity {
         return cell >= 0 && cell < originals.length ? originals[cell] : null;
     }
 
-    /** Oxidation of the golem on this side (0 = left, 1 = right), taken from the statue it was built from. */
+    /** Oxidation stage of the side golem (0 = left, 1 = right), read from the original statue block. */
     public int golemOxidation(int side) {
         if (side < 0 || side > 1) {
             return 0;
@@ -227,41 +226,22 @@ public class CardCatalogBlockEntity extends BlockEntity {
     }
 
     public int viewers() {
-        return viewers;
+        return viewerTracker.viewers();
     }
 
     public void startOpen() {
-        viewers++;
-        if (viewers == 1 && level != null && !level.isClientSide()) {
-            level.playSound(null, worldPosition, SoundEvents.CHISELED_BOOKSHELF_PICKUP, SoundSource.BLOCKS, 0.8f, 0.9f);
-        }
-        signalViewers();
+        viewerTracker.open(this, () ->
+                level.playSound(null, worldPosition, SoundEvents.CHISELED_BOOKSHELF_PICKUP, SoundSource.BLOCKS, 0.8f, 0.9f));
     }
 
     public void stopOpen() {
-        if (viewers == 0) {
-            return;
-        }
-        viewers--;
-        if (viewers == 0 && level != null && !level.isClientSide()) {
-            level.playSound(null, worldPosition, SoundEvents.CHISELED_BOOKSHELF_INSERT, SoundSource.BLOCKS, 0.8f, 0.9f);
-        }
-        signalViewers();
-    }
-
-    private void signalViewers() {
-        if (level != null && !level.isClientSide()) {
-            level.blockEvent(worldPosition, getBlockState().getBlock(), EVENT_VIEWERS, viewers);
-        }
+        viewerTracker.close(this, () ->
+                level.playSound(null, worldPosition, SoundEvents.CHISELED_BOOKSHELF_INSERT, SoundSource.BLOCKS, 0.8f, 0.9f));
     }
 
     @Override
     public boolean triggerEvent(int id, int param) {
-        if (id == EVENT_VIEWERS) {
-            clientOpen = param > 0;
-            return true;
-        }
-        return super.triggerEvent(id, param);
+        return viewerTracker.handleEvent(id, param) || super.triggerEvent(id, param);
     }
 
     public void dropContents() {
@@ -274,23 +254,14 @@ public class CardCatalogBlockEntity extends BlockEntity {
                 Containers.dropItemStack(level, x, y, z, cards.removeItemNoUpdate(i));
             }
         }
-        Containers.dropContents(level, worldPosition, providers);
-        Containers.dropContents(level, worldPosition, upgrades);
-    }
-
-    private static boolean allCellsLoaded(Level level, BlockPos pos, Direction facing) {
-        for (int i = 0; i < CatalogStructure.CELLS.length; i++) {
-            if (!level.isLoaded(CatalogStructure.cellPos(pos, facing, i))) {
-                return false;
-            }
-        }
-        return true;
+        BlockEntities.dropContainers(level, worldPosition, providers, upgrades);
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, CardCatalogBlockEntity be) {
         long time = level.getGameTime();
         Direction facing = state.getValue(CardCatalogBlock.FACING);
-        if ((time + pos.asLong()) % 20 == 0 && allCellsLoaded(level, pos, facing)) {
+        if ((time + pos.asLong()) % 20 == 0
+                && BlockEntities.allLoaded(level, CatalogStructure.CELLS.length, i -> CatalogStructure.cellPos(pos, facing, i))) {
             boolean valid = CatalogStructure.valid(level, pos, facing);
             if (be.formed() && !valid) {
                 CatalogStructure.disassemble(level, pos, facing, null);
@@ -300,50 +271,45 @@ public class CardCatalogBlockEntity extends BlockEntity {
         }
         boolean module = be.upgrades.has(UpgradeType.REDSTONE);
         boolean powered = module && level.hasNeighborSignal(pos);
-        boolean enabled = !module || switch (be.redstone.mode()) {
+        boolean enabledNow = !module || switch (be.redstone.mode()) {
             case IGNORE -> true;
             case HIGH, PULSE -> powered;
             case LOW -> !powered;
         };
-        if (enabled != be.enabled) {
-            be.enabled = enabled;
+        if (enabledNow != be.enabled) {
+            be.enabled = enabledNow;
             be.patterns = null;
             GolemNetwork.patternsChanged();
         }
         if (be.summaryDirty && time - be.lastSync >= 10) {
             be.summaryDirty = false;
-            if (!be.summary().equals(be.sentSummary)) {
+            if (be.cardCount() != be.sentCards || be.capacity() != be.sentCapacity) {
                 be.syncNow();
             }
         }
     }
 
-    private String summary() {
-        return cardCount() + "/" + capacity();
-    }
-
     public void syncNow() {
         if (level != null && !level.isClientSide()) {
             lastSync = level.getGameTime();
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            BlockEntities.sendUpdate(this);
         }
     }
 
     public static void clientTick(Level level, BlockPos pos, BlockState state, CardCatalogBlockEntity be) {
+        boolean open = be.viewerTracker.isClientOpen();
         be.drawersPrev = be.drawers;
-        be.drawers = Math.max(0f, Math.min(1f, be.drawers + (be.clientOpen ? 0.08f : -0.06f)));
+        be.drawers = Math.max(0f, Math.min(1f, be.drawers + (open ? 0.08f : -0.06f)));
         be.drumsPrev = be.drums;
-        // the drums click to the next letter every second and a half; while the window is open they flip quickly
-        be.drums += be.clientOpen ? 0.12f : (Math.floorMod(level.getGameTime() + pos.asLong(), 30) < 6 ? 0.05f : 0f);
-        // steam from the roof pipe: in puffs while the window is open, now and then when idle
-        if (be.formed() && level.getGameTime() % (be.clientOpen ? 4 : 23) == 0) {
+        be.drums += open ? 0.12f : (Math.floorMod(level.getGameTime() + pos.asLong(), 30) < 6 ? 0.05f : 0f);
+        if (be.formed() && level.getGameTime() % (open ? 4 : 23) == 0) {
             var r = level.random;
             Direction f = state.getValue(CardCatalogBlock.FACING);
             double a = Math.toRadians(180 - f.toYRot()), dx = 23.3 / 16 - 0.5, dz = 23.3 / 16 - 0.5;
             double wx = dx * Math.cos(a) + dz * Math.sin(a), wz = -dx * Math.sin(a) + dz * Math.cos(a);
-            level.addParticle(be.clientOpen ? net.minecraft.core.particles.ParticleTypes.CLOUD : net.minecraft.core.particles.ParticleTypes.WHITE_SMOKE,
-                    pos.getX() + 0.5 + wx + (r.nextDouble() - 0.5) * 0.15, pos.getY() + 2.85, pos.getZ() + 0.5 + wz + (r.nextDouble() - 0.5) * 0.15,
-                    0, 0.04, 0);
+            level.addParticle(open ? ParticleTypes.CLOUD : ParticleTypes.WHITE_SMOKE,
+                    pos.getX() + 0.5 + wx + (r.nextDouble() - 0.5) * 0.15, pos.getY() + 2.85,
+                    pos.getZ() + 0.5 + wz + (r.nextDouble() - 0.5) * 0.15, 0, 0.04, 0);
         }
     }
 
@@ -380,7 +346,7 @@ public class CardCatalogBlockEntity extends BlockEntity {
         cards.fromTag(tag.getList("Cards", Tag.TAG_COMPOUND), registries);
         providers.fromTag(tag.getList("Providers", Tag.TAG_COMPOUND), registries);
         upgrades.fromTag(tag.getList("Upgrades", Tag.TAG_COMPOUND), registries);
-        java.util.Arrays.fill(originals, null);
+        Arrays.fill(originals, null);
         ListTag orig = tag.getList("Originals", Tag.TAG_COMPOUND);
         for (int i = 0; i < orig.size(); i++) {
             CompoundTag e = orig.getCompound(i);
@@ -396,12 +362,15 @@ public class CardCatalogBlockEntity extends BlockEntity {
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = super.getUpdateTag(registries);
-        tag.putInt("CardCount", cardCount());
-        tag.putInt("Capacity", capacity());
-        tag.putBoolean("Open", viewers > 0);
+        int count = cardCount();
+        int cap = capacity();
+        tag.putInt("CardCount", count);
+        tag.putInt("Capacity", cap);
+        tag.putBoolean("Open", viewerTracker.isOpen());
         tag.putInt("GolemL", golemOxidation(0));
         tag.putInt("GolemR", golemOxidation(1));
-        sentSummary = summary();
+        sentCards = count;
+        sentCapacity = cap;
         return tag;
     }
 
@@ -409,13 +378,13 @@ public class CardCatalogBlockEntity extends BlockEntity {
     public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
         clientCards = tag.getInt("CardCount");
         clientCapacity = tag.getInt("Capacity");
-        clientOpen = tag.getBoolean("Open");
+        viewerTracker.setClientOpen(tag.getBoolean("Open"));
         clientGolems[0] = tag.getInt("GolemL");
         clientGolems[1] = tag.getInt("GolemR");
     }
 
     @Override
-    public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider registries) {
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider registries) {
         handleUpdateTag(pkt.getTag(), registries);
     }
 

@@ -2,6 +2,8 @@ package com.golemlogix.blockentity;
 
 import com.golemlogix.blocks.CoolingCoprocessorBlock;
 import com.golemlogix.blocks.GolemProperties;
+import com.golemlogix.config.GolemConfig;
+import com.golemlogix.crafting.CraftingCpu;
 import com.golemlogix.crafting.CraftingJob;
 import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.init.ModSounds;
@@ -18,6 +20,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -27,9 +30,11 @@ import net.minecraft.world.Containers;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
+import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
@@ -38,17 +43,19 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Cryo-Calculator: the central processor of autocrafting. One job at a time;
- * Cooling Co-Processors right next to it speed up running steps in parallel.
- * While a job runs, a mini model of what it is making right now spins above the calculator.
+ * Cryo-Calculator: single-job autocrafting CPU. Adjacent Cooling Co-Processors and installed Compressed Co-Processors
+ * execute multiple steps per cycle; idle calculators lend spare steps to busy jobs in the same network.
  */
-public class CryoCalculatorBlockEntity extends BlockEntity implements com.golemlogix.crafting.CraftingCpu {
+public class CryoCalculatorBlockEntity extends BlockEntity implements CraftingCpu {
     public static final int CYCLE_TICKS = 4;
     public static final int BASE_WORKERS = 1;
     public static final int WORKERS_PER_COPROCESSOR = 2;
-    /** A Compressed Co-Processor in an upgrade slot speeds things up twice as much as a placed one: it needs no room, but compression costs Source. */
     public static final int WORKERS_PER_COMPRESSED = 4;
-    private static final Direction[] DIRECTIONS = Direction.values();
+    /** Minimum ticks the foreman stays visible on clients after a boosted cycle. */
+    public static final int FOREMAN_MIN_TICKS = 60;
+
+    private static final int HELP_HOLD = 20;
+    private static final int BOOST_HOLD = 60;
 
     @Nullable
     private CraftingJob job;
@@ -56,38 +63,34 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
     private boolean active = false;
     private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.CALCULATOR, this);
     private final RedstoneControl redstone = new RedstoneControl();
-    /** What was last sent to clients as "making now" (so it is only sent on change). */
     private ItemStack sentCurrent = ItemStack.EMPTY;
     private long lastCurrentSync = -100;
-    /** Display for clients: even an instant order stays visible for at least VisualHold.TICKS ticks (crafting is not slowed down). */
     private final VisualHold hold = new VisualHold();
-    /** The job this idle calculator last lent its steps to, and until when it counts as lending. */
     @Nullable
     private CraftingJob helped;
     private long helpUntil;
-    /** A lending calculator looks busy this long: a job that waits a moment for its machines does not make it flicker. */
-    private static final int HELP_HOLD = 20;
-
-    /**
-     * Whether the coprocessors speed up work right now (a cycle with several steps at once happened in the last BOOST_HOLD ticks):
-     * then a snowman foreman with an atlant head appears above the calculator.
-     */
     private boolean boosted = false;
     private long boostUntil = 0;
-    private static final int BOOST_HOLD = 60;
-    /** Once called, the foreman stays at least this long (client ticks), even if the speed-up was over in a blink. */
-    public static final int FOREMAN_MIN_TICKS = 60;
-
-    public boolean isBoosted() {
-        return boosted;
-    }
 
     // --- client
     private boolean clientHasJob = false;
     private ItemStack clientCurrent = ItemStack.EMPTY;
+    private ItemStack visualItem = ItemStack.EMPTY;
+    private final CraftingCpus.Animation animation = new CraftingCpus.Animation();
+    /** Smooth spin-up 0..1, foreman visibility 0..1, and visual work hold timer (read by renderer / coprocessors). */
+    public float spin = 0f, spinPrev = 0f;
+    public float foreman = 0f, foremanPrev = 0f;
+    public int visualWorkTimer = 0;
+
+    private boolean devWorking = false;
+    private ItemStack devItem = ItemStack.EMPTY;
 
     public CryoCalculatorBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.CRYO_CALCULATOR.get(), pos, state);
+    }
+
+    public boolean isBoosted() {
+        return boosted;
     }
 
     @Override
@@ -118,12 +121,11 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
     @Override
     public int getWorkers() {
         return BASE_WORKERS + WORKERS_PER_COPROCESSOR * coprocessors
-                + WORKERS_PER_COMPRESSED * upgrades.count(com.golemlogix.upgrade.UpgradeType.SPEED);
+                + WORKERS_PER_COMPRESSED * upgrades.count(UpgradeType.SPEED);
     }
 
-    /** How many Compressed Co-Processors sit in the slots. */
     public int getCompressed() {
-        return upgrades.count(com.golemlogix.upgrade.UpgradeType.SPEED);
+        return upgrades.count(UpgradeType.SPEED);
     }
 
     public UpgradeContainer getUpgrades() {
@@ -161,7 +163,6 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         syncToClient();
     }
 
-    /** How many of an item the current job is waiting for from machines (0 if there is no job). */
     @Override
     public long wants(ItemKey key) {
         return job == null ? 0L : job.wants(key);
@@ -180,7 +181,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
     }
 
     @Override
-    public int absorbFluid(net.neoforged.neoforge.fluids.FluidStack fluid) {
+    public int absorbFluid(FluidStack fluid) {
         int n = job == null ? 0 : job.absorbFluid(fluid);
         if (n > 0) {
             setChanged();
@@ -188,139 +189,72 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         return n;
     }
 
-    /** Cancel: everything in the job goes back to the network (the excess is dropped). */
     @Override
     public void cancelJob() {
         if (job == null || level == null || level.isClientSide()) {
             return;
         }
-        GolemNetwork net = GolemNetwork.get(level, worldPosition);
-        List<ItemStack> overflow = job.refundAll(net);
-        for (ItemStack s : overflow) {
-            Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 1.0,
-                    worldPosition.getZ() + 0.5, s);
-        }
+        CraftingCpus.refundAndDrop(level, worldPosition, job, GolemNetwork.get(level, worldPosition), 1.0);
         job = null;
         setChanged();
         syncToClient();
     }
 
-    /** Drop the contents when the block is broken. */
     public void dropContents() {
         if (level == null || level.isClientSide()) {
             return;
         }
+        double x = worldPosition.getX() + 0.5, y = worldPosition.getY() + 0.5, z = worldPosition.getZ() + 0.5;
         for (int i = 0; i < upgrades.getContainerSize(); i++) {
             if (!upgrades.getItem(i).isEmpty()) {
-                Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5,
-                        worldPosition.getZ() + 0.5, upgrades.removeItemNoUpdate(i));
+                Containers.dropItemStack(level, x, y, z, upgrades.removeItemNoUpdate(i));
             }
         }
         if (job == null) {
             return;
         }
-        // the job's items go back to the network first, as on a cancel, and only what does not fit drops: orders of any size can hold
-        // millions of reserved items, and dropping them all as item entities froze the server
-        GolemNetwork net = GolemNetwork.aroundRemoved(level, worldPosition);
-        for (ItemStack s : job.refundAll(net)) {
-            Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, s);
-        }
+        CraftingCpus.refundAndDrop(level, worldPosition, job, GolemNetwork.aroundRemoved(level, worldPosition), 0.5);
         job = null;
     }
 
     private void syncToClient() {
-        if (level != null && !level.isClientSide()) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-        }
+        BlockEntities.sendUpdate(this);
     }
 
-    /** Whether a finished job rings the typewriter's bell: a big one or one a player ordered, unless the config silences it. */
-    public static boolean dings(com.golemlogix.crafting.CraftingJob job) {
-        return com.golemlogix.config.GolemConfig.TYPEWRITER_DING.get() && (job.doneExecutions() >= 16 || job.requester() != null);
+    /** Whether a finished job rings the typewriter bell (large job or player-ordered, unless silenced in config). */
+    public static boolean dings(CraftingJob job) {
+        return GolemConfig.TYPEWRITER_DING.get() && (job.doneExecutions() >= 16 || job.requester() != null);
     }
+
+    // ------------------------------------------------------------------ tick
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, CryoCalculatorBlockEntity be) {
         long time = level.getGameTime();
         boolean hasRedstone = be.upgrades.has(UpgradeType.REDSTONE);
-        boolean powered = hasRedstone && level.hasNeighborSignal(pos);
-        if (hasRedstone) {
-            be.redstone.observe(powered);
-        }
+        boolean powered = BlockEntities.pollRedstone(level, pos, hasRedstone, be.redstone);
         if ((time + pos.asLong()) % 20 == 0) {
-            int n = 0;
-            for (Direction dir : DIRECTIONS) {
-                BlockPos p = pos.relative(dir);
-                if (!level.isLoaded(p)) {
-                    continue;
-                }
-                BlockState ns = level.getBlockState(p);
-                if (ns.getBlock() instanceof CoolingCoprocessorBlock) {
-                    n++;
-                    ensureCoprocessorEntity(level, p, ns);
-                }
-            }
-            be.coprocessors = n;
+            be.refreshCoprocessors(level, pos);
         }
 
         boolean wasActive = be.active;
         boolean needSync = false;
         if (be.job == null) {
             if ((time + pos.asLong()) % CYCLE_TICKS == 0 && !hasRedstone) {
-                needSync |= be.lendSteps(level, pos, time);
+                needSync = be.lendSteps(level, pos, time);
             }
             be.active = time < be.helpUntil;
         } else if ((time + pos.asLong()) % CYCLE_TICKS == 0) {
-            GolemNetwork net = GolemNetwork.get(level, pos);
-            boolean ok = net.isOnline() && net.isDeviceActive(pos);
-            boolean allowed = be.redstone.allows(hasRedstone, powered, ok);
-            be.active = ok && allowed;
-            if (ok && !allowed) {
-                if (be.job.status() != CraftingJob.Status.PAUSED) {
-                    be.job.setStatus(CraftingJob.Status.PAUSED);
-                    needSync = true;
-                }
-            } else if (ok) {
-                CraftingJob.Status before = be.job.status();
-                long doneBefore = be.job.doneExecutions();
-                be.job.tick(net, be.getWorkers());
-                long done = be.job.doneExecutions() - doneBefore;
-                if (done != 0) {
-                    level.playSound(null, pos, ModSounds.RELAY_CLICK.get(), SoundSource.BLOCKS, 0.3f, 1.2f);
-                }
-                // the coprocessors really helped: more steps were done in a cycle than one calculator could do
-                if (done > BASE_WORKERS) {
-                    be.boostUntil = time + BOOST_HOLD;
-                }
-                needSync |= be.hold.show(be.job.current().stack(), time);
-                if (be.job.isDone()) {
-                    if (dings(be.job)) {
-                        level.playSound(null, pos, SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.BLOCKS, 0.7f, 1.8f);
-                    }
-                    notifyFinished(level, be.job);
-                    be.job = null;
-                    be.active = false;
-                }
-                be.setChanged();
-                if (be.job == null || be.job.status() != before) {
-                    needSync = true;
-                } else {
-                    needSync |= be.currentChanged(time);
-                }
-            }
+            needSync = be.tickOwnJob(level, pos, hasRedstone, powered, time);
         }
-        // an order the co-processors finished at once (on a big speed-up: in one cycle) still calls the foreman: it was sped up
-        boolean boosted = time < be.boostUntil && (be.active || be.job == null);
-        if (boosted != be.boosted) {
-            be.boosted = boosted;
+
+        boolean boostedNow = time < be.boostUntil && (be.active || be.job == null);
+        if (boostedNow != be.boosted) {
+            be.boosted = boostedNow;
             needSync = true;
         }
         if (wasActive != be.active) {
             needSync = true;
-            if (state.hasProperty(GolemProperties.ACTIVE) && state.getValue(GolemProperties.ACTIVE) != be.active) {
-                // only the looks change: no neighbour updates (pipes and the network do not care)
-                level.setBlock(pos, state.setValue(GolemProperties.ACTIVE, be.active),
-                        net.minecraft.world.level.block.Block.UPDATE_CLIENTS | net.minecraft.world.level.block.Block.UPDATE_KNOWN_SHAPE);
-            }
+            syncActiveBlockState(level, pos, state, be.active);
         }
         if (be.hold.ended(time)) {
             needSync = true;
@@ -330,10 +264,69 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         }
     }
 
-    /**
-     * With no order of its own a calculator works on someone else's: it stays free, so a new order takes it at once. A calculator
-     * under a Redstone Module does neither: it keeps to its own job, at the pace its signal sets.
-     */
+    private void refreshCoprocessors(Level level, BlockPos pos) {
+        int n = 0;
+        for (Direction dir : BlockEntities.DIRECTIONS) {
+            BlockPos p = pos.relative(dir);
+            if (!level.isLoaded(p)) {
+                continue;
+            }
+            BlockState ns = level.getBlockState(p);
+            if (ns.getBlock() instanceof CoolingCoprocessorBlock) {
+                n++;
+                ensureCoprocessorEntity(level, p, ns);
+            }
+        }
+        coprocessors = n;
+    }
+
+    private boolean tickOwnJob(Level level, BlockPos pos, boolean hasRedstone, boolean powered, long time) {
+        GolemNetwork net = GolemNetwork.get(level, pos);
+        boolean ok = net.isOnline() && net.isDeviceActive(pos);
+        boolean allowed = redstone.allows(hasRedstone, powered, ok);
+        active = ok && allowed;
+        if (!ok) {
+            return false;
+        }
+        if (!allowed) {
+            if (job.status() != CraftingJob.Status.PAUSED) {
+                job.setStatus(CraftingJob.Status.PAUSED);
+                return true;
+            }
+            return false;
+        }
+        CraftingJob.Status before = job.status();
+        long doneBefore = job.doneExecutions();
+        job.tick(net, getWorkers());
+        long done = job.doneExecutions() - doneBefore;
+        if (done != 0) {
+            level.playSound(null, pos, ModSounds.RELAY_CLICK.get(), SoundSource.BLOCKS, 0.3f, 1.2f);
+        }
+        if (done > BASE_WORKERS) {
+            boostUntil = time + BOOST_HOLD;
+        }
+        boolean needSync = hold.show(job.current().stack(), time);
+        if (job.isDone()) {
+            if (dings(job)) {
+                level.playSound(null, pos, SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.BLOCKS, 0.7f, 1.8f);
+            }
+            notifyFinished(level, job);
+            job = null;
+            active = false;
+        }
+        setChanged();
+        return needSync || job == null || job.status() != before || currentChanged(time);
+    }
+
+    private static void syncActiveBlockState(Level level, BlockPos pos, BlockState state, boolean active) {
+        if (state.hasProperty(GolemProperties.ACTIVE) && state.getValue(GolemProperties.ACTIVE) != active) {
+            // visual property only: skip neighbour updates so pipes and network do not re-evaluate
+            level.setBlock(pos, state.setValue(GolemProperties.ACTIVE, active),
+                    Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+        }
+    }
+
+    /** Idle calculators without a Redstone Module lend steps to busy jobs while staying free for new orders. */
     private boolean lendSteps(Level level, BlockPos pos, long time) {
         GolemNetwork net = GolemNetwork.get(level, pos);
         if (!net.isOnline() || !net.isDeviceActive(pos)) {
@@ -358,7 +351,6 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         return hold.show(target.current().stack(), time);
     }
 
-    /** The job this idle calculator is lending its steps to, for its window. */
     @Nullable
     public CraftingJob helpedJob() {
         return level != null && level.getGameTime() < helpUntil && helped != null && !helped.isDone() ? helped : null;
@@ -369,20 +361,18 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         return !upgrades.has(UpgradeType.REDSTONE);
     }
 
-    /** Mini model above the calculator: sent to clients only when the item changes and at most twice a second. */
     private boolean currentChanged(long time) {
         if (job == null || time - lastCurrentSync < 10) {
             return false;
         }
-        ItemStack cur = job.current().stack();
-        if (!ItemStack.isSameItemSameComponents(cur, sentCurrent)) {
+        if (!ItemStack.isSameItemSameComponents(job.current().stack(), sentCurrent)) {
             lastCurrentSync = time;
             return true;
         }
         return false;
     }
 
-    /** The order is done: whoever placed it gets a notification (as in AE2). */
+    /** Sends a completion toast packet to the player who ordered {@code done}. */
     public static void notifyFinished(Level level, CraftingJob done) {
         if (done.requester() == null || !(level instanceof ServerLevel sl)) {
             return;
@@ -401,10 +391,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         PacketDistributor.sendToPlayer(player, new CraftDonePayload(items));
     }
 
-    /**
-     * Coprocessors placed before they had an animation have no block entity: create it and tell clients,
-     * so the flywheel starts turning on old blocks too.
-     */
+    /** Lazily instantiates block entities for legacy Cooling Co-Processors so their flywheels animate. */
     private static void ensureCoprocessorEntity(Level level, BlockPos p, BlockState state) {
         LevelChunk chunk = level.getChunkAt(p);
         if (chunk.getBlockEntity(p, LevelChunk.EntityCreationType.CHECK) == null) {
@@ -433,17 +420,9 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         redstone.load(tag);
     }
 
-    private boolean devWorking = false;
-    private ItemStack devItem = ItemStack.EMPTY;
-
     public void setVisualWorkForDev(boolean on, @Nullable String item) {
         this.devWorking = on;
-        if (item != null) {
-            var it = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(item));
-            this.devItem = new ItemStack(it);
-        } else {
-            this.devItem = ItemStack.EMPTY;
-        }
+        this.devItem = CraftingCpus.resolveDevItem(item);
         setChanged();
         syncToClient();
     }
@@ -468,13 +447,14 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         active = tag.getBoolean("Active");
         boosted = tag.getBoolean("Boosted");
         clientHasJob = tag.getBoolean("HasJob");
-        clientCurrent = tag.contains("Current") ? ItemStack.parse(lookupProvider, tag.getCompound("Current")).orElse(ItemStack.EMPTY)
+        clientCurrent = tag.contains("Current")
+                ? ItemStack.parse(lookupProvider, tag.getCompound("Current")).orElse(ItemStack.EMPTY)
                 : ItemStack.EMPTY;
     }
 
     /** The sendBlockUpdated packet carries the same tag as chunk loading: read only the client fields (not the job). */
     @Override
-    public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider lookupProvider) {
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider lookupProvider) {
         handleUpdateTag(pkt.getTag(), lookupProvider);
     }
 
@@ -482,7 +462,6 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         return clientHasJob;
     }
 
-    /** Client: what the calculator is making now (empty = idle). */
     public ItemStack clientCurrent() {
         return clientCurrent;
     }
@@ -492,7 +471,6 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         return ClientboundBlockEntityDataPacket.create(this);
     }
 
-    /** Target key for display (may be null). */
     @Nullable
     public ItemKey targetKey() {
         return job == null ? null : job.target();
@@ -500,65 +478,24 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
 
     // --------------------------------------------------------------- client animation
 
-    /** Smooth spin-up of the calculator 0..1 (slides and matrix rain) and its phase. */
-    public float spin = 0f;
-    public float spinPrev = 0f;
-    /** Foreman: 0 = none, 1 = stands on the roof (pops up and hides smoothly). */
-    public float foreman = 0f;
-    public float foremanPrev = 0f;
-    /** Ticks the foreman still stays at least, and whether he was called last tick. */
-    private int foremanLeft = 0;
-    private boolean foremanCalled = false;
-
-    // Visual timer for the minimum work duration (at least 28 ticks = 1.4 seconds)
-    // Makes sure an instant craft still plays the whole assembly animation
-    // and returns smoothly to rest, without sudden disappearances or teleports.
-    public int visualWorkTimer = 0;
-    private ItemStack visualItem = ItemStack.EMPTY;
-
     public ItemStack clientDisplayItem() {
-        if (!clientCurrent.isEmpty()) {
-            return clientCurrent;
-        }
-        return visualItem;
+        return !clientCurrent.isEmpty() ? clientCurrent : visualItem;
     }
 
     public static void clientTick(Level level, BlockPos pos, BlockState state, CryoCalculatorBlockEntity be) {
-        be.spinPrev = be.spin;
-        be.foremanPrev = be.foreman;
-
         boolean on = state.hasProperty(GolemProperties.ACTIVE) ? state.getValue(GolemProperties.ACTIVE) : be.active;
-        if (on || !be.clientCurrent.isEmpty()) {
-            be.visualWorkTimer = Math.max(be.visualWorkTimer, 32);
-            if (!be.clientCurrent.isEmpty()) {
-                be.visualItem = be.clientCurrent.copy();
-            }
-        } else if (be.visualWorkTimer > 0) {
-            be.visualWorkTimer--;
+        boolean activeNow = on || !be.clientCurrent.isEmpty();
+        if (activeNow && !be.clientCurrent.isEmpty()) {
+            be.visualItem = be.clientCurrent;
         }
-        be.foremanLeft = be.boosted && !be.foremanCalled ? FOREMAN_MIN_TICKS : Math.max(0, be.foremanLeft - 1);
-        be.foremanCalled = be.boosted;
-        // the crew keeps working while the foreman urges it on
-        be.visualWorkTimer = Math.max(be.visualWorkTimer, be.foremanLeft);
-
-        boolean activeVisually = on || be.visualWorkTimer > 0;
-
-        if (activeVisually) {
-            // Energetic spin-up to the maximum
-            be.spin += (1f - be.spin) * 0.14f;
-            if (be.spin > 0.98f) {
-                be.spin = 1f;
-            }
-        } else {
-            // Smooth return to idle
-            be.spin += (0f - be.spin) * 0.05f;
-            if (be.spin < 0.005f) {
-                be.spin = 0f;
-                be.visualItem = ItemStack.EMPTY;
-            }
+        be.animation.visualWorkTimer = be.visualWorkTimer;
+        if (be.animation.tick(activeNow, be.boosted)) {
+            be.visualItem = ItemStack.EMPTY;
         }
-
-        boolean foremanWanted = (be.boosted || be.foremanLeft > 0) && be.spin > 0.4f;
-        be.foreman = Math.max(0f, Math.min(1f, be.foreman + (foremanWanted ? 0.08f : -0.05f)));
+        be.spin = be.animation.spin;
+        be.spinPrev = be.animation.spinPrev;
+        be.foreman = be.animation.foreman;
+        be.foremanPrev = be.animation.foremanPrev;
+        be.visualWorkTimer = be.animation.visualWorkTimer;
     }
 }

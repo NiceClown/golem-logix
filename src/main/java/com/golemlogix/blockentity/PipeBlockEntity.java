@@ -39,9 +39,7 @@ public class PipeBlockEntity extends BlockEntity {
         plugs = on ? plugs | (1 << dir.ordinal()) : plugs & ~(1 << dir.ordinal());
         if (plugs != before) {
             setChanged();
-            if (level != null && !level.isClientSide()) {
-                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-            }
+            BlockEntities.sendUpdate(this);
         }
     }
 
@@ -61,9 +59,7 @@ public class PipeBlockEntity extends BlockEntity {
         if (load != lampLoad || capacity != lampCapacity) {
             lampLoad = load;
             lampCapacity = capacity;
-            if (level != null && !level.isClientSide()) {
-                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 2);
-            }
+            BlockEntities.sendUpdate(this, 2);
         }
     }
 
