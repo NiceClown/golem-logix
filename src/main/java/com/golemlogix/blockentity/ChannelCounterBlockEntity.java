@@ -46,7 +46,7 @@ public class ChannelCounterBlockEntity extends BlockEntity {
     public void toggleMode() {
         showCapacity = !showCapacity;
         setChanged();
-        if (level != null) {
+        if (level != null && !level.isClientSide()) {
             level.playSound(null, worldPosition, SoundEvents.COMPARATOR_CLICK, SoundSource.BLOCKS, 0.4f, showCapacity ? 1.3f : 0.9f);
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
@@ -60,7 +60,7 @@ public class ChannelCounterBlockEntity extends BlockEntity {
         BlockPos node = ChannelCounterBlock.attached(worldPosition, getBlockState());
         boolean on = false;
         int u = 0, c = 0;
-        if (level.getBlockState(node).getBlock() instanceof com.golemlogix.system.GolemNode) {
+        if (level.isLoaded(node) && level.getBlockState(node).getBlock() instanceof com.golemlogix.system.GolemNode) {
             GolemNetwork net = GolemNetwork.get(level, node);
             GolemNetwork.NodeChannels ch = net.channelsAt(node);
             on = net.hasCore() && net.isOnline() && ch.member();
@@ -72,7 +72,6 @@ public class ChannelCounterBlockEntity extends BlockEntity {
             online = on;
             used = u;
             capacity = c;
-            setChanged();
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
     }

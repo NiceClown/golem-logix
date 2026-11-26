@@ -29,7 +29,6 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
         @Override
         public void setChanged() {
             super.setChanged();
-            updateMask();
             refreshVisuals();
         }
 
@@ -45,7 +44,10 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
         @Override
         public void stopOpen(net.minecraft.world.entity.player.Player player) {
             if (!player.isSpectator()) {
-                viewers = Math.max(0, viewers - 1);
+                if (viewers == 0) {
+                    return;
+                }
+                viewers--;
                 signalViewers(viewers == 0);
             }
         }
@@ -124,12 +126,14 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
         return mask;
     }
 
-    /** Recomputes how the cabinet looks from outside and sends it to clients when it changes. */
+    /** Recomputes how the cabinet looks from outside and sends it to clients once when the mask or fill levels change. */
     public void refreshVisuals() {
+        int m = 0;
         int sig = 0;
         for (int i = 0; i < SLOTS; i++) {
             ItemStack d = container.getItem(i);
             if (!d.isEmpty()) {
+                m |= 1 << i;
                 int cap = Math.max(1, DiskStorage.capacity(d));
                 // the counter on the disk itself (the client sees it too)
                 long stored = MagneticDiskItem.getStoredCount(d);
@@ -137,23 +141,9 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
                 sig = sig * 31 + (i + 1) * 8 + level + 977 * BuiltInRegistries.ITEM.getId(d.getItem());
             }
         }
-        if (sig != visualSig) {
-            visualSig = sig;
-            if (level != null && !level.isClientSide()) {
-                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-            }
-        }
-    }
-
-    private void updateMask() {
-        int m = 0;
-        for (int i = 0; i < SLOTS; i++) {
-            if (!container.getItem(i).isEmpty()) {
-                m |= 1 << i;
-            }
-        }
-        if (m != mask) {
+        if (m != mask || sig != visualSig) {
             mask = m;
+            visualSig = sig;
             if (level != null && !level.isClientSide()) {
                 level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
             }
@@ -188,13 +178,7 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
         super.loadAdditional(tag, registries);
         container.fromTag(tag.getList("Disks", Tag.TAG_COMPOUND), registries);
         priority = tag.getInt("Priority");
-        int m = 0;
-        for (int i = 0; i < SLOTS; i++) {
-            if (!container.getItem(i).isEmpty()) {
-                m |= 1 << i;
-            }
-        }
-        mask = m;
+        refreshVisuals();
     }
 
     @Override
@@ -211,6 +195,11 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
         mask = tag.getInt("Mask");
         clientOpen = tag.getBoolean("Open");
         container.fromTag(tag.getList("Disks", Tag.TAG_COMPOUND), lookupProvider);
+    }
+
+    @Override
+    public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider registries) {
+        handleUpdateTag(pkt.getTag(), registries);
     }
 
     @Override

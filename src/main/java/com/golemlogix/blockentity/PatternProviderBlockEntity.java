@@ -42,6 +42,7 @@ public class PatternProviderBlockEntity extends BlockEntity {
     public static final int RETURN_TANKS = 3, RETURN_TANK_MB = 16_000;
     /** When the network took nothing (it is full or offline), how long before the return slots try again (ticks). */
     private static final int RETURN_RETRY = 5;
+    private static final Direction[] ALL_DIRECTIONS = Direction.values();
     private long nextFlush = 0;
 
     private final OwnedContainer container = new OwnedContainer(SLOTS, this,
@@ -50,7 +51,9 @@ public class PatternProviderBlockEntity extends BlockEntity {
         public void setChanged() {
             super.setChanged();
             patterns = null;
-            com.golemlogix.system.GolemNetwork.patternsChanged();
+            if (level == null || !level.isClientSide()) {
+                com.golemlogix.system.GolemNetwork.patternsChanged();
+            }
         }
     };
     private final OwnedContainer returns = new OwnedContainer(RETURN_SLOTS, this, s -> true);
@@ -231,7 +234,8 @@ public class PatternProviderBlockEntity extends BlockEntity {
     }
 
     public void setOutput(com.golemlogix.blocks.ProviderOutput out) {
-        if (level != null && !level.isClientSide() && getBlockState().hasProperty(com.golemlogix.blocks.PatternProviderBlock.OUTPUT)) {
+        if (level != null && !level.isClientSide() && getBlockState().hasProperty(com.golemlogix.blocks.PatternProviderBlock.OUTPUT)
+                && out != output()) {
             level.setBlock(worldPosition, getBlockState().setValue(com.golemlogix.blocks.PatternProviderBlock.OUTPUT, out), 3);
         }
     }
@@ -357,7 +361,7 @@ public class PatternProviderBlockEntity extends BlockEntity {
             return false;
         }
         Direction only = output().direction();
-        for (Direction dir : only == null ? Direction.values() : new Direction[]{only}) {
+        for (Direction dir : only == null ? ALL_DIRECTIONS : new Direction[]{only}) {
             BlockPos target = worldPosition.relative(dir);
             if (!level.isLoaded(target)) {
                 continue;
@@ -404,7 +408,7 @@ public class PatternProviderBlockEntity extends BlockEntity {
 
         // a side is selected: only into it (when machines stand side by side you can see which one the provider feeds)
         Direction only = output().direction();
-        Direction[] dirs = only == null ? Direction.values() : new Direction[]{only};
+        Direction[] dirs = only == null ? ALL_DIRECTIONS : new Direction[]{only};
         for (int k = 0; k < dirs.length; k++) {
             Direction dir = dirs[(lastDirection + 1 + k) % dirs.length];
             BlockPos target = worldPosition.relative(dir);

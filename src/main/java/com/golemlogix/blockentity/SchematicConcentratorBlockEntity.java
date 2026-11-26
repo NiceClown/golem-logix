@@ -33,15 +33,18 @@ public class SchematicConcentratorBlockEntity extends BlockEntity {
 
     public void startOpen() {
         viewers++;
-        if (viewers == 1 && level != null) {
+        if (viewers == 1 && level != null && !level.isClientSide()) {
             level.playSound(null, worldPosition, SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 0.35f, 1.8f);
         }
         signal();
     }
 
     public void stopOpen() {
-        viewers = Math.max(0, viewers - 1);
-        if (viewers == 0 && level != null) {
+        if (viewers == 0) {
+            return;
+        }
+        viewers--;
+        if (viewers == 0 && level != null && !level.isClientSide()) {
             level.playSound(null, worldPosition, SoundEvents.BEACON_DEACTIVATE, SoundSource.BLOCKS, 0.3f, 1.8f);
         }
         signal();
@@ -88,6 +91,11 @@ public class SchematicConcentratorBlockEntity extends BlockEntity {
     @Override
     public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
         clientOpen = tag.getBoolean("Open");
+    }
+
+    @Override
+    public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider registries) {
+        handleUpdateTag(pkt.getTag(), registries);
     }
 
     @Override

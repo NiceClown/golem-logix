@@ -104,14 +104,20 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         int step = Math.max(1, all.size() / CARGO_ITEMS);
         int i = 0;
         for (com.golemlogix.system.ItemKey key : all.keySet()) {
-            if (i++ % step == 0 && items.size() < CARGO_ITEMS && !com.golemlogix.system.Ingredients.isFluid(key)) {
+            if (i++ % step == 0 && !com.golemlogix.system.Ingredients.isFluid(key)) {
                 items.add(key.toStack(1));
+                if (items.size() >= CARGO_ITEMS) {
+                    break;
+                }
             }
         }
         List<ItemStack> fluids = new ArrayList<>();
         for (FluidStack f : net.listFluids()) {
+            if (fluids.size() >= CARGO_FLUIDS) {
+                break;
+            }
             ItemStack bucket = f.isEmpty() ? ItemStack.EMPTY : FluidUtil.getFilledBucket(f.copyWithAmount(FluidType.BUCKET_VOLUME));
-            if (!bucket.isEmpty() && fluids.size() < CARGO_FLUIDS) {
+            if (!bucket.isEmpty()) {
                 fluids.add(bucket);
             }
         }
@@ -173,20 +179,23 @@ public class AtlasCoreBlockEntity extends BlockEntity {
             syncedNetwork = net;
             secondsSinceSync = 0;
         }
-        boolean newFormed = net.structure() != null && net.structure().valid();
+        boolean newFormed = duplicate ? AtlasStructure.check(level, pos).valid()
+                : net.structure() != null && net.structure().valid();
         if (newFormed && !formed) {
             AtlasStructure.orientAtlants(level, pos);
         }
-        AtlasStructure.dress(level, pos, duplicate ? AtlasStructure.check(level, pos).valid() : newFormed);
+        // the casings wear the assembled look while the array around this core is whole (also a duplicate core's array)
+        AtlasStructure.dress(level, pos, newFormed);
         boolean newInfinite = net.hasInfiniteSource() || !com.golemlogix.system.SourceHelper.sourceRequired();
         int newSps = newInfinite ? 0 : cost;
-        boolean changed = newFormed != formed || newPowered != powered || net.channelsUsed() != channelsUsed
+        boolean persistedChanged = newFormed != formed || newPowered != powered || net.channelsUsed() != channelsUsed
                 || net.channelCapacity() != channelCapacity || net.deviceCount() != devices
                 || newInfinite != infiniteSource || newSps != sourcePerSecond || duplicate != wasDuplicate;
+        boolean cargoChanged = false;
         if (!duplicate && (force || net != cargoNetwork || ++secondsSinceCargo >= CARGO_SECONDS)) {
             cargoNetwork = net;
             secondsSinceCargo = 0;
-            changed |= pickCargo(net);
+            cargoChanged = pickCargo(net);
         }
         wasDuplicate = duplicate;
         powered = newPowered;
@@ -196,8 +205,10 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         devices = net.deviceCount();
         infiniteSource = newInfinite;
         sourcePerSecond = newSps;
-        if (changed) {
+        if (persistedChanged) {
             setChanged();
+        }
+        if (persistedChanged || cargoChanged) {
             level.sendBlockUpdated(pos, getBlockState(), getBlockState(), 3);
         }
     }
@@ -226,6 +237,7 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         sourcePerSecond = tag.getInt("SourcePerSecond");
         infiniteSource = tag.getBoolean("InfiniteSource");
         duplicate = tag.getBoolean("Duplicate");
+        wasDuplicate = duplicate;
         // only in update packets (client visuals), never saved with the world
         if (tag.contains("CargoItems")) {
             cargoItems = readStacks(tag.getList("CargoItems", Tag.TAG_COMPOUND), registries);

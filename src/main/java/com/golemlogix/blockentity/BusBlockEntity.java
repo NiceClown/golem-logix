@@ -1,7 +1,6 @@
 package com.golemlogix.blockentity;
 
 import com.golemlogix.blocks.InjectorExportBusBlock;
-import com.golemlogix.config.GolemConfig;
 import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.init.ModSounds;
 import com.golemlogix.menu.Priority;
@@ -54,7 +53,6 @@ import java.util.Optional;
  */
 public class BusBlockEntity extends BlockEntity {
     public static final int FILTER_SLOTS = 9;
-    /** Multipliers of "items at a time" and of the interval by the number of speed upgrades (0..4). */
     /** How often a bus with an Autocraft Module may order a craft (ticks). */
     private static final int CRAFT_REQUEST_COOLDOWN = 40;
     /** Work sound at most once every half second (with speed upgrades the bus works almost every tick). */
@@ -374,36 +372,43 @@ public class BusBlockEntity extends BlockEntity {
         if (items != null && (denyList || noFilters || !itemFilters.isEmpty())) {
             int budget = opItems;
             for (int i = 0; i < items.getSlots() && budget > 0; i++) {
-                ItemStack inSlot = items.getStackInSlot(i);
-                if (inSlot.isEmpty() || !passes(inSlot, itemFilters, noFilters, fuzzy(), denyList)) {
-                    continue;
-                }
-                ItemStack sim = items.extractItem(i, Math.min(budget, inSlot.getCount()), true);
-                if (sim.isEmpty()) {
-                    continue;
-                }
-                // what an autocraft job is waiting for is accepted even when storage is full (otherwise the job would hang);
-                // items are never put back into the same container (if a periscope connects it)
-                int wanted = Math.min(sim.getCount(), net.machineWants(sim));
-                ItemStack restSim = net.insertItem(sim.copyWithCount(sim.getCount() - wanted), true, target);
-                int accepted = wanted + (sim.getCount() - wanted - restSim.getCount());
-                if (accepted <= 0) {
-                    continue;
-                }
-                ItemStack real = items.extractItem(i, accepted, false);
-                if (real.isEmpty()) {
-                    continue;
-                }
-                ItemStack leftover = net.insertFromMachine(real, target);
-                int stored = real.getCount() - leftover.getCount();
-                if (!leftover.isEmpty()) {
-                    ItemStack back = ItemHandlerHelper.insertItemStacked(items, leftover, false);
-                    if (!back.isEmpty()) {
-                        Block.popResource(level, pos, back);
+                while (budget > 0) {
+                    ItemStack inSlot = items.getStackInSlot(i);
+                    if (inSlot.isEmpty() || !passes(inSlot, itemFilters, noFilters, fuzzy(), denyList)) {
+                        break;
+                    }
+                    int takeMax = Math.min(Math.min(budget, inSlot.getCount()), Math.max(1, inSlot.getMaxStackSize()));
+                    ItemStack sim = items.extractItem(i, takeMax, true);
+                    if (sim.isEmpty()) {
+                        break;
+                    }
+                    // what an autocraft job is waiting for is accepted even when storage is full (otherwise the job would hang);
+                    // items are never put back into the same container (if a periscope connects it)
+                    int wanted = Math.min(sim.getCount(), net.machineWants(sim));
+                    ItemStack restSim = net.insertItem(sim.copyWithCount(sim.getCount() - wanted), true, target);
+                    int accepted = wanted + (sim.getCount() - wanted - restSim.getCount());
+                    if (accepted <= 0) {
+                        break;
+                    }
+                    ItemStack real = items.extractItem(i, accepted, false);
+                    if (real.isEmpty()) {
+                        break;
+                    }
+                    int got = real.getCount();
+                    ItemStack leftover = net.insertFromMachine(real, target);
+                    int stored = got - leftover.getCount();
+                    if (!leftover.isEmpty()) {
+                        ItemStack back = ItemHandlerHelper.insertItemStacked(items, leftover, false);
+                        if (!back.isEmpty()) {
+                            Block.popResource(level, pos, back);
+                        }
+                    }
+                    budget -= got;
+                    moved += stored;
+                    if (stored < accepted || got < takeMax) {
+                        break;
                     }
                 }
-                budget -= real.getCount();
-                moved += stored;
             }
         }
 
@@ -464,127 +469,37 @@ public class BusBlockEntity extends BlockEntity {
     private void doExport(Level level, GolemNetwork net, BlockPos target, IItemHandler items, IFluidHandler fluids) {
         int itemBudget = opItems;
         int fluidBudget = opFluid;
-        Map<ItemKey, Long> toCraft = new LinkedHashMap<>();
+        Map<ItemKey, Long> toCraft = null;
 
         int[] slotOrder = exportOrder(level);
-        if (items != null) {
-            boolean fuzzy = fuzzy();
-            java.util.Set<ItemKey> netKeys = fuzzy ? net.listItems().keySet() : java.util.Set.of();
-            for (int slot : slotOrder) {
-                ItemStack filter = filters.getItem(slot);
-                if (filter.isEmpty() || fluidOf(filter).isPresent()) {
-                    continue;
-                }
-                if (itemBudget <= 0) {
-                    break;
-                }
-                ItemStack want = com.golemlogix.system.Fuzzy.plain(filter).copyWithCount(1);
-                // a keep amount: only what the container still lacks of it
-                int keep = com.golemlogix.menu.BusMenu.keep(filter);
-                int cap = itemBudget;
-                if (keep > 0) {
-                    int have = 0;
-                    for (int s = 0; s < items.getSlots(); s++) {
-                        ItemStack in = items.getStackInSlot(s);
-                        if (com.golemlogix.system.Fuzzy.matches(filter, in, fuzzy)) {
-                            have += in.getCount();
-                        }
-                    }
-                    cap = Math.min(cap, keep - have);
-                    if (cap <= 0) {
-                        continue;
-                    }
-                }
-                // what may go out for this filter: its own item first, with a Fuzzy Card also what the network has that matches it
-                List<ItemStack> wants = new ArrayList<>();
-                wants.add(want);
-                for (ItemKey k : com.golemlogix.system.Fuzzy.candidates(filter, netKeys, fuzzy)) {
-                    if (!k.matches(want)) {
-                        wants.add(k.toStack(1));
-                    }
-                }
-                int perStack = Math.max(1, want.getMaxStackSize());
-                int moved = 0;
-                boolean nothingInNetwork = true;
-                for (ItemStack one : wants) {
-                    boolean stop = false;
-                    while (cap - moved > 0) {
-                        int ask = Math.min(cap - moved, Math.max(1, one.getMaxStackSize()));
-                        // do not move from a container into the same container (a periscope on the same chest)
-                        ItemStack sim = net.extractItem(one, ask, true, target);
-                        if (sim.isEmpty()) {
-                            break;
-                        }
-                        nothingInNetwork = false;
-                        // top up stacks already started first (like a hopper), then empty slots
-                        ItemStack restSim = ItemHandlerHelper.insertItemStacked(items, sim, true);
-                        int accepted = sim.getCount() - restSim.getCount();
-                        if (accepted <= 0) {
-                            stop = true;
-                            break;
-                        }
-                        ItemStack real = net.extractItem(one, accepted, false, target);
-                        if (real.isEmpty()) {
-                            break;
-                        }
-                        ItemStack rest = ItemHandlerHelper.insertItemStacked(items, real, false);
-                        if (!rest.isEmpty()) {
-                            net.insertItem(rest, false, target);
-                        }
-                        moved += real.getCount() - rest.getCount();
-                        if (accepted < ask) {
-                            stop = true;
-                            break;
-                        }
-                    }
-                    if (stop || cap - moved <= 0) {
-                        break;
-                    }
-                }
-                itemBudget -= moved;
-                this.moved += moved;
-                if (moved > 0 && order == FormationBusBlockEntity.ROUND_ROBIN) {
-                    // round robin: one slot an operation, the next operation starts after it
-                    next = (slot + 1) % FILTER_SLOTS;
-                    break;
-                }
-                if (nothingInNetwork && upgrades.has(UpgradeType.CRAFTING)) {
-                    ItemKey key = ItemKey.of(want);
-                    // order only if the container accepts this item at all
-                    if (ItemHandlerHelper.insertItemStacked(items, want, true).isEmpty() && net.canCraft(key)
-                            && !net.busCraftPending(worldPosition, key)) {
-                        toCraft.put(key, (long) Math.min(perStack, Math.min(itemsPerOperation(), cap)));
-                    }
-                }
+        boolean fuzzy = fuzzy();
+        java.util.Set<ItemKey> netKeys = null;
+        for (int slot : slotOrder) {
+            ItemStack filter = filters.getItem(slot);
+            if (filter.isEmpty()) {
+                continue;
             }
-        }
-
-        if (fluids != null) {
-            for (int slot : slotOrder) {
-                ItemStack ghost = filters.getItem(slot);
-                FluidStack filter = fluidOf(ghost).orElse(FluidStack.EMPTY);
-                if (filter.isEmpty()) {
+            FluidStack fluidFilter = fluidOf(filter).orElse(FluidStack.EMPTY);
+            if (!fluidFilter.isEmpty()) {
+                if (fluids == null || fluidBudget <= 0) {
                     continue;
-                }
-                if (fluidBudget <= 0) {
-                    break;
                 }
                 int cap = fluidBudget;
-                int keep = com.golemlogix.menu.BusMenu.keep(ghost);
+                int keep = com.golemlogix.menu.BusMenu.keep(filter);
                 if (keep > 0) {
-                    int have = 0;
+                    long have = 0;
                     for (int t = 0; t < fluids.getTanks(); t++) {
                         FluidStack in = fluids.getFluidInTank(t);
-                        if (FluidStack.isSameFluidSameComponents(in, filter)) {
+                        if (!in.isEmpty() && FluidStack.isSameFluidSameComponents(in, fluidFilter)) {
                             have += in.getAmount();
                         }
                     }
-                    cap = Math.min(cap, keep - have);
-                    if (cap <= 0) {
+                    if (have >= keep) {
                         continue;
                     }
+                    cap = (int) Math.min(cap, keep - have);
                 }
-                FluidStack sim = net.extractFluid(filter, cap, true, target);
+                FluidStack sim = net.extractFluid(fluidFilter, cap, true, target);
                 if (sim.isEmpty()) {
                     continue;
                 }
@@ -592,7 +507,7 @@ public class BusBlockEntity extends BlockEntity {
                 if (accepted <= 0) {
                     continue;
                 }
-                FluidStack real = net.extractFluid(filter, accepted, false, target);
+                FluidStack real = net.extractFluid(fluidFilter, accepted, false, target);
                 if (real.isEmpty()) {
                     continue;
                 }
@@ -603,12 +518,110 @@ public class BusBlockEntity extends BlockEntity {
                 fluidBudget -= filled;
                 this.moved += filled;
                 fluidMoved += filled;
+                if (filled > 0 && order == FormationBusBlockEntity.ROUND_ROBIN) {
+                    next = (slot + 1) % FILTER_SLOTS;
+                    break;
+                }
+                continue;
+            }
+            if (items == null || itemBudget <= 0) {
+                continue;
+            }
+            ItemStack want = com.golemlogix.system.Fuzzy.plain(filter).copyWithCount(1);
+            // a keep amount: only what the container still lacks of it
+            int keep = com.golemlogix.menu.BusMenu.keep(filter);
+            int cap = itemBudget;
+            if (keep > 0) {
+                long have = 0;
+                for (int s = 0; s < items.getSlots(); s++) {
+                    ItemStack in = items.getStackInSlot(s);
+                    if (!in.isEmpty() && com.golemlogix.system.Fuzzy.matches(filter, in, fuzzy)) {
+                        have += in.getCount();
+                    }
+                }
+                if (have >= keep) {
+                    continue;
+                }
+                cap = (int) Math.min(cap, keep - have);
+            }
+            // what may go out for this filter: its own item first, with a Fuzzy Card also what the network has that matches it
+            List<ItemStack> wants = new ArrayList<>();
+            wants.add(want);
+            if (fuzzy) {
+                if (netKeys == null) {
+                    netKeys = net.listItems().keySet();
+                }
+                for (ItemKey k : com.golemlogix.system.Fuzzy.candidates(filter, netKeys, true)) {
+                    if (!k.matches(want)) {
+                        wants.add(k.toStack(1));
+                    }
+                }
+            }
+            int perStack = Math.max(1, want.getMaxStackSize());
+            int slotMoved = 0;
+            boolean nothingInNetwork = true;
+            for (ItemStack one : wants) {
+                boolean stop = false;
+                while (cap - slotMoved > 0) {
+                    int ask = Math.min(cap - slotMoved, Math.max(1, one.getMaxStackSize()));
+                    // do not move from a container into the same container (a periscope on the same chest)
+                    ItemStack sim = net.extractItem(one, ask, true, target);
+                    if (sim.isEmpty()) {
+                        break;
+                    }
+                    nothingInNetwork = false;
+                    // top up stacks already started first (like a hopper), then empty slots
+                    ItemStack restSim = ItemHandlerHelper.insertItemStacked(items, sim, true);
+                    int accepted = sim.getCount() - restSim.getCount();
+                    if (accepted <= 0) {
+                        stop = true;
+                        break;
+                    }
+                    ItemStack real = net.extractItem(one, accepted, false, target);
+                    if (real.isEmpty()) {
+                        break;
+                    }
+                    int realCount = real.getCount();
+                    ItemStack rest = ItemHandlerHelper.insertItemStacked(items, real, false);
+                    if (!rest.isEmpty()) {
+                        ItemStack unreturned = net.insertItem(rest, false, target);
+                        if (!unreturned.isEmpty()) {
+                            Block.popResource(level, worldPosition, unreturned);
+                        }
+                    }
+                    slotMoved += realCount - rest.getCount();
+                    if (accepted < ask) {
+                        stop = true;
+                        break;
+                    }
+                }
+                if (stop || cap - slotMoved <= 0) {
+                    break;
+                }
+            }
+            itemBudget -= slotMoved;
+            this.moved += slotMoved;
+            if (slotMoved > 0 && order == FormationBusBlockEntity.ROUND_ROBIN) {
+                // round robin: one slot an operation, the next operation starts after it
+                next = (slot + 1) % FILTER_SLOTS;
+                break;
+            }
+            if (nothingInNetwork && upgrades.has(UpgradeType.CRAFTING)) {
+                ItemKey key = ItemKey.of(want);
+                // order only if the container accepts this item at all
+                if (ItemHandlerHelper.insertItemStacked(items, want, true).isEmpty() && net.canCraft(key)
+                        && !net.busCraftPending(worldPosition, key)) {
+                    if (toCraft == null) {
+                        toCraft = new LinkedHashMap<>();
+                    }
+                    toCraft.put(key, (long) Math.min(perStack, Math.min(itemsPerOperation(), cap)));
+                }
             }
         }
 
         // Autocraft Module: what the network lacks is ordered from a calculator (one item at a time, at most once every 2 seconds)
         long now = level.getGameTime();
-        if (!toCraft.isEmpty() && now - lastCraftRequest >= CRAFT_REQUEST_COOLDOWN) {
+        if (toCraft != null && now - lastCraftRequest >= CRAFT_REQUEST_COOLDOWN) {
             lastCraftRequest = now;
             for (Map.Entry<ItemKey, Long> e : toCraft.entrySet()) {
                 Map<ItemKey, Long> one = new LinkedHashMap<>();
@@ -641,8 +654,8 @@ public class BusBlockEntity extends BlockEntity {
         filters.fromTag(tag.getList("Filters", Tag.TAG_COMPOUND), registries);
         upgrades.fromTag(tag.getList("Upgrades", Tag.TAG_COMPOUND), registries);
         priority = tag.getInt("Priority");
-        order = tag.contains("Order") ? tag.getInt("Order") : FormationBusBlockEntity.IN_ORDER;
-        next = tag.getInt("Next");
+        order = Math.floorMod(tag.contains("Order") ? tag.getInt("Order") : FormationBusBlockEntity.IN_ORDER, 3);
+        next = Math.floorMod(tag.getInt("Next"), FILTER_SLOTS);
         denyList = tag.getBoolean("DenyList");
         redstone.load(tag);
     }

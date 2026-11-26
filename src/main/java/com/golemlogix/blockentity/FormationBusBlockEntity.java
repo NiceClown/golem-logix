@@ -127,7 +127,7 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
     }
 
     public int interval() {
-        int n = upgrades.count(UpgradeType.SPEED);
+        int n = Math.min(upgrades.count(UpgradeType.SPEED), INTERVAL_MULT.length - 1);
         return Math.max(1, (int) Math.round(GolemConfig.BUS_INTERVAL_TICKS.get() * INTERVAL_MULT[n]));
     }
 
@@ -172,7 +172,7 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
         carrying = taken;
         pushStart = now;
         pushTicks = Math.max(2, interval);
-        wake();
+        setChanged();
         redstone.allows(hasRedstone, powered, true);
         sync();
     }
@@ -304,7 +304,7 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
 
     /** Broken or replaced: the block in the golem's hands goes back, the upgrades drop. */
     public void dropContents() {
-        if (level == null) {
+        if (level == null || level.isClientSide()) {
             return;
         }
         giveBack(level);
@@ -312,7 +312,7 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
     }
 
     private void sync() {
-        if (level != null) {
+        if (level != null && !level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 2);
         }
     }
@@ -339,8 +339,8 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
             filters.fromTag(tag.getList("Filters", Tag.TAG_COMPOUND), registries);
             upgrades.fromTag(tag.getList("Upgrades", Tag.TAG_COMPOUND), registries);
             redstone.load(tag);
-            order = tag.contains("Order") ? tag.getInt("Order") : IN_ORDER;
-            next = tag.getInt("Next");
+            order = Math.floorMod(tag.contains("Order") ? tag.getInt("Order") : IN_ORDER, 3);
+            next = Math.floorMod(tag.getInt("Next"), FILTER_SLOTS);
         }
         carrying = tag.contains("Carrying") ? ItemStack.parseOptional(registries, tag.getCompound("Carrying")) : ItemStack.EMPTY;
         pushStart = tag.getLong("PushStart");

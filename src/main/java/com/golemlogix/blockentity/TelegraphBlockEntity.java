@@ -177,7 +177,9 @@ public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
             return;
         }
         for (TelegraphBlockEntity r : TelegraphLinks.receiversOf(this)) {
-            lastEnds.add(new GolemNetwork.Node(r.getLevel(), r.getBlockPos()));
+            if (r.getLevel() != null) {
+                lastEnds.add(new GolemNetwork.Node(r.getLevel(), r.getBlockPos()));
+            }
         }
         seal = newSeal(seal);
         ItemStack memory = slots.getItem(SLOT_MEMORY);
@@ -189,7 +191,7 @@ public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
     }
 
     public void dropContents() {
-        if (level == null) {
+        if (level == null || level.isClientSide()) {
             return;
         }
         for (int i = 0; i < slots.getContainerSize(); i++) {
@@ -217,7 +219,9 @@ public class TelegraphBlockEntity extends BlockEntity implements MenuProvider {
         if (level != null && !level.isClientSide()) {
             List<GolemNetwork.Node> ends = new ArrayList<>(lastEnds);
             for (TelegraphBlockEntity r : TelegraphLinks.receiversOf(this)) {
-                ends.add(new GolemNetwork.Node(r.getLevel(), r.getBlockPos()));
+                if (r.getLevel() != null) {
+                    ends.add(new GolemNetwork.Node(r.getLevel(), r.getBlockPos()));
+                }
             }
             TelegraphLinks.untrack(this);
             GolemNetwork.nodesChanged(level, worldPosition);

@@ -43,8 +43,8 @@ public class CopperTankBlockEntity extends BlockEntity {
 
     /** The comparator: 1 for any fluid, 15 when full. */
     public int signal() {
-        int amount = fluid().getAmount();
-        return amount <= 0 ? 0 : 1 + (int) (14L * amount / capacity());
+        int amount = tank.getFluidAmount();
+        return amount <= 0 ? 0 : Math.min(15, 1 + (int) (14L * amount / capacity()));
     }
 
     private final class Tank extends FluidTank {

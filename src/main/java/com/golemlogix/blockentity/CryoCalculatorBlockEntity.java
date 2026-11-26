@@ -48,6 +48,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
     public static final int WORKERS_PER_COPROCESSOR = 2;
     /** A Compressed Co-Processor in an upgrade slot speeds things up twice as much as a placed one: it needs no room, but compression costs Source. */
     public static final int WORKERS_PER_COMPRESSED = 4;
+    private static final Direction[] DIRECTIONS = Direction.values();
 
     @Nullable
     private CraftingJob job;
@@ -193,7 +194,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         if (job == null || level == null || level.isClientSide()) {
             return;
         }
-        GolemNetwork net = GolemNetwork.scan(level, worldPosition);
+        GolemNetwork net = GolemNetwork.get(level, worldPosition);
         List<ItemStack> overflow = job.refundAll(net);
         for (ItemStack s : overflow) {
             Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 1.0,
@@ -206,7 +207,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
 
     /** Drop the contents when the block is broken. */
     public void dropContents() {
-        if (level == null) {
+        if (level == null || level.isClientSide()) {
             return;
         }
         for (int i = 0; i < upgrades.getContainerSize(); i++) {
@@ -220,7 +221,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         }
         // the job's items go back to the network first, as on a cancel, and only what does not fit drops: orders of any size can hold
         // millions of reserved items, and dropping them all as item entities froze the server
-        GolemNetwork net = level.isClientSide() ? null : GolemNetwork.aroundRemoved(level, worldPosition);
+        GolemNetwork net = GolemNetwork.aroundRemoved(level, worldPosition);
         for (ItemStack s : job.refundAll(net)) {
             Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, s);
         }
@@ -247,8 +248,11 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         }
         if ((time + pos.asLong()) % 20 == 0) {
             int n = 0;
-            for (Direction dir : Direction.values()) {
+            for (Direction dir : DIRECTIONS) {
                 BlockPos p = pos.relative(dir);
+                if (!level.isLoaded(p)) {
+                    continue;
+                }
                 BlockState ns = level.getBlockState(p);
                 if (ns.getBlock() instanceof CoolingCoprocessorBlock) {
                     n++;
@@ -259,9 +263,10 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         }
 
         boolean wasActive = be.active;
+        boolean needSync = false;
         if (be.job == null) {
             if ((time + pos.asLong()) % CYCLE_TICKS == 0 && !hasRedstone) {
-                be.lendSteps(level, pos, time);
+                needSync |= be.lendSteps(level, pos, time);
             }
             be.active = time < be.helpUntil;
         } else if ((time + pos.asLong()) % CYCLE_TICKS == 0) {
@@ -272,7 +277,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
             if (ok && !allowed) {
                 if (be.job.status() != CraftingJob.Status.PAUSED) {
                     be.job.setStatus(CraftingJob.Status.PAUSED);
-                    be.syncToClient();
+                    needSync = true;
                 }
             } else if (ok) {
                 CraftingJob.Status before = be.job.status();
@@ -286,7 +291,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
                 if (done > BASE_WORKERS) {
                     be.boostUntil = time + BOOST_HOLD;
                 }
-                boolean justShown = be.hold.show(be.job.current().stack(), time);
+                needSync |= be.hold.show(be.job.current().stack(), time);
                 if (be.job.isDone()) {
                     if (dings(be.job)) {
                         level.playSound(null, pos, SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.BLOCKS, 0.7f, 1.8f);
@@ -295,14 +300,11 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
                     be.job = null;
                     be.active = false;
                 }
-                if (justShown) {
-                    be.syncToClient();
-                }
                 be.setChanged();
                 if (be.job == null || be.job.status() != before) {
-                    be.syncToClient();
+                    needSync = true;
                 } else {
-                    be.syncCurrentIfChanged(time);
+                    needSync |= be.currentChanged(time);
                 }
             }
         }
@@ -310,10 +312,10 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         boolean boosted = time < be.boostUntil && (be.active || be.job == null);
         if (boosted != be.boosted) {
             be.boosted = boosted;
-            be.syncToClient();
+            needSync = true;
         }
         if (wasActive != be.active) {
-            be.syncToClient();
+            needSync = true;
             if (state.hasProperty(GolemProperties.ACTIVE) && state.getValue(GolemProperties.ACTIVE) != be.active) {
                 // only the looks change: no neighbour updates (pipes and the network do not care)
                 level.setBlock(pos, state.setValue(GolemProperties.ACTIVE, be.active),
@@ -321,6 +323,9 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
             }
         }
         if (be.hold.ended(time)) {
+            needSync = true;
+        }
+        if (needSync) {
             be.syncToClient();
         }
     }
@@ -329,20 +334,20 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
      * With no order of its own a calculator works on someone else's: it stays free, so a new order takes it at once. A calculator
      * under a Redstone Module does neither: it keeps to its own job, at the pace its signal sets.
      */
-    private void lendSteps(Level level, BlockPos pos, long time) {
+    private boolean lendSteps(Level level, BlockPos pos, long time) {
         GolemNetwork net = GolemNetwork.get(level, pos);
         if (!net.isOnline() || !net.isDeviceActive(pos)) {
-            return;
+            return false;
         }
         CraftingJob target = net.jobWantingHelp();
         if (target == null) {
-            return;
+            return false;
         }
         long before = target.doneExecutions();
         target.tick(net, getWorkers());
         long done = target.doneExecutions() - before;
         if (done <= 0) {
-            return;
+            return false;
         }
         helped = target;
         helpUntil = time + HELP_HOLD;
@@ -350,9 +355,7 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
         if (done > BASE_WORKERS) {
             boostUntil = time + BOOST_HOLD;
         }
-        if (hold.show(target.current().stack(), time)) {
-            syncToClient();
-        }
+        return hold.show(target.current().stack(), time);
     }
 
     /** The job this idle calculator is lending its steps to, for its window. */
@@ -367,15 +370,16 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements com.goleml
     }
 
     /** Mini model above the calculator: sent to clients only when the item changes and at most twice a second. */
-    private void syncCurrentIfChanged(long time) {
+    private boolean currentChanged(long time) {
         if (job == null || time - lastCurrentSync < 10) {
-            return;
+            return false;
         }
         ItemStack cur = job.current().stack();
         if (!ItemStack.isSameItemSameComponents(cur, sentCurrent)) {
             lastCurrentSync = time;
-            syncToClient();
+            return true;
         }
+        return false;
     }
 
     /** The order is done: whoever placed it gets a notification (as in AE2). */

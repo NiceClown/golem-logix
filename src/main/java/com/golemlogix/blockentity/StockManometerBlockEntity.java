@@ -18,7 +18,6 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.Container;
-import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -125,7 +124,10 @@ public class StockManometerBlockEntity extends BlockEntity {
             return false;
         }
         return switch (getBridgeMode(side)) {
-            case BRIDGE_ON -> !level.getBlockState(worldPosition.relative(side)).isAir();
+            case BRIDGE_ON -> {
+                BlockPos neighbor = worldPosition.relative(side);
+                yield level.isLoaded(neighbor) && !level.getBlockState(neighbor).isAir();
+            }
             case BRIDGE_OFF -> false;
             default -> StockManometerBlock.isReceiver(level, worldPosition, side);
         };
@@ -153,15 +155,21 @@ public class StockManometerBlockEntity extends BlockEntity {
         }
 
         boolean hasCraftingUpgrade = be.upgrades.count(UpgradeType.CRAFTING) > 0;
+        boolean fuzzy = be.upgrades.has(UpgradeType.FUZZY);
         ItemStack plainGhost = Fuzzy.plain(ghost);
-        ItemKey key = ItemKey.of(plainGhost);
+        // normalize fluid ghosts to 1 mB so CraftingJob targets and fluid checks agree
+        ItemKey key = Ingredients.key(plainGhost);
+        boolean isFluid = FluidGhostItem.is(plainGhost) || Ingredients.isFluid(key);
+        FluidStack fluid = isFluid
+                ? (FluidGhostItem.is(plainGhost) ? FluidGhostItem.fluid(plainGhost) : Ingredients.fluid(key, 1))
+                : FluidStack.EMPTY;
 
         if (hasCraftingUpgrade) {
-            boolean running = net.busCraftPending(pos, key);
+            boolean running = !fuzzy && net.busCraftPending(pos, key);
             if (!running) {
                 for (com.golemlogix.crafting.CraftingCpu cpu : net.cpus()) {
                     var job = cpu.isRemoved() ? null : cpu.getJob();
-                    if (job != null && !job.isDone() && job.targets().containsKey(key)) {
+                    if (job != null && !job.isDone() && matchesCraftTarget(job.targets().keySet(), ghost, key, isFluid, fluid, fuzzy)) {
                         running = true;
                         break;
                     }
@@ -173,15 +181,56 @@ public class StockManometerBlockEntity extends BlockEntity {
         }
 
         long stock;
-        if (FluidGhostItem.is(plainGhost) || Ingredients.isFluid(key)) {
-            var fluid = FluidGhostItem.is(plainGhost) ? FluidGhostItem.fluid(plainGhost).getFluid() : Ingredients.fluid(key, 1).getFluid();
-            stock = net.fluidCountOf(new FluidStack(fluid, 1));
+        if (isFluid) {
+            stock = fuzzy ? countFuzzyFluid(net, fluid) : net.fluidCountOf(fluid);
+        } else if (fuzzy) {
+            stock = countFuzzyItem(net, ghost);
         } else {
             stock = net.itemCountOf(key);
         }
 
         int newSignal = be.computeSignal(stock);
         be.updateSignal(level, pos, state, newSignal, stock, false);
+    }
+
+    private static boolean matchesCraftTarget(java.util.Set<ItemKey> targets, ItemStack ghost, ItemKey key,
+                                              boolean isFluid, FluidStack fluid, boolean fuzzy) {
+        if (!fuzzy) {
+            return targets.contains(key);
+        }
+        for (ItemKey target : targets) {
+            if (isFluid) {
+                if (Ingredients.isFluid(target) && FluidStack.isSameFluid(Ingredients.fluid(target, 1), fluid)) {
+                    return true;
+                }
+            } else if (!Ingredients.isFluid(target) && Fuzzy.matches(ghost, target.stack(), true)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static long countFuzzyItem(GolemNetwork net, ItemStack ghost) {
+        long total = 0;
+        for (var entry : net.listItems().entrySet()) {
+            if (!Ingredients.isFluid(entry.getKey()) && Fuzzy.matches(ghost, entry.getKey().stack(), true)) {
+                total += entry.getValue();
+            }
+        }
+        return total;
+    }
+
+    private static long countFuzzyFluid(GolemNetwork net, FluidStack fluid) {
+        if (com.golemlogix.system.CryoSource.is(fluid)) {
+            return net.cryoSourceAvailable();
+        }
+        long total = 0;
+        for (FluidStack f : net.listFluids()) {
+            if (FluidStack.isSameFluid(f, fluid)) {
+                total += f.getAmount();
+            }
+        }
+        return total;
     }
 
     /**
@@ -219,15 +268,19 @@ public class StockManometerBlockEntity extends BlockEntity {
         this.stockCount = newStock;
         this.craftRunning = running;
 
+        BlockState current = state;
         if (signalChanged) {
-            level.setBlock(pos, state.setValue(StockManometerBlock.POWERED, newSignal > 0), 3);
-            level.updateNeighborsAt(pos, state.getBlock());
-            Direction attached = state.getValue(StockManometerBlock.FACING).getOpposite();
-            level.updateNeighborsAt(pos.relative(attached), state.getBlock());
+            current = state.setValue(StockManometerBlock.POWERED, newSignal > 0);
+            level.setBlock(pos, current, 3);
+            level.updateNeighborsAt(pos, current.getBlock());
+            BlockPos attached = pos.relative(current.getValue(StockManometerBlock.FACING).getOpposite());
+            if (level.isLoaded(attached)) {
+                level.updateNeighborsAt(attached, current.getBlock());
+            }
             setChanged();
         }
         if (signalChanged || stockChanged) {
-            level.sendBlockUpdated(pos, state, state, 3);
+            level.sendBlockUpdated(pos, current, current, 3);
         }
     }
 
@@ -236,6 +289,7 @@ public class StockManometerBlockEntity extends BlockEntity {
             @Override
             public int get(int index) {
                 // window data slots carry 16 bits: the numbers go in two halves each
+                int clampedStock = (int) Math.min(stockCount, Integer.MAX_VALUE);
                 return switch (index) {
                     case 0 -> mode;
                     case 1 -> threshold & 0xFFFF;
@@ -243,8 +297,8 @@ public class StockManometerBlockEntity extends BlockEntity {
                     case 3 -> hysteresis & 0xFFFF;
                     case 4 -> hysteresis >>> 16;
                     case 5 -> signal;
-                    case 6 -> (int) (stockCount & 0xFFFF);
-                    case 7 -> (int) ((stockCount >> 16) & 0xFFFF);
+                    case 6 -> clampedStock & 0xFFFF;
+                    case 7 -> clampedStock >>> 16;
                     case 8 -> bridgeModes;
                     default -> 0;
                 };
@@ -260,6 +314,7 @@ public class StockManometerBlockEntity extends BlockEntity {
                     case SET_BRIDGE_NEXT -> {
                         Direction side = Direction.values()[Math.floorMod(value, 6)];
                         setBridgeMode(side, getBridgeMode(side) + 1);
+                        return;
                     }
                     default -> {
                         return;
@@ -312,12 +367,16 @@ public class StockManometerBlockEntity extends BlockEntity {
     }
 
     /** The client takes only the synced keys (what the renderer shows); the rest keep their values. */
-    @Override
-    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
+    public void readUpdateTag(CompoundTag tag) {
         signal = tag.getInt("Signal");
         stockCount = tag.getLong("Stock");
         threshold = Math.max(1, tag.contains("Threshold") ? tag.getInt("Threshold") : 100);
         bridgeModes = tag.getInt("Bridges");
+    }
+
+    @Override
+    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
+        readUpdateTag(tag);
     }
 
     @Override

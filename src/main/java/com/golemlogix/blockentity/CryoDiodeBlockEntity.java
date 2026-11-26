@@ -10,8 +10,14 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
+
 public class CryoDiodeBlockEntity extends BlockEntity {
-    private static final ThreadLocal<Boolean> DRAIN_LOCK = ThreadLocal.withInitial(() -> false);
+    /** Per-diode cycle guard: allows daisy-chained diodes while breaking loops cleanly. */
+    private static final ThreadLocal<Set<CryoDiodeBlockEntity>> VISITING =
+            ThreadLocal.withInitial(() -> Collections.newSetFromMap(new IdentityHashMap<>()));
 
     public CryoDiodeBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.CRYO_DIODE.get(), pos, state);
@@ -64,6 +70,101 @@ public class CryoDiodeBlockEntity extends BlockEntity {
         return getBlockState().getValue(CryoDiodeBlock.FACING);
     }
 
+    @Nullable
+    private SourceHelper.Supplier directInlet(BlockPos inletPos, Direction facing) {
+        BlockEntity inletBe = level.getBlockEntity(inletPos);
+        if (inletBe instanceof CryoDiodeBlockEntity diode) {
+            return diode.asSupplier(facing);
+        }
+        return inletBe != null ? SourceHelper.asSupplier(inletBe) : null;
+    }
+
+    @Nullable
+    private GolemNetwork inletNetwork(BlockPos inletPos) {
+        if (!(level.getBlockState(inletPos).getBlock() instanceof com.golemlogix.system.GolemNode)) {
+            return null;
+        }
+        return GolemNetwork.get(level, inletPos);
+    }
+
+    private final SourceHelper.Supplier outletSupplier = new SourceHelper.Supplier() {
+        @Override
+        public boolean infinite() {
+            if (isRemoved() || level == null) return false;
+            Set<CryoDiodeBlockEntity> visiting = VISITING.get();
+            if (!visiting.add(CryoDiodeBlockEntity.this)) return false;
+            try {
+                Direction facing = getFacing();
+                BlockPos inletPos = worldPosition.relative(facing.getOpposite());
+                if (!level.isLoaded(inletPos)) return false;
+                SourceHelper.Supplier direct = directInlet(inletPos, facing);
+                if (direct != null) return direct.infinite();
+                GolemNetwork inletNet = inletNetwork(inletPos);
+                return inletNet != null && inletNet.hasInfiniteSource();
+            } finally {
+                visiting.remove(CryoDiodeBlockEntity.this);
+            }
+        }
+
+        @Override
+        public int available() {
+            if (isRemoved() || level == null) return 0;
+            Set<CryoDiodeBlockEntity> visiting = VISITING.get();
+            if (!visiting.add(CryoDiodeBlockEntity.this)) return 0;
+            try {
+                Direction facing = getFacing();
+                BlockPos inletPos = worldPosition.relative(facing.getOpposite());
+                if (!level.isLoaded(inletPos)) return 0;
+                SourceHelper.Supplier direct = directInlet(inletPos, facing);
+                if (direct != null) return direct.available();
+                GolemNetwork inletNet = inletNetwork(inletPos);
+                if (inletNet == null) return 0;
+                if (inletNet.hasInfiniteSource()) return Integer.MAX_VALUE;
+                long total = 0;
+                for (SourceHelper.Supplier s : inletNet.sources()) {
+                    total += s.available();
+                }
+                return (int) Math.min(total, Integer.MAX_VALUE);
+            } finally {
+                visiting.remove(CryoDiodeBlockEntity.this);
+            }
+        }
+
+        @Override
+        public int drain(int amount) {
+            if (isRemoved() || level == null || amount <= 0) return 0;
+            Set<CryoDiodeBlockEntity> visiting = VISITING.get();
+            if (!visiting.add(CryoDiodeBlockEntity.this)) return 0;
+            try {
+                Direction facing = getFacing();
+                BlockPos inletPos = worldPosition.relative(facing.getOpposite());
+                if (!level.isLoaded(inletPos)) return 0;
+                SourceHelper.Supplier direct = directInlet(inletPos, facing);
+                if (direct != null) {
+                    int got = direct.drain(amount);
+                    if (got > 0) flowed();
+                    return got;
+                }
+                GolemNetwork inletNet = inletNetwork(inletPos);
+                if (inletNet == null) return 0;
+                if (inletNet.hasInfiniteSource()) {
+                    flowed();
+                    return amount;
+                }
+                int taken = 0;
+                for (SourceHelper.Supplier s : inletNet.sources()) {
+                    int d = s.drain(amount - taken);
+                    taken += d;
+                    if (taken >= amount) break;
+                }
+                if (taken > 0) flowed();
+                return taken;
+            } finally {
+                visiting.remove(CryoDiodeBlockEntity.this);
+            }
+        }
+    };
+
     /**
      * Supplies Source to an adjacent node if that node is on the diode's OUTLET side.
      * @param fromDiodeToNode The direction from this diode to the querying node.
@@ -73,79 +174,6 @@ public class CryoDiodeBlockEntity extends BlockEntity {
         if (fromDiodeToNode != getFacing()) {
             return null; // Only the outlet side can draw Source!
         }
-        return new SourceHelper.Supplier() {
-            @Override
-            public boolean infinite() {
-                if (DRAIN_LOCK.get() || level == null) return false;
-                DRAIN_LOCK.set(true);
-                try {
-                    BlockPos inletPos = worldPosition.relative(getFacing().getOpposite());
-                    if (!level.isLoaded(inletPos)) return false;
-                    BlockEntity inletBe = level.getBlockEntity(inletPos);
-                    SourceHelper.Supplier direct = inletBe != null ? SourceHelper.asSupplier(inletBe) : null;
-                    if (direct != null) return direct.infinite();
-                    GolemNetwork inletNet = GolemNetwork.get(level, inletPos);
-                    return inletNet != null && inletNet.hasInfiniteSource();
-                } finally {
-                    DRAIN_LOCK.set(false);
-                }
-            }
-
-            @Override
-            public int available() {
-                if (DRAIN_LOCK.get() || level == null) return 0;
-                DRAIN_LOCK.set(true);
-                try {
-                    BlockPos inletPos = worldPosition.relative(getFacing().getOpposite());
-                    if (!level.isLoaded(inletPos)) return 0;
-                    BlockEntity inletBe = level.getBlockEntity(inletPos);
-                    SourceHelper.Supplier direct = inletBe != null ? SourceHelper.asSupplier(inletBe) : null;
-                    if (direct != null) return direct.available();
-                    GolemNetwork inletNet = GolemNetwork.get(level, inletPos);
-                    if (inletNet == null) return 0;
-                    if (inletNet.hasInfiniteSource()) return Integer.MAX_VALUE;
-                    int total = 0;
-                    for (SourceHelper.Supplier s : inletNet.sources()) {
-                        total += s.available();
-                    }
-                    return total;
-                } finally {
-                    DRAIN_LOCK.set(false);
-                }
-            }
-
-            @Override
-            public int drain(int amount) {
-                if (DRAIN_LOCK.get() || level == null || amount <= 0) return 0;
-                DRAIN_LOCK.set(true);
-                try {
-                    BlockPos inletPos = worldPosition.relative(getFacing().getOpposite());
-                    if (!level.isLoaded(inletPos)) return 0;
-                    BlockEntity inletBe = level.getBlockEntity(inletPos);
-                    SourceHelper.Supplier direct = inletBe != null ? SourceHelper.asSupplier(inletBe) : null;
-                    if (direct != null) {
-                        int got = direct.drain(amount);
-                        if (got > 0) flowed();
-                        return got;
-                    }
-                    GolemNetwork inletNet = GolemNetwork.get(level, inletPos);
-                    if (inletNet == null) return 0;
-                    if (inletNet.hasInfiniteSource()) {
-                        flowed();
-                        return amount;
-                    }
-                    int taken = 0;
-                    for (SourceHelper.Supplier s : inletNet.sources()) {
-                        int d = s.drain(amount - taken);
-                        taken += d;
-                        if (taken >= amount) break;
-                    }
-                    if (taken > 0) flowed();
-                    return taken;
-                } finally {
-                    DRAIN_LOCK.set(false);
-                }
-            }
-        };
+        return outletSupplier;
     }
 }

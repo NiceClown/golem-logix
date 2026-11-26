@@ -98,6 +98,7 @@ public class SecurityTerminalBlockEntity extends BlockEntity {
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
+        ownerId = null;
         if (tag.contains("OwnerId", Tag.TAG_STRING)) {
             try {
                 ownerId = UUID.fromString(tag.getString("OwnerId"));

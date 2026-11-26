@@ -205,7 +205,7 @@ public class CryoMainframeBlockEntity extends BlockEntity {
                 job = null;
                 return;
             }
-            GolemNetwork net = GolemNetwork.scan(level, worldPosition);
+            GolemNetwork net = GolemNetwork.get(level, worldPosition);
             for (ItemStack s : job.refundAll(net)) {
                 Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 1.0, worldPosition.getZ() + 0.5, s);
             }
@@ -314,7 +314,7 @@ public class CryoMainframeBlockEntity extends BlockEntity {
     /** A player opened the window: the doors swing open. */
     public void startOpen() {
         viewers++;
-        if (viewers == 1 && level != null) {
+        if (viewers == 1 && level != null && !level.isClientSide()) {
             level.playSound(null, worldPosition, SoundEvents.IRON_DOOR_OPEN, SoundSource.BLOCKS, 0.7f, 1.3f);
             level.playSound(null, worldPosition, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 0.6f, 1.6f);
         }
@@ -322,8 +322,11 @@ public class CryoMainframeBlockEntity extends BlockEntity {
     }
 
     public void stopOpen() {
-        viewers = Math.max(0, viewers - 1);
-        if (viewers == 0 && level != null) {
+        if (viewers == 0) {
+            return;
+        }
+        viewers--;
+        if (viewers == 0 && level != null && !level.isClientSide()) {
             level.playSound(null, worldPosition, SoundEvents.IRON_DOOR_CLOSE, SoundSource.BLOCKS, 0.7f, 1.3f);
         }
         signalViewers();
@@ -346,12 +349,12 @@ public class CryoMainframeBlockEntity extends BlockEntity {
 
     /** Drop the calculators, coprocessors and job contents (when the owner is broken). */
     public void dropContents() {
-        if (level == null) {
+        if (level == null || level.isClientSide()) {
             return;
         }
         double x = worldPosition.getX() + 0.5, y = worldPosition.getY() + 0.5, z = worldPosition.getZ() + 0.5;
         // the jobs' items go back to the network first, as on a cancel; only what does not fit drops (see CryoCalculatorBlockEntity)
-        GolemNetwork refundTo = level.isClientSide() ? null : GolemNetwork.aroundRemoved(level, worldPosition);
+        GolemNetwork refundTo = GolemNetwork.aroundRemoved(level, worldPosition);
         for (Core c : cores) {
             if (c.job == null) {
                 continue;
@@ -374,18 +377,26 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         cores.clear();
     }
 
+    private static boolean allCellsLoaded(Level level, BlockPos pos, Direction facing) {
+        for (int i = 0; i < MainframeStructure.CELLS.length; i++) {
+            if (!level.isLoaded(MainframeStructure.cellPos(pos, facing, i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     // ------------------------------------------------------------------------------------------------ work
     public static void serverTick(Level level, BlockPos pos, BlockState state, CryoMainframeBlockEntity be) {
         long time = level.getGameTime();
         Direction facing = state.getValue(CryoMainframeBlock.FACING);
-        if ((time + pos.asLong()) % 20 == 0) {
+        if ((time + pos.asLong()) % 20 == 0 && allCellsLoaded(level, pos, facing)) {
             boolean valid = MainframeStructure.valid(level, pos, facing);
             if (be.formed() && !valid) {
                 MainframeStructure.disassemble(level, pos, facing, null);
             } else if (!be.formed() && valid) {
                 MainframeStructure.form(level, pos, facing);
             }
-            state = level.getBlockState(pos);
         }
         boolean hasRedstone = be.upgrades.has(UpgradeType.REDSTONE);
         boolean powered = hasRedstone && level.hasNeighborSignal(pos);
@@ -393,100 +404,106 @@ public class CryoMainframeBlockEntity extends BlockEntity {
             be.redstone.observe(powered);
         }
         boolean wasActive = be.active;
+        boolean needSync = false;
         if ((time + pos.asLong()) % CryoCalculatorBlockEntity.CYCLE_TICKS == 0) {
-            GolemNetwork net = GolemNetwork.get(level, pos);
-            boolean ok = be.formed() && net.isOnline() && net.isDeviceActive(pos);
-            boolean allowed = be.redstone.allows(hasRedstone, powered, ok);
-            boolean anyJob = false, clicked = false, changed = false;
-            int workers = be.workersPerCore();
-            int shelf = 0;
-            for (Core core : be.cores) {
-                CraftingJob job = core.job;
-                if (job == null) {
-                    continue;
-                }
-                anyJob = true;
-                // the first two busy cores are shown on the shelves: the display keeps their item even after the order ends
-                int myShelf = shelf < be.holds.length ? shelf++ : -1;
-                if (myShelf >= 0) {
-                    changed |= be.holds[myShelf].show(job.current().stack(), time);
-                }
-                if (!ok) {
-                    continue;
-                }
-                if (!allowed) {
-                    if (job.status() != CraftingJob.Status.PAUSED) {
-                        job.setStatus(CraftingJob.Status.PAUSED);
-                        changed = true;
+            int busyBefore = be.busyCores();
+            boolean hasOwnJob = busyBefore > 0;
+            boolean formed = be.formed();
+            if (!formed || (!hasOwnJob && (be.cores.isEmpty() || hasRedstone))) {
+                be.active = false;
+                needSync |= be.summaryChanged(time);
+            } else {
+                GolemNetwork net = GolemNetwork.get(level, pos);
+                boolean ok = net.isOnline() && net.isDeviceActive(pos);
+                // only consume a redstone pulse when there is actually a job of our own to step
+                boolean allowed = be.redstone.allows(hasRedstone, powered, ok && hasOwnJob);
+                boolean clicked = false;
+                int workers = be.workersPerCore();
+                int shelf = 0;
+                for (Core core : be.cores) {
+                    CraftingJob job = core.job;
+                    if (job == null) {
+                        continue;
                     }
-                    continue;
-                }
-                CraftingJob.Status before = job.status();
-                long doneBefore = job.doneExecutions();
-                job.tick(net, workers);
-                if (myShelf >= 0) {
-                    be.holds[myShelf].show(job.current().stack(), time);
-                }
-                long done = job.doneExecutions() - doneBefore;
-                clicked |= done > 0;
-                if (done > CryoCalculatorBlockEntity.BASE_WORKERS) {
-                    be.boostUntil = time + BOOST_HOLD;
-                }
-                if (job.isDone()) {
-                    CryoCalculatorBlockEntity.notifyFinished(level, job);
-                    core.job = null;
-                    changed = true;
-                } else if (job.status() != before) {
-                    changed = true;
-                }
-            }
-            // idle cores work on whatever job could use more steps, and stay free for a new order
-            if (ok && !hasRedstone) {
-                for (int idle = be.cores.size() - be.busyCores(); idle > 0; idle--) {
-                    CraftingJob target = net.jobWantingHelp();
-                    if (target == null) {
-                        break;
+                    // the first two busy cores are shown on the shelves: the display keeps their item even after the order ends
+                    int myShelf = shelf < be.holds.length ? shelf++ : -1;
+                    if (myShelf >= 0) {
+                        needSync |= be.holds[myShelf].show(job.current().stack(), time);
                     }
-                    long before = target.doneExecutions();
-                    target.tick(net, workers);
-                    long done = target.doneExecutions() - before;
-                    if (done <= 0) {
-                        break;
+                    if (!ok) {
+                        continue;
                     }
-                    clicked = true;
-                    be.helpUntil = time + 20;
+                    if (!allowed) {
+                        if (job.status() != CraftingJob.Status.PAUSED) {
+                            job.setStatus(CraftingJob.Status.PAUSED);
+                            needSync = true;
+                        }
+                        continue;
+                    }
+                    CraftingJob.Status before = job.status();
+                    long doneBefore = job.doneExecutions();
+                    job.tick(net, workers);
+                    if (myShelf >= 0) {
+                        be.holds[myShelf].show(job.current().stack(), time);
+                    }
+                    long done = job.doneExecutions() - doneBefore;
+                    clicked |= done > 0;
                     if (done > CryoCalculatorBlockEntity.BASE_WORKERS) {
                         be.boostUntil = time + BOOST_HOLD;
                     }
-                    if (shelf < be.holds.length) {
-                        changed |= be.holds[shelf++].show(target.current().stack(), time);
+                    if (job.isDone()) {
+                        CryoCalculatorBlockEntity.notifyFinished(level, job);
+                        core.job = null;
+                        needSync = true;
+                    } else if (job.status() != before) {
+                        needSync = true;
                     }
                 }
-            }
-            if (clicked) {
-                level.playSound(null, pos, ModSounds.RELAY_CLICK.get(), SoundSource.BLOCKS, 0.3f, 1.0f);
-            }
-            if (anyJob) {
-                be.setChanged();
-            }
-            be.active = ok && allowed && (be.busyCores() > 0 || time < be.helpUntil);
-            if (changed) {
-                be.syncNow();
-            } else {
-                be.syncIfChanged(time);
+                // idle cores work on whatever job could use more steps, and stay free for a new order
+                if (ok && !hasRedstone) {
+                    for (int idle = be.cores.size() - be.busyCores(); idle > 0; idle--) {
+                        CraftingJob target = net.jobWantingHelp();
+                        if (target == null) {
+                            break;
+                        }
+                        long before = target.doneExecutions();
+                        target.tick(net, workers);
+                        long done = target.doneExecutions() - before;
+                        if (done <= 0) {
+                            break;
+                        }
+                        clicked = true;
+                        be.helpUntil = time + 20;
+                        if (done > CryoCalculatorBlockEntity.BASE_WORKERS) {
+                            be.boostUntil = time + BOOST_HOLD;
+                        }
+                        if (shelf < be.holds.length) {
+                            needSync |= be.holds[shelf++].show(target.current().stack(), time);
+                        }
+                    }
+                }
+                if (clicked) {
+                    level.playSound(null, pos, ModSounds.RELAY_CLICK.get(), SoundSource.BLOCKS, 0.3f, 1.0f);
+                }
+                if (hasOwnJob) {
+                    be.setChanged();
+                }
+                be.active = ok && allowed && (be.busyCores() > 0 || time < be.helpUntil);
+                if (!needSync) {
+                    needSync = be.summaryChanged(time);
+                }
             }
         }
         // orders the co-processors finished at once (on a big speed-up: in one cycle) still call the foreman: they were sped up
         boolean boosted = time < be.boostUntil && (be.active || be.busyCores() == 0);
         if (boosted != be.boosted || wasActive != be.active) {
             be.boosted = boosted;
-            be.syncNow();
+            needSync = true;
         }
-        boolean ended = false;
         for (VisualHold h : be.holds) {
-            ended |= h.ended(time);
+            needSync |= h.ended(time);
         }
-        if (ended) {
+        if (needSync) {
             be.syncNow();
         }
     }
@@ -505,13 +522,8 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         return sb.toString();
     }
 
-    private void syncIfChanged(long time) {
-        if (time - lastSync < 10) {
-            return;
-        }
-        if (!summary().equals(sentSummary)) {
-            syncNow();
-        }
+    private boolean summaryChanged(long time) {
+        return time - lastSync >= 10 && !summary().equals(sentSummary);
     }
 
     private void syncNow() {

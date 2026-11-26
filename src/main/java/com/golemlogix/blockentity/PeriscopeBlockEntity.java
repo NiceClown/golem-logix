@@ -27,7 +27,7 @@ public class PeriscopeBlockEntity extends BlockEntity {
     /** Access modes. */
     public static final int BOTH = 0, INSERT_ONLY = 1, EXTRACT_ONLY = 2;
     private int priority = 0;
-    private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.PERISCOPE, this);
+    private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.PERISCOPE, this, this::invalidateNetwork);
     private final RedstoneControl redstone = new RedstoneControl();
     private final OwnedContainer filters = new OwnedContainer(FILTER_SLOTS, this, s -> true);
     private int access = BOTH;
@@ -44,7 +44,11 @@ public class PeriscopeBlockEntity extends BlockEntity {
     public void setPriority(int value) {
         this.priority = Mth.clamp(value, -Priority.MAX, Priority.MAX);
         setChanged();
-        // the network remembers the storages behind periscopes with their priority
+        invalidateNetwork();
+    }
+
+    /** The network caches connected storages with their priority and redstone enabled state. */
+    private void invalidateNetwork() {
         if (level != null && !level.isClientSide()) {
             com.golemlogix.system.GolemNetwork.clearCache();
         }
@@ -81,14 +85,16 @@ public class PeriscopeBlockEntity extends BlockEntity {
 
     /** The same for a fluid, by the buckets (fluid ghosts) in the filter. */
     public boolean passes(net.neoforged.neoforge.fluids.FluidStack fluid) {
-        boolean any = false;
+        boolean fuzzy = upgrades.has(UpgradeType.FUZZY), any = false;
         for (int i = 0; i < FILTER_SLOTS; i++) {
             net.neoforged.neoforge.fluids.FluidStack f = fluidOf(filters.getItem(i));
             if (f.isEmpty()) {
                 continue;
             }
             any = true;
-            if (net.neoforged.neoforge.fluids.FluidStack.isSameFluid(f, fluid)) {
+            boolean match = fuzzy ? net.neoforged.neoforge.fluids.FluidStack.isSameFluid(f, fluid)
+                    : net.neoforged.neoforge.fluids.FluidStack.isSameFluidSameComponents(f, fluid);
+            if (match) {
                 return !denyList;
             }
         }
@@ -157,6 +163,7 @@ public class PeriscopeBlockEntity extends BlockEntity {
                     RedstoneMode m = RedstoneMode.byId(value);
                     redstone.setMode(m == RedstoneMode.PULSE ? RedstoneMode.IGNORE : m);
                     setChanged();
+                    invalidateNetwork();
                 } else if (index == 2) {
                     access = Math.floorMod(value, 3);
                     setChanged();
@@ -190,7 +197,7 @@ public class PeriscopeBlockEntity extends BlockEntity {
         priority = tag.getInt("Priority");
         upgrades.fromTag(tag.getList("Upgrades", Tag.TAG_COMPOUND), registries);
         filters.fromTag(tag.getList("Filters", Tag.TAG_COMPOUND), registries);
-        access = tag.getInt("Access");
+        access = Math.floorMod(tag.getInt("Access"), 3);
         denyList = tag.getBoolean("DenyList");
         redstone.load(tag);
     }

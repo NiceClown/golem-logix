@@ -1,6 +1,5 @@
 package com.golemlogix.blockentity;
 
-import com.golemlogix.config.GolemConfig;
 import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.init.ModSounds;
 import com.golemlogix.system.GolemNetwork;
@@ -93,10 +92,13 @@ public class InterfaceBlockEntity extends BlockEntity {
     }
 
     public boolean itemMode(int i) {
-        return (itemModeMask & (1 << i)) != 0;
+        return i >= 0 && i < SLOTS && (itemModeMask & (1 << i)) != 0;
     }
 
     public void toggleMode(int i) {
+        if (i < 0 || i >= SLOTS) {
+            return;
+        }
         int mask = itemModeMask ^ (1 << i);
         modesChanged(itemModeMask, mask);
         itemModeMask = mask;
@@ -118,12 +120,15 @@ public class InterfaceBlockEntity extends BlockEntity {
 
     /** The slot keeps fluid: the config holds a fluid ghost, or a container with fluid and the mode is not "item". */
     public boolean isFluidSlot(int i) {
+        if (i < 0 || i >= SLOTS) {
+            return false;
+        }
         ItemStack cfg = config.getItem(i);
         return com.golemlogix.items.FluidGhostItem.is(cfg) || (!itemMode(i) && !containedFluid(cfg).isEmpty());
     }
 
     public net.neoforged.neoforge.fluids.FluidStack fluidStock(int i) {
-        return fluidStock[i];
+        return i >= 0 && i < SLOTS ? fluidStock[i] : net.neoforged.neoforge.fluids.FluidStack.EMPTY;
     }
 
     /** No more fluid than this is kept in one slot (256 buckets). */
@@ -136,6 +141,9 @@ public class InterfaceBlockEntity extends BlockEntity {
 
     /** The set amount of a slot (items or mB) depending on the mode. */
     public int amount(int i) {
+        if (i < 0 || i >= SLOTS) {
+            return 0;
+        }
         ItemStack cfg = config.getItem(i);
         if (cfg.isEmpty()) {
             return 0;
@@ -148,6 +156,9 @@ public class InterfaceBlockEntity extends BlockEntity {
 
     /** Put an item (ghost) and an amount into a config slot. */
     public void setSlot(int i, ItemStack stack, int count) {
+        if (i < 0 || i >= SLOTS) {
+            return;
+        }
         if (stack.isEmpty()) {
             config.setItem(i, ItemStack.EMPTY);
             amount[i] = 0;
@@ -160,6 +171,9 @@ public class InterfaceBlockEntity extends BlockEntity {
 
     /** Set a slot amount (items or mB) within the mode's limits. */
     public void setAmount(int i, int value) {
+        if (i < 0 || i >= SLOTS) {
+            return;
+        }
         ItemStack cfg = config.getItem(i);
         if (cfg.isEmpty()) {
             amount[i] = 0;
@@ -317,13 +331,13 @@ public class InterfaceBlockEntity extends BlockEntity {
         }
     }
 
-    /** Tank -> network (as much as fits), returns the mB moved. */
+    /** Tank -> network: waiting autocraft jobs take what they need first, the rest goes to storage. Returns the mB moved. */
     private int flushTank(GolemNetwork network) {
         var f = tank.getFluid();
         if (f.isEmpty()) {
             return 0;
         }
-        int stored = network.insertFluid(f.copy(), false);
+        int stored = network.insertFluidFromMachine(f.copy(), null);
         if (stored > 0) {
             tank.drain(stored, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
         }
@@ -396,12 +410,13 @@ public class InterfaceBlockEntity extends BlockEntity {
             public void set(int index, int value) {
                 if (index == 0) {
                     redstone.setMode(RedstoneMode.byId(value));
+                    setChanged();
                 } else if (index == 1) {
                     int mask = value & ((1 << SLOTS) - 1);
                     modesChanged(itemModeMask, mask);
                     itemModeMask = mask;
+                    setChanged();
                 }
-                setChanged();
             }
 
             @Override
@@ -504,6 +519,7 @@ public class InterfaceBlockEntity extends BlockEntity {
                 continue;
             }
             ItemStack real = in.split(accepted);
+            int realCount = real.getCount();
             ItemStack leftover = net.insertFromMachine(real);
             if (!leftover.isEmpty()) {
                 if (in.isEmpty()) {
@@ -512,10 +528,12 @@ public class InterfaceBlockEntity extends BlockEntity {
                     in.grow(leftover.getCount());
                 }
             }
-            int stored = real.getCount() - leftover.getCount();
+            int stored = realCount - leftover.getCount();
             moved += stored;
-            budget -= real.getCount();
-            inbox.setChanged();
+            budget -= realCount;
+            if (stored > 0) {
+                inbox.setChanged();
+            }
         }
         return moved;
     }
@@ -523,7 +541,7 @@ public class InterfaceBlockEntity extends BlockEntity {
     /** Stock: excess and foreign items go back to the network, missing ones come from it; what is absent entirely is ordered with the Autocraft Module. */
     private int restock(Level level, GolemNetwork net, int budget) {
         int moved = 0;
-        Map<ItemKey, Long> toCraft = new LinkedHashMap<>();
+        Map<ItemKey, Long> toCraft = null;
         // a Fuzzy Card: a config slot keeps any item that matches it (any components, or its chosen tag)
         boolean fuzzy = upgrades.has(UpgradeType.FUZZY);
         java.util.Set<ItemKey> netKeys = null;
@@ -537,9 +555,12 @@ public class InterfaceBlockEntity extends BlockEntity {
                 if (excess > 0) {
                     ItemStack back = have.copyWithCount(excess);
                     ItemStack rest = net.insertItem(back, false);
-                    have.shrink(excess - rest.getCount());
-                    stock.setItem(i, have.isEmpty() ? ItemStack.EMPTY : have);
-                    moved += excess - rest.getCount();
+                    int returned = excess - rest.getCount();
+                    if (returned > 0) {
+                        have.shrink(returned);
+                        stock.setItem(i, have.isEmpty() ? ItemStack.EMPTY : have);
+                        moved += returned;
+                    }
                 }
             }
             if (cfg.isEmpty() || isFluidSlot(i) || budget - moved <= 0) {
@@ -571,6 +592,9 @@ public class InterfaceBlockEntity extends BlockEntity {
             if (got.isEmpty()) {
                 ItemKey key = ItemKey.of(plain);
                 if (upgrades.has(UpgradeType.CRAFTING) && net.canCraft(key) && !net.busCraftPending(worldPosition, key)) {
+                    if (toCraft == null) {
+                        toCraft = new LinkedHashMap<>();
+                    }
                     toCraft.merge(key, (long) need, Long::sum);
                 }
                 continue;
@@ -584,7 +608,7 @@ public class InterfaceBlockEntity extends BlockEntity {
             moved += got.getCount();
         }
         long now = level.getGameTime();
-        if (!toCraft.isEmpty() && now - lastCraftRequest >= CRAFT_REQUEST_COOLDOWN) {
+        if (toCraft != null && now - lastCraftRequest >= CRAFT_REQUEST_COOLDOWN) {
             lastCraftRequest = now;
             for (Map.Entry<ItemKey, Long> e : toCraft.entrySet()) {
                 Map<ItemKey, Long> one = new LinkedHashMap<>();

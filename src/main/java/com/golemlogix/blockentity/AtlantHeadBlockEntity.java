@@ -16,6 +16,7 @@ import net.minecraft.world.level.block.state.BlockState;
 public class AtlantHeadBlockEntity extends BlockEntity {
     /** Head rotation relative to the statue's facing (degrees): yaw and pitch, current and previous tick. */
     public float yaw, yawPrev, pitch, pitchPrev;
+    private final float[] look = new float[2];
     private static final double RANGE = 12.0;
     private static final float MAX_YAW = 70f, MAX_PITCH = 35f;
 
@@ -26,10 +27,11 @@ public class AtlantHeadBlockEntity extends BlockEntity {
     public static void clientTick(Level level, BlockPos pos, BlockState state, AtlantHeadBlockEntity be) {
         be.yawPrev = be.yaw;
         be.pitchPrev = be.pitch;
-        float[] look = {be.yaw, be.pitch};
-        track(level, pos, state.getValue(AtlantBlock.FACING), look);
-        be.yaw = look[0];
-        be.pitch = look[1];
+        be.look[0] = be.yaw;
+        be.look[1] = be.pitch;
+        track(level, pos, state.getValue(AtlantBlock.FACING), be.look);
+        be.yaw = be.look[0];
+        be.pitch = be.look[1];
     }
 
     /**
