@@ -3,6 +3,7 @@ package com.golemlogix.blockentity;
 import com.golemlogix.blocks.GolemPlaneBlock;
 import com.golemlogix.config.GolemConfig;
 import com.golemlogix.init.ModBlockEntities;
+import com.golemlogix.system.Fuzzy;
 import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.ItemKey;
 import com.golemlogix.upgrade.RedstoneControl;
@@ -15,6 +16,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.inventory.ContainerData;
@@ -27,40 +29,38 @@ import net.minecraft.world.level.block.DirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
- * Formation Bus: the copper golem fused into it takes a block named in the filter out of the network and pushes it out of the
- * mouth onto the free spot in front. The push takes as long as the bus's interval (at least two ticks), so the golem's hands keep
- * pace with four Compressed Co-Processors too; the block is set down when the push ends, and if the spot is taken meanwhile the
- * golem holds it until it is free again. Which filter slot goes next: in order (the first the network has), round robin (slot
- * after slot, skipping what the network lacks) or at random. Upgrades as on the Export Bus: speed, an Autocraft Module (it
- * orders the block when the network has none), a Redstone Module, a Fuzzy Card.
+ * Formation Bus: the copper golem fused into it pulls a filtered block from the network and pushes it onto the free spot
+ * in front over one bus interval (at least 2 ticks). Supports in-order, round-robin, and random slot ordering, plus speed,
+ * autocraft, redstone, and fuzzy upgrades.
  */
 public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBlock.Waking {
     public static final int FILTER_SLOTS = 9;
+    /** Filter slot traversal modes shared with {@link BusBlockEntity}. */
+    public static final int IN_ORDER = 0, ROUND_ROBIN = 1, RANDOM = 2;
+
     private static final double[] INTERVAL_MULT = {1.0, 0.75, 0.5, 0.25, 0.125};
+    private static final long[] ORDER_BATCHES = {8L, 1L};
     private static final int CRAFT_REQUEST_COOLDOWN = 40;
     private static final int MAX_IDLE_TICKS = 20, MAX_IDLE_STEPS = 5;
-    /** The order of the filter slots: the first one the network has, round robin, at random. */
-    public static final int IN_ORDER = 0, ROUND_ROBIN = 1, RANDOM = 2;
 
     private final OwnedContainer filters = new OwnedContainer(FILTER_SLOTS, this, s -> true);
     private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.FORMATION_BUS, this);
     private final RedstoneControl redstone = new RedstoneControl();
+    private final int[] slotOrder = new int[FILTER_SLOTS];
 
-    /** The block the golem is pushing out (already taken out of the network), when the push began and how long it lasts. */
+    /** Block currently being pushed out (already extracted from the network), push start tick and duration. */
     private ItemStack carrying = ItemStack.EMPTY;
     private long pushStart;
     private int pushTicks = 2;
     private int idleSteps;
     private long sleepUntil;
-    /** The network's storage epoch when it fell asleep: anything entering or leaving the network (a craft done) wakes it. */
     private long sleepEpoch;
     private long lastCraftRequest = -1000;
     private int order = IN_ORDER;
-    /** Round robin: the slot to try first next time. */
     private int next;
 
     public FormationBusBlockEntity(BlockPos pos, BlockState state) {
@@ -79,7 +79,7 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
         return carrying;
     }
 
-    /** How far the push is (0 at the start, 1 when the block is set down), for the renderer. */
+    /** Push animation progress (0 at start, 1 when placed) for the renderer. */
     public float push(float partialTick) {
         if (carrying.isEmpty() || level == null) {
             return 0f;
@@ -139,10 +139,7 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
 
     private void tick(ServerLevel level, BlockPos pos, BlockState state) {
         boolean hasRedstone = upgrades.has(UpgradeType.REDSTONE);
-        boolean powered = hasRedstone && level.hasNeighborSignal(pos);
-        if (hasRedstone) {
-            redstone.observe(powered);
-        }
+        boolean powered = BlockEntities.pollRedstone(level, pos, hasRedstone, redstone);
         long now = level.getGameTime();
         Direction facing = state.getValue(DirectionalBlock.FACING);
         BlockPos target = pos.relative(facing);
@@ -153,7 +150,7 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
             return;
         }
         int interval = interval();
-        if (Math.floorMod(now + pos.asLong(), interval) != 0 || now < sleepUntil && sleepEpoch == GolemNetwork.storageEpoch()) {
+        if (Math.floorMod(now + pos.asLong(), interval) != 0 || (now < sleepUntil && sleepEpoch == GolemNetwork.storageEpoch())) {
             return;
         }
         GolemNetwork net = GolemNetwork.get(level, pos);
@@ -183,79 +180,74 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
         sleepEpoch = GolemNetwork.storageEpoch();
     }
 
-    /** One block named in the filter that can stand in front, out of the network; with an Autocraft Module, orders a missing one. */
+    /** Extracts one placeable filtered block from the network; with Autocraft Module, orders missing blocks. */
     private ItemStack take(ServerLevel level, GolemNetwork net, BlockPos target, Direction facing) {
         boolean fuzzy = upgrades.has(UpgradeType.FUZZY);
-        java.util.Set<ItemKey> netKeys = fuzzy ? net.listItems().keySet() : java.util.Set.of();
+        Set<ItemKey> netKeys = fuzzy ? net.listItems().keySet() : Set.of();
         orderMissing(level, net);
-        int[] slots = new int[FILTER_SLOTS];
-        int start = order == ROUND_ROBIN ? next : 0;
-        for (int k = 0; k < FILTER_SLOTS; k++) {
-            slots[k] = (start + k) % FILTER_SLOTS;
-        }
-        if (order == RANDOM) {
-            for (int k = FILTER_SLOTS - 1; k > 0; k--) {
-                int r = level.getRandom().nextInt(k + 1), t = slots[k];
-                slots[k] = slots[r];
-                slots[r] = t;
-            }
-        }
-        for (int i : slots) {
+        BlockEntities.fillSlotOrder(slotOrder, order, next, level.getRandom());
+        for (int i : slotOrder) {
             ItemStack filter = filters.getItem(i);
             if (filter.isEmpty()) {
                 continue;
             }
-            ItemStack want = com.golemlogix.system.Fuzzy.plain(filter).copyWithCount(1);
-            List<ItemStack> wants = new ArrayList<>();
-            wants.add(want);
-            for (ItemKey k : com.golemlogix.system.Fuzzy.candidates(filter, netKeys, fuzzy)) {
-                if (!k.matches(want)) {
-                    wants.add(k.toStack(1));
+            ItemStack want = Fuzzy.plain(filter).copyWithCount(1);
+            ItemStack real = tryExtractBlock(level, net, target, facing, want);
+            if (real.isEmpty() && fuzzy) {
+                for (ItemKey k : Fuzzy.candidates(filter, netKeys, true)) {
+                    if (!k.matches(want)) {
+                        real = tryExtractBlock(level, net, target, facing, k.toStack(1));
+                        if (!real.isEmpty()) {
+                            break;
+                        }
+                    }
                 }
             }
-            for (ItemStack one : wants) {
-                if (!(one.getItem() instanceof BlockItem) || !fits(level, target, facing, one)) {
-                    continue;
-                }
-                if (net.extractItem(one, 1, true, target).isEmpty()) {
-                    continue;
-                }
-                ItemStack real = net.extractItem(one, 1, false, target);
-                if (!real.isEmpty()) {
-                    next = (i + 1) % FILTER_SLOTS;
-                    return real;
-                }
+            if (!real.isEmpty()) {
+                next = (i + 1) % FILTER_SLOTS;
+                return real;
             }
         }
         return ItemStack.EMPTY;
     }
 
-    /**
-     * Autocraft Module: every block of the filter the network has none of is ordered (whatever the other slots have - so a missing
-     * block is made while the golem lays the others), a batch of 8 if the ingredients are there, otherwise one.
-     */
+    private static ItemStack tryExtractBlock(ServerLevel level, GolemNetwork net, BlockPos target, Direction facing, ItemStack one) {
+        if (!(one.getItem() instanceof BlockItem) || !fits(level, target, facing, one)) {
+            return ItemStack.EMPTY;
+        }
+        if (net.extractItem(one, 1, true, target).isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+        return net.extractItem(one, 1, false, target);
+    }
+
+    /** Orders missing filtered blocks (batch of 8 if craftable, else 1) while the golem continues placing others. */
     private void orderMissing(ServerLevel level, GolemNetwork net) {
         long now = level.getGameTime();
         if (!upgrades.has(UpgradeType.CRAFTING) || now - lastCraftRequest < CRAFT_REQUEST_COOLDOWN) {
             return;
         }
-        java.util.Set<ItemKey> asked = new java.util.HashSet<>();
+        Set<ItemKey> asked = null;
         for (int i = 0; i < FILTER_SLOTS; i++) {
             ItemStack filter = filters.getItem(i);
             if (filter.isEmpty()) {
                 continue;
             }
-            ItemStack want = com.golemlogix.system.Fuzzy.plain(filter).copyWithCount(1);
+            ItemStack want = Fuzzy.plain(filter).copyWithCount(1);
+            if (!(want.getItem() instanceof BlockItem)) {
+                continue;
+            }
             ItemKey key = ItemKey.of(want);
-            if (!(want.getItem() instanceof BlockItem) || !asked.add(key) || !net.extractItem(want, 1, true, null).isEmpty()
+            if (asked == null) {
+                asked = new HashSet<>();
+            }
+            if (!asked.add(key) || !net.extractItem(want, 1, true, null).isEmpty()
                     || !net.canCraft(key) || net.busCraftPending(worldPosition, key)) {
                 continue;
             }
             lastCraftRequest = now;
-            for (long amount : new long[]{8, 1}) {
-                java.util.Map<ItemKey, Long> one = new java.util.LinkedHashMap<>();
-                one.put(key, amount);
-                GolemNetwork.StartType r = net.startCrafting(one, null, worldPosition).type();
+            for (long amount : ORDER_BATCHES) {
+                GolemNetwork.StartType r = BlockEntities.requestCraft(net, worldPosition, key, amount).type();
                 if (r == GolemNetwork.StartType.STARTED || r == GolemNetwork.StartType.NO_CPU) {
                     break;
                 }
@@ -267,14 +259,12 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
         return new DirectionalPlaceContext(level, target, facing, stack, facing.getOpposite());
     }
 
-    /** The block would stand in front: placeable there and able to survive. */
     private static boolean fits(Level level, BlockPos target, Direction facing, ItemStack stack) {
         BlockItem item = (BlockItem) stack.getItem();
         BlockState placed = item.getBlock().getStateForPlacement(context(level, target, facing, stack.copyWithCount(1)));
         return placed != null && placed.canSurvive(level, target);
     }
 
-    /** The push is over: the block goes down in front; if the spot was taken it waits, if it cannot stand there it goes back. */
     private void finishPush(ServerLevel level, BlockPos target, Direction facing) {
         if (!level.getBlockState(target).canBeReplaced()) {
             return;
@@ -290,7 +280,6 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
         sync();
     }
 
-    /** What the golem holds goes back into the network, or drops if it cannot. */
     private void giveBack(Level level) {
         if (carrying.isEmpty()) {
             return;
@@ -302,19 +291,16 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
         carrying = ItemStack.EMPTY;
     }
 
-    /** Broken or replaced: the block in the golem's hands goes back, the upgrades drop. */
     public void dropContents() {
         if (level == null || level.isClientSide()) {
             return;
         }
         giveBack(level);
-        net.minecraft.world.Containers.dropContents(level, worldPosition, upgrades);
+        BlockEntities.dropContainers(level, worldPosition, upgrades);
     }
 
     private void sync() {
-        if (level != null && !level.isClientSide()) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 2);
-        }
+        BlockEntities.sendUpdate(this, 2);
     }
 
     // ----------------------------------------------------------- persistence
@@ -342,7 +328,9 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
             order = Math.floorMod(tag.contains("Order") ? tag.getInt("Order") : IN_ORDER, 3);
             next = Math.floorMod(tag.getInt("Next"), FILTER_SLOTS);
         }
-        carrying = tag.contains("Carrying") ? ItemStack.parseOptional(registries, tag.getCompound("Carrying")) : ItemStack.EMPTY;
+        carrying = tag.contains("Carrying")
+                ? ItemStack.parseOptional(registries, tag.getCompound("Carrying"))
+                : ItemStack.EMPTY;
         pushStart = tag.getLong("PushStart");
         pushTicks = Math.max(1, tag.contains("PushTicks") ? tag.getInt("PushTicks") : 2);
     }
@@ -377,7 +365,7 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
     }
 
     @Override
-    public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider registries) {
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider registries) {
         handleUpdateTag(pkt.getTag(), registries);
     }
 }

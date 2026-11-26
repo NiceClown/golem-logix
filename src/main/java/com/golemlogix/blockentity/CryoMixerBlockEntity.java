@@ -2,6 +2,7 @@ package com.golemlogix.blockentity;
 
 import com.golemlogix.config.GolemConfig;
 import com.golemlogix.init.ModBlockEntities;
+import com.golemlogix.system.AutoOutput;
 import com.golemlogix.system.CryoSource;
 import com.golemlogix.upgrade.RedstoneControl;
 import com.golemlogix.upgrade.RedstoneMode;
@@ -12,9 +13,13 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -24,17 +29,20 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
 import net.neoforged.neoforge.items.IItemHandler;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
 
 /**
- * The Cryo-Mixer's work: water and Liquid Cryo-Source from its two flasks freeze into snow blocks (the fast mode) or ice (the slow
- * one), one block at a time, into the tray. Compressed Co-Processors each add the base speed once more; a Redstone Module decides
- * when it may work (a pulse makes one block). From outside the flasks only take fluids (water into the left, Cryo-Source into the
- * right) and the tray only gives.
+ * Cryo-Mixer: freezes water and Liquid Cryo-Source into snow blocks (fast) or ice (slow) in its output tray.
+ * Compressed Co-Processors scale speed; a Redstone Module gates work (one block per pulse).
  */
 public class CryoMixerBlockEntity extends BlockEntity {
     public static final int WATER_TANK = 8000, CRYO_TANK = 4000;
+    /** Status values shown in the GUI. */
+    public static final int WORKING = 1, NO_WATER = 2, NO_CRYO = 3, TRAY_FULL = 4, PAUSED = 5;
 
-    /** What the mixer makes: the fast snow or the slow ice. */
+    /** Output mode: fast snow blocks or slow ice blocks. */
     public enum Mode {
         SNOW, ICE;
 
@@ -59,22 +67,19 @@ public class CryoMixerBlockEntity extends BlockEntity {
         }
     }
 
-    /** What the mixer is doing (for the window): working, or what it waits for. */
-    public static final int WORKING = 1, NO_WATER = 2, NO_CRYO = 3, TRAY_FULL = 4, PAUSED = 5;
-
     private final FluidTank water = new FluidTank(WATER_TANK, fs -> fs.getFluid().isSame(Fluids.WATER)) {
         @Override
         protected void onContentsChanged() {
-            changed();
+            setChanged();
         }
     };
     private final FluidTank cryo = new FluidTank(CRYO_TANK, CryoSource::is) {
         @Override
         protected void onContentsChanged() {
-            changed();
+            setChanged();
         }
     };
-    /** What pipes, buses and buckets see: two tanks that only take, each its own fluid (the flasks for other mods, filling only). */
+    /** External fluid view: two fill-only flasks (water left, Liquid Cryo-Source right). */
     private final IFluidHandler input = new IFluidHandler() {
         @Override
         public int getTanks() {
@@ -114,7 +119,6 @@ public class CryoMixerBlockEntity extends BlockEntity {
             return FluidStack.EMPTY;
         }
     };
-    /** The tray: one stack of snow or ice, nothing goes in from outside. */
     private final OwnedContainer output = new OwnedContainer(1, this, s -> false);
     private final IItemHandler tray = new IItemHandler() {
         @Override
@@ -161,8 +165,9 @@ public class CryoMixerBlockEntity extends BlockEntity {
     };
     private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.MIXER, this);
     private final RedstoneControl redstone = new RedstoneControl();
+    private final List<BlockPos> autoOutputCells;
+
     private Mode mode = Mode.SNOW;
-    /** Auto-output (on by default): the tray hands its blocks to a neighbouring Pattern Provider first, otherwise to any inventory. */
     private boolean autoOutput = true;
     private int progress;
     private int status;
@@ -170,19 +175,26 @@ public class CryoMixerBlockEntity extends BlockEntity {
     private boolean working;
     private boolean dirty;
     private long lastSync = -100;
-    private String sent = "";
+    /** Quantized visual state last broadcast to clients (avoids allocating a summary String). */
+    private int sentWater = -1, sentCryo = -1, sentTrayCount = -1;
+    @Nullable
+    private Item sentTrayItem;
+    private boolean sentWorking;
+    @Nullable
+    private Mode sentMode;
+
     // client
     private int clientWater, clientCryo, clientTray;
     private boolean clientWorking;
     private Mode clientMode = Mode.SNOW;
-    /** Client: how hard it works 0..1, the flask levels 0..1, the gear's turn. */
+    /** Client animation state: work spin 0..1, flask fill 0..1, gear angle. */
     public float work, workPrev, waterLevel, waterPrev, cryoLevel, cryoPrev, phase, phasePrev;
 
     public CryoMixerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.CRYO_MIXER.get(), pos, state);
+        this.autoOutputCells = List.of(pos.immutable(), pos.above().immutable());
     }
 
-    /** The tray for buses, hoppers and other mods (taking only). */
     public IItemHandler tray() {
         return tray;
     }
@@ -215,7 +227,7 @@ public class CryoMixerBlockEntity extends BlockEntity {
         if (this.mode != mode) {
             this.mode = mode;
             progress = 0;
-            changed();
+            setChanged();
         }
     }
 
@@ -227,7 +239,6 @@ public class CryoMixerBlockEntity extends BlockEntity {
         return autoOutput;
     }
 
-    /** Ticks one block takes now: the mode's time shared between the base speed and every co-processor. */
     public int ticksPerBlock() {
         return Math.max(1, (int) Math.ceil(mode.ticks() / (double) (1 + upgrades.count(UpgradeType.SPEED))));
     }
@@ -238,10 +249,6 @@ public class CryoMixerBlockEntity extends BlockEntity {
         super.setChanged();
     }
 
-    private void changed() {
-        setChanged();
-    }
-
     public void serverTick() {
         long now = level.getGameTime();
         boolean hasRedstone = upgrades.has(UpgradeType.REDSTONE);
@@ -250,12 +257,12 @@ public class CryoMixerBlockEntity extends BlockEntity {
             redstone.observe(powered);
         }
         work(hasRedstone, powered, now);
-        if (autoOutput && !output.getItem(0).isEmpty() && now % com.golemlogix.system.AutoOutput.INTERVAL == 0) {
-            ItemStack tray = output.getItem(0);
-            ItemStack rest = com.golemlogix.system.AutoOutput.push(level, java.util.List.of(worldPosition, worldPosition.above()), tray);
-            if (rest.getCount() != tray.getCount()) {
+        if (autoOutput && !output.getItem(0).isEmpty() && now % AutoOutput.INTERVAL == 0) {
+            ItemStack trayStack = output.getItem(0);
+            ItemStack rest = AutoOutput.push(level, autoOutputCells, trayStack);
+            if (rest.getCount() != trayStack.getCount()) {
                 output.setItem(0, rest);
-                changed();
+                setChanged();
             }
         }
         boolean nowWorking = now - lastWork < 10;
@@ -265,20 +272,33 @@ public class CryoMixerBlockEntity extends BlockEntity {
         }
         if (dirty && now - lastSync >= 10) {
             dirty = false;
-            String state = (water.getFluidAmount() * 20 / WATER_TANK) + "/" + (cryo.getFluidAmount() * 20 / CRYO_TANK) + "/"
-                    + Math.min(3, output.getItem(0).getCount()) + "/" + output.getItem(0).getItem() + "/" + working + "/" + mode;
-            if (!state.equals(sent)) {
-                sent = state;
-                lastSync = now;
-                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-            }
+            syncIfVisuallyChanged(now);
+        }
+    }
+
+    private void syncIfVisuallyChanged(long now) {
+        int w = water.getFluidAmount() * 20 / WATER_TANK;
+        int c = cryo.getFluidAmount() * 20 / CRYO_TANK;
+        ItemStack trayStack = output.getItem(0);
+        int trayCount = Math.min(3, trayStack.getCount());
+        Item trayItem = trayStack.getItem();
+        if (w != sentWater || c != sentCryo || trayCount != sentTrayCount
+                || trayItem != sentTrayItem || working != sentWorking || mode != sentMode) {
+            sentWater = w;
+            sentCryo = c;
+            sentTrayCount = trayCount;
+            sentTrayItem = trayItem;
+            sentWorking = working;
+            sentMode = mode;
+            lastSync = now;
+            BlockEntities.sendUpdate(this);
         }
     }
 
     private void work(boolean hasRedstone, boolean powered, long now) {
-        net.minecraft.world.item.Item expected = mode == Mode.SNOW ? Items.SNOW_BLOCK : Items.ICE;
-        ItemStack tray = output.getItem(0);
-        if (!tray.isEmpty() && (!tray.is(expected) || tray.getCount() >= tray.getMaxStackSize())) {
+        Item expected = mode == Mode.SNOW ? Items.SNOW_BLOCK : Items.ICE;
+        ItemStack trayStack = output.getItem(0);
+        if (!trayStack.isEmpty() && (!trayStack.is(expected) || trayStack.getCount() >= trayStack.getMaxStackSize())) {
             status = TRAY_FULL;
             return;
         }
@@ -290,7 +310,7 @@ public class CryoMixerBlockEntity extends BlockEntity {
             status = NO_CRYO;
             return;
         }
-        // a new block starts only when the module allows it (a pulse is used up here); a started block is finished
+        // a new block consumes a pulse when starting; an in-progress block runs to completion
         boolean allowed = progress == 0 ? redstone.allows(hasRedstone, powered, true)
                 : redstone.mode() == RedstoneMode.PULSE || redstone.allows(hasRedstone, powered, false);
         if (!allowed) {
@@ -306,20 +326,19 @@ public class CryoMixerBlockEntity extends BlockEntity {
         progress = 0;
         water.drain(mode.water(), IFluidHandler.FluidAction.EXECUTE);
         cryo.drain(mode.cryo(), IFluidHandler.FluidAction.EXECUTE);
-        if (tray.isEmpty()) {
+        if (trayStack.isEmpty()) {
             output.setItem(0, mode.output());
         } else {
-            tray.grow(1);
+            trayStack.grow(1);
             output.setChanged();
         }
         level.playSound(null, worldPosition, mode == Mode.SNOW ? SoundEvents.SNOW_PLACE : SoundEvents.GLASS_PLACE, SoundSource.BLOCKS,
                 0.45f, mode == Mode.SNOW ? 1.1f : 1.4f);
-        changed();
+        setChanged();
     }
 
-    /** The window's numbers: water, Cryo-Source, progress, ticks a block, mode, status, co-processors, redstone mode, auto-output. */
-    public net.minecraft.world.inventory.ContainerData menuData() {
-        return new net.minecraft.world.inventory.ContainerData() {
+    public ContainerData menuData() {
+        return new ContainerData() {
             @Override
             public int get(int index) {
                 return switch (index) {
@@ -357,10 +376,7 @@ public class CryoMixerBlockEntity extends BlockEntity {
     }
 
     public void dropContents() {
-        if (level != null && !level.isClientSide()) {
-            net.minecraft.world.Containers.dropContents(level, worldPosition, output);
-            net.minecraft.world.Containers.dropContents(level, worldPosition, upgrades);
-        }
+        BlockEntities.dropContainers(level, worldPosition, output, upgrades);
     }
 
     // ----------------------------------------------------------------- client
@@ -383,7 +399,6 @@ public class CryoMixerBlockEntity extends BlockEntity {
         cryoLevel += (clientCryo / 20f - cryoLevel) * 0.1f;
         phase += 0.01f + 0.2f * work;
         if (clientWorking && level.getRandom().nextInt(5) == 0) {
-            // frost breathing out of the louvres
             double side = level.getRandom().nextBoolean() ? 0.08 : 0.92;
             level.addParticle(ParticleTypes.SNOWFLAKE, worldPosition.getX() + side, worldPosition.getY() + 0.6,
                     worldPosition.getZ() + 0.5 + (level.getRandom().nextDouble() - 0.5) * 0.6, 0, 0.01, 0);
@@ -410,8 +425,8 @@ public class CryoMixerBlockEntity extends BlockEntity {
         super.loadAdditional(tag, registries);
         water.readFromNBT(registries, tag.getCompound("Water"));
         cryo.readFromNBT(registries, tag.getCompound("Cryo"));
-        output.fromTag(tag.getList("Output", net.minecraft.nbt.Tag.TAG_COMPOUND), registries);
-        upgrades.fromTag(tag.getList("Upgrades", net.minecraft.nbt.Tag.TAG_COMPOUND), registries);
+        output.fromTag(tag.getList("Output", Tag.TAG_COMPOUND), registries);
+        upgrades.fromTag(tag.getList("Upgrades", Tag.TAG_COMPOUND), registries);
         mode = Mode.byId(tag.getInt("Mode"));
         progress = tag.getInt("Progress");
         autoOutput = !tag.contains("AutoOutput") || tag.getBoolean("AutoOutput");
@@ -445,7 +460,7 @@ public class CryoMixerBlockEntity extends BlockEntity {
     }
 
     @Override
-    public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider registries) {
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider registries) {
         handleUpdateTag(pkt.getTag(), registries);
     }
 }

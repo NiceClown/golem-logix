@@ -1,7 +1,9 @@
 package com.golemlogix.blockentity;
 
 import com.golemlogix.blocks.CryoJarBlock;
+import com.golemlogix.blocks.JarForm;
 import com.golemlogix.init.ModBlockEntities;
+import com.golemlogix.system.JarMerge;
 import com.golemlogix.system.SourceHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -14,20 +16,19 @@ import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The Source of a Cryo-Source Jar. The lower half keeps it; the upper half's entity only stands for the jar (so a pipe touching the
- * top counts too) and hands every call to the lower one. To the network the jar is a Source supplier like an Ars Nouveau jar.
+ * Cryo-Source Jar: stores Source in the lower half (or controller corner of a merged multi-jar); upper and non-controller
+ * parts forward every query and transfer to {@link #owner()}.
  */
 public class CryoJarBlockEntity extends BlockEntity implements SourceHelper.Supplier {
     private int source;
-    /** Of a jar in a joined whole (see JarMerge): the lower half of the corner that holds its Source. */
     @Nullable
     private BlockPos controller;
     private boolean dirty;
     private long lastSync = -100;
     private int sentSource = -1;
+
     // client
     private int clientSource;
-    /** Client: the shown level 0..1 (eases towards the real one) and the previous tick's. */
     public float fill, fillPrev;
 
     public CryoJarBlockEntity(BlockPos pos, BlockState state) {
@@ -39,7 +40,6 @@ public class CryoJarBlockEntity extends BlockEntity implements SourceHelper.Supp
         return !s.hasProperty(CryoJarBlock.HALF) || s.getValue(CryoJarBlock.HALF) == DoubleBlockHalf.LOWER;
     }
 
-    /** The entity that keeps the Source: of a jar, its lower half; of a joined whole, its corner (null while it is half broken). */
     @Nullable
     public CryoJarBlockEntity owner() {
         CryoJarBlockEntity lower = isLower() ? this
@@ -61,21 +61,19 @@ public class CryoJarBlockEntity extends BlockEntity implements SourceHelper.Supp
         setChanged();
     }
 
-    /** Whether this is the corner that holds a whole's Source and draws it. */
     public boolean isController() {
         return worldPosition.equals(controller);
     }
 
-    public com.golemlogix.blocks.JarForm form() {
+    public JarForm form() {
         BlockState s = getBlockState();
-        return s.hasProperty(CryoJarBlock.FORM) ? s.getValue(CryoJarBlock.FORM) : com.golemlogix.blocks.JarForm.SINGLE;
+        return s.hasProperty(CryoJarBlock.FORM) ? s.getValue(CryoJarBlock.FORM) : JarForm.SINGLE;
     }
 
     public int capacity() {
-        return com.golemlogix.system.JarMerge.capacity(form());
+        return JarMerge.capacity(form());
     }
 
-    /** Joining and parting: all of this entity's own Source comes out. */
     public int takeAll() {
         int all = source;
         source = 0;
@@ -83,7 +81,6 @@ public class CryoJarBlockEntity extends BlockEntity implements SourceHelper.Supp
         return all;
     }
 
-    /** Joining and parting: this entity's own Source is now this. */
     public void putAll(int amount) {
         source = amount;
         changed();
@@ -114,7 +111,6 @@ public class CryoJarBlockEntity extends BlockEntity implements SourceHelper.Supp
         return take;
     }
 
-    /** Pours Source in; returns how much went in (simulate: only how much would). */
     public int fill(int amount, boolean simulate) {
         CryoJarBlockEntity o = owner();
         if (o == null || o.isRemoved() || amount <= 0) {
@@ -135,30 +131,34 @@ public class CryoJarBlockEntity extends BlockEntity implements SourceHelper.Supp
 
     public void serverTick() {
         long now = level.getGameTime();
-        // the level is shown in steps of 1%: clients get it at most twice a second, and not for every drop
-        if (dirty && now - lastSync >= 10) {
-            dirty = false;
-            int cap = capacity();
-            int step = Math.max(1, cap / 100);
-            if (sentSource < 0 || Math.abs(source - sentSource) >= step || (source == 0) != (sentSource == 0)
-                    || (source == cap) != (sentSource == cap)) {
-                sentSource = source;
-                lastSync = now;
-                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-                level.updateNeighbourForOutputSignal(worldPosition, getBlockState().getBlock());
-                if (level.isLoaded(worldPosition.above())) {
-                    level.updateNeighbourForOutputSignal(worldPosition.above(), getBlockState().getBlock());
-                }
-                // every jar (and upper half) of a whole shows the shared level to comparators, but only this corner changes
-                com.golemlogix.blocks.JarForm f = form();
-                if (f != com.golemlogix.blocks.JarForm.SINGLE && isController()) {
-                    for (BlockPos cell : com.golemlogix.system.JarMerge.cells(worldPosition, f.width())) {
-                        if (!cell.equals(worldPosition) && level.isLoaded(cell)) {
-                            level.updateNeighbourForOutputSignal(cell, getBlockState().getBlock());
-                            if (level.isLoaded(cell.above())) {
-                                level.updateNeighbourForOutputSignal(cell.above(), getBlockState().getBlock());
-                            }
-                        }
+        if (!dirty || now - lastSync < 10) {
+            return;
+        }
+        dirty = false;
+        int cap = capacity();
+        int step = Math.max(1, cap / 100);
+        if (sentSource < 0 || Math.abs(source - sentSource) >= step
+                || (source == 0) != (sentSource == 0) || (source == cap) != (sentSource == cap)) {
+            sentSource = source;
+            lastSync = now;
+            BlockEntities.sendUpdate(this);
+            updateComparators();
+        }
+    }
+
+    private void updateComparators() {
+        var block = getBlockState().getBlock();
+        level.updateNeighbourForOutputSignal(worldPosition, block);
+        if (level.isLoaded(worldPosition.above())) {
+            level.updateNeighbourForOutputSignal(worldPosition.above(), block);
+        }
+        JarForm f = form();
+        if (f != JarForm.SINGLE && isController()) {
+            for (BlockPos cell : JarMerge.cells(worldPosition, f.width())) {
+                if (!cell.equals(worldPosition) && level.isLoaded(cell)) {
+                    level.updateNeighbourForOutputSignal(cell, block);
+                    if (level.isLoaded(cell.above())) {
+                        level.updateNeighbourForOutputSignal(cell.above(), block);
                     }
                 }
             }
@@ -171,7 +171,6 @@ public class CryoJarBlockEntity extends BlockEntity implements SourceHelper.Supp
         fill += (Math.min(1f, target) - fill) * 0.12f;
     }
 
-    /** Client: the Source the jar holds (as last sent). */
     public int clientSource() {
         return clientSource;
     }
@@ -209,7 +208,6 @@ public class CryoJarBlockEntity extends BlockEntity implements SourceHelper.Supp
         clientSource = tag.getInt("Source");
         controller = tag.contains("Controller") ? BlockPos.of(tag.getLong("Controller")) : null;
         if (fill == 0f && fillPrev == 0f) {
-            // a jar seen for the first time shows its level at once, without filling up in front of the player
             fill = fillPrev = Math.min(1f, clientSource / (float) Math.max(1, capacity()));
         }
     }

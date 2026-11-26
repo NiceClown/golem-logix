@@ -2,36 +2,44 @@ package com.golemlogix.blockentity;
 
 import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.menu.Priority;
+import com.golemlogix.system.Fuzzy;
+import com.golemlogix.system.GolemNetwork;
+import com.golemlogix.system.TargetCaps;
 import com.golemlogix.upgrade.RedstoneControl;
 import com.golemlogix.upgrade.RedstoneMode;
 import com.golemlogix.upgrade.UpgradeContainer;
 import com.golemlogix.upgrade.UpgradeSpec;
 import com.golemlogix.upgrade.UpgradeType;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.fluids.FluidStack;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * Periscope: the external storage it connects, as a storage bus of AE2 or RS - its priority, its access (both ways, insert only,
- * extract only: an insert-only storage shows nothing in the terminal), a filter of what may go in and out of it (an allow list, or
- * a deny list; fuzzy with a Fuzzy Card; a bucket stands for its fluid; empty: everything) and a Redstone Module that can switch it
- * on and off.
+ * Periscope Storage Bus: attaches an external container or tank to the network with configurable priority,
+ * access direction (both / insert-only / extract-only), allow/deny + fuzzy filters, and redstone gating.
  */
 public class PeriscopeBlockEntity extends BlockEntity {
     public static final int FILTER_SLOTS = 9;
-    /** Access modes. */
     public static final int BOTH = 0, INSERT_ONLY = 1, EXTRACT_ONLY = 2;
+
     private int priority = 0;
     private final UpgradeContainer upgrades = new UpgradeContainer(UpgradeSpec.PERISCOPE, this, this::invalidateNetwork);
     private final RedstoneControl redstone = new RedstoneControl();
     private final OwnedContainer filters = new OwnedContainer(FILTER_SLOTS, this, s -> true);
     private int access = BOTH;
     private boolean denyList;
+    @Nullable
+    private TargetCaps caps;
 
     public PeriscopeBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.PERISCOPE.get(), pos, state);
@@ -47,10 +55,9 @@ public class PeriscopeBlockEntity extends BlockEntity {
         invalidateNetwork();
     }
 
-    /** The network caches connected storages with their priority and redstone enabled state. */
     private void invalidateNetwork() {
         if (level != null && !level.isClientSide()) {
-            com.golemlogix.system.GolemNetwork.clearCache();
+            GolemNetwork.clearCache();
         }
     }
 
@@ -62,38 +69,30 @@ public class PeriscopeBlockEntity extends BlockEntity {
         return filters;
     }
 
-    private static net.neoforged.neoforge.fluids.FluidStack fluidOf(net.minecraft.world.item.ItemStack ghost) {
-        net.neoforged.neoforge.fluids.FluidStack f = com.golemlogix.items.FluidGhostItem.fluid(ghost);
-        return f.isEmpty() ? net.neoforged.neoforge.fluids.FluidUtil.getFluidContained(ghost).orElse(net.neoforged.neoforge.fluids.FluidStack.EMPTY) : f;
-    }
-
-    /** The item passes the filter: an allow list lets only what it names through, a deny list everything else; no item in it, all. */
-    public boolean passes(net.minecraft.world.item.ItemStack stack) {
+    public boolean passes(ItemStack stack) {
         boolean fuzzy = upgrades.has(UpgradeType.FUZZY), any = false;
         for (int i = 0; i < FILTER_SLOTS; i++) {
-            net.minecraft.world.item.ItemStack f = filters.getItem(i);
-            if (f.isEmpty() || !fluidOf(f).isEmpty()) {
+            ItemStack f = filters.getItem(i);
+            if (f.isEmpty() || !BlockEntities.ghostFluid(f).isEmpty()) {
                 continue;
             }
             any = true;
-            if (com.golemlogix.system.Fuzzy.matches(f, stack, fuzzy)) {
+            if (Fuzzy.matches(f, stack, fuzzy)) {
                 return !denyList;
             }
         }
         return !any || denyList;
     }
 
-    /** The same for a fluid, by the buckets (fluid ghosts) in the filter. */
-    public boolean passes(net.neoforged.neoforge.fluids.FluidStack fluid) {
+    public boolean passes(FluidStack fluid) {
         boolean fuzzy = upgrades.has(UpgradeType.FUZZY), any = false;
         for (int i = 0; i < FILTER_SLOTS; i++) {
-            net.neoforged.neoforge.fluids.FluidStack f = fluidOf(filters.getItem(i));
+            FluidStack f = BlockEntities.ghostFluid(filters.getItem(i));
             if (f.isEmpty()) {
                 continue;
             }
             any = true;
-            boolean match = fuzzy ? net.neoforged.neoforge.fluids.FluidStack.isSameFluid(f, fluid)
-                    : net.neoforged.neoforge.fluids.FluidStack.isSameFluidSameComponents(f, fluid);
+            boolean match = fuzzy ? FluidStack.isSameFluid(f, fluid) : FluidStack.isSameFluidSameComponents(f, fluid);
             if (match) {
                 return !denyList;
             }
@@ -101,35 +100,28 @@ public class PeriscopeBlockEntity extends BlockEntity {
         return !any || denyList;
     }
 
-    /** The network may put this into the storage. */
-    public boolean mayInsert(net.minecraft.world.item.ItemStack stack) {
+    public boolean mayInsert(ItemStack stack) {
         return access != EXTRACT_ONLY && passes(stack);
     }
 
-    /** The network sees this in the storage and may take it out. */
-    public boolean mayExtract(net.minecraft.world.item.ItemStack stack) {
+    public boolean mayExtract(ItemStack stack) {
         return access != INSERT_ONLY && passes(stack);
     }
 
-    public boolean mayInsert(net.neoforged.neoforge.fluids.FluidStack fluid) {
+    public boolean mayInsert(FluidStack fluid) {
         return access != EXTRACT_ONLY && passes(fluid);
     }
 
-    public boolean mayExtract(net.neoforged.neoforge.fluids.FluidStack fluid) {
+    public boolean mayExtract(FluidStack fluid) {
         return access != INSERT_ONLY && passes(fluid);
     }
 
-    /** The handlers of the storage in front (server), looked up once and kept until the block there changes. */
-    public com.golemlogix.system.TargetCaps targetCaps(net.minecraft.server.level.ServerLevel level, BlockPos target, net.minecraft.core.Direction face) {
-        caps = com.golemlogix.system.TargetCaps.of(caps, level, target, face, () -> !isRemoved(), () -> {
+    public TargetCaps targetCaps(ServerLevel level, BlockPos target, Direction face) {
+        caps = TargetCaps.of(caps, level, target, face, () -> !isRemoved(), () -> {
         });
         return caps;
     }
 
-    @org.jetbrains.annotations.Nullable
-    private com.golemlogix.system.TargetCaps caps;
-
-    /** Whether the storage is connected now (with a Redstone Module, by signal; pulse mode makes no sense here). */
     public boolean storageEnabled() {
         if (level == null || !upgrades.has(UpgradeType.REDSTONE)) {
             return true;
