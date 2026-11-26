@@ -287,4 +287,33 @@ public final class CoreRegressionTests {
             helper.succeed();
         });
     }
+
+    /** A global serverVersion bump from an unrelated network must not bump an unchanged network's epoch, while a real change must. */
+    @GameTest(template = T, timeoutTicks = 60)
+    public static void coreUnrelatedCacheClearPreservesNetworkEpoch(GameTestHelper helper) {
+        BlockPos bushing = buildTinyNetwork(helper);
+        BlockPos absBushing = helper.absolutePos(bushing);
+
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork before = GolemNetwork.get(helper.getLevel(), absBushing);
+            before.insertItem(new ItemStack(Items.COBBLESTONE, 1), false);
+            long epochBefore = before.networkEpoch();
+            helper.assertTrue(epochBefore > 0, "insert should bump networkEpoch");
+
+            // Simulate an unrelated network invalidating the global server cache version
+            GolemNetwork.clearCache();
+            GolemNetwork afterUnrelated = GolemNetwork.get(helper.getLevel(), absBushing);
+            helper.assertTrue(afterUnrelated != before, "cache clear should trigger a fresh scan");
+            helper.assertTrue(afterUnrelated.networkEpoch() == epochBefore,
+                    "unrelated serverVersion bump must preserve unchanged network's epoch: expected "
+                            + epochBefore + ", got " + afterUnrelated.networkEpoch());
+
+            // A real change to this network's own topology must bump its epoch
+            helper.setBlock(bushing.west(), ModBlocks.BASIC_SNOW_PIPE.get());
+            GolemNetwork afterOwnChange = GolemNetwork.get(helper.getLevel(), absBushing);
+            helper.assertTrue(afterOwnChange.networkEpoch() > epochBefore,
+                    "real topology change on this network must bump networkEpoch");
+            helper.succeed();
+        });
+    }
 }
