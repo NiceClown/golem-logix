@@ -48,18 +48,24 @@ public final class GhostHud {
             default -> TITLE_TOWER;
         };
         Map<Item, Integer> missing = GhostProjection.cachedMissingItems(mc.level);
+        Component state = GhostProjection.anchor() == null ? STATE_AIM
+                : GhostProjection.isLocked() ? STATE_LOCKED : STATE_FOLLOWING;
+        Component hint = Component.translatable("gui.golem_logix.ghost.keys",
+                GolemKeys.GHOST_CONFIRM.getTranslatedKeyMessage(), GolemKeys.GHOST_CANCEL.getTranslatedKeyMessage());
+        boolean complete = GhostProjection.anchor() != null && missing.isEmpty();
         int rows = Math.max(1, missing.size());
-        int w = 176;
+        int w = Math.max(176, Math.max(font.width(title), Math.max(font.width(state), font.width(hint))) + 6);
+        if (complete) {
+            w = Math.max(w, font.width(COMPLETE) + 6);
+        }
         int h = 38 + rows * 18 + 14;
         g.fill(x - 4, y - 4, x + w, y + h, 0xC0140D09);
         g.fill(x - 4, y - 4, x + w, y - 3, 0xFFB8862B);
         g.text(font, title, x, y, 0xFFF2D070, true);
-        Component state = GhostProjection.anchor() == null ? STATE_AIM
-                : GhostProjection.isLocked() ? STATE_LOCKED : STATE_FOLLOWING;
         g.text(font, state, x, y + 11, GhostProjection.isLocked() ? 0xFF6FD68A : 0xFF38D9D6, true);
 
         int yy = y + 26;
-        if (GhostProjection.anchor() != null && missing.isEmpty()) {
+        if (complete) {
             g.text(font, COMPLETE, x, yy + 4, 0xFF6FD68A, true);
         } else {
             for (Map.Entry<Item, Integer> e : missing.entrySet()) {
@@ -69,8 +75,6 @@ public final class GhostHud {
                 yy += 18;
             }
         }
-        Component hint = Component.translatable("gui.golem_logix.ghost.keys",
-                GolemKeys.GHOST_CONFIRM.getTranslatedKeyMessage(), GolemKeys.GHOST_CANCEL.getTranslatedKeyMessage());
         g.text(font, hint, x, y + h - 14, 0xFF9A8E78, false);
     }
 }
