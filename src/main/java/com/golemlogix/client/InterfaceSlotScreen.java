@@ -1,6 +1,7 @@
 package com.golemlogix.client;
 
 import com.golemlogix.blockentity.InterfaceBlockEntity;
+import com.golemlogix.items.FluidGhostItem;
 import com.golemlogix.menu.InterfaceMenu;
 import com.golemlogix.network.InterfaceAmountPayload;
 import net.minecraft.ChatFormatting;
@@ -10,21 +11,26 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Settings window for one Interface slot (the gear under the slot or a click on it with an empty hand): what to keep, how much
  * (items or mB), quick step buttons and preset values, fluid/item mode, clearing. The number can also be typed:
- * for fluids in mB or in buckets with the letter B ("16B"). With a Fuzzy Card an item slot also lists what may stand for it (the
- * item with any components, or one of its tags) - one click picks. Enter applies, Esc goes back without changes.
+ * for fluids in mB or in buckets with the letter B ("16B"). With a Fuzzy Card an item slot also lists matching tags.
+ * Enter applies, Esc goes back without changes.
  */
 public class InterfaceSlotScreen extends Screen {
     private static final int W = 176, BASE_H = 150;
     /** Where the fuzzy tag list starts (below the typing hint). */
     private static final int TAG_Y = 128;
+
+    private static final Component LABEL_KEEP_ITEMS = Component.translatable("gui.golem_logix.interface.keep_items");
+    private static final Component LABEL_AMOUNT = Component.translatable("gui.golem_logix.interface.amount");
+    private static final Component LABEL_TYPE_HINT = Component.translatable("gui.golem_logix.interface.type_hint").withStyle(ChatFormatting.ITALIC);
+    private static final Component TOGGLE_MODE_TIP = Component.translatable("gui.golem_logix.interface.toggle_mode");
 
     private final InterfaceScreen parent;
     private final InterfaceMenu menu;
@@ -45,6 +51,10 @@ public class InterfaceSlotScreen extends Screen {
         this.slot = slot;
     }
 
+    static String bucketText(int mb) {
+        return SlotAmountHelper.bucketText(mb);
+    }
+
     @Override
     protected void init() {
         picker = !menu.canCycleFuzzy(slot) ? null : picker != null ? picker : new TagPicker(menu, slot, menu.configItem(slot));
@@ -61,56 +71,39 @@ public class InterfaceSlotScreen extends Screen {
         synced = menu.amount(slot);
         String initial = amount != null && !modeChanged ? amount.getValue() : Integer.toString(synced);
 
-        amount = new EditBox(font, left + 62, top + 50, 58, 12, Component.empty());
-        amount.setBordered(false);
-        amount.setMaxLength(7);
-        amount.setFilter(s -> s.isEmpty() || s.matches("\\d{1,6}[bBвВ]?"));
-        amount.setTextColor(GolemGui.PARCHMENT);
-        amount.setValue(initial);
+        amount = SlotAmountHelper.createAmountBox(font, left + 62, top + 50, 58, 7, "\\d{1,6}[bBвВ]?", initial);
         addRenderableWidget(amount);
         setInitialFocus(amount);
 
-        int[] deltas = fluid ? new int[]{-10_000, -1000, -100, 100, 1000, 10_000} : new int[]{-64, -10, -1, 1, 10, 64};
+        int[] deltas = fluid ? SlotAmountHelper.FLUID_DELTAS : SlotAmountHelper.ITEM_DELTAS;
         for (int k = 0; k < deltas.length; k++) {
             int d = deltas[k];
-            addRenderableWidget(new GolemButton(left + 8 + k * 27, top + 70, 25, 14, Component.literal(deltaLabel(d)), b -> change(d)));
+            addRenderableWidget(new GolemButton(left + 8 + k * 27, top + 70, 25, 14,
+                    Component.literal(SlotAmountHelper.deltaLabel(d)), b -> change(d)));
         }
         List<Integer> presets = presets();
         int pw = (160 - (presets.size() - 1) * 2) / presets.size();
         for (int k = 0; k < presets.size(); k++) {
             int p = presets.get(k);
-            addRenderableWidget(new GolemButton(left + 8 + k * (pw + 2), top + 88, pw, 14, Component.literal(presetLabel(p)), b -> set(p)));
+            addRenderableWidget(new GolemButton(left + 8 + k * (pw + 2), top + 88, pw, 14,
+                    Component.literal(fluid ? SlotAmountHelper.bucketText(p) : Integer.toString(p)), b -> set(p)));
         }
 
-        boolean container = !com.golemlogix.items.FluidGhostItem.is(menu.configItem(slot))
-                && !InterfaceBlockEntity.containedFluid(menu.configItem(slot)).isEmpty();
+        ItemStack cfg = menu.configItem(slot);
+        boolean container = !FluidGhostItem.is(cfg) && !InterfaceBlockEntity.containedFluid(cfg).isEmpty();
         GolemButton mode = addRenderableWidget(new GolemButton(left + 8, top + h - 24, 70, 16,
                 () -> Component.translatable(menu.itemMode(slot) ? "gui.golem_logix.interface.mode_item" : "gui.golem_logix.interface.mode_fluid"),
-                () -> Component.translatable("gui.golem_logix.interface.toggle_mode"), () -> false, b -> toggleMode()));
+                () -> TOGGLE_MODE_TIP, () -> false, b -> toggleMode()));
         // only containers with fluid have a mode
         mode.visible = container;
-        addRenderableWidget(new GolemButton(left + 80, top + h - 24, 42, 16, Component.translatable("gui.golem_logix.interface.clear"), b -> {
-            net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new InterfaceAmountPayload(menu.containerId, slot, -1));
+        addRenderableWidget(new GolemButton(left + 80, top + h - 24, 42, 16, SlotAmountHelper.CLEAR_LABEL, b -> {
+            ClientPacketDistributor.sendToServer(new InterfaceAmountPayload(menu.containerId, slot, -1));
             onClose();
         }));
-        addRenderableWidget(new GolemButton(left + 124, top + h - 24, 44, 16, Component.translatable("gui.golem_logix.interface.done"), b -> {
+        addRenderableWidget(new GolemButton(left + 124, top + h - 24, 44, 16, SlotAmountHelper.DONE_LABEL, b -> {
             apply();
             onClose();
         }));
-    }
-
-    private static String deltaLabel(int d) {
-        String sign = d > 0 ? "+" : "-";
-        int a = Math.abs(d);
-        return sign + (a >= 1000 && a % 1000 == 0 ? a / 1000 + "B" : Integer.toString(a));
-    }
-
-    private String presetLabel(int p) {
-        return fluid ? bucketText(p) : Integer.toString(p);
-    }
-
-    static String bucketText(int mb) {
-        return mb % 1000 == 0 ? mb / 1000 + "B" : String.format(Locale.ROOT, "%.1fB", mb / 1000f);
     }
 
     /** Preset values: for fluids a bucket ... 256 buckets, for items from 1 to a stack. */
@@ -126,19 +119,8 @@ public class InterfaceSlotScreen extends Screen {
         return out;
     }
 
-    /** The entered number (the letter B, Latin or Cyrillic, means buckets), within the slot's limits. */
     private int value() {
-        String s = amount.getValue();
-        int mult = 1;
-        if (!s.isEmpty() && "bBвВ".indexOf(s.charAt(s.length() - 1)) >= 0) {
-            s = s.substring(0, s.length() - 1);
-            mult = fluid ? 1000 : 1;
-        }
-        try {
-            return clamp((int) Math.min(Integer.MAX_VALUE, Long.parseLong(s) * mult));
-        } catch (NumberFormatException e) {
-            return clamp(synced);
-        }
+        return clamp(SlotAmountHelper.parseAmount(amount.getValue(), fluid, synced));
     }
 
     private int clamp(int v) {
@@ -158,7 +140,7 @@ public class InterfaceSlotScreen extends Screen {
     }
 
     private void apply() {
-        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new InterfaceAmountPayload(menu.containerId, slot, value()));
+        ClientPacketDistributor.sendToServer(new InterfaceAmountPayload(menu.containerId, slot, value()));
     }
 
     private void toggleMode() {
@@ -229,23 +211,21 @@ public class InterfaceSlotScreen extends Screen {
         }
         Language lang = Language.getInstance();
         g.text(font, lang.getVisualOrder(font.substrByWidth(cfg.getHoverName(), W - 38)), left + 30, top + 20, GolemGui.CYAN, false);
-        var contained = InterfaceBlockEntity.containedFluid(cfg);
         Component mode = fluid
-                ? Component.translatable("gui.golem_logix.interface.keep_fluid", contained.getHoverName())
-                : Component.translatable("gui.golem_logix.interface.keep_items");
+                ? Component.translatable("gui.golem_logix.interface.keep_fluid", InterfaceBlockEntity.containedFluid(cfg).getHoverName())
+                : LABEL_KEEP_ITEMS;
         g.text(font, lang.getVisualOrder(font.substrByWidth(mode, W - 38)), left + 30, top + 30, 0xFFA89880, false);
 
-        g.text(font, Component.translatable("gui.golem_logix.interface.amount"), left + 8, top + 52, GolemGui.PARCHMENT, false);
-        g.text(font, Component.translatable(fluid ? "gui.golem_logix.interface.unit_mb" : "gui.golem_logix.interface.unit_items"),
-                left + 128, top + 50, 0xFFA89880, false);
+        g.text(font, LABEL_AMOUNT, left + 8, top + 52, GolemGui.PARCHMENT, false);
+        g.text(font, fluid ? SlotAmountHelper.UNIT_MB : SlotAmountHelper.UNIT_ITEMS, left + 128, top + 50, 0xFFA89880, false);
 
         int v = value();
         Component info = fluid
-                ? Component.translatable("gui.golem_logix.interface.fluid_info", bucketText(v), bucketText(menu.maxAmount(slot)))
+                ? Component.translatable("gui.golem_logix.interface.fluid_info",
+                SlotAmountHelper.bucketText(v), SlotAmountHelper.bucketText(menu.maxAmount(slot)))
                 : Component.translatable("gui.golem_logix.interface.item_info", menu.maxAmount(slot));
         g.text(font, lang.getVisualOrder(font.substrByWidth(info, W - 16)), left + 8, top + 106, 0xFF8A7A66, false);
-        g.text(font, lang.getVisualOrder(font.substrByWidth(Component.translatable("gui.golem_logix.interface.type_hint").withStyle(ChatFormatting.ITALIC), W - 16)),
-                left + 8, top + 115, 0xFF6A5A48, false);
+        g.text(font, lang.getVisualOrder(font.substrByWidth(LABEL_TYPE_HINT, W - 16)), left + 8, top + 115, 0xFF6A5A48, false);
 
         if (picker != null) {
             picker.extract(g, font, cfg, mouseX, mouseY);
@@ -257,8 +237,7 @@ public class InterfaceSlotScreen extends Screen {
 
     @Override
     public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
-        int keyCode = event.key();
-        if (keyCode == 257 || keyCode == 335) {
+        if (SlotAmountHelper.isEnterKey(event.key())) {
             apply();
             onClose();
             return true;
