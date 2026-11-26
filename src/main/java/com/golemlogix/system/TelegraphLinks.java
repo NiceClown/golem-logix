@@ -120,7 +120,7 @@ public final class TelegraphLinks {
         List<TelegraphBlockEntity> out = new ArrayList<>();
         for (GlobalPos r : set) {
             ServerLevel rl = sl.getServer().getLevel(r.dimension());
-            if (rl != null && rl.isLoaded(r.pos()) && rl.getBlockEntity(r.pos()) instanceof TelegraphBlockEntity rt) {
+            if (rl != null && rl.isLoaded(r.pos()) && rl.getBlockEntity(r.pos()) instanceof TelegraphBlockEntity rt && !rt.isRemoved()) {
                 out.add(rt);
             }
         }
@@ -165,7 +165,7 @@ public final class TelegraphLinks {
         if (!hostLevel.isLoaded(hostPos)) {
             return new Resolved(Status.HOST_UNLOADED, null);
         }
-        if (!(hostLevel.getBlockEntity(hostPos) instanceof TelegraphBlockEntity host)) {
+        if (!(hostLevel.getBlockEntity(hostPos) instanceof TelegraphBlockEntity host) || host.isRemoved()) {
             return new Resolved(Status.HOST_MISSING, null);
         }
         if (host.seal() != link.seal()) {
@@ -181,16 +181,21 @@ public final class TelegraphLinks {
 
     /** The telegraphs a telegraph is linked to: its host, then the receivers that are linked to it. */
     public static List<Partner> partners(Level level, BlockPos pos) {
-        if (level.isClientSide() || !(level.getBlockEntity(pos) instanceof TelegraphBlockEntity t)) {
+        if (level.isClientSide() || !level.isLoaded(pos)
+                || !(level.getBlockEntity(pos) instanceof TelegraphBlockEntity t) || t.isRemoved()) {
             return List.of();
         }
         List<Partner> out = new ArrayList<>(2);
         TelegraphBlockEntity host = hostOf(t);
         if (host != null) {
-            out.add(new Partner(new GolemNetwork.Node(host.getLevel(), host.getBlockPos()), true));
+            // if two telegraphs point at each other, avoid duplicate links and count the pair only once
+            boolean mutual = hostOf(host) == t;
+            boolean countLink = !mutual || ORDER.compare(GlobalPos.of(level.dimension(), pos),
+                    GlobalPos.of(host.getLevel().dimension(), host.getBlockPos())) < 0;
+            out.add(new Partner(new GolemNetwork.Node(host.getLevel(), host.getBlockPos()), countLink));
         }
         for (TelegraphBlockEntity r : receiversOf(t)) {
-            if (hostOf(r) == t) {
+            if (r != host && hostOf(r) == t) {
                 out.add(new Partner(new GolemNetwork.Node(r.getLevel(), r.getBlockPos()), false));
             }
         }

@@ -1,8 +1,12 @@
 package com.golemlogix.system;
 
+import com.golemlogix.GolemLogixMod;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.level.LevelEvent;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,6 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * zero, and once the server's value is right the server sees nothing to update. The client's check waits a moment, because the
  * chunk's light data arrives after its block entities.
  */
+@EventBusSubscriber(modid = GolemLogixMod.MOD_ID)
 public final class StaleLight {
     private static final int CLIENT_DELAY_TICKS = 40;
     /** Client: the cells still to check and the game time to do it. */
@@ -27,7 +32,11 @@ public final class StaleLight {
     public static void recheck(Level level, BlockPos pos) {
         BlockPos at = pos.immutable();
         if (level instanceof ServerLevel server) {
-            server.getServer().execute(() -> server.getLightEngine().checkBlock(at));
+            server.getServer().execute(() -> {
+                if (server.isLoaded(at)) {
+                    server.getLightEngine().checkBlock(at);
+                }
+            });
         } else if (level.isClientSide()) {
             CLIENT_CHECKS.put(at, level.getGameTime() + CLIENT_DELAY_TICKS);
         }
@@ -54,8 +63,15 @@ public final class StaleLight {
         });
     }
 
-    /** Client left a world: drop any queued light checks from it. */
+    /** Client left a world or changed dimensions: drop any queued light checks from it. */
     public static void forgetClient() {
         CLIENT_CHECKS.clear();
+    }
+
+    @SubscribeEvent
+    public static void onLevelUnload(LevelEvent.Unload event) {
+        if (event.getLevel() instanceof Level level && level.isClientSide()) {
+            forgetClient();
+        }
     }
 }
