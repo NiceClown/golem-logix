@@ -38,8 +38,12 @@ public class CopperTankItem extends ModBlockItem {
         super(block, tooltipKey, properties);
     }
 
+    private static SimpleFluidContent rawFluid(ItemStack stack) {
+        return stack.getOrDefault(ModDataComponents.TANK_FLUID.get(), SimpleFluidContent.EMPTY);
+    }
+
     public static FluidStack fluid(ItemStack stack) {
-        return stack.getOrDefault(ModDataComponents.TANK_FLUID.get(), SimpleFluidContent.EMPTY).copy();
+        return rawFluid(stack).copy();
     }
 
     public static int capacity(ItemStack stack) {
@@ -95,17 +99,25 @@ public class CopperTankItem extends ModBlockItem {
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (player.isSecondaryUseActive()) {
-            boolean on = !bucketMode(stack);
-            stack.set(ModDataComponents.BUCKET_MODE.get(), on);
-            if (!level.isClientSide()) {
-                player.sendOverlayMessage(Component.translatable(on ? "message.golem_logix.copper_tank.bucket_on"
-                        : "message.golem_logix.copper_tank.bucket_off"));
-            }
-            return InteractionResult.SUCCESS;
+            return toggleBucketMode(level, player, stack);
         }
         if (!bucketMode(stack)) {
             return InteractionResult.PASS;
         }
+        return useBucketMode(level, player, hand, stack);
+    }
+
+    private static InteractionResult toggleBucketMode(Level level, Player player, ItemStack stack) {
+        boolean on = !bucketMode(stack);
+        stack.set(ModDataComponents.BUCKET_MODE.get(), on);
+        if (!level.isClientSide()) {
+            player.sendOverlayMessage(Component.translatable(on ? "message.golem_logix.copper_tank.bucket_on"
+                    : "message.golem_logix.copper_tank.bucket_off"));
+        }
+        return InteractionResult.SUCCESS;
+    }
+
+    private InteractionResult useBucketMode(Level level, Player player, InteractionHand hand, ItemStack stack) {
         BlockHitResult hit = getPlayerPOVHitResult(level, player, ClipContext.Fluid.SOURCE_ONLY);
         if (hit.getType() != HitResult.Type.BLOCK) {
             return InteractionResult.PASS;
@@ -142,12 +154,12 @@ public class CopperTankItem extends ModBlockItem {
 
     @Override
     public boolean isBarVisible(ItemStack stack) {
-        return !fluid(stack).isEmpty();
+        return !rawFluid(stack).isEmpty();
     }
 
     @Override
     public int getBarWidth(ItemStack stack) {
-        return Math.min(13, Math.round(13f * fluid(stack).getAmount() / Math.max(1, capacity(stack))));
+        return Math.min(13, Math.round(13f * rawFluid(stack).getAmount() / Math.max(1, capacity(stack))));
     }
 
     @Override

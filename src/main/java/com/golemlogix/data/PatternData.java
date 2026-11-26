@@ -1,6 +1,8 @@
 package com.golemlogix.data;
 
+import com.golemlogix.items.FluidGhostItem;
 import com.golemlogix.system.Fuzzy;
+import com.golemlogix.system.Ingredients;
 import com.golemlogix.system.ItemKey;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -16,6 +18,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Predicate;
 
 /**
@@ -46,10 +49,14 @@ public record PatternData(boolean crafting, List<ItemStack> inputs, List<ItemSta
     public PatternData {
         inputs = copyList(inputs);
         outputs = copyList(outputs);
-        if (fuzzy.stream().noneMatch(s -> !s.isEmpty())) {
+        if (!hasAnyFuzzy(fuzzy)) {
             fuzzy = List.of();
         } else {
-            List<String> f = new ArrayList<>(fuzzy.subList(0, Math.min(fuzzy.size(), inputs.size())));
+            List<String> f = new ArrayList<>(inputs.size());
+            int n = Math.min(fuzzy.size(), inputs.size());
+            for (int i = 0; i < n; i++) {
+                f.add(fuzzy.get(i));
+            }
             while (f.size() < inputs.size()) {
                 f.add(Fuzzy.EXACT);
             }
@@ -62,12 +69,30 @@ public record PatternData(boolean crafting, List<ItemStack> inputs, List<ItemSta
         this(crafting, inputs, outputs, List.of());
     }
 
+    private static boolean hasAnyFuzzy(List<String> fuzzy) {
+        for (String s : fuzzy) {
+            if (!s.isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static List<ItemStack> copyList(List<ItemStack> in) {
         List<ItemStack> out = new ArrayList<>(in.size());
         for (ItemStack s : in) {
             out.add(s.copy());
         }
         return List.copyOf(out);
+    }
+
+    private static boolean hasNonEmpty(List<ItemStack> stacks) {
+        for (ItemStack s : stacks) {
+            if (!s.isEmpty()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Total ingredients (without empty slots) in order of appearance. */
@@ -84,7 +109,7 @@ public record PatternData(boolean crafting, List<ItemStack> inputs, List<ItemSta
         Map<ItemKey, Integer> map = new LinkedHashMap<>();
         for (ItemStack s : stacks) {
             if (!s.isEmpty()) {
-                map.merge(com.golemlogix.system.Ingredients.key(s), com.golemlogix.system.Ingredients.amount(s), Integer::sum);
+                map.merge(Ingredients.key(s), Ingredients.amount(s), Integer::sum);
             }
         }
         return map;
@@ -93,7 +118,7 @@ public record PatternData(boolean crafting, List<ItemStack> inputs, List<ItemSta
     /** Whether the pattern feeds any fluid into its machine. */
     public boolean hasFluidInputs() {
         for (ItemStack s : inputs) {
-            if (com.golemlogix.items.FluidGhostItem.is(s)) {
+            if (FluidGhostItem.is(s)) {
                 return true;
             }
         }
@@ -104,29 +129,15 @@ public record PatternData(boolean crafting, List<ItemStack> inputs, List<ItemSta
     public int outputCount(ItemKey key) {
         int n = 0;
         for (ItemStack s : outputs) {
-            if (!s.isEmpty() && com.golemlogix.system.Ingredients.key(s).equals(key)) {
-                n += com.golemlogix.system.Ingredients.amount(s);
+            if (!s.isEmpty() && Ingredients.key(s).equals(key)) {
+                n += Ingredients.amount(s);
             }
         }
         return n;
     }
 
     public boolean isValid() {
-        boolean anyIn = false;
-        for (ItemStack s : inputs) {
-            if (!s.isEmpty()) {
-                anyIn = true;
-                break;
-            }
-        }
-        boolean anyOut = false;
-        for (ItemStack s : outputs) {
-            if (!s.isEmpty()) {
-                anyOut = true;
-                break;
-            }
-        }
-        return anyIn && anyOut;
+        return hasNonEmpty(inputs) && hasNonEmpty(outputs);
     }
 
     public ItemStack primaryOutput() {
@@ -155,7 +166,12 @@ public record PatternData(boolean crafting, List<ItemStack> inputs, List<ItemSta
         if (i < 0 || i >= inputs.size()) {
             return null;
         }
-        String spec = spec(i);
+        return resolveMatcher(i, inputs.get(i), spec(i), level, null);
+    }
+
+    @Nullable
+    private Predicate<ItemStack> resolveMatcher(int i, ItemStack encoded, String spec, @Nullable Level level,
+                                                @Nullable List<Optional<Ingredient>> cachedSubstitutes) {
         if (spec.isEmpty()) {
             return null;
         }
@@ -164,9 +180,10 @@ public record PatternData(boolean crafting, List<ItemStack> inputs, List<ItemSta
             if (level == null || !crafting || i >= GRID) {
                 return null;
             }
-            recipeChoice = Fuzzy.craftingSubstitutes(level, inputs).get(i).orElse(null);
+            List<Optional<Ingredient>> subs = cachedSubstitutes != null ? cachedSubstitutes : Fuzzy.craftingSubstitutes(level, inputs);
+            recipeChoice = subs.get(i).orElse(null);
         }
-        return Fuzzy.matcher(spec, inputs.get(i), recipeChoice);
+        return Fuzzy.matcher(spec, encoded, recipeChoice);
     }
 
     /** One kind of input of an execution: the encoded item, how many (mB for fluids), and what else may stand for it (null = nothing). */
@@ -179,39 +196,24 @@ public record PatternData(boolean crafting, List<ItemStack> inputs, List<ItemSta
     /** The inputs of one execution, identical ones (same item, same fuzziness) summed, in order of appearance. */
     public List<Need> needs(@Nullable Level level) {
         Map<NeedKey, Need> map = new LinkedHashMap<>();
-        List<java.util.Optional<Ingredient>> substitutes = null;
+        List<Optional<Ingredient>> substitutes = null;
         for (int i = 0; i < inputs.size(); i++) {
             ItemStack s = inputs.get(i);
             if (s.isEmpty()) {
                 continue;
             }
-            ItemKey key = com.golemlogix.system.Ingredients.key(s);
-            int amount = com.golemlogix.system.Ingredients.amount(s);
+            ItemKey key = Ingredients.key(s);
+            int amount = Ingredients.amount(s);
             String spec = spec(i);
             boolean isRecipe = spec.equals(Fuzzy.RECIPE);
-            Predicate<ItemStack> alt;
-            if (spec.isEmpty()) {
-                alt = null;
-            } else if (isRecipe) {
-                if (level == null || !crafting || i >= GRID) {
-                    alt = null;
-                } else {
-                    if (substitutes == null) {
-                        substitutes = Fuzzy.craftingSubstitutes(level, inputs);
-                    }
-                    alt = Fuzzy.matcher(spec, s, substitutes.get(i).orElse(null));
-                }
-            } else {
-                alt = Fuzzy.matcher(spec, s, null);
+            if (isRecipe && substitutes == null && level != null && crafting && i < GRID) {
+                substitutes = Fuzzy.craftingSubstitutes(level, inputs);
             }
+            Predicate<ItemStack> alt = resolveMatcher(i, s, spec, level, substitutes);
             // a recipe's choice differs per cell, so cells with it are not merged
             NeedKey id = new NeedKey(key, spec, isRecipe ? i : -1);
             Need old = map.get(id);
-            if (old != null) {
-                map.put(id, new Need(key, old.amount() + amount, old.alternatives()));
-            } else {
-                map.put(id, new Need(key, amount, alt));
-            }
+            map.put(id, old != null ? new Need(key, old.amount() + amount, old.alternatives()) : new Need(key, amount, alt));
         }
         return new ArrayList<>(map.values());
     }
