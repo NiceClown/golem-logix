@@ -2,6 +2,7 @@ package com.golemlogix.integration.jade;
 
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.AtlasCoreBlockEntity;
+import com.golemlogix.system.GolemNetwork;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -35,7 +36,7 @@ public enum CoreProvider implements IBlockComponentProvider {
         // the live numbers of the server's network (ChannelProvider sends them); the core's own copy is a second old at most
         int used = core.getChannelsUsed();
         int max = core.getChannelCapacity();
-        boolean tower = max == com.golemlogix.system.GolemNetwork.TOWER_CHANNELS;
+        boolean tower = max == GolemNetwork.TOWER_CHANNELS;
         if (accessor.getServerData().contains(ChannelProvider.TAG)) {
             var t = accessor.getServerData().getCompound(ChannelProvider.TAG);
             used = t.contains("netUsed") ? t.getInt("netUsed") : used;

@@ -1,23 +1,31 @@
 package com.golemlogix.menu;
 
-import com.golemlogix.data.PatternData;
 import com.golemlogix.crafting.CraftingJob;
+import com.golemlogix.data.PatternData;
 import com.golemlogix.init.ModBlocks;
 import com.golemlogix.init.ModDataComponents;
 import com.golemlogix.init.ModMenus;
 import com.golemlogix.items.CopperPunchCardItem;
+import com.golemlogix.items.FluidGhostItem;
+import com.golemlogix.system.Fuzzy;
+import com.golemlogix.system.Ingredients;
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.Container;
+import net.minecraft.world.ContainerListener;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,23 +47,22 @@ public class PatternEncoderMenu extends GolemMenu {
     public static final int BUTTON_FUZZY = 4;
 
     public static final int SLOT_COUNT = 14;
+    private static final int MAX_ITEM_GHOST = 99;
 
     private final Container container;
-    private final net.minecraft.world.inventory.ContainerData data;
+    private final ContainerData data;
     private final Level level;
     private boolean updating = false;
-    private final net.minecraft.world.ContainerListener listener = c -> slotsChanged(c);
-
+    private final ContainerListener listener = this::slotsChanged;
     private final ContainerLevelAccess access;
 
     public static PatternEncoderMenu fromNetwork(int id, Inventory inv, RegistryFriendlyByteBuf buf) {
-        return new PatternEncoderMenu(id, inv, new SimpleContainer(SLOT_COUNT), new net.minecraft.world.inventory.SimpleContainerData(2),
+        return new PatternEncoderMenu(id, inv, new SimpleContainer(SLOT_COUNT), new SimpleContainerData(2),
                 ContainerLevelAccess.NULL);
     }
 
     /** container and data belong to the encoder block entity (on the client they are empty copies filled by window sync). */
-    public PatternEncoderMenu(int id, Inventory inv, Container container, net.minecraft.world.inventory.ContainerData data,
-                              ContainerLevelAccess access) {
+    public PatternEncoderMenu(int id, Inventory inv, Container container, ContainerData data, ContainerLevelAccess access) {
         super(ModMenus.PATTERN_ENCODER.get(), id);
         this.level = inv.player.level();
         this.access = access;
@@ -120,10 +127,10 @@ public class PatternEncoderMenu extends GolemMenu {
     }
 
     @Override
-    public net.minecraft.network.chat.Component fuzzyLine(int slotId) {
+    public Component fuzzyLine(int slotId) {
         if (fuzzyActive(slotId) && isCraftingMode()) {
-            return net.minecraft.network.chat.Component.translatable("tooltip.golem_logix.fuzzy",
-                    net.minecraft.network.chat.Component.translatable("tooltip.golem_logix.fuzzy.recipe")).withStyle(net.minecraft.ChatFormatting.AQUA);
+            return Component.translatable("tooltip.golem_logix.fuzzy",
+                    Component.translatable("tooltip.golem_logix.fuzzy.recipe")).withStyle(ChatFormatting.AQUA);
         }
         return super.fuzzyLine(slotId);
     }
@@ -137,16 +144,16 @@ public class PatternEncoderMenu extends GolemMenu {
         if (s.isEmpty()) {
             return;
         }
-        container.setItem(slot, com.golemlogix.items.FluidGhostItem.is(s)
-                ? com.golemlogix.items.FluidGhostItem.withAmount(s, Math.clamp(amount, 1, MAX_FLUID_GHOST))
-                : s.copyWithCount(Math.clamp(amount, 1, 99)));
+        container.setItem(slot, FluidGhostItem.is(s)
+                ? FluidGhostItem.withAmount(s, Math.clamp(amount, 1, MAX_FLUID_GHOST))
+                : s.copyWithCount(Math.clamp(amount, 1, MAX_ITEM_GHOST)));
         broadcastChanges();
     }
 
     @Override
     public void setGhost(Player player, int slotId, ItemStack stack) {
         // fluids and manual outputs belong to processing patterns only, never crafting table recipes
-        if (isCraftingMode() && (com.golemlogix.items.FluidGhostItem.is(stack) || (slotId >= OUT_START && slotId < OUT_START + 3))) {
+        if (isCraftingMode() && (FluidGhostItem.is(stack) || isOutputSlot(slotId))) {
             return;
         }
         super.setGhost(player, slotId, stack);
@@ -157,16 +164,36 @@ public class PatternEncoderMenu extends GolemMenu {
         return container;
     }
 
+    private static boolean isOutputSlot(int slotId) {
+        return slotId >= OUT_START && slotId < OUT_START + 3;
+    }
+
+    /** Runs a batch of container mutations without re-entering slotsChanged -> refreshCraftingResult on each slot. */
+    private void withUpdating(Runnable action) {
+        updating = true;
+        try {
+            action.run();
+        } finally {
+            updating = false;
+        }
+    }
+
+    private void clearRecipeSlots() {
+        for (int i = 0; i < OUT_START + 3; i++) {
+            container.setItem(i, ItemStack.EMPTY);
+        }
+    }
+
     @Override
     public void clicked(int slotId, int button, ClickType clickType, Player player) {
         // fluids are inputs and outputs of processing patterns, never in the crafting table grid
-        boolean fluid = com.golemlogix.items.FluidGhostItem.is(ghostFor(getCarried()));
+        boolean fluid = FluidGhostItem.is(ghostFor(getCarried()));
         if (fluid && clickType == ClickType.PICKUP && isGhost(slotId) && isCraftingMode()) {
             return;
         }
         if (handleGhostClick(slotId, button, clickType)) {
             // the crafting table recipe output is computed by itself and cannot be changed by hand
-            if (isCraftingMode() && slotId >= OUT_START && slotId < OUT_START + 3) {
+            if (isCraftingMode() && isOutputSlot(slotId)) {
                 refreshCraftingResult();
             }
             return;
@@ -186,17 +213,16 @@ public class PatternEncoderMenu extends GolemMenu {
         if (!isCraftingMode() || level.isClientSide()) {
             return;
         }
-        updating = true;
-        try {
+        withUpdating(() -> {
             for (int i = 0; i < 9; i++) {
                 ItemStack s = container.getItem(i);
-                if (com.golemlogix.items.FluidGhostItem.is(s)) {
+                if (FluidGhostItem.is(s)) {
                     container.setItem(i, ItemStack.EMPTY);
                 } else if (!s.isEmpty() && s.getCount() != 1) {
                     container.setItem(i, s.copyWithCount(1));
                 }
             }
-            List<ItemStack> grid = new ArrayList<>();
+            List<ItemStack> grid = new ArrayList<>(9);
             for (int i = 0; i < 9; i++) {
                 grid.add(container.getItem(i));
             }
@@ -210,9 +236,7 @@ public class PatternEncoderMenu extends GolemMenu {
                     container.setItem(OUT_START + i, ItemStack.EMPTY);
                 }
             }
-        } finally {
-            updating = false;
-        }
+        });
     }
 
     @Override
@@ -220,26 +244,16 @@ public class PatternEncoderMenu extends GolemMenu {
         switch (id) {
             case BUTTON_TOGGLE -> {
                 data.set(0, isCraftingMode() ? 1 : 0);
-                updating = true;
-                try {
+                withUpdating(() -> {
                     for (int i = 0; i < 3; i++) {
                         container.setItem(OUT_START + i, ItemStack.EMPTY);
                     }
-                } finally {
-                    updating = false;
-                }
+                });
                 refreshCraftingResult();
                 return true;
             }
             case BUTTON_CLEAR -> {
-                updating = true;
-                try {
-                    for (int i = 0; i < 12; i++) {
-                        container.setItem(i, ItemStack.EMPTY);
-                    }
-                } finally {
-                    updating = false;
-                }
+                withUpdating(this::clearRecipeSlots);
                 refreshCraftingResult();
                 return true;
             }
@@ -251,17 +265,14 @@ public class PatternEncoderMenu extends GolemMenu {
                 data.set(1, isFuzzy() ? 0 : 1);
                 if (!isFuzzy()) {
                     // exact again: the chosen tags go away with it
-                    updating = true;
-                    try {
+                    withUpdating(() -> {
                         for (int i = 0; i < 9; i++) {
                             ItemStack s = container.getItem(i);
-                            if (com.golemlogix.system.Fuzzy.tag(s) != null) {
-                                container.setItem(i, com.golemlogix.system.Fuzzy.plain(s));
+                            if (Fuzzy.tag(s) != null) {
+                                container.setItem(i, Fuzzy.plain(s));
                             }
                         }
-                    } finally {
-                        updating = false;
-                    }
+                    });
                 }
                 return true;
             }
@@ -280,71 +291,75 @@ public class PatternEncoderMenu extends GolemMenu {
      * (identical ones are summed) and up to three outputs. The slots are ghosts: items are not taken from anywhere.
      */
     public void fillFromRecipe(boolean craftingRecipe, List<List<ItemStack>> inputs, List<ItemStack> outputs) {
-        updating = true;
-        try {
-            for (int i = 0; i < 12; i++) {
-                container.setItem(i, ItemStack.EMPTY);
-            }
+        withUpdating(() -> {
+            clearRecipeSlots();
             data.set(0, craftingRecipe ? 0 : 1);
             if (craftingRecipe) {
-                for (int i = 0; i < Math.min(9, inputs.size()); i++) {
-                    ItemStack first = firstOf(inputs.get(i));
-                    boolean usable = !first.isEmpty() && !com.golemlogix.items.FluidGhostItem.is(first);
-                    container.setItem(i, usable ? first.copyWithCount(1) : ItemStack.EMPTY);
-                }
+                fillCraftingInputs(inputs);
             } else {
-                int slot = 0;
-                for (List<ItemStack> opts : inputs) {
-                    ItemStack first = firstOf(opts);
-                    if (first.isEmpty()) {
-                        continue;
-                    }
-                    boolean fluid = com.golemlogix.items.FluidGhostItem.is(first);
-                    if (fluid && com.golemlogix.items.FluidGhostItem.fluid(first).isEmpty()) {
-                        continue;
-                    }
-                    boolean merged = false;
-                    for (int k = 0; k < slot; k++) {
-                        ItemStack ex = container.getItem(k);
-                        if (fluid && com.golemlogix.system.Ingredients.key(ex).equals(com.golemlogix.system.Ingredients.key(first))) {
-                            // the same fluid twice: one ghost with the summed mB
-                            long sum = (long) com.golemlogix.items.FluidGhostItem.amount(ex)
-                                    + com.golemlogix.items.FluidGhostItem.amount(first);
-                            container.setItem(k, com.golemlogix.items.FluidGhostItem.withAmount(ex,
-                                    (int) Math.clamp(sum, 1L, MAX_FLUID_GHOST)));
-                            merged = true;
-                            break;
-                        }
-                        if (!fluid && ItemStack.isSameItemSameComponents(ex, first)) {
-                            container.setItem(k, ex.copyWithCount(Math.min(99, ex.getCount() + first.getCount())));
-                            merged = true;
-                            break;
-                        }
-                    }
-                    if (!merged && slot < 9) {
-                        container.setItem(slot++, fluid
-                                ? com.golemlogix.items.FluidGhostItem.withAmount(first,
-                                        Math.clamp(com.golemlogix.items.FluidGhostItem.amount(first), 1, MAX_FLUID_GHOST))
-                                : first.copyWithCount(Math.clamp(first.getCount(), 1, 99)));
-                    }
-                }
-                for (int i = 0; i < Math.min(3, outputs.size()); i++) {
-                    ItemStack out = outputs.get(i);
-                    if (com.golemlogix.items.FluidGhostItem.is(out)) {
-                        if (!com.golemlogix.items.FluidGhostItem.fluid(out).isEmpty()) {
-                            container.setItem(OUT_START + i, com.golemlogix.items.FluidGhostItem.withAmount(out,
-                                    Math.clamp(com.golemlogix.items.FluidGhostItem.amount(out), 1, MAX_FLUID_GHOST)));
-                        }
-                    } else if (!out.isEmpty()) {
-                        container.setItem(OUT_START + i, out.copyWithCount(Math.clamp(out.getCount(), 1, 99)));
-                    }
-                }
+                fillProcessingRecipe(inputs, outputs);
             }
-        } finally {
-            updating = false;
-        }
+        });
         refreshCraftingResult();
         broadcastChanges();
+    }
+
+    private void fillCraftingInputs(List<List<ItemStack>> inputs) {
+        for (int i = 0; i < Math.min(9, inputs.size()); i++) {
+            ItemStack first = firstOf(inputs.get(i));
+            boolean usable = !first.isEmpty() && !FluidGhostItem.is(first);
+            container.setItem(i, usable ? first.copyWithCount(1) : ItemStack.EMPTY);
+        }
+    }
+
+    private void fillProcessingRecipe(List<List<ItemStack>> inputs, List<ItemStack> outputs) {
+        int slot = 0;
+        for (List<ItemStack> opts : inputs) {
+            ItemStack first = sanitizeProcessingStack(firstOf(opts));
+            if (first.isEmpty()) {
+                continue;
+            }
+            if (!mergeProcessingInput(slot, first) && slot < 9) {
+                container.setItem(slot++, first);
+            }
+        }
+        for (int i = 0; i < Math.min(3, outputs.size()); i++) {
+            ItemStack out = sanitizeProcessingStack(outputs.get(i));
+            if (!out.isEmpty()) {
+                container.setItem(OUT_START + i, out);
+            }
+        }
+    }
+
+    private boolean mergeProcessingInput(int filledSlots, ItemStack stack) {
+        boolean fluid = FluidGhostItem.is(stack);
+        for (int k = 0; k < filledSlots; k++) {
+            ItemStack ex = container.getItem(k);
+            if (fluid && Ingredients.key(ex).equals(Ingredients.key(stack))) {
+                // the same fluid twice: one ghost with the summed mB
+                long sum = (long) FluidGhostItem.amount(ex) + FluidGhostItem.amount(stack);
+                container.setItem(k, FluidGhostItem.withAmount(ex, (int) Math.clamp(sum, 1L, MAX_FLUID_GHOST)));
+                return true;
+            }
+            if (!fluid && ItemStack.isSameItemSameComponents(ex, stack)) {
+                container.setItem(k, ex.copyWithCount(Math.min(MAX_ITEM_GHOST, ex.getCount() + stack.getCount())));
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static ItemStack sanitizeProcessingStack(ItemStack stack) {
+        if (stack.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+        if (FluidGhostItem.is(stack)) {
+            if (FluidGhostItem.fluid(stack).isEmpty()) {
+                return ItemStack.EMPTY;
+            }
+            return FluidGhostItem.withAmount(stack, Math.clamp(FluidGhostItem.amount(stack), 1, MAX_FLUID_GHOST));
+        }
+        return stack.copyWithCount(Math.clamp(stack.getCount(), 1, MAX_ITEM_GHOST));
     }
 
     private static ItemStack firstOf(List<ItemStack> options) {
@@ -363,29 +378,23 @@ public class PatternEncoderMenu extends GolemMenu {
     }
 
     /** Open the card's recipe in the grid (for editing). */
-    void loadPattern(PatternData pattern) {
+    void loadPattern(@Nullable PatternData pattern) {
         if (pattern == null) {
             return;
         }
-        updating = true;
-        try {
-            for (int i = 0; i < 12; i++) {
-                container.setItem(i, ItemStack.EMPTY);
-            }
+        withUpdating(() -> {
+            clearRecipeSlots();
             data.set(0, pattern.crafting() ? 0 : 1);
             data.set(1, pattern.isFuzzy() ? 1 : 0);
             for (int i = 0; i < Math.min(9, pattern.inputs().size()); i++) {
                 ItemStack in = pattern.inputs().get(i).copy();
                 // a processing input's chosen tag goes back onto its ghost
-                container.setItem(i, pattern.crafting() ? in : com.golemlogix.system.Fuzzy.withTag(in,
-                        com.golemlogix.system.Fuzzy.tagOfSpec(pattern.spec(i))));
+                container.setItem(i, pattern.crafting() ? in : Fuzzy.withTag(in, Fuzzy.tagOfSpec(pattern.spec(i))));
             }
             for (int i = 0; i < Math.min(3, pattern.outputs().size()); i++) {
                 container.setItem(OUT_START + i, pattern.outputs().get(i).copy());
             }
-        } finally {
-            updating = false;
-        }
+        });
         refreshCraftingResult();
         broadcastChanges();
     }
@@ -403,6 +412,26 @@ public class PatternEncoderMenu extends GolemMenu {
             return;
         }
 
+        PatternData pattern = buildPatternData(player);
+        if (pattern == null) {
+            return;
+        }
+
+        if (rewrite) {
+            ItemStack out = container.getItem(CARD_OUT);
+            container.setItem(CARD_OUT, CopperPunchCardItem.written(out.getItem(), pattern));
+            player.displayClientMessage(Component.translatable("message.golem_logix.encoder.rewritten"), true);
+            return;
+        }
+        ItemStack encoded = CopperPunchCardItem.written(card.getItem(), pattern);
+        card.shrink(1);
+        container.setItem(CARD_IN, card.isEmpty() ? ItemStack.EMPTY : card);
+        container.setItem(CARD_OUT, encoded);
+        player.displayClientMessage(Component.translatable("message.golem_logix.encoder.done"), true);
+    }
+
+    @Nullable
+    private PatternData buildPatternData(Player player) {
         List<ItemStack> inputs = new ArrayList<>();
         List<ItemStack> outputs = new ArrayList<>();
         // fuzziness per input: the recipe's own choice in a crafting grid, the ghost's tag (or any components) in processing
@@ -410,22 +439,22 @@ public class PatternEncoderMenu extends GolemMenu {
         boolean crafting = isCraftingMode();
         if (crafting) {
             for (int i = 0; i < 9; i++) {
-                ItemStack s = com.golemlogix.system.Fuzzy.plain(container.getItem(i));
+                ItemStack s = Fuzzy.plain(container.getItem(i));
                 inputs.add(s.isEmpty() ? ItemStack.EMPTY : s.copyWithCount(1));
-                fuzzy.add(isFuzzy() && !s.isEmpty() ? com.golemlogix.system.Fuzzy.RECIPE : com.golemlogix.system.Fuzzy.EXACT);
+                fuzzy.add(isFuzzy() && !s.isEmpty() ? Fuzzy.RECIPE : Fuzzy.EXACT);
             }
             List<ItemStack> result = CraftingJob.craftResult(level, new PatternData(true, inputs, List.of()));
             if (result == null) {
                 player.displayClientMessage(Component.translatable("message.golem_logix.encoder.no_recipe"), true);
-                return;
+                return null;
             }
             outputs.add(result.get(0));
         } else {
             for (int i = 0; i < 9; i++) {
                 ItemStack s = container.getItem(i);
                 if (!s.isEmpty()) {
-                    inputs.add(com.golemlogix.system.Fuzzy.plain(s).copy());
-                    fuzzy.add(isFuzzy() ? com.golemlogix.system.Fuzzy.specOf(s) : com.golemlogix.system.Fuzzy.EXACT);
+                    inputs.add(Fuzzy.plain(s).copy());
+                    fuzzy.add(isFuzzy() ? Fuzzy.specOf(s) : Fuzzy.EXACT);
                 }
             }
             for (int i = 0; i < 3; i++) {
@@ -435,23 +464,12 @@ public class PatternEncoderMenu extends GolemMenu {
                 }
             }
         }
-        PatternData data = new PatternData(crafting, inputs, outputs, fuzzy);
-        if (!data.isValid()) {
+        PatternData pattern = new PatternData(crafting, inputs, outputs, fuzzy);
+        if (!pattern.isValid()) {
             player.displayClientMessage(Component.translatable("message.golem_logix.encoder.incomplete"), true);
-            return;
+            return null;
         }
-
-        if (rewrite) {
-            ItemStack out = container.getItem(CARD_OUT);
-            container.setItem(CARD_OUT, CopperPunchCardItem.written(out.getItem(), data));
-            player.displayClientMessage(Component.translatable("message.golem_logix.encoder.rewritten"), true);
-            return;
-        }
-        ItemStack encoded = CopperPunchCardItem.written(card.getItem(), data);
-        card.shrink(1);
-        container.setItem(CARD_IN, card.isEmpty() ? ItemStack.EMPTY : card);
-        container.setItem(CARD_OUT, encoded);
-        player.displayClientMessage(Component.translatable("message.golem_logix.encoder.done"), true);
+        return pattern;
     }
 
     @Override
@@ -480,16 +498,7 @@ public class PatternEncoderMenu extends GolemMenu {
         } else {
             return ItemStack.EMPTY;
         }
-        if (stack.isEmpty()) {
-            slot.setByPlayer(ItemStack.EMPTY);
-        } else {
-            slot.setChanged();
-        }
-        if (stack.getCount() == copy.getCount()) {
-            return ItemStack.EMPTY;
-        }
-        slot.onTake(player, stack);
-        return copy;
+        return finishQuickMove(slot, stack, copy, player);
     }
 
     @Override

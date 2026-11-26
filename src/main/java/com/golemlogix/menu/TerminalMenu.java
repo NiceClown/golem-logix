@@ -1,16 +1,16 @@
 package com.golemlogix.menu;
 
-import com.golemlogix.blockentity.CryoCalculatorBlockEntity;
 import com.golemlogix.crafting.CraftingPlan;
-import com.golemlogix.crafting.CraftingPlanner;
 import com.golemlogix.init.ModMenus;
 import com.golemlogix.init.ModSounds;
+import com.golemlogix.items.Chronometers;
 import com.golemlogix.items.PortableChronometerItem;
 import com.golemlogix.network.CraftPlanPayload;
 import com.golemlogix.network.CraftRequestPayload;
 import com.golemlogix.network.TerminalActionPayload;
 import com.golemlogix.network.TerminalInfoPayload;
 import com.golemlogix.network.TerminalListPayload;
+import com.golemlogix.security.SecurityPermission;
 import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.ItemKey;
 import com.golemlogix.system.SourceHelper;
@@ -18,11 +18,13 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.inventory.ResultContainer;
 import net.minecraft.world.inventory.ResultSlot;
@@ -35,26 +37,20 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.fluids.capability.IFluidHandlerItem;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 /**
- * Network terminal menu. The item list does not live in slots: the server sends it in packets,
- * the client draws it (search and sorting happen on the client), and the player's actions come back in packets.
- * The "Crafting Terminal" variant (and the Portable Chronometer) adds a 3x3 grid that refills from the network.
- * The player chooses the list height (the "Size" button): {@link #relayout(int)} recomputes the slot positions on the client.
+ * Network terminal menu. The item list does not live in slots: the server sends it in packets
+ * ({@link TerminalSync}), the client draws it (search and sorting happen on the client), and the player's
+ * actions come back in packets. The "Crafting Terminal" variant (and the Portable Chronometer) adds a 3x3
+ * grid that refills from the network. Autocraft orders live in {@link TerminalOrders} and cursor fluid
+ * container operations in {@link TerminalFluids}.
  */
 public class TerminalMenu extends GolemMenu {
     public static final int LIST_X = 10;
@@ -93,7 +89,6 @@ public class TerminalMenu extends GolemMenu {
         return invY(crafting, rows) + 82;
     }
 
-
     // --- shared state
     public final boolean crafting;
     public final boolean wireless;
@@ -116,10 +111,7 @@ public class TerminalMenu extends GolemMenu {
     @Nullable
     private final Block expectedBlock;
     private final int wirelessTier;
-    private Map<ItemKey, Long> lastItems = null;
-    private Set<ItemKey> lastCraftable = null;
-    private TerminalInfoPayload lastInfo = null;
-    private boolean forceSync = true;
+    private final TerminalSync sync = new TerminalSync();
     private long lastDrainTick = -1;
 
     // --- crafting
@@ -129,9 +121,12 @@ public class TerminalMenu extends GolemMenu {
 
     // --- client side
     public final List<TerminalListPayload.Entry> clientEntries = new ArrayList<>();
-    private final Map<ItemKey, Integer> clientIndex = new java.util.HashMap<>();
+    private final Map<ItemKey, Integer> clientIndex = new HashMap<>();
     public TerminalInfoPayload clientInfo = null;
     public int clientVersion = 0;
+    /** Client: the last order plan received (for the order window's planner). */
+    @Nullable
+    public CraftPlanPayload clientPlan;
 
     public static TerminalMenu fromNetwork(int id, Inventory inv, RegistryFriendlyByteBuf buf) {
         boolean crafting = buf.readBoolean();
@@ -173,24 +168,28 @@ public class TerminalMenu extends GolemMenu {
             this.containerSlotCount = 10;
         }
         addPlayerSlots(inv, LIST_X, invY(crafting, rows));
-        // the inventory slot with the Chronometer is locked (from the offhand only an F key swap could take it, and that is not allowed
-        // either); one worn in the Curios slot (Chronometers.CURIO) is not in this window at all
-        if (lockedSlot >= 0 && lockedSlot < Inventory.INVENTORY_SIZE) {
-            for (int i = playerStart; i < playerEnd; i++) {
-                Slot s = this.slots.get(i);
-                if (s.container == inv && s.getContainerSlot() == lockedSlot) {
-                    Slot lock = new LockedSlot(inv, lockedSlot, s.x, s.y);
-                    lock.index = i;
-                    this.slots.set(i, lock);
-                    lockedMenuSlot = i;
-                }
+        lockChronometerSlot(inv);
+    }
+
+    /** Locks the inventory slot holding the active Chronometer (Curios slots are outside this menu). */
+    private void lockChronometerSlot(Inventory inv) {
+        if (lockedSlot < 0 || lockedSlot >= Inventory.INVENTORY_SIZE) {
+            return;
+        }
+        for (int i = playerStart; i < playerEnd; i++) {
+            Slot s = this.slots.get(i);
+            if (s.container == inv && s.getContainerSlot() == lockedSlot) {
+                Slot lock = new LockedSlot(inv, lockedSlot, s.x, s.y);
+                lock.index = i;
+                this.slots.set(i, lock);
+                lockedMenuSlot = i;
             }
         }
     }
 
     /** The slot with the Chronometer of the open terminal: it cannot be taken, replaced or thrown out. */
     public static final class LockedSlot extends Slot {
-        LockedSlot(net.minecraft.world.Container container, int slot, int x, int y) {
+        LockedSlot(Container container, int slot, int x, int y) {
             super(container, slot, x, y);
         }
 
@@ -211,13 +210,13 @@ public class TerminalMenu extends GolemMenu {
     }
 
     @Override
-    public void clicked(int slotId, int button, net.minecraft.world.inventory.ClickType clickType, Player player) {
+    public void clicked(int slotId, int button, ClickType clickType, Player player) {
         if (lockedSlot >= 0) {
             // any clicks on the Chronometer slot and swapping with it by a hotbar number (or F with the offhand) do nothing
             if (slotId >= 0 && slotId == lockedMenuSlot) {
                 return;
             }
-            if (clickType == net.minecraft.world.inventory.ClickType.SWAP && button == lockedSlot) {
+            if (clickType == ClickType.SWAP && button == lockedSlot) {
                 return;
             }
         }
@@ -267,6 +266,14 @@ public class TerminalMenu extends GolemMenu {
         return true;
     }
 
+    private static boolean requirePermission(ServerPlayer sp, GolemNetwork net, SecurityPermission permission) {
+        if (!net.hasPermission(sp, permission)) {
+            sp.displayClientMessage(Component.translatable("message.golem_logix.security_denied"), true);
+            return false;
+        }
+        return true;
+    }
+
     public void handleAction(ServerPlayer sp, TerminalActionPayload p) {
         if (netLevel == null) {
             return;
@@ -275,22 +282,15 @@ public class TerminalMenu extends GolemMenu {
         if (!checkAccess(sp, net)) {
             return;
         }
-        ItemStack keyStack = p.key();
-        switch (p.action()) {
-            case TAKE_STACK, TAKE_HALF, TAKE_ONE, TO_INVENTORY, FLUID_FILL_CARRIED -> {
-                if (!net.hasPermission(sp, com.golemlogix.security.SecurityPermission.EXTRACT)) {
-                    sp.displayClientMessage(Component.translatable("message.golem_logix.security_denied"), true);
-                    return;
-                }
-            }
-            case INSERT_ALL, INSERT_ONE, FLUID_DRAIN_CARRIED, CLEAR_GRID -> {
-                if (!net.hasPermission(sp, com.golemlogix.security.SecurityPermission.INSERT)) {
-                    sp.displayClientMessage(Component.translatable("message.golem_logix.security_denied"), true);
-                    return;
-                }
-            }
+        SecurityPermission required = switch (p.action()) {
+            case TAKE_STACK, TAKE_HALF, TAKE_ONE, TO_INVENTORY, FLUID_FILL_CARRIED -> SecurityPermission.EXTRACT;
+            case INSERT_ALL, INSERT_ONE, FLUID_DRAIN_CARRIED, CLEAR_GRID -> SecurityPermission.INSERT;
+        };
+        if (!requirePermission(sp, net, required)) {
+            return;
         }
         sp.level().playSound(null, sp.blockPosition(), ModSounds.RELAY_CLICK.get(), SoundSource.BLOCKS, 0.25f, 1.4f);
+        ItemStack keyStack = p.key();
         switch (p.action()) {
             case TAKE_STACK -> take(net, keyStack, Amount.STACK);
             case TAKE_HALF -> take(net, keyStack, Amount.HALF);
@@ -298,11 +298,11 @@ public class TerminalMenu extends GolemMenu {
             case TO_INVENTORY -> toInventory(net, sp, keyStack);
             case INSERT_ALL -> insertCarried(net, false);
             case INSERT_ONE -> insertCarried(net, true);
-            case FLUID_FILL_CARRIED -> fluidFillCarried(net, sp, p.fluid());
-            case FLUID_DRAIN_CARRIED -> fluidDrainCarried(net, sp);
+            case FLUID_FILL_CARRIED -> TerminalFluids.fillCarried(this, net, sp, p.fluid());
+            case FLUID_DRAIN_CARRIED -> TerminalFluids.drainCarried(this, net, sp);
             case CLEAR_GRID -> clearGrid(net, sp);
         }
-        forceSync = true;
+        sync.markDirty();
     }
 
     private enum Amount {STACK, HALF, ONE}
@@ -375,101 +375,31 @@ public class TerminalMenu extends GolemMenu {
         }
     }
 
-    // ------------------------------------------------------------------ fluids
+    // ------------------------------------------------------------------ crafting grid
 
-    private void giveContainer(ServerPlayer sp, IFluidHandlerItem handler, ItemStack original) {
-        ItemStack result = handler.getContainer();
-        if (original.getCount() <= 1) {
-            setCarried(result);
-        } else {
-            original.shrink(1);
-            setCarried(original);
-            if (!result.isEmpty()) {
-                sp.getInventory().placeItemBackInInventory(result);
+    private void drainGrid(ServerPlayer sp, @Nullable GolemNetwork net, boolean canInsert, boolean notifySlots) {
+        for (int i = 0; i < 9; i++) {
+            ItemStack s = craftSlots.removeItemNoUpdate(i);
+            if (s.isEmpty()) {
+                continue;
+            }
+            if (canInsert && net != null) {
+                s = net.insertItem(s, false);
+            }
+            if (!s.isEmpty()) {
+                sp.getInventory().placeItemBackInInventory(s);
             }
         }
-    }
-
-    private void fluidFillCarried(GolemNetwork net, ServerPlayer sp, FluidStack fluid) {
-        ItemStack carried = getCarried();
-        // Liquid Cryo-Source is pumped out by automation only, never into buckets or other containers by hand
-        if (carried.isEmpty() || fluid.isEmpty() || com.golemlogix.system.CryoSource.is(fluid)) {
-            return;
-        }
-        ItemStack single = carried.copyWithCount(1);
-        IFluidHandlerItem handler = single.getCapability(Capabilities.FluidHandler.ITEM);
-        if (handler == null) {
-            return;
-        }
-        int fits = handler.fill(fluid.copyWithAmount(Math.max(1, fluid.getAmount())), IFluidHandler.FluidAction.SIMULATE);
-        if (fits <= 0) {
-            return;
-        }
-        FluidStack avail = net.extractFluid(fluid, fits, true);
-        if (avail.isEmpty()) {
-            return;
-        }
-        int willTake = handler.fill(avail, IFluidHandler.FluidAction.SIMULATE);
-        if (willTake <= 0) {
-            return;
-        }
-        FluidStack extracted = net.extractFluid(fluid, willTake, false);
-        if (extracted.isEmpty()) {
-            return;
-        }
-        int filled = handler.fill(extracted, IFluidHandler.FluidAction.EXECUTE);
-        if (filled < extracted.getAmount()) {
-            net.insertFluid(extracted.copyWithAmount(extracted.getAmount() - filled), false);
-        }
-        if (filled > 0) {
-            giveContainer(sp, handler, carried);
+        if (notifySlots) {
+            slotsChanged(craftSlots);
         }
     }
-
-    private void fluidDrainCarried(GolemNetwork net, ServerPlayer sp) {
-        ItemStack carried = getCarried();
-        if (carried.isEmpty()) {
-            return;
-        }
-        ItemStack single = carried.copyWithCount(1);
-        IFluidHandlerItem handler = single.getCapability(Capabilities.FluidHandler.ITEM);
-        if (handler == null) {
-            return;
-        }
-        FluidStack sim = handler.drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.SIMULATE);
-        if (sim.isEmpty()) {
-            return;
-        }
-        int accepted = net.insertFluid(sim, true);
-        if (accepted <= 0) {
-            sp.displayClientMessage(Component.translatable("message.golem_logix.fluid.no_room"), true);
-            return;
-        }
-        FluidStack drained = handler.drain(sim.copyWithAmount(accepted), IFluidHandler.FluidAction.EXECUTE);
-        if (drained.isEmpty()) {
-            return;
-        }
-        net.insertFluid(drained, false);
-        giveContainer(sp, handler, carried);
-    }
-
-    // ------------------------------------------------------------------ crafting grid
 
     private void clearGrid(GolemNetwork net, ServerPlayer sp) {
         if (!crafting) {
             return;
         }
-        for (int i = 0; i < 9; i++) {
-            ItemStack s = craftSlots.getItem(i);
-            if (s.isEmpty()) {
-                continue;
-            }
-            ItemStack rest = net.insertItem(s.copy(), false);
-            craftSlots.setItem(i, ItemStack.EMPTY);
-            if (!rest.isEmpty()) {
-                sp.getInventory().placeItemBackInInventory(rest);
-            }
-        }
+        drainGrid(sp, net, true, true);
     }
 
     /**
@@ -483,65 +413,55 @@ public class TerminalMenu extends GolemMenu {
         GolemNetwork net = network();
         boolean netOnline = accessError(net) == null;
         // returning items from the grid requires INSERT; pulling ingredients requires EXTRACT
-        boolean canInsert = netOnline && net.hasPermission(sp, com.golemlogix.security.SecurityPermission.INSERT);
-        boolean canExtract = netOnline && net.hasPermission(sp, com.golemlogix.security.SecurityPermission.EXTRACT);
-        for (int i = 0; i < 9; i++) {
-            ItemStack s = craftSlots.removeItemNoUpdate(i);
-            if (s.isEmpty()) {
-                continue;
-            }
-            if (canInsert) {
-                s = net.insertItem(s, false);
-            }
-            if (!s.isEmpty()) {
-                sp.getInventory().placeItemBackInInventory(s);
-            }
-        }
+        boolean canInsert = netOnline && net.hasPermission(sp, SecurityPermission.INSERT);
+        boolean canExtract = netOnline && net.hasPermission(sp, SecurityPermission.EXTRACT);
+        drainGrid(sp, net, canInsert, false);
+
         Inventory inv = sp.getInventory();
         for (int i = 0; i < Math.min(9, options.size()); i++) {
-            for (ItemStack opt : options.get(i)) {
-                if (opt.isEmpty()) {
-                    continue;
-                }
-                ItemStack key = opt.copyWithCount(1);
-                int want = max ? key.getMaxStackSize() : 1;
-                int have = canExtract ? net.extractItem(key, want, false).getCount() : 0;
-                for (int k = 0; k < inv.items.size() && have < want; k++) {
-                    if (k == lockedSlot) {
-                        continue;
-                    }
-                    ItemStack st = inv.items.get(k);
-                    if (ItemStack.isSameItemSameComponents(st, key)) {
-                        int take = Math.min(want - have, st.getCount());
-                        st.shrink(take);
-                        if (st.isEmpty()) {
-                            inv.setItem(k, ItemStack.EMPTY);
-                        }
-                        have += take;
-                    }
-                }
-                if (have > 0) {
-                    craftSlots.setItem(i, key.copyWithCount(have));
-                    break;
-                }
-            }
+            fillGridSlot(i, options.get(i), max, net, canExtract, inv);
         }
         inv.setChanged();
         slotsChanged(craftSlots);
-        forceSync = true;
+        sync.markDirty();
+    }
+
+    private void fillGridSlot(int slotIndex, List<ItemStack> opts, boolean max, GolemNetwork net, boolean canExtract, Inventory inv) {
+        for (ItemStack opt : opts) {
+            if (opt.isEmpty()) {
+                continue;
+            }
+            ItemStack key = opt.copyWithCount(1);
+            int want = max ? key.getMaxStackSize() : 1;
+            int have = canExtract ? net.extractItem(key, want, false).getCount() : 0;
+            for (int k = 0; k < inv.items.size() && have < want; k++) {
+                if (k == lockedSlot) {
+                    continue;
+                }
+                ItemStack st = inv.items.get(k);
+                if (ItemStack.isSameItemSameComponents(st, key)) {
+                    int take = Math.min(want - have, st.getCount());
+                    st.shrink(take);
+                    if (st.isEmpty()) {
+                        inv.setItem(k, ItemStack.EMPTY);
+                    }
+                    have += take;
+                }
+            }
+            if (have > 0) {
+                craftSlots.setItem(slotIndex, key.copyWithCount(have));
+                return;
+            }
+        }
     }
 
     @Override
     public boolean clickMenuButton(Player player, int id) {
         if (id == 0 && player instanceof ServerPlayer sp && netLevel != null) {
             GolemNetwork net = network();
-            if (checkAccess(sp, net)) {
-                if (!net.hasPermission(sp, com.golemlogix.security.SecurityPermission.INSERT)) {
-                    sp.displayClientMessage(Component.translatable("message.golem_logix.security_denied"), true);
-                    return true;
-                }
+            if (checkAccess(sp, net) && requirePermission(sp, net, SecurityPermission.INSERT)) {
                 clearGrid(net, sp);
-                forceSync = true;
+                sync.markDirty();
             }
             return true;
         }
@@ -553,7 +473,7 @@ public class TerminalMenu extends GolemMenu {
             return;
         }
         GolemNetwork net = network();
-        if (accessError(net) != null || !net.hasPermission(player, com.golemlogix.security.SecurityPermission.EXTRACT)) {
+        if (accessError(net) != null || !net.hasPermission(player, SecurityPermission.EXTRACT)) {
             return;
         }
         for (int i = 0; i < 9; i++) {
@@ -564,11 +484,11 @@ public class TerminalMenu extends GolemMenu {
                 }
             }
         }
-        forceSync = true;
+        sync.markDirty();
     }
 
     private class NetworkResultSlot extends ResultSlot {
-        NetworkResultSlot(Player player, CraftingContainer craftSlots, net.minecraft.world.Container container, int slot, int x, int y) {
+        NetworkResultSlot(Player player, CraftingContainer craftSlots, Container container, int slot, int x, int y) {
             super(player, craftSlots, container, slot, x, y);
         }
 
@@ -584,7 +504,7 @@ public class TerminalMenu extends GolemMenu {
     }
 
     @Override
-    public void slotsChanged(net.minecraft.world.Container container) {
+    public void slotsChanged(Container container) {
         // as with the vanilla crafting table: super is not called, otherwise every grid change forces a broadcast
         if (!crafting || container != craftSlots) {
             return;
@@ -608,16 +528,14 @@ public class TerminalMenu extends GolemMenu {
         }
         resultSlots.setItem(0, result);
         setRemoteSlot(0, result);
-        sp.connection.send(new net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket(
-                containerId, incrementStateId(), 0, result));
+        sp.connection.send(new ClientboundContainerSetSlotPacket(containerId, incrementStateId(), 0, result));
     }
 
     // ------------------------------------------------------------------ craft requests
 
     /**
-     * An order from the order window: a preview sends the plan to the window's planner (CraftPlanPayload: what to take from the network, what to
-     * craft, what is missing); a start sends the outcome there too (the window closes if the order started, otherwise it shows the reason).
-     * Shortages are no longer written to chat.
+     * An order from the order window: a preview sends the plan to the window's planner (CraftPlanPayload);
+     * a start sends the outcome there too (the window closes if the order started, otherwise it shows the reason).
      */
     public void handleCraftRequest(ServerPlayer sp, CraftRequestPayload p) {
         if (netLevel == null || p.key().isEmpty()) {
@@ -625,85 +543,23 @@ public class TerminalMenu extends GolemMenu {
         }
         GolemNetwork net = network();
         if (!checkAccess(sp, net)) {
-            sendPlan(sp, p.request(), CraftPlanPayload.Status.OFFLINE, null);
+            TerminalOrders.sendPlan(sp, containerId, p.request(), CraftPlanPayload.Status.OFFLINE, null);
             return;
         }
-        if (!net.hasPermission(sp, com.golemlogix.security.SecurityPermission.CRAFT)) {
-            sendPlan(sp, p.request(), CraftPlanPayload.Status.OFFLINE, null);
-            sp.displayClientMessage(Component.translatable("message.golem_logix.security_denied"), true);
-            return;
+        if (TerminalOrders.handleCraftRequest(sp, containerId, net, p)) {
+            sync.markDirty();
         }
-        ItemKey key = ItemKey.of(p.key());
-        long amount = Math.max(1, Math.min(p.amount(), 1_000_000));
-        Component name = key.stack().getHoverName();
-
-        if (!net.canCraft(key)) {
-            sendPlan(sp, p.request(), CraftPlanPayload.Status.NO_PATTERN, null);
-            return;
-        }
-
-        if (p.preview()) {
-            CraftingPlan plan = CraftingPlanner.plan(net, key, amount);
-            sendPlan(sp, p.request(), plan.missing().isEmpty() ? CraftPlanPayload.Status.OK : CraftPlanPayload.Status.MISSING, plan);
-            return;
-        }
-
-        Map<ItemKey, Long> one = new LinkedHashMap<>();
-        one.put(key, amount);
-        GolemNetwork.StartResult result = net.startCrafting(one, sp.getUUID(), null);
-        CraftPlanPayload.Status status = switch (result.type()) {
-            case STARTED -> CraftPlanPayload.Status.STARTED;
-            case MISSING -> CraftPlanPayload.Status.MISSING;
-            case NO_CPU -> CraftPlanPayload.Status.NO_CPU;
-            case RESERVE_FAILED -> CraftPlanPayload.Status.RESERVE_FAILED;
-            case OFFLINE -> CraftPlanPayload.Status.OFFLINE;
-            case NO_PATTERN -> CraftPlanPayload.Status.NO_PATTERN;
-        };
-        CraftingPlan plan = result.plan() != null ? result.plan() : CraftingPlanner.plan(net, key, amount);
-        sendPlan(sp, p.request(), status, plan);
-        if (status == CraftPlanPayload.Status.STARTED) {
-            sp.displayClientMessage(Component.translatable("message.golem_logix.craft.started", amount, name, plan.totalExecutions())
-                    .withStyle(ChatFormatting.AQUA), true);
-        }
-        forceSync = true;
-    }
-
-    /** The order plan goes to the order window's planner: missing, crafted and taken from the network (in that order). */
-    private void sendPlan(ServerPlayer sp, int request, CraftPlanPayload.Status status, @Nullable CraftingPlan plan) {
-        List<CraftPlanPayload.Entry> entries = plan == null ? List.of() : planEntries(plan);
-        PacketDistributor.sendToPlayer(sp, new CraftPlanPayload(containerId, request, status, plan == null ? 0 : plan.steps().size(),
-                plan == null ? 0 : plan.totalExecutions(), entries));
     }
 
     /** Planner rows: per item, how much to take from the network, how much to craft, how much is missing. */
     public static List<CraftPlanPayload.Entry> planEntries(CraftingPlan plan) {
-        Map<ItemKey, long[]> rows = new LinkedHashMap<>();
-        for (Map.Entry<ItemKey, Long> e : plan.missing().entrySet()) {
-            rows.computeIfAbsent(e.getKey(), k -> new long[3])[2] += e.getValue();
-        }
-        for (CraftingPlan.Step s : plan.steps()) {
-            for (Map.Entry<ItemKey, Integer> out : s.pattern().outputTotals().entrySet()) {
-                rows.computeIfAbsent(out.getKey(), k -> new long[3])[1] += s.times() * out.getValue();
-            }
-        }
-        for (Map.Entry<ItemKey, Long> e : plan.fromStorage().entrySet()) {
-            rows.computeIfAbsent(e.getKey(), k -> new long[3])[0] += e.getValue();
-        }
-        List<CraftPlanPayload.Entry> entries = new ArrayList<>();
-        for (Map.Entry<ItemKey, long[]> e : rows.entrySet()) {
-            long[] v = e.getValue();
-            entries.add(new CraftPlanPayload.Entry(e.getKey().stack(), v[0], v[1], v[2]));
-        }
-        entries.sort(java.util.Comparator.comparingInt(e -> e.missing() > 0 ? 0 : e.craft() > 0 ? 1 : 2));
-        return entries.size() > CraftPlanPayload.MAX_ENTRIES ? new ArrayList<>(entries.subList(0, CraftPlanPayload.MAX_ENTRIES)) : entries;
+        return TerminalOrders.planEntries(plan);
     }
-    /** Client: the last order plan received (for the order window's planner). */
-    @Nullable
-    public CraftPlanPayload clientPlan;
 
     public void clientReceivePlan(CraftPlanPayload p) {
         clientPlan = p;
     }
+
     /**
      * Precraft (Ctrl + "+" in JEI): one job for all missing ingredients that have patterns.
      * What cannot be crafted is listed in chat.
@@ -716,74 +572,8 @@ public class TerminalMenu extends GolemMenu {
         if (!checkAccess(sp, net)) {
             return;
         }
-        if (!net.hasPermission(sp, com.golemlogix.security.SecurityPermission.CRAFT)) {
-            sp.displayClientMessage(Component.translatable("message.golem_logix.security_denied"), true);
-            return;
-        }
-        Map<ItemKey, Long> targets = new LinkedHashMap<>();
-        List<Component> uncraftable = new ArrayList<>();
-        for (int i = 0; i < Math.min(items.size(), counts.size()); i++) {
-            ItemStack s = items.get(i);
-            if (s.isEmpty()) {
-                continue;
-            }
-            ItemKey key = ItemKey.of(s);
-            long n = Math.max(1, Math.min(counts.get(i), 4096));
-            if (net.canCraft(key)) {
-                targets.merge(key, n, Long::sum);
-            } else {
-                uncraftable.add(key.stack().getHoverName());
-            }
-        }
-        if (!uncraftable.isEmpty()) {
-            MutableComponent list = Component.empty();
-            for (int i = 0; i < uncraftable.size(); i++) {
-                list.append(i == 0 ? Component.empty() : Component.literal(", ")).append(uncraftable.get(i));
-            }
-            sp.sendSystemMessage(Component.translatable("message.golem_logix.precraft.uncraftable", list).withStyle(ChatFormatting.YELLOW));
-        }
-        if (targets.isEmpty()) {
-            return;
-        }
-        MutableComponent what = Component.empty();
-        int i = 0;
-        for (Map.Entry<ItemKey, Long> e : targets.entrySet()) {
-            what.append(i++ == 0 ? Component.empty() : Component.literal(", "))
-                    .append(Component.literal(e.getValue() + "× ")).append(e.getKey().stack().getHoverName());
-        }
-        GolemNetwork.StartResult result = net.startCrafting(targets, sp.getUUID(), null);
-        ItemKey first = targets.keySet().iterator().next();
-        reportStart(sp, result, Component.translatable("message.golem_logix.precraft.started", what), targets.get(first),
-                first.stack().getHoverName());
-        forceSync = true;
-    }
-
-    private void reportStart(ServerPlayer sp, GolemNetwork.StartResult result, Component started, long amount, Component name) {
-        switch (result.type()) {
-            case STARTED -> sp.sendSystemMessage(started.copy().withStyle(ChatFormatting.AQUA));
-            case MISSING -> {
-                sp.sendSystemMessage(Component.translatable("message.golem_logix.craft.missing", amount, name).withStyle(ChatFormatting.RED));
-                reportMissing(sp, result.plan());
-            }
-            case NO_CPU -> sp.sendSystemMessage(Component.translatable("message.golem_logix.craft.no_cpu").withStyle(ChatFormatting.RED));
-            case RESERVE_FAILED -> sp.sendSystemMessage(Component.translatable("message.golem_logix.craft.reserve_failed").withStyle(ChatFormatting.RED));
-            case OFFLINE -> sp.sendSystemMessage(Component.translatable("message.golem_logix.no_power").withStyle(ChatFormatting.RED));
-            case NO_PATTERN -> sp.sendSystemMessage(Component.translatable("message.golem_logix.craft.no_pattern", name).withStyle(ChatFormatting.RED));
-        }
-    }
-
-    private void reportMissing(ServerPlayer sp, @Nullable CraftingPlan plan) {
-        if (plan == null) {
-            return;
-        }
-        int shown = 0;
-        for (Map.Entry<ItemKey, Long> e : plan.missing().entrySet()) {
-            if (shown++ >= 8) {
-                sp.sendSystemMessage(Component.literal("  ...").withStyle(ChatFormatting.GRAY));
-                break;
-            }
-            sp.sendSystemMessage(Component.translatable("message.golem_logix.craft.missing_item", e.getValue(), e.getKey().stack().getHoverName())
-                    .withStyle(ChatFormatting.YELLOW));
+        if (TerminalOrders.handlePrecraft(sp, net, items, counts)) {
+            sync.markDirty();
         }
     }
 
@@ -797,9 +587,10 @@ public class TerminalMenu extends GolemMenu {
             return player.getInventory().getItem(lockedSlot);
         }
         // the inventory, the offhand and the Curios slot: the one bound to this network, or else any
-        List<ItemStack> carried = com.golemlogix.items.Chronometers.carried(player);
+        List<ItemStack> carried = Chronometers.carried(player);
         for (ItemStack s : carried) {
-            if (anchor != null && PortableChronometerItem.getBound(s) != null && anchor.equals(PortableChronometerItem.getBound(s).pos())) {
+            var bound = PortableChronometerItem.getBound(s);
+            if (anchor != null && bound != null && anchor.equals(bound.pos())) {
                 return s;
             }
         }
@@ -835,12 +626,10 @@ public class TerminalMenu extends GolemMenu {
             return;
         }
         long tick = player.level().getGameTime();
-        if (!forceSync && tick % 10 != 0) {
+        if (!sync.isDue(tick)) {
             return;
         }
-        boolean force = forceSync;
-        forceSync = false;
-
+        boolean force = sync.consumeForce();
         GolemNetwork net = force ? network() : GolemNetwork.get(netLevel, anchor);
         String err = accessError(net);
 
@@ -848,116 +637,8 @@ public class TerminalMenu extends GolemMenu {
             lastDrainTick = tick;
             drainCharge(sp, net);
         }
-
-        Map<ItemKey, Long> items = err == null ? net.listItemsShared() : Map.of();
-        Set<ItemKey> craftable = err == null ? new HashSet<>(net.patternIndex().keySet()) : Set.of();
-
-        if (lastItems == null) {
-            sendList(sp, items, craftable);
-        } else if (!items.equals(lastItems) || !craftable.equals(lastCraftable)) {
-            sendChanges(sp, items, craftable);
-        }
-        lastItems = items;
-        lastCraftable = craftable;
-
-        int busy = 0;
-        int total = 0;
-        if (err == null) {
-            for (com.golemlogix.crafting.CraftingCpu cpu : net.cpus()) {
-                if (!cpu.isRemoved()) {
-                    total++;
-                    if (!cpu.isIdle()) {
-                        busy++;
-                    }
-                }
-            }
-        }
-        int charge = -1;
-        boolean resonator = false;
-        if (wireless && SourceHelper.sourceRequired()) {
-            ItemStack chrono = chronometer();
-            charge = chrono == null ? 0 : PortableChronometerItem.getCharge(chrono);
-            resonator = err == null && net.hasResonator();
-        }
-        TerminalInfoPayload info = new TerminalInfoPayload(containerId, err == null ? "" : err,
-                net.channelsUsed(), net.channelCapacity(),
-                err == null ? net.itemsStoredOnDisks() : 0, err == null ? net.itemCapacity() : 0,
-                err == null ? net.fluidStoredOnDisks() : 0, err == null ? net.fluidCapacity() : 0,
-                busy, total, err == null ? net.listFluids() : List.of(), charge, resonator);
-        if (!sameInfo(info, lastInfo)) {
-            lastInfo = info;
-            PacketDistributor.sendToPlayer(sp, info);
-        }
-    }
-
-    private static boolean sameInfo(TerminalInfoPayload a, @Nullable TerminalInfoPayload b) {
-        if (b == null) {
-            return false;
-        }
-        if (!a.error().equals(b.error()) || a.channelsUsed() != b.channelsUsed() || a.channelCapacity() != b.channelCapacity()
-                || a.itemsUsed() != b.itemsUsed() || a.itemsCapacity() != b.itemsCapacity()
-                || a.fluidsUsed() != b.fluidsUsed() || a.fluidsCapacity() != b.fluidsCapacity()
-                || a.cpuBusy() != b.cpuBusy() || a.cpuTotal() != b.cpuTotal() || a.fluids().size() != b.fluids().size()
-                || a.charge() != b.charge() || a.resonator() != b.resonator()) {
-            return false;
-        }
-        for (int i = 0; i < a.fluids().size(); i++) {
-            if (!FluidStack.matches(a.fluids().get(i), b.fluids().get(i))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /** Only what changed since the last time: an entry with nothing stored that cannot be crafted is gone. */
-    private void sendChanges(ServerPlayer sp, Map<ItemKey, Long> items, Set<ItemKey> craftable) {
-        List<TerminalListPayload.Entry> changes = new ArrayList<>();
-        for (Map.Entry<ItemKey, Long> e : items.entrySet()) {
-            ItemKey k = e.getKey();
-            boolean can = craftable.contains(k);
-            if (!e.getValue().equals(lastItems.get(k)) || can != lastCraftable.contains(k)) {
-                changes.add(new TerminalListPayload.Entry(k.stack(), e.getValue(), can));
-            }
-        }
-        for (ItemKey k : lastItems.keySet()) {
-            if (!items.containsKey(k)) {
-                changes.add(new TerminalListPayload.Entry(k.stack(), 0, craftable.contains(k)));
-            }
-        }
-        for (ItemKey k : craftable) {
-            if (!items.containsKey(k) && !lastItems.containsKey(k) && !lastCraftable.contains(k)) {
-                changes.add(new TerminalListPayload.Entry(k.stack(), 0, true));
-            }
-        }
-        for (ItemKey k : lastCraftable) {
-            if (!items.containsKey(k) && !lastItems.containsKey(k) && !craftable.contains(k)) {
-                changes.add(new TerminalListPayload.Entry(k.stack(), 0, false));
-            }
-        }
-        for (int i = 0; i < changes.size(); i += TerminalListPayload.CHUNK) {
-            int end = Math.min(changes.size(), i + TerminalListPayload.CHUNK);
-            PacketDistributor.sendToPlayer(sp, new TerminalListPayload(containerId, false, new ArrayList<>(changes.subList(i, end))));
-        }
-    }
-
-    private void sendList(ServerPlayer sp, Map<ItemKey, Long> items, Set<ItemKey> craftable) {
-        List<TerminalListPayload.Entry> all = new ArrayList<>(items.size() + craftable.size());
-        for (Map.Entry<ItemKey, Long> e : items.entrySet()) {
-            all.add(new TerminalListPayload.Entry(e.getKey().stack(), e.getValue(), craftable.contains(e.getKey())));
-        }
-        for (ItemKey k : craftable) {
-            if (!items.containsKey(k)) {
-                all.add(new TerminalListPayload.Entry(k.stack(), 0, true));
-            }
-        }
-        boolean first = true;
-        int i = 0;
-        do {
-            int end = Math.min(all.size(), i + TerminalListPayload.CHUNK);
-            PacketDistributor.sendToPlayer(sp, new TerminalListPayload(containerId, first, new ArrayList<>(all.subList(i, end))));
-            first = false;
-            i = end;
-        } while (i < all.size());
+        ItemStack chrono = wireless && SourceHelper.sourceRequired() ? chronometer() : null;
+        sync.sync(sp, containerId, net, err, wireless, chrono);
     }
 
     // ------------------------------------------------------------------ client
@@ -1020,63 +701,69 @@ public class TerminalMenu extends GolemMenu {
                 return ItemStack.EMPTY;
             }
             slot.onQuickCraft(stack, copy);
-        } else if (crafting && index >= 1 && index < 10) {
-            // from the grid into the network (on the server), otherwise into the inventory
-            if (player.level().isClientSide()) {
-                return ItemStack.EMPTY;
+            ItemStack result = finishQuickMove(slot, stack, copy, player);
+            if (!result.isEmpty()) {
+                player.drop(stack, false);
             }
-            if (netLevel != null) {
-                GolemNetwork net = network();
-                if (accessError(net) == null && net.hasPermission(player, com.golemlogix.security.SecurityPermission.INSERT)) {
-                    ItemStack rest = net.insertItem(stack.copy(), false);
-                    stack.setCount(rest.getCount());
-                    forceSync = true;
-                }
-            }
-            if (!stack.isEmpty() && !this.moveItemStackTo(stack, playerStart, playerEnd, false)) {
-                slot.setChanged();
-                return ItemStack.EMPTY;
-            }
-        } else {
-            // player inventory -> network
-            if (player.level().isClientSide() || netLevel == null) {
-                return ItemStack.EMPTY;
-            }
-            GolemNetwork net = network();
-            String err = accessError(net);
-            if (err != null) {
-                if (player instanceof ServerPlayer sp) {
-                    sp.displayClientMessage(Component.translatable(err), true);
-                }
-                return ItemStack.EMPTY;
-            }
-            if (!net.hasPermission(player, com.golemlogix.security.SecurityPermission.INSERT)) {
-                if (player instanceof ServerPlayer sp) {
-                    sp.displayClientMessage(Component.translatable("message.golem_logix.security_denied"), true);
-                }
-                return ItemStack.EMPTY;
-            }
-            ItemStack rest = net.insertItem(stack.copy(), false);
-            if (rest.getCount() == stack.getCount()) {
-                return ItemStack.EMPTY;
-            }
-            stack.setCount(rest.getCount());
-            forceSync = true;
+            return result;
         }
-
-        if (stack.isEmpty()) {
-            slot.setByPlayer(ItemStack.EMPTY);
-        } else {
-            slot.setChanged();
+        if (crafting && index >= 1 && index < 10) {
+            if (!quickMoveFromGrid(player, slot, stack)) {
+                return ItemStack.EMPTY;
+            }
+            return finishQuickMove(slot, stack, copy, player);
         }
-        if (stack.getCount() == copy.getCount()) {
+        if (!quickMoveFromPlayer(player, stack)) {
             return ItemStack.EMPTY;
         }
-        slot.onTake(player, stack);
-        if (crafting && index == 0) {
-            player.drop(stack, false);
+        return finishQuickMove(slot, stack, copy, player);
+    }
+
+    private boolean quickMoveFromGrid(Player player, Slot slot, ItemStack stack) {
+        // from the grid into the network (on the server), otherwise into the inventory
+        if (player.level().isClientSide()) {
+            return false;
         }
-        return copy;
+        if (netLevel != null) {
+            GolemNetwork net = network();
+            if (accessError(net) == null && net.hasPermission(player, SecurityPermission.INSERT)) {
+                ItemStack rest = net.insertItem(stack.copy(), false);
+                stack.setCount(rest.getCount());
+                sync.markDirty();
+            }
+        }
+        if (!stack.isEmpty() && !this.moveItemStackTo(stack, playerStart, playerEnd, false)) {
+            slot.setChanged();
+            return false;
+        }
+        return true;
+    }
+
+    private boolean quickMoveFromPlayer(Player player, ItemStack stack) {
+        if (player.level().isClientSide() || netLevel == null) {
+            return false;
+        }
+        GolemNetwork net = network();
+        String err = accessError(net);
+        if (err != null) {
+            if (player instanceof ServerPlayer sp) {
+                sp.displayClientMessage(Component.translatable(err), true);
+            }
+            return false;
+        }
+        if (!net.hasPermission(player, SecurityPermission.INSERT)) {
+            if (player instanceof ServerPlayer sp) {
+                sp.displayClientMessage(Component.translatable("message.golem_logix.security_denied"), true);
+            }
+            return false;
+        }
+        ItemStack rest = net.insertItem(stack.copy(), false);
+        if (rest.getCount() == stack.getCount()) {
+            return false;
+        }
+        stack.setCount(rest.getCount());
+        sync.markDirty();
+        return true;
     }
 
     @Override
@@ -1092,29 +779,28 @@ public class TerminalMenu extends GolemMenu {
         if (anchor == null || !netLevel.isLoaded(anchor)) {
             return false;
         }
-        if (wireless) {
-            boolean held = lockedSlot >= 0
-                    ? lockedSlot < player.getInventory().getContainerSize()
-                            && player.getInventory().getItem(lockedSlot).getItem() instanceof PortableChronometerItem
-                    : !com.golemlogix.items.Chronometers.carried(player).isEmpty();
-            if (!held || !PortableChronometerItem.inRange(wirelessTier, player.level(), player.position(), netLevel, anchor)) {
-                return false;
-            }
-        } else {
-            if (player.level() != netLevel || devicePos == null || expectedBlock == null
-                    || !netLevel.isLoaded(devicePos) || !netLevel.getBlockState(devicePos).is(expectedBlock)
-                    || player.distanceToSqr(devicePos.getX() + 0.5, devicePos.getY() + 0.5, devicePos.getZ() + 0.5) > 64.0) {
-                return false;
-            }
-        }
-        GolemNetwork net = GolemNetwork.get(netLevel, anchor);
-        if (net.hasSecurityTerminal()
-                && !net.hasPermission(player, com.golemlogix.security.SecurityPermission.INSERT)
-                && !net.hasPermission(player, com.golemlogix.security.SecurityPermission.EXTRACT)
-                && !net.hasPermission(player, com.golemlogix.security.SecurityPermission.CRAFT)) {
+        if (wireless ? !stillValidWireless(player) : !stillValidWired(player)) {
             return false;
         }
-        return true;
+        GolemNetwork net = GolemNetwork.get(netLevel, anchor);
+        return !net.hasSecurityTerminal()
+                || net.hasPermission(player, SecurityPermission.INSERT)
+                || net.hasPermission(player, SecurityPermission.EXTRACT)
+                || net.hasPermission(player, SecurityPermission.CRAFT);
+    }
+
+    private boolean stillValidWireless(Player player) {
+        boolean held = lockedSlot >= 0
+                ? lockedSlot < player.getInventory().getContainerSize()
+                        && player.getInventory().getItem(lockedSlot).getItem() instanceof PortableChronometerItem
+                : !Chronometers.carried(player).isEmpty();
+        return held && PortableChronometerItem.inRange(wirelessTier, player.level(), player.position(), netLevel, anchor);
+    }
+
+    private boolean stillValidWired(Player player) {
+        return player.level() == netLevel && devicePos != null && expectedBlock != null
+                && netLevel.isLoaded(devicePos) && netLevel.getBlockState(devicePos).is(expectedBlock)
+                && player.distanceToSqr(devicePos.getX() + 0.5, devicePos.getY() + 0.5, devicePos.getZ() + 0.5) <= 64.0;
     }
 
     @Override
@@ -1122,20 +808,8 @@ public class TerminalMenu extends GolemMenu {
         super.removed(player);
         if (crafting && !player.level().isClientSide() && player instanceof ServerPlayer sp) {
             GolemNetwork net = netLevel != null ? network() : null;
-            boolean netOk = net != null && accessError(net) == null
-                    && net.hasPermission(sp, com.golemlogix.security.SecurityPermission.INSERT);
-            for (int i = 0; i < 9; i++) {
-                ItemStack s = craftSlots.removeItemNoUpdate(i);
-                if (s.isEmpty()) {
-                    continue;
-                }
-                if (netOk) {
-                    s = net.insertItem(s, false);
-                }
-                if (!s.isEmpty()) {
-                    sp.getInventory().placeItemBackInInventory(s);
-                }
-            }
+            boolean netOk = net != null && accessError(net) == null && net.hasPermission(sp, SecurityPermission.INSERT);
+            drainGrid(sp, net, netOk, false);
         }
     }
 
