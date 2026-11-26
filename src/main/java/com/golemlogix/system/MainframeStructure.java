@@ -49,8 +49,20 @@ public final class MainframeStructure {
         return RESTORING.get();
     }
 
-    private static boolean isLoaded(LevelReader level, BlockPos pos) {
+    static boolean isLoaded(LevelReader level, BlockPos pos) {
         return level instanceof Level l ? l.isLoaded(pos) : level.hasChunkAt(pos);
+    }
+
+    static boolean allLoaded(Level level, BlockPos controller, Direction facing) {
+        if (!level.isLoaded(controller)) {
+            return false;
+        }
+        for (int i = 0; i < CELLS.length; i++) {
+            if (!level.isLoaded(cellPos(controller, facing, i))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public static boolean isAtlant(int cell) {
@@ -132,13 +144,8 @@ public final class MainframeStructure {
      * of the statue, left without its pair, would disappear by itself), and the neighbours are notified at the end.
      */
     public static void form(Level level, BlockPos controller, Direction facing) {
-        if (!level.isLoaded(controller)) {
+        if (!allLoaded(level, controller, facing)) {
             return;
-        }
-        for (int i = 0; i < CELLS.length; i++) {
-            if (!level.isLoaded(cellPos(controller, facing, i))) {
-                return;
-            }
         }
         RESTORING.set(true);
         try {
@@ -203,7 +210,7 @@ public final class MainframeStructure {
     }
 
     /** Notify the neighbours of all cells (pipes recompute their joints) once the whole cabinet has been replaced. */
-    private static void notifyAll(Level level, BlockPos controller, Direction facing) {
+    static void notifyAll(Level level, BlockPos controller, Direction facing) {
         for (int i = 0; i < CELLS.length; i++) {
             BlockPos p = cellPos(controller, facing, i);
             if (!level.isLoaded(p)) {

@@ -1,20 +1,40 @@
 package com.golemlogix.upgrade;
 
+import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.OwnedContainer;
 import com.golemlogix.items.UpgradeItem;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.Container;
+import net.minecraft.world.Containers;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.WeakHashMap;
 
 /**
  * A machine's upgrade slots: one upgrade in each (speed upgrades may share one, see UpgradeSpec), every slot for one kind (UpgradeSpec.typeAt; the window shows its ghost).
  * Upgrades from an older save are put into their own slots on loading; one with no slot left (the Annihilation Bus took speed
  * upgrades once) waits in strays until the machine drops it.
  */
-@net.neoforged.fml.common.EventBusSubscriber(modid = com.golemlogix.GolemLogixMod.MOD_ID)
+@EventBusSubscriber(modid = GolemLogixMod.MOD_ID)
 public class UpgradeContainer extends OwnedContainer {
     private final UpgradeSpec spec;
     private final Runnable onChange;
-    private final java.util.List<ItemStack> strays = new java.util.ArrayList<>();
+    private final List<ItemStack> strays = new ArrayList<>();
 
     public UpgradeContainer(UpgradeSpec spec, BlockEntity owner, Runnable onChange) {
         super(spec.slots(), owner, s -> true);
@@ -41,30 +61,30 @@ public class UpgradeContainer extends OwnedContainer {
         return stack.getItem() instanceof UpgradeItem up ? spec.perSlot(up.type()) : 1;
     }
 
-    /** Whether an upgrade can go into slot slot (considering what is already in the others). */
+    /** Whether an upgrade can go into slot (considering what is already in the others). */
     @Override
     public boolean canPlaceItem(int slot, ItemStack stack) {
         return accepts(spec, stack, this, slot);
     }
 
     /** The shared check (the client copy of the menu uses it too): the slot is for this kind of upgrade. */
-    public static boolean accepts(UpgradeSpec spec, ItemStack stack, net.minecraft.world.Container current, int slot) {
+    public static boolean accepts(UpgradeSpec spec, ItemStack stack, Container current, int slot) {
         return stack.getItem() instanceof UpgradeItem up && spec.typeAt(slot) == up.type();
     }
 
     /** Loads every upgrade into a slot of its own kind, where it was if that slot is for it (saves from before slots had kinds). */
     @Override
-    public void fromTag(net.minecraft.nbt.ListTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+    public void fromTag(ListTag tag, HolderLookup.Provider registries) {
         clearContent();
         strays.clear();
-        java.util.List<ItemStack> rest = new java.util.ArrayList<>();
+        List<ItemStack> rest = new ArrayList<>();
         for (int i = 0; i < tag.size(); i++) {
-            net.minecraft.nbt.CompoundTag entry = tag.getCompound(i);
+            CompoundTag entry = tag.getCompound(i);
             ItemStack stack = ItemStack.parse(registries, entry).orElse(ItemStack.EMPTY);
             if (stack.isEmpty()) {
                 continue;
             }
-            int slot = entry.contains("Slot", net.minecraft.nbt.Tag.TAG_ANY_NUMERIC) ? entry.getInt("Slot") : -1;
+            int slot = entry.contains("Slot", Tag.TAG_ANY_NUMERIC) ? entry.getInt("Slot") : -1;
             if (slot >= 0 && slot < getContainerSize() && getItem(slot).isEmpty() && accepts(spec, stack, this, slot)) {
                 int max = getMaxStackSize(stack);
                 if (stack.getCount() <= max) {
@@ -77,8 +97,15 @@ public class UpgradeContainer extends OwnedContainer {
                 rest.add(stack);
             }
         }
+        packRest(rest);
+        if (!strays.isEmpty() && (owner().getLevel() == null || !owner().getLevel().isClientSide())) {
+            PENDING.add(this);
+        }
+    }
+
+    /** Packs unplaced or migrated upgrades into matching slots; anything that cannot fit is preserved in strays. */
+    private void packRest(List<ItemStack> rest) {
         for (ItemStack s : rest) {
-            // a save from when a bus had four speed slots: they come together in the one slot; what does not fit stays a stray
             for (int i = 0; i < getContainerSize() && !s.isEmpty(); i++) {
                 if (!accepts(spec, s, this, i)) {
                     continue;
@@ -100,17 +127,14 @@ public class UpgradeContainer extends OwnedContainer {
                 strays.add(s);
             }
         }
-        if (!strays.isEmpty() && (owner().getLevel() == null || !owner().getLevel().isClientSide())) {
-            PENDING.add(this);
-        }
     }
 
     /** The slots, and the strays after them without a slot: a stray is kept by a save until it can be dropped, never lost. */
     @Override
-    public net.minecraft.nbt.ListTag createTag(net.minecraft.core.HolderLookup.Provider registries) {
-        net.minecraft.nbt.ListTag list = super.createTag(registries);
+    public ListTag createTag(HolderLookup.Provider registries) {
+        ListTag list = super.createTag(registries);
         for (ItemStack s : strays) {
-            net.minecraft.nbt.CompoundTag entry = new net.minecraft.nbt.CompoundTag();
+            CompoundTag entry = new CompoundTag();
             entry.putByte("Slot", (byte) -1);
             list.add(s.save(registries, entry));
         }
@@ -121,23 +145,23 @@ public class UpgradeContainer extends OwnedContainer {
      * Containers that loaded strays: on the next server tick they are dropped in front of their machine, whatever the machine is
      * (only the Annihilation Bus used to drop them; a bus or tower from an old save lost what did not fit its one speed slot).
      */
-    private static final java.util.Set<UpgradeContainer> PENDING = java.util.Collections.synchronizedSet(java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>()));
+    private static final Set<UpgradeContainer> PENDING = Collections.synchronizedSet(Collections.newSetFromMap(new WeakHashMap<>()));
 
-    @net.neoforged.bus.api.SubscribeEvent
-    public static void onServerTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+    @SubscribeEvent
+    public static void onServerTick(ServerTickEvent.Post event) {
         if (PENDING.isEmpty()) {
             return;
         }
-        java.util.List<UpgradeContainer> now;
+        List<UpgradeContainer> now;
         synchronized (PENDING) {
-            now = java.util.List.copyOf(PENDING);
+            now = List.copyOf(PENDING);
         }
         for (UpgradeContainer c : now) {
             BlockEntity owner = c.owner();
             if (owner.getLevel() == null && !owner.isRemoved()) {
-                continue;   // not placed in a level yet
+                continue; // Not placed in a level yet
             }
-            if (!owner.isRemoved() && owner.getLevel() instanceof net.minecraft.server.level.ServerLevel level) {
+            if (!owner.isRemoved() && owner.getLevel() instanceof ServerLevel level) {
                 if (!level.isLoaded(owner.getBlockPos())) {
                     continue;
                 }
@@ -149,8 +173,8 @@ public class UpgradeContainer extends OwnedContainer {
         }
     }
 
-    @net.neoforged.bus.api.SubscribeEvent
-    public static void onServerStopped(net.neoforged.neoforge.event.server.ServerStoppedEvent event) {
+    @SubscribeEvent
+    public static void onServerStopped(ServerStoppedEvent event) {
         PENDING.clear();
     }
 
@@ -160,10 +184,10 @@ public class UpgradeContainer extends OwnedContainer {
     }
 
     /** Drops the upgrades that found no slot on loading, in front of the machine. */
-    public void dropStrays(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos) {
+    public void dropStrays(Level level, BlockPos pos) {
         if (!strays.isEmpty()) {
             for (ItemStack s : strays) {
-                net.minecraft.world.Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, s);
+                Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, s);
             }
             strays.clear();
             setChanged();

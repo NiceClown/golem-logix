@@ -8,10 +8,10 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -102,7 +102,7 @@ public final class DiskStorage {
         long stored = d == null ? 0L : (isFluidDisk(disk) ? d.storedFluids : d.storedItems);
         Integer expected = (d == null || (stored <= 0 && d.isEmpty())) ? null : (int) Math.min(stored, Integer.MAX_VALUE);
         Integer shown = disk.get(ModDataComponents.STORED.get());
-        if (!java.util.Objects.equals(shown, expected)) {
+        if (!Objects.equals(shown, expected)) {
             if (expected == null) {
                 disk.remove(ModDataComponents.STORED.get());
             } else {
@@ -330,10 +330,5 @@ public final class DiskStorage {
             }
         }
         return 0;
-    }
-
-    /** A copy of the disk's fluid list (for safe iteration). */
-    public static List<FluidStack> fluidsCopy(ItemStack disk) {
-        return new ArrayList<>(fluids(disk));
     }
 }
