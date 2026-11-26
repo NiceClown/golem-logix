@@ -4,8 +4,12 @@ import com.golemlogix.blockentity.CryoCalculatorBlockEntity;
 import com.golemlogix.crafting.CraftingJob;
 import com.golemlogix.init.ModBlocks;
 import com.golemlogix.init.ModMenus;
+import com.golemlogix.items.FluidGhostItem;
 import com.golemlogix.network.CalculatorStatusPayload;
+import com.golemlogix.security.SecurityPermission;
 import com.golemlogix.system.GolemNetwork;
+import com.golemlogix.system.Ingredients;
+import com.golemlogix.system.ItemKey;
 import com.golemlogix.upgrade.RedstoneMode;
 import com.golemlogix.upgrade.UpgradeSpec;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -68,8 +72,8 @@ public class CalculatorMenu extends GolemMenu {
         if (id == 0 && be != null && !be.isRemoved()) {
             if (be.getLevel() != null && !be.getLevel().isClientSide()) {
                 GolemNetwork net = GolemNetwork.get(be.getLevel(), be.getBlockPos());
-                if (!net.hasPermission(player, com.golemlogix.security.SecurityPermission.CRAFT)
-                        && !net.hasPermission(player, com.golemlogix.security.SecurityPermission.BUILD)) {
+                if (!net.hasPermission(player, SecurityPermission.CRAFT)
+                        && !net.hasPermission(player, SecurityPermission.BUILD)) {
                     return false;
                 }
             }
@@ -92,38 +96,40 @@ public class CalculatorMenu extends GolemMenu {
         if (sp.level().getGameTime() % 5 != 0) {
             return;
         }
-        CraftingJob job = be.getJob();
         GolemNetwork net = GolemNetwork.get(be.getLevel(), be.getBlockPos());
-        boolean online = net.isOnline();
-        CalculatorStatusPayload p;
-        CraftingJob helped = job == null ? be.helpedJob() : null;
-        if (helped != null) {
-            // no order of its own: it shows the one it is lending its steps to
-            p = new CalculatorStatusPayload(containerId, helped.status().ordinal(), helped.doneExecutions(), helped.totalExecutions(),
-                    be.getCoprocessors(), be.getWorkers(), helped.awaitingTotal(), online,
-                    helped.target().toStack(1), helped.amount(), List.of(), true);
-        } else if (job == null) {
-            p = new CalculatorStatusPayload(containerId, -1, 0, 0, be.getCoprocessors(), be.getWorkers(), 0, online,
-                    ItemStack.EMPTY, 0, List.of(), false);
-        } else {
-            List<ItemStack> contents = new ArrayList<>();
-            for (Map.Entry<com.golemlogix.system.ItemKey, Long> e : job.inventory().entrySet()) {
-                if (contents.size() >= 8) {
-                    break;
-                }
-                int n = (int) Math.min(e.getValue(), Integer.MAX_VALUE);
-                // a fluid shows as its ghost with the mB of the job
-                contents.add(com.golemlogix.system.Ingredients.isFluid(e.getKey())
-                        ? com.golemlogix.items.FluidGhostItem.withAmount(e.getKey().stack(), n) : e.getKey().toStack(n));
-            }
-            p = new CalculatorStatusPayload(containerId, job.status().ordinal(), job.doneExecutions(), job.totalExecutions(),
-                    be.getCoprocessors(), be.getWorkers(), job.awaitingTotal(), online,
-                    job.target().toStack(1), job.amount(), contents, false);
-        }
+        CalculatorStatusPayload p = buildStatus(net.isOnline());
         if (!sameStatus(p, lastSent)) {
             lastSent = p;
             PacketDistributor.sendToPlayer(sp, p);
         }
+    }
+
+    private CalculatorStatusPayload buildStatus(boolean online) {
+        CraftingJob job = be.getJob();
+        CraftingJob helped = job == null ? be.helpedJob() : null;
+        if (helped != null) {
+            // no order of its own: it shows the one it is lending its steps to
+            return new CalculatorStatusPayload(containerId, helped.status().ordinal(), helped.doneExecutions(), helped.totalExecutions(),
+                    be.getCoprocessors(), be.getWorkers(), helped.awaitingTotal(), online,
+                    helped.target().toStack(1), helped.amount(), List.of(), true);
+        }
+        if (job == null) {
+            return new CalculatorStatusPayload(containerId, -1, 0, 0, be.getCoprocessors(), be.getWorkers(), 0, online,
+                    ItemStack.EMPTY, 0, List.of(), false);
+        }
+        List<ItemStack> contents = new ArrayList<>();
+        for (Map.Entry<ItemKey, Long> e : job.inventory().entrySet()) {
+            if (contents.size() >= 8) {
+                break;
+            }
+            int n = (int) Math.min(e.getValue(), Integer.MAX_VALUE);
+            // a fluid shows as its ghost with the mB of the job
+            contents.add(Ingredients.isFluid(e.getKey())
+                    ? FluidGhostItem.withAmount(e.getKey().stack(), n) : e.getKey().toStack(n));
+        }
+        return new CalculatorStatusPayload(containerId, job.status().ordinal(), job.doneExecutions(), job.totalExecutions(),
+                be.getCoprocessors(), be.getWorkers(), job.awaitingTotal(), online,
+                job.target().toStack(1), job.amount(), contents, false);
     }
 
     /** Compares payloads by ItemStack contents (ItemStack does not override Object.equals). */

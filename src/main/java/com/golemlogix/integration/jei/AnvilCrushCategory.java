@@ -106,7 +106,7 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
     @Override
     public void setRecipe(IRecipeLayoutBuilder builder, AnvilCrushRecipe recipe, IFocusGroup focuses) {
         // the anvil and the golem are drawn as a scene; JEI still finds the ritual by them
-        builder.addInvisibleIngredients(RecipeIngredientRole.CATALYST).addItemStack(new ItemStack(Blocks.ANVIL));
+        builder.addInvisibleIngredients(RecipeIngredientRole.CATALYST).addItemStack(anvilStack.copy());
         builder.addInvisibleIngredients(RecipeIngredientRole.INPUT).addItemStack(recipe.golemRepresentation());
         builder.addSlot(RecipeIngredientRole.OUTPUT, OUT_X + 1, OUT_Y + 1).addItemStack(recipe.output());
     }
@@ -119,62 +119,76 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
 
         g.drawString(font, recipe.golemName(), 4, 3, BROWN, false);
 
-        // the golem: whole until the blow, then flattening, then gone while the plate is shown
-        LivingEntity golem = model(mc.level, recipe.entity());
-        float h = GOLEM_H;
         float squash = t < IMPACT ? 1f : t < FLAT ? 1f - 0.75f * (t - IMPACT) / (FLAT - IMPACT) : 0f;
-        float top = FEET_Y - h * squash;
-        if (golem != null && squash > 0f) {
-            drawGolem(g, golem, squash, t >= IMPACT ? Math.max(0, 10 - (int) ((t - IMPACT) * 1.5f)) : 0);
-        } else if (golem == null && squash > 0f) {
+        float top = FEET_Y - GOLEM_H * squash;
+        drawGolemPhase(g, mc.level, recipe, t, squash);
+        drawAnvilPhase(g, t, top);
+        drawImpactSparks(g, t, top);
+        drawHealthCondition(g, font, recipe);
+        drawResultSection(g, t);
+    }
+
+    private static void drawGolemPhase(GuiGraphics g, Level level, AnvilCrushRecipe recipe, float t, float squash) {
+        if (squash <= 0f) {
+            return;
+        }
+        LivingEntity golem = model(level, recipe.entity());
+        if (golem != null) {
+            int hurt = t >= IMPACT ? Math.max(0, 10 - (int) ((t - IMPACT) * 1.5f)) : 0;
+            drawGolem(g, golem, squash, hurt);
+        } else {
             g.renderItem(recipe.golemRepresentation(), GX - 8, FEET_Y - 16);
         }
+    }
 
-        // the anvil: hangs, falls faster and faster, then sinks with the golem and rests where it stood
-        float fallTo = FEET_Y - h - 14;
+    private void drawAnvilPhase(GuiGraphics g, float t, float top) {
+        // hangs, falls faster and faster, then sinks with the golem and rests where it stood
+        float fallTo = FEET_Y - GOLEM_H - 14;
         float anvilY;
         if (t < FALL_START) {
             anvilY = ANVIL_Y + Mth.sin(t * 0.35f) * 0.6f;
+            arrowDown(g, GX, ANVIL_Y + 19, (int) fallTo + 10);
         } else if (t < IMPACT) {
             float p = (t - FALL_START) / (IMPACT - FALL_START);
             anvilY = ANVIL_Y + (fallTo - ANVIL_Y) * p * p;
         } else {
             anvilY = Math.min(top, FEET_Y) - 14;
         }
-        // the arrow down to the golem, under the hanging anvil
-        if (t < FALL_START) {
-            arrowDown(g, GX, ANVIL_Y + 19, (int) fallTo + 10);
-        }
         g.pose().pushPose();
         g.pose().translate(0, anvilY, 100);
         g.renderItem(anvilStack, GX - 8, 0);
         g.pose().popPose();
+    }
 
-        // the blow: sparks and frost flying off
-        if (t >= IMPACT && t < IMPACT + 10) {
-            float k = (t - IMPACT) / 10f;
-            int alpha = (int) (255 * (1 - k));
-            for (int i = 0; i < 10; i++) {
-                double a = i * Math.PI * 2 / 10 + 0.3;
-                int sx = GX + (int) (Math.cos(a) * (6 + 16 * k));
-                int sy = (int) top + (int) (Math.sin(a) * (3 + 9 * k)) - 2;
-                g.fill(sx, sy, sx + 2, sy + 2, alpha << 24 | (i % 2 == 0 ? 0xFFFFFF : 0x7CE8F0));
-            }
+    private static void drawImpactSparks(GuiGraphics g, float t, float top) {
+        if (t < IMPACT || t >= IMPACT + 10) {
+            return;
         }
+        float k = (t - IMPACT) / 10f;
+        int alpha = (int) (255 * (1 - k));
+        for (int i = 0; i < 10; i++) {
+            double a = i * Math.PI * 2 / 10 + 0.3;
+            int sx = GX + (int) (Math.cos(a) * (6 + 16 * k));
+            int sy = (int) top + (int) (Math.sin(a) * (3 + 9 * k)) - 2;
+            g.fill(sx, sy, sx + 2, sy + 2, alpha << 24 | (i % 2 == 0 ? 0xFFFFFF : 0x7CE8F0));
+        }
+    }
 
+    private static void drawHealthCondition(GuiGraphics g, Font font, AnvilCrushRecipe recipe) {
         // how battered: an arrow from the golem to the hearts (the Wither: a time instead)
         int midY = FEET_Y - GOLEM_H / 2;
         arrowLeft(g, GX - 22, GX - 36, midY);
         if (Float.isNaN(recipe.minHealth())) {
             g.drawWordWrap(font, recipe.healthCondition(), 4, midY - 8, GX - 42, BROWN);
         } else {
-            int x = 4;
-            x = hearts(g, x, midY - 5, Mth.ceil(recipe.minHealth()));
+            int x = hearts(g, 4, midY - 5, Mth.ceil(recipe.minHealth()));
             g.drawString(font, "–", x + 1, midY - 4, BROWN, false);
             hearts(g, x + 8, midY - 5, Mth.floor(recipe.maxHealth()));
             g.drawString(font, recipe.healthCondition(), 4, midY + 7, 0xFFB0581A, false);
         }
+    }
 
+    private void drawResultSection(GuiGraphics g, float t) {
         // "=" under the golem, then the plate, which lights up once the golem is flattened
         g.fill(GX - 5, OUT_Y - 12, GX + 5, OUT_Y - 11, BROWN);
         g.fill(GX - 5, OUT_Y - 9, GX + 5, OUT_Y - 8, BROWN);

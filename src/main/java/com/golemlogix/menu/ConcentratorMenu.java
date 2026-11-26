@@ -3,6 +3,7 @@ package com.golemlogix.menu;
 import com.golemlogix.blockentity.CardCatalogBlockEntity;
 import com.golemlogix.blockentity.PatternProviderBlockEntity;
 import com.golemlogix.blockentity.SchematicConcentratorBlockEntity;
+import com.golemlogix.blocks.SaturatorPartBlock;
 import com.golemlogix.data.PatternData;
 import com.golemlogix.init.ModBlocks;
 import com.golemlogix.init.ModDataComponents;
@@ -127,7 +128,7 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
                 continue;
             }
             BlockState s = level.getBlockState(t);
-            if (s.isAir() || (s.getBlock() instanceof GolemNode && !(s.getBlock() instanceof com.golemlogix.blocks.SaturatorPartBlock))) {
+            if (s.isAir() || (s.getBlock() instanceof GolemNode && !(s.getBlock() instanceof SaturatorPartBlock))) {
                 continue;
             }
             if (level.getCapability(Capabilities.ItemHandler.BLOCK, t, d.getOpposite()) == null) {
@@ -150,17 +151,34 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
         }
     }
 
-    private boolean matches(Container c, int start, int count) {
-        if (filter.isBlank()) {
+    private static boolean matchesAnyCard(Container c, int start, int count, @Nullable FilterQuery query) {
+        if (query == null) {
             return true;
         }
         for (int k = 0; k < count; k++) {
             PatternData d = c.getItem(start + k).get(ModDataComponents.PATTERN.get());
-            if (d != null && d.outputs().stream().anyMatch(s -> ScrollableMenu.matches(s, filter))) {
-                return true;
+            if (d == null) {
+                continue;
+            }
+            for (ItemStack out : d.outputs()) {
+                if (query.matches(out)) {
+                    return true;
+                }
             }
         }
         return false;
+    }
+
+    private static boolean allCraftingPatterns(List<PatternData> patterns) {
+        if (patterns.isEmpty()) {
+            return false;
+        }
+        for (PatternData p : patterns) {
+            if (!p.crafting()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static String posText(BlockPos p) {
@@ -175,6 +193,13 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
         // the keys order the categories: crafting table, machines by name, no machine
         Map<String, Category> cats = new TreeMap<>();
         Component craftTitle = Component.translatable("gui.golem_logix.concentrator.crafting");
+        FilterQuery query = filter.isBlank() ? null : FilterQuery.parse(filter);
+        addProviders(net, cats, craftTitle, query);
+        addCatalogs(net, cats, craftTitle, query);
+        return flattenCategories(cats);
+    }
+
+    private void addProviders(GolemNetwork net, Map<String, Category> cats, Component craftTitle, @Nullable FilterQuery query) {
         List<PatternProviderBlockEntity> providers = new ArrayList<>(net.providers());
         providers.sort(Comparator.comparingDouble(p -> p.getBlockPos().distSqr(pos)));
         for (PatternProviderBlockEntity p : providers) {
@@ -182,20 +207,11 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
                 continue;
             }
             List<PatternData> pats = p.getPatterns();
-            boolean allCrafting = !pats.isEmpty() && pats.stream().allMatch(PatternData::crafting);
+            boolean allCrafting = allCraftingPatterns(pats);
             Level providerLevel = p.getLevel() != null ? p.getLevel() : level;
             ItemStack machine = allCrafting ? ItemStack.EMPTY : machineOf(providerLevel, p);
-            Category cat;
-            if (allCrafting || (machine.isEmpty() && pats.isEmpty())) {
-                cat = cats.computeIfAbsent("0", k -> new Category(new RowInfo(true, new ItemStack(Items.CRAFTING_TABLE), craftTitle, 0), true));
-            } else if (!machine.isEmpty()) {
-                String name = machine.getHoverName().getString();
-                cat = cats.computeIfAbsent("1:" + name, k -> new Category(new RowInfo(true, machine.copyWithCount(1), machine.getHoverName(), 0), false));
-            } else {
-                cat = cats.computeIfAbsent("2", k -> new Category(new RowInfo(true, new ItemStack(Items.BARRIER),
-                        Component.translatable("gui.golem_logix.concentrator.unconnected"), 0), false));
-            }
-            if (!matches(p.getContainer(), 0, PatternProviderBlockEntity.SLOTS)) {
+            Category cat = categoryFor(cats, craftTitle, allCrafting, pats.isEmpty(), machine);
+            if (!matchesAnyCard(p.getContainer(), 0, PatternProviderBlockEntity.SLOTS, query)) {
                 continue;
             }
             Component label = Component.translatable("gui.golem_logix.concentrator.provider", posText(p.getBlockPos()));
@@ -205,6 +221,23 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
             cat.rows.add(new Entry(new RowInfo(false, new ItemStack(ModBlocks.PATTERN_PROVIDER.get()), label, PatternProviderBlockEntity.SLOTS),
                     p.getContainer(), p, 0, cat.crafting, "P" + p.getBlockPos().asLong()));
         }
+    }
+
+    private static Category categoryFor(Map<String, Category> cats, Component craftTitle, boolean allCrafting, boolean emptyPatterns,
+                                        ItemStack machine) {
+        if (allCrafting || (machine.isEmpty() && emptyPatterns)) {
+            return cats.computeIfAbsent("0", k -> new Category(new RowInfo(true, new ItemStack(Items.CRAFTING_TABLE), craftTitle, 0), true));
+        }
+        if (!machine.isEmpty()) {
+            String name = machine.getHoverName().getString();
+            return cats.computeIfAbsent("1:" + name,
+                    k -> new Category(new RowInfo(true, machine.copyWithCount(1), machine.getHoverName(), 0), false));
+        }
+        return cats.computeIfAbsent("2", k -> new Category(new RowInfo(true, new ItemStack(Items.BARRIER),
+                Component.translatable("gui.golem_logix.concentrator.unconnected"), 0), false));
+    }
+
+    private static void addCatalogs(GolemNetwork net, Map<String, Category> cats, Component craftTitle, @Nullable FilterQuery query) {
         for (CardCatalogBlockEntity c : net.catalogs()) {
             if (c.isRemoved() || !c.formed()) {
                 continue;
@@ -213,7 +246,7 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
             int cap = c.capacity();
             for (int start = 0; start < cap; start += COLS) {
                 int count = Math.min(COLS, cap - start);
-                if (!matches(c.getCards(), start, count)) {
+                if (!matchesAnyCard(c.getCards(), start, count, query)) {
                     continue;
                 }
                 Component label = Component.translatable("gui.golem_logix.concentrator.catalog", posText(c.getBlockPos()), start + 1, start + count);
@@ -221,6 +254,9 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
                         c.getCards(), c, start, true, "C" + c.getBlockPos().asLong() + ":" + start + ":" + count));
             }
         }
+    }
+
+    private static List<Entry> flattenCategories(Map<String, Category> cats) {
         List<Entry> out = new ArrayList<>();
         for (Map.Entry<String, Category> e : cats.entrySet()) {
             Category cat = e.getValue();
@@ -238,14 +274,14 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
         return index >= 0 && index < entries.size() ? entries.get(index) : null;
     }
 
-    private static boolean live(Entry e) {
+    private static boolean live(@Nullable Entry e) {
         if (e == null || e.container == null || e.owner == null || e.owner.isRemoved()) {
             return false;
         }
         return !(e.owner instanceof CardCatalogBlockEntity cat) || cat.formed();
     }
 
-    private static boolean liveSlot(Entry e, int col) {
+    private static boolean liveSlot(@Nullable Entry e, int col) {
         if (!live(e) || col < 0 || col >= e.info.count()) {
             return false;
         }
@@ -416,12 +452,30 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
         sendLayout();
     }
 
-    private void sendLayout() {
-        List<String> keys = entries.stream().map(Entry::key).toList();
-        if (player != null && !keys.equals(sentKeys)) {
-            sentKeys = keys;
-            PacketDistributor.sendToPlayer(player, new ConcentratorLayoutPayload(containerId, entries.stream().map(Entry::info).toList()));
+    private boolean sameLayoutKeys() {
+        if (entries.size() != sentKeys.size()) {
+            return false;
         }
+        for (int i = 0; i < entries.size(); i++) {
+            if (!entries.get(i).key().equals(sentKeys.get(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void sendLayout() {
+        if (player == null || sameLayoutKeys()) {
+            return;
+        }
+        List<String> keys = new ArrayList<>(entries.size());
+        List<RowInfo> rows = new ArrayList<>(entries.size());
+        for (Entry e : entries) {
+            keys.add(e.key());
+            rows.add(e.info());
+        }
+        sentKeys = keys;
+        PacketDistributor.sendToPlayer(player, new ConcentratorLayoutPayload(containerId, rows));
     }
 
     @Override
@@ -467,16 +521,7 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
                 }
             }
         }
-        if (stack.getCount() == copy.getCount()) {
-            return ItemStack.EMPTY;
-        }
-        if (stack.isEmpty()) {
-            slot.setByPlayer(ItemStack.EMPTY);
-        } else {
-            slot.setChanged();
-        }
-        slot.onTake(p, stack);
-        return copy;
+        return finishQuickMove(slot, stack, copy, p);
     }
 
     @Override

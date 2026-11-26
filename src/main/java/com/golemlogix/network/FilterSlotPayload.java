@@ -3,11 +3,15 @@ package com.golemlogix.network;
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.menu.BusMenu;
 import com.golemlogix.menu.GolemMenu;
+import com.golemlogix.menu.PatternEncoderMenu;
+import com.golemlogix.menu.StockManometerMenu;
+import com.golemlogix.menu.StockRequesterMenu;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
@@ -34,18 +38,17 @@ public record FilterSlotPayload(int containerId, int slot, int amount) implement
         ctx.enqueueWork(() -> {
             if (ctx.player() instanceof ServerPlayer player && player.containerMenu instanceof GolemMenu menu
                     && menu.containerId == p.containerId && menu.stillValid(player) && menu.isGhost(p.slot)) {
-                if (p.amount == com.golemlogix.menu.StockRequesterMenu.TOGGLE_FLUID
-                        && menu instanceof com.golemlogix.menu.StockRequesterMenu req) {
+                if (p.amount == StockRequesterMenu.TOGGLE_FLUID && menu instanceof StockRequesterMenu req) {
                     req.setKeep(p.slot, p.amount);
                 } else if (p.amount < 0) {
-                    menu.setGhost(player, p.slot, net.minecraft.world.item.ItemStack.EMPTY);
+                    menu.setGhost(player, p.slot, ItemStack.EMPTY);
                 } else if (menu instanceof BusMenu bus) {
                     bus.setKeep(p.slot, p.amount);
-                } else if (menu instanceof com.golemlogix.menu.StockRequesterMenu req) {
+                } else if (menu instanceof StockRequesterMenu req) {
                     req.setKeep(p.slot, p.amount);
-                } else if (menu instanceof com.golemlogix.menu.PatternEncoderMenu enc) {
+                } else if (menu instanceof PatternEncoderMenu enc) {
                     enc.setCount(p.slot, p.amount);
-                } else if (menu instanceof com.golemlogix.menu.StockManometerMenu mano) {
+                } else if (menu instanceof StockManometerMenu mano) {
                     mano.setKeep(p.slot, p.amount);
                 }
                 menu.broadcastChanges();

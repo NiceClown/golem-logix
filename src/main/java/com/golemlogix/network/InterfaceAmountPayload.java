@@ -1,6 +1,7 @@
 package com.golemlogix.network;
 
 import com.golemlogix.GolemLogixMod;
+import com.golemlogix.blockentity.InterfaceBlockEntity;
 import com.golemlogix.menu.InterfaceMenu;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -33,7 +34,7 @@ public record InterfaceAmountPayload(int containerId, int slot, int amount) impl
         ctx.enqueueWork(() -> {
             if (ctx.player() instanceof ServerPlayer player && player.containerMenu instanceof InterfaceMenu menu
                     && menu.containerId == p.containerId && menu.stillValid(player)
-                    && p.slot >= 0 && p.slot < com.golemlogix.blockentity.InterfaceBlockEntity.SLOTS) {
+                    && p.slot >= 0 && p.slot < InterfaceBlockEntity.SLOTS) {
                 if (p.amount < 0) {
                     menu.clearSlot(p.slot);
                 } else {

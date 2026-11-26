@@ -77,16 +77,7 @@ public class TelegraphMenu extends GolemMenu {
         } else if (!memory.hasItem() && memory.mayPlace(stack)) {
             memory.setByPlayer(stack.split(1));
         }
-        if (stack.getCount() == copy.getCount()) {
-            return ItemStack.EMPTY;
-        }
-        if (stack.isEmpty()) {
-            from.setByPlayer(ItemStack.EMPTY);
-        } else {
-            from.setChanged();
-        }
-        from.onTake(player, stack);
-        return copy;
+        return finishQuickMove(from, stack, copy, player);
     }
 
     /** Cards clicked onto the Write slot join the cards there even when those are already written (instead of swapping). */

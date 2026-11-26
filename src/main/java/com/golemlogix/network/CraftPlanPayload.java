@@ -11,6 +11,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Server -> client: an autocraft order plan for the planner in the order window (like the AE2 craft confirmation screen): what
@@ -29,8 +30,14 @@ public record CraftPlanPayload(int containerId, int request, Status status, int 
     public enum Status {
         OK, MISSING, STARTED, NO_CPU, RESERVE_FAILED, OFFLINE, NO_PATTERN;
 
+        private static final Status[] VALUES = values();
+
         public String key() {
-            return "gui.golem_logix.plan.status." + name().toLowerCase(java.util.Locale.ROOT);
+            return "gui.golem_logix.plan.status." + name().toLowerCase(Locale.ROOT);
+        }
+
+        static Status byId(int ordinal) {
+            return VALUES[Math.clamp(ordinal, 0, VALUES.length - 1)];
         }
     }
 
@@ -58,8 +65,7 @@ public record CraftPlanPayload(int containerId, int request, Status status, int 
             buf -> {
                 int id = buf.readVarInt();
                 int request = buf.readVarInt();
-                Status[] statuses = Status.values();
-                Status status = statuses[Math.clamp(buf.readVarInt(), 0, statuses.length - 1)];
+                Status status = Status.byId(buf.readVarInt());
                 int steps = buf.readVarInt();
                 long executions = buf.readVarLong();
                 int n = PayloadCodecs.readCount(buf, MAX_ENTRIES);

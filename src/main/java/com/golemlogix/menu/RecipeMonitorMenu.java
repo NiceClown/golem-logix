@@ -5,6 +5,7 @@ import com.golemlogix.crafting.CraftingJob;
 import com.golemlogix.init.ModBlocks;
 import com.golemlogix.init.ModMenus;
 import com.golemlogix.network.MonitorPayload;
+import com.golemlogix.security.SecurityPermission;
 import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.ItemKey;
 import net.minecraft.core.BlockPos;
@@ -76,8 +77,8 @@ public class RecipeMonitorMenu extends GolemMenu {
         if (net.accessError(pos) != null) {
             return false;
         }
-        if (!net.hasPermission(player, com.golemlogix.security.SecurityPermission.CRAFT)
-                && !net.hasPermission(player, com.golemlogix.security.SecurityPermission.BUILD)) {
+        if (!net.hasPermission(player, SecurityPermission.CRAFT)
+                && !net.hasPermission(player, SecurityPermission.BUILD)) {
             return false;
         }
         CraftingCpu target = sentOrder.get(index);

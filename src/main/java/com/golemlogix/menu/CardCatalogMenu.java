@@ -1,7 +1,9 @@
 package com.golemlogix.menu;
 
 import com.golemlogix.blockentity.CardCatalogBlockEntity;
+import com.golemlogix.data.PatternData;
 import com.golemlogix.init.ModBlocks;
+import com.golemlogix.init.ModDataComponents;
 import com.golemlogix.init.ModMenus;
 import com.golemlogix.upgrade.RedstoneMode;
 import com.golemlogix.upgrade.UpgradeSpec;
@@ -18,6 +20,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Arrays;
 import java.util.function.BooleanSupplier;
 import java.util.function.IntSupplier;
 
@@ -321,22 +324,35 @@ public class CardCatalogMenu extends GolemMenu implements ScrollableMenu {
         }
         if (!newFilter.equals(filter)) {
             filter = newFilter;
-            if (filter.isBlank()) {
-                view = null;
-            } else {
-                java.util.List<Integer> found = new java.util.ArrayList<>();
-                for (int i = 0; i < be.getCards().getContainerSize(); i++) {
-                    var data = be.getCards().getItem(i).get(com.golemlogix.init.ModDataComponents.PATTERN.get());
-                    if (data != null && data.outputs().stream().anyMatch(s -> ScrollableMenu.matches(s, filter))) {
-                        found.add(i);
-                    }
-                }
-                view = found.stream().mapToInt(Integer::intValue).toArray();
-            }
+            view = filter.isBlank() ? null : searchCards(filter);
         }
         int shown = view != null ? view.length : be.capacity();
         int max = Math.max(0, Math.max(ROWS, (shown + COLS - 1) / COLS) - ROWS);
         row = Math.max(0, Math.min(max, newRow));
+    }
+
+    private int[] searchCards(String queryText) {
+        FilterQuery query = FilterQuery.parse(queryText);
+        Container cards = be.getCards();
+        int size = cards.getContainerSize();
+        int[] found = new int[Math.min(size, 32)];
+        int count = 0;
+        for (int i = 0; i < size; i++) {
+            PatternData pattern = cards.getItem(i).get(ModDataComponents.PATTERN.get());
+            if (pattern == null) {
+                continue;
+            }
+            for (ItemStack out : pattern.outputs()) {
+                if (query.matches(out)) {
+                    if (count == found.length) {
+                        found = Arrays.copyOf(found, found.length * 2);
+                    }
+                    found[count++] = i;
+                    break;
+                }
+            }
+        }
+        return Arrays.copyOf(found, count);
     }
 
     @Override
@@ -419,16 +435,7 @@ public class CardCatalogMenu extends GolemMenu implements ScrollableMenu {
         } else {
             return super.quickMoveStack(player, index);
         }
-        if (stack.isEmpty()) {
-            slot.setByPlayer(ItemStack.EMPTY);
-        } else {
-            slot.setChanged();
-        }
-        if (stack.getCount() == copy.getCount()) {
-            return ItemStack.EMPTY;
-        }
-        slot.onTake(player, stack);
-        return copy;
+        return finishQuickMove(slot, stack, copy, player);
     }
 
     @Override

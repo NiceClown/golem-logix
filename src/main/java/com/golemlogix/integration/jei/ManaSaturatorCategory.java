@@ -15,6 +15,10 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 
+import java.util.IdentityHashMap;
+import java.util.Locale;
+import java.util.Map;
+
 /** Mana Saturator: a block on the anvil, an arrow, two plates; under the arrow the Source cost and the time. */
 public class ManaSaturatorCategory implements IRecipeCategory<ManaSaturatorRecipe> {
     public static final RecipeType<ManaSaturatorRecipe> TYPE =
@@ -28,6 +32,7 @@ public class ManaSaturatorCategory implements IRecipeCategory<ManaSaturatorRecip
     private final IDrawable slot;
     private final IDrawable arrow;
     private final Component title;
+    private final Map<ManaSaturatorRecipe, Component> costLineCache = new IdentityHashMap<>();
 
     public ManaSaturatorCategory(IGuiHelper guiHelper) {
         this.background = guiHelper.createBlankDrawable(W, H);
@@ -81,10 +86,14 @@ public class ManaSaturatorCategory implements IRecipeCategory<ManaSaturatorRecip
         slot.draw(g, IN_X, SLOT_Y);
         slot.draw(g, OUT_X, SLOT_Y);
         arrow.draw(g, (IN_X + OUT_X + 18) / 2 - 12, SLOT_Y + 1);
+        Component cost = costLineCache.computeIfAbsent(recipe, ManaSaturatorCategory::formatCostLine);
+        g.drawString(font, cost, (W - font.width(cost)) / 2, SLOT_Y + 24, 0xFF5A3C9A, false);
+    }
+
+    private static Component formatCostLine(ManaSaturatorRecipe recipe) {
         // seconds without coolers: 5 for the mod's own rituals, half of the Imbuement Chamber's time for Source Gems
         String seconds = recipe.ticks() % 20 == 0 ? String.valueOf(recipe.ticks() / 20)
-                : String.format(java.util.Locale.ROOT, "%.1f", recipe.ticks() / 20f);
-        Component cost = Component.translatable("jei.golem_logix.source_cost", recipe.sourceCost(), seconds);
-        g.drawString(font, cost, (W - font.width(cost)) / 2, SLOT_Y + 24, 0xFF5A3C9A, false);
+                : String.format(Locale.ROOT, "%.1f", recipe.ticks() / 20f);
+        return Component.translatable("jei.golem_logix.source_cost", recipe.sourceCost(), seconds);
     }
 }

@@ -1,10 +1,12 @@
 package com.golemlogix.menu;
 
 import com.golemlogix.blockentity.BusBlockEntity;
+import com.golemlogix.init.ModDataComponents;
 import com.golemlogix.init.ModMenus;
 import com.golemlogix.items.UpgradeItem;
 import com.golemlogix.upgrade.RedstoneMode;
 import com.golemlogix.upgrade.UpgradeSpec;
+import com.golemlogix.upgrade.UpgradeType;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
@@ -86,7 +88,7 @@ public class BusMenu extends GolemMenu {
 
     /** How much the container in front should hold of what a filter ghost names (0: export without a limit). */
     public static int keep(ItemStack filter) {
-        return filter.getOrDefault(com.golemlogix.init.ModDataComponents.KEEP_AMOUNT.get(), 0);
+        return filter.getOrDefault(ModDataComponents.KEEP_AMOUNT.get(), 0);
     }
 
     public int keepAt(int slot) {
@@ -108,9 +110,9 @@ public class BusMenu extends GolemMenu {
         }
         ItemStack f = filters.getItem(slot).copy();
         if (amount == 0) {
-            f.remove(com.golemlogix.init.ModDataComponents.KEEP_AMOUNT.get());
+            f.remove(ModDataComponents.KEEP_AMOUNT.get());
         } else {
-            f.set(com.golemlogix.init.ModDataComponents.KEEP_AMOUNT.get(), amount);
+            f.set(ModDataComponents.KEEP_AMOUNT.get(), amount);
         }
         filters.setItem(slot, f);
     }
@@ -168,22 +170,7 @@ public class BusMenu extends GolemMenu {
         if (isFormation()) {
             return false;
         }
-        return Priority.handle(new ContainerData() {
-            @Override
-            public int get(int index) {
-                return data.get(0);
-            }
-
-            @Override
-            public void set(int index, int value) {
-                data.set(0, value);
-            }
-
-            @Override
-            public int getCount() {
-                return 1;
-            }
-        }, id);
+        return Priority.handle(data, id);
     }
 
     @Override
@@ -217,6 +204,6 @@ public class BusMenu extends GolemMenu {
     /** With a Fuzzy Card the item filters match fuzzily, and a middle-click chooses a filter's tag. */
     @Override
     public boolean fuzzyActive(int slotId) {
-        return slotId < filters.getContainerSize() && itemGhost(slotId) && hasUpgrade(com.golemlogix.upgrade.UpgradeType.FUZZY);
+        return slotId < filters.getContainerSize() && itemGhost(slotId) && hasUpgrade(UpgradeType.FUZZY);
     }
 }
