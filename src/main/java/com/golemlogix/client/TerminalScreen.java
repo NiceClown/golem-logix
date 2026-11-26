@@ -1,21 +1,16 @@
 package com.golemlogix.client;
 
+import com.golemlogix.client.book.BookScreen;
 import com.golemlogix.config.GolemClientConfig;
-import com.golemlogix.items.FluidGhostItem;
 import com.golemlogix.menu.TerminalMenu;
 import com.golemlogix.network.TerminalActionPayload;
 import com.golemlogix.network.TerminalActionPayload.Action;
-import com.golemlogix.network.TerminalInfoPayload;
-import com.golemlogix.network.TerminalListPayload;
-import com.golemlogix.system.Gear;
-import com.golemlogix.system.ItemKey;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
@@ -31,75 +26,32 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import org.lwjgl.glfw.GLFW;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 /**
  * Terminal screen: search, sorting, scrolling; the "Crafting" variant also has a 3x3 grid. The window height follows the "Size" button:
- * normal, tall or full screen (more list rows). In the Portable Chronometer, to the right of the grid there is a green screen
- * where a Wither tries to shoot right into the glass, and the Source charge.
- * By default items and fluids are in one list (combined mode): fluid is counted in buckets,
- * that is 1000 mB in the list is "one item".
+ * normal, tall or full screen (more list rows). In the Portable Chronometer, to the right of the grid there is a charge gauge.
+ * By default items and fluids are in one list (combined mode): fluid is counted in buckets (1000 mB = "one item").
+ *
+ * Filtering/sorting/metadata caching live in {@link TerminalCatalog}; status bar, charge gauge, and tooltips in {@link TerminalHud}.
  */
 public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
-    private enum SortMode {NAME, COUNT, MOD}
-
-    /** What the list shows: everything together (the default), only items or only fluids. */
-    private enum ViewMode {ALL, ITEMS, FLUIDS}
-
-    private static SortMode sortMode = SortMode.NAME;
-    private static boolean reverse = false;
-    private static ViewMode viewMode = ViewMode.ALL;
-    private static boolean craftableOnly = false;
-    private static String lastSearch = "";
-    /** Last JEI search line seen: if it changed in JEI, it is picked up here. */
-    private String lastJei;
-
-    @Override
-    protected void containerTick() {
-        super.containerTick();
-        String jei = jeiSync().readsFromJei() ? ClientHooks.jeiGetSearch.get() : null;
-        if (jei != null && !jei.equals(lastJei) && search != null && !jei.equals(search.getValue())) {
-            lastJei = jei;
-            search.setValue(jei);
-        }
-    }
-
-    /** A list row: either an item with a count or a fluid (then fluid is not empty). */
-    private record Row(ItemStack stack, long count, boolean craftable, FluidStack fluid, String name, String namespace,
-                       String countText, boolean gear) {
-        boolean isFluid() {
-            return !fluid.isEmpty();
-        }
-
-        /** Count "in units": buckets for a fluid. */
-        double units() {
-            return isFluid() ? fluid.getAmount() / 1000.0 : count;
-        }
-    }
-
-    /** Cached per-ItemKey display metadata so periodic network sync rebuilds skip hover-name/tag/gear recomputation. */
-    private record ItemMeta(String lowerName, String namespace, boolean gear) {
-    }
-
     /** Ingredient under the cursor for JEI (R and U keys): an ItemStack or FluidStack and its place on the screen. */
     public record Hit(Object ingredient, Rect2i area) {
     }
 
     private final boolean crafting;
+    private final TerminalCatalog catalog = new TerminalCatalog();
+    private final TerminalHud hud = new TerminalHud();
+
     private EditBox search;
+    /** Last JEI search line seen: if it changed in JEI, it is picked up here. */
+    private String lastJei;
     private int scroll = 0;
     private boolean draggingScroll = false;
-
-    private int builtVersion = -1;
-    private boolean dirty = true;
-    private final List<Row> rows = new ArrayList<>();
-    private final Map<ItemKey, ItemMeta> metaCache = new HashMap<>();
-    private final Map<ItemKey, String> tooltipCache = new HashMap<>();
+    private List<Rect2i> cachedExtraAreas = List.of();
+    private String truncatedTitle = "";
 
     public TerminalScreen(TerminalMenu menu, Inventory inv, Component title) {
         super(menu, inv, title);
@@ -112,44 +64,12 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         return menu.rows;
     }
 
-    private static GolemClientConfig.JeiSync jeiSync() {
-        try {
-            return GolemClientConfig.JEI_SYNC.get();
-        } catch (IllegalStateException notLoaded) {
-            return GolemClientConfig.JeiSync.TWO_WAY;
-        }
-    }
-
-    private static GolemClientConfig.TerminalSize sizeMode() {
-        try {
-            return GolemClientConfig.TERMINAL_SIZE.get();
-        } catch (IllegalStateException notLoaded) {
-            return GolemClientConfig.TerminalSize.NORMAL;
-        }
-    }
-
-    private static void setJeiSync(GolemClientConfig.JeiSync mode) {
-        try {
-            GolemClientConfig.JEI_SYNC.set(mode);
-            GolemClientConfig.JEI_SYNC.save();
-        } catch (IllegalStateException ignored) {
-        }
-    }
-
-    private static void setSizeMode(GolemClientConfig.TerminalSize mode) {
-        try {
-            GolemClientConfig.TERMINAL_SIZE.set(mode);
-            GolemClientConfig.TERMINAL_SIZE.save();
-        } catch (IllegalStateException ignored) {
-        }
-    }
-
     /** How many list rows to show for the selected size and screen height. */
     private int wantedRows() {
         int base = TerminalMenu.defaultRows(crafting);
         int fixed = TerminalMenu.imageHeight(crafting, 0);
         int fit = Math.max(base, (height - 6 - fixed) / 18);
-        return switch (sizeMode()) {
+        return switch (TerminalCatalog.sizeMode()) {
             case NORMAL -> base;
             case TALL -> Math.min(fit, base + 4);
             case FULL -> fit;
@@ -158,8 +78,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
 
     @Override
     protected void init() {
-        metaCache.clear();
-        tooltipCache.clear();
+        catalog.clearCaches();
         menu.relayout(wantedRows());
         this.imageHeight = TerminalMenu.imageHeight(crafting, rows());
         super.init();
@@ -167,7 +86,15 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         this.titleLabelY = 6;
         this.inventoryLabelX = TerminalMenu.LIST_X;
         this.inventoryLabelY = TerminalMenu.invY(crafting, rows()) - 11;
+        this.cachedExtraAreas = List.of(new Rect2i(leftPos + imageWidth, topPos + 2, 40, 110));
+        this.truncatedTitle = font.plainSubstrByWidth(title.getString(), 82);
 
+        initSearchBox();
+        initSideButtons();
+        scroll = Math.max(0, Math.min(scroll, maxScroll()));
+    }
+
+    private void initSearchBox() {
         search = new EditBox(font, leftPos + 97, topPos + 8, 74, 12, Component.translatable("gui.golem_logix.search"));
         search.setBordered(false);
         search.setMaxLength(48);
@@ -175,73 +102,77 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         search.setHint(Component.translatable("gui.golem_logix.search").withStyle(ChatFormatting.DARK_GRAY));
         // search is shared with JEI: on open the JEI line is taken (if JEI is there), what is typed here goes to JEI
         // the mode is chosen with the "JEI" button on the right: no link, only to JEI, both ways
-        String jei = jeiSync().readsFromJei() ? ClientHooks.jeiGetSearch.get() : null;
-        search.setValue(jei != null ? jei : lastSearch);
+        String jei = TerminalCatalog.jeiSync().readsFromJei() ? ClientHooks.jeiGetSearch.get() : null;
+        search.setValue(jei != null ? jei : TerminalCatalog.lastSearch());
         lastJei = jei;
         search.setResponder(s -> {
-            lastSearch = s;
-            dirty = true;
+            TerminalCatalog.setLastSearch(s);
+            catalog.markDirty();
             scroll = 0;
             lastJei = s;
-            if (jeiSync().sendsToJei()) {
+            if (TerminalCatalog.jeiSync().sendsToJei()) {
                 ClientHooks.jeiSetSearch.accept(s);
             }
         });
         addRenderableWidget(search);
+    }
 
+    private void initSideButtons() {
         int bx = leftPos + imageWidth + 2;
         int by = topPos + 4;
         addRenderableWidget(new GolemButton(bx, by, 36, 16,
-                () -> Component.translatable("gui.golem_logix.sort." + sortMode.name().toLowerCase(Locale.ROOT)),
+                () -> Component.translatable(TerminalCatalog.sortMode().langKey()),
                 () -> Component.translatable("gui.golem_logix.sort.tooltip"), () -> false,
                 b -> {
-                    sortMode = SortMode.values()[(sortMode.ordinal() + 1) % SortMode.values().length];
-                    dirty = true;
+                    TerminalCatalog.cycleSort();
+                    catalog.markDirty();
                 }));
         addRenderableWidget(new GolemButton(bx, by + 18, 36, 16,
-                () -> Component.translatable(reverse ? "gui.golem_logix.dir.desc" : "gui.golem_logix.dir.asc"),
+                () -> Component.translatable(TerminalCatalog.reverse() ? "gui.golem_logix.dir.desc" : "gui.golem_logix.dir.asc"),
                 () -> Component.translatable("gui.golem_logix.dir.tooltip"), () -> false,
                 b -> {
-                    reverse = !reverse;
-                    dirty = true;
+                    TerminalCatalog.toggleReverse();
+                    catalog.markDirty();
                 }));
         addRenderableWidget(new GolemButton(bx, by + 36, 36, 16,
-                () -> Component.translatable("gui.golem_logix.view." + viewMode.name().toLowerCase(Locale.ROOT)),
-                () -> Component.translatable("gui.golem_logix.view.tooltip"), () -> viewMode != ViewMode.ALL,
+                () -> Component.translatable(TerminalCatalog.viewMode().langKey()),
+                () -> Component.translatable("gui.golem_logix.view.tooltip"),
+                () -> TerminalCatalog.viewMode() != TerminalCatalog.ViewMode.ALL,
                 b -> {
-                    viewMode = ViewMode.values()[(viewMode.ordinal() + 1) % ViewMode.values().length];
-                    dirty = true;
+                    TerminalCatalog.cycleView();
+                    catalog.markDirty();
                     scroll = 0;
                 }));
         addRenderableWidget(new GolemButton(bx, by + 54, 36, 16,
-                () -> Component.translatable(craftableOnly ? "gui.golem_logix.filter.craft" : "gui.golem_logix.filter.all"),
-                () -> Component.translatable("gui.golem_logix.filter.tooltip"), () -> craftableOnly,
+                () -> Component.translatable(TerminalCatalog.craftableOnly() ? "gui.golem_logix.filter.craft" : "gui.golem_logix.filter.all"),
+                () -> Component.translatable("gui.golem_logix.filter.tooltip"), TerminalCatalog::craftableOnly,
                 b -> {
-                    craftableOnly = !craftableOnly;
-                    dirty = true;
+                    TerminalCatalog.toggleCraftableOnly();
+                    catalog.markDirty();
                     scroll = 0;
                 }));
         addRenderableWidget(new GolemButton(bx, by + 72, 36, 16,
-                () -> Component.translatable("gui.golem_logix.size." + sizeMode().name().toLowerCase(Locale.ROOT)),
-                () -> Component.translatable("gui.golem_logix.size.tooltip"), () -> sizeMode() != GolemClientConfig.TerminalSize.NORMAL,
+                () -> Component.translatable("gui.golem_logix.size." + TerminalCatalog.sizeMode().name().toLowerCase(Locale.ROOT)),
+                () -> Component.translatable("gui.golem_logix.size.tooltip"),
+                () -> TerminalCatalog.sizeMode() != GolemClientConfig.TerminalSize.NORMAL,
                 b -> {
-                    setSizeMode(sizeMode().next());
+                    TerminalCatalog.setSizeMode(TerminalCatalog.sizeMode().next());
                     rebuildWidgets();
                 }));
         // search sync with JEI (the button is visible only when JEI is installed)
         if (ClientHooks.jeiGetSearch.get() != null) {
             addRenderableWidget(new GolemButton(bx, by + 90, 36, 16,
-                    () -> Component.translatable("gui.golem_logix.jei_sync." + jeiSync().name().toLowerCase(Locale.ROOT)),
-                    () -> Component.translatable("gui.golem_logix.jei_sync.tooltip"), () -> jeiSync() != GolemClientConfig.JeiSync.OFF,
+                    () -> Component.translatable("gui.golem_logix.jei_sync." + TerminalCatalog.jeiSync().name().toLowerCase(Locale.ROOT)),
+                    () -> Component.translatable("gui.golem_logix.jei_sync.tooltip"),
+                    () -> TerminalCatalog.jeiSync() != GolemClientConfig.JeiSync.OFF,
                     b -> {
-                        setJeiSync(jeiSync().next());
-                        if (jeiSync().sendsToJei()) {
+                        TerminalCatalog.setJeiSync(TerminalCatalog.jeiSync().next());
+                        if (TerminalCatalog.jeiSync().sendsToJei()) {
                             ClientHooks.jeiSetSearch.accept(search.getValue());
                             lastJei = search.getValue();
                         }
                     }));
         }
-
         if (crafting) {
             int cy = topPos + TerminalMenu.craftY(rows());
             addRenderableWidget(new GolemButton(leftPos + TerminalMenu.LIST_X, cy + 36, 18, 16,
@@ -253,171 +184,52 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
                         }
                     }));
         }
-        scroll = Math.max(0, Math.min(scroll, maxScroll()));
     }
 
-    // ------------------------------------------------------------------ data
-
-    private ItemMeta metaOf(ItemKey key, ItemStack stack) {
-        if (metaCache.size() > 8192) {
-            metaCache.clear();
-            tooltipCache.clear();
+    @Override
+    protected void containerTick() {
+        super.containerTick();
+        String jei = TerminalCatalog.jeiSync().readsFromJei() ? ClientHooks.jeiGetSearch.get() : null;
+        if (jei != null && !jei.equals(lastJei) && search != null && !jei.equals(search.getValue())) {
+            lastJei = jei;
+            search.setValue(jei);
         }
-        return metaCache.computeIfAbsent(key, k -> new ItemMeta(
-                stack.getHoverName().getString().toLowerCase(Locale.ROOT),
-                BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace(),
-                Gear.is(stack)));
-    }
-
-    private String tooltipTextOf(ItemKey key, ItemStack stack) {
-        return tooltipCache.computeIfAbsent(key, k -> {
-            StringBuilder sb = new StringBuilder();
-            for (Component line : getTooltipFromItem(minecraft, stack)) {
-                sb.append(line.getString().toLowerCase(Locale.ROOT)).append('\n');
-            }
-            return sb.toString();
-        });
-    }
-
-    private void rebuild() {
-        dirty = false;
-        builtVersion = menu.clientVersion;
-        rows.clear();
-
-        String query = search != null ? search.getValue().trim().toLowerCase(Locale.ROOT) : "";
-        String craftShort = Component.translatable("gui.golem_logix.craft_short").getString();
-        TerminalInfoPayload info = menu.clientInfo;
-        boolean showItems = viewMode != ViewMode.FLUIDS;
-        boolean showFluids = viewMode != ViewMode.ITEMS && info != null;
-
-        // craftable fluids come as fluid ghost keys among the items: they go with the fluids
-        List<ItemStack> craftFluids = showFluids ? new ArrayList<>() : null;
-        for (TerminalListPayload.Entry e : menu.clientEntries) {
-            ItemStack keyStack = e.key();
-            if (FluidGhostItem.is(keyStack)) {
-                if (craftFluids != null && e.craftable()) {
-                    craftFluids.add(keyStack);
-                }
-                continue;
-            }
-            if (!showItems || (craftableOnly && !e.craftable())) {
-                continue;
-            }
-            ItemKey key = ItemKey.of(keyStack);
-            ItemMeta meta = metaOf(key, keyStack);
-            if (matches(key, keyStack, meta, query)) {
-                String countText = e.count() > 0 ? GolemGui.formatCount(e.count()) : craftShort;
-                rows.add(new Row(keyStack, e.count(), e.craftable(), FluidStack.EMPTY, meta.lowerName(), meta.namespace(), countText, meta.gear()));
-            }
-        }
-        if (showFluids) {
-            for (FluidStack f : info.fluids()) {
-                if (f.isEmpty()) {
-                    continue;
-                }
-                ItemStack ghost = ItemStack.EMPTY;
-                for (int i = 0; i < craftFluids.size(); i++) {
-                    if (FluidStack.isSameFluidSameComponents(FluidGhostItem.fluid(craftFluids.get(i)), f)) {
-                        ghost = craftFluids.remove(i);
-                        break;
-                    }
-                }
-                if (craftableOnly && ghost.isEmpty()) {
-                    continue;
-                }
-                String name = f.getHoverName().getString().toLowerCase(Locale.ROOT);
-                String ns = BuiltInRegistries.FLUID.getKey(f.getFluid()).getNamespace();
-                if (matchesFluid(name, ns, query)) {
-                    String countText = viewMode == ViewMode.FLUIDS ? GolemGui.formatCount(f.getAmount()) : GolemGui.formatBuckets(f.getAmount());
-                    rows.add(new Row(ghost, f.getAmount(), !ghost.isEmpty(), f, name, ns, countText, false));
-                }
-            }
-            // none of it in the network, but a pattern makes it: a row to order it from
-            for (ItemStack ghost : craftFluids) {
-                FluidStack f = FluidGhostItem.fluid(ghost);
-                if (f.isEmpty()) {
-                    continue;
-                }
-                String name = f.getHoverName().getString().toLowerCase(Locale.ROOT);
-                String ns = BuiltInRegistries.FLUID.getKey(f.getFluid()).getNamespace();
-                if (matchesFluid(name, ns, query)) {
-                    rows.add(new Row(ghost, 0, true, f.copyWithAmount(1), name, ns, craftShort, false));
-                }
-            }
-        }
-
-        Comparator<Row> byName = Comparator.comparing(Row::name);
-        Comparator<Row> cmp = switch (sortMode) {
-            case NAME -> byName;
-            case COUNT -> Comparator.comparingDouble(Row::units).reversed().thenComparing(byName);
-            case MOD -> Comparator.comparing(Row::namespace).thenComparing(byName);
-        };
-        rows.sort(reverse ? cmp.reversed() : cmp);
-
-        scroll = Math.max(0, Math.min(scroll, maxScroll()));
     }
 
     /** For rig checks: index of a list row by part of its name (-1 if there is none). */
     public int indexOfName(String part) {
-        if (dirty || builtVersion != menu.clientVersion) {
-            rebuild();
-        }
-        String q = part.toLowerCase(Locale.ROOT);
-        for (int i = 0; i < rows.size(); i++) {
-            if (rows.get(i).name().contains(q)) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    private boolean matchesFluid(String name, String namespace, String query) {
-        if (query.isEmpty()) {
-            return true;
-        }
-        if (query.startsWith("@")) {
-            return namespace.contains(query.substring(1));
-        }
-        if (query.startsWith("#")) {
-            return false;
-        }
-        return name.contains(query);
-    }
-
-    private boolean matches(ItemKey key, ItemStack stack, ItemMeta meta, String query) {
-        if (query.isEmpty()) {
-            return true;
-        }
-        if (query.startsWith("@")) {
-            return meta.namespace().contains(query.substring(1));
-        }
-        if (query.startsWith("#")) {
-            return tooltipTextOf(key, stack).contains(query.substring(1));
-        }
-        return meta.lowerName().contains(query);
-    }
-
-    private int totalEntries() {
-        return rows.size();
+        return catalog.indexOfName(menu, search != null ? search.getValue() : "", minecraft, part);
     }
 
     private int maxScroll() {
-        return Math.max(0, (totalEntries() + TerminalMenu.COLS - 1) / TerminalMenu.COLS - rows());
+        return Math.max(0, (catalog.size() + TerminalMenu.COLS - 1) / TerminalMenu.COLS - rows());
+    }
+
+    /** The sort and view buttons sit to the right of the window: JEI must avoid them, not cover them with its panel. */
+    public List<Rect2i> extraAreas() {
+        return cachedExtraAreas;
+    }
+
+    @Override
+    protected boolean hasClickedOutside(double mouseX, double mouseY, int guiLeft, int guiTop, int button) {
+        for (Rect2i r : cachedExtraAreas) {
+            if (r.contains((int) mouseX, (int) mouseY)) {
+                return false;
+            }
+        }
+        return super.hasClickedOutside(mouseX, mouseY, guiLeft, guiTop, button);
     }
 
     // ------------------------------------------------------------------ render
 
     @Override
     protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
-        if (dirty || builtVersion != menu.clientVersion) {
-            rebuild();
+        if (catalog.ensureBuilt(menu, search != null ? search.getValue() : "", minecraft)) {
+            scroll = Math.max(0, Math.min(scroll, maxScroll()));
         }
         GolemGui.panel(g, leftPos, topPos, imageWidth, imageHeight);
-
-        // search field
         GolemGui.inset(g, leftPos + 91, topPos + 5, 80, 15);
 
-        // list
         int lx = leftPos + TerminalMenu.LIST_X;
         int ly = topPos + TerminalMenu.LIST_Y;
         for (int r = 0; r < rows(); r++) {
@@ -425,10 +237,24 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
                 GolemGui.slot(g, lx + c * 18, ly + r * 18);
             }
         }
+        renderScrollbar(g, lx + TerminalMenu.COLS * 18 + 3, ly, rows() * 18);
+        hud.renderInfo(g, font, menu.clientInfo, TerminalCatalog.viewMode(), lx, topPos + TerminalMenu.infoY(rows()));
 
-        // scroll bar
-        int sbX = lx + TerminalMenu.COLS * 18 + 3;
-        int sbH = rows() * 18;
+        for (Slot slot : menu.slots) {
+            GolemGui.slot(g, leftPos + slot.x - 1, topPos + slot.y - 1);
+        }
+        renderLockedChronometerOutline(g);
+        if (crafting) {
+            int cy = topPos + TerminalMenu.craftY(rows());
+            g.drawString(font, "=>", leftPos + 102, cy + 22, GolemGui.CYAN, false);
+            if (hasChargeGauge()) {
+                TerminalHud.renderChargeGauge(g, minecraft, menu.clientInfo, leftPos + TerminalMenu.GAUGE_X, cy, 54);
+            }
+        }
+        renderEntries(g, mouseX, mouseY);
+    }
+
+    private void renderScrollbar(GuiGraphics g, int sbX, int ly, int sbH) {
         g.fill(sbX, ly, sbX + 5, ly + sbH, GolemGui.SLOT_BG);
         int max = maxScroll();
         if (max > 0) {
@@ -438,13 +264,9 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         } else {
             g.fill(sbX, ly, sbX + 5, ly + sbH, GolemGui.BRASS_DARK);
         }
+    }
 
-        // info line
-        renderInfo(g, mouseX, mouseY);
-
-        for (Slot slot : menu.slots) {
-            GolemGui.slot(g, leftPos + slot.x - 1, topPos + slot.y - 1);
-        }
+    private void renderLockedChronometerOutline(GuiGraphics g) {
         // the slot of the Chronometer the window was opened through is locked: a teal frame outlines it
         if (menu.lockedMenuSlot() >= 0 && menu.lockedMenuSlot() < menu.slots.size()) {
             Slot lock = menu.slots.get(menu.lockedMenuSlot());
@@ -455,15 +277,6 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
             g.fill(x + 17, y, x + 18, y + 18, GolemGui.CYAN);
             g.fill(x + 1, y + 1, x + 17, y + 17, 0x5038D9D6);
         }
-        if (crafting) {
-            int cy = topPos + TerminalMenu.craftY(rows());
-            g.drawString(font, "=>", leftPos + 102, cy + 22, GolemGui.CYAN, false);
-            if (hasChargeGauge()) {
-                renderChargeGauge(g, leftPos + TerminalMenu.GAUGE_X, cy, 54);
-            }
-        }
-
-        renderEntries(g, mouseX, mouseY);
     }
 
     /** For the Chronometer (if Source is needed) a charge gauge to the right of the result. */
@@ -471,131 +284,24 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         return menu.wireless && crafting && menu.clientInfo != null && menu.clientInfo.charge() >= 0;
     }
 
-    /** Vertical Source charge flask: a purple column in a brass mount; fed by the Resonator it is full and shimmers. */
-    private void renderChargeGauge(GuiGraphics g, int x, int y, int h) {
-        TerminalInfoPayload info = menu.clientInfo;
-        boolean resonator = info.resonator();
-        double frac = resonator ? 1.0 : Math.min(1.0, info.charge() / (double) com.golemlogix.items.PortableChronometerItem.MAX_CHARGE);
-        g.fill(x - 1, y - 1, x + 11, y + h + 1, GolemGui.BRASS_DARK);
-        g.fill(x, y, x + 10, y + h, GolemGui.SLOT_BG);
-        int fill = (int) Math.round((h - 2) * frac);
-        if (fill > 0) {
-            float t = minecraft == null || minecraft.level == null ? 0 : (minecraft.level.getGameTime() % 40) / 40f;
-            int top = y + h - 1 - fill;
-            g.fill(x + 1, top, x + 9, y + h - 1, 0xFF6A4FC8);
-            g.fill(x + 1, top, x + 3, y + h - 1, 0xFF9E80F8);
-            if (resonator) {
-                // aether stream from the Resonator: a running light stripe
-                int band = top + (int) ((y + h - 1 - top) * t);
-                g.fill(x + 1, band, x + 9, Math.min(y + h - 1, band + 3), 0xFFE2D6FF);
-            }
-        }
-    }
-
-    private static int fillColor(double frac) {
-        return frac > 0.9 ? GolemGui.RED : frac > 0.7 ? GolemGui.COPPER : GolemGui.CYAN_DARK;
-    }
-
-    private void renderInfo(GuiGraphics g, int mouseX, int mouseY) {
-        int iy = topPos + TerminalMenu.infoY(rows());
-        int ix = leftPos + TerminalMenu.LIST_X;
-        TerminalInfoPayload info = menu.clientInfo;
-        GolemGui.inset(g, ix, iy, 162, 12);
-        if (info == null) {
-            return;
-        }
-        if (!info.error().isEmpty()) {
-            g.drawCenteredString(font, Component.translatable(info.error()), ix + 81, iy + 2, GolemGui.RED);
-            return;
-        }
-        double itemFrac = info.itemsCapacity() <= 0 ? 0 : (double) info.itemsUsed() / info.itemsCapacity();
-        double fluidFrac = info.fluidsCapacity() <= 0 ? 0 : (double) info.fluidsUsed() / info.fluidsCapacity();
-        String left;
-        if (viewMode == ViewMode.ALL) {
-            // two bars: items on top, fluids below; the numbers are items and buckets
-            int wi = (int) Math.round(160 * Math.min(1.0, itemFrac));
-            int wf = (int) Math.round(160 * Math.min(1.0, fluidFrac));
-            if (wi > 0) {
-                g.fill(ix + 1, iy + 1, ix + 1 + wi, iy + 6, fillColor(itemFrac));
-            }
-            if (wf > 0) {
-                g.fill(ix + 1, iy + 6, ix + 1 + wf, iy + 11, fluidFrac > 0.9 ? GolemGui.RED : 0xFF2A6FC8);
-            }
-            // items, then a drop and the fluid buckets; channels on the right if there is room (otherwise they are in the tooltip)
-            String items = GolemGui.formatCount(info.itemsUsed()) + "/" + GolemGui.formatCount(info.itemsCapacity());
-            String buckets = GolemGui.formatBuckets(info.fluidsUsed()) + "/" + GolemGui.formatBuckets(info.fluidsCapacity());
-            g.drawString(font, items, ix + 4, iy + 2, GolemGui.PARCHMENT, true);
-            int fx = ix + 4 + font.width(items) + 6;
-            drawDropAt(g, fx, iy + 3);
-            g.drawString(font, buckets, fx + 7, iy + 2, GolemGui.PARCHMENT, true);
-            drawChannels(g, info, fx + 7 + font.width(buckets) + 6, ix, iy);
-            return;
-        } else {
-            boolean fluids = viewMode == ViewMode.FLUIDS;
-            double frac = fluids ? fluidFrac : itemFrac;
-            int w = (int) Math.round(160 * Math.min(1.0, frac));
-            if (w > 0) {
-                g.fill(ix + 1, iy + 1, ix + 1 + w, iy + 11, fillColor(frac));
-            }
-            left = fluids
-                    ? GolemGui.formatCount(info.fluidsUsed()) + "/" + GolemGui.formatCount(info.fluidsCapacity()) + " mB"
-                    : GolemGui.formatCount(info.itemsUsed()) + "/" + GolemGui.formatCount(info.itemsCapacity());
-        }
-        g.drawString(font, left, ix + 4, iy + 2, GolemGui.PARCHMENT, true);
-        drawChannels(g, info, ix + 4 + font.width(left) + 6, ix, iy);
-    }
-
-    /** "Ch 9/320" at the right edge of the status line, if it does not overlap the text on the left (from = where that text ends). */
-    private void drawChannels(GuiGraphics g, TerminalInfoPayload info, int from, int ix, int iy) {
-        String right = Component.translatable("gui.golem_logix.channels_short", info.channelsUsed(), info.channelCapacity()).getString();
-        int x = ix + 158 - font.width(right);
-        if (x >= from) {
-            g.drawString(font, right, x, iy + 2, GolemGui.CYAN, true);
-        }
-    }
-
-    /** A 5x6 drop before the bucket count in the status line. */
-    private void drawDropAt(GuiGraphics g, int x, int y) {
-        int edge = 0xFF0B2A52, body = 0xFF9FE8FF;
-        g.fill(x + 1, y, x + 4, y + 1, edge);
-        g.fill(x, y + 1, x + 5, y + 5, edge);
-        g.fill(x + 1, y + 5, x + 4, y + 6, edge);
-        g.fill(x + 2, y + 1, x + 3, y + 2, body);
-        g.fill(x + 1, y + 2, x + 4, y + 5, body);
-    }
-
-    /** The sort and view buttons sit to the right of the window: JEI must avoid them, not cover them with its panel. */
-    public List<Rect2i> extraAreas() {
-        return List.of(new Rect2i(leftPos + imageWidth, topPos + 2, 40, 110));
-    }
-
-    @Override
-    protected boolean hasClickedOutside(double mouseX, double mouseY, int guiLeft, int guiTop, int button) {
-        for (Rect2i r : extraAreas()) {
-            if (r.contains((int) mouseX, (int) mouseY)) {
-                return false;
-            }
-        }
-        return super.hasClickedOutside(mouseX, mouseY, guiLeft, guiTop, button);
-    }
-
     private void renderEntries(GuiGraphics g, int mouseX, int mouseY) {
         int lx = leftPos + TerminalMenu.LIST_X;
         int ly = topPos + TerminalMenu.LIST_Y;
         int hovered = hoveredIndex(mouseX, mouseY);
+        TerminalCatalog.ViewMode mode = TerminalCatalog.viewMode();
 
         for (int r = 0; r < rows(); r++) {
             for (int c = 0; c < TerminalMenu.COLS; c++) {
                 int idx = (scroll + r) * TerminalMenu.COLS + c;
-                if (idx >= totalEntries()) {
+                if (idx >= catalog.size()) {
                     return;
                 }
                 int x = lx + c * 18 + 1;
                 int y = ly + r * 18 + 1;
-                Row row = rows.get(idx);
+                TerminalCatalog.Row row = catalog.get(idx);
                 if (row.isFluid()) {
                     drawFluid(g, row.fluid(), x, y);
-                    drawDrop(g, x, y);
+                    TerminalHud.drawSlotDrop(g, mode, x, y);
                     drawCount(g, row.countText(), x, y, row.count() <= 0 ? GolemGui.CYAN : 0xFFFFFFFF);
                     if (row.craftable() && row.count() > 0) {
                         g.fill(x - 1, y - 1, x + 3, y + 3, GolemGui.CYAN);
@@ -631,23 +337,6 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         g.pose().popPose();
     }
 
-    /** A small drop in the slot corner: tells a fluid from an item in the combined list. */
-    private void drawDrop(GuiGraphics g, int x, int y) {
-        if (viewMode == ViewMode.FLUIDS) {
-            return;
-        }
-        g.pose().pushPose();
-        g.pose().translate(0, 0, 200);
-        int edge = 0xFF0B2A52, body = 0xFF9FE8FF;
-        g.fill(x + 1, y, x + 4, y + 1, edge);
-        g.fill(x, y + 1, x + 5, y + 5, edge);
-        g.fill(x + 1, y + 5, x + 4, y + 6, edge);
-        g.fill(x + 2, y + 1, x + 3, y + 2, body);
-        g.fill(x + 1, y + 2, x + 4, y + 5, body);
-        g.fill(x + 1, y + 2, x + 2, y + 3, 0xFFFFFFFF);
-        g.pose().popPose();
-    }
-
     private void drawFluid(GuiGraphics g, FluidStack fluid, int x, int y) {
         IClientFluidTypeExtensions ext = IClientFluidTypeExtensions.of(fluid.getFluid());
         ResourceLocation tex = ext.getStillTexture(fluid);
@@ -663,10 +352,30 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         g.blit(x, y, 0, 16, 16, sprite, r, gr, b, a == 0 ? 1f : a);
     }
 
+    @Override
+    protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
+        g.drawString(font, truncatedTitle, titleLabelX, titleLabelY, GolemGui.PARCHMENT, false);
+        if (!crafting) {
+            g.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, GolemGui.PARCHMENT, false);
+        }
+    }
+
+    @Override
+    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        super.render(g, mouseX, mouseY, partialTick);
+        renderTooltip(g, mouseX, mouseY);
+        int idx = hoveredIndex(mouseX, mouseY);
+        TerminalCatalog.Row hovered = idx >= 0 ? catalog.get(idx) : null;
+        TerminalHud.renderTooltips(g, font, minecraft, menu, hovered, overGearMark(mouseX, mouseY),
+                hasChargeGauge(), leftPos, topPos, rows(), mouseX, mouseY);
+    }
+
+    // ------------------------------------------------------------------ hit testing & JEI
+
     /** Whether the cursor is on the exclamation mark of a piece of equipment in the list. */
     private boolean overGearMark(double mouseX, double mouseY) {
         int idx = hoveredIndex(mouseX, mouseY);
-        if (idx < 0 || !rows.get(idx).gear()) {
+        if (idx < 0 || !catalog.get(idx).gear()) {
             return false;
         }
         double cx = (mouseX - (leftPos + TerminalMenu.LIST_X)) % 18, cy = (mouseY - (topPos + TerminalMenu.LIST_Y)) % 18;
@@ -682,14 +391,14 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         int c = (int) ((mouseX - lx) / 18);
         int r = (int) ((mouseY - ly) / 18);
         int idx = (scroll + r) * TerminalMenu.COLS + c;
-        return idx < totalEntries() ? idx : -1;
+        return idx < catalog.size() ? idx : -1;
     }
 
     /** For JEI (R and U keys, bookmarks): what is in the list slot under the cursor. */
     @Nullable
     public Hit ingredientAt(double mouseX, double mouseY) {
         int idx = hoveredIndex(mouseX, mouseY);
-        if (idx < 0 || idx >= rows.size()) {
+        if (idx < 0 || idx >= catalog.size()) {
             return null;
         }
         int lx = leftPos + TerminalMenu.LIST_X;
@@ -697,7 +406,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         int c = (int) ((mouseX - lx) / 18);
         int r = (int) ((mouseY - ly) / 18);
         Rect2i area = new Rect2i(lx + c * 18 + 1, ly + r * 18 + 1, 16, 16);
-        Row row = rows.get(idx);
+        TerminalCatalog.Row row = catalog.get(idx);
         return new Hit(row.isFluid() ? row.fluid() : row.stack(), area);
     }
 
@@ -705,80 +414,6 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
         int lx = leftPos + TerminalMenu.LIST_X;
         int ly = topPos + TerminalMenu.LIST_Y;
         return mouseX >= lx && mouseY >= ly && mouseX < lx + TerminalMenu.COLS * 18 && mouseY < ly + rows() * 18;
-    }
-
-    @Override
-    protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
-        String t = font.plainSubstrByWidth(title.getString(), 82);
-        g.drawString(font, t, titleLabelX, titleLabelY, GolemGui.PARCHMENT, false);
-        if (!crafting) {
-            g.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, GolemGui.PARCHMENT, false);
-        }
-    }
-
-    @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
-        renderTooltip(g, mouseX, mouseY);
-        renderEntryTooltip(g, mouseX, mouseY);
-    }
-
-    private void renderEntryTooltip(GuiGraphics g, int mouseX, int mouseY) {
-        if (overGearMark(mouseX, mouseY)) {
-            g.renderComponentTooltip(font, List.of(
-                    Component.translatable("gui.golem_logix.gear.title").withStyle(ChatFormatting.YELLOW),
-                    Component.translatable("gui.golem_logix.gear.why", com.golemlogix.system.Gear.COST).withStyle(ChatFormatting.GRAY),
-                    Component.translatable("gui.golem_logix.gear.click").withStyle(ChatFormatting.DARK_AQUA)), mouseX, mouseY);
-            return;
-        }
-        int idx = hoveredIndex(mouseX, mouseY);
-        if (idx >= 0) {
-            List<Component> lines = new ArrayList<>();
-            Row row = rows.get(idx);
-            if (row.isFluid()) {
-                FluidStack f = row.fluid();
-                lines.add(f.getHoverName());
-                int stored = row.count() <= 0 ? 0 : f.getAmount();
-                lines.add(Component.translatable("gui.golem_logix.stored", Component.translatable("gui.golem_logix.stored_fluid",
-                        GolemGui.formatBuckets(stored), String.format(Locale.US, "%,d", stored))).withStyle(ChatFormatting.GRAY));
-                if (stored > 0) {
-                    lines.add(Component.translatable("gui.golem_logix.fluid_hint").withStyle(ChatFormatting.DARK_AQUA));
-                }
-                if (row.craftable()) {
-                    lines.add(Component.translatable("gui.golem_logix.craftable_hint").withStyle(ChatFormatting.AQUA));
-                }
-            } else {
-                lines.addAll(getTooltipFromItem(minecraft, row.stack()));
-                lines.add(Component.translatable("gui.golem_logix.stored", String.format(Locale.US, "%,d", row.count()))
-                        .withStyle(ChatFormatting.GRAY));
-                if (row.craftable()) {
-                    lines.add(Component.translatable("gui.golem_logix.craftable_hint").withStyle(ChatFormatting.AQUA));
-                }
-            }
-            g.renderComponentTooltip(font, lines, mouseX, mouseY);
-            return;
-        }
-        int iy = topPos + TerminalMenu.infoY(rows());
-        if (menu.clientInfo != null && mouseX >= leftPos + TerminalMenu.LIST_X && mouseX < leftPos + TerminalMenu.LIST_X + 162 && mouseY >= iy && mouseY < iy + 12) {
-            TerminalInfoPayload info = menu.clientInfo;
-            List<Component> lines = new ArrayList<>();
-            lines.add(Component.translatable("gui.golem_logix.info.items", GolemGui.formatCount(info.itemsUsed()), GolemGui.formatCount(info.itemsCapacity())));
-            lines.add(Component.translatable("gui.golem_logix.info.fluids", GolemGui.formatCount(info.fluidsUsed()), GolemGui.formatCount(info.fluidsCapacity())));
-            lines.add(Component.translatable("gui.golem_logix.info.channels", info.channelsUsed(), info.channelCapacity()));
-            lines.add(Component.translatable("gui.golem_logix.info.cpu", info.cpuBusy(), info.cpuTotal()));
-            g.renderComponentTooltip(font, lines, mouseX, mouseY);
-            return;
-        }
-        if (hasChargeGauge()) {
-            int cy = topPos + TerminalMenu.craftY(rows());
-            int sx = leftPos + TerminalMenu.GAUGE_X;
-            if (mouseX >= sx - 1 && mouseX < sx + 11 && mouseY >= cy - 1 && mouseY < cy + 55) {
-                g.renderComponentTooltip(font, List.of(menu.clientInfo.resonator()
-                        ? Component.translatable("tooltip.golem_logix.chronometer.resonator").withStyle(ChatFormatting.LIGHT_PURPLE)
-                        : Component.translatable("tooltip.golem_logix.chronometer.charge", menu.clientInfo.charge(),
-                        com.golemlogix.items.PortableChronometerItem.MAX_CHARGE).withStyle(ChatFormatting.LIGHT_PURPLE)), mouseX, mouseY);
-            }
-        }
     }
 
     // ------------------------------------------------------------------ input
@@ -805,22 +440,18 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
             dragScroll(mouseY);
             return true;
         }
-
         if (button == 0 && menu.getCarried().isEmpty() && overGearMark(mouseX, mouseY)) {
-            // the terminal is closed first (as Escape would): left open behind the book, the server kept the menu and a wireless
-            // terminal's charge running, and the inventory ignored clicks afterwards because the client still had the terminal's menu
+            // close the terminal first (as Escape would) so wireless charge stops and inventory clicks remain valid
             if (minecraft != null) {
                 if (minecraft.player != null) {
                     minecraft.player.closeContainer();
                 }
-                minecraft.setScreen(com.golemlogix.client.book.BookScreen.openAt("st_gear"));
+                minecraft.setScreen(BookScreen.openAt("st_gear"));
             }
             return true;
         }
-        if (overList(mouseX, mouseY)) {
-            if (handleListClick(mouseX, mouseY, button)) {
-                return true;
-            }
+        if (overList(mouseX, mouseY) && handleListClick(mouseX, mouseY, button)) {
+            return true;
         }
         boolean handled = super.mouseClicked(mouseX, mouseY, button);
         if (!search.isMouseOver(mouseX, mouseY) && search.isFocused() && button == 0) {
@@ -832,12 +463,12 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     private boolean handleListClick(double mouseX, double mouseY, int button) {
         ItemStack carried = menu.getCarried();
         int idx = hoveredIndex(mouseX, mouseY);
-        Row row = idx >= 0 ? rows.get(idx) : null;
+        TerminalCatalog.Row row = idx >= 0 ? catalog.get(idx) : null;
 
         IFluidHandlerItem handler = carried.isEmpty() ? null : carried.copyWithCount(1).getCapability(Capabilities.FluidHandler.ITEM);
         boolean fullContainer = handler != null && !handler.drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.SIMULATE).isEmpty();
 
-        if (viewMode == ViewMode.FLUIDS && !carried.isEmpty()) {
+        if (TerminalCatalog.viewMode() == TerminalCatalog.ViewMode.FLUIDS && !carried.isEmpty()) {
             // in the fluid list any click with a container: a full one empties into the network, an empty one takes the selected fluid
             if (handler == null) {
                 return true;
@@ -849,10 +480,8 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
             }
             return true;
         }
-
         if (!carried.isEmpty()) {
             if (row != null && row.isFluid() && handler != null) {
-                // a click with a container on a fluid row in the combined list
                 if (fullContainer) {
                     send(Action.FLUID_DRAIN_CARRIED, ItemStack.EMPTY, FluidStack.EMPTY);
                 } else {
@@ -860,7 +489,6 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
                 }
                 return true;
             }
-            // right-click with a full bucket (any fluid container) on the list pours the fluid into the network
             if (button == 1 && fullContainer) {
                 send(Action.FLUID_DRAIN_CARRIED, ItemStack.EMPTY, FluidStack.EMPTY);
                 return true;

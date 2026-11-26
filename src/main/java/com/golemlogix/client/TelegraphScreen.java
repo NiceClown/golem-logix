@@ -20,6 +20,15 @@ import java.util.List;
 public class TelegraphScreen extends GolemScreen<TelegraphMenu> {
     private static final int STATUS_Y = 56;
     private static final int[] BAY_X = {TelegraphMenu.RANGE_X, TelegraphMenu.WRITE_X, TelegraphMenu.MEMORY_X};
+    private static final Component LABEL_RANGE = Component.translatable("gui.golem_logix.telegraph.range");
+    private static final Component LABEL_WRITE = Component.translatable("gui.golem_logix.telegraph.write");
+    private static final Component LABEL_MEMORY = Component.translatable("gui.golem_logix.telegraph.memory");
+    private static final Component STATUS_LINKED_SHORT = Component.translatable("gui.golem_logix.telegraph.status.linked_short");
+    private static final Component STATUS_WORKING = Component.translatable("gui.golem_logix.telegraph.working");
+    private static final Component STATUS_IDLE = Component.translatable("gui.golem_logix.telegraph.idle");
+    private static final Component LABEL_BLOCKED = Component.translatable("gui.golem_logix.telegraph.blocked").withStyle(ChatFormatting.RED);
+    private static final Component LABEL_RESET = Component.translatable("gui.golem_logix.telegraph.reset");
+    private static final Component TIP_RESET = Component.translatable("gui.golem_logix.telegraph.reset.tooltip");
 
     public TelegraphScreen(TelegraphMenu menu, Inventory inv, Component title) {
         super(menu, inv, title, TelegraphMenu.IMAGE_WIDTH, TelegraphMenu.IMAGE_HEIGHT);
@@ -64,40 +73,47 @@ public class TelegraphScreen extends GolemScreen<TelegraphMenu> {
     @Override
     protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
         super.renderLabels(g, mouseX, mouseY);
-        label(g, "gui.golem_logix.telegraph.range", TelegraphMenu.RANGE_X, GolemGui.BRASS_L);
-        label(g, "gui.golem_logix.telegraph.write", TelegraphMenu.WRITE_X, GolemGui.GREEN);
-        label(g, "gui.golem_logix.telegraph.memory", TelegraphMenu.MEMORY_X, GolemGui.CYAN);
+        label(g, LABEL_RANGE, TelegraphMenu.RANGE_X, GolemGui.BRASS_L);
+        label(g, LABEL_WRITE, TelegraphMenu.WRITE_X, GolemGui.GREEN);
+        label(g, LABEL_MEMORY, TelegraphMenu.MEMORY_X, GolemGui.CYAN);
 
         int x = 11, y = STATUS_Y + 4;
         TelegraphLinks.Status status = menu.status();
         boolean writing = TelegraphLinkCardItem.isCard(menu.slotItem(TelegraphBlockEntity.SLOT_WRITE));
-        Component main;
-        int color;
-        if (writing) {
-            main = Component.translatable("gui.golem_logix.telegraph.written", menu.slotItem(TelegraphBlockEntity.SLOT_WRITE).getCount());
-            color = GolemGui.GREEN;
-        } else if (status == TelegraphLinks.Status.LINKED) {
-            TelegraphLinkCardItem.Link link = TelegraphLinkCardItem.link(menu.slotItem(TelegraphBlockEntity.SLOT_MEMORY));
-            main = link == null ? Component.translatable("gui.golem_logix.telegraph.status.linked_short")
-                    : Component.translatable("gui.golem_logix.telegraph.status.linked", link.target().pos().getX(),
-                    link.target().pos().getY(), link.target().pos().getZ());
-            color = GolemGui.CYAN;
-        } else {
-            main = Component.translatable("gui.golem_logix.telegraph.status." + status.name().toLowerCase(java.util.Locale.ROOT));
-            color = status == TelegraphLinks.Status.NO_CARD ? GolemGui.PARCHMENT : GolemGui.RED;
-        }
-        drawFitted(g, main, x, y, color);
+        drawFitted(g, statusLine(status, writing), x, y, statusColor(status, writing));
         drawFitted(g, Component.translatable("gui.golem_logix.telegraph.receivers", menu.receivers()), x, y + 11, GolemGui.PARCHMENT);
-        drawFitted(g, Component.translatable(menu.active() ? "gui.golem_logix.telegraph.working" : "gui.golem_logix.telegraph.idle"),
-                x, y + 22, menu.active() ? GolemGui.GREEN : 0xFFA89880);
+        drawFitted(g, menu.active() ? STATUS_WORKING : STATUS_IDLE, x, y + 22, menu.active() ? GolemGui.GREEN : 0xFFA89880);
     }
 
-    private void label(GuiGraphics g, String key, int slotX, int color) {
-        Component c = Component.translatable(key);
+    private Component statusLine(TelegraphLinks.Status status, boolean writing) {
+        if (writing) {
+            return Component.translatable("gui.golem_logix.telegraph.written", menu.slotItem(TelegraphBlockEntity.SLOT_WRITE).getCount());
+        }
+        if (status == TelegraphLinks.Status.LINKED) {
+            TelegraphLinkCardItem.Link link = TelegraphLinkCardItem.link(menu.slotItem(TelegraphBlockEntity.SLOT_MEMORY));
+            return link == null ? STATUS_LINKED_SHORT
+                    : Component.translatable("gui.golem_logix.telegraph.status.linked", link.target().pos().getX(),
+                    link.target().pos().getY(), link.target().pos().getZ());
+        }
+        return Component.translatable("gui.golem_logix.telegraph.status." + status.name().toLowerCase(java.util.Locale.ROOT));
+    }
+
+    private static int statusColor(TelegraphLinks.Status status, boolean writing) {
+        if (writing) {
+            return GolemGui.GREEN;
+        }
+        if (status == TelegraphLinks.Status.LINKED) {
+            return GolemGui.CYAN;
+        }
+        return status == TelegraphLinks.Status.NO_CARD ? GolemGui.PARCHMENT : GolemGui.RED;
+    }
+
+    private void label(GuiGraphics g, Component c, int slotX, int color) {
         // a long translation is squeezed into the slot's frame
-        float fit = Math.min(1f, 42f / Math.max(1, font.width(c)));
+        int w = font.width(c);
+        float fit = Math.min(1f, 42f / Math.max(1, w));
         g.pose().pushPose();
-        g.pose().translate(slotX + 8 - font.width(c) * fit / 2f, 21 + (1f - fit) * 4f, 0);
+        g.pose().translate(slotX + 8 - w * fit / 2f, 21 + (1f - fit) * 4f, 0);
         g.pose().scale(fit, fit, 1f);
         g.drawString(font, c, 0, 0, color, false);
         g.pose().popPose();
@@ -122,10 +138,10 @@ public class TelegraphScreen extends GolemScreen<TelegraphMenu> {
             int i = hoveredSlot.index;
             String key = i == TelegraphBlockEntity.SLOT_RANGE ? "gui.golem_logix.telegraph.range.hint"
                     : i == TelegraphBlockEntity.SLOT_WRITE ? "gui.golem_logix.telegraph.write.hint" : "gui.golem_logix.telegraph.memory.hint";
-            List<Component> lines = new java.util.ArrayList<>();
+            List<Component> lines = new java.util.ArrayList<>(2);
             lines.add(Component.translatable(key, GolemConfig.LOCAL_WIRELESS_RANGE.get()));
             if (menu.blocked(i)) {
-                lines.add(Component.translatable("gui.golem_logix.telegraph.blocked").withStyle(ChatFormatting.RED));
+                lines.add(LABEL_BLOCKED);
             }
             g.renderComponentTooltip(font, lines, mouseX, mouseY);
         }
@@ -134,8 +150,7 @@ public class TelegraphScreen extends GolemScreen<TelegraphMenu> {
     /** The big red-brass Reset plate. */
     private static class ResetButton extends GolemButton {
         ResetButton(int x, int y, int w, int h, OnPress onPress) {
-            super(x, y, w, h, () -> Component.translatable("gui.golem_logix.telegraph.reset"),
-                    () -> Component.translatable("gui.golem_logix.telegraph.reset.tooltip"), () -> false, onPress);
+            super(x, y, w, h, () -> LABEL_RESET, () -> TIP_RESET, () -> false, onPress);
         }
 
         @Override
