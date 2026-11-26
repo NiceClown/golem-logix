@@ -334,4 +334,225 @@ public final class BlockEntityRegressionTests {
             helper.succeed();
         });
     }
+
+    /** Satisfied interfaces sleep without re-running restock, wake on stock/config/network changes, and keep fluid cache fresh. */
+    @GameTest(template = T, timeoutTicks = 340)
+    public static void beregInterfaceSleepAndCache(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        CopperDriveBayBlockEntity drive = (CopperDriveBayBlockEntity) helper.getBlockEntity(BAY);
+        drive.getContainer().setItem(1, new ItemStack(ModItems.FLUID_DISK_64K.get()));
+        put(helper, BUS_OUT, ModBlocks.GOLEM_INTERFACE.get());
+        InterfaceBlockEntity itf = (InterfaceBlockEntity) helper.getBlockEntity(BUS_OUT);
+        itf.setSlot(0, new ItemStack(Items.IRON_INGOT), 4);
+        itf.setSlot(1, new ItemStack(Items.WATER_BUCKET), 1000);
+
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.IRON_INGOT, 16), false);
+            n.insertFluid(new FluidStack(Fluids.WATER, 4000), false);
+        });
+
+        int[] runsBefore = new int[1];
+        helper.runAfterDelay(45, () -> {
+            helper.assertTrue(itf.isFluidSlot(1), "slot 1 cached as fluid slot");
+            helper.assertTrue(!itf.isFluidSlot(0), "slot 0 cached as item slot");
+            helper.assertTrue(itf.getStock().getItem(0).getCount() == 4, "iron stocked");
+            helper.assertTrue(itf.fluidStock(1).getAmount() == 1000, "water stocked");
+            helper.assertTrue(itf.isStockSleeping(), "satisfied interface entered sleep");
+            runsBefore[0] = itf.restockRuns();
+        });
+
+        helper.runAfterDelay(95, () -> {
+            helper.assertTrue(itf.restockRuns() == runsBefore[0],
+                    "satisfied interface skipped restock for 50 ticks, delta=" + (itf.restockRuns() - runsBefore[0]));
+            // Extracting items via capability must wake stock immediately
+            ItemStack got = itf.automation().extractItem(0, 2, false);
+            helper.assertTrue(got.is(Items.IRON_INGOT) && got.getCount() == 2, "extracted 2 iron");
+            helper.assertTrue(!itf.isStockSleeping(), "item extraction woke sleeping interface");
+        });
+
+        helper.runAfterDelay(120, () -> {
+            helper.assertTrue(itf.getStock().getItem(0).getCount() == 4, "iron restocked after wake");
+            helper.assertTrue(itf.isStockSleeping(), "returned to satisfied sleep");
+            // Extracting fluid via capability must wake stock immediately
+            FluidStack got = itf.fluids().drain(new FluidStack(Fluids.WATER, 500), IFluidHandler.FluidAction.EXECUTE);
+            helper.assertTrue(got.getFluid() == Fluids.WATER && got.getAmount() == 500, "extracted 500 mB water");
+            helper.assertTrue(!itf.isStockSleeping(), "fluid extraction woke sleeping interface");
+        });
+
+        helper.runAfterDelay(145, () -> {
+            helper.assertTrue(itf.fluidStock(1).getAmount() == 1000, "water restocked after wake");
+            // Toggle mode invalidates fluid cache and survives NBT reload
+            itf.toggleMode(1);
+            helper.assertTrue(!itf.isFluidSlot(1), "toggleMode invalidated fluid slot cache");
+            var level = helper.getLevel();
+            CompoundTag saved = itf.saveWithFullMetadata(level.registryAccess());
+            InterfaceBlockEntity reloaded = (InterfaceBlockEntity) BlockEntity
+                    .loadStatic(helper.absolutePos(BUS_OUT), itf.getBlockState(), saved, level.registryAccess());
+            helper.assertTrue(reloaded != null && !reloaded.isFluidSlot(1) && !reloaded.isFluidSlot(0),
+                    "reloaded interface preserved cached slot modes");
+            // Unsatisfied slot sleeps with backoff, then wakes immediately when missing item enters the network
+            itf.setSlot(2, new ItemStack(Items.DIAMOND), 2);
+        });
+
+        helper.runAfterDelay(195, () -> {
+            helper.assertTrue(itf.isStockSleeping(), "unsatisfied interface sleeping on missing diamond");
+            helper.assertTrue(itf.getStock().getItem(2).isEmpty(), "no diamonds stocked yet");
+            net(helper, bay).insertItem(new ItemStack(Items.DIAMOND, 2), false);
+        });
+
+        helper.runAfterDelay(210, () -> {
+            helper.assertTrue(itf.getStock().getItem(2).getCount() == 2,
+                    "unsatisfied interface woke on networkEpoch and stocked diamonds, got " + itf.getStock().getItem(2));
+            // Inserting a pre-filled disk must also wake an unsatisfied interface promptly without storageEpoch changing
+            itf.setSlot(3, new ItemStack(Items.EMERALD), 2);
+        });
+
+        helper.runAfterDelay(255, () -> {
+            helper.assertTrue(itf.isStockSleeping(), "unsatisfied interface sleeping on missing emerald");
+            ItemStack prefilled = new ItemStack(ModItems.COPPER_DISK_1K.get());
+            com.golemlogix.system.DiskStorage.insertItem(prefilled, new ItemStack(Items.EMERALD, 4), false);
+            drive.getContainer().setItem(2, prefilled);
+        });
+
+        helper.runAfterDelay(275, () -> {
+            helper.assertTrue(itf.getStock().getItem(3).getCount() == 2,
+                    "unsatisfied interface woke on disk insert and stocked emeralds, got " + itf.getStock().getItem(3));
+            helper.succeed();
+        });
+    }
+
+    /** Idle buses back off past 40t, and stalled import / sleeping export buses wake on both networkEpoch and bay disk swaps. */
+    @GameTest(template = T, timeoutTicks = 420)
+    public static void beregBusIdleAndFullImportWake(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        CopperDriveBayBlockEntity drive = (CopperDriveBayBlockEntity) helper.getBlockEntity(BAY);
+        helper.setBlock(BUS_OUT, ModBlocks.INJECTOR_EXPORT_BUS.get().defaultBlockState()
+                .setValue(DirectionalBlock.FACING, Direction.NORTH));
+        BlockPos outBarrelPos = BUS_OUT.north();
+        put(helper, outBarrelPos, Blocks.BARREL);
+        var outBarrel = (net.minecraft.world.Container) helper.getBlockEntity(outBarrelPos);
+        BusBlockEntity expBus = (BusBlockEntity) helper.getBlockEntity(BUS_OUT);
+        expBus.getFilters().setItem(0, new ItemStack(Items.NETHER_STAR));
+
+        helper.setBlock(BUS_IN, ModBlocks.VACUUM_IMPORT_BUS.get().defaultBlockState()
+                .setValue(DirectionalBlock.FACING, Direction.WEST));
+        BlockPos inBarrel = BUS_IN.west();
+        put(helper, inBarrel, Blocks.BARREL);
+        var barrel = (net.minecraft.world.Container) helper.getBlockEntity(inBarrel);
+        barrel.setItem(0, new ItemStack(Items.COBBLESTONE, 16));
+        BusBlockEntity impBus = (BusBlockEntity) helper.getBlockEntity(BUS_IN);
+
+        // Fill the 1k disk completely so the import bus stalls on a full network
+        GolemNetwork n = net(helper, bay);
+        for (int i = 0; i < 16; i++) {
+            n.insertItem(new ItemStack(Items.DIRT, 64), false);
+        }
+
+        int[] expOps0 = new int[1];
+        helper.runAfterDelay(160, () -> {
+            helper.assertTrue(expBus.idle(), "idle export bus sleeping");
+            helper.assertTrue(impBus.idle(), "stalled import bus sleeping on full network");
+            helper.assertTrue(barrel.getItem(0).getCount() == 16, "cobblestone still waiting in barrel");
+            expOps0[0] = expBus.operations;
+        });
+
+        helper.runAfterDelay(250, () -> {
+            int delta = expBus.operations - expOps0[0];
+            helper.assertTrue(delta <= 1, "idle export bus backed off past 40t: ran " + delta + " ops in 90t");
+            // Free space in the network -> stalled import bus must wake via networkEpoch well before 200t
+            net(helper, bay).extractItem(new ItemStack(Items.DIRT), 64, false);
+        });
+
+        helper.runAfterDelay(275, () -> {
+            helper.assertTrue(barrel.isEmpty(), "stalled import bus woke on networkEpoch and drained barrel");
+            helper.assertTrue(net(helper, bay).itemCountOf(ItemKey.of(new ItemStack(Items.COBBLESTONE))) == 16,
+                    "all 16 cobblestone imported");
+            // Re-fill disk to capacity and stall import bus again so we can test bay-disk wakeup for both buses
+            GolemNetwork cur = net(helper, bay);
+            cur.insertItem(new ItemStack(Items.DIRT, 48), false);
+            barrel.setItem(0, new ItemStack(Items.OAK_PLANKS, 8));
+        });
+
+        helper.runAfterDelay(355, () -> {
+            helper.assertTrue(impBus.idle(), "re-stalled import bus sleeping on full network");
+            helper.assertTrue(expBus.idle(), "export bus sleeping on missing nether star");
+            // Insert a disk holding 1 nether star (with plenty of free room) -> wakes BOTH stalled import and sleeping export bus
+            ItemStack prefilled = new ItemStack(ModItems.COPPER_DISK_1K.get());
+            com.golemlogix.system.DiskStorage.insertItem(prefilled, new ItemStack(Items.NETHER_STAR, 1), false);
+            drive.getContainer().setItem(1, prefilled);
+        });
+
+        helper.runAfterDelay(385, () -> {
+            helper.assertTrue(barrel.isEmpty(), "stalled import bus woke on bay disk insert and drained planks");
+            helper.assertTrue(outBarrel.getItem(0).is(Items.NETHER_STAR),
+                    "sleeping export bus woke on bay disk insert and exported nether star");
+            helper.succeed();
+        });
+    }
+
+    /** Atlas Core skips redundant syncs across cache rolls, refreshes cargo on disk swap, and syncs visuals on power change. */
+    @GameTest(template = T, timeoutTicks = 260)
+    public static void beregCoreSkipsRedundantSync(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        CopperDriveBayBlockEntity drive = (CopperDriveBayBlockEntity) helper.getBlockEntity(BAY);
+        net(helper, bay).insertItem(new ItemStack(Items.DIAMOND, 3), false);
+
+        int[] syncs0 = new int[1];
+        int[] picks0 = new int[1];
+        helper.runAfterDelay(35, () -> {
+            AtlasCoreBlockEntity core = (AtlasCoreBlockEntity) helper.getBlockEntity(CORE);
+            syncs0[0] = core.visualSyncCount();
+            picks0[0] = core.cargoPickCount();
+            helper.assertTrue(syncs0[0] >= 1 && picks0[0] >= 1, "initial sync and cargo pick ran");
+            helper.assertTrue(core.cargoItems().stream().anyMatch(s -> s.is(Items.DIAMOND)), "initial cargo has diamond");
+        });
+
+        helper.runAfterDelay(40, GolemNetwork::clearCache);
+        helper.runAfterDelay(100, GolemNetwork::clearCache);
+
+        helper.runAfterDelay(160, () -> {
+            AtlasCoreBlockEntity core = (AtlasCoreBlockEntity) helper.getBlockEntity(CORE);
+            helper.assertTrue(core.visualSyncCount() == syncs0[0],
+                    "unchanged core skipped visual sync across cache rolls: " + core.visualSyncCount() + " vs " + syncs0[0]);
+            helper.assertTrue(core.cargoPickCount() == picks0[0],
+                    "unchanged core skipped cargo pick across cache rolls: " + core.cargoPickCount() + " vs " + picks0[0]);
+            // Removing the disk on this network must refresh cargo promptly on the next core update
+            drive.getContainer().setItem(0, ItemStack.EMPTY);
+        });
+
+        helper.runAfterDelay(195, () -> {
+            AtlasCoreBlockEntity core = (AtlasCoreBlockEntity) helper.getBlockEntity(CORE);
+            helper.assertTrue(core.cargoPickCount() > picks0[0], "disk removal triggered cargo refresh");
+            helper.assertTrue(core.cargoItems().isEmpty(), "stale diamond cargo cleared after disk removal");
+            // Removing Source breaks power -> must trigger visual sync promptly
+            helper.setBlock(JAR, Blocks.AIR);
+        });
+
+        helper.runAfterDelay(235, () -> {
+            AtlasCoreBlockEntity core = (AtlasCoreBlockEntity) helper.getBlockEntity(CORE);
+            helper.assertTrue(!core.isPowered(), "core lost power");
+            helper.assertTrue(core.visualSyncCount() > syncs0[0], "power change synced visuals immediately");
+            helper.succeed();
+        });
+    }
+
+    /** Inserting a disk or changing priority on a Copper Drive Bay must immediately invalidate the network cache. */
+    @GameTest(template = T, timeoutTicks = 80)
+    public static void beregDriveBayDiskInvalidatesCache(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.runAfterDelay(15, () -> {
+            var level = helper.getLevel();
+            BlockPos absBay = helper.absolutePos(bay);
+            CopperDriveBayBlockEntity drive = (CopperDriveBayBlockEntity) helper.getBlockEntity(bay);
+            GolemNetwork n1 = GolemNetwork.get(level, absBay);
+            drive.getContainer().setItem(1, new ItemStack(ModItems.COPPER_DISK_1K.get()));
+            GolemNetwork n2 = GolemNetwork.get(level, absBay);
+            helper.assertTrue(n2 != n1, "disk insertion invalidated network cache immediately");
+            drive.setPriority(5);
+            GolemNetwork n3 = GolemNetwork.get(level, absBay);
+            helper.assertTrue(n3 != n2, "bay priority change invalidated network cache immediately");
+            helper.succeed();
+        });
+    }
 }

@@ -37,6 +37,7 @@ import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemHandlerHelper;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -56,16 +57,21 @@ public class BusBlockEntity extends BlockEntity {
     private static final int CRAFT_REQUEST_COOLDOWN = 40;
     /** Work sound cooldown (ticks). */
     private static final int SOUND_COOLDOWN = 10;
-    private static final int MAX_IDLE_TICKS = 40, MAX_IDLE_STEPS = 6, MAX_LIGHT_TICKS = 20, CREDIT_TICKS = 20;
+    private static final int MAX_IDLE_TICKS = 200, MAX_IDLE_CRAFT_TICKS = 40, MAX_IDLE_STEPS = 8;
+    private static final int MAX_LIGHT_TICKS = 20, CREDIT_TICKS = 20;
     /** An operation moving less than this (items; 62 mB count as 1 item) is light; twice this is heavy. */
     private static final int LIGHT_LOAD = 16;
 
     private final OwnedContainer filters = new OwnedContainer(FILTER_SLOTS, this, s -> true);
     private final UpgradeContainer upgrades;
     private final RedstoneControl redstone = new RedstoneControl();
-    /** Reusable scratch buffers populated per operation to avoid per-tick allocations. */
+    /** Reusable slot traversal buffer and cached per-slot filter fluids (refreshed only on filter edits). */
     private final int[] slotOrder = new int[FILTER_SLOTS];
     private final FluidStack[] filterFluids = new FluidStack[FILTER_SLOTS];
+    private boolean filterCacheDirty = true;
+    private boolean hasItemFilter, hasFluidFilter;
+    private boolean upgradesDirty = true;
+    private boolean hasRedstone;
 
     private int moved = 0;
     /** Export: filter slot traversal mode and round-robin cursor. */
@@ -84,8 +90,11 @@ public class BusBlockEntity extends BlockEntity {
     private long lastRun;
     private int deferrals;
     private boolean sleeping;
+    private boolean sleepWaitStorage;
     private long sleepEpoch;
     private long sleepNetworkEpoch;
+    private long sleepDiskEpoch;
+    private long sleepNetworkDiskEpoch;
     private int fluidMoved;
     /** Throughput budget for the current operation. */
     private int opItems, opFluid;
@@ -97,6 +106,7 @@ public class BusBlockEntity extends BlockEntity {
 
     public BusBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.BUS.get(), pos, state);
+        Arrays.fill(filterFluids, FluidStack.EMPTY);
         this.upgrades = new UpgradeContainer(
                 state.getBlock() instanceof InjectorExportBusBlock ? UpgradeSpec.EXPORT_BUS : UpgradeSpec.IMPORT_BUS, this);
     }
@@ -129,6 +139,7 @@ public class BusBlockEntity extends BlockEntity {
         period = 0;
         nextRun = 0;
         sleeping = false;
+        sleepWaitStorage = false;
     }
 
     /** Neighbour changed: wake if sleeping, keep current pace if already working. */
@@ -141,6 +152,8 @@ public class BusBlockEntity extends BlockEntity {
     @Override
     public void setChanged() {
         super.setChanged();
+        filterCacheDirty = true;
+        upgradesDirty = true;
         wake();
     }
 
@@ -204,10 +217,18 @@ public class BusBlockEntity extends BlockEntity {
         return upgrades.has(UpgradeType.FUZZY);
     }
 
+    private boolean hasRedstone() {
+        if (upgradesDirty) {
+            hasRedstone = upgrades.has(UpgradeType.REDSTONE);
+            upgradesDirty = false;
+        }
+        return hasRedstone;
+    }
+
     // ------------------------------------------------------------------ tick
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, BusBlockEntity be) {
-        boolean hasRedstone = be.upgrades.has(UpgradeType.REDSTONE);
+        boolean hasRedstone = be.hasRedstone();
         boolean powered = BlockEntities.pollRedstone(level, pos, hasRedstone, be.redstone);
         long now = level.getGameTime();
         if (now < be.nextRun && !be.wokeFromStorageChange(level, pos)) {
@@ -251,12 +272,20 @@ public class BusBlockEntity extends BlockEntity {
     }
 
     private boolean wokeFromStorageChange(Level level, BlockPos pos) {
-        if (!sleeping || !isExport() || sleepEpoch == GolemNetwork.storageEpoch()) {
+        if (!sleeping || (!isExport() && !sleepWaitStorage)) {
+            return false;
+        }
+        long globalEpoch = GolemNetwork.storageEpoch();
+        long globalDisk = CopperDriveBayBlockEntity.diskChangeEpoch();
+        if (globalEpoch == sleepEpoch && globalDisk == sleepDiskEpoch) {
             return false;
         }
         // something changed in some network: wake only if it was ours
-        sleepEpoch = GolemNetwork.storageEpoch();
-        if (GolemNetwork.get(level, pos).networkEpoch() == sleepNetworkEpoch) {
+        sleepEpoch = globalEpoch;
+        sleepDiskEpoch = globalDisk;
+        GolemNetwork net = GolemNetwork.get(level, pos);
+        long netDisk = net.core() != null ? net.core().diskEpoch() : 0L;
+        if (net.networkEpoch() == sleepNetworkEpoch && netDisk == sleepNetworkDiskEpoch) {
             return false;
         }
         wake();
@@ -267,6 +296,7 @@ public class BusBlockEntity extends BlockEntity {
                               @Nullable IItemHandler items, @Nullable IFluidHandler fluids,
                               int interval, boolean hasRedstone, boolean powered, long now) {
         deferrals = 0;
+        sleepWaitStorage = false;
         long ticks = Math.max(interval, Math.min(Math.max(interval, CREDIT_TICKS), now - lastRun));
         opItems = (int) (itemsPerOperation() * ticks / interval);
         opFluid = (int) (fluidPerOperation() * ticks / interval);
@@ -290,14 +320,18 @@ public class BusBlockEntity extends BlockEntity {
         if (moved == 0) {
             idleSteps = Math.min(MAX_IDLE_STEPS, idleSteps + 1);
             period = interval;
-            nextRun = now + Math.max(interval, Math.min(MAX_IDLE_TICKS, interval << idleSteps));
+            int maxIdle = isExport() && upgrades.has(UpgradeType.CRAFTING) ? MAX_IDLE_CRAFT_TICKS : MAX_IDLE_TICKS;
+            nextRun = now + Math.max(interval, Math.min(maxIdle, interval << idleSteps));
             sleeping = true;
             sleepEpoch = GolemNetwork.storageEpoch();
             sleepNetworkEpoch = net.networkEpoch();
+            sleepDiskEpoch = CopperDriveBayBlockEntity.diskChangeEpoch();
+            sleepNetworkDiskEpoch = net.core() != null ? net.core().diskEpoch() : 0L;
             return;
         }
         idleSteps = 0;
         sleeping = false;
+        sleepWaitStorage = false;
         int load = moved - fluidMoved + fluidMoved / 62;
         if (load < LIGHT_LOAD) {
             period = Math.max(interval, Math.min(MAX_LIGHT_TICKS, period * 2));
@@ -316,29 +350,34 @@ public class BusBlockEntity extends BlockEntity {
         }
     }
 
-    /** Resolves each filter slot's fluid (or EMPTY) once per operation into {@link #filterFluids}. */
-    private void snapshotFilterFluids() {
-        for (int i = 0; i < FILTER_SLOTS; i++) {
-            filterFluids[i] = BlockEntities.ghostFluid(filters.getItem(i));
+    /** Refreshes cached filter fluids and item/fluid presence flags when filters have been modified. */
+    private void ensureFilterCache() {
+        if (!filterCacheDirty) {
+            return;
         }
+        boolean items = false, fluids = false;
+        for (int i = 0; i < FILTER_SLOTS; i++) {
+            ItemStack f = filters.getItem(i);
+            FluidStack fluid = BlockEntities.ghostFluid(f);
+            filterFluids[i] = fluid;
+            if (!f.isEmpty()) {
+                if (fluid.isEmpty()) {
+                    items = true;
+                } else {
+                    fluids = true;
+                }
+            }
+        }
+        hasItemFilter = items;
+        hasFluidFilter = fluids;
+        filterCacheDirty = false;
     }
 
     // ---------------------------------------------------------------- import
 
     private void doImport(Level level, BlockPos pos, GolemNetwork net, BlockPos target,
                           @Nullable IItemHandler items, @Nullable IFluidHandler fluids) {
-        snapshotFilterFluids();
-        boolean hasItemFilter = false, hasFluidFilter = false;
-        for (int i = 0; i < FILTER_SLOTS; i++) {
-            if (filters.getItem(i).isEmpty()) {
-                continue;
-            }
-            if (filterFluids[i].isEmpty()) {
-                hasItemFilter = true;
-            } else {
-                hasFluidFilter = true;
-            }
-        }
+        ensureFilterCache();
         boolean noFilters = !hasItemFilter && !hasFluidFilter;
         if (items != null && (denyList || noFilters || hasItemFilter)) {
             importItems(level, pos, net, target, items, noFilters);
@@ -368,6 +407,7 @@ public class BusBlockEntity extends BlockEntity {
                 ItemStack restSim = net.insertItem(sim.copyWithCount(sim.getCount() - wanted), true, target);
                 int accepted = wanted + (sim.getCount() - wanted - restSim.getCount());
                 if (accepted <= 0) {
+                    sleepWaitStorage = true;
                     break;
                 }
                 ItemStack real = items.extractItem(i, accepted, false);
@@ -406,6 +446,7 @@ public class BusBlockEntity extends BlockEntity {
             int wanted = Math.min(sim.getAmount(), net.machineWantsFluid(sim));
             int accepted = wanted + net.insertFluid(sim.copyWithAmount(sim.getAmount() - wanted), true, target);
             if (accepted <= 0) {
+                sleepWaitStorage = true;
                 continue;
             }
             FluidStack real = fluids.drain(sim.copyWithAmount(accepted), IFluidHandler.FluidAction.EXECUTE);
@@ -452,6 +493,7 @@ public class BusBlockEntity extends BlockEntity {
 
     private void doExport(Level level, GolemNetwork net, BlockPos target,
                           @Nullable IItemHandler items, @Nullable IFluidHandler fluids) {
+        ensureFilterCache();
         int itemBudget = opItems;
         int fluidBudget = opFluid;
         Map<ItemKey, Long> toCraft = null;
@@ -464,7 +506,7 @@ public class BusBlockEntity extends BlockEntity {
             if (filter.isEmpty()) {
                 continue;
             }
-            FluidStack fluidFilter = BlockEntities.ghostFluid(filter);
+            FluidStack fluidFilter = filterFluids[slot];
             if (!fluidFilter.isEmpty()) {
                 if (fluids == null || fluidBudget <= 0) {
                     continue;
@@ -487,7 +529,7 @@ public class BusBlockEntity extends BlockEntity {
                 continue;
             }
             if (fuzzy && netKeys == null) {
-                netKeys = net.listItems().keySet();
+                netKeys = net.listItemsShared().keySet();
             }
             ItemStack want = Fuzzy.plain(filter).copyWithCount(1);
             int slotMoved = exportItemSlot(level, net, target, items, filter, want, cap, fuzzy, netKeys);
@@ -675,5 +717,7 @@ public class BusBlockEntity extends BlockEntity {
         next = Math.floorMod(tag.getInt("Next"), FILTER_SLOTS);
         denyList = tag.getBoolean("DenyList");
         redstone.load(tag);
+        filterCacheDirty = true;
+        upgradesDirty = true;
     }
 }

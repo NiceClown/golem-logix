@@ -33,6 +33,7 @@ import java.util.Map;
  */
 public class AtlasCoreBlockEntity extends BlockEntity {
     private static final int CARGO_SECONDS = 15, CARGO_ITEMS = 12, CARGO_FLUIDS = 4;
+    private static final int VISUAL_RESYNC_SECONDS = 60;
 
     private boolean powered = false;
     private int channelsUsed = 0;
@@ -49,9 +50,14 @@ public class AtlasCoreBlockEntity extends BlockEntity {
     /** Sampled items and fluid buckets synced to clients for pipe-carrier crates. */
     private List<ItemStack> cargoItems = List.of(), cargoFluids = List.of();
     private int secondsSinceCargo = CARGO_SECONDS;
-    private GolemNetwork cargoNetwork;
-    private GolemNetwork syncedNetwork;
-    private int secondsSinceSync;
+    private long cargoEpoch = Long.MIN_VALUE;
+    private long cargoDiskEpoch = Long.MIN_VALUE;
+    /** Bumped by drive bays on this network when disks are inserted, removed, or swapped. */
+    private long diskEpoch = 0;
+    private boolean visualsSynced = false;
+    private int secondsSinceSync = 0;
+    private int visualSyncCount = 0;
+    private int cargoPickCount = 0;
 
     public AtlasCoreBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.ATLAS_CORE.get(), pos, state);
@@ -97,10 +103,27 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         return cargoFluids;
     }
 
+    public int visualSyncCount() {
+        return visualSyncCount;
+    }
+
+    public int cargoPickCount() {
+        return cargoPickCount;
+    }
+
+    long diskEpoch() {
+        return diskEpoch;
+    }
+
+    void onDiskChanged() {
+        diskEpoch++;
+    }
+
     /** Samples up to CARGO_ITEMS items and CARGO_FLUIDS fluid buckets for client visuals. Returns true on change. */
     private boolean pickCargo(GolemNetwork net) {
+        cargoPickCount++;
         List<ItemStack> items = new ArrayList<>();
-        Map<ItemKey, Long> all = net.listItems();
+        Map<ItemKey, Long> all = net.listItemsShared();
         int step = Math.max(1, all.size() / CARGO_ITEMS);
         int i = 0;
         for (ItemKey key : all.keySet()) {
@@ -149,14 +172,23 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         duplicate = !net.isPrimaryCore(pos);
         int cost = duplicate ? 0 : powerCost(net);
         boolean newPowered = !duplicate && net.consumeSource(cost);
-
-        if (!duplicate && (force || net != syncedNetwork || newPowered != powered || ++secondsSinceSync >= 10)) {
-            net.syncActiveVisuals(newPowered);
-            syncedNetwork = net;
-            secondsSinceSync = 0;
-        }
         boolean newFormed = duplicate ? AtlasStructure.check(level, pos).valid()
                 : net.structure() != null && net.structure().valid();
+        boolean topologyChanged = newFormed != formed || net.channelsUsed() != channelsUsed
+                || net.channelCapacity() != channelCapacity || net.deviceCount() != devices
+                || duplicate != wasDuplicate;
+
+        if (duplicate) {
+            visualsSynced = false;
+            cargoEpoch = Long.MIN_VALUE;
+            cargoDiskEpoch = Long.MIN_VALUE;
+        } else if (force || !visualsSynced || newPowered != powered || topologyChanged
+                || ++secondsSinceSync >= VISUAL_RESYNC_SECONDS) {
+            net.syncActiveVisuals(newPowered);
+            visualsSynced = true;
+            secondsSinceSync = 0;
+            visualSyncCount++;
+        }
         if (newFormed && !formed) {
             AtlasStructure.orientAtlants(level, pos);
         }
@@ -164,14 +196,22 @@ public class AtlasCoreBlockEntity extends BlockEntity {
 
         boolean newInfinite = net.hasInfiniteSource() || !SourceHelper.sourceRequired();
         int newSps = newInfinite ? 0 : cost;
-        boolean persistedChanged = newFormed != formed || newPowered != powered || net.channelsUsed() != channelsUsed
-                || net.channelCapacity() != channelCapacity || net.deviceCount() != devices
-                || newInfinite != infiniteSource || newSps != sourcePerSecond || duplicate != wasDuplicate;
+        boolean persistedChanged = topologyChanged || newPowered != powered
+                || newInfinite != infiniteSource || newSps != sourcePerSecond;
         boolean cargoChanged = false;
-        if (!duplicate && (force || net != cargoNetwork || ++secondsSinceCargo >= CARGO_SECONDS)) {
-            cargoNetwork = net;
-            secondsSinceCargo = 0;
-            cargoChanged = pickCargo(net);
+        if (!duplicate) {
+            if (secondsSinceCargo < VISUAL_RESYNC_SECONDS) {
+                secondsSinceCargo++;
+            }
+            long epoch = net.networkEpoch();
+            if (force || cargoEpoch == Long.MIN_VALUE || topologyChanged || diskEpoch != cargoDiskEpoch
+                    || (epoch != cargoEpoch && secondsSinceCargo >= CARGO_SECONDS)
+                    || secondsSinceCargo >= VISUAL_RESYNC_SECONDS) {
+                cargoEpoch = epoch;
+                cargoDiskEpoch = diskEpoch;
+                secondsSinceCargo = 0;
+                cargoChanged = pickCargo(net);
+            }
         }
         wasDuplicate = duplicate;
         powered = newPowered;

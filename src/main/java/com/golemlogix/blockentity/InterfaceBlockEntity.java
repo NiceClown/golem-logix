@@ -59,6 +59,10 @@ public class InterfaceBlockEntity extends BlockEntity {
     private static final int SOUND_COOLDOWN = 12;
     private static final int EVENT_COOLDOWN = 8;
     private static final int INTAKE_RETRY = 5;
+    private static final int SATISFIED_TICKS = 200;
+    private static final int MAX_IDLE_TICKS = 120;
+    private static final int MAX_IDLE_STEPS = 6;
+    private static final int OFFLINE_RETRY_TICKS = 20;
 
     /** Ghost configuration slots (max stack size 64 even for buckets in legacy worlds). */
     private final OwnedContainer config = new OwnedContainer(SLOTS, this, s -> true) {
@@ -66,15 +70,35 @@ public class InterfaceBlockEntity extends BlockEntity {
         public int getMaxStackSize(ItemStack stack) {
             return 64;
         }
+
+        @Override
+        public void setChanged() {
+            invalidateConfigCache();
+            super.setChanged();
+        }
     };
-    private final OwnedContainer stock = new OwnedContainer(SLOTS, this, s -> true);
-    private final OwnedContainer inbox = new OwnedContainer(SLOTS, this, s -> true);
+    private final OwnedContainer stock = new OwnedContainer(SLOTS, this, s -> true) {
+        @Override
+        public void setChanged() {
+            wakeStock();
+            super.setChanged();
+        }
+    };
+    private final OwnedContainer inbox = new OwnedContainer(SLOTS, this, s -> true) {
+        @Override
+        public void setChanged() {
+            inboxDirty = true;
+            nextIntake = 0;
+            super.setChanged();
+        }
+    };
     private final UpgradeContainer upgrades;
     private final RedstoneControl redstone = new RedstoneControl();
     private final Automation automation = new Automation();
     private final FluidTank tank = new FluidTank(TANK) {
         @Override
         protected void onContentsChanged() {
+            nextIntake = 0;
             setChanged();
         }
     };
@@ -83,12 +107,30 @@ public class InterfaceBlockEntity extends BlockEntity {
     private final FluidStack[] fluidStock = new FluidStack[SLOTS];
     /** Bit i = 1 keeps container items (e.g. buckets); bit i = 0 keeps the contained fluid. */
     private int itemModeMask = 0;
+    /** Cached per-slot fluid resolved from config slots; refreshed lazily when config or itemModeMask changes. */
+    private final FluidStack[] cachedFluids = new FluidStack[SLOTS];
+    private int fluidSlotMask = 0;
+    private boolean configCacheDirty = true;
 
     {
         Arrays.fill(fluidStock, FluidStack.EMPTY);
     }
 
     private long nextIntake = 0;
+    private boolean inboxDirty = true;
+    private boolean inboxHasItems = false;
+    private boolean upgradesDirty = true;
+    private boolean hasRedstone = false;
+    private long nextRestock = 0;
+    private int idleSteps = 0;
+    private boolean stockSleeping = false;
+    private boolean stockSatisfied = false;
+    private long sleepEpoch = 0;
+    private long sleepNetworkEpoch = 0;
+    private long sleepDiskEpoch = 0;
+    private long sleepNetworkDiskEpoch = 0;
+    private boolean stockUnsatisfied = false;
+    private int restockRuns = 0;
     private long lastSound = -1000;
     private long lastEvent = -1000;
     private long lastCraftRequest = -1000;
@@ -100,7 +142,12 @@ public class InterfaceBlockEntity extends BlockEntity {
 
     public InterfaceBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.INTERFACE.get(), pos, state);
-        this.upgrades = new UpgradeContainer(UpgradeSpec.INTERFACE, this, () -> BlockEntities.sendUpdate(this));
+        Arrays.fill(cachedFluids, FluidStack.EMPTY);
+        this.upgrades = new UpgradeContainer(UpgradeSpec.INTERFACE, this, () -> {
+            upgradesDirty = true;
+            wakeStock();
+            BlockEntities.sendUpdate(this);
+        });
     }
 
     public IItemHandler automation() {
@@ -142,6 +189,7 @@ public class InterfaceBlockEntity extends BlockEntity {
         int mask = itemModeMask ^ (1 << i);
         modesChanged(itemModeMask, mask);
         itemModeMask = mask;
+        invalidateConfigCache();
         setChanged();
     }
 
@@ -150,12 +198,55 @@ public class InterfaceBlockEntity extends BlockEntity {
         return BlockEntities.ghostFluid(cfg);
     }
 
+    private void ensureConfigCache() {
+        if (!configCacheDirty) {
+            return;
+        }
+        int mask = 0;
+        for (int i = 0; i < SLOTS; i++) {
+            ItemStack cfg = config.getItem(i);
+            FluidStack fluid = cfg.isEmpty() ? FluidStack.EMPTY : containedFluid(cfg);
+            cachedFluids[i] = fluid;
+            if (!cfg.isEmpty() && (FluidGhostItem.is(cfg) || (!itemMode(i) && !fluid.isEmpty()))) {
+                mask |= 1 << i;
+            }
+        }
+        fluidSlotMask = mask;
+        configCacheDirty = false;
+    }
+
+    private FluidStack cachedFluid(int i) {
+        ensureConfigCache();
+        return cachedFluids[i];
+    }
+
+    private void invalidateConfigCache() {
+        configCacheDirty = true;
+        wakeStock();
+    }
+
+    public boolean isStockSleeping() {
+        return stockSleeping;
+    }
+
+    public int restockRuns() {
+        return restockRuns;
+    }
+
+    /** Ends restock sleep so stock maintenance resumes on its next turn. */
+    public void wakeStock() {
+        idleSteps = 0;
+        nextRestock = 0;
+        stockSleeping = false;
+        stockSatisfied = false;
+    }
+
     public boolean isFluidSlot(int i) {
         if (i < 0 || i >= SLOTS) {
             return false;
         }
-        ItemStack cfg = config.getItem(i);
-        return FluidGhostItem.is(cfg) || (!itemMode(i) && !containedFluid(cfg).isEmpty());
+        ensureConfigCache();
+        return (fluidSlotMask & (1 << i)) != 0;
     }
 
     public FluidStack fluidStock(int i) {
@@ -203,6 +294,7 @@ public class InterfaceBlockEntity extends BlockEntity {
         amount[i] = isFluidSlot(i)
                 ? Math.max(1, Math.min(MAX_FLUID, value))
                 : Math.max(1, Math.min(cfg.getMaxStackSize(), value));
+        wakeStock();
         setChanged();
     }
 
@@ -210,7 +302,7 @@ public class InterfaceBlockEntity extends BlockEntity {
     private void modesChanged(int oldMask, int newMask) {
         for (int i = 0; i < SLOTS; i++) {
             int bit = 1 << i;
-            if ((oldMask & bit) == (newMask & bit) || containedFluid(config.getItem(i)).isEmpty()) {
+            if ((oldMask & bit) == (newMask & bit) || cachedFluid(i).isEmpty()) {
                 continue;
             }
             int cur = amount[i] > 0 ? amount[i] : config.getItem(i).getCount() * ((oldMask & bit) == 0 ? MB_PER_BUCKET : 1);
@@ -265,11 +357,13 @@ public class InterfaceBlockEntity extends BlockEntity {
             public void set(int index, int value) {
                 if (index == 0) {
                     redstone.setMode(RedstoneMode.byId(value));
+                    wakeStock();
                     setChanged();
                 } else if (index == 1) {
                     int mask = value & ((1 << SLOTS) - 1);
                     modesChanged(itemModeMask, mask);
                     itemModeMask = mask;
+                    invalidateConfigCache();
                     setChanged();
                 }
             }
@@ -283,12 +377,33 @@ public class InterfaceBlockEntity extends BlockEntity {
 
     // ------------------------------------------------------------------ tick
 
+    private boolean hasRedstone() {
+        if (upgradesDirty) {
+            hasRedstone = upgrades.has(UpgradeType.REDSTONE);
+            upgradesDirty = false;
+        }
+        return hasRedstone;
+    }
+
     public static void serverTick(Level level, BlockPos pos, BlockState state, InterfaceBlockEntity be) {
-        boolean hasRedstone = be.upgrades.has(UpgradeType.REDSTONE);
+        boolean hasRedstone = be.hasRedstone();
         boolean powered = BlockEntities.pollRedstone(level, pos, hasRedstone, be.redstone);
         long time = level.getGameTime();
         boolean pulseMode = hasRedstone && be.redstone.mode() == RedstoneMode.PULSE;
-        boolean stockDue = Math.floorMod(time + pos.asLong(), be.interval()) == 0;
+        boolean stockDue;
+        if (be.stockSleeping) {
+            if (time >= be.nextRestock || be.wokeFromStorageChange(level, pos)) {
+                stockDue = true;
+            } else if (pulseMode && be.redstone.allows(true, powered, false)) {
+                // a rising redstone pulse wakes sleeping stock so intake and restocking run together
+                be.wakeStock();
+                stockDue = true;
+            } else {
+                stockDue = false;
+            }
+        } else {
+            stockDue = time >= be.nextRestock && Math.floorMod(time + pos.asLong(), be.interval()) == 0;
+        }
         // in pulse mode run intake and restocking together so neither consumes the pulse from the other
         boolean intake = ((pulseMode && stockDue) || time >= be.nextIntake) && be.hasIntake();
         if (pulseMode && intake) {
@@ -299,24 +414,83 @@ public class InterfaceBlockEntity extends BlockEntity {
         }
         GolemNetwork net = GolemNetwork.get(level, pos);
         if (!net.isOnline() || !net.isDeviceActive(pos)) {
-            be.nextIntake = time + INTAKE_RETRY;
+            if (intake) {
+                be.nextIntake = time + INTAKE_RETRY;
+            }
+            if (stockDue) {
+                be.stockSleeping = false;
+                be.stockSatisfied = false;
+                be.nextRestock = time + Math.max(be.interval(), OFFLINE_RETRY_TICKS);
+            }
             return;
         }
         int moved = 0;
         if (intake) {
-            moved = be.flushInbox(net, Integer.MAX_VALUE) + be.flushTank(net);
-            if (moved == 0) {
+            int intakeMoved = be.flushInbox(net, Integer.MAX_VALUE) + be.flushTank(net);
+            moved += intakeMoved;
+            if (intakeMoved == 0) {
                 be.nextIntake = time + INTAKE_RETRY;
             }
         }
         if (stockDue) {
-            moved += be.restock(level, net, be.itemsPerOperation());
-            moved += be.restockFluids(net);
+            be.stockUnsatisfied = false;
+            be.restockRuns++;
+            int restockMoved = be.restock(level, net, be.itemsPerOperation()) + be.restockFluids(net);
+            moved += restockMoved;
+            be.updateStockSleep(net, restockMoved, time);
         }
         if (moved > 0) {
             be.redstone.allows(hasRedstone, powered, true);
             be.signalWork(level, pos, state, time);
         }
+    }
+
+    private boolean wokeFromStorageChange(Level level, BlockPos pos) {
+        if (!stockSleeping || stockSatisfied) {
+            return false;
+        }
+        long globalEpoch = GolemNetwork.storageEpoch();
+        long globalDisk = CopperDriveBayBlockEntity.diskChangeEpoch();
+        if (globalEpoch == sleepEpoch && globalDisk == sleepDiskEpoch) {
+            return false;
+        }
+        // only wake unsatisfied stock when our own network's storage or mounted disks changed
+        sleepEpoch = globalEpoch;
+        sleepDiskEpoch = globalDisk;
+        GolemNetwork net = GolemNetwork.get(level, pos);
+        long netDisk = net.core() != null ? net.core().diskEpoch() : 0L;
+        if (net.networkEpoch() == sleepNetworkEpoch && netDisk == sleepNetworkDiskEpoch) {
+            return false;
+        }
+        wakeStock();
+        return true;
+    }
+
+    private void updateStockSleep(GolemNetwork net, int restockMoved, long now) {
+        if (restockMoved > 0) {
+            idleSteps = 0;
+            nextRestock = 0;
+            stockSleeping = false;
+            stockSatisfied = false;
+            return;
+        }
+        if (!stockUnsatisfied) {
+            idleSteps = 0;
+            stockSleeping = true;
+            stockSatisfied = true;
+            nextRestock = now + SATISFIED_TICKS;
+            return;
+        }
+        idleSteps = Math.min(MAX_IDLE_STEPS, idleSteps + 1);
+        int interval = interval();
+        int maxIdle = upgrades.has(UpgradeType.CRAFTING) ? CRAFT_REQUEST_COOLDOWN : MAX_IDLE_TICKS;
+        nextRestock = now + Math.max(interval, Math.min(maxIdle, interval << idleSteps));
+        stockSleeping = true;
+        stockSatisfied = false;
+        sleepEpoch = GolemNetwork.storageEpoch();
+        sleepNetworkEpoch = net.networkEpoch();
+        sleepDiskEpoch = CopperDriveBayBlockEntity.diskChangeEpoch();
+        sleepNetworkDiskEpoch = net.core() != null ? net.core().diskEpoch() : 0L;
     }
 
     private void signalWork(Level level, BlockPos pos, BlockState state, long now) {
@@ -331,7 +505,11 @@ public class InterfaceBlockEntity extends BlockEntity {
     }
 
     private boolean hasIntake() {
-        return !inbox.isEmpty() || !tank.getFluid().isEmpty();
+        if (inboxDirty) {
+            inboxHasItems = !inbox.isEmpty();
+            inboxDirty = false;
+        }
+        return inboxHasItems || tank.getFluidAmount() > 0;
     }
 
     /** Input inbox -> network (waiting autocraft jobs first, then storage). */
@@ -387,7 +565,7 @@ public class InterfaceBlockEntity extends BlockEntity {
         int moved = 0, budget = fluidPerOperation();
         for (int i = 0; i < SLOTS; i++) {
             FluidStack have = fluidStock[i];
-            FluidStack want = isFluidSlot(i) ? containedFluid(config.getItem(i)) : FluidStack.EMPTY;
+            FluidStack want = isFluidSlot(i) ? cachedFluid(i) : FluidStack.EMPTY;
             if (!have.isEmpty()) {
                 int excess = want.isEmpty() || !FluidStack.isSameFluidSameComponents(want, have)
                         ? have.getAmount() : have.getAmount() - wantedFluid(i);
@@ -405,17 +583,25 @@ public class InterfaceBlockEntity extends BlockEntity {
                         moved += back;
                         setChanged();
                     }
+                    if (back < excess) {
+                        stockUnsatisfied = true;
+                    }
                 }
             }
-            if (want.isEmpty() || budget - moved <= 0) {
+            if (want.isEmpty()) {
                 continue;
             }
             have = fluidStock[i];
             if (!have.isEmpty() && !FluidStack.isSameFluidSameComponents(want, have)) {
+                stockUnsatisfied = true;
                 continue;
             }
             int need = wantedFluid(i) - have.getAmount();
             if (need <= 0) {
+                continue;
+            }
+            if (budget - moved <= 0) {
+                stockUnsatisfied = true;
                 continue;
             }
             FluidStack got = network.extractFluid(want, Math.min(need, budget - moved), false);
@@ -427,6 +613,9 @@ public class InterfaceBlockEntity extends BlockEntity {
                 }
                 moved += got.getAmount();
                 setChanged();
+            }
+            if (got.getAmount() < need) {
+                stockUnsatisfied = true;
             }
         }
         return moved;
@@ -441,15 +630,20 @@ public class InterfaceBlockEntity extends BlockEntity {
         for (int i = 0; i < SLOTS; i++) {
             ItemStack cfg = config.getItem(i);
             moved += returnExcessItem(net, i, cfg, fuzzy);
-            if (cfg.isEmpty() || isFluidSlot(i) || budget - moved <= 0) {
+            if (cfg.isEmpty() || isFluidSlot(i)) {
                 continue;
             }
             ItemStack have = stock.getItem(i);
             if (!have.isEmpty() && !Fuzzy.matches(cfg, have, fuzzy)) {
+                stockUnsatisfied = true;
                 continue;
             }
             int need = wanted(i) - have.getCount();
             if (need <= 0) {
+                continue;
+            }
+            if (budget - moved <= 0) {
+                stockUnsatisfied = true;
                 continue;
             }
             ItemStack plain = Fuzzy.plain(cfg).copyWithCount(1);
@@ -457,11 +651,12 @@ public class InterfaceBlockEntity extends BlockEntity {
             ItemStack got = net.extractItem(have.isEmpty() ? plain : have.copyWithCount(1), ask, false);
             if (got.isEmpty() && fuzzy && have.isEmpty()) {
                 if (netKeys == null) {
-                    netKeys = net.listItems().keySet();
+                    netKeys = net.listItemsShared().keySet();
                 }
                 got = extractFirstFuzzy(net, cfg, netKeys, ask);
             }
             if (got.isEmpty()) {
+                stockUnsatisfied = true;
                 toCraft = queueMissingCraft(net, plain, need, toCraft);
                 continue;
             }
@@ -472,6 +667,9 @@ public class InterfaceBlockEntity extends BlockEntity {
                 stock.setChanged();
             }
             moved += got.getCount();
+            if (got.getCount() < need) {
+                stockUnsatisfied = true;
+            }
         }
         dispatchCraftOrders(level, net, toCraft);
         return moved;
@@ -492,6 +690,9 @@ public class InterfaceBlockEntity extends BlockEntity {
         if (returned > 0) {
             have.shrink(returned);
             stock.setItem(slot, have.isEmpty() ? ItemStack.EMPTY : have);
+        }
+        if (returned < excess) {
+            stockUnsatisfied = true;
         }
         return returned;
     }
@@ -609,20 +810,28 @@ public class InterfaceBlockEntity extends BlockEntity {
         config.fromTag(tag.getList("Config", Tag.TAG_COMPOUND), registries);
         stock.fromTag(tag.getList("Stock", Tag.TAG_COMPOUND), registries);
         inbox.fromTag(tag.getList("Inbox", Tag.TAG_COMPOUND), registries);
+        inboxDirty = true;
         upgrades.fromTag(tag.getList("Upgrades", Tag.TAG_COMPOUND), registries);
+        upgradesDirty = true;
         tank.readFromNBT(registries, tag.getCompound("Tank"));
         BlockEntities.loadFluidSlots(tag, "FluidStock", fluidStock, registries);
         itemModeMask = tag.getInt("ItemModes");
+        invalidateConfigCache();
         int[] am = tag.getIntArray("Amounts");
         Arrays.fill(amount, 0);
         System.arraycopy(am, 0, amount, 0, Math.min(am.length, SLOTS));
         // migrate legacy worlds that kept target amounts as item counts in config slots
+        boolean migrated = false;
         for (int i = 0; i < SLOTS; i++) {
             ItemStack cfg = config.getItem(i);
             if (amount[i] == 0 && cfg.getCount() > 1) {
                 amount[i] = amount(i);
                 config.getItems().set(i, cfg.copyWithCount(1));
+                migrated = true;
             }
+        }
+        if (migrated) {
+            invalidateConfigCache();
         }
         redstone.load(tag);
     }
@@ -699,6 +908,7 @@ public class InterfaceBlockEntity extends BlockEntity {
                 if (have.isEmpty()) {
                     fluidStock[i] = FluidStack.EMPTY;
                 }
+                wakeStock();
                 setChanged();
             }
             return out;

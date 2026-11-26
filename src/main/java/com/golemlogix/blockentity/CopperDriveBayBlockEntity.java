@@ -4,6 +4,7 @@ import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.items.MagneticDiskItem;
 import com.golemlogix.menu.Priority;
 import com.golemlogix.system.DiskStorage;
+import com.golemlogix.system.GolemNetwork;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
@@ -30,6 +31,12 @@ import net.minecraft.world.level.block.state.BlockState;
 public class CopperDriveBayBlockEntity extends BlockEntity {
     public static final int SLOTS = 10;
     public static final int EVENT_VIEWERS = ViewerTracker.EVENT_VIEWERS;
+    /** Monotonic server counter bumped on physical disk insert, remove, or swap in any cabinet. */
+    private static long diskChangeEpoch;
+
+    static long diskChangeEpoch() {
+        return diskChangeEpoch;
+    }
 
     private final ViewerTracker viewerTracker = new ViewerTracker();
 
@@ -38,6 +45,14 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
         public void setChanged() {
             super.setChanged();
             refreshVisuals();
+            if (level != null && !level.isClientSide()) {
+                AtlasCoreBlockEntity core = GolemNetwork.get(level, worldPosition).core();
+                if (core != null) {
+                    core.onDiskChanged();
+                }
+                diskChangeEpoch++;
+                GolemNetwork.clearCache();
+            }
         }
 
         @Override
@@ -91,6 +106,9 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
     public void setPriority(int value) {
         this.priority = Mth.clamp(value, -Priority.MAX, Priority.MAX);
         setChanged();
+        if (level != null && !level.isClientSide()) {
+            GolemNetwork.clearCache();
+        }
     }
 
     public ContainerData priorityData() {
@@ -139,7 +157,10 @@ public class CopperDriveBayBlockEntity extends BlockEntity {
                 changed |= DiskStorage.syncStored(container.getItem(i));
             }
             if (changed) {
-                container.setChanged();
+                setChanged();
+                refreshVisuals();
+                diskChangeEpoch++;
+                GolemNetwork.clearCache();
             }
         }
     }
