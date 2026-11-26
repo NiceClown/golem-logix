@@ -350,15 +350,29 @@ public class CardCatalogMenu extends GolemMenu implements ScrollableMenu {
 
     @Override
     public void clicked(int slotId, int button, ContainerInput clickType, Player player) {
-        // a hotbar swap (number keys) would take the whole provider stack past the limit, so it is not allowed while places are taken
-        if (slotId == providerSlot && clickType == ContainerInput.SWAP && minProviders() > 0) {
-            return;
+        if (slotId == providerSlot && minProviders() > 0) {
+            // hotbar swap or swapping with a differently-componented provider stack could drop below minProviders()
+            if (clickType == ContainerInput.SWAP) {
+                return;
+            }
+            if (clickType == ContainerInput.PICKUP) {
+                ItemStack carried = getCarried();
+                ItemStack inSlot = this.slots.get(providerSlot).getItem();
+                if (!carried.isEmpty() && !inSlot.isEmpty()
+                        && !ItemStack.isSameItemSameComponents(carried, inSlot)
+                        && carried.getCount() < minProviders()) {
+                    return;
+                }
+            }
         }
         super.clicked(slotId, button, clickType, player);
     }
 
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
+        if (index < 0 || index >= this.slots.size()) {
+            return ItemStack.EMPTY;
+        }
         Slot slot = this.slots.get(index);
         if (slot == null || !slot.hasItem()) {
             return ItemStack.EMPTY;
@@ -378,6 +392,7 @@ public class CardCatalogMenu extends GolemMenu implements ScrollableMenu {
             }
             slot.remove(moved);
             slot.setChanged();
+            slot.onTake(player, stack);
             return copy;
         }
         if (index < containerSlotCount || (index >= upgradeStart && index < upgradeEnd)) {
@@ -388,7 +403,10 @@ public class CardCatalogMenu extends GolemMenu implements ScrollableMenu {
             if (!this.moveItemStackTo(stack, providerSlot, providerSlot + 1, false)) {
                 return ItemStack.EMPTY;
             }
-        } else if (CardCatalogBlockEntity.isCraftingCard(stack) && be != null) {
+        } else if (CardCatalogBlockEntity.isCraftingCard(stack)) {
+            if (be == null) {
+                return ItemStack.EMPTY;
+            }
             int cap = be.capacity();
             for (int i = 0; i < cap && !stack.isEmpty(); i++) {
                 if (be.getCards().getItem(i).isEmpty()) {
@@ -406,7 +424,11 @@ public class CardCatalogMenu extends GolemMenu implements ScrollableMenu {
         } else {
             slot.setChanged();
         }
-        return stack.getCount() == copy.getCount() ? ItemStack.EMPTY : copy;
+        if (stack.getCount() == copy.getCount()) {
+            return ItemStack.EMPTY;
+        }
+        slot.onTake(player, stack);
+        return copy;
     }
 
     @Override

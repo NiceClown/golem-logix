@@ -121,6 +121,9 @@ public class StockManometerMenu extends GolemMenu {
 
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
+        if (index < 0 || index >= this.slots.size()) {
+            return ItemStack.EMPTY;
+        }
         ItemStack stack = this.slots.get(index).getItem();
         boolean fromPlayer = index >= playerStart && index < playerEnd;
         if (!fromPlayer || stack.getItem() instanceof UpgradeItem) {
