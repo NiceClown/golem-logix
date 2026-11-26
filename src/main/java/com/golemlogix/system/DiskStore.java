@@ -2,17 +2,23 @@ package com.golemlogix.system;
 
 import com.golemlogix.GolemLogixMod;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.core.UUIDUtil;
-import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.NbtAccounter;
+import net.minecraft.nbt.NbtIo;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
+import net.minecraft.world.level.storage.LevelResource;
 import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -44,8 +50,10 @@ public class DiskStore extends SavedData {
     private final Map<UUID, Disk> disks = new HashMap<>();
 
     /** Saved as one compound (the format of 1.21.1, now in data/golem_logix/disks.dat) through the server's registries. */
-    private static final SavedDataType<DiskStore> TYPE = new SavedDataType<>(Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "disks"),
-            level -> fromLegacyFile(), level -> {
+    private static final SavedDataType<DiskStore> TYPE = new SavedDataType<>(
+            Identifier.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "disks"),
+            level -> fromLegacyFile(),
+            level -> {
                 HolderLookup.Provider registries = registries();
                 return CompoundTag.CODEC.xmap(tag -> load(tag, registries), store -> store.save(new CompoundTag(), registries));
             });
@@ -55,22 +63,22 @@ public class DiskStore extends SavedData {
     }
 
     private static HolderLookup.Provider registries() {
-        return net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer().registryAccess();
+        return ServerLifecycleHooks.getCurrentServer().registryAccess();
     }
 
     /** A world from 1.21.1 kept its disks in data/golem_logix_disks.dat: they move to the new file on the next save. */
     private static DiskStore fromLegacyFile() {
-        MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server != null) {
-            java.nio.file.Path old = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.DATA).resolve(NAME + ".dat");
-            if (java.nio.file.Files.isRegularFile(old)) {
+            Path old = server.getWorldPath(LevelResource.DATA).resolve(NAME + ".dat");
+            if (Files.isRegularFile(old)) {
                 try {
-                    CompoundTag root = net.minecraft.nbt.NbtIo.readCompressed(old, net.minecraft.nbt.NbtAccounter.unlimitedHeap());
+                    CompoundTag root = NbtIo.readCompressed(old, NbtAccounter.unlimitedHeap());
                     DiskStore store = load(root.getCompoundOrEmpty("data"), server.registryAccess());
                     store.setDirty();
                     GolemLogixMod.LOGGER.info("Golem Logix: moved {} disks from {}", store.disks.size(), old.getFileName());
                     return store;
-                } catch (java.io.IOException | RuntimeException e) {
+                } catch (IOException | RuntimeException e) {
                     GolemLogixMod.LOGGER.warn("Golem Logix: could not read the old disk file {}", old, e);
                 }
             }
@@ -84,12 +92,6 @@ public class DiskStore extends SavedData {
 
     public Disk getOrCreate(UUID id) {
         return disks.computeIfAbsent(id, k -> new Disk());
-    }
-
-    public void drop(UUID id) {
-        if (disks.remove(id) != null) {
-            setDirty();
-        }
     }
 
     /** Recomputes used space and equipment counts after a /reload, in case the golem_logix:not_gear tag changed. */
@@ -126,7 +128,7 @@ public class DiskStore extends SavedData {
             ListTag items = t.getListOrEmpty("Items");
             for (int j = 0; j < items.size(); j++) {
                 CompoundTag it = items.getCompoundOrEmpty(j);
-                ItemStack stack = com.golemlogix.system.NbtBridge.loadItem(provider, it.getCompoundOrEmpty("Item")).orElse(ItemStack.EMPTY);
+                ItemStack stack = NbtBridge.loadItem(provider, it.getCompoundOrEmpty("Item")).orElse(ItemStack.EMPTY);
                 int count = it.getIntOr("Count", 0);
                 if (!stack.isEmpty() && count > 0) {
                     disk.items.merge(ItemKey.of(stack), count, Integer::sum);
@@ -139,7 +141,7 @@ public class DiskStore extends SavedData {
             }
             ListTag fluids = t.getListOrEmpty("Fluids");
             for (int j = 0; j < fluids.size(); j++) {
-                com.golemlogix.system.NbtBridge.loadFluid(provider, fluids.getCompoundOrEmpty(j)).ifPresent(f -> {
+                NbtBridge.loadFluid(provider, fluids.getCompoundOrEmpty(j)).ifPresent(f -> {
                     if (!f.isEmpty()) {
                         disk.fluids.add(f);
                         disk.storedFluids += f.getAmount();
@@ -165,14 +167,14 @@ public class DiskStore extends SavedData {
             ListTag items = new ListTag();
             for (Map.Entry<ItemKey, Integer> it : disk.items.entrySet()) {
                 CompoundTag c = new CompoundTag();
-                c.put("Item", com.golemlogix.system.NbtBridge.saveItem(it.getKey().toStack(1), provider));
+                c.put("Item", NbtBridge.saveItem(it.getKey().toStack(1), provider));
                 c.putInt("Count", it.getValue());
                 items.add(c);
             }
             t.put("Items", items);
             ListTag fluids = new ListTag();
             for (FluidStack f : disk.fluids) {
-                fluids.add(com.golemlogix.system.NbtBridge.saveFluid(f, provider));
+                fluids.add(NbtBridge.saveFluid(f, provider));
             }
             t.put("Fluids", fluids);
             list.add(t);

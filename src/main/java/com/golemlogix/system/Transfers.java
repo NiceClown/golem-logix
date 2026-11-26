@@ -16,6 +16,7 @@ import net.neoforged.neoforge.transfer.fluid.FluidUtil;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.resource.Resource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
+import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -30,13 +31,13 @@ public final class Transfers {
     public static <T extends Resource> ResourceHandler<T> insertOnly(ResourceHandler<T> delegate) {
         return new DelegatingResourceHandler<>(delegate) {
             @Override
-            public int extract(int index, T resource, int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext tx) {
+            public int extract(int index, T resource, int amount, TransactionContext tx) {
                 TransferPreconditions.checkNonEmptyNonNegative(resource, amount);
                 return 0;
             }
 
             @Override
-            public int extract(T resource, int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext tx) {
+            public int extract(T resource, int amount, TransactionContext tx) {
                 TransferPreconditions.checkNonEmptyNonNegative(resource, amount);
                 return 0;
             }
@@ -52,13 +53,13 @@ public final class Transfers {
             }
 
             @Override
-            public int insert(int index, T resource, int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext tx) {
+            public int insert(int index, T resource, int amount, TransactionContext tx) {
                 TransferPreconditions.checkNonEmptyNonNegative(resource, amount);
                 return 0;
             }
 
             @Override
-            public int insert(T resource, int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext tx) {
+            public int insert(T resource, int amount, TransactionContext tx) {
                 TransferPreconditions.checkNonEmptyNonNegative(resource, amount);
                 return 0;
             }
