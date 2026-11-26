@@ -38,11 +38,10 @@ import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -120,13 +119,42 @@ public class TerminalMenu extends GolemMenu {
     private final Player player;
 
     // --- client side
-    public final List<TerminalListPayload.Entry> clientEntries = new ArrayList<>();
-    private final Map<ItemKey, Integer> clientIndex = new HashMap<>();
+    private final ArrayList<TerminalListPayload.Entry> clientEntryList = new ArrayList<>();
+    public final List<TerminalListPayload.Entry> clientEntries = clientEntryList;
+    private Object2IntOpenHashMap<EntryKey> clientIndex = newClientIndex(16);
+    private int clientIndexCap = 16;
     public TerminalInfoPayload clientInfo = null;
     public int clientVersion = 0;
     /** Client: the last order plan received (for the order window's planner). */
     @Nullable
     public CraftPlanPayload clientPlan;
+
+    /** Non-copying lookup key for {@link #clientIndex}; {@link TerminalListPayload.Entry#key()} is never mutated. */
+    private static final class EntryKey {
+        final ItemStack stack;
+        final int hash;
+
+        EntryKey(ItemStack stack) {
+            this.stack = stack;
+            this.hash = ItemStack.hashItemAndComponents(stack);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof EntryKey k && hash == k.hash && ItemStack.isSameItemSameComponents(stack, k.stack);
+        }
+
+        @Override
+        public int hashCode() {
+            return hash;
+        }
+    }
+
+    private static Object2IntOpenHashMap<EntryKey> newClientIndex(int expected) {
+        Object2IntOpenHashMap<EntryKey> map = new Object2IntOpenHashMap<>(expected);
+        map.defaultReturnValue(-1);
+        return map;
+    }
 
     public static TerminalMenu fromNetwork(int id, Inventory inv, RegistryFriendlyByteBuf buf) {
         boolean crafting = buf.readBoolean();
@@ -248,8 +276,13 @@ public class TerminalMenu extends GolemMenu {
 
     // =================================================================== server
 
+    /**
+     * Returns the cached server network for this terminal. Safe without a forced scan because {@code NetworkCache}
+     * invalidates synchronously on block/plug/telegraph/multiblock/periscope mutations, while core power, security
+     * cards, drive-bay disks/priorities, crafting CPUs, and pattern indexes are read live through cached BE refs.
+     */
     private GolemNetwork network() {
-        return GolemNetwork.scan(netLevel, anchor);
+        return GolemNetwork.get(netLevel, anchor);
     }
 
     @Nullable
@@ -629,8 +662,8 @@ public class TerminalMenu extends GolemMenu {
         if (!sync.isDue(tick)) {
             return;
         }
-        boolean force = sync.consumeForce();
-        GolemNetwork net = force ? network() : GolemNetwork.get(netLevel, anchor);
+        sync.clearForce();
+        GolemNetwork net = network();
         String err = accessError(net);
 
         if (wireless && tick % 20 == 0 && tick != lastDrainTick && err == null) {
@@ -644,31 +677,51 @@ public class TerminalMenu extends GolemMenu {
     // ------------------------------------------------------------------ client
 
     public void clientReceiveList(TerminalListPayload p) {
+        List<TerminalListPayload.Entry> incoming = p.entries();
         if (p.reset()) {
-            clientEntries.clear();
-            clientIndex.clear();
-        }
-        for (TerminalListPayload.Entry e : p.entries()) {
-            ItemKey k = ItemKey.of(e.key());
-            Integer at = clientIndex.get(k);
-            if (e.count() <= 0 && !e.craftable()) {
-                if (at != null) {
-                    // the last entry takes the place of the one that is gone (the screen sorts its own copy)
-                    TerminalListPayload.Entry last = clientEntries.remove(clientEntries.size() - 1);
-                    if (at < clientEntries.size()) {
-                        clientEntries.set(at, last);
-                        clientIndex.put(ItemKey.of(last.key()), at);
-                    }
-                    clientIndex.remove(k);
-                }
-            } else if (at != null) {
-                clientEntries.set(at, e);
+            clientEntryList.clear();
+            int need = incoming.size() >= TerminalListPayload.CHUNK
+                    ? TerminalListPayload.CHUNK * 4 : incoming.size();
+            if (need > clientIndexCap) {
+                clientIndex = newClientIndex(need);
+                clientIndexCap = need;
             } else {
-                clientIndex.put(k, clientEntries.size());
-                clientEntries.add(e);
+                clientIndex.clear();
+            }
+        }
+        if (!incoming.isEmpty()) {
+            clientEntryList.ensureCapacity(clientEntryList.size() + incoming.size());
+        }
+        for (TerminalListPayload.Entry e : incoming) {
+            EntryKey k = new EntryKey(e.key());
+            if (e.count() <= 0 && !e.craftable()) {
+                int at = clientIndex.removeInt(k);
+                if (at >= 0) {
+                    // the last entry takes the place of the one that is gone (the screen sorts its own copy)
+                    int lastIdx = clientEntryList.size() - 1;
+                    TerminalListPayload.Entry last = clientEntryList.remove(lastIdx);
+                    if (at < lastIdx) {
+                        clientEntryList.set(at, last);
+                        clientIndex.put(new EntryKey(last.key()), at);
+                    }
+                }
+            } else {
+                int prev = clientIndex.putIfAbsent(k, clientEntryList.size());
+                if (prev < 0) {
+                    clientEntryList.add(e);
+                } else {
+                    clientEntryList.set(prev, e);
+                }
             }
         }
         clientVersion++;
+    }
+
+    /** Client: O(1) lookup of an item's current entry in {@link #clientEntries}, or null if absent. */
+    @Nullable
+    public TerminalListPayload.Entry clientEntryOf(ItemStack stack) {
+        int at = clientIndex.getInt(new EntryKey(stack));
+        return at >= 0 ? clientEntryList.get(at) : null;
     }
 
     public void clientReceiveInfo(TerminalInfoPayload p) {

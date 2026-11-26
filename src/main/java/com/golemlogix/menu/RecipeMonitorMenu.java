@@ -73,7 +73,7 @@ public class RecipeMonitorMenu extends GolemMenu {
         if (index >= sentOrder.size()) {
             return false;
         }
-        GolemNetwork net = GolemNetwork.scan(level, pos);
+        GolemNetwork net = GolemNetwork.get(level, pos);
         if (net.accessError(pos) != null) {
             return false;
         }
