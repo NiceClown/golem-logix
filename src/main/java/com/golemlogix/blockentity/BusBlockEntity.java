@@ -525,10 +525,10 @@ public class BusBlockEntity extends BlockEntity {
                             have += amt;
                         }
                     }
-                    cap = (int) Math.min(cap, keep - have);
-                    if (cap <= 0) {
+                    if (have >= keep) {
                         continue;
                     }
+                    cap = (int) Math.min(cap, keep - have);
                 }
                 FluidStack sim = net.extractFluid(fluidFilter, cap, true, target);
                 if (sim.isEmpty()) {
@@ -571,10 +571,10 @@ public class BusBlockEntity extends BlockEntity {
                         have += amt;
                     }
                 }
-                cap = (int) Math.min(cap, keep - have);
-                if (cap <= 0) {
+                if (have >= keep) {
                     continue;
                 }
+                cap = (int) Math.min(cap, keep - have);
             }
             // what may go out for this filter: its own item first, with a Fuzzy Card also what the network has that matches it
             List<ItemStack> wants = new ArrayList<>();
