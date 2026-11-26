@@ -188,12 +188,12 @@ public final class CraftingPlanner {
         long fromStockBefore = take(stock, n.key, need, true);
         takenBefore += fromStockBefore;
         need -= fromStockBefore;
-        need += n.ordered;
+        need = saturatedAdd(need, n.ordered);
         if (need <= 0) {
             return;
         }
         if (n.pattern == null) {
-            missing.merge(n.key, need, Long::sum);
+            missing.merge(n.key, need, CraftingPlanner::saturatedAdd);
             return;
         }
         long selfIn = 0;
@@ -207,19 +207,20 @@ public final class CraftingPlanner {
             }
         }
         int per = Math.max(1, n.pattern.outputCount(n.key));
-        long crafts;
+        long denom;
         if (selfIn > 0) {
             if (selfIn >= per) {
-                missing.merge(n.key, need, Long::sum);
+                missing.merge(n.key, need, CraftingPlanner::saturatedAdd);
                 return;
             }
-            long netPer = per - selfIn;
-            crafts = (need + netPer - 1) / netPer;
+            denom = per - selfIn;
         } else {
-            crafts = (need + per - 1) / per;
+            denom = per;
         }
+        // overflow-safe ceiling division for any positive need up to Long.MAX_VALUE
+        long crafts = (need - 1) / denom + 1;
         if (crafts > MAX_EXECUTIONS - executions) {
-            missing.merge(n.key, need, Long::sum);
+            missing.merge(n.key, need, CraftingPlanner::saturatedAdd);
             return;
         }
         executions += crafts;
@@ -302,11 +303,21 @@ public final class CraftingPlanner {
         if (alt != null) {
             rest -= takeSurplus(consumer, in.key(), rest);
             rest -= take(stock, in.key(), rest, true);
-            for (ItemKey k : surplusAlternatives(consumer, alt, in.key())) {
-                rest -= takeSurplus(consumer, k, rest);
+            if (rest > 0) {
+                for (ItemKey k : surplusAlternatives(consumer, alt, in.key())) {
+                    rest -= takeSurplus(consumer, k, rest);
+                    if (rest <= 0) {
+                        break;
+                    }
+                }
             }
-            for (ItemKey k : alternatives(stock, alt, in.key())) {
-                rest -= take(stock, k, rest, true);
+            if (rest > 0) {
+                for (ItemKey k : alternatives(stock, alt, in.key())) {
+                    rest -= take(stock, k, rest, true);
+                    if (rest <= 0) {
+                        break;
+                    }
+                }
             }
         }
         if (rest <= 0) {
@@ -348,12 +359,25 @@ public final class CraftingPlanner {
             if (n > 0) {
                 b.amount -= n;
                 got += n;
+                // consumer now depends on b.producer: propagate so later steps cannot form a mutual byproduct deadlock
+                recordDependency(consumer, b.producer);
                 if (got >= want) {
                     break;
                 }
             }
         }
         return got;
+    }
+
+    private void recordDependency(Node consumer, Node producer) {
+        consumer.deps.set(producer.id);
+        consumer.deps.or(producer.deps);
+        for (Node u : postOrder) {
+            if (u.deps.get(consumer.id)) {
+                u.deps.set(producer.id);
+                u.deps.or(producer.deps);
+            }
+        }
     }
 
     private List<ItemKey> surplusAlternatives(Node consumer, java.util.function.Predicate<net.minecraft.world.item.ItemStack> alt,

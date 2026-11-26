@@ -18,6 +18,7 @@ import java.util.Set;
  * and only when there is none, or it is full, into any neighbouring inventory. The machine's own blocks are skipped.
  */
 public final class AutoOutput {
+    private static final Direction[] DIRECTIONS = Direction.values();
     /** How often a machine tries to hand out what it made (ticks). */
     public static final int INTERVAL = 10;
 
@@ -29,14 +30,14 @@ public final class AutoOutput {
         if (stack.isEmpty()) {
             return ItemStack.EMPTY;
         }
-        Set<BlockPos> own = new HashSet<>(cells);
+        Set<BlockPos> own = cells.size() > 1 ? new HashSet<>(cells) : null;
         ItemStack rest = stack.copy();
         // the first pass only into Pattern Providers, the second into everything else
         for (int pass = 0; pass < 2; pass++) {
             for (BlockPos cell : cells) {
-                for (Direction dir : Direction.values()) {
+                for (Direction dir : DIRECTIONS) {
                     BlockPos target = cell.relative(dir);
-                    if (own.contains(target) || !level.isLoaded(target)) {
+                    if ((own != null && own.contains(target)) || !level.isLoaded(target)) {
                         continue;
                     }
                     boolean provider = level.getBlockEntity(target) instanceof PatternProviderBlockEntity;

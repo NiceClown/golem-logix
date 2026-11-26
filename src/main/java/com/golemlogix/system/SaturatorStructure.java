@@ -165,6 +165,11 @@ public final class SaturatorStructure {
 
     /** Replaces the machine blocks with part blocks (the owner stays in place and becomes "assembled"). */
     public static void form(ServerLevel level, BlockPos controller, Direction facing) {
+        for (int i = 0; i < CELLS; i++) {
+            if (!level.isLoaded(cellPos(controller, facing, i))) {
+                return;
+            }
+        }
         Block part = ModBlocks.SATURATOR_PART.get();
         for (int i = 0; i < CELLS; i++) {
             if (i == CONTROLLER) {
@@ -205,7 +210,9 @@ public final class SaturatorStructure {
                     continue;
                 }
                 BlockState state = level.getBlockState(pos);
-                if (state.getBlock() instanceof SaturatorPartBlock && state.getValue(SaturatorPartBlock.CELL) == i) {
+                if (state.getBlock() instanceof SaturatorPartBlock
+                        && state.getValue(SaturatorPartBlock.CELL) == i
+                        && state.getValue(SaturatorPartBlock.FACING) == facing) {
                     restore(level, pos);
                 }
             }

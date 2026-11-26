@@ -33,7 +33,7 @@ public class UpgradeContainer extends OwnedContainer {
 
     @Override
     public int getMaxStackSize() {
-        return spec.perSlot(UpgradeType.SPEED);
+        return Math.max(1, spec.perSlot(UpgradeType.SPEED));
     }
 
     @Override
@@ -66,7 +66,13 @@ public class UpgradeContainer extends OwnedContainer {
             }
             int slot = entry.contains("Slot", net.minecraft.nbt.Tag.TAG_ANY_NUMERIC) ? entry.getInt("Slot") : -1;
             if (slot >= 0 && slot < getContainerSize() && getItem(slot).isEmpty() && accepts(spec, stack, this, slot)) {
-                setItem(slot, stack);
+                int max = getMaxStackSize(stack);
+                if (stack.getCount() <= max) {
+                    setItem(slot, stack);
+                } else {
+                    setItem(slot, stack.copyWithCount(max));
+                    rest.add(stack.copyWithCount(stack.getCount() - max));
+                }
             } else {
                 rest.add(stack);
             }
@@ -94,7 +100,7 @@ public class UpgradeContainer extends OwnedContainer {
                 strays.add(s);
             }
         }
-        if (!strays.isEmpty()) {
+        if (!strays.isEmpty() && (owner().getLevel() == null || !owner().getLevel().isClientSide())) {
             PENDING.add(this);
         }
     }
@@ -131,11 +137,21 @@ public class UpgradeContainer extends OwnedContainer {
             if (owner.getLevel() == null && !owner.isRemoved()) {
                 continue;   // not placed in a level yet
             }
-            PENDING.remove(c);
             if (!owner.isRemoved() && owner.getLevel() instanceof net.minecraft.server.level.ServerLevel level) {
+                if (!level.isLoaded(owner.getBlockPos())) {
+                    continue;
+                }
+                PENDING.remove(c);
                 c.dropStrays(level, owner.getBlockPos());
+            } else {
+                PENDING.remove(c);
             }
         }
+    }
+
+    @net.neoforged.bus.api.SubscribeEvent
+    public static void onServerStopped(net.neoforged.neoforge.event.server.ServerStoppedEvent event) {
+        PENDING.clear();
     }
 
     /** Strays still waiting to be dropped (tests). */

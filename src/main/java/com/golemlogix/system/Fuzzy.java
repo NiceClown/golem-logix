@@ -225,24 +225,48 @@ public final class Fuzzy {
                     }
                 }
             } else if (recipe instanceof ShapelessRecipe) {
-                List<Ingredient> pool = new ArrayList<>(recipe.getIngredients());
+                List<Ingredient> pool = recipe.getIngredients();
+                List<Integer> filled = new ArrayList<>(9);
                 for (int cell = 0; cell < 9; cell++) {
-                    ItemStack s = nine.get(cell);
-                    if (s.isEmpty()) {
-                        continue;
+                    if (!nine.get(cell).isEmpty()) {
+                        filled.add(cell);
                     }
-                    for (int k = 0; k < pool.size(); k++) {
-                        if (pool.get(k).test(s)) {
-                            out.set(cell, pool.remove(k));
-                            break;
-                        }
+                }
+                int[] match = new int[filled.size()];
+                if (filled.size() == pool.size()
+                        && matchShapeless(0, filled, nine, pool, new boolean[pool.size()], match)) {
+                    for (int idx = 0; idx < filled.size(); idx++) {
+                        out.set(filled.get(idx), pool.get(match[idx]));
                     }
                 }
             }
         }
         List<Ingredient> result = List.copyOf(out);
+        if (cache.size() >= 4096) {
+            cache.clear();
+        }
         cache.put(key, result);
         return result;
+    }
+
+    /** Exact bipartite matching between non-empty grid cells and shapeless recipe ingredients (at most 9 cells). */
+    private static boolean matchShapeless(int i, List<Integer> filled, List<ItemStack> nine,
+                                          List<Ingredient> pool, boolean[] used, int[] match) {
+        if (i == filled.size()) {
+            return true;
+        }
+        ItemStack stack = nine.get(filled.get(i));
+        for (int k = 0; k < pool.size(); k++) {
+            if (!used[k] && pool.get(k).test(stack)) {
+                used[k] = true;
+                match[i] = k;
+                if (matchShapeless(i + 1, filled, nine, pool, used, match)) {
+                    return true;
+                }
+                used[k] = false;
+            }
+        }
+        return false;
     }
 
     private static boolean fits(NonNullList<Ingredient> ings, int w, int h, CraftingInput in, boolean mirrored) {

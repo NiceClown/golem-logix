@@ -23,7 +23,11 @@ public final class BusLoad {
     }
 
     private static void roll(Level level) {
-        long now = level.getServer().getTickCount();
+        var server = level.getServer();
+        if (server == null) {
+            return;
+        }
+        long now = server.getTickCount();
         if (now == tick) {
             return;
         }
