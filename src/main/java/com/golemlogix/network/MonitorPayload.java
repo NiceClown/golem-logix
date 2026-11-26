@@ -34,16 +34,20 @@ public record MonitorPayload(int containerId, String error, List<Cpu> cpus) impl
                       List<Step> targets, List<Step> steps, List<Step> waiting) {
     }
 
+    public static final int MAX_STEPS = 64, MAX_CPUS = 256;
+
     private static void writeSteps(RegistryFriendlyByteBuf buf, List<Step> list) {
-        buf.writeVarInt(list.size());
-        for (Step s : list) {
+        int n = Math.min(MAX_STEPS, list.size());
+        buf.writeVarInt(n);
+        for (int i = 0; i < n; i++) {
+            Step s = list.get(i);
             ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, s.item().copyWithCount(1));
             buf.writeVarLong(s.left());
         }
     }
 
     private static List<Step> readSteps(RegistryFriendlyByteBuf buf) {
-        int n = Math.min(64, buf.readVarInt());
+        int n = PayloadCodecs.readCount(buf, MAX_STEPS);
         List<Step> out = new ArrayList<>(n);
         for (int i = 0; i < n; i++) {
             out.add(new Step(ItemStack.OPTIONAL_STREAM_CODEC.decode(buf), buf.readVarLong()));
@@ -55,8 +59,10 @@ public record MonitorPayload(int containerId, String error, List<Cpu> cpus) impl
             (buf, p) -> {
                 buf.writeVarInt(p.containerId);
                 buf.writeUtf(p.error);
-                buf.writeVarInt(p.cpus.size());
-                for (Cpu c : p.cpus) {
+                int n = Math.min(MAX_CPUS, p.cpus.size());
+                buf.writeVarInt(n);
+                for (int i = 0; i < n; i++) {
+                    Cpu c = p.cpus.get(i);
                     buf.writeBlockPos(c.pos());
                     buf.writeVarInt(c.core());
                     buf.writeVarInt(c.state());
@@ -72,7 +78,7 @@ public record MonitorPayload(int containerId, String error, List<Cpu> cpus) impl
             buf -> {
                 int id = buf.readVarInt();
                 String error = buf.readUtf();
-                int n = Math.min(256, buf.readVarInt());
+                int n = PayloadCodecs.readCount(buf, MAX_CPUS);
                 List<Cpu> cpus = new ArrayList<>(n);
                 for (int i = 0; i < n; i++) {
                     BlockPos pos = buf.readBlockPos();

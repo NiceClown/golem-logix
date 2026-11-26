@@ -52,17 +52,17 @@ public record RecipeFillPayload(int containerId, boolean crafting, boolean max, 
                 int id = buf.readVarInt();
                 boolean crafting = buf.readBoolean();
                 boolean max = buf.readBoolean();
-                int n = Math.min(MAX_SLOTS, buf.readVarInt());
+                int n = PayloadCodecs.readCount(buf, MAX_SLOTS);
                 List<List<ItemStack>> inputs = new ArrayList<>(n);
                 for (int i = 0; i < n; i++) {
-                    int m = Math.min(MAX_OPTIONS, buf.readVarInt());
+                    int m = PayloadCodecs.readCount(buf, MAX_OPTIONS);
                     List<ItemStack> opts = new ArrayList<>(m);
                     for (int k = 0; k < m; k++) {
                         opts.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(buf));
                     }
                     inputs.add(opts);
                 }
-                int o = Math.min(MAX_OUTPUTS, buf.readVarInt());
+                int o = PayloadCodecs.readCount(buf, MAX_OUTPUTS);
                 List<ItemStack> outputs = new ArrayList<>(o);
                 for (int i = 0; i < o; i++) {
                     outputs.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(buf));
@@ -77,7 +77,9 @@ public record RecipeFillPayload(int containerId, boolean crafting, boolean max, 
 
     public static void handle(RecipeFillPayload payload, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
-            if (!(ctx.player() instanceof ServerPlayer player) || player.containerMenu.containerId != payload.containerId) {
+            if (!(ctx.player() instanceof ServerPlayer player)
+                    || player.containerMenu.containerId != payload.containerId
+                    || !player.containerMenu.stillValid(player)) {
                 return;
             }
             if (player.containerMenu instanceof TerminalMenu menu) {

@@ -45,8 +45,10 @@ public record CraftPlanPayload(int containerId, int request, Status status, int 
                 buf.writeVarInt(p.status.ordinal());
                 buf.writeVarInt(p.steps);
                 buf.writeVarLong(p.executions);
-                buf.writeVarInt(p.entries.size());
-                for (Entry e : p.entries) {
+                int n = Math.min(MAX_ENTRIES, p.entries.size());
+                buf.writeVarInt(n);
+                for (int i = 0; i < n; i++) {
+                    Entry e = p.entries.get(i);
                     ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, e.stack);
                     buf.writeVarLong(e.stored);
                     buf.writeVarLong(e.craft);
@@ -56,10 +58,11 @@ public record CraftPlanPayload(int containerId, int request, Status status, int 
             buf -> {
                 int id = buf.readVarInt();
                 int request = buf.readVarInt();
-                Status status = Status.values()[Math.min(Status.values().length - 1, buf.readVarInt())];
+                Status[] statuses = Status.values();
+                Status status = statuses[Math.clamp(buf.readVarInt(), 0, statuses.length - 1)];
                 int steps = buf.readVarInt();
                 long executions = buf.readVarLong();
-                int n = Math.min(buf.readVarInt(), MAX_ENTRIES);
+                int n = PayloadCodecs.readCount(buf, MAX_ENTRIES);
                 List<Entry> entries = new ArrayList<>(n);
                 for (int i = 0; i < n; i++) {
                     entries.add(new Entry(ItemStack.OPTIONAL_STREAM_CODEC.decode(buf), buf.readVarLong(), buf.readVarLong(), buf.readVarLong()));
