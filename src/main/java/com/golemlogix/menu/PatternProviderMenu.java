@@ -1,6 +1,7 @@
 package com.golemlogix.menu;
 
 import com.golemlogix.blockentity.PatternProviderBlockEntity;
+import com.golemlogix.blocks.ProviderOutput;
 import com.golemlogix.init.ModDataComponents;
 import com.golemlogix.init.ModMenus;
 import com.golemlogix.upgrade.RedstoneMode;
@@ -76,16 +77,7 @@ public class PatternProviderMenu extends GolemMenu {
             if (!this.moveItemStackTo(stack, playerStart, playerEnd, true)) {
                 return ItemStack.EMPTY;
             }
-            if (stack.isEmpty()) {
-                slot.setByPlayer(ItemStack.EMPTY);
-            } else {
-                slot.setChanged();
-            }
-            if (stack.getCount() == copy.getCount()) {
-                return ItemStack.EMPTY;
-            }
-            slot.onTake(player, stack);
-            return copy;
+            return finishQuickMove(slot, stack, copy, player);
         }
         return super.quickMoveStack(player, index);
     }
@@ -98,8 +90,8 @@ public class PatternProviderMenu extends GolemMenu {
         return RedstoneMode.byId(data.get(1));
     }
 
-    public com.golemlogix.blocks.ProviderOutput output() {
-        return com.golemlogix.blocks.ProviderOutput.byId(data.get(2));
+    public ProviderOutput output() {
+        return ProviderOutput.byId(data.get(2));
     }
 
     @Override
