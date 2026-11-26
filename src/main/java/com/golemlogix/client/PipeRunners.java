@@ -6,6 +6,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayDeque;
@@ -18,22 +19,21 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Client-side "dispatch office" of the runners: there is exactly one snowman (or its head) per connected pipe network.
- * It walks all pipes by a depth-first tour of the tree (there and back), so at any moment only one pipe draws it;
- * the others spend a single hash table lookup on the check.
+ * Client-side dispatch office for pipe runners: there is exactly one snowman (or pumpkin head) per connected pipe component.
+ * It walks the component via a closed depth-first Euler tour of its spanning tree so at any moment only one pipe renders it
+ * while all others reject in a single hash lookup.
  * <p>
- * The path is continuous: at a block joint the runner is exactly on the boundary (0.5 from the centre) and the neighbouring pipe draws it from
- * the same point; at a dead end it stops at a "station" (0.35 from the centre, vertically 0.22 up and 0 down) and turns around
- * there, the renderer rotates it by 180° over the turn. The trip number is cumulative (not reset on each lap of the
- * route), so the cargo handed over is exactly the one the runner carried. Time is kept in long/double: in old worlds the game
- * time is large and float lost tick fractions, so the running stuttered.
+ * The path is continuous across block boundaries (0.5 from centre); at dead ends the runner stops at a station (0.35 horizontal,
+ * 0.22 up, 0 down) and turns 180 degrees in place. Trip indices are cumulative across laps so handed-over cargo always matches
+ * what was carried. Timestamps stay in {@code long}/{@code double} to prevent float precision jitter in old worlds.
  */
 public final class PipeRunners {
     private static final int MAX_PIPES = 192;
     private static final int LIFETIME = 60;
-    /** Ticks per block of path (an integer: the route lap length in ticks is an integer too). */
+    private static final int MAX_CACHE_ENTRIES = 4096;
+    /** Ticks per block of path (integer so route lap length in ticks is exact). */
     private static final int TICKS_PER_BLOCK = 26;
-    /** Ticks per trip of a lonely pipe: 48% running, 52% turning at the station. */
+    /** Ticks per trip of an isolated pipe: 48% walking, 52% turning at its station. */
     private static final int LONELY_TRIP = 60;
     private static final float LONELY_WALK = 0.48f;
     private static final Direction[] DIRS = Direction.values();
@@ -44,22 +44,22 @@ public final class PipeRunners {
     private PipeRunners() {
     }
 
-    /** A connected group of pipes and the runner's route over it. */
+    /** A connected pipe component and the runner's closed tour over it. */
     private static final class Component {
         long expires;
         BlockPos[] tour = new BlockPos[0];
-        /** Length of the closed route (number of steps); 0 = a lonely pipe. */
+        /** Length of the closed route in steps; 0 means an isolated single pipe. */
         int period;
-        /** How many turns per route lap. */
+        /** Number of station turns per route lap. */
         int turns;
-        /** Number of the last turn before a step (within the lap). */
+        /** Cumulative turn index before each step within a lap. */
         int[] tripAtStep = new int[0];
         float[] tripProgressAtStep = new float[0];
     }
 
     /**
-     * Where the runner is in this pipe now: offset from the block centre, direction of movement (when turning, where it looked
-     * when it arrived), turn progress (0..1 or -1), numbers of the cargo handed over / the new cargo, and trip progress (0..1).
+     * Runner state inside a pipe: offset from block centre, movement direction (or arrival direction while turning),
+     * turn progress ({@code 0..1}, or {@code -1} when running), incoming/outgoing cargo IDs, and trip progress ({@code 0..1}).
      */
     public record Spot(float dx, float dy, float dz, Direction heading, float turnProgress, int incomingCargo, int outgoingCargo, float tripProgress) {
         public boolean isTurning() {
@@ -72,7 +72,7 @@ public final class PipeRunners {
         cachedLevel = new WeakReference<>(null);
     }
 
-    /** How far from the centre the station at the dead end in direction d stands. */
+    /** Distance from block centre to the dead-end turnaround station in direction {@code d}. */
     private static float stationDist(Direction d) {
         return switch (d) {
             case UP -> 0.22f;
@@ -89,7 +89,7 @@ public final class PipeRunners {
         long now = level.getGameTime();
         Component comp = CACHE.get(pos);
         if (comp == null || comp.expires < now || comp.expires - now > LIFETIME * 2L) {
-            if (CACHE.size() > 4096) {
+            if (CACHE.size() > MAX_CACHE_ENTRIES) {
                 CACHE.clear();
             }
             comp = build(level, pos);
@@ -103,8 +103,8 @@ public final class PipeRunners {
     }
 
     /**
-     * Quick check for renderer culling: returns true if the runner can possibly be inside {@code pos} at any
-     * partialTick in [0, 1] of {@code gameTime}.
+     * Fast culling check for {@link SnowPipeRenderer#shouldRender}: true if the runner can occupy {@code pos} at any
+     * {@code partialTick} in {@code [0, 1]} of {@code gameTime}.
      */
     public static boolean mayVisit(Level level, BlockPos pos, long gameTime) {
         Component comp = getOrBuild(level, pos);
@@ -121,11 +121,12 @@ public final class PipeRunners {
         return i1 != i0 && (pos.equals(comp.tour[i1]) || pos.equals(comp.tour[i1 + 1]));
     }
 
-    /** Runner position in the pipe at pos at gameTime + partialTick, or null if it is in another pipe now. */
+    /** Runner position in the pipe at {@code pos} at {@code gameTime + partialTick}, or {@code null} if elsewhere. */
+    @Nullable
     public static Spot locate(Level level, BlockPos pos, BlockState state, long gameTime, float partialTick) {
         Component comp = getOrBuild(level, pos);
         if (comp.period == 0) {
-            return lonely(state, gameTime, partialTick);
+            return locateLonely(state, gameTime, partialTick);
         }
         long cycleTicks = (long) TICKS_PER_BLOCK * comp.period;
         long cycle = Math.floorDiv(gameTime, cycleTicks);
@@ -143,7 +144,7 @@ public final class PipeRunners {
         int inCargo = trip;
         int outCargo = trip + 1;
 
-        // turning at a dead-end station: it stands still and looks where it came from (the renderer rotates it by 180°)
+        // in-place station turn at a dead end
         if (a.equals(b)) {
             if (!a.equals(pos)) {
                 return null;
@@ -157,14 +158,13 @@ public final class PipeRunners {
             return new Spot(dIn.getStepX() * sd, dIn.getStepY() * sd, dIn.getStepZ() * sd, dIn, f, inCargo, outCargo, 1f);
         }
 
-        // a step between neighbouring pipes a -> b: from the station (or centre) of a to the boundary, from the boundary to the centre (or station) of b
+        // step between neighbouring pipes a -> b across their shared face
         Direction d = Direction.fromDelta(b.getX() - a.getX(), b.getY() - a.getY(), b.getZ() - a.getZ());
         if (d == null) {
             return null;
         }
         boolean prevWasTurn = comp.tour[(i - 1 + comp.period) % comp.period].equals(a);
         boolean nextIsTurn = comp.tour[(i + 2) % comp.period].equals(b);
-        // the station in a lies opposite to the movement
         float startDist = prevWasTurn ? -stationDist(d.getOpposite()) : 0f;
         float endDist = nextIsTurn ? stationDist(d) : 0f;
         float distA = 0.5f - startDist;
@@ -193,11 +193,9 @@ public final class PipeRunners {
         return new Spot(d.getStepX() * dist, d.getStepY() * dist, d.getStepZ() * dist, d, -1f, inCargo, outCargo, tripProgress);
     }
 
-    /**
-     * A pipe with no neighbouring pipes: the runner walks from one of its exits to another through the centre (for a pipe with one exit, from the exit
-     * to the blind end) and turns around calmly at every station. The path is continuous.
-     */
-    private static Spot lonely(BlockState state, long gameTime, float partialTick) {
+    /** Isolated pipe with no neighbouring pipes: walks continuously between its device exits (or blind end) and turns at each. */
+    @Nullable
+    private static Spot locateLonely(BlockState state, long gameTime, float partialTick) {
         int mask = 0;
         int count = 0;
         Direction first = null;
@@ -226,20 +224,16 @@ public final class PipeRunners {
         Direction to = count == 1 ? (toIdx == 0 ? first : first.getOpposite()) : nthDir(mask, toIdx);
         int trip = (int) k;
         if (phase >= LONELY_WALK) {
-            // turning at station "to": this is the next turn, its cargo is handed over and a new one is taken
             float sd = stationDist(to);
             float turn = (phase - LONELY_WALK) / (1f - LONELY_WALK);
             return new Spot(to.getStepX() * sd, to.getStepY() * sd, to.getStepZ() * sd, to, turn, trip + 1, trip + 2, 1f);
         }
         float t = phase / LONELY_WALK;
         float sdFrom = stationDist(from), sdTo = stationDist(to);
-        float total = sdFrom + sdTo;
-        float along = t * total;
+        float along = t * (sdFrom + sdTo);
         if (along < sdFrom || sdTo <= 0f) {
-            // first half: from station "from" to the centre
             float dist = sdFrom - along;
-            Direction heading = from.getOpposite();
-            return new Spot(from.getStepX() * dist, from.getStepY() * dist, from.getStepZ() * dist, heading, -1f, trip, trip + 1, t);
+            return new Spot(from.getStepX() * dist, from.getStepY() * dist, from.getStepZ() * dist, from.getOpposite(), -1f, trip, trip + 1, t);
         }
         float dist = along - sdFrom;
         return new Spot(to.getStepX() * dist, to.getStepY() * dist, to.getStepZ() * dist, to, -1f, trip, trip + 1, t);
@@ -258,8 +252,24 @@ public final class PipeRunners {
         return Direction.NORTH;
     }
 
+    // ------------------------------------------------------------------------------------- graph & tour building
+
     private static Component build(Level level, BlockPos origin) {
         BlockPos root = origin.immutable();
+        Map<BlockPos, EnumMap<Direction, BlockPos>> graph = collectPipeGraph(level, root);
+        Component comp = new Component();
+        if (graph.size() <= 1) {
+            comp.tour = new BlockPos[]{root};
+            return comp;
+        }
+        comp.tour = buildClosedTour(graph, selectStart(graph));
+        comp.period = comp.tour.length - 1;
+        indexTrips(comp);
+        return comp;
+    }
+
+    /** Flood-fills up to {@link #MAX_PIPES} mutually linked snow pipes reachable from {@code root}. */
+    private static Map<BlockPos, EnumMap<Direction, BlockPos>> collectPipeGraph(Level level, BlockPos root) {
         Map<BlockPos, EnumMap<Direction, BlockPos>> graph = new HashMap<>();
         ArrayDeque<BlockPos> queue = new ArrayDeque<>();
         queue.add(root);
@@ -290,12 +300,11 @@ public final class PipeRunners {
                 graph.get(n).put(dir.getOpposite(), p);
             }
         }
-        Component comp = new Component();
-        if (graph.size() <= 1) {
-            comp.tour = new BlockPos[]{root};
-            return comp;
-        }
-        // the start is the dead end with the smallest coordinates (or just the smallest pipe)
+        return graph;
+    }
+
+    /** Picks a deterministic tour origin: the lowest-coordinate dead end, or lowest-coordinate pipe in a loop. */
+    private static BlockPos selectStart(Map<BlockPos, EnumMap<Direction, BlockPos>> graph) {
         BlockPos start = null;
         BlockPos any = null;
         for (BlockPos p : graph.keySet()) {
@@ -306,12 +315,13 @@ public final class PipeRunners {
                 start = p;
             }
         }
-        if (start == null) {
-            start = any;
-        }
+        return start != null ? start : any;
+    }
+
+    /** Builds the closed Euler tour with in-place turnaround steps at reversals, rotated so step 0 starts on a turn. */
+    private static BlockPos[] buildClosedTour(Map<BlockPos, EnumMap<Direction, BlockPos>> graph, BlockPos start) {
         List<BlockPos> raw = new ArrayList<>(graph.size() * 2);
         dfs(start, graph, new HashSet<>(), raw);
-        // route lap raw[0..n-1] (raw[n] == raw[0]); where the path turns back there is an "in place" turn step
         int n = raw.size() - 1;
         List<BlockPos> cyc = new ArrayList<>(raw.size() * 2);
         for (int k = 0; k < n; k++) {
@@ -321,7 +331,6 @@ public final class PipeRunners {
                 cyc.add(here);
             }
         }
-        // the lap starts with a turn: then a trip never crosses the start of the lap
         int first = 0;
         for (int k = 0; k + 1 < cyc.size(); k++) {
             if (cyc.get(k).equals(cyc.get(k + 1))) {
@@ -334,8 +343,11 @@ public final class PipeRunners {
             tour.add(cyc.get((first + k) % cyc.size()));
         }
         tour.add(tour.get(0));
-        comp.tour = tour.toArray(new BlockPos[0]);
-        comp.period = comp.tour.length - 1;
+        return tour.toArray(new BlockPos[0]);
+    }
+
+    /** Precomputes trip index and normalized trip progress {@code [0, 1]} for every step of the closed tour. */
+    private static void indexTrips(Component comp) {
         comp.tripAtStep = new int[comp.tour.length];
         comp.tripProgressAtStep = new float[comp.tour.length];
 
@@ -363,10 +375,9 @@ public final class PipeRunners {
         }
         comp.tripAtStep[comp.period] = comp.tripAtStep[0];
         comp.tripProgressAtStep[comp.period] = 0f;
-        return comp;
     }
 
-    /** Depth-first walk: tour is a lap over the tree (every edge twice), it starts and ends at p. */
+    /** Depth-first walk: appends a closed lap over the spanning tree traversing each edge twice. */
     private static void dfs(BlockPos p, Map<BlockPos, EnumMap<Direction, BlockPos>> graph, Set<BlockPos> seen, List<BlockPos> tour) {
         seen.add(p);
         tour.add(p);

@@ -1,10 +1,12 @@
 package com.golemlogix.client;
 
 import com.golemlogix.blockentity.CryoCalculatorBlockEntity;
+import com.golemlogix.client.render.PixelMesh;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
@@ -48,7 +50,7 @@ public class CryoCalculatorRenderer implements BlockEntityRenderer<CryoCalculato
         float foreman = Mth.lerp(partialTick, be.foremanPrev, be.foreman);
         int light = LevelRenderer.getLightColor(be.getLevel(), be.getBlockPos().above());
 
-        float appear = spin * spin * (3 - 2 * spin);
+        float appear = PixelMesh.smoothstep(spin);
         float bob = Mth.sin(time * 0.1f) * 0.03f;
         PROJ.set(0.5f, 1.0f + 0.78f * appear + bob, 0.5f);
         SnowCrew.render(pose, buffers, light, time, be.getBlockPos().asLong(), 1.0f, spin, foreman, PROJ);
@@ -61,7 +63,7 @@ public class CryoCalculatorRenderer implements BlockEntityRenderer<CryoCalculato
             pose.translate(PROJ.x, PROJ.y, PROJ.z);
             pose.mulPose(Axis.YP.rotationDegrees(time * 3f));
             pose.scale(size, size, size);
-            Minecraft.getInstance().getItemRenderer().renderStatic(current, ItemDisplayContext.FIXED, 0xF000F0, OverlayTexture.NO_OVERLAY,
+            Minecraft.getInstance().getItemRenderer().renderStatic(current, ItemDisplayContext.FIXED, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
                     pose, buffers, be.getLevel(), 0);
             pose.popPose();
         }

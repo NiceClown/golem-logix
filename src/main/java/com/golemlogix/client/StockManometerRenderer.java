@@ -27,19 +27,22 @@ import org.joml.Matrix3f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
+import static com.golemlogix.client.render.PixelMesh.PIXEL;
+
 /**
- * Stock Manometer dial needle renderer:
- * Renders the rotating brass gauge needle on the front dial face, pointing according to stock / threshold ratio, and the copper
- * bridges to the redstone receivers around it, with very small golems carrying redstone dust over them.
+ * Stock Manometer renderer: draws the rotating brass gauge needle on the front dial face according to stock/threshold ratio,
+ * plus copper walkways to neighbouring redstone receivers with tiny copper golems ferrying redstone dust across them.
  */
 public class StockManometerRenderer implements BlockEntityRenderer<StockManometerBlockEntity> {
-    private static final ResourceLocation NEEDLE = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/stock_manometer_needle.png");
-    private static final ResourceLocation COPPER = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/dev_copper_plain.png");
+    private static final ResourceLocation NEEDLE =
+            ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/stock_manometer_needle.png");
+    private static final ResourceLocation COPPER =
+            ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/dev_copper_plain.png");
     private static final float TINY_SCALE = 0.11f;
-    /** Beyond this (blocks) a golem two pixels tall cannot be made out and is not drawn; the bridges stay, they are the indicator. */
+    /** Beyond this distance (blocks) the two-pixel golems are skipped while the bridge walkways stay visible. */
     private static final double TINY_SIGHT = 24.0;
-    /** Deck half width and thickness, handrail height, the distance between posts (blocks). */
-    private static final float DECK_W = 0.7f / 16f, DECK_T = 0.2f / 16f, RAIL_H = 0.9f / 16f, POST_STEP = 2f / 16f;
+    /** Deck half-width, thickness, handrail height, and post spacing (blocks). */
+    private static final float DECK_W = 0.7f * PIXEL, DECK_T = 0.2f * PIXEL, RAIL_H = 0.9f * PIXEL, POST_STEP = 2f * PIXEL;
 
     private static final Direction[] DIRS = Direction.values();
     private static final Quaternionf[] FACING_TURN = new Quaternionf[6];
@@ -79,29 +82,36 @@ public class StockManometerRenderer implements BlockEntityRenderer<StockManomete
     }
 
     @Override
+    public AABB getRenderBoundingBox(StockManometerBlockEntity be) {
+        return new AABB(be.getBlockPos()).inflate(1.0);
+    }
+
+    @Override
     public void render(StockManometerBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
         if (be.getLevel() == null || !be.getBlockState().hasProperty(StockManometerBlock.FACING)) {
             return;
         }
-        Direction facing = be.getFacing();
-        bridges(be, partialTick, pose, buffers, light);
+        renderBridges(be, partialTick, pose, buffers, light);
+        renderNeedle(be, pose, buffers, light);
+    }
 
+    private static void renderNeedle(StockManometerBlockEntity be, PoseStack pose, MultiBufferSource buffers, int light) {
+        Direction facing = be.getFacing();
         pose.pushPose();
         pose.translate(0.5f, 0.5f, 0.5f);
         pose.mulPose(FACING_TURN[facing.ordinal()]);
         pose.translate(-0.5f, -0.5f, -0.5f);
 
-        // the needle's pivot: the dial's centre (8, 8), just proud of the clock face
-        pose.translate(8f / 16f, 8f / 16f, 4.78f / 16f);
+        // needle pivot: dial centre (8, 8), just proud of the clock face
+        pose.translate(8f * PIXEL, 8f * PIXEL, 4.78f * PIXEL);
 
         double ratio = be.getThreshold() <= 0 ? 0.0 : (double) be.getStockCount() / Math.max(1.0, 2.0 * be.getThreshold());
         float targetAngle = (float) (-135.0 + Math.clamp(ratio, 0.0, 1.0) * 270.0);
         pose.mulPose(Axis.ZP.rotationDegrees(-targetAngle));
 
         VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(NEEDLE));
-        float r = 4.1f / 16f;
+        float r = 4.1f * PIXEL;
         PoseStack.Pose p = pose.last();
-        // Quad centred at pivot (0, 0)
         vertex(vc, p, r, -r, 0f, 0f, 1f, light);
         vertex(vc, p, -r, -r, 0f, 1f, 1f, light);
         vertex(vc, p, -r, r, 0f, 1f, 0f, light);
@@ -110,23 +120,13 @@ public class StockManometerRenderer implements BlockEntityRenderer<StockManomete
         pose.popPose();
     }
 
-    @Override
-    public AABB getRenderBoundingBox(StockManometerBlockEntity be) {
-        return new AABB(be.getBlockPos()).inflate(1.0);
-    }
-
     /**
-     * The bridges, drawn in the world's directions so the decks slope and the golems stand upright however the clock hangs. A bridge
-     * runs from the clock's rim on the side of each neighbour that takes the signal (see hasBridge), and only while that neighbour
-     * is there. While the signal is on, its golem carries redstone dust over to the receiver and comes back for more, the faster the
-     * stronger the signal; with no signal it waits at the clock, its hands empty.
+     * Bridges in world coordinates so decks slope naturally and golems stand upright regardless of how the clock is mounted.
+     * Drawn in two passes: all copper decks on a single VertexConsumer first, then the tiny golems.
      */
-    private static void bridges(StockManometerBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light) {
+    private static void renderBridges(StockManometerBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light) {
         Level level = be.getLevel();
         BlockPos pos = be.getBlockPos();
-        int facingOrd = be.getFacing().ordinal();
-        Quaternionf q = FACING_TURN[facingOrd];
-        Quaternionf invQ = FACING_INV[facingOrd];
         long now = level.getGameTime();
         int steps = (int) Math.max(0, Math.min(3, now - be.bridgeTick));
         be.bridgeTick = now;
@@ -134,7 +134,17 @@ public class StockManometerRenderer implements BlockEntityRenderer<StockManomete
         Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
         boolean near = camera.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) < TINY_SIGHT * TINY_SIGHT;
 
-        // Pass 1: draw all copper decks on a single VertexConsumer before switching buffers for golems
+        boolean anyNear = renderBridgeDecks(be, level, pos, steps, signal, near, pose, buffers, light);
+        if (anyNear) {
+            renderBridgeGolems(be, level, now, partialTick, signal, pose, buffers, light);
+        }
+    }
+
+    private static boolean renderBridgeDecks(StockManometerBlockEntity be, Level level, BlockPos pos, int steps, int signal,
+                                             boolean near, PoseStack pose, MultiBufferSource buffers, int light) {
+        int facingOrd = be.getFacing().ordinal();
+        Quaternionf q = FACING_TURN[facingOrd];
+        Quaternionf invQ = FACING_INV[facingOrd];
         VertexConsumer copper = null;
         boolean anyNear = false;
         for (int i = 0; i < DIRS.length; i++) {
@@ -155,8 +165,7 @@ public class StockManometerRenderer implements BlockEntityRenderer<StockManomete
                 copper = buffers.getBuffer(RenderType.entityCutoutNoCull(COPPER));
             }
             deck(copper, pose, SCRATCH_FROM, SCRATCH_ALONG, length, light);
-            // the longer the bridge and the weaker the signal, the longer the trip
-            float speed = (0.05f + 0.006f * signal) / 16f / length;
+            float speed = (0.05f + 0.006f * signal) * PIXEL / length;
             float phase = be.bridgePhase[i];
             for (int k = 0; k < steps; k++) {
                 if (phase > 0f || signal > 0) {
@@ -179,10 +188,11 @@ public class StockManometerRenderer implements BlockEntityRenderer<StockManomete
                 anyNear = true;
             }
         }
-        if (!anyNear) {
-            return;
-        }
-        // Pass 2: draw the tiny copper golems (uses its own entityCutout + item render types)
+        return anyNear;
+    }
+
+    private static void renderBridgeGolems(StockManometerBlockEntity be, Level level, long now, float partialTick, int signal,
+                                           PoseStack pose, MultiBufferSource buffers, int light) {
         if (redstoneStack == null) {
             redstoneStack = new ItemStack(Items.REDSTONE);
         }
@@ -202,7 +212,7 @@ public class StockManometerRenderer implements BlockEntityRenderer<StockManomete
             SCRATCH_AT.set(fromX + alongX * f, fromY + alongY * f + DECK_T, fromZ + alongZ * f);
             float fx = alongX, fz = alongZ;
             if (fx * fx + fz * fz < 1e-5f) {
-                // on a ladder: facing the clock's axis
+                // vertical ladder: face the clock's central axis
                 fx = 0.5f - fromX;
                 fz = 0.5f - fromZ;
                 if (fx * fx + fz * fz < 1e-5f) {
@@ -247,7 +257,7 @@ public class StockManometerRenderer implements BlockEntityRenderer<StockManomete
     private static void landing(Level level, BlockPos pos, Direction d, Vector3f from, Vector3f out) {
         NEIGHBOUR.setWithOffset(pos, d);
         var shape = level.getBlockState(NEIGHBOUR).getShape(level, NEIGHBOUR);
-        float top = shape.isEmpty() ? 1f / 16f : (float) shape.max(Direction.Axis.Y);
+        float top = shape.isEmpty() ? PIXEL : (float) shape.max(Direction.Axis.Y);
         out.set(from);
         if (d == Direction.UP) {
             out.y = 1f;
@@ -256,7 +266,7 @@ public class StockManometerRenderer implements BlockEntityRenderer<StockManomete
         } else {
             boolean low = top <= 0.5f;
             float edge = d.getAxisDirection() == Direction.AxisDirection.POSITIVE ? 1f : 0f;
-            float past = (low ? 3f / 16f : 0f) * d.getAxisDirection().getStep();
+            float past = (low ? 3f * PIXEL : 0f) * d.getAxisDirection().getStep();
             if (d.getAxis() == Direction.Axis.X) {
                 out.x = edge + past;
             } else {
@@ -282,9 +292,9 @@ public class StockManometerRenderer implements BlockEntityRenderer<StockManomete
         pose.mulPose(DECK_Q);
         PoseStack.Pose p = pose.last();
         box(vc, p, -DECK_W, -DECK_T, 0f, DECK_W, 0f, length, light);
-        box(vc, p, -DECK_W - 0.1f / 16f, -DECK_T * 1.5f, -0.3f / 16f, DECK_W + 0.1f / 16f, 0.02f / 16f, 0.3f / 16f, light);
-        box(vc, p, -DECK_W - 0.1f / 16f, -DECK_T * 1.5f, length - 0.3f / 16f, DECK_W + 0.1f / 16f, 0.02f / 16f, length + 0.3f / 16f, light);
-        float w = 0.06f / 16f;
+        box(vc, p, -DECK_W - 0.1f * PIXEL, -DECK_T * 1.5f, -0.3f * PIXEL, DECK_W + 0.1f * PIXEL, 0.02f * PIXEL, 0.3f * PIXEL, light);
+        box(vc, p, -DECK_W - 0.1f * PIXEL, -DECK_T * 1.5f, length - 0.3f * PIXEL, DECK_W + 0.1f * PIXEL, 0.02f * PIXEL, length + 0.3f * PIXEL, light);
+        float w = 0.06f * PIXEL;
         for (int sIdx = -1; sIdx <= 1; sIdx += 2) {
             float side = sIdx * DECK_W;
             box(vc, p, side - w, RAIL_H, 0f, side + w, RAIL_H + 2f * w, length, light);

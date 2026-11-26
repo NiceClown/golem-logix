@@ -3,6 +3,7 @@ package com.golemlogix.client;
 import com.golemlogix.blockentity.DistillationTowerBlockEntity;
 import com.golemlogix.blocks.DistillationTowerBlock;
 import com.golemlogix.client.render.Baked;
+import com.golemlogix.client.render.PixelMesh;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -22,21 +23,23 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import org.joml.Vector3f;
 
-import static com.golemlogix.client.CryoJarRenderer.BRASS;
-import static com.golemlogix.client.CryoJarRenderer.BRICK;
-import static com.golemlogix.client.CryoJarRenderer.BRICK_TINT;
-import static com.golemlogix.client.CryoJarRenderer.COPPER;
-import static com.golemlogix.client.CryoJarRenderer.DARK;
-import static com.golemlogix.client.CryoJarRenderer.FRAME;
-import static com.golemlogix.client.CryoJarRenderer.GAUGE;
-import static com.golemlogix.client.CryoJarRenderer.GLASS;
-import static com.golemlogix.client.CryoJarRenderer.ICE;
-import static com.golemlogix.client.CryoJarRenderer.RUNES;
-import static com.golemlogix.client.CryoJarRenderer.SNOW;
-import static com.golemlogix.client.CryoJarRenderer.WHITE;
-import static com.golemlogix.client.CryoMainframeRenderer.box;
-import static com.golemlogix.client.CryoMainframeRenderer.fitWall;
-import static com.golemlogix.client.CryoMainframeRenderer.sprite;
+import static com.golemlogix.client.MachineParts.BRASS;
+import static com.golemlogix.client.MachineParts.BRICK;
+import static com.golemlogix.client.MachineParts.BRICK_TINT;
+import static com.golemlogix.client.MachineParts.COPPER;
+import static com.golemlogix.client.MachineParts.DARK;
+import static com.golemlogix.client.MachineParts.FRAME;
+import static com.golemlogix.client.MachineParts.GAUGE;
+import static com.golemlogix.client.MachineParts.GLASS;
+import static com.golemlogix.client.MachineParts.ICE;
+import static com.golemlogix.client.MachineParts.RUNES;
+import static com.golemlogix.client.MachineParts.SNOW;
+import static com.golemlogix.client.MachineParts.WHITE;
+import static com.golemlogix.client.render.PixelMesh.PIXEL;
+import static com.golemlogix.client.render.PixelMesh.box;
+import static com.golemlogix.client.render.PixelMesh.fitWall;
+import static com.golemlogix.client.render.PixelMesh.mcBlock;
+import static com.golemlogix.client.render.PixelMesh.sprite;
 
 /**
  * The Cryo-Distillation Tower, three blocks high, drawn from its plinth. The plinth: dark bricks with blood-red runes, two brass
@@ -47,11 +50,14 @@ import static com.golemlogix.client.CryoMainframeRenderer.sprite;
  * Pixels in the north-facing frame: the front is Z 0, the viewer's right is -X; Y 0..48.
  */
 public class DistillationTowerRenderer implements BlockEntityRenderer<DistillationTowerBlockEntity> {
-    private static final ResourceLocation BLOOD = CryoJarRenderer.mc("water_still"), GLOW = CryoJarRenderer.mc("white_concrete");
+    private static final ResourceLocation BLOOD = mcBlock("water_still"), GLOW = mcBlock("white_concrete");
     private static final float COLUMN_BOTTOM = 14.5f, COLUMN_TOP = 33.5f;
     /** The coil's colours from the bottom up: blood, ember, violet, ice. */
     private static final int[] COIL = {0xD02424, 0xE8661E, 0xC03CB0, 0x7A5CFF, 0x5CE6F8};
-    private static final Vector3f GOLEM_POS = new Vector3f(-3.2f / 16f, 18f / 16f, 3.9f / 16f);
+    private static final float[] VALVE_X = {9.4f, 12.2f};
+    private static final float[][] COLUMN_POSTS = {{1.2f, 1.2f}, {13.4f, 1.2f}, {1.2f, 13.4f}, {13.4f, 13.4f}};
+    private static final float[][] HEAD_ICICLES = {{1.2f, 2.4f}, {4.4f, 1.2f}, {7.8f, 3.0f}, {10.6f, 1.6f}, {13.8f, 2.2f}};
+    private static final Vector3f GOLEM_POS = new Vector3f(-3.2f * PIXEL, 18f * PIXEL, 3.9f * PIXEL);
     private static final Vector3f FWD_EAST = new Vector3f(1f, 0f, 0f);
     private static final Vector3f UP = new Vector3f(0f, 1f, 0f);
 
@@ -115,18 +121,18 @@ public class DistillationTowerRenderer implements BlockEntityRenderer<Distillati
         int rune = 0xFF000000 | ((int) (0xF0 * runeGlow) << 16) | ((int) (0x30 * runeGlow) << 8) | (int) (0x28 * runeGlow);
         fitWall(vc, p, 1.2f, 2.4f, 14.8f, 5.6f, 0.54f, RUNES, rune, LightTexture.FULL_BRIGHT);
 
-        // ---- the valve wheel on the feed pipe
+        // valve wheel on the feed pipe, then coil inside the glass
         float turn = work > 0.05f ? phase * 14f : 0f;
-        CryoJarRenderer.wheel(vc, pose, -1.2f, 24f, 3.9f, 2.4f, turn, light);
+        MachineParts.wheelX(vc, pose, -1.2f, 24f, 3.9f, 2.4f, turn, light);
+        renderCoil(vc, pose, phase, work, time);
 
-        // ---- inside the glass: the coil, then the golem, then (translucent) the blood and the glass itself
-        coil(vc, pose, phase, work, time);
-        // the golem last: its own buffer ends the one above
+        // side golem last: its own buffer closes the block-atlas cutout buffer
         float reach = work > 0.05f ? -1.2f + 0.15f * Mth.sin(phase * 0.7f) : -0.85f;
         CopperGolemPuppet.Arms arms = new CopperGolemPuppet.Arms(reach, 0.25f, reach, -0.25f, 0.2f * Mth.sin(time * 0.013f));
         CopperGolemPuppet.render(pose, buffers, light, GOLEM_POS, FWD_EAST,
                 UP, 0.45f, new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.1f), 1, null, arms);
 
+        // translucent blood pool and column glass
         VertexConsumer tv = buffers.getBuffer(RenderType.entityTranslucent(InventoryMenu.BLOCK_ATLAS));
         if (blood > 0.002f) {
             float top = COLUMN_BOTTOM + 0.6f + 7f * Math.min(1f, blood);
@@ -144,20 +150,20 @@ public class DistillationTowerRenderer implements BlockEntityRenderer<Distillati
         box(vc, p, 0, 0, 0, 16, 2, 16, DARK, WHITE, light);
         box(vc, p, 0.6f, 2, 0.6f, 15.4f, 12.6f, 15.4f, BRICK, BRICK_TINT, light);
         box(vc, p, 0.2f, 12.6f, 0.2f, 15.8f, 14.4f, 15.8f, DARK, WHITE, light);
-        for (float x : new float[]{9.4f, 12.2f}) {
+        for (float x : VALVE_X) {
             box(vc, p, x, 7.2f, -0.2f, x + 1.4f, 8.6f, 0.6f, BRASS, WHITE, light);
             box(vc, p, x - 0.4f, 8.6f, -0.3f, x + 1.8f, 9.2f, 0.4f, BRASS, 0xFFE8C878, light);
         }
         fitWall(vc, p, 2.2f, 6.6f, 7.4f, 11.8f, 0.5f, GAUGE, WHITE, light);
         box(vc, p, 4.4f, 5.8f, 0.2f, 5.2f, 6.6f, 0.6f, BRASS, WHITE, light);
         // column frame, feed pipe and golem bracket platform
-        for (float[] c : new float[][]{{1.2f, 1.2f}, {13.4f, 1.2f}, {1.2f, 13.4f}, {13.4f, 13.4f}}) {
+        for (float[] c : COLUMN_POSTS) {
             box(vc, p, c[0], 14.4f, c[1], c[0] + 1.4f, 34.4f, c[1] + 1.4f, FRAME, WHITE, light);
         }
         box(vc, p, 1, 14.4f, 1, 15, 15.4f, 15, FRAME, WHITE, light);
         box(vc, p, 1, 33.4f, 1, 15, 34.4f, 15, FRAME, WHITE, light);
         box(vc, p, -0.6f, 14.4f, 3.2f, 0.8f, 34f, 4.6f, COPPER, WHITE, light);
-        CryoJarRenderer.platform(vc, pose, -5f, 1.2f, 17.4f, 2.2f, 5.8f, 13.6f, 0.2f, light);
+        MachineParts.platform(vc, pose, -5f, 1.2f, 17.4f, 2.2f, 5.8f, 13.6f, 0.2f, light);
     }
 
     private static void bakeHead(VertexConsumer vc, PoseStack pose) {
@@ -169,7 +175,7 @@ public class DistillationTowerRenderer implements BlockEntityRenderer<Distillati
         }
         box(vc, p, 0.4f, 44f, 0.4f, 15.6f, 45.8f, 15.6f, SNOW, WHITE, light);
         box(vc, p, 3.6f, 45.8f, 3.6f, 12.4f, 46.6f, 12.4f, SNOW, WHITE, light);
-        for (float[] i : new float[][]{{1.2f, 2.4f}, {4.4f, 1.2f}, {7.8f, 3.0f}, {10.6f, 1.6f}, {13.8f, 2.2f}}) {
+        for (float[] i : HEAD_ICICLES) {
             box(vc, p, i[0], 44f - i[1], 0.1f, i[0] + 0.7f, 44f, 0.8f, ICE, WHITE, light);
             box(vc, p, 0.1f, 44f - i[1] * 0.8f, i[0], 0.8f, 44f, i[0] + 0.7f, ICE, WHITE, light);
         }
@@ -180,17 +186,15 @@ public class DistillationTowerRenderer implements BlockEntityRenderer<Distillati
     }
 
     /** The coil: five glowing rings stacked up the column, a pulse running up them while the tower works. */
-    private static void coil(VertexConsumer vc, PoseStack pose, float phase, float work, float time) {
-        int rings = COIL.length;
+    private static void renderCoil(VertexConsumer vc, PoseStack pose, float phase, float work, float time) {
         TextureAtlasSprite glowSprite = sprite(GLOW);
-        for (int k = 0; k < rings; k++) {
+        for (int k = 0; k < COIL.length; k++) {
             float y = COLUMN_BOTTOM + 2.6f + k * 3.6f;
             float pulse = 0.5f + 0.5f * Mth.sin(phase * 1.6f - k * 1.2f);
             float b = 0.35f + 0.65f * (0.25f + 0.75f * work) * (0.55f + 0.45f * pulse);
-            int c = COIL[k];
-            int col = 0xFF000000 | ((int) (((c >> 16) & 255) * b) << 16) | ((int) (((c >> 8) & 255) * b) << 8) | (int) ((c & 255) * b);
+            int col = PixelMesh.scaledRgb(COIL[k], b);
             pose.pushPose();
-            pose.translate(8f / 16f, y / 16f, 8f / 16f);
+            pose.translate(8f * PIXEL, y * PIXEL, 8f * PIXEL);
             pose.mulPose(Axis.YP.rotationDegrees(phase * 22f + k * 17f));
             PoseStack.Pose p = pose.last();
             float r = 3.9f;

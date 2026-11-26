@@ -91,7 +91,7 @@ public class AnnihilationBusRenderer implements BlockEntityRenderer<Annihilation
             return;
         }
         Direction facing = be.getBlockState().getValue(DirectionalBlock.FACING);
-        int front = FormationBusRenderer.light(be.getLevel(), be.getBlockPos(), facing);
+        int front = MachineParts.frontLight(be.getLevel(), be.getBlockPos(), facing);
         long gameTime = be.getLevel().getGameTime();
         float time = (gameTime % 72000L) + partialTick;
 
@@ -124,7 +124,7 @@ public class AnnihilationBusRenderer implements BlockEntityRenderer<Annihilation
         leftArm.yRot = 0f;
 
         pose.pushPose();
-        FormationBusRenderer.orient(pose, facing);
+        Quads.orient(pose, facing);
         pose.translate(0.5f, FLOOR / 16f, GOLEM_Z / 16f);
         pose.scale(-SCALE, -SCALE, SCALE);
         pose.translate(0f, -1.501f, 0f);

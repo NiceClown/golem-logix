@@ -2,6 +2,7 @@ package com.golemlogix.client;
 
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.StockRequesterBlockEntity;
+import com.golemlogix.client.render.PixelMesh;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -22,31 +23,36 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
+import static com.golemlogix.client.render.PixelMesh.PIXEL;
+
 /**
- * Copper Order Ledger: the Storekeeper, a small copper golem standing behind the lectern. While an order of the ledger is being
- * crafted it bends over the book and scribbles; otherwise it waits, now and then looking round the workshop. Now and then it turns
- * a page. A poppy on its head shows how the orders go: red blinking (ingredients missing), yellow (no pattern), green (all fine).
+ * Copper Order Ledger: the Storekeeper, a small copper golem standing behind the lectern. While an order is being
+ * crafted it bends over the book and scribbles; otherwise it waits and glances round the workshop. Periodically it turns
+ * a page. A poppy on its head shows worst order status: red blinking (missing ingredients), yellow (no pattern), green (all fine).
  */
 public class StockRequesterRenderer implements BlockEntityRenderer<StockRequesterBlockEntity> {
     /** Feet on the walnut top behind the lectern (pixels, the block facing north), about 6.5 pixels tall with the antenna. */
     private static final float SCALE = 0.27f, FEET_Y = 11f, FEET_Z = 14.6f;
 
-    public StockRequesterRenderer(BlockEntityRendererProvider.Context context) {
-    }
-
     private static final ResourceLocation STEM = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/dev_ledger_flower_stem.png");
     private static final ResourceLocation PETALS = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/dev_ledger_flower_petals.png");
     private static final ResourceLocation PAGE = ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "textures/entity/dev_ledger_page.png");
-    /** A page is turned every PAGE_EVERY ticks (more often while writing), the turn takes PAGE_TICKS. */
+    /** A page is turned every PAGE_EVERY ticks (twice as often while writing); the turn takes PAGE_TICKS. */
     private static final int PAGE_EVERY = 240, PAGE_TICKS = 24;
-    /** Beyond this (blocks) the pictures on the pages are too small to make out and are not drawn. */
+    /** Beyond this distance (blocks) the icons on the open pages are too small to make out and are skipped. */
     private static final double PAGE_SIGHT = 24.0;
     private static final double SIN_225 = Math.sin(Math.toRadians(22.5));
     private static final double COS_225 = Math.cos(Math.toRadians(22.5));
-    private static final Vector3f GOLEM_POS = new Vector3f(0.5f, FEET_Y / 16f, FEET_Z / 16f);
+    private static final Vector3f GOLEM_POS = new Vector3f(0.5f, FEET_Y * PIXEL, FEET_Z * PIXEL);
     private static final Vector3f FWD_NORTH = new Vector3f(0f, 0f, -1f);
     private static final Vector3f UP = new Vector3f(0f, 1f, 0f);
     private static final ItemStack[] KEPT = new ItemStack[StockRequesterBlockEntity.FILTER_SLOTS];
+
+    private record OrderSummary(boolean writing, boolean missing, boolean noPattern) {
+    }
+
+    public StockRequesterRenderer(BlockEntityRendererProvider.Context context) {
+    }
 
     @Override
     public void render(StockRequesterBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
@@ -54,19 +60,13 @@ public class StockRequesterRenderer implements BlockEntityRenderer<StockRequeste
             return;
         }
         Direction facing = be.getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING);
-        // the poppy shows the worst status of the ledger's orders: missing ingredients (red) > no pattern (yellow) > fine (green)
-        boolean writing = false, missing = false, noPattern = false;
-        for (int i = 0; i < StockRequesterBlockEntity.FILTER_SLOTS; i++) {
-            int st = be.getSlotStatus(i);
-            writing |= st == StockRequesterBlockEntity.STATUS_CRAFTING;
-            missing |= st == StockRequesterBlockEntity.STATUS_MISSING_INGREDIENTS;
-            noPattern |= st == StockRequesterBlockEntity.STATUS_NO_PATTERN;
-        }
+        OrderSummary status = summarizeOrders(be);
         float time = (be.getLevel().getGameTime() % 72000L) + partialTick;
         float seed = (be.getBlockPos().hashCode() & 255) * 0.37f;
-        int every = writing ? PAGE_EVERY / 2 : PAGE_EVERY;
+        int every = status.writing ? PAGE_EVERY / 2 : PAGE_EVERY;
         float inTurn = (time + seed * 7) % every;
         float turn = inTurn < PAGE_TICKS ? inTurn / PAGE_TICKS : -1f;
+
         CopperGolemPuppet.Arms arms;
         CopperGolemPuppet.Anim anim;
         if (turn >= 0f) {
@@ -74,7 +74,7 @@ public class StockRequesterRenderer implements BlockEntityRenderer<StockRequeste
             float sweep = Mth.sin(turn * Mth.PI);
             arms = new CopperGolemPuppet.Arms(-0.9f, 0.05f, -1.0f - 0.35f * sweep, -0.35f + 0.75f * turn, 0f);
             anim = new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.3f);
-        } else if (writing) {
+        } else if (status.writing) {
             // the quill hand scribbles over the page, the other holds the book open
             float s = Mth.sin(time * 0.9f) * 0.12f;
             arms = new CopperGolemPuppet.Arms(-1.05f + s, 0.05f + Mth.cos(time * 0.9f) * 0.05f, -0.85f, -0.1f, 0f);
@@ -83,20 +83,22 @@ public class StockRequesterRenderer implements BlockEntityRenderer<StockRequeste
             arms = new CopperGolemPuppet.Arms(-0.1f, 0.12f, -0.1f, -0.12f, Mth.sin((time + seed * 40) * 0.02f) * 0.7f);
             anim = new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0f);
         }
-        int color = missing ? 0xE02420 : noPattern ? 0xF0C020 : 0x7CFF3A;
+
+        int color = status.missing ? 0xE02420 : status.noPattern ? 0xF0C020 : 0x7CFF3A;
         // red blinks fast, yellow slower, green only breathes
         float glow;
-        if (missing || noPattern) {
-            int period = missing ? 10 : 24;
+        if (status.missing || status.noPattern) {
+            int period = status.missing ? 10 : 24;
             glow = (time % period) < period * 0.5f ? 1f : 0.35f;
         } else {
             glow = 0.75f + 0.25f * Mth.sin(time * 0.08f);
         }
-        int tint = shade(color, glow);
-        int flowerLight = glow > 0.9f || !(missing || noPattern) ? LightTexture.FULL_BRIGHT : -1;
+        int tint = PixelMesh.scaledRgb(color, glow);
+        int flowerLight = glow > 0.9f || !(status.missing || status.noPattern) ? LightTexture.FULL_BRIGHT : -1;
+
         pose.pushPose();
-        FormationBusRenderer.orient(pose, facing);
-        int lit = FormationBusRenderer.light(be.getLevel(), be.getBlockPos(), facing);
+        Quads.orient(pose, facing);
+        int lit = MachineParts.frontLight(be.getLevel(), be.getBlockPos(), facing);
         CopperGolemPuppet.render(pose, buffers, lit, GOLEM_POS, FWD_NORTH, UP, SCALE, anim, 0, null, arms, head -> {
             PoseStack.Pose p = head.last();
             cross(buffers.getBuffer(RenderType.entityCutoutNoCull(STEM)), p, 0xFFFFFFFF, lit);
@@ -109,6 +111,17 @@ public class StockRequesterRenderer implements BlockEntityRenderer<StockRequeste
             pageItems(be, pose, buffers, lit);
         }
         pose.popPose();
+    }
+
+    private static OrderSummary summarizeOrders(StockRequesterBlockEntity be) {
+        boolean writing = false, missing = false, noPattern = false;
+        for (int i = 0; i < StockRequesterBlockEntity.FILTER_SLOTS; i++) {
+            int st = be.getSlotStatus(i);
+            writing |= st == StockRequesterBlockEntity.STATUS_CRAFTING;
+            missing |= st == StockRequesterBlockEntity.STATUS_MISSING_INGREDIENTS;
+            noPattern |= st == StockRequesterBlockEntity.STATUS_NO_PATTERN;
+        }
+        return new OrderSummary(writing, missing, noPattern);
     }
 
     /**
@@ -146,9 +159,9 @@ public class StockRequesterRenderer implements BlockEntityRenderer<StockRequeste
         float size = n <= 2 ? 4.4f : n <= 4 ? 3.6f : n <= 6 ? 2.6f : 2.2f;
         int onLeft = (n + 1) / 2;
         pose.pushPose();
-        pose.translate(8f / 16f, 11f / 16f, 8f / 16f);
+        pose.translate(8f * PIXEL, 11f * PIXEL, 8f * PIXEL);
         pose.mulPose(Axis.XP.rotationDegrees(22.5f));
-        pose.translate(0f, 1.53f / 16f, 0f);
+        pose.translate(0f, 1.53f * PIXEL, 0f);
         for (int i = 0; i < n; i++) {
             ItemStack stack = KEPT[i];
             KEPT[i] = null;
@@ -159,10 +172,10 @@ public class StockRequesterRenderer implements BlockEntityRenderer<StockRequeste
             float x = cols == 1 ? pageX : pageX + (col == 0 ? -1.2f : 1.2f);
             float z = rows == 1 ? 0f : (row - (rows - 1) / 2f) * (rows == 2 ? 3.9f : 2.75f);
             pose.pushPose();
-            pose.translate(x / 16f, 0f, z / 16f);
+            pose.translate(x * PIXEL, 0f, z * PIXEL);
             // the picture lies on the page, its top towards the far edge for a reader at the back of the block
             pose.mulPose(Axis.XP.rotationDegrees(-90f));
-            float s = size / 16f;
+            float s = size * PIXEL;
             pose.scale(s, s, 0.004f);
             Minecraft.getInstance().getItemRenderer().renderStatic(stack, ItemDisplayContext.GUI, light,
                     OverlayTexture.NO_OVERLAY, pose, buffers, be.getLevel(), 0);
@@ -173,7 +186,7 @@ public class StockRequesterRenderer implements BlockEntityRenderer<StockRequeste
 
     /** The poppy on top of the antenna's ball (model pixels, Y down; the ball's top is y = -13): two quads crossed at 45 degrees, 8 by 8. */
     private static void cross(VertexConsumer vc, PoseStack.Pose p, int argb, int light) {
-        float h = 2.83f / 16f, y0 = -12.6f / 16f, y1 = -20.6f / 16f;
+        float h = 2.83f * PIXEL, y0 = -12.6f * PIXEL, y1 = -20.6f * PIXEL;
         // one quad a plane: this render type draws both sides, a second quad on top of the first would flicker
         vert(vc, p, -h, y1, -h, 0f, 0f, argb, light);
         vert(vc, p, -h, y0, -h, 0f, 1f, argb, light);
@@ -192,12 +205,12 @@ public class StockRequesterRenderer implements BlockEntityRenderer<StockRequeste
      */
     private static void page(PoseStack pose, VertexConsumer vc, float turn, int light) {
         pose.pushPose();
-        pose.translate(8f / 16f, 11f / 16f, 8f / 16f);
+        pose.translate(8f * PIXEL, 11f * PIXEL, 8f * PIXEL);
         pose.mulPose(Axis.XP.rotationDegrees(22.5f));
-        pose.translate(0f, 1.6f / 16f, 0f);
+        pose.translate(0f, 1.6f * PIXEL, 0f);
         pose.mulPose(Axis.ZP.rotationDegrees(180f * turn));
         PoseStack.Pose p = pose.last();
-        float w = 5.2f / 16f, z0 = -4.2f / 16f, z1 = 4.2f / 16f;
+        float w = 5.2f * PIXEL, z0 = -4.2f * PIXEL, z1 = 4.2f * PIXEL;
         // lit as if it lay flat all the way over: paper does not go dark while it turns
         float a = Mth.PI * turn, nx = Mth.sin(a), ny = Mth.cos(a);
         vc.addVertex(p, 0f, 0f, z0).setColor(0xFFFFFFFF).setUv(0f, 0f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(p, nx, ny, 0f);
@@ -209,10 +222,5 @@ public class StockRequesterRenderer implements BlockEntityRenderer<StockRequeste
 
     private static void vert(VertexConsumer vc, PoseStack.Pose p, float x, float y, float z, float u, float v, int argb, int light) {
         vc.addVertex(p, x, y, z).setColor(argb).setUv(u, v).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(p, 0f, 1f, 0f);
-    }
-
-    private static int shade(int rgb, float k) {
-        int r = (int) (((rgb >> 16) & 255) * k), g = (int) (((rgb >> 8) & 255) * k), b = (int) ((rgb & 255) * k);
-        return 0xFF000000 | (r << 16) | (g << 8) | b;
     }
 }

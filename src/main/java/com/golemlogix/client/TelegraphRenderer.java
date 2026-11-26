@@ -1,9 +1,9 @@
 package com.golemlogix.client;
 
-import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.TelegraphBlockEntity;
 import com.golemlogix.blocks.TelegraphBlock;
 import com.golemlogix.client.render.Baked;
+import com.golemlogix.client.render.PixelMesh;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -24,35 +24,42 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import org.joml.Vector3f;
 
-import static com.golemlogix.client.CryoMainframeRenderer.box;
-import static com.golemlogix.client.CryoMainframeRenderer.fitWall;
-import static com.golemlogix.client.CryoMainframeRenderer.limb;
-import static com.golemlogix.client.CryoMainframeRenderer.sprite;
+import static com.golemlogix.client.render.PixelMesh.PIXEL;
+import static com.golemlogix.client.render.PixelMesh.box;
+import static com.golemlogix.client.render.PixelMesh.fitWall;
+import static com.golemlogix.client.render.PixelMesh.limb;
+import static com.golemlogix.client.render.PixelMesh.mcBlock;
+import static com.golemlogix.client.render.PixelMesh.modBlock;
+import static com.golemlogix.client.render.PixelMesh.sprite;
 
 /**
- * The whole Cryo-Source Telegraph, drawn from its main cell. A rusty copper base with frost on its edges, gauges and a rune panel;
- * on the back right a mast: a crystal in a brass cage with copper coils and vacuum tubes, a lattice tower with two small crystals
- * and an iced dish on top. On the front left a copper golem operator keys a Morse message ("GOLEM") on a brass key; the desk lamp
- * lights with every press and a pulse of blue light and mana runs up the mast. At the start of each message the incoming Source
- * strikes the top crystal: it flashes and hums. Everything moves only on the client, from the game time.
+ * The Cryo-Source Telegraph, drawn from its main cell: rusty copper base with frost rim, gauges, and glowing rune panel;
+ * rear-right crystal mast with coils, vacuum tubes, lattice tower, and swaying iced dish; front-left copper golem operator
+ * keying a Morse message ("GOLEM") on a brass key while desk-lamp and rising mast pulses track each keystroke.
  * <p>
- * Pixels in the main cell's north-facing frame: the front is Z 0, "right" (seen from the front) is -X, so the base spans X -16..16,
- * Z 0..32; the mast stands on X -16..0, Z 16..32.
+ * Pixels in the main cell's north-facing frame: front is Z 0, viewer's right is -X; base spans X -16..16, Z 0..32;
+ * mast sits on X -16..0, Z 16..32.
  */
 public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEntity> {
-    private static final ResourceLocation RUST = mc("exposed_copper"), VERDIGRIS = mc("weathered_copper"),
-            CUT = mc("exposed_cut_copper"), COPPER = mc("copper_block"), BRASS = tex("sat_brass"), DARK = tex("sat_dark"),
-            ICE = tex("sat_ice"), GAUGE = tex("monitor_gauge"), DIAL = tex("resonator_dial"), RUNES = tex("cryo_panel_matrix"),
-            GLASS = tex("sat_glass"), CRYSTAL = tex("core_crystal"), GEM = tex("sat_crystal"), WHITE = mc("white_concrete"),
-            DARK_OAK = mc("dark_oak_planks");
-    /** Rusty tint over the vanilla exposed copper (on its own it reads pink). */
+    private static final ResourceLocation RUST = mcBlock("exposed_copper"), VERDIGRIS = mcBlock("weathered_copper"),
+            CUT = mcBlock("exposed_cut_copper"), COPPER = mcBlock("copper_block"), BRASS = modBlock("sat_brass"),
+            DARK = modBlock("sat_dark"), ICE = modBlock("sat_ice"), GAUGE = modBlock("monitor_gauge"),
+            DIAL = modBlock("resonator_dial"), RUNES = modBlock("cryo_panel_matrix"), GLASS = modBlock("sat_glass"),
+            CRYSTAL = modBlock("core_crystal"), GEM = modBlock("sat_crystal"), WHITE = mcBlock("white_concrete"),
+            DARK_OAK = mcBlock("dark_oak_planks");
+    /** Rusty tint over vanilla exposed copper (untinted it reads pink). */
     private static final int RUST_TINT = 0xFFB07A62;
     /** Ticks a pulse needs to run from the base to the dish. */
     private static final float PULSE_TICKS = 16f;
     private static final float MAST_X = -8f, MAST_Z = 24f, MAST_BOTTOM = 16f, MAST_TOP = 41f;
-    /** The key's knob, right under the operator's right hand when it presses (worked out from CopperGolemPuppet's arm). */
+    /** The key's knob, right under the operator's right hand when pressed. */
     private static final float KEY_X = 12.9f, KEY_Z = 9.5f;
-    private static final Vector3f OPERATOR_POS = new Vector3f(9.5f / 16f, 15f / 16f, 11.5f / 16f);
+    private static final float[][] BASE_CORNERS = {{-16.5f, -0.5f}, {14.5f, -0.5f}, {-16.5f, 30.5f}, {14.5f, 30.5f}};
+    private static final float[][] BASE_ICICLES = {{-13f, 2.4f}, {-9.5f, 1.4f}, {-4f, 3.2f}, {1.5f, 1.8f}, {6f, 2.8f}, {12f, 1.2f}};
+    private static final float[][] CAGE_POSTS = {{-6.5f, -6.5f}, {4.5f, -6.5f}, {-6.5f, 4.5f}, {4.5f, 4.5f}};
+    private static final float[][] TOWER_LEGS = {{-5f, -5f}, {5f, -5f}, {-5f, 5f}, {5f, 5f}};
+    private static final float[] TUBE_SIDES = {-1f, 1f};
+    private static final Vector3f OPERATOR_POS = new Vector3f(9.5f * PIXEL, 15f * PIXEL, 11.5f * PIXEL);
     private static final Vector3f FWD_NORTH = new Vector3f(0f, 0f, -1f);
     private static final Vector3f UP = new Vector3f(0f, 1f, 0f);
 
@@ -69,14 +76,6 @@ public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEnti
                     Baked.bake(TelegraphRenderer::bakeDish));
         }
         return meshes;
-    }
-
-    private static ResourceLocation tex(String name) {
-        return ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "block/" + name);
-    }
-
-    private static ResourceLocation mc(String name) {
-        return ResourceLocation.withDefaultNamespace("block/" + name);
     }
 
     public TelegraphRenderer(BlockEntityRendererProvider.Context context) {
@@ -130,31 +129,41 @@ public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEnti
         baked.body().draw(buffers, solid, p, light, 0);
 
         // animated dish on top
-        pose.pushPose();
-        pose.translate(MAST_X / 16f, (MAST_TOP + 0.5f) / 16f, MAST_Z / 16f);
-        pose.mulPose(Axis.YP.rotationDegrees(25f * Mth.sin(time * 0.012f) * wake));
-        pose.mulPose(Axis.XP.rotationDegrees(-30f));
-        baked.dish().draw(buffers, solid, pose.last(), light, 0);
-        VertexConsumer vc = buffers.getBuffer(solid);
-        int tip = color(0.4f + 0.6f * flash, 0.85f, 1f);
-        box(vc, pose.last(), -0.7f, 6.3f, -0.7f, 0.7f, 7.7f, 0.7f, WHITE, tip, wake > 0.05f ? LightTexture.FULL_BRIGHT : light);
-        pose.popPose();
+        renderDish(pose, buffers, solid, baked.dish(), light, wake, flash, time);
 
         // dynamic glowing elements on base, mast, desk, moving key lever and rising Morse pulses
-        dynamicParts(vc, pose, p, light, wake, flash, down, baseTick, partialTick, time);
+        VertexConsumer vc = buffers.getBuffer(solid);
+        renderDynamicParts(vc, pose, p, light, wake, flash, down, baseTick, partialTick, time);
 
-        // the operator: stands at the back of the front left cell facing the front, the right hand on the key
+        // copper golem operator at the key (last: switches away from the block-atlas cutout buffer)
+        renderOperator(pose, buffers, light, wake, down, time);
+        pose.popPose();
+    }
+
+    private static void renderDish(PoseStack pose, MultiBufferSource buffers, RenderType solid, Baked dish,
+                                   int light, float wake, float flash, float time) {
+        pose.pushPose();
+        pose.translate(MAST_X * PIXEL, (MAST_TOP + 0.5f) * PIXEL, MAST_Z * PIXEL);
+        pose.mulPose(Axis.YP.rotationDegrees(25f * Mth.sin(time * 0.012f) * wake));
+        pose.mulPose(Axis.XP.rotationDegrees(-30f));
+        dish.draw(buffers, solid, pose.last(), light, 0);
+        VertexConsumer vc = buffers.getBuffer(solid);
+        int tip = PixelMesh.rgb(0.4f + 0.6f * flash, 0.85f, 1f);
+        box(vc, pose.last(), -0.7f, 6.3f, -0.7f, 0.7f, 7.7f, 0.7f, WHITE, tip, wake > 0.05f ? LightTexture.FULL_BRIGHT : light);
+        pose.popPose();
+    }
+
+    private static void renderOperator(PoseStack pose, MultiBufferSource buffers, int light, float wake, boolean down, float time) {
         float bob = down ? -0.02f : 0f;
         CopperGolemPuppet.Arms arms = wake > 0.05f
                 ? new CopperGolemPuppet.Arms(down ? -0.66f : -0.95f, 0.05f, -0.25f, -0.1f, 0.12f * Mth.sin(time * 0.03f))
                 : new CopperGolemPuppet.Arms(0.1f, 0.12f, -0.15f, -0.08f, 0.6f * Mth.sin(time * 0.02f));
         CopperGolemPuppet.render(pose, buffers, light, OPERATOR_POS, FWD_NORTH,
                 UP, 0.58f, new CopperGolemPuppet.Anim(time * 0.1f, false, false, 0.12f + bob), 1, null, arms);
-        pose.popPose();
     }
 
-    private static void dynamicParts(VertexConsumer vc, PoseStack pose, PoseStack.Pose p, int light, float wake, float flash,
-                                     boolean down, long baseTick, float partialTick, float time) {
+    private static void renderDynamicParts(VertexConsumer vc, PoseStack pose, PoseStack.Pose p, int light, float wake, float flash,
+                                           boolean down, long baseTick, float partialTick, float time) {
         // glowing rune panel on front right of the base
         float glow = 0.35f + 0.65f * wake * (0.75f + 0.25f * Mth.sin(time * 0.15f));
         int rune = 0xFF000000 | ((int) (0x40 * glow) << 16) | ((int) (0xF0 * glow) << 8) | (int) (0xE8 * glow);
@@ -167,12 +176,20 @@ public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEnti
         box(vc, p, MAST_X - 8.8f + 0.8f, 19f, MAST_Z - 0.4f, MAST_X - 8.8f + 1.6f, 26f, MAST_Z + 0.4f, whiteSprite, fil, filLight);
         box(vc, p, MAST_X + 6.4f + 0.8f, 19f, MAST_Z - 0.4f, MAST_X + 6.4f + 1.6f, 26f, MAST_Z + 0.4f, whiteSprite, fil, filLight);
 
+        renderMastCrystals(vc, pose, p, wake, flash, time);
+        renderDeskLampAndKey(vc, pose, p, whiteSprite, light, wake, down);
+        if (wake >= 0.95f) {
+            renderMorsePulses(vc, p, whiteSprite, baseTick, partialTick);
+        }
+    }
+
+    private static void renderMastCrystals(VertexConsumer vc, PoseStack pose, PoseStack.Pose p, float wake, float flash, float time) {
         // spinning violet crystal in the cage
         float b = Math.min(1f, 0.62f + 0.23f * wake + 0.4f * flash);
-        int crystal = color(b, Math.min(1f, b * 0.9f + 0.25f * flash), b);
+        int crystal = PixelMesh.rgb(b, Math.min(1f, b * 0.9f + 0.25f * flash), b);
         TextureAtlasSprite gemSprite = sprite(GEM);
         pose.pushPose();
-        pose.translate(MAST_X / 16f, 24f / 16f, MAST_Z / 16f);
+        pose.translate(MAST_X * PIXEL, 24f * PIXEL, MAST_Z * PIXEL);
         pose.mulPose(Axis.YP.rotationDegrees(45f + time * (0.4f + 2f * flash) * wake));
         PoseStack.Pose gp = pose.last();
         box(vc, gp, -2.0f, -2.5f, -2.0f, 2.0f, 2.5f, 2.0f, gemSprite, crystal, LightTexture.FULL_BRIGHT);
@@ -181,59 +198,64 @@ public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEnti
         pose.popPose();
 
         // two small crystals in the lattice tower
-        int small = color(Math.min(1f, 0.7f * b + 0.3f), Math.min(1f, 0.85f * b + 0.15f), 1f);
+        int small = PixelMesh.rgb(Math.min(1f, 0.7f * b + 0.3f), Math.min(1f, 0.85f * b + 0.15f), 1f);
         TextureAtlasSprite crystalSprite = sprite(CRYSTAL);
         box(vc, p, MAST_X - 3f, 34.5f, MAST_Z - 1f, MAST_X - 1f, 39f, MAST_Z + 1f, crystalSprite, small, LightTexture.FULL_BRIGHT);
         box(vc, p, MAST_X + 1f, 35.5f, MAST_Z - 1f, MAST_X + 3f, 39.5f, MAST_Z + 1f, crystalSprite, small, LightTexture.FULL_BRIGHT);
+    }
 
-        // banker's lamp bulb and desk glow
+    private static void renderDeskLampAndKey(VertexConsumer vc, PoseStack pose, PoseStack.Pose p, TextureAtlasSprite whiteSprite,
+                                             int light, float wake, boolean down) {
         int bulb = down ? 0xFFFFE08A : (wake > 0.05f ? 0xFF8A7440 : 0xFF4A4030);
         box(vc, p, -6.0f, 17.6f, 2.3f, -3.0f, 19.2f, 4.7f, whiteSprite, bulb, down ? LightTexture.FULL_BRIGHT : light);
         if (down) {
             box(vc, p, -7.0f, 15.05f, 1.3f, -2.0f, 15.15f, 5.7f, whiteSprite, 0xFF8A7A4A, LightTexture.FULL_BRIGHT);
         }
 
-        // moving key lever
         pose.pushPose();
-        pose.translate(KEY_X / 16f, 16.2f / 16f, 4.6f / 16f);
+        pose.translate(KEY_X * PIXEL, 16.2f * PIXEL, 4.6f * PIXEL);
         pose.mulPose(Axis.XP.rotationDegrees(down ? 6f : 0f));
         PoseStack.Pose kp = pose.last();
         box(vc, kp, -0.35f, -0.2f, -0.8f, 0.35f, 0.3f, 5.2f, BRASS, 0xFFF0D080, light);
         box(vc, kp, -0.8f, 0.3f, KEY_Z - 4.6f - 0.7f, 0.8f, 0.9f, KEY_Z - 4.6f + 0.7f, DARK, 0xFFFFFFFF, light);
         pose.popPose();
+    }
 
-        // Morse pulses running up the mast
-        if (wake >= 0.95f) {
-            for (int k = 0; k < PULSE_TICKS; k++) {
-                long s = baseTick - k;
-                if (!TelegraphBlockEntity.keyPressed(s)) {
-                    continue;
-                }
-                float t = (k + partialTick) / PULSE_TICKS;
-                if (t < 0f || t > 1f) {
-                    continue;
-                }
-                float y = MAST_BOTTOM + t * (MAST_TOP - MAST_BOTTOM);
-                float fade = 1f - t * 0.5f;
-                int c = color(0.35f * fade, 0.95f * fade, 1f * fade);
-                float z = y < 31f ? MAST_Z - 7.9f : MAST_Z - 3.2f;
-                box(vc, p, MAST_X - 1.1f, y, z, MAST_X + 1.1f, y + 2.4f, z + 1.2f, whiteSprite, c, LightTexture.FULL_BRIGHT);
+    private static void renderMorsePulses(VertexConsumer vc, PoseStack.Pose p, TextureAtlasSprite whiteSprite,
+                                          long baseTick, float partialTick) {
+        for (int k = 0; k < PULSE_TICKS; k++) {
+            long s = baseTick - k;
+            if (!TelegraphBlockEntity.keyPressed(s)) {
+                continue;
             }
+            float t = (k + partialTick) / PULSE_TICKS;
+            if (t < 0f || t > 1f) {
+                continue;
+            }
+            float y = MAST_BOTTOM + t * (MAST_TOP - MAST_BOTTOM);
+            float fade = 1f - t * 0.5f;
+            int c = PixelMesh.rgb(0.35f * fade, 0.95f * fade, 1f * fade);
+            float z = y < 31f ? MAST_Z - 7.9f : MAST_Z - 3.2f;
+            box(vc, p, MAST_X - 1.1f, y, z, MAST_X + 1.1f, y + 2.4f, z + 1.2f, whiteSprite, c, LightTexture.FULL_BRIGHT);
         }
     }
 
     // ------------------------------------------------------------------ baked static geometry
 
     private static void bakeBody(VertexConsumer vc, PoseStack pose) {
+        bakeBase(vc, pose);
+        bakeMast(vc, pose);
+        bakeDeskAndKeyBase(vc, pose);
+    }
+
+    private static void bakeBase(VertexConsumer vc, PoseStack pose) {
         PoseStack.Pose p = pose.last();
         int white = 0xFFFFFFFF;
         int light = 0;
-
-        // ---- base
         box(vc, p, -16.3f, 0, -0.3f, 16.3f, 1.6f, 32.3f, DARK, white, light);
         box(vc, p, -16, 1.6f, 0, 16, 13, 32, RUST, RUST_TINT, light);
         box(vc, p, -15.6f, 13, 0.4f, 15.6f, 15, 31.6f, CUT, 0xFFA87460, light);
-        for (float[] c : new float[][]{{-16.5f, -0.5f}, {14.5f, -0.5f}, {-16.5f, 30.5f}, {14.5f, 30.5f}}) {
+        for (float[] c : BASE_CORNERS) {
             box(vc, p, c[0], 0, c[1], c[0] + 2f, 15.4f, c[1] + 2f, BRASS, white, light);
         }
         box(vc, p, -16.2f, 9.5f, -0.2f, 16.2f, 10.5f, 32.2f, BRASS, 0xFFD8C090, light);
@@ -241,8 +263,7 @@ public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEnti
         box(vc, p, -16.2f, 14.6f, 31f, 16.2f, 15.6f, 32.4f, ICE, white, light);
         box(vc, p, -16.4f, 14.6f, -0.4f, -15f, 15.6f, 32.4f, ICE, white, light);
         box(vc, p, 15f, 14.6f, -0.4f, 16.4f, 15.6f, 32.4f, ICE, white, light);
-        float[][] icicles = {{-13f, 2.4f}, {-9.5f, 1.4f}, {-4f, 3.2f}, {1.5f, 1.8f}, {6f, 2.8f}, {12f, 1.2f}};
-        for (float[] i : icicles) {
+        for (float[] i : BASE_ICICLES) {
             box(vc, p, i[0], 14.6f - i[1], -0.6f, i[0] + 0.8f, 14.6f, 0.2f, ICE, white, light);
             box(vc, p, i[0] + 0.2f, 14.6f - i[1] - 0.8f, -0.4f, i[0] + 0.6f, 14.6f - i[1], 0f, ICE, white, light);
         }
@@ -263,18 +284,22 @@ public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEnti
         pose.popPose();
         box(vc, p, KEY_X + 1f, 15f, 8.4f, KEY_X + 1.8f, 15.7f, 19.8f, COPPER, white, light);
         box(vc, p, MAST_X, 15f, 18.8f, KEY_X + 1f, 15.7f, 19.8f, COPPER, white, light);
+    }
 
-        // ---- mast static frame, coils, glass tubes, braces and lattice tower
+    private static void bakeMast(VertexConsumer vc, PoseStack pose) {
+        PoseStack.Pose p = pose.last();
+        int white = 0xFFFFFFFF;
+        int light = 0;
         float cx = MAST_X, cz = MAST_Z;
         box(vc, p, cx - 7, 15f, cz - 7, cx + 7, 17f, cz + 7, DARK, white, light);
-        for (float[] c : new float[][]{{-6.5f, -6.5f}, {4.5f, -6.5f}, {-6.5f, 4.5f}, {4.5f, 4.5f}}) {
+        for (float[] c : CAGE_POSTS) {
             box(vc, p, cx + c[0], 17f, cz + c[1], cx + c[0] + 2f, 31f, cz + c[1] + 2f, BRASS, white, light);
         }
         for (float y = 19f; y < 30f; y += 1.6f) {
             box(vc, p, cx - 7.1f, y, cz - 7.1f, cx - 3.9f, y + 0.9f, cz - 3.9f, COPPER, white, light);
             box(vc, p, cx + 3.9f, y, cz - 7.1f, cx + 7.1f, y + 0.9f, cz - 3.9f, COPPER, white, light);
         }
-        for (float side : new float[]{-1f, 1f}) {
+        for (float side : TUBE_SIDES) {
             float x0 = cx + side * 7.6f - 1.2f;
             box(vc, p, x0, 18.5f, cz - 1.2f, x0 + 2.4f, 28f, cz + 1.2f, GLASS, 0xFFC8F0FF, light);
             box(vc, p, x0 - 0.2f, 28f, cz - 1.4f, x0 + 2.6f, 29.5f, cz + 1.4f, BRASS, white, light);
@@ -285,7 +310,7 @@ public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEnti
         box(vc, p, cx - 7.4f, 32.2f, cz - 7.4f, cx + 7.4f, 33f, cz + 7.4f, ICE, white, light);
         box(vc, p, cx - 0.4f, MAST_BOTTOM, cz - 7.5f, cx + 0.4f, 31f, cz - 7.2f, DARK, 0xFF5A8898, light);
         float top = MAST_TOP;
-        for (float[] c : new float[][]{{-5f, -5f}, {5f, -5f}, {-5f, 5f}, {5f, 5f}}) {
+        for (float[] c : TOWER_LEGS) {
             limb(vc, pose, cx + c[0], 33f, cz + c[1], cx + c[0] * 0.45f, top, cz + c[1] * 0.45f, 1.1f, BRASS, light);
         }
         for (float y = 35f; y < top; y += 3f) {
@@ -295,8 +320,12 @@ public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEnti
             box(vc, p, cx - r, y, cz - r, cx - r + 0.6f, y + 0.6f, cz + r, COPPER, white, light);
             box(vc, p, cx + r - 0.6f, y, cz - r, cx + r, y + 0.6f, cz + r, COPPER, white, light);
         }
+    }
 
-        // ---- desk static parts (lamp base/stem/shade, ledger, inkwell) and key base
+    private static void bakeDeskAndKeyBase(VertexConsumer vc, PoseStack pose) {
+        PoseStack.Pose p = pose.last();
+        int white = 0xFFFFFFFF;
+        int light = 0;
         box(vc, p, -6.5f, 15f, 3f, -2.5f, 15.7f, 7f, BRASS, white, light);
         limb(vc, pose, -4.5f, 15.6f, 6f, -4.5f, 19.6f, 6f, 0.7f, BRASS, light);
         limb(vc, pose, -4.5f, 19.6f, 6f, -4.5f, 20.2f, 4.2f, 0.6f, BRASS, light);
@@ -324,10 +353,5 @@ public class TelegraphRenderer implements BlockEntityRenderer<TelegraphBlockEnti
             pose.popPose();
         }
         limb(vc, pose, 0f, 1f, 0f, 0f, 6.5f, 0f, 0.9f, BRASS, 0);
-    }
-
-    private static int color(float r, float g, float b) {
-        return 0xFF000000 | ((int) (Mth.clamp(r, 0f, 1f) * 255) << 16) | ((int) (Mth.clamp(g, 0f, 1f) * 255) << 8)
-                | (int) (Mth.clamp(b, 0f, 1f) * 255);
     }
 }

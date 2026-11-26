@@ -13,7 +13,6 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelResourceLocation;
-import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.client.model.data.ModelData;
 
@@ -49,27 +48,12 @@ public class CryoDiodeRenderer implements BlockEntityRenderer<CryoDiodeBlockEnti
         var renderer = Minecraft.getInstance().getBlockRenderer().getModelRenderer();
 
         pose.pushPose();
-        orient(pose, be.getFacing());
+        Quads.orient(pose, be.getFacing());
         pose.translate(0.5f, 0, 0.5f);
         pose.mulPose(Axis.YP.rotationDegrees(angle));
         pose.translate(-0.5f, 0, -0.5f);
         renderer.renderModel(pose.last(), buffers.getBuffer(RenderType.cutout()), null, wheel, 1f, 1f, 1f, light,
                 OverlayTexture.NO_OVERLAY, ModelData.EMPTY, RenderType.cutout());
         pose.popPose();
-    }
-
-    /** Turns the north-facing frame to the block's facing (the same turn as the Formation Bus renderer). */
-    private static void orient(PoseStack pose, Direction facing) {
-        pose.translate(0.5f, 0.5f, 0.5f);
-        switch (facing) {
-            case SOUTH -> pose.mulPose(Axis.YP.rotationDegrees(180f));
-            case EAST -> pose.mulPose(Axis.YP.rotationDegrees(-90f));
-            case WEST -> pose.mulPose(Axis.YP.rotationDegrees(90f));
-            case UP -> pose.mulPose(Axis.XP.rotationDegrees(90f));
-            case DOWN -> pose.mulPose(Axis.XP.rotationDegrees(-90f));
-            default -> {
-            }
-        }
-        pose.translate(-0.5f, -0.5f, -0.5f);
     }
 }
