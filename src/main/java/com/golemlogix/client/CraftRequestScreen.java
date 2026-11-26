@@ -7,9 +7,9 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +40,8 @@ public class CraftRequestScreen extends Screen {
     /** In how many ticks to send a preview after the amount was edited (-1 = not needed). */
     private int previewIn = -1;
     private int lastAmount = -1;
+    private CraftPlanPayload cachedPlan;
+    private List<List<Component>> cachedCellLines = List.of();
 
     public CraftRequestScreen(TerminalScreen parent, TerminalMenu menu, ItemStack key) {
         super(Component.translatable("gui.golem_logix.craft_request"));
@@ -151,7 +153,9 @@ public class CraftRequestScreen extends Screen {
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        if (minecraft != null) {
+            minecraft.setScreen(parent);
+        }
     }
 
     private int maxScroll(CraftPlanPayload p) {
@@ -215,6 +219,14 @@ public class CraftRequestScreen extends Screen {
         if (entries.isEmpty()) {
             return;
         }
+        if (p != cachedPlan) {
+            cachedPlan = p;
+            List<List<Component>> built = new ArrayList<>(entries.size());
+            for (CraftPlanPayload.Entry e : entries) {
+                built.add(cellLines(e));
+            }
+            cachedCellLines = built;
+        }
         scroll = Math.max(0, Math.min(scroll, maxScroll(p)));
         CraftPlanPayload.Entry hovered = null;
         for (int r = 0; r < ROWS; r++) {
@@ -231,11 +243,13 @@ public class CraftRequestScreen extends Screen {
                 if (!FluidIcons.drawGhost(g, font, e.stack(), x + 3, y + 4, false)) {
                     g.item(e.stack(), x + 3, y + 4);
                 }
-                List<Component> lines = cellLines(e);
+                List<Component> lines = cachedCellLines.get(idx);
                 for (int k = 0; k < Math.min(2, lines.size()); k++) {
                     Component line = lines.get(k);
-                    g.text(font, line, x + 22, y + 3 + k * 10, line.getStyle().getColor() == null ? GolemGui.PARCHMENT
-                            : line.getStyle().getColor().getValue() | 0xFF000000, false);
+                    int color = line.getStyle().getColor() == null ? GolemGui.PARCHMENT
+                            : line.getStyle().getColor().getValue() | 0xFF000000;
+                    g.text(font, Language.getInstance().getVisualOrder(font.substrByWidth(line, CELL_W - 24)),
+                            x + 22, y + 3 + k * 10, color, false);
                 }
                 if (mouseX >= x && mouseX < x + CELL_W && mouseY >= y && mouseY < y + CELL_H) {
                     hovered = e;
@@ -281,7 +295,7 @@ public class CraftRequestScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mx, double my, double sx, double sy) {
         CraftPlanPayload p = plan();
-        if (p != null && mx >= left + GRID_X && mx < left + GRID_X + COLS * CELL_W + 12 && my >= top + GRID_Y && my < top + GRID_Y + ROWS * CELL_H) {
+        if (p != null && sy != 0 && mx >= left + GRID_X && mx < left + GRID_X + COLS * CELL_W + 12 && my >= top + GRID_Y && my < top + GRID_Y + ROWS * CELL_H) {
             scroll = Math.max(0, Math.min(maxScroll(p), scroll - (int) Math.signum(sy)));
             return true;
         }
