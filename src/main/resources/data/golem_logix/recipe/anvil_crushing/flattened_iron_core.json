@@ -3,5 +3,6 @@
   "entity": "minecraft:iron_golem",
   "max_health": 4.0,
   "result": {"id": "golem_logix:flattened_iron_core"},
+  "bonus_chance": 0.33,
   "icon": "minecraft:iron_block"
 }

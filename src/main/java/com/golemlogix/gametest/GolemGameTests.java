@@ -2213,7 +2213,7 @@ public class GolemGameTests {
                 "channel_expander", "quantum_channel_expander", "cable_bushing", "basic_snow_pipe",
                 "dense_frost_pipe", "copper_drive_bay", "analog_terminal", "crafting_terminal", "pattern_encoder",
                 "pattern_provider", "cryo_calculator", "cooling_coprocessor", "vacuum_import_bus", "injector_export_bus",
-                "periscope_storage_bus", "eternal_frost_resonator"};
+                "periscope_storage_bus", "eternal_frost_resonator", "vis_condenser", "essentia_cryo_cauldron"};
         for (String b : blocks) {
             ResourceKey<LootTable> key = ResourceKey.create(Registries.LOOT_TABLE,
                     ResourceLocation.fromNamespaceAndPath(GolemLogixMod.MOD_ID, "blocks/" + b));

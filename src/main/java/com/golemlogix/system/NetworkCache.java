@@ -267,6 +267,9 @@ final class NetworkCache {
                 || a.cpus.size() != b.cpus.size()
                 || a.peripherals.size() != b.peripherals.size()
                 || a.sources.size() != b.sources.size()
+                || a.gigaJars != b.gigaJars
+                || a.reactors != b.reactors
+                || a.channelCapacity != b.channelCapacity
                 || a.telegraphLinks != b.telegraphLinks) {
             return false;
         }

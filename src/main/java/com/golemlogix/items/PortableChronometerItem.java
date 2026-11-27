@@ -90,6 +90,10 @@ public class PortableChronometerItem extends Item {
     }
 
     public static boolean inRange(int tier, Level playerLevel, Vec3 playerPos, Level netLevel, BlockPos anchor) {
+        return inRange(tier, playerLevel, playerPos, netLevel, anchor, GolemConfig.LOCAL_WIRELESS_RANGE.get());
+    }
+
+    public static boolean inRange(int tier, Level playerLevel, Vec3 playerPos, Level netLevel, BlockPos anchor, double localRange) {
         if (tier >= 2) {
             return true;
         }
@@ -99,8 +103,7 @@ public class PortableChronometerItem extends Item {
         if (tier == 1) {
             return true;
         }
-        double range = GolemConfig.LOCAL_WIRELESS_RANGE.get();
-        return playerPos.distanceToSqr(anchor.getX() + 0.5, anchor.getY() + 0.5, anchor.getZ() + 0.5) <= range * range;
+        return playerPos.distanceToSqr(anchor.getX() + 0.5, anchor.getY() + 0.5, anchor.getZ() + 0.5) <= localRange * localRange;
     }
 
     @Override

@@ -142,4 +142,12 @@ public class ModBlockEntities {
     public static final Supplier<BlockEntityType<com.golemlogix.blockentity.ChannelCounterBlockEntity>> CHANNEL_COUNTER =
             BLOCK_ENTITY_TYPES.register("channel_counter", () ->
                     BlockEntityType.Builder.of(com.golemlogix.blockentity.ChannelCounterBlockEntity::new, ModBlocks.CHANNEL_COUNTER.get()).build(null));
+
+    public static final Supplier<BlockEntityType<VisCondenserBlockEntity>> VIS_CONDENSER =
+            BLOCK_ENTITY_TYPES.register("vis_condenser", () ->
+                    BlockEntityType.Builder.of(VisCondenserBlockEntity::new, ModBlocks.VIS_CONDENSER.get()).build(null));
+
+    public static final Supplier<BlockEntityType<EssentiaCauldronBlockEntity>> ESSENTIA_CAULDRON =
+            BLOCK_ENTITY_TYPES.register("essentia_cryo_cauldron", () ->
+                    BlockEntityType.Builder.of(EssentiaCauldronBlockEntity::new, ModBlocks.ESSENTIA_CAULDRON.get()).build(null));
 }

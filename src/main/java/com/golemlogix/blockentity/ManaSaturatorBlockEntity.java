@@ -6,6 +6,7 @@ import com.golemlogix.init.ModSounds;
 import com.golemlogix.items.ForgeHammerItem;
 import com.golemlogix.secret.SecretKnowledge;
 import com.golemlogix.system.AutoOutput;
+import com.golemlogix.system.EndRodRitual;
 import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.SaturatorStructure;
 import com.golemlogix.system.SourceHelper;
@@ -16,6 +17,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -24,8 +27,12 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.Containers;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.items.IItemHandler;
@@ -246,12 +253,23 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
 
     /** Everything inside the machine and in the carriers' hands (dropped when it is broken). */
     public List<ItemStack> allItems() {
-        List<ItemStack> out = new ArrayList<>(5);
+        List<ItemStack> out = new ArrayList<>(8);
         addIfNonEmpty(out, inDeck);
         addIfNonEmpty(out, heldItem);
         addIfNonEmpty(out, outDeck);
         addIfNonEmpty(out, bringer.hands);
         addIfNonEmpty(out, taker.hands);
+        if (rodStage != EndRodRitual.NONE) {
+            if (rodEyes > 0) {
+                out.add(new ItemStack(Items.ENDER_EYE, rodEyes));
+            }
+            if (rodTears > 0) {
+                out.add(new ItemStack(Items.GHAST_TEAR, rodTears));
+            }
+            if (rodNetherite > 0) {
+                out.add(new ItemStack(Items.NETHERITE_INGOT, rodNetherite));
+            }
+        }
         return out;
     }
 
@@ -266,12 +284,17 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
      * Forging by hand on the anvil of an unassembled saturator (an intermediate stage, the machine is its upgrade): a blank is put
      * on the face with right-click and struck with the Forge Hammer (left-click); every strike spends Source from the hammer's charge
      * and a little food; after MANUAL_HITS strikes the blank becomes a plate, just one (the machine gives two). ONLY the three base plates can be forged by hand.
+     * Also hosts the 3-phase Cryo-Forging Ritual ({@link EndRodRitual}) that turns a Diamond Block + reagents + surrounding Blue Ice into an End Rod.
      */
     public static final int MANUAL_HITS = 4, MANUAL_COOLDOWN = 6;
     private int manualHits = 0;
     private long lastStrike = -100;
+    private int rodStage = EndRodRitual.NONE;
+    private int rodEyes = 0;
+    private int rodTears = 0;
+    private int rodNetherite = 0;
 
-    public enum Strike { HIT, DONE, COOLDOWN, NO_SOURCE, NOTHING }
+    public enum Strike { HIT, DONE, COOLDOWN, NO_SOURCE, NOTHING, NEED_ICE, WAIT_REAGENT, ROD_PHASE_DONE, ROD_DONE }
 
     /** What forging by hand gives: the "hand_result" of the blank's Saturator recipe (data packs; by default the three base plates). */
     public static ItemStack manualOutputFor(@Nullable Level level, ItemStack input) {
@@ -286,13 +309,42 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         return manualHits;
     }
 
+    public int rodStage() {
+        return rodStage;
+    }
+
+    public int rodEyes() {
+        return rodEyes;
+    }
+
+    public int rodTears() {
+        return rodTears;
+    }
+
+    public int rodNetherite() {
+        return rodNetherite;
+    }
+
+    public int rodTotalHits() {
+        return EndRodRitual.completedHitsBefore(rodStage)
+                + (EndRodRitual.isHammerStage(rodStage) ? manualHits : 0);
+    }
+
     public ItemStack anvilItem() {
         return heldItem;
+    }
+
+    private void resetRodState() {
+        rodStage = EndRodRitual.NONE;
+        rodEyes = 0;
+        rodTears = 0;
+        rodNetherite = 0;
     }
 
     public void placeOnAnvil(ItemStack one) {
         heldItem = one.copyWithCount(1);
         manualHits = 0;
+        resetRodState();
         changed();
     }
 
@@ -300,12 +352,197 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         ItemStack s = heldItem;
         heldItem = ItemStack.EMPTY;
         manualHits = 0;
+        resetRodState();
         changed();
         return s;
     }
 
-    /** A hammer strike on the blank on the anvil (server). */
+    /** Starts the 3-phase End Rod Cryo-Forging Ritual with a single Diamond Block placed on the anvil. */
+    public void startRodRitual(ItemStack diamondBlock) {
+        heldItem = diamondBlock.copyWithCount(1);
+        manualHits = 0;
+        rodStage = EndRodRitual.PHASE_1_DIAMOND;
+        rodEyes = 0;
+        rodTears = 0;
+        rodNetherite = 0;
+        changed();
+    }
+
+    private static int rodReagentKind(Item item) {
+        if (item == Items.ENDER_EYE) {
+            return EndRodRitual.REAGENT_EYE;
+        }
+        if (item == Items.GHAST_TEAR) {
+            return EndRodRitual.REAGENT_TEAR;
+        }
+        if (item == Items.NETHERITE_INGOT) {
+            return EndRodRitual.REAGENT_NETHERITE;
+        }
+        return EndRodRitual.REAGENT_NONE;
+    }
+
+    private static int rodIceTier(Block block) {
+        if (block == Blocks.BLUE_ICE) {
+            return EndRodRitual.ICE_BLUE;
+        }
+        if (block == Blocks.PACKED_ICE) {
+            return EndRodRitual.ICE_PACKED;
+        }
+        if (block == Blocks.ICE) {
+            return EndRodRitual.ICE_NORMAL;
+        }
+        return EndRodRitual.ICE_NONE;
+    }
+
+    private static Block degradeRodIce(Block block) {
+        if (block == Blocks.BLUE_ICE) {
+            return Blocks.PACKED_ICE;
+        }
+        if (block == Blocks.PACKED_ICE) {
+            return Blocks.ICE;
+        }
+        if (block == Blocks.ICE) {
+            return Blocks.WATER;
+        }
+        return block;
+    }
+
+    /** Attempts to feed Eyes of Ender, Ghast Tears, or a Netherite Ingot into the active waiting stage. */
+    public EndRodRitual.ReagentStep tryInsertRodReagent(ItemStack stack, boolean creative) {
+        EndRodRitual.ReagentStep step = EndRodRitual.insertReagent(
+                rodStage, rodEyes, rodTears, rodNetherite, rodReagentKind(stack.getItem()), stack.getCount());
+        if (!step.accepted()) {
+            return step;
+        }
+        if (!creative) {
+            stack.shrink(step.taken());
+        }
+        rodStage = step.newStage();
+        rodEyes = step.newEyes();
+        rodTears = step.newTears();
+        rodNetherite = step.newNetherite();
+        if (level instanceof ServerLevel sl) {
+            double x = worldPosition.getX() + 0.5, y = worldPosition.getY() + 1.05, z = worldPosition.getZ() + 0.5;
+            sl.playSound(null, worldPosition, SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.BLOCKS, 0.7f,
+                    EndRodRitual.isHammerStage(rodStage) ? 1.35f : 1.05f);
+            sl.sendParticles(ParticleTypes.END_ROD, x, y, z, 8, 0.18, 0.08, 0.18, 0.03);
+        }
+        changed();
+        return step;
+    }
+
+    /** Cancels an active End Rod ritual and returns the Diamond Block plus all inserted reagents. */
+    public List<ItemStack> cancelRodRitual() {
+        List<ItemStack> refund = new ArrayList<>(4);
+        if (!heldItem.isEmpty()) {
+            refund.add(heldItem.copy());
+        }
+        if (rodStage != EndRodRitual.NONE) {
+            if (rodEyes > 0) {
+                refund.add(new ItemStack(Items.ENDER_EYE, rodEyes));
+            }
+            if (rodTears > 0) {
+                refund.add(new ItemStack(Items.GHAST_TEAR, rodTears));
+            }
+            if (rodNetherite > 0) {
+                refund.add(new ItemStack(Items.NETHERITE_INGOT, rodNetherite));
+            }
+        }
+        heldItem = ItemStack.EMPTY;
+        manualHits = 0;
+        resetRodState();
+        changed();
+        return refund;
+    }
+
+    /** Human-readable actionbar / status prompt for the current End Rod ritual stage. */
+    public MutableComponent rodStatusPrompt() {
+        return switch (rodStage) {
+            case EndRodRitual.PHASE_1_DIAMOND, EndRodRitual.PHASE_2_VOID, EndRodRitual.PHASE_3_QUENCH -> {
+                int phaseNum = rodStage == EndRodRitual.PHASE_1_DIAMOND ? 1
+                        : (rodStage == EndRodRitual.PHASE_2_VOID ? 2 : 3);
+                yield Component.translatable("message.golem_logix.rod_ritual.phase_progress",
+                        phaseNum, manualHits, EndRodRitual.hitsForStage(rodStage),
+                        Component.translatable("message.golem_logix.rod_ritual.ice." + EndRodRitual.requiredIceTier(rodStage)));
+            }
+            case EndRodRitual.WAIT_EYES -> Component.translatable("message.golem_logix.rod_ritual.wait_eyes",
+                    EndRodRitual.EYES_REQUIRED - rodEyes);
+            case EndRodRitual.WAIT_TEMPER -> Component.translatable("message.golem_logix.rod_ritual.wait_temper",
+                    EndRodRitual.TEARS_REQUIRED - rodTears, EndRodRitual.NETHERITE_REQUIRED - rodNetherite);
+            default -> Component.empty();
+        };
+    }
+
+    public static boolean hasRequiredRodIce(Level level, BlockPos pos, int stage) {
+        return EndRodRitual.hasSurroundingIce(stage,
+                rodIceTier(level.getBlockState(pos.north()).getBlock()),
+                rodIceTier(level.getBlockState(pos.south()).getBlock()),
+                rodIceTier(level.getBlockState(pos.east()).getBlock()),
+                rodIceTier(level.getBlockState(pos.west()).getBlock()));
+    }
+
+    private static void degradeSurroundingIce(ServerLevel level, BlockPos pos) {
+        for (Direction dir : Direction.Plane.HORIZONTAL) {
+            BlockPos side = pos.relative(dir);
+            Block cur = level.getBlockState(side).getBlock();
+            Block next = degradeRodIce(cur);
+            if (next != cur) {
+                level.setBlock(side, next.defaultBlockState(), Block.UPDATE_ALL);
+                level.sendParticles(ParticleTypes.SNOWFLAKE,
+                        side.getX() + 0.5, side.getY() + 0.7, side.getZ() + 0.5,
+                        12, 0.3, 0.25, 0.3, 0.02);
+            }
+        }
+    }
+
+    /** A hammer strike on the blank or End Rod core on the anvil (server). */
     public Strike strike(ServerLevel level, BlockPos pos, Player player, ItemStack hammer) {
+        if (rodStage != EndRodRitual.NONE) {
+            if (!EndRodRitual.isHammerStage(rodStage)) {
+                return Strike.WAIT_REAGENT;
+            }
+            long now = level.getGameTime();
+            if (now - lastStrike < MANUAL_COOLDOWN) {
+                return Strike.COOLDOWN;
+            }
+            if (!hasRequiredRodIce(level, pos, rodStage)) {
+                return Strike.NEED_ICE;
+            }
+            if (!ForgeHammerItem.canStrike(hammer)) {
+                return Strike.NO_SOURCE;
+            }
+            ForgeHammerItem.spendStrike(hammer);
+            lastStrike = now;
+            player.causeFoodExhaustion(0.35f);
+            EndRodRitual.StrikeStep step = EndRodRitual.stepStrike(rodStage, manualHits);
+            rodStage = step.newStage();
+            manualHits = step.newHits();
+
+            double x = pos.getX() + 0.5, y = pos.getY() + 0.97, z = pos.getZ() + 0.5;
+            level.playSound(null, pos, SoundEvents.ANVIL_LAND, SoundSource.BLOCKS, 0.45f, 1.0f + rodTotalHits() * 0.015f);
+            level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_HIT, SoundSource.BLOCKS, 0.7f, 1.35f);
+            level.sendParticles(ParticleTypes.ENCHANTED_HIT, x, y, z, 4, 0.16, 0.04, 0.16, 0.1);
+            level.sendParticles(ParticleTypes.SNOWFLAKE, x, y, z, 3, 0.18, 0.05, 0.18, 0.02);
+
+            if (step.finished()) {
+                degradeSurroundingIce(level, pos);
+                heldItem = new ItemStack(Items.END_ROD);
+                resetRodState();
+                level.sendParticles(ParticleTypes.END_ROD, x, y + 0.15, z, 24, 0.25, 0.2, 0.25, 0.05);
+                level.playSound(null, pos, ModSounds.ANVIL_CRUSH.get(), SoundSource.BLOCKS, 1.0f, 1.6f);
+                changed();
+                return Strike.ROD_DONE;
+            }
+            if (step.phaseCompleted()) {
+                degradeSurroundingIce(level, pos);
+                level.playSound(null, pos, SoundEvents.GLASS_BREAK, SoundSource.BLOCKS, 0.7f, 1.25f);
+                level.sendParticles(ParticleTypes.END_ROD, x, y, z, 10, 0.2, 0.08, 0.2, 0.03);
+                changed();
+                return Strike.ROD_PHASE_DONE;
+            }
+            changed();
+            return Strike.HIT;
+        }
         if (!isManualInput(level, heldItem)) {
             return Strike.NOTHING;
         }
@@ -631,7 +868,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
     }
 
     private void tickUnformed(ServerLevel sl, BlockPos pos, Direction facing, long t) {
-        if (t % 20 == 0) {
+        if (t % 20 == 0 && rodStage == EndRodRitual.NONE) {
             tryForm(sl, pos, facing);
             if (sl.getBlockState(pos).getValue(ManaSaturatorBlock.FORMED)) {
                 manualHits = 0;
@@ -845,6 +1082,7 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         bringer.hands = ItemStack.EMPTY;
         taker.hands = ItemStack.EMPTY;
         redstoneModule = false;
+        resetRodState();
     }
 
     // ------------------------------------------------------------------ persistence
@@ -865,6 +1103,10 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         tag.put("Taker", taker.save(registries));
         tag.putInt("Progress", ritualProgress);
         tag.putInt("ManualHits", manualHits);
+        tag.putInt("RodStage", rodStage);
+        tag.putInt("RodEyes", rodEyes);
+        tag.putInt("RodTears", rodTears);
+        tag.putInt("RodNetherite", rodNetherite);
         tag.putInt("Source", source);
         tag.putBoolean("IsCrafting", isCrafting);
         tag.putInt("Coolers", coolers);
@@ -883,6 +1125,10 @@ public class ManaSaturatorBlockEntity extends BlockEntity {
         taker.load(tag.getCompound("Taker"), registries);
         ritualProgress = tag.getInt("Progress");
         manualHits = tag.getInt("ManualHits");
+        rodStage = tag.contains("RodStage") ? tag.getInt("RodStage") : EndRodRitual.NONE;
+        rodEyes = tag.getInt("RodEyes");
+        rodTears = tag.getInt("RodTears");
+        rodNetherite = tag.getInt("RodNetherite");
         source = tag.getInt("Source");
         syncedLevel = levelEighths();
         isCrafting = tag.getBoolean("IsCrafting");

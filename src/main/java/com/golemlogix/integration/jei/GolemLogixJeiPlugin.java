@@ -86,7 +86,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         if (witherRitual == null) {
             witherRitual = new AnvilCrushRecipe(new ItemStack(Items.NETHER_STAR), Component.translatable("jei.golem_logix.golem.wither"),
                     Component.translatable("jei.golem_logix.hp.wither"), new ItemStack(ModItems.IMPLODED_WITHER_PLASMA.get()),
-                    EntityType.WITHER, Float.NaN, Float.NaN);
+                    EntityType.WITHER, Float.NaN, Float.NaN, 0f);
         }
         return witherRitual;
     }
@@ -112,7 +112,7 @@ public class GolemLogixJeiPlugin implements IModPlugin {
             double full = DefaultAttributes.getSupplier(living).getBaseValue(Attributes.MAX_HEALTH);
             hp = Component.translatable("jei.golem_logix.hp.range_of", min, max, (int) Math.round(full));
         }
-        return new AnvilCrushRecipe(icon, type.getDescription(), hp, r.result().copy(), type, r.minHealth(), r.maxHealth());
+        return new AnvilCrushRecipe(icon, type.getDescription(), hp, r.result().copy(), type, r.minHealth(), r.maxHealth(), r.bonusChance());
     }
 
     @Override
@@ -364,7 +364,8 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         var guiHelper = registration.getJeiHelpers().getGuiHelper();
         registration.addRecipeCategories(
                 new AnvilCrushCategory(guiHelper),
-                new ManaSaturatorCategory(guiHelper)
+                new ManaSaturatorCategory(guiHelper),
+                new EndRodRitualCategory(guiHelper)
         );
     }
 
@@ -372,6 +373,9 @@ public class GolemLogixJeiPlugin implements IModPlugin {
     public void registerRecipeCatalysts(IRecipeCatalystRegistration registration) {
         registration.addRecipeCatalyst(new ItemStack(Blocks.ANVIL), AnvilCrushCategory.TYPE);
         registration.addRecipeCatalyst(new ItemStack(ModBlocks.MANA_SATURATOR.get()), ManaSaturatorCategory.TYPE);
+        // End Rod ritual on the unassembled Saturator anvil
+        registration.addRecipeCatalyst(new ItemStack(ModItems.FORGE_HAMMER.get()), EndRodRitualCategory.TYPE);
+        registration.addRecipeCatalyst(new ItemStack(ModBlocks.MANA_SATURATOR.get()), EndRodRitualCategory.TYPE);
         // the Crafting Terminal crafts from the network (and takes JEI's "+"), so it stands among the crafting tables
         registration.addRecipeCatalyst(new ItemStack(ModBlocks.CRAFTING_TERMINAL.get()), RecipeTypes.CRAFTING);
     }
@@ -383,17 +387,29 @@ public class GolemLogixJeiPlugin implements IModPlugin {
         registerDistillationInfo(registration);
         registerAnvilRecipes(registration, manager);
         registerSaturatorRecipes(registration, level, manager);
+        registration.addRecipes(EndRodRitualCategory.TYPE, EndRodRitualCategory.recipes());
     }
 
-    /** Cryo-distillation (Source from blood): info pages shown when a blood mod is loaded. */
+    /** Cryo-distillation and Thaumaturge Source condenser info pages shown when the corresponding mod is loaded. */
     private static void registerDistillationInfo(IRecipeRegistration registration) {
-        if (!SourceHelper.distillationAvailable()) {
-            return;
+        boolean distill = SourceHelper.distillationAvailable();
+        boolean thaum = SourceHelper.thaumaturgeLoaded();
+        if (distill) {
+            registration.addIngredientInfo(new ItemStack(ModBlocks.CRYO_DISTILLATION_TOWER.get()),
+                    VanillaTypes.ITEM_STACK, Component.translatable("jei.golem_logix.info.distillation_tower"));
         }
-        registration.addIngredientInfo(new ItemStack(ModBlocks.CRYO_DISTILLATION_TOWER.get()),
-                VanillaTypes.ITEM_STACK, Component.translatable("jei.golem_logix.info.distillation_tower"));
-        registration.addIngredientInfo(new ItemStack(ModBlocks.CRYO_SOURCE_JAR.get()),
-                VanillaTypes.ITEM_STACK, Component.translatable("jei.golem_logix.info.cryo_jar"));
+        if (distill || thaum) {
+            registration.addIngredientInfo(new ItemStack(ModBlocks.CRYO_SOURCE_JAR.get()),
+                    VanillaTypes.ITEM_STACK, Component.translatable("jei.golem_logix.info.cryo_jar"));
+        }
+        if (thaum) {
+            registration.addIngredientInfo(new ItemStack(ModBlocks.VIS_CONDENSER.get()),
+                    VanillaTypes.ITEM_STACK, Component.translatable("jei.golem_logix.info.vis_condenser"));
+            registration.addIngredientInfo(new ItemStack(ModBlocks.ESSENTIA_CAULDRON.get()),
+                    VanillaTypes.ITEM_STACK, Component.translatable("jei.golem_logix.info.essentia_cryo_cauldron"));
+            registration.addIngredientInfo(new ItemStack(ModItems.HOLLOW_GOLEM_HEAD.get()),
+                    VanillaTypes.ITEM_STACK, Component.translatable("jei.golem_logix.info.hollow_golem_head"));
+        }
     }
 
     /** Anvil rituals from data packs plus the secret Wither ritual (hidden until revealed). */

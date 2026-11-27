@@ -3,10 +3,15 @@ package com.golemlogix.integration.jade;
 import com.golemlogix.blocks.AtlasCoreBlock;
 import com.golemlogix.blocks.CardCatalogBlock;
 import com.golemlogix.blocks.CatalogPartBlock;
+import com.golemlogix.blocks.ChannelCounterBlock;
+import com.golemlogix.blocks.CryoJarBlock;
 import com.golemlogix.blocks.CryoMainframeBlock;
+import com.golemlogix.blocks.DistillationTowerBlock;
+import com.golemlogix.blocks.EssentiaCauldronBlock;
 import com.golemlogix.blocks.MainframePartBlock;
 import com.golemlogix.blocks.ManaSaturatorBlock;
 import com.golemlogix.blocks.SaturatorPartBlock;
+import com.golemlogix.blocks.VisCondenserBlock;
 import net.minecraft.world.level.block.Block;
 import snownee.jade.api.IWailaClientRegistration;
 import snownee.jade.api.IWailaCommonRegistration;
@@ -22,11 +27,21 @@ public class GolemJadePlugin implements IWailaPlugin {
     public void register(IWailaCommonRegistration registration) {
         // channel numbers come from the server's network, as AE2 sends its grid state (also for blocks without a block entity)
         registration.registerBlockDataProvider(ChannelProvider.INSTANCE, Block.class);
+        registration.registerBlockDataProvider(CryoJarProvider.INSTANCE, CryoJarBlock.class);
+        registration.registerBlockDataProvider(DistillationTowerProvider.INSTANCE, DistillationTowerBlock.class);
+        registration.registerBlockDataProvider(VisCondenserProvider.INSTANCE, VisCondenserBlock.class);
+        registration.registerBlockDataProvider(EssentiaCauldronProvider.INSTANCE, EssentiaCauldronBlock.class);
+        registration.registerBlockDataProvider(ChannelCounterProvider.INSTANCE, ChannelCounterBlock.class);
     }
 
     @Override
     public void registerClient(IWailaClientRegistration registration) {
         registration.registerBlockComponent(CoreProvider.INSTANCE, AtlasCoreBlock.class);
+        registration.registerBlockComponent(CryoJarProvider.INSTANCE, CryoJarBlock.class);
+        registration.registerBlockComponent(DistillationTowerProvider.INSTANCE, DistillationTowerBlock.class);
+        registration.registerBlockComponent(VisCondenserProvider.INSTANCE, VisCondenserBlock.class);
+        registration.registerBlockComponent(EssentiaCauldronProvider.INSTANCE, EssentiaCauldronBlock.class);
+        registration.registerBlockComponent(ChannelCounterProvider.INSTANCE, ChannelCounterBlock.class);
         registration.registerBlockComponent(SaturatorProvider.INSTANCE, ManaSaturatorBlock.class);
         registration.registerBlockComponent(SaturatorProvider.INSTANCE, SaturatorPartBlock.class);
         registration.registerBlockComponent(MainframeProvider.INSTANCE, CryoMainframeBlock.class);

@@ -35,6 +35,8 @@ public record UpgradeSpec(int slots, int maxSpeed, boolean crafting, boolean red
     public static final UpgradeSpec MAINFRAME = new UpgradeSpec(7, 6, false, true, false);
     /** Cryo-Distillation Tower: one slot of Compressed Co-Processors, each one distils faster (see its tank, too). */
     public static final UpgradeSpec DISTILLATION = new UpgradeSpec(1, BUS_MAX_SPEED, false, false, false, false, true);
+    /** Essentia Cryo-Cauldron: one slot of up to 28 Compressed Co-Processors, each one speeds up reactions. */
+    public static final UpgradeSpec ESSENTIA_CAULDRON = new UpgradeSpec(1, BUS_MAX_SPEED, false, false, false, false, true);
     /** Cryo-Mixer: up to 4 Compressed Co-Processors (each one adds the base speed) and redstone. */
     public static final UpgradeSpec MIXER = new UpgradeSpec(5, 4, false, true, false);
     /** Periscope: redstone and a Fuzzy Card (for its filter). */

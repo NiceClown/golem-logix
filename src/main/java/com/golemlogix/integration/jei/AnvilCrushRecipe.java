@@ -7,7 +7,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * One anvil ritual for JEI: what stands for the golem (looked up by JEI), its name, the condition as text, what it gives; the
- * golem's entity type for the animated scene and its health window in HP (NaN for the Wither: a time, not health).
+ * golem's entity type for the animated scene, its health window in HP (NaN for the Wither: a time, not health), and optional bonus chance.
  */
 public record AnvilCrushRecipe(
         ItemStack golemRepresentation,
@@ -16,5 +16,6 @@ public record AnvilCrushRecipe(
         ItemStack output,
         @Nullable EntityType<?> entity,
         float minHealth,
-        float maxHealth
+        float maxHealth,
+        float bonusChance
 ) {}

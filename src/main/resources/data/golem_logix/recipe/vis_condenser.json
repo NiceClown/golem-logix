@@ -1,0 +1,27 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "thaumaturge"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "B": { "tag": "c:ingots/gold" },
+    "S": { "item": "thaumaturge:salis_mundus" },
+    "F": { "item": "golem_logix:flattened_cryo_substrate" },
+    "G": { "tag": "c:glass_blocks" },
+    "A": { "item": "thaumaturge:stone_arcane" },
+    "M": { "item": "golem_logix:flattened_copper_matrix" }
+  },
+  "pattern": [
+    "BSB",
+    "FGF",
+    "AMA"
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:vis_condenser"
+  }
+}

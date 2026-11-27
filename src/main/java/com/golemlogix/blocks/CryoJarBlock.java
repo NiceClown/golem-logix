@@ -1,6 +1,7 @@
 package com.golemlogix.blocks;
 
 import com.golemlogix.blockentity.CryoJarBlockEntity;
+import com.golemlogix.config.GolemConfig;
 import com.golemlogix.init.ModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -180,11 +181,24 @@ public class CryoJarBlock extends Block implements EntityBlock {
         return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 
-    /** A click shows how much Source is inside. */
+    /** A click shows how much Source is inside and the active multiblock bonus for Giga Jar / Reactor. */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!level.isClientSide() && level.getBlockEntity(lowerOf(pos, state)) instanceof CryoJarBlockEntity jar) {
-            player.displayClientMessage(Component.translatable("message.golem_logix.cryo_jar", jar.available(), jar.capacity()), true);
+            JarForm form = jar.form();
+            int avail = jar.available();
+            int cap = jar.capacity();
+            int gigaDiscount = GolemConfig.GIGA_SOURCE_DISCOUNT.get();
+            int reactorBonus = GolemConfig.REACTOR_CHANNEL_BONUS.get();
+            Component msg;
+            if (form == JarForm.GIGA && gigaDiscount > 0) {
+                msg = Component.translatable("message.golem_logix.cryo_jar.giga", avail, cap, gigaDiscount);
+            } else if (form == JarForm.SUPER && reactorBonus > 0) {
+                msg = Component.translatable("message.golem_logix.cryo_jar.reactor", avail, cap, reactorBonus);
+            } else {
+                msg = Component.translatable("message.golem_logix.cryo_jar", avail, cap);
+            }
+            player.displayClientMessage(msg, true);
         }
         return InteractionResult.sidedSuccess(level.isClientSide());
     }

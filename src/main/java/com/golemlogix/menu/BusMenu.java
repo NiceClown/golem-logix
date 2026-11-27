@@ -40,6 +40,8 @@ public class BusMenu extends GolemMenu {
     public static final int BUTTON_LIST = 31;
     /** The periscope's access: both ways, insert only, extract only. */
     public static final int BUTTON_ACCESS = 32;
+    /** The Formation Bus's fluid replacement toggle (replace fluids vs respect fluids). */
+    public static final int BUTTON_FLUIDS = 33;
 
     private final Container filters;
     private final int kind;
@@ -57,7 +59,8 @@ public class BusMenu extends GolemMenu {
     public static BusMenu fromNetwork(int id, Inventory inv, RegistryFriendlyByteBuf buf) {
         int kind = buf.readVarInt();
         return new BusMenu(id, inv, new SimpleContainer(BusBlockEntity.FILTER_SLOTS),
-                new SimpleContainer(specOf(kind).slots()), kind, new SimpleContainerData(kind == KIND_PERISCOPE ? 4 : 3));
+                new SimpleContainer(specOf(kind).slots()), kind,
+                new SimpleContainerData(kind == KIND_PERISCOPE || kind == KIND_FORMATION ? 4 : 3));
     }
 
     public BusMenu(int id, Inventory inv, Container filters, Container upgrades, int kind, ContainerData data) {
@@ -141,6 +144,11 @@ public class BusMenu extends GolemMenu {
         return isPeriscope() ? data.get(2) : 0;
     }
 
+    /** Whether the Formation Bus may place blocks into replaceable fluids such as water. */
+    public boolean replaceFluids() {
+        return isFormation() && data.get(3) != 0;
+    }
+
     public int getPriority() {
         return data.get(0);
     }
@@ -165,6 +173,10 @@ public class BusMenu extends GolemMenu {
         }
         if (id == BUTTON_ACCESS && isPeriscope()) {
             data.set(2, (access() + 1) % 3);
+            return true;
+        }
+        if (id == BUTTON_FLUIDS && isFormation()) {
+            data.set(3, replaceFluids() ? 0 : 1);
             return true;
         }
         if (isFormation()) {

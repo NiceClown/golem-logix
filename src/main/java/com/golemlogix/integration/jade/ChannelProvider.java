@@ -1,6 +1,7 @@
 package com.golemlogix.integration.jade;
 
 import com.golemlogix.GolemLogixMod;
+import com.golemlogix.blockentity.AtlasCoreBlockEntity;
 import com.golemlogix.blockentity.PipeBlockEntity;
 import com.golemlogix.blocks.AtlasConduitBlock;
 import com.golemlogix.blocks.AtlasCoreBlock;
@@ -10,6 +11,7 @@ import com.golemlogix.blocks.SnowPipeBlock;
 import com.golemlogix.system.ChannelCalculation;
 import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.GolemNode;
+import com.golemlogix.system.SourceDiscount;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -74,6 +76,12 @@ public enum ChannelProvider implements IBlockComponentProvider, IServerDataProvi
         t.putInt("netUsed", net.channelsUsed());
         t.putInt("netMax", net.channelCapacity());
         t.putBoolean("tower", net.isTower());
+        int gigaDiscount = net.sourceDiscountPercent();
+        int reactorBonus = net.channelBonusPercent();
+        t.putInt("gigaDiscount", gigaDiscount);
+        t.putInt("reactorBonus", reactorBonus);
+        t.putInt("spsHundredths", net.hasCore()
+                ? SourceDiscount.effectiveCostHundredths(AtlasCoreBlockEntity.powerCost(net), gigaDiscount) : 0);
         data.put(TAG, t);
     }
 

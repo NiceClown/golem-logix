@@ -13,8 +13,11 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.neoforged.fml.ModList;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
 
@@ -61,6 +64,11 @@ public class SourceHelper {
         return ModList.get().isLoaded("ars_nouveau");
     }
 
+    /** Whether Thaumaturge is loaded (enables Vis Condenser and Essentia Cryo-Cauldron as Source producers). */
+    public static boolean thaumaturgeLoaded() {
+        return ModList.get().isLoaded("thaumaturge");
+    }
+
     /** Whether a blood mod for the Cryo-Distillation Tower is there: Neo Vitae, or any fluid a modpack put into the tag. */
     public static boolean distillationAvailable() {
         if (ModList.get().isLoaded("neovitae")) {
@@ -70,9 +78,9 @@ public class SourceHelper {
                 .map(t -> t.size() > 0).orElse(false);
     }
 
-    /** Whether any Source-providing magic mod (Ars Nouveau or Neo Vitae / distillable blood) is present. */
+    /** Whether any Source-providing magic mod (Ars Nouveau, Neo Vitae / distillable blood, or Thaumaturge) is present. */
     public static boolean hasSourceProviderMod() {
-        return arsNouveauLoaded() || distillationAvailable();
+        return arsNouveauLoaded() || distillationAvailable() || thaumaturgeLoaded();
     }
 
     /**
@@ -284,5 +292,81 @@ public class SourceHelper {
             }
         }
         return amount - left;
+    }
+
+    /**
+     * Pours up to amount Source into jars touching region AND joined jars (Giga Jars / Antigravity Reactors) on every
+     * network touching region (including unpowered networks so they can recover). Each jar owner is filled at most once.
+     */
+    public static int fillAroundAndNetworks(Level level, Collection<BlockPos> region, int amount, boolean simulate) {
+        if (amount <= 0) {
+            return 0;
+        }
+        int put = fillAround(level, region, amount, simulate);
+        if (put >= amount) {
+            return put;
+        }
+        Set<BlockPos> inside = region.size() <= 1 ? null : new HashSet<>(region);
+        Set<GolemNetwork> seenNets = null;
+        Set<Object> nearOwners = null;
+        List<CryoJarBlockEntity> farJars = null;
+        Set<Object> seenFar = null;
+        for (BlockPos cell : region) {
+            for (Direction d : DIRECTIONS) {
+                BlockPos p = cell.relative(d);
+                if ((inside != null && inside.contains(p)) || !level.isLoaded(p)) {
+                    continue;
+                }
+                if (level.getBlockState(p).getBlock() instanceof GolemNode) {
+                    GolemNetwork net = GolemNetwork.get(level, p);
+                    if (seenNets == null) {
+                        seenNets = Collections.newSetFromMap(new IdentityHashMap<>());
+                    }
+                    if (seenNets.add(net)) {
+                        List<CryoJarBlockEntity> joined = net.joinedJars();
+                        if (!joined.isEmpty()) {
+                            if (nearOwners == null) {
+                                nearOwners = collectAdjacentOwners(level, region, inside);
+                            }
+                            if (farJars == null) {
+                                farJars = new ArrayList<>();
+                                seenFar = new HashSet<>();
+                            }
+                            for (CryoJarBlockEntity jar : joined) {
+                                CryoJarBlockEntity owner = jar.owner();
+                                if (owner != null && !nearOwners.contains(owner) && seenFar.add(owner)) {
+                                    farJars.add(owner);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (farJars != null) {
+            for (CryoJarBlockEntity jar : farJars) {
+                if (put >= amount) {
+                    break;
+                }
+                put += jar.fill(amount - put, simulate);
+            }
+        }
+        return put;
+    }
+
+    private static Set<Object> collectAdjacentOwners(Level level, Collection<BlockPos> region, Set<BlockPos> inside) {
+        Set<Object> near = new HashSet<>();
+        for (BlockPos cell : region) {
+            for (Direction d : DIRECTIONS) {
+                BlockPos p = cell.relative(d);
+                if ((inside == null || !inside.contains(p)) && level.isLoaded(p)) {
+                    BlockEntity be = level.getBlockEntity(p);
+                    if (be != null) {
+                        near.add(owner(be));
+                    }
+                }
+            }
+        }
+        return near;
     }
 }

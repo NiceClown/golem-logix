@@ -6,6 +6,7 @@ import com.golemlogix.system.AtlasPart;
 import com.golemlogix.system.AtlasStructure;
 import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.GolemNode;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -65,23 +66,35 @@ public class AtlasCoreBlock extends Block implements GolemNode, EntityBlock, Atl
             core.refresh(level, pos);
             GolemNetwork net = GolemNetwork.scan(level, pos);
             AtlasStructure.Result st = net.structure();
-            String sourceText = core.isInfiniteSource() ? "∞" : String.valueOf(core.getSourcePerSecond());
+            String sourceText = core.isInfiniteSource() ? "∞" : core.formattedSourcePerSecond();
             if (core.isDuplicate()) {
                 player.displayClientMessage(Component.translatable("message.golem_logix.core.duplicate"), false);
-            } else if (st != null && !st.valid()) {
-                BlockPos m = st.missingPos();
-                // the core alone, or on a starter tower: what it gives now, and the next block the whole array needs
-                player.displayClientMessage(Component.translatable(net.isTower() ? "message.golem_logix.core.tower" : "message.golem_logix.core.unformed",
-                        net.channelsUsed(), net.channelCapacity(), st.expected().getName(), m.getX(), m.getY(), m.getZ()), false);
-                if (player instanceof ServerPlayer sp && level instanceof ServerLevel sl) {
-                    sl.sendParticles(sp, ParticleTypes.END_ROD, true, m.getX() + 0.5, m.getY() + 0.5, m.getZ() + 0.5,
-                            18, 0.3, 0.3, 0.3, 0.02);
-                }
             } else {
-                player.displayClientMessage(Component.translatable(
-                        core.isPowered() ? "message.golem_logix.core.formed_on" : "message.golem_logix.core.formed_off",
-                        net.channelsUsed(), net.channelCapacity(), net.lineCapacity(), net.deviceCount(), sourceText,
-                        st == null ? 0 : st.expanders(), st == null ? 0 : st.quantumExpanders()), false);
+                if (st != null && !st.valid()) {
+                    BlockPos m = st.missingPos();
+                    // the core alone, or on a starter tower: what it gives now, and the next block the whole array needs
+                    player.displayClientMessage(Component.translatable(net.isTower() ? "message.golem_logix.core.tower" : "message.golem_logix.core.unformed",
+                            net.channelsUsed(), net.channelCapacity(), st.expected().getName(), m.getX(), m.getY(), m.getZ()), false);
+                    if (player instanceof ServerPlayer sp && level instanceof ServerLevel sl) {
+                        sl.sendParticles(sp, ParticleTypes.END_ROD, true, m.getX() + 0.5, m.getY() + 0.5, m.getZ() + 0.5,
+                                18, 0.3, 0.3, 0.3, 0.02);
+                    }
+                } else {
+                    player.displayClientMessage(Component.translatable(
+                            core.isPowered() ? "message.golem_logix.core.formed_on" : "message.golem_logix.core.formed_off",
+                            net.channelsUsed(), net.channelCapacity(), net.lineCapacity(), net.deviceCount(), sourceText,
+                            st == null ? 0 : st.expanders(), st == null ? 0 : st.quantumExpanders()), false);
+                }
+                int gigaDiscount = net.sourceDiscountPercent();
+                if (gigaDiscount > 0) {
+                    player.displayClientMessage(Component.translatable("message.golem_logix.core.giga_discount", gigaDiscount)
+                            .withStyle(ChatFormatting.GREEN), false);
+                }
+                int reactorBonus = net.channelBonusPercent();
+                if (reactorBonus > 0) {
+                    player.displayClientMessage(Component.translatable("message.golem_logix.core.reactor_bonus", reactorBonus)
+                            .withStyle(ChatFormatting.LIGHT_PURPLE), false);
+                }
             }
         }
         return InteractionResult.CONSUME;

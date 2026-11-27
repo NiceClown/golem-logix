@@ -62,9 +62,30 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
     private long lastCraftRequest = -1000;
     private int order = IN_ORDER;
     private int next;
+    private boolean replaceFluids = true;
 
     public FormationBusBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.FORMATION_BUS.get(), pos, state);
+    }
+
+    public boolean replaceFluids() {
+        return replaceFluids;
+    }
+
+    public void setReplaceFluids(boolean replaceFluids) {
+        if (this.replaceFluids != replaceFluids) {
+            this.replaceFluids = replaceFluids;
+            setChanged();
+        }
+    }
+
+    /** Whether a block can be placed into a target spot given fluid-replacement preference, replaceability, and emptiness of fluid. */
+    public static boolean canPlaceInto(boolean replaceFluids, boolean canBeReplaced, boolean fluidEmpty) {
+        return com.golemlogix.system.FormationBusMath.canPlaceInto(replaceFluids, canBeReplaced, fluidEmpty);
+    }
+
+    public boolean canPlaceInto(BlockState state) {
+        return canPlaceInto(replaceFluids, state.canBeReplaced(), state.getFluidState().isEmpty());
     }
 
     public OwnedContainer getFilters() {
@@ -99,12 +120,17 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
         wake();
     }
 
-    /** Window data: 0 = priority (unused), 1 = redstone mode, 2 = order (IN_ORDER, ROUND_ROBIN, RANDOM). */
+    /** Window data: 0 = priority (unused), 1 = redstone mode, 2 = order (IN_ORDER, ROUND_ROBIN, RANDOM), 3 = replaceFluids (0/1). */
     public ContainerData menuData() {
         return new ContainerData() {
             @Override
             public int get(int index) {
-                return index == 0 ? 0 : index == 1 ? redstone.mode().ordinal() : order;
+                return switch (index) {
+                    case 1 -> redstone.mode().ordinal();
+                    case 2 -> order;
+                    case 3 -> replaceFluids ? 1 : 0;
+                    default -> 0;
+                };
             }
 
             @Override
@@ -116,12 +142,14 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
                     order = Math.floorMod(value, 3);
                     next = 0;
                     setChanged();
+                } else if (index == 3) {
+                    setReplaceFluids(value != 0);
                 }
             }
 
             @Override
             public int getCount() {
-                return 3;
+                return 4;
             }
         };
     }
@@ -157,7 +185,7 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
         if (!net.isOnline() || !net.isDeviceActive(pos) || !redstone.allows(hasRedstone, powered, false)) {
             return;
         }
-        if (!level.isLoaded(target) || !level.getBlockState(target).canBeReplaced()) {
+        if (!level.isLoaded(target) || !canPlaceInto(level.getBlockState(target))) {
             sleep(now, interval);
             return;
         }
@@ -266,7 +294,7 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
     }
 
     private void finishPush(ServerLevel level, BlockPos target, Direction facing) {
-        if (!level.getBlockState(target).canBeReplaced()) {
+        if (!canPlaceInto(level.getBlockState(target))) {
             return;
         }
         ItemStack one = carrying.copyWithCount(1);
@@ -312,6 +340,7 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
             redstone.save(tag);
             tag.putInt("Order", order);
             tag.putInt("Next", next);
+            tag.putBoolean("ReplaceFluids", replaceFluids);
         }
         if (!carrying.isEmpty()) {
             tag.put("Carrying", carrying.save(registries));
@@ -327,6 +356,7 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
             redstone.load(tag);
             order = Math.floorMod(tag.contains("Order") ? tag.getInt("Order") : IN_ORDER, 3);
             next = Math.floorMod(tag.getInt("Next"), FILTER_SLOTS);
+            replaceFluids = !tag.contains("ReplaceFluids") || tag.getBoolean("ReplaceFluids");
         }
         carrying = tag.contains("Carrying")
                 ? ItemStack.parseOptional(registries, tag.getCompound("Carrying"))

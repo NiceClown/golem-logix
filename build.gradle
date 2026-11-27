@@ -102,8 +102,13 @@ dependencies {
     compileOnly 'maven.modrinth:jade:15.10.6+neoforge'
     // Curios: the Portable Chronometer's own slot (integration/curios, used only when Curios is loaded)
     compileOnly 'maven.modrinth:curios:yohfFbgD'                    // 9.5.1+1.21.1
+    // Thaumaturge: Vis Condenser and Essentia Cryo-Cauldron (integration/thaumaturge, used only when Thaumaturge is loaded)
+    compileOnly('curse.maven:thaumaturge-1628024:9815157') {        // thaumaturge-1.21.1-NeoForge-1.1.1.jar
+        transitive = false
+    }
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
 
     // Modrinth version ids, not version numbers: the same number sometimes has Fabric builds.
     // Copper Age Backport is optional (it brings the copper golem for the anvil ritual; modpacks may use another golem or their own
@@ -147,6 +152,17 @@ dependencies {
     if (project.hasProperty('ae2')) {
         runtimeOnly 'maven.modrinth:ae2:KDnFUmMm'                  // 19.2.18 (1.21.1 neoforge)
         runtimeOnly 'maven.modrinth:guideme:hFpGwC6q'              // 21.1.19, required by AE2
+    }
+    // Thaumaturge (Vis Condenser and Essentia Cryo-Cauldron): on in dev and test runs by default so integration is exercised.
+    // gradle -PnoThaumaturge runs the same tests without it.
+    if (!project.hasProperty('noThaumaturge')) {
+        runtimeOnly('curse.maven:thaumaturge-1628024:9815157') {     // 1.21.1-1.1.1
+            transitive = false
+        }
+        runtimeOnly 'maven.modrinth:lithostitched:1.8.0-neoforge-21.1'
+        if (!project.hasProperty('testMods') && project.hasProperty('noArs')) {
+            runtimeOnly 'maven.modrinth:curios:yohfFbgD'           // 9.5.1+1.21.1, required by Thaumaturge
+        }
     }
 }
 

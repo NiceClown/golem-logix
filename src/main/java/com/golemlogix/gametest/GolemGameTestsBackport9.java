@@ -139,7 +139,7 @@ public class GolemGameTestsBackport9 {
         helper.runAfterDelay(80, () -> {
             var tower = be(helper, base, DistillationTowerBlockEntity.class);
             var whole = be(helper, jarAt, CryoJarBlockEntity.class);
-            double perMb = com.golemlogix.config.GolemConfig.DISTILL_SOURCE_PER_MB.get() * (1 + com.golemlogix.config.GolemConfig.GIGA_SOURCE_BONUS.get() / 100.0);
+            double perMb = com.golemlogix.config.GolemConfig.DISTILL_SOURCE_PER_MB.get();
             // the core drinks a little meanwhile, which makes some more room: allow 15 Source for it, far less than the room
             int used = 1000 - tower.blood().getAmount();
             helper.assertTrue(used <= Math.ceil((room[0] + 15) / perMb) + 1, "blood was taken only for the room there was: " + used + " mB for " + room[0] + " Source of room");
@@ -178,11 +178,11 @@ public class GolemGameTestsBackport9 {
             var tower = be(helper, base, DistillationTowerBlockEntity.class);
             helper.assertTrue(tower.blood().isEmpty(), "the blood is distilled: " + tower.blood().getAmount());
             var whole = be(helper, jarAt, CryoJarBlockEntity.class);
-            int expect = (int) Math.floor(100 * com.golemlogix.config.GolemConfig.DISTILL_SOURCE_PER_MB.get() * (1 + com.golemlogix.config.GolemConfig.GIGA_SOURCE_BONUS.get() / 100.0));
+            int expect = (int) Math.floor(100 * com.golemlogix.config.GolemConfig.DISTILL_SOURCE_PER_MB.get() + 1e-9);
             // the core drinks some of it meanwhile, so the amount is checked loosely and the bonus on its own: the window's rate
             helper.assertTrue(whole.available() > expect - 60 && whole.available() <= expect, "the Giga Jar far away got it: " + whole.available() + " of " + expect);
             int shown = tower.menuData().get(2), plain = (int) Math.round(tower.rate() * com.golemlogix.config.GolemConfig.DISTILL_SOURCE_PER_MB.get() * 10);
-            helper.assertTrue(shown > plain, "with the derrick's bonus: " + shown / 10.0 + " Source a second, without it " + plain / 10.0);
+            helper.assertTrue(shown == plain, "Giga Jar no longer adds distillation income bonus: " + shown / 10.0);
             helper.assertTrue(be(helper, lone, CryoJarBlockEntity.class).available() == 0, "the lone jar on the network did not");
             helper.succeed();
         });

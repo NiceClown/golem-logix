@@ -44,6 +44,8 @@ public class GolemLogixClientEvents {
         event.registerBlockEntityRenderer(ModBlockEntities.CRYO_DIODE.get(), CryoDiodeRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.CHANNEL_COUNTER.get(), ChannelCounterRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.PERISCOPE.get(), PeriscopeEyeRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.VIS_CONDENSER.get(), VisCondenserRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.ESSENTIA_CAULDRON.get(), EssentiaCauldronRenderer::new);
     }
 
     @SubscribeEvent
@@ -99,6 +101,8 @@ public class GolemLogixClientEvents {
         event.register(ModMenus.STOCK_MANOMETER.get(), StockManometerScreen::new);
         event.register(ModMenus.STOCK_REQUESTER.get(), StockRequesterScreen::new);
         event.register(ModMenus.SECURITY_TERMINAL.get(), SecurityTerminalScreen::new);
+        event.register(ModMenus.VIS_CONDENSER.get(), VisCondenserScreen::new);
+        event.register(ModMenus.ESSENTIA_CAULDRON.get(), EssentiaCauldronScreen::new);
     }
 
     /** Liquid Cryo-Source textures (tanks, basins, JEI, the planner). */
@@ -144,6 +148,8 @@ public class GolemLogixClientEvents {
             ManaSaturatorRenderer.clearBaked();
             CatalogCabinetMesh.clearBaked();
             CryoMainframeRenderer.clearBaked();
+            VisCondenserRenderer.clearBaked();
+            EssentiaCauldronRenderer.clearBaked();
             com.golemlogix.client.book.BookModel.invalidate();
         });
     }

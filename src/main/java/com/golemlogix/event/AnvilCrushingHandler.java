@@ -111,7 +111,7 @@ public class AnvilCrushingHandler {
             warnHealthTooHigh(serverLevel, victim, currentHealth);
             return;
         }
-        ItemStack reward = ritual.battered(currentHealth) ? ritual.result().copy() : ItemStack.EMPTY;
+        ItemStack reward = ritual.battered(currentHealth) ? ritual.rollResult(serverLevel.getRandom()) : ItemStack.EMPTY;
         if (!reward.isEmpty()) {
             completeCrush(serverLevel, victim, reward);
             event.setNewDamage(0.0f);
@@ -129,7 +129,9 @@ public class AnvilCrushingHandler {
     }
 
     private static void completeCrush(ServerLevel serverLevel, Entity victim, ItemStack reward) {
-        Component rewardName = reward.getHoverName();
+        Component rewardName = reward.getCount() > 1
+                ? Component.literal(reward.getCount() + "x ").append(reward.getHoverName())
+                : reward.getHoverName();
         serverLevel.addFreshEntity(new ItemEntity(serverLevel, victim.getX(), victim.getY() + 0.2, victim.getZ(), reward));
 
         serverLevel.sendParticles(ParticleTypes.SNOWFLAKE, victim.getX(), victim.getY() + 0.5, victim.getZ(),

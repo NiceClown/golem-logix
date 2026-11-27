@@ -12,8 +12,9 @@ credits="Copper golem model and textures: Copper Age Backport (CC0). Occult-anal
 description='''
 Cold, occult, analog logistics for Minecraft 1.21.1: a storage network with channels and an Atlas Array multiblock,
 2x2 copper drive cabinets with cassette disks, glass frost pipes with running snowmen, buses, terminals and
-autocrafting on punch cards. The network runs on Source: Ars Nouveau's, or Cryo-Source distilled from Neo Vitae blood
-(with neither installed it needs no Source at all). Copper golems for the anvil ritual come from Copper Age Backport.
+autocrafting on punch cards. The network runs on Source: Ars Nouveau's, Thaumaturge chunk Vis & Essentia
+condensed via the Vis Condenser and Essentia Cryo-Cauldron, or Cryo-Source distilled from Neo Vitae blood
+(with none installed it needs no Source at all). Copper golems for the anvil ritual come from Copper Age Backport.
 Includes an in-game guide book in English and Russian.
 '''
 
@@ -52,6 +53,13 @@ file="META-INF/accesstransformer.cfg"
 
 [[dependencies.golem_logix]]
     modId="neovitae"
+    type="optional"
+    versionRange="*"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.golem_logix]]
+    modId="thaumaturge"
     type="optional"
     versionRange="*"
     ordering="NONE"

@@ -65,4 +65,10 @@ public class ModMenus {
 
     public static final Supplier<MenuType<SecurityTerminalMenu>> SECURITY_TERMINAL =
             MENUS.register("security_terminal", () -> IMenuTypeExtension.create(SecurityTerminalMenu::fromNetwork));
+
+    public static final Supplier<MenuType<VisCondenserMenu>> VIS_CONDENSER =
+            MENUS.register("vis_condenser", () -> IMenuTypeExtension.create(VisCondenserMenu::fromNetwork));
+
+    public static final Supplier<MenuType<EssentiaCauldronMenu>> ESSENTIA_CAULDRON =
+            MENUS.register("essentia_cryo_cauldron", () -> IMenuTypeExtension.create(EssentiaCauldronMenu::fromNetwork));
 }

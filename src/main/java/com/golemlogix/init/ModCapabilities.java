@@ -57,5 +57,6 @@ public final class ModCapabilities {
         event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ModBlockEntities.COPPER_TANK.get(), (be, side) -> be.tank());
         event.registerItem(Capabilities.FluidHandler.ITEM, (stack, ctx) -> new com.golemlogix.items.CopperTankItem.Contents(stack),
                 ModBlocks.COPPER_TANK.get().asItem());
+        com.golemlogix.integration.thaumaturge.ThaumaturgeCompat.registerCapabilities(event);
     }
 }

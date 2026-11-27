@@ -29,6 +29,22 @@ public final class ChannelCalculation {
     public static final int TIER_PIPE = 1;
     public static final int TIER_DEVICE = 2;
 
+    /** Non-stacking channel capacity bonus percent: applies once when at least one Antigravity Reactor is connected. */
+    public static int bonusPercent(boolean hasReactor, int configuredPercent) {
+        return hasReactor ? Math.max(0, configuredPercent) : 0;
+    }
+
+    /** Scales a base channel limit by {@code bonusPercent} (e.g. +25% turns 16->20, 64->80, 128->160, 320->400). */
+    public static int scale(int base, int bonusPercent) {
+        if (base <= 0 || bonusPercent <= 0) {
+            return base;
+        }
+        if (base == UNLIMITED) {
+            return UNLIMITED;
+        }
+        return (int) Math.min(Integer.MAX_VALUE, ((long) base * (100L + bonusPercent)) / 100L);
+    }
+
     /** Why a device has no channel. */
     public enum Missing {
         NONE, NETWORK_FULL, BOTTLENECK, NO_ROUTE

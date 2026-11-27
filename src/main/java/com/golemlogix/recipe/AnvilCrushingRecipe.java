@@ -4,6 +4,7 @@ import com.golemlogix.init.ModRecipes;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import io.netty.buffer.ByteBuf;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.RegistryCodecs;
@@ -47,24 +48,53 @@ import java.util.Set;
  * </pre>
  */
 public record AnvilCrushingRecipe(HolderSet<EntityType<?>> entity, List<String> entityIdContains, float minHealth, float maxHealth,
-                                  ItemStack result, Optional<Item> icon) implements Recipe<AnvilCrushingRecipe.Golem> {
+                                  ItemStack result, Optional<Item> icon, float bonusChance) implements Recipe<AnvilCrushingRecipe.Golem> {
     public static final MapCodec<AnvilCrushingRecipe> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             RegistryCodecs.homogeneousList(Registries.ENTITY_TYPE).fieldOf("entity").forGetter(AnvilCrushingRecipe::entity),
             Codec.STRING.listOf().optionalFieldOf("entity_id_contains", List.of()).forGetter(AnvilCrushingRecipe::entityIdContains),
             Codec.floatRange(0f, 1024f).optionalFieldOf("min_health", 0.5f).forGetter(AnvilCrushingRecipe::minHealth),
             Codec.floatRange(0f, 1024f).fieldOf("max_health").forGetter(AnvilCrushingRecipe::maxHealth),
             ItemStack.STRICT_CODEC.fieldOf("result").forGetter(AnvilCrushingRecipe::result),
-            BuiltInRegistries.ITEM.byNameCodec().optionalFieldOf("icon").forGetter(AnvilCrushingRecipe::icon)
+            BuiltInRegistries.ITEM.byNameCodec().optionalFieldOf("icon").forGetter(AnvilCrushingRecipe::icon),
+            Codec.floatRange(0f, 1f).optionalFieldOf("bonus_chance", 0f).forGetter(AnvilCrushingRecipe::bonusChance)
     ).apply(i, AnvilCrushingRecipe::new));
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, AnvilCrushingRecipe> STREAM_CODEC = StreamCodec.composite(
-            ByteBufCodecs.holderSet(Registries.ENTITY_TYPE), AnvilCrushingRecipe::entity,
-            ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), AnvilCrushingRecipe::entityIdContains,
-            ByteBufCodecs.FLOAT, AnvilCrushingRecipe::minHealth,
-            ByteBufCodecs.FLOAT, AnvilCrushingRecipe::maxHealth,
-            ItemStack.STREAM_CODEC, AnvilCrushingRecipe::result,
-            ByteBufCodecs.optional(ByteBufCodecs.registry(Registries.ITEM)), AnvilCrushingRecipe::icon,
-            AnvilCrushingRecipe::new);
+    private static final StreamCodec<RegistryFriendlyByteBuf, HolderSet<EntityType<?>>> ENTITY_STREAM_CODEC =
+            ByteBufCodecs.holderSet(Registries.ENTITY_TYPE);
+    private static final StreamCodec<ByteBuf, List<String>> STRINGS_STREAM_CODEC =
+            ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list());
+    private static final StreamCodec<RegistryFriendlyByteBuf, Optional<Item>> ICON_STREAM_CODEC =
+            ByteBufCodecs.optional(ByteBufCodecs.registry(Registries.ITEM));
+
+    public static final StreamCodec<RegistryFriendlyByteBuf, AnvilCrushingRecipe> STREAM_CODEC = StreamCodec.of(
+            (buf, r) -> {
+                ENTITY_STREAM_CODEC.encode(buf, r.entity);
+                STRINGS_STREAM_CODEC.encode(buf, r.entityIdContains);
+                buf.writeFloat(r.minHealth);
+                buf.writeFloat(r.maxHealth);
+                ItemStack.STREAM_CODEC.encode(buf, r.result);
+                ICON_STREAM_CODEC.encode(buf, r.icon);
+                buf.writeFloat(r.bonusChance);
+            },
+            buf -> new AnvilCrushingRecipe(
+                    ENTITY_STREAM_CODEC.decode(buf),
+                    STRINGS_STREAM_CODEC.decode(buf),
+                    buf.readFloat(),
+                    buf.readFloat(),
+                    ItemStack.STREAM_CODEC.decode(buf),
+                    ICON_STREAM_CODEC.decode(buf),
+                    buf.readFloat()
+            )
+    );
+
+    /** Rolls the ritual drop, adding +1 bonus item with probability {@link #bonusChance}. */
+    public ItemStack rollResult(net.minecraft.util.RandomSource random) {
+        ItemStack out = result.copy();
+        if (bonusChance > 0f && random.nextFloat() < bonusChance) {
+            out.grow(1);
+        }
+        return out;
+    }
 
     /** The golem under the anvil (the ritual matches its kind; the health window is checked by the handler). */
     public record Golem(EntityType<?> type) implements RecipeInput {
