@@ -1,0 +1,464 @@
+{
+  "values": {
+    "golem_logix:flattened_iron_core": [
+      { "aspect": "thaumaturge:metallum", "amount": 30 },
+      { "aspect": "thaumaturge:ordo", "amount": 8 },
+      { "aspect": "thaumaturge:machina", "amount": 6 },
+      { "aspect": "thaumaturge:praecantatio", "amount": 4 }
+    ],
+    "golem_logix:flattened_copper_matrix": [
+      { "aspect": "thaumaturge:metallum", "amount": 20 },
+      { "aspect": "thaumaturge:permutatio", "amount": 10 },
+      { "aspect": "thaumaturge:machina", "amount": 8 },
+      { "aspect": "thaumaturge:praecantatio", "amount": 4 }
+    ],
+    "golem_logix:flattened_cryo_substrate": [
+      { "aspect": "thaumaturge:gelum", "amount": 12 },
+      { "aspect": "thaumaturge:ordo", "amount": 6 },
+      { "aspect": "thaumaturge:praecantatio", "amount": 4 }
+    ],
+    "golem_logix:raw_iron_mind": [
+      { "aspect": "thaumaturge:metallum", "amount": 15 },
+      { "aspect": "thaumaturge:cognitio", "amount": 10 },
+      { "aspect": "thaumaturge:spiritus", "amount": 8 }
+    ],
+    "golem_logix:raw_copper_mind": [
+      { "aspect": "thaumaturge:metallum", "amount": 10 },
+      { "aspect": "thaumaturge:permutatio", "amount": 5 },
+      { "aspect": "thaumaturge:cognitio", "amount": 10 },
+      { "aspect": "thaumaturge:spiritus", "amount": 8 }
+    ],
+    "golem_logix:raw_snow_mind": [
+      { "aspect": "thaumaturge:gelum", "amount": 10 },
+      { "aspect": "thaumaturge:cognitio", "amount": 10 },
+      { "aspect": "thaumaturge:spiritus", "amount": 8 }
+    ],
+    "golem_logix:torn_iron_mind": [
+      { "aspect": "thaumaturge:metallum", "amount": 12 },
+      { "aspect": "thaumaturge:cognitio", "amount": 6 },
+      { "aspect": "thaumaturge:perditio", "amount": 6 }
+    ],
+    "golem_logix:torn_copper_mind": [
+      { "aspect": "thaumaturge:metallum", "amount": 8 },
+      { "aspect": "thaumaturge:permutatio", "amount": 4 },
+      { "aspect": "thaumaturge:cognitio", "amount": 6 },
+      { "aspect": "thaumaturge:perditio", "amount": 6 }
+    ],
+    "golem_logix:torn_snow_mind": [
+      { "aspect": "thaumaturge:gelum", "amount": 8 },
+      { "aspect": "thaumaturge:cognitio", "amount": 6 },
+      { "aspect": "thaumaturge:perditio", "amount": 6 }
+    ],
+    "golem_logix:imploded_wither_plasma": [
+      { "aspect": "thaumaturge:mortuus", "amount": 25 },
+      { "aspect": "thaumaturge:alienis", "amount": 20 },
+      { "aspect": "thaumaturge:perditio", "amount": 20 },
+      { "aspect": "thaumaturge:potentia", "amount": 15 }
+    ],
+    "golem_logix:interdimensional_occult_matrix": [
+      { "aspect": "thaumaturge:alienis", "amount": 30 },
+      { "aspect": "thaumaturge:praecantatio", "amount": 20 },
+      { "aspect": "thaumaturge:potentia", "amount": 15 },
+      { "aspect": "thaumaturge:ordo", "amount": 15 }
+    ],
+    "golem_logix:hollow_golem_head": [
+      { "aspect": "thaumaturge:metallum", "amount": 25 },
+      { "aspect": "thaumaturge:vacuos", "amount": 15 },
+      { "aspect": "thaumaturge:gelum", "amount": 15 },
+      { "aspect": "thaumaturge:auram", "amount": 10 }
+    ],
+    "golem_logix:guide_book": [
+      { "aspect": "thaumaturge:cognitio", "amount": 15 },
+      { "aspect": "thaumaturge:metallum", "amount": 5 },
+      { "aspect": "thaumaturge:ordo", "amount": 5 }
+    ],
+    "golem_logix:copper_punch_card": [
+      { "aspect": "thaumaturge:metallum", "amount": 5 },
+      { "aspect": "thaumaturge:cognitio", "amount": 5 },
+      { "aspect": "thaumaturge:ordo", "amount": 5 }
+    ],
+    "golem_logix:identity_punch_card": [
+      { "aspect": "thaumaturge:metallum", "amount": 5 },
+      { "aspect": "thaumaturge:cognitio", "amount": 8 },
+      { "aspect": "thaumaturge:vinculum", "amount": 8 },
+      { "aspect": "thaumaturge:praemunio", "amount": 5 }
+    ],
+    "golem_logix:pipe_plug": [
+      { "aspect": "thaumaturge:metallum", "amount": 5 },
+      { "aspect": "thaumaturge:vinculum", "amount": 5 }
+    ],
+    "golem_logix:forge_hammer": [
+      { "aspect": "thaumaturge:metallum", "amount": 30 },
+      { "aspect": "thaumaturge:instrumentum", "amount": 15 },
+      { "aspect": "thaumaturge:fabrico", "amount": 10 },
+      { "aspect": "thaumaturge:gelum", "amount": 8 }
+    ],
+    "golem_logix:portable_chronometer": [
+      { "aspect": "thaumaturge:machina", "amount": 25 },
+      { "aspect": "thaumaturge:alienis", "amount": 15 },
+      { "aspect": "thaumaturge:sensus", "amount": 15 },
+      { "aspect": "thaumaturge:metallum", "amount": 15 },
+      { "aspect": "thaumaturge:praecantatio", "amount": 10 }
+    ],
+    "golem_logix:aetherial_linkage": [
+      { "aspect": "thaumaturge:alienis", "amount": 10 },
+      { "aspect": "thaumaturge:motus", "amount": 8 },
+      { "aspect": "thaumaturge:cognitio", "amount": 8 },
+      { "aspect": "thaumaturge:metallum", "amount": 5 }
+    ],
+    "golem_logix:aether_resonance_core": [
+      { "aspect": "thaumaturge:alienis", "amount": 20 },
+      { "aspect": "thaumaturge:praecantatio", "amount": 15 },
+      { "aspect": "thaumaturge:vitreus", "amount": 10 },
+      { "aspect": "thaumaturge:potentia", "amount": 10 }
+    ],
+    "golem_logix:void_glass_prism": [
+      { "aspect": "thaumaturge:alienis", "amount": 30 },
+      { "aspect": "thaumaturge:vitreus", "amount": 15 },
+      { "aspect": "thaumaturge:tenebrae", "amount": 15 },
+      { "aspect": "thaumaturge:praecantatio", "amount": 15 }
+    ],
+    "golem_logix:compressed_coprocessor": [
+      { "aspect": "thaumaturge:machina", "amount": 20 },
+      { "aspect": "thaumaturge:gelum", "amount": 15 },
+      { "aspect": "thaumaturge:motus", "amount": 15 },
+      { "aspect": "thaumaturge:ordo", "amount": 10 }
+    ],
+    "golem_logix:incomplete_compressed_coprocessor": [
+      { "aspect": "thaumaturge:machina", "amount": 10 },
+      { "aspect": "thaumaturge:gelum", "amount": 8 },
+      { "aspect": "thaumaturge:ordo", "amount": 5 }
+    ],
+    "golem_logix:autocraft_module": [
+      { "aspect": "thaumaturge:fabrico", "amount": 20 },
+      { "aspect": "thaumaturge:machina", "amount": 15 },
+      { "aspect": "thaumaturge:cognitio", "amount": 10 }
+    ],
+    "golem_logix:redstone_module": [
+      { "aspect": "thaumaturge:potentia", "amount": 15 },
+      { "aspect": "thaumaturge:machina", "amount": 10 },
+      { "aspect": "thaumaturge:sensus", "amount": 10 }
+    ],
+    "golem_logix:fuzzy_card": [
+      { "aspect": "thaumaturge:permutatio", "amount": 15 },
+      { "aspect": "thaumaturge:cognitio", "amount": 10 },
+      { "aspect": "thaumaturge:ordo", "amount": 5 }
+    ],
+    "golem_logix:plasma_temper": [
+      { "aspect": "thaumaturge:mortuus", "amount": 20 },
+      { "aspect": "thaumaturge:instrumentum", "amount": 20 },
+      { "aspect": "thaumaturge:potentia", "amount": 15 },
+      { "aspect": "thaumaturge:alienis", "amount": 10 }
+    ],
+    "golem_logix:copper_disk_1k": [
+      { "aspect": "thaumaturge:metallum", "amount": 12 },
+      { "aspect": "thaumaturge:vacuos", "amount": 10 },
+      { "aspect": "thaumaturge:cognitio", "amount": 8 },
+      { "aspect": "thaumaturge:ordo", "amount": 6 }
+    ],
+    "golem_logix:copper_disk_4k": [
+      { "aspect": "thaumaturge:metallum", "amount": 16 },
+      { "aspect": "thaumaturge:vacuos", "amount": 16 },
+      { "aspect": "thaumaturge:cognitio", "amount": 12 },
+      { "aspect": "thaumaturge:ordo", "amount": 8 }
+    ],
+    "golem_logix:copper_disk_16k": [
+      { "aspect": "thaumaturge:metallum", "amount": 20 },
+      { "aspect": "thaumaturge:vacuos", "amount": 24 },
+      { "aspect": "thaumaturge:cognitio", "amount": 16 },
+      { "aspect": "thaumaturge:ordo", "amount": 12 }
+    ],
+    "golem_logix:copper_disk_64k": [
+      { "aspect": "thaumaturge:metallum", "amount": 25 },
+      { "aspect": "thaumaturge:vacuos", "amount": 32 },
+      { "aspect": "thaumaturge:cognitio", "amount": 20 },
+      { "aspect": "thaumaturge:ordo", "amount": 16 }
+    ],
+    "golem_logix:copper_disk_256k": [
+      { "aspect": "thaumaturge:metallum", "amount": 30 },
+      { "aspect": "thaumaturge:vacuos", "amount": 45 },
+      { "aspect": "thaumaturge:cognitio", "amount": 25 },
+      { "aspect": "thaumaturge:ordo", "amount": 20 }
+    ],
+    "golem_logix:fluid_disk_1k": [
+      { "aspect": "thaumaturge:aqua", "amount": 10 },
+      { "aspect": "thaumaturge:gelum", "amount": 10 },
+      { "aspect": "thaumaturge:vacuos", "amount": 10 },
+      { "aspect": "thaumaturge:metallum", "amount": 10 }
+    ],
+    "golem_logix:fluid_disk_4k": [
+      { "aspect": "thaumaturge:aqua", "amount": 14 },
+      { "aspect": "thaumaturge:gelum", "amount": 14 },
+      { "aspect": "thaumaturge:vacuos", "amount": 16 },
+      { "aspect": "thaumaturge:metallum", "amount": 14 }
+    ],
+    "golem_logix:fluid_disk_16k": [
+      { "aspect": "thaumaturge:aqua", "amount": 18 },
+      { "aspect": "thaumaturge:gelum", "amount": 18 },
+      { "aspect": "thaumaturge:vacuos", "amount": 24 },
+      { "aspect": "thaumaturge:metallum", "amount": 18 }
+    ],
+    "golem_logix:fluid_disk_64k": [
+      { "aspect": "thaumaturge:aqua", "amount": 24 },
+      { "aspect": "thaumaturge:gelum", "amount": 24 },
+      { "aspect": "thaumaturge:vacuos", "amount": 32 },
+      { "aspect": "thaumaturge:metallum", "amount": 22 }
+    ],
+    "golem_logix:fluid_disk_256k": [
+      { "aspect": "thaumaturge:aqua", "amount": 30 },
+      { "aspect": "thaumaturge:gelum", "amount": 30 },
+      { "aspect": "thaumaturge:vacuos", "amount": 45 },
+      { "aspect": "thaumaturge:metallum", "amount": 28 }
+    ],
+    "golem_logix:atlas_core": [
+      { "aspect": "thaumaturge:machina", "amount": 35 },
+      { "aspect": "thaumaturge:ordo", "amount": 30 },
+      { "aspect": "thaumaturge:metallum", "amount": 35 },
+      { "aspect": "thaumaturge:praecantatio", "amount": 20 },
+      { "aspect": "thaumaturge:cognitio", "amount": 20 }
+    ],
+    "golem_logix:atlas_casing": [
+      { "aspect": "thaumaturge:metallum", "amount": 25 },
+      { "aspect": "thaumaturge:praemunio", "amount": 10 },
+      { "aspect": "thaumaturge:ordo", "amount": 6 }
+    ],
+    "golem_logix:atlas_conduit": [
+      { "aspect": "thaumaturge:metallum", "amount": 15 },
+      { "aspect": "thaumaturge:potentia", "amount": 12 },
+      { "aspect": "thaumaturge:gelum", "amount": 8 },
+      { "aspect": "thaumaturge:permutatio", "amount": 8 }
+    ],
+    "golem_logix:atlas_atlant": [
+      { "aspect": "thaumaturge:metallum", "amount": 40 },
+      { "aspect": "thaumaturge:praemunio", "amount": 20 },
+      { "aspect": "thaumaturge:spiritus", "amount": 10 },
+      { "aspect": "thaumaturge:machina", "amount": 10 }
+    ],
+    "golem_logix:cable_bushing": [
+      { "aspect": "thaumaturge:metallum", "amount": 20 },
+      { "aspect": "thaumaturge:machina", "amount": 15 },
+      { "aspect": "thaumaturge:gelum", "amount": 12 },
+      { "aspect": "thaumaturge:ordo", "amount": 10 }
+    ],
+    "golem_logix:channel_expander": [
+      { "aspect": "thaumaturge:machina", "amount": 20 },
+      { "aspect": "thaumaturge:ordo", "amount": 20 },
+      { "aspect": "thaumaturge:gelum", "amount": 15 },
+      { "aspect": "thaumaturge:potentia", "amount": 10 }
+    ],
+    "golem_logix:quantum_channel_expander": [
+      { "aspect": "thaumaturge:machina", "amount": 30 },
+      { "aspect": "thaumaturge:ordo", "amount": 30 },
+      { "aspect": "thaumaturge:alienis", "amount": 20 },
+      { "aspect": "thaumaturge:gelum", "amount": 20 }
+    ],
+    "golem_logix:mana_saturator": [
+      { "aspect": "thaumaturge:fabrico", "amount": 25 },
+      { "aspect": "thaumaturge:praecantatio", "amount": 25 },
+      { "aspect": "thaumaturge:metallum", "amount": 30 },
+      { "aspect": "thaumaturge:machina", "amount": 15 }
+    ],
+    "golem_logix:eternal_frost_resonator": [
+      { "aspect": "thaumaturge:gelum", "amount": 30 },
+      { "aspect": "thaumaturge:alienis", "amount": 25 },
+      { "aspect": "thaumaturge:praecantatio", "amount": 25 },
+      { "aspect": "thaumaturge:potentia", "amount": 20 }
+    ],
+    "golem_logix:basic_snow_pipe": [
+      { "aspect": "thaumaturge:gelum", "amount": 6 },
+      { "aspect": "thaumaturge:vitreus", "amount": 4 },
+      { "aspect": "thaumaturge:motus", "amount": 4 }
+    ],
+    "golem_logix:dense_frost_pipe": [
+      { "aspect": "thaumaturge:gelum", "amount": 14 },
+      { "aspect": "thaumaturge:vitreus", "amount": 8 },
+      { "aspect": "thaumaturge:motus", "amount": 10 },
+      { "aspect": "thaumaturge:ordo", "amount": 8 }
+    ],
+    "golem_logix:cryo_diode": [
+      { "aspect": "thaumaturge:gelum", "amount": 15 },
+      { "aspect": "thaumaturge:machina", "amount": 12 },
+      { "aspect": "thaumaturge:praemunio", "amount": 10 },
+      { "aspect": "thaumaturge:aqua", "amount": 8 }
+    ],
+    "golem_logix:cryo_source_telegraph": [
+      { "aspect": "thaumaturge:alienis", "amount": 25 },
+      { "aspect": "thaumaturge:sensus", "amount": 20 },
+      { "aspect": "thaumaturge:machina", "amount": 20 },
+      { "aspect": "thaumaturge:metallum", "amount": 20 },
+      { "aspect": "thaumaturge:gelum", "amount": 15 }
+    ],
+    "golem_logix:channel_counter": [
+      { "aspect": "thaumaturge:sensus", "amount": 12 },
+      { "aspect": "thaumaturge:lux", "amount": 8 },
+      { "aspect": "thaumaturge:metallum", "amount": 8 },
+      { "aspect": "thaumaturge:ordo", "amount": 6 }
+    ],
+    "golem_logix:copper_tank": [
+      { "aspect": "thaumaturge:vacuos", "amount": 15 },
+      { "aspect": "thaumaturge:vitreus", "amount": 10 },
+      { "aspect": "thaumaturge:metallum", "amount": 15 },
+      { "aspect": "thaumaturge:aqua", "amount": 5 }
+    ],
+    "golem_logix:copper_drive_bay": [
+      { "aspect": "thaumaturge:vacuos", "amount": 25 },
+      { "aspect": "thaumaturge:metallum", "amount": 25 },
+      { "aspect": "thaumaturge:machina", "amount": 20 },
+      { "aspect": "thaumaturge:cognitio", "amount": 15 }
+    ],
+    "golem_logix:analog_terminal": [
+      { "aspect": "thaumaturge:sensus", "amount": 20 },
+      { "aspect": "thaumaturge:vitreus", "amount": 12 },
+      { "aspect": "thaumaturge:machina", "amount": 15 },
+      { "aspect": "thaumaturge:lux", "amount": 8 },
+      { "aspect": "thaumaturge:metallum", "amount": 12 }
+    ],
+    "golem_logix:crafting_terminal": [
+      { "aspect": "thaumaturge:sensus", "amount": 20 },
+      { "aspect": "thaumaturge:fabrico", "amount": 20 },
+      { "aspect": "thaumaturge:machina", "amount": 15 },
+      { "aspect": "thaumaturge:vitreus", "amount": 12 },
+      { "aspect": "thaumaturge:metallum", "amount": 12 }
+    ],
+    "golem_logix:security_terminal": [
+      { "aspect": "thaumaturge:praemunio", "amount": 25 },
+      { "aspect": "thaumaturge:vinculum", "amount": 20 },
+      { "aspect": "thaumaturge:sensus", "amount": 15 },
+      { "aspect": "thaumaturge:metallum", "amount": 20 }
+    ],
+    "golem_logix:pattern_encoder": [
+      { "aspect": "thaumaturge:fabrico", "amount": 15 },
+      { "aspect": "thaumaturge:cognitio", "amount": 15 },
+      { "aspect": "thaumaturge:machina", "amount": 15 },
+      { "aspect": "thaumaturge:metallum", "amount": 12 }
+    ],
+    "golem_logix:pattern_provider": [
+      { "aspect": "thaumaturge:fabrico", "amount": 20 },
+      { "aspect": "thaumaturge:machina", "amount": 20 },
+      { "aspect": "thaumaturge:motus", "amount": 12 },
+      { "aspect": "thaumaturge:metallum", "amount": 15 }
+    ],
+    "golem_logix:cryo_calculator": [
+      { "aspect": "thaumaturge:cognitio", "amount": 25 },
+      { "aspect": "thaumaturge:gelum", "amount": 20 },
+      { "aspect": "thaumaturge:ordo", "amount": 20 },
+      { "aspect": "thaumaturge:machina", "amount": 20 }
+    ],
+    "golem_logix:cooling_coprocessor": [
+      { "aspect": "thaumaturge:gelum", "amount": 18 },
+      { "aspect": "thaumaturge:machina", "amount": 15 },
+      { "aspect": "thaumaturge:ordo", "amount": 12 },
+      { "aspect": "thaumaturge:motus", "amount": 8 }
+    ],
+    "golem_logix:cryo_mainframe": [
+      { "aspect": "thaumaturge:cognitio", "amount": 35 },
+      { "aspect": "thaumaturge:gelum", "amount": 30 },
+      { "aspect": "thaumaturge:ordo", "amount": 30 },
+      { "aspect": "thaumaturge:machina", "amount": 35 },
+      { "aspect": "thaumaturge:metallum", "amount": 30 }
+    ],
+    "golem_logix:punch_card_catalog": [
+      { "aspect": "thaumaturge:cognitio", "amount": 30 },
+      { "aspect": "thaumaturge:vacuos", "amount": 25 },
+      { "aspect": "thaumaturge:ordo", "amount": 20 },
+      { "aspect": "thaumaturge:metallum", "amount": 20 }
+    ],
+    "golem_logix:schematic_concentrator": [
+      { "aspect": "thaumaturge:cognitio", "amount": 25 },
+      { "aspect": "thaumaturge:sensus", "amount": 20 },
+      { "aspect": "thaumaturge:fabrico", "amount": 15 },
+      { "aspect": "thaumaturge:machina", "amount": 15 }
+    ],
+    "golem_logix:recipe_monitor": [
+      { "aspect": "thaumaturge:sensus", "amount": 20 },
+      { "aspect": "thaumaturge:cognitio", "amount": 15 },
+      { "aspect": "thaumaturge:vitreus", "amount": 12 },
+      { "aspect": "thaumaturge:metallum", "amount": 12 }
+    ],
+    "golem_logix:stock_manometer": [
+      { "aspect": "thaumaturge:sensus", "amount": 18 },
+      { "aspect": "thaumaturge:potentia", "amount": 15 },
+      { "aspect": "thaumaturge:machina", "amount": 15 },
+      { "aspect": "thaumaturge:metallum", "amount": 12 }
+    ],
+    "golem_logix:stock_requester": [
+      { "aspect": "thaumaturge:cognitio", "amount": 20 },
+      { "aspect": "thaumaturge:fabrico", "amount": 18 },
+      { "aspect": "thaumaturge:ordo", "amount": 15 },
+      { "aspect": "thaumaturge:metallum", "amount": 15 }
+    ],
+    "golem_logix:vacuum_import_bus": [
+      { "aspect": "thaumaturge:vacuos", "amount": 15 },
+      { "aspect": "thaumaturge:motus", "amount": 12 },
+      { "aspect": "thaumaturge:machina", "amount": 12 },
+      { "aspect": "thaumaturge:metallum", "amount": 12 }
+    ],
+    "golem_logix:injector_export_bus": [
+      { "aspect": "thaumaturge:motus", "amount": 15 },
+      { "aspect": "thaumaturge:machina", "amount": 12 },
+      { "aspect": "thaumaturge:permutatio", "amount": 10 },
+      { "aspect": "thaumaturge:metallum", "amount": 12 }
+    ],
+    "golem_logix:periscope_storage_bus": [
+      { "aspect": "thaumaturge:sensus", "amount": 18 },
+      { "aspect": "thaumaturge:vacuos", "amount": 15 },
+      { "aspect": "thaumaturge:vitreus", "amount": 10 },
+      { "aspect": "thaumaturge:metallum", "amount": 12 }
+    ],
+    "golem_logix:formation_bus": [
+      { "aspect": "thaumaturge:fabrico", "amount": 15 },
+      { "aspect": "thaumaturge:motus", "amount": 12 },
+      { "aspect": "thaumaturge:machina", "amount": 15 },
+      { "aspect": "thaumaturge:metallum", "amount": 18 }
+    ],
+    "golem_logix:annihilation_bus": [
+      { "aspect": "thaumaturge:perditio", "amount": 15 },
+      { "aspect": "thaumaturge:instrumentum", "amount": 15 },
+      { "aspect": "thaumaturge:machina", "amount": 15 },
+      { "aspect": "thaumaturge:metallum", "amount": 22 }
+    ],
+    "golem_logix:golem_interface": [
+      { "aspect": "thaumaturge:permutatio", "amount": 18 },
+      { "aspect": "thaumaturge:vacuos", "amount": 15 },
+      { "aspect": "thaumaturge:machina", "amount": 15 },
+      { "aspect": "thaumaturge:metallum", "amount": 15 }
+    ],
+    "golem_logix:cryo_source_jar": [
+      { "aspect": "thaumaturge:vacuos", "amount": 15 },
+      { "aspect": "thaumaturge:vitreus", "amount": 15 },
+      { "aspect": "thaumaturge:gelum", "amount": 10 },
+      { "aspect": "thaumaturge:metallum", "amount": 10 },
+      { "aspect": "thaumaturge:praecantatio", "amount": 5 }
+    ],
+    "golem_logix:cryo_distillation_tower": [
+      { "aspect": "thaumaturge:alkimia", "amount": 25 },
+      { "aspect": "thaumaturge:gelum", "amount": 25 },
+      { "aspect": "thaumaturge:vitreus", "amount": 15 },
+      { "aspect": "thaumaturge:machina", "amount": 15 },
+      { "aspect": "thaumaturge:metallum", "amount": 20 }
+    ],
+    "golem_logix:cryo_mixer": [
+      { "aspect": "thaumaturge:gelum", "amount": 20 },
+      { "aspect": "thaumaturge:aqua", "amount": 15 },
+      { "aspect": "thaumaturge:machina", "amount": 15 },
+      { "aspect": "thaumaturge:vitreus", "amount": 10 },
+      { "aspect": "thaumaturge:metallum", "amount": 15 }
+    ],
+    "golem_logix:vis_condenser": [
+      { "aspect": "thaumaturge:praecantatio", "amount": 18 },
+      { "aspect": "thaumaturge:gelum", "amount": 18 },
+      { "aspect": "thaumaturge:machina", "amount": 15 },
+      { "aspect": "thaumaturge:sensus", "amount": 12 },
+      { "aspect": "thaumaturge:metallum", "amount": 15 },
+      { "aspect": "thaumaturge:vitreus", "amount": 10 }
+    ],
+    "golem_logix:essentia_cryo_cauldron": [
+      { "aspect": "thaumaturge:alkimia", "amount": 25 },
+      { "aspect": "thaumaturge:gelum", "amount": 20 },
+      { "aspect": "thaumaturge:vacuos", "amount": 15 },
+      { "aspect": "thaumaturge:machina", "amount": 15 },
+      { "aspect": "thaumaturge:metallum", "amount": 25 },
+      { "aspect": "thaumaturge:auram", "amount": 8 }
+    ]
+  }
+}

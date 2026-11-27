@@ -188,6 +188,14 @@ public class ModBlocks {
             "tooltip.golem_logix.cryo_mixer",
             () -> new CryoMixerBlock(props()));
 
+    // Thaumaturge integration: chunk Vis condensation and ice-cooled Essentia alchemy into Cryo-Source
+    public static final DeferredBlock<VisCondenserBlock> VIS_CONDENSER = registerBlock("vis_condenser",
+            "tooltip.golem_logix.vis_condenser",
+            () -> new VisCondenserBlock(props()));
+    public static final DeferredBlock<EssentiaCauldronBlock> ESSENTIA_CAULDRON = registerBlock("essentia_cryo_cauldron",
+            "tooltip.golem_logix.essentia_cryo_cauldron",
+            () -> com.golemlogix.integration.thaumaturge.ThaumaturgeCompat.createCauldronBlock(props()));
+
     public static final DeferredBlock<StockManometerBlock> STOCK_MANOMETER = registerBlock("stock_manometer",
             "tooltip.golem_logix.stock_manometer",
             () -> new StockManometerBlock(props()));

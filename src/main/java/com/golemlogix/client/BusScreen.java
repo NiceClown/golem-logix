@@ -16,6 +16,8 @@ public class BusScreen extends GolemScreen<BusMenu> {
     private static final ItemStack ICON_CLOCK = new ItemStack(Items.CLOCK);
     private static final ItemStack ICON_ENDER_PEARL = new ItemStack(Items.ENDER_PEARL);
     private static final ItemStack ICON_PAPER = new ItemStack(Items.PAPER);
+    private static final ItemStack ICON_WATER_BUCKET = new ItemStack(Items.WATER_BUCKET);
+    private static final ItemStack ICON_BUCKET = new ItemStack(Items.BUCKET);
 
     public BusScreen(BusMenu menu, Inventory inv, Component title) {
         super(menu, inv, title, BusMenu.IMAGE_WIDTH, BusMenu.IMAGE_HEIGHT);
@@ -71,6 +73,15 @@ public class BusScreen extends GolemScreen<BusMenu> {
                                 .append("\n").append(Component.translatable(key + ".hint").withStyle(net.minecraft.ChatFormatting.GRAY));
                     },
                     () -> true, () -> menu.order() != com.golemlogix.blockentity.FormationBusBlockEntity.IN_ORDER, BusMenu.BUTTON_ORDER);
+        }
+        if (menu.isFormation()) {
+            addSideButton(() -> menu.replaceFluids() ? ICON_WATER_BUCKET : ICON_BUCKET,
+                    () -> {
+                        String key = "gui.golem_logix.bus.fluids." + (menu.replaceFluids() ? "replace" : "keep");
+                        return Component.translatable("gui.golem_logix.bus.fluids").append("\n").append(Component.translatable(key))
+                                .append("\n").append(Component.translatable(key + ".hint").withStyle(net.minecraft.ChatFormatting.GRAY));
+                    },
+                    () -> true, menu::replaceFluids, BusMenu.BUTTON_FLUIDS);
         }
     }
 

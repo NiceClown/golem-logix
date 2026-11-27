@@ -7,6 +7,7 @@ import com.golemlogix.blocks.SaturatorPartBlock;
 import com.golemlogix.client.render.BerBuffers;
 import com.golemlogix.client.render.LegacyBer;
 import com.golemlogix.client.render.PixelMesh;
+import com.golemlogix.system.EndRodRitual;
 import com.golemlogix.system.SaturatorStructure;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -26,6 +27,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -301,7 +303,7 @@ public class ManaSaturatorRenderer extends LegacyBer<ManaSaturatorBlockEntity> {
         }
     }
 
-    /** Standalone unformed anvil: hand-forged blank flattens with each hammer blow; finished plate rests flat and sways gently. */
+    /** Standalone unformed anvil: hand-forged blank flattens, End Rod core elongates with orbiting reagents, finished result sways gently. */
     private static void renderManualAnvilItem(ManaSaturatorBlockEntity entity, float partialTick, PoseStack pose,
                                               MultiBufferSource buffers, Level level) {
         ItemStack item = entity.anvilItem();
@@ -310,6 +312,32 @@ public class ManaSaturatorRenderer extends LegacyBer<ManaSaturatorBlockEntity> {
         }
         int light = LevelRenderer.getLightCoords(level, entity.getBlockPos().above());
         float time = (level.getGameTime() % 72000L) + partialTick;
+        if (entity.rodStage() != EndRodRitual.NONE) {
+            float progress = EndRodRitual.overallProgress(entity.rodStage(), entity.manualHits());
+            float width = Mth.lerp(progress, 0.34f, 0.14f);
+            float height = Mth.lerp(progress, 0.34f, 0.54f);
+            pose.pushPose();
+            pose.translate(0.5, 15f / 16f + height * 0.5f, 0.5);
+            pose.mulPose(Axis.YP.rotationDegrees(time * 0.8f));
+            pose.scale(width, height, width);
+            BerBuffers.item(buffers, item, ItemDisplayContext.FIXED, light, pose, level, 0);
+            pose.popPose();
+
+            int totalOrbit = entity.rodEyes() + entity.rodTears() + entity.rodNetherite();
+            if (totalOrbit > 0) {
+                int idx = 0;
+                for (int i = 0; i < entity.rodEyes(); i++, idx++) {
+                    renderOrbitReagent(pose, buffers, level, light, time, idx, totalOrbit, new ItemStack(Items.ENDER_EYE));
+                }
+                for (int i = 0; i < entity.rodTears(); i++, idx++) {
+                    renderOrbitReagent(pose, buffers, level, light, time, idx, totalOrbit, new ItemStack(Items.GHAST_TEAR));
+                }
+                for (int i = 0; i < entity.rodNetherite(); i++, idx++) {
+                    renderOrbitReagent(pose, buffers, level, light, time, idx, totalOrbit, new ItemStack(Items.NETHERITE_INGOT));
+                }
+            }
+            return;
+        }
         pose.pushPose();
         if (ManaSaturatorBlockEntity.isManualInput(level, item)) {
             float squash = 1f - 0.55f * entity.manualHits() / (float) ManaSaturatorBlockEntity.MANUAL_HITS;
@@ -324,6 +352,19 @@ public class ManaSaturatorRenderer extends LegacyBer<ManaSaturatorBlockEntity> {
             pose.scale(0.45f, 0.45f, 0.45f);
             BerBuffers.item(buffers, item, ItemDisplayContext.FIXED, light, pose, level, 0);
         }
+        pose.popPose();
+    }
+
+    private static void renderOrbitReagent(PoseStack pose, MultiBufferSource buffers, Level level, int light,
+                                           float time, int idx, int total, ItemStack reagent) {
+        float angle = (time * 0.06f) + (float) (2.0 * Math.PI * idx / total);
+        double radius = 0.34;
+        double y = 1.18 + 0.04 * Mth.sin(time * 0.08f + idx);
+        pose.pushPose();
+        pose.translate(0.5 + radius * Math.cos(angle), y, 0.5 + radius * Math.sin(angle));
+        pose.mulPose(Axis.YP.rotation(-angle));
+        pose.scale(0.20f, 0.20f, 0.20f);
+        BerBuffers.item(buffers, reagent, ItemDisplayContext.FIXED, light, pose, level, 0);
         pose.popPose();
     }
 }

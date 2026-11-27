@@ -6,6 +6,7 @@ import com.golemlogix.blockentity.CardCatalogBlockEntity;
 import com.golemlogix.blockentity.CopperDriveBayBlockEntity;
 import com.golemlogix.blockentity.CryoCalculatorBlockEntity;
 import com.golemlogix.blockentity.CryoDiodeBlockEntity;
+import com.golemlogix.blockentity.CryoJarBlockEntity;
 import com.golemlogix.blockentity.CryoMainframeBlockEntity;
 import com.golemlogix.blockentity.EternalFrostResonatorBlockEntity;
 import com.golemlogix.blockentity.PatternProviderBlockEntity;
@@ -18,6 +19,7 @@ import com.golemlogix.blocks.CableBushingBlock;
 import com.golemlogix.blocks.ChannelExpanderBlock;
 import com.golemlogix.blocks.CryoCalculatorBlock;
 import com.golemlogix.blocks.GolemProperties;
+import com.golemlogix.blocks.JarForm;
 import com.golemlogix.blocks.PeriscopeStorageBusBlock;
 import com.golemlogix.blocks.SnowPipeBlock;
 import com.golemlogix.blocks.TelegraphBlock;
@@ -225,7 +227,8 @@ final class NetworkScanner {
                 if (linked) {
                     int nextSeenId = walk.enqueue(scratch, lvl, probe, nextLong);
                     walk.addFlatLink(nextSeenId);
-                } else if (nextState.hasBlockEntity() && !(nextState.getBlock() instanceof SnowPipeBlock)) {
+                } else if ((selfPlugMask & (1 << dir.ordinal())) == 0
+                        && nextState.hasBlockEntity() && !(nextState.getBlock() instanceof SnowPipeBlock)) {
                     sourceCandidates.add(new SourceCandidate(lvl, probe.immutable(), dir.getOpposite()));
                 }
             }
@@ -338,6 +341,14 @@ final class NetworkScanner {
             if (s != null) {
                 seenSources.add(owner);
                 net.sources.add(s);
+                if (s instanceof CryoJarBlockEntity jar && !jar.isRemoved()) {
+                    JarForm form = jar.form();
+                    if (form == JarForm.GIGA) {
+                        net.gigaJars++;
+                    } else if (form == JarForm.SUPER) {
+                        net.reactors++;
+                    }
+                }
                 net.peripherals.put(new GolemNetwork.Node(cand.level, cand.pos), be.getBlockState().getBlock());
             }
         }
@@ -352,12 +363,13 @@ final class NetworkScanner {
         net.corePos = primary.pos();
         net.core = net.coreLevel.getBlockEntity(net.corePos) instanceof AtlasCoreBlockEntity c ? c : null;
         if (net.structure.valid()) {
-            net.lineCapacity = GolemConfig.LINE_CHANNELS.get() + GolemConfig.EXPANDER_BONUS.get() * net.structure.expanders()
+            int baseLine = GolemConfig.LINE_CHANNELS.get() + GolemConfig.EXPANDER_BONUS.get() * net.structure.expanders()
                     + GolemConfig.QUANTUM_BONUS.get() * net.structure.quantumExpanders();
+            net.lineCapacity = net.scaleChannels(baseLine);
             net.channelCapacity = net.lineCapacity * AtlasStructure.BUSHINGS;
         } else {
             net.tower = AtlasStructure.isTower(net.coreLevel, net.corePos);
-            net.lineCapacity = net.tower ? GolemNetwork.TOWER_CHANNELS : GolemNetwork.BARE_CORE_CHANNELS;
+            net.lineCapacity = net.scaleChannels(net.tower ? GolemNetwork.TOWER_CHANNELS : GolemNetwork.BARE_CORE_CHANNELS);
             net.channelCapacity = net.lineCapacity;
         }
         allocateChannels(net, links, net.nodeIndex.get(primary));
@@ -406,7 +418,8 @@ final class NetworkScanner {
         if (net.structure == null || !net.structure.valid()) {
             return 0;
         }
-        return ex.isQuantum() ? GolemConfig.QUANTUM_EXIT.get() : GolemConfig.EXPANDER_EXIT.get();
+        int base = ex.isQuantum() ? GolemConfig.QUANTUM_EXIT.get() : GolemConfig.EXPANDER_EXIT.get();
+        return net.scaleChannels(base);
     }
 
     /** The node is one of the array cells (relative to the core on top). */
@@ -436,7 +449,8 @@ final class NetworkScanner {
 
         int[] controllerNodes = findControllerNodes(net, links, coreIdx, formed);
 
-        int deviceChannels = GolemConfig.DEVICE_CHANNELS.get();
+        int deviceChannels = net.scaleChannels(GolemConfig.DEVICE_CHANNELS.get());
+        int telegraphChannels = net.scaleChannels(TelegraphBlock.CHANNELS);
         for (int i = 0; i < n; i++) {
             BlockState state = net.nodeStates.get(i);
             Block b = state.getBlock();
@@ -458,10 +472,10 @@ final class NetworkScanner {
                 net.capacities[i] = expanderExit(net, ex);
                 tiers[i] = ChannelCalculation.TIER_DENSE;
             } else if (b instanceof SnowPipeBlock pipe) {
-                net.capacities[i] = pipe.channelCapacity();
+                net.capacities[i] = net.scaleChannels(pipe.channelCapacity());
                 tiers[i] = pipe.isDense() ? ChannelCalculation.TIER_DENSE : ChannelCalculation.TIER_PIPE;
             } else if (b instanceof TelegraphBlock) {
-                net.capacities[i] = TelegraphBlock.CHANNELS;
+                net.capacities[i] = telegraphChannels;
                 tiers[i] = ChannelCalculation.TIER_DENSE;
             } else {
                 net.capacities[i] = deviceChannels;
@@ -522,7 +536,8 @@ final class NetworkScanner {
             if (state.getBlock() instanceof SnowPipeBlock pipe && SnowPipeBlock.hasLamp(state, n.pos())
                     && n.level().getBlockEntity(n.pos()) instanceof PipeBlockEntity be) {
                 // A heat lamp on the pipe reads the channels running through it
-                be.setLamp(active && net.channels != null ? net.channels.load(i) : 0, pipe.channelCapacity());
+                int lampCap = net.channels != null && i < net.capacities.length ? net.capacities[i] : net.scaleChannels(pipe.channelCapacity());
+                be.setLamp(active && net.channels != null ? net.channels.load(i) : 0, lampCap);
             }
             if (!state.hasProperty(GolemProperties.ACTIVE) || !(state.getBlock() instanceof GolemNode node)
                     || state.getBlock() instanceof CryoCalculatorBlock) {

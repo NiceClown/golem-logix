@@ -9,6 +9,7 @@ import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 import mezz.jei.api.recipe.types.IRecipeType;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -103,7 +104,12 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
         // the anvil and the golem are drawn as a scene; JEI still finds the ritual by them
         builder.addInvisibleIngredients(RecipeIngredientRole.CRAFTING_STATION).addItemStack(anvilStack.copy());
         builder.addInvisibleIngredients(RecipeIngredientRole.INPUT).addItemStack(recipe.golemRepresentation());
-        builder.addSlot(RecipeIngredientRole.OUTPUT, OUT_X + 1, OUT_Y + 1).addItemStack(recipe.output());
+        var outSlot = builder.addSlot(RecipeIngredientRole.OUTPUT, OUT_X + 1, OUT_Y + 1).addItemStack(recipe.output());
+        if (recipe.bonusChance() > 0f) {
+            int pct = Math.round(recipe.bonusChance() * 100);
+            outSlot.addRichTooltipCallback((view, tooltip) -> tooltip.add(
+                    Component.translatable("jei.golem_logix.anvil.bonus_chance", pct).withStyle(ChatFormatting.GOLD)));
+        }
     }
 
     @Override
@@ -121,6 +127,9 @@ public class AnvilCrushCategory implements IRecipeCategory<AnvilCrushRecipe> {
         drawImpactSparks(g, t, top);
         drawHealthCondition(g, font, recipe);
         drawResultSection(g, t);
+        if (recipe.bonusChance() > 0f) {
+            g.text(font, "+" + Math.round(recipe.bonusChance() * 100) + "%", OUT_X + 20, OUT_Y + 5, 0xFFD89A2B, false);
+        }
     }
 
     private static void drawGolemPhase(GuiGraphicsExtractor g, Level level, AnvilCrushRecipe recipe, float t, float squash) {

@@ -4,6 +4,7 @@ import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.ManaSaturatorBlockEntity;
 import com.golemlogix.blocks.ManaSaturatorBlock;
 import com.golemlogix.blocks.SaturatorPartBlock;
+import com.golemlogix.system.EndRodRitual;
 import com.golemlogix.system.SaturatorStructure;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -27,8 +28,27 @@ public enum SaturatorProvider implements IBlockComponentProvider {
         BlockPos master = accessor.getBlock() instanceof SaturatorPartBlock
                 ? SaturatorPartBlock.controllerOf(accessor.getPosition(), accessor.getBlockState()) : accessor.getPosition();
         if (master == null || !accessor.getLevel().isLoaded(master)
-                || !(accessor.getLevel().getBlockEntity(master) instanceof ManaSaturatorBlockEntity sat)
-                || !sat.getBlockState().getValue(ManaSaturatorBlock.FORMED)) {
+                || !(accessor.getLevel().getBlockEntity(master) instanceof ManaSaturatorBlockEntity sat)) {
+            return;
+        }
+        if (!sat.getBlockState().getValue(ManaSaturatorBlock.FORMED)) {
+            int stage = sat.rodStage();
+            if (stage == EndRodRitual.NONE) {
+                return;
+            }
+            tooltip.add(Component.translatable("jade.golem_logix.saturator.rod_title")
+                    .withStyle(ChatFormatting.LIGHT_PURPLE));
+            tooltip.add(sat.rodStatusPrompt().withStyle(
+                    EndRodRitual.isHammerStage(stage) ? ChatFormatting.AQUA : ChatFormatting.YELLOW));
+            tooltip.add(Component.translatable("jade.golem_logix.saturator.rod_progress",
+                            sat.rodTotalHits(), EndRodRitual.TOTAL_HITS)
+                    .withStyle(ChatFormatting.GRAY));
+            if (EndRodRitual.isHammerStage(stage)
+                    && !ManaSaturatorBlockEntity.hasRequiredRodIce(accessor.getLevel(), master, stage)) {
+                tooltip.add(Component.translatable("message.golem_logix.rod_ritual.need_ice."
+                                + EndRodRitual.requiredIceTier(stage))
+                        .withStyle(ChatFormatting.RED));
+            }
             return;
         }
         float speed = sat.speed() / (float) ManaSaturatorBlockEntity.BASE_SPEED;

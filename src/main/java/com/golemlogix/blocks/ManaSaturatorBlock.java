@@ -5,8 +5,10 @@ import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.init.ModItems;
 import com.golemlogix.items.ForgeHammerItem;
 import com.golemlogix.items.UpgradeItem;
+import com.golemlogix.system.EndRodRitual;
 import com.golemlogix.system.SaturatorStructure;
 import com.golemlogix.upgrade.UpgradeType;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
@@ -19,6 +21,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -117,13 +120,45 @@ public class ManaSaturatorBlock extends Block implements RemovalAware, EntityBlo
                 : useItemOnUnformed(stack, level, pos, player, saturator);
     }
 
-    /** Unassembled anvil: blanks are placed onto the face for manual forging with the Forge Hammer (left-click). */
+    /** Unassembled anvil: blanks and End Rod ritual steps are driven via RMB + Forge Hammer LMB. */
     private static InteractionResult useItemOnUnformed(ItemStack stack, Level level, BlockPos pos, Player player,
                                                        ManaSaturatorBlockEntity anvil) {
         if (stack.getItem() instanceof ForgeHammerItem) {
             if (!level.isClientSide()) {
-                player.sendOverlayMessage(Component.translatable(anvil.anvilItem().isEmpty()
-                        ? "message.golem_logix.anvil.empty" : "message.golem_logix.anvil.use_hammer"));
+                if (anvil.rodStage() != EndRodRitual.NONE) {
+                    player.sendOverlayMessage(anvil.rodStatusPrompt().withStyle(ChatFormatting.AQUA));
+                } else {
+                    player.sendOverlayMessage(Component.translatable(anvil.anvilItem().isEmpty()
+                            ? "message.golem_logix.anvil.empty" : "message.golem_logix.anvil.use_hammer"));
+                }
+            }
+            return InteractionResult.SUCCESS;
+        }
+        if (anvil.rodStage() != EndRodRitual.NONE) {
+            if (!level.isClientSide()) {
+                if (EndRodRitual.isWaitStage(anvil.rodStage())) {
+                    var step = anvil.tryInsertRodReagent(stack, player.getAbilities().instabuild);
+                    if (step.accepted()) {
+                        player.sendOverlayMessage(anvil.rodStatusPrompt().withStyle(
+                                EndRodRitual.isHammerStage(step.newStage()) ? ChatFormatting.AQUA : ChatFormatting.GREEN));
+                    } else {
+                        player.sendOverlayMessage(anvil.rodStatusPrompt().withStyle(ChatFormatting.YELLOW));
+                    }
+                } else {
+                    player.sendOverlayMessage(anvil.rodStatusPrompt().withStyle(ChatFormatting.AQUA));
+                }
+            }
+            return InteractionResult.SUCCESS;
+        }
+        if (anvil.anvilItem().isEmpty() && stack.is(Items.DIAMOND_BLOCK)) {
+            if (!level.isClientSide()) {
+                anvil.startRodRitual(stack.copyWithCount(1));
+                if (!player.getAbilities().instabuild) {
+                    stack.shrink(1);
+                }
+                level.playSound(null, pos, SoundEvents.ANVIL_PLACE, SoundSource.BLOCKS, 0.4f, 1.2f);
+                player.sendOverlayMessage(Component.translatable("message.golem_logix.rod_ritual.started")
+                        .withStyle(ChatFormatting.AQUA));
             }
             return InteractionResult.SUCCESS;
         }
@@ -227,6 +262,20 @@ public class ManaSaturatorBlock extends Block implements RemovalAware, EntityBlo
     private static void useWithoutItemUnformed(Level level, BlockPos pos, Direction facing, Player player,
                                                ManaSaturatorBlockEntity saturator) {
         if (!saturator.anvilItem().isEmpty()) {
+            if (EndRodRitual.requiresSneakToCancel(saturator.rodStage(), saturator.manualHits())) {
+                if (!player.isShiftKeyDown()) {
+                    player.sendOverlayMessage(saturator.rodStatusPrompt()
+                            .append(Component.literal(" "))
+                            .append(Component.translatable("message.golem_logix.rod_ritual.cancel_hint").withStyle(ChatFormatting.GRAY)));
+                    return;
+                }
+                for (ItemStack refund : saturator.cancelRodRitual()) {
+                    giveOrDrop(level, player, refund);
+                }
+                level.playSound(null, pos, SoundEvents.ITEM_FRAME_REMOVE_ITEM, SoundSource.BLOCKS, 0.6f, 0.9f);
+                player.sendOverlayMessage(Component.translatable("message.golem_logix.rod_ritual.cancelled").withStyle(ChatFormatting.YELLOW));
+                return;
+            }
             giveOrDrop(level, player, saturator.takeFromAnvil());
             return;
         }

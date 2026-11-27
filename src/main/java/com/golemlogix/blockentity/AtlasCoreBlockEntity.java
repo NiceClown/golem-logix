@@ -8,6 +8,7 @@ import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.Ingredients;
 import com.golemlogix.system.ItemKey;
 import com.golemlogix.system.NbtBridge;
+import com.golemlogix.system.SourceDiscount;
 import com.golemlogix.system.SourceHelper;
 import com.golemlogix.system.Transfers;
 import net.minecraft.core.BlockPos;
@@ -41,7 +42,14 @@ public class AtlasCoreBlockEntity extends BlockEntity {
     private int channelCapacity = 0;
     private int devices = 0;
     private int sourcePerSecond = 0;
+    private int sourcePerSecondHundredths = 0;
     private boolean infiniteSource = false;
+    private boolean hasGigaJar = false;
+    private boolean hasReactor = false;
+    private boolean tower = false;
+    private int gigaDiscountPercent = 0;
+    private int reactorBonusPercent = 0;
+    private final SourceDiscount sourceDiscount = new SourceDiscount();
     private boolean duplicate = false;
     private boolean wasDuplicate = false;
     private boolean formed = false;
@@ -82,6 +90,38 @@ public class AtlasCoreBlockEntity extends BlockEntity {
 
     public int getSourcePerSecond() {
         return sourcePerSecond;
+    }
+
+    public int getSourcePerSecondHundredths() {
+        return sourcePerSecondHundredths;
+    }
+
+    public String formattedSourcePerSecond() {
+        return SourceDiscount.formatRate(sourcePerSecondHundredths);
+    }
+
+    public SourceDiscount sourceDiscount() {
+        return sourceDiscount;
+    }
+
+    public boolean hasGigaJar() {
+        return hasGigaJar;
+    }
+
+    public boolean hasReactor() {
+        return hasReactor;
+    }
+
+    public boolean isTower() {
+        return tower;
+    }
+
+    public int getGigaDiscountPercent() {
+        return gigaDiscountPercent;
+    }
+
+    public int getReactorBonusPercent() {
+        return reactorBonusPercent;
     }
 
     public boolean isInfiniteSource() {
@@ -171,6 +211,9 @@ public class AtlasCoreBlockEntity extends BlockEntity {
     private void update(Level level, BlockPos pos, boolean force) {
         GolemNetwork net = resolveNetwork(level, pos, force);
         duplicate = !net.isPrimaryCore(pos);
+        if (!duplicate && !net.hasGigaJar()) {
+            sourceDiscount.reset();
+        }
         int cost = duplicate ? 0 : powerCost(net);
         boolean newPowered = !duplicate && net.consumeSource(cost);
         boolean newFormed = duplicate ? AtlasStructure.check(level, pos).valid()
@@ -196,9 +239,18 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         AtlasStructure.dress(level, pos, newFormed);
 
         boolean newInfinite = net.hasInfiniteSource() || !SourceHelper.sourceRequired();
-        int newSps = newInfinite ? 0 : cost;
+        boolean newGiga = !duplicate && net.hasGigaJar();
+        boolean newReactor = !duplicate && net.hasReactor();
+        boolean newTower = !duplicate && net.isTower();
+        int newDiscount = duplicate ? 0 : net.sourceDiscountPercent();
+        int newChannelBonus = duplicate ? 0 : net.channelBonusPercent();
+        int newSpsHundredths = newInfinite ? 0 : SourceDiscount.effectiveCostHundredths(cost, newDiscount);
+        int newSps = newInfinite ? 0 : (int) Math.round(newSpsHundredths / 100.0);
         boolean persistedChanged = topologyChanged || newPowered != powered
-                || newInfinite != infiniteSource || newSps != sourcePerSecond;
+                || newInfinite != infiniteSource || newSps != sourcePerSecond
+                || newSpsHundredths != sourcePerSecondHundredths
+                || newGiga != hasGigaJar || newReactor != hasReactor || newTower != tower
+                || newDiscount != gigaDiscountPercent || newChannelBonus != reactorBonusPercent;
         boolean cargoChanged = false;
         if (!duplicate) {
             if (secondsSinceCargo < VISUAL_RESYNC_SECONDS) {
@@ -222,6 +274,12 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         devices = net.deviceCount();
         infiniteSource = newInfinite;
         sourcePerSecond = newSps;
+        sourcePerSecondHundredths = newSpsHundredths;
+        hasGigaJar = newGiga;
+        hasReactor = newReactor;
+        tower = newTower;
+        gigaDiscountPercent = newDiscount;
+        reactorBonusPercent = newChannelBonus;
         if (persistedChanged) {
             setChanged();
         }
@@ -240,7 +298,7 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         return net;
     }
 
-    private static int powerCost(GolemNetwork net) {
+    public static int powerCost(GolemNetwork net) {
         return GolemConfig.CORE_SOURCE_PER_SECOND.get()
                 + (int) Math.ceil(net.channelsUsed() * GolemConfig.CHANNEL_SOURCE_PER_SECOND.get())
                 + net.telegraphLinks() * GolemConfig.TELEGRAPH_SOURCE_PER_SECOND.get();
@@ -253,7 +311,14 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         tag.putInt("ChannelCapacity", channelCapacity);
         tag.putInt("Devices", devices);
         tag.putInt("SourcePerSecond", sourcePerSecond);
+        tag.putInt("SourcePerSecondHundredths", sourcePerSecondHundredths);
+        tag.putInt("SourceCredit", sourceDiscount.creditHundredths());
         tag.putBoolean("InfiniteSource", infiniteSource);
+        tag.putBoolean("HasGigaJar", hasGigaJar);
+        tag.putBoolean("HasReactor", hasReactor);
+        tag.putBoolean("Tower", tower);
+        tag.putInt("GigaDiscount", gigaDiscountPercent);
+        tag.putInt("ReactorBonus", reactorBonusPercent);
         tag.putBoolean("Duplicate", duplicate);
     }
 
@@ -264,7 +329,14 @@ public class AtlasCoreBlockEntity extends BlockEntity {
         channelCapacity = tag.getIntOr("ChannelCapacity", 0);
         devices = tag.getIntOr("Devices", 0);
         sourcePerSecond = tag.getIntOr("SourcePerSecond", 0);
+        sourcePerSecondHundredths = tag.getIntOr("SourcePerSecondHundredths", sourcePerSecond * 100);
+        sourceDiscount.setCreditHundredths(tag.getIntOr("SourceCredit", 0));
         infiniteSource = tag.getBooleanOr("InfiniteSource", false);
+        hasGigaJar = tag.getBooleanOr("HasGigaJar", false);
+        hasReactor = tag.getBooleanOr("HasReactor", false);
+        tower = tag.getBooleanOr("Tower", false);
+        gigaDiscountPercent = tag.getIntOr("GigaDiscount", 0);
+        reactorBonusPercent = tag.getIntOr("ReactorBonus", 0);
         duplicate = tag.getBooleanOr("Duplicate", false);
         wasDuplicate = duplicate;
         // only in update packets (client visuals), never saved with the world

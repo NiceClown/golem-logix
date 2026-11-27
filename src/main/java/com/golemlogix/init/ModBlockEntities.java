@@ -40,6 +40,14 @@ public class ModBlockEntities {
             BLOCK_ENTITY_TYPES.register("cryo_mixer", () ->
                     new BlockEntityType<>(com.golemlogix.blockentity.CryoMixerBlockEntity::new, ModBlocks.CRYO_MIXER.get()));
 
+    public static final Supplier<BlockEntityType<VisCondenserBlockEntity>> VIS_CONDENSER =
+            BLOCK_ENTITY_TYPES.register("vis_condenser", () ->
+                    new BlockEntityType<>(VisCondenserBlockEntity::new, ModBlocks.VIS_CONDENSER.get()));
+
+    public static final Supplier<BlockEntityType<EssentiaCauldronBlockEntity>> ESSENTIA_CAULDRON =
+            BLOCK_ENTITY_TYPES.register("essentia_cryo_cauldron", () ->
+                    new BlockEntityType<>(EssentiaCauldronBlockEntity::new, ModBlocks.ESSENTIA_CAULDRON.get()));
+
     public static final Supplier<BlockEntityType<com.golemlogix.blockentity.TelegraphBlockEntity>> TELEGRAPH =
             BLOCK_ENTITY_TYPES.register("cryo_source_telegraph", () ->
                     new BlockEntityType<>(com.golemlogix.blockentity.TelegraphBlockEntity::new, ModBlocks.CRYO_SOURCE_TELEGRAPH.get()));

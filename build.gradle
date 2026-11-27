@@ -27,6 +27,11 @@ repositories {
         url = 'https://api.modrinth.com/maven'
         content { includeGroup 'maven.modrinth' }
     }
+    maven {
+        name = 'Leclown'
+        url = 'https://maven.leclowndu93150.dev/releases'
+        content { includeGroup 'com.leclowndu93150' }
+    }
 }
 
 base {
@@ -88,8 +93,13 @@ dependencies {
     compileOnly 'maven.modrinth:jade:Pr1h4azo'                      // 26.1.12+neoforge
     // Curios: the Portable Chronometer's own slot (integration/curios, used only when Curios is loaded)
     compileOnly 'maven.modrinth:curios:dRnRThvD'                    // 15.0.0+26.1.2
+    // Thaumaturge: Vis Condenser and Essentia Cryo-Cauldron (integration/thaumaturge, used only when Thaumaturge is loaded)
+    compileOnly('com.leclowndu93150:thaumaturge-26.1.2-neoforge:1.0.0') {
+        transitive = false
+    }
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
 
     // Modrinth version ids, not version numbers: the same number sometimes has Fabric builds.
     // testing with the real mods in dev runs: gradle -PtestMods runClient / runDevShots / runGameTestServer
@@ -108,6 +118,17 @@ dependencies {
         runtimeOnly 'maven.modrinth:geckolib:xfVfPcoC'             // 5.5.2, required by Neo Vitae
         if (!project.hasProperty('testMods')) {
             runtimeOnly 'mezz.jei:jei-26.1.2-neoforge:29.47.0.111'
+        }
+    }
+    // Thaumaturge (Vis Condenser and Essentia Cryo-Cauldron): on in dev and test runs by default, so the integration is
+    // really exercised. gradle -PnoThaumaturge runs the same tests without it.
+    if (!project.hasProperty('noThaumaturge')) {
+        runtimeOnly('com.leclowndu93150:thaumaturge-26.1.2-neoforge:1.0.0') {
+            transitive = false
+        }
+        runtimeOnly 'maven.modrinth:XaDC71GB:84kuUpr4'             // Lithostitched, required by Thaumaturge
+        if (!project.hasProperty('testMods')) {
+            runtimeOnly 'maven.modrinth:curios:dRnRThvD'           // Curios, required by Thaumaturge
         }
     }
 }

@@ -174,9 +174,16 @@ final class DevFilm {
 
     // ---------------------------------------------------------------------------------------------- frames
 
-    static void clientTick() {
+    static void clientTick(Minecraft mc) {
         if (rolling) {
             ticks++;
+            if (mc.player != null) {
+                mc.player.noPhysics = true;
+                mc.player.setNoGravity(true);
+                mc.player.getAbilities().flying = true;
+                mc.player.setOnGround(false);
+                mc.player.setDeltaMovement(Vec3.ZERO);
+            }
         }
     }
 
@@ -198,6 +205,10 @@ final class DevFilm {
             return;
         }
         current = k;
+        p.noPhysics = true;
+        p.setNoGravity(true);
+        p.getAbilities().flying = true;
+        p.setOnGround(false);
         double feet = k.y() - p.getEyeHeight();
         p.setPos(k.x(), feet, k.z());
         p.xo = p.xOld = k.x();
@@ -314,8 +325,11 @@ final class DevFilm {
         Path out = dir.resolve("film").resolve(takeName + ".mp4");
         Files.createDirectories(out.getParent());
         List<String> cmd = List.of(ffmpeg(dir), "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgba",
-                "-s", width + "x" + height, "-r", String.valueOf(fps), "-i", "-", "-vf", "vflip", "-c:v", "libx264",
-                "-preset", "fast", "-crf", String.valueOf(crf), "-pix_fmt", "yuv420p", out.toString());
+                "-s", width + "x" + height, "-r", String.valueOf(fps), "-i", "-",
+                "-vf", "vflip,scale=out_color_matrix=bt709:out_range=tv,format=yuv420p",
+                "-c:v", "libx264", "-preset", "fast", "-crf", String.valueOf(crf), "-pix_fmt", "yuv420p",
+                "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-color_range", "tv",
+                out.toString());
         File errLog = out.resolveSibling(takeName + ".ffmpeg.log").toFile();
         Process process = new ProcessBuilder(cmd).redirectErrorStream(true).redirectOutput(errLog).start();
         writing = true;
@@ -331,6 +345,32 @@ final class DevFilm {
         mc.options.framerateLimit().set(260);
         mc.getWindow().updateVsync(false);
         setRate(mc, rate);
+        Key startKey = pose(0.0);
+        if (mc.player != null) {
+            mc.player.noPhysics = true;
+            mc.player.setNoGravity(true);
+            mc.player.getAbilities().flying = true;
+            mc.player.setOnGround(false);
+            mc.player.setDeltaMovement(Vec3.ZERO);
+        }
+        MinecraftServer srv = mc.getSingleplayerServer();
+        if (srv != null) {
+            srv.execute(() -> {
+                var list = srv.getPlayerList().getPlayers();
+                if (!list.isEmpty()) {
+                    var sp = list.get(0);
+                    sp.noPhysics = true;
+                    sp.setNoGravity(true);
+                    sp.getAbilities().flying = true;
+                    sp.setOnGround(false);
+                    sp.setDeltaMovement(Vec3.ZERO);
+                    if (startKey != null) {
+                        sp.teleportTo(sp.level(), startKey.x(), startKey.y() - sp.getEyeHeight(), startKey.z(),
+                                java.util.Set.of(), startKey.yaw(), startKey.pitch(), true);
+                    }
+                }
+            });
+        }
         ticks = 0;
         frame = 0;
         rendered = 0;
@@ -370,6 +410,18 @@ final class DevFilm {
     private static void stop(Minecraft mc) {
         rolling = false;
         current = null;
+        if (mc.player != null) {
+            mc.player.noPhysics = false;
+        }
+        MinecraftServer srv = mc.getSingleplayerServer();
+        if (srv != null) {
+            srv.execute(() -> {
+                var list = srv.getPlayerList().getPlayers();
+                if (!list.isEmpty()) {
+                    list.get(0).noPhysics = false;
+                }
+            });
+        }
         setRate(mc, 20f);
         try {
             queue.put(END);

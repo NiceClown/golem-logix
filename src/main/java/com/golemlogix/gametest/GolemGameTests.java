@@ -2980,7 +2980,7 @@ public class GolemGameTests {
                                 Identifier rid = Identifier.parse(page.get("recipe").getAsString());
                                 helper.assertTrue(server.getRecipeManager().byKey(com.golemlogix.system.Recipes.key(rid)).isPresent(), "entry " + id + ": unknown recipe " + rid);
                             }
-                            if (page.has("grid")) {
+                            if (page.has("grid") && items) {
                                 for (var g : page.getAsJsonArray("grid")) {
                                     if (!g.getAsString().isEmpty()) {
                                         checkItem(helper, g.getAsString(), id + " grid");
@@ -4818,7 +4818,7 @@ public class GolemGameTests {
         helper.runAfterDelay(80, () -> {
             var tower = helper.getBlockEntity(base, com.golemlogix.blockentity.DistillationTowerBlockEntity.class);
             var whole = helper.getBlockEntity(jarAt, com.golemlogix.blockentity.CryoJarBlockEntity.class);
-            double perMb = com.golemlogix.config.GolemConfig.DISTILL_SOURCE_PER_MB.get() * (1 + com.golemlogix.config.GolemConfig.GIGA_SOURCE_BONUS.get() / 100.0);
+            double perMb = com.golemlogix.config.GolemConfig.DISTILL_SOURCE_PER_MB.get();
             // the core drinks a little meanwhile, which makes some more room: allow 15 Source for it, far less than the room
             int used = 1000 - tower.blood().getAmount();
             helper.assertTrue(used <= Math.ceil((room[0] + 15) / perMb) + 1, "blood was taken only for the room there was: " + used + " mB for " + room[0] + " Source of room");
@@ -4827,7 +4827,7 @@ public class GolemGameTests {
         });
     }
 
-    /** A tower touching the network pours into a Giga Jar anywhere on it, with the derrick's bonus; a lone jar there gets nothing. */
+    /** A tower touching the network pours into a Giga Jar anywhere on it (without any distillation income bonus); a lone jar there gets nothing. */
     public static void towerFillsJarsThroughNetwork(GameTestHelper helper) {
         buildArray(helper, 0, 0);
         var level = helper.getLevel();
@@ -4856,11 +4856,11 @@ public class GolemGameTests {
             var tower = helper.getBlockEntity(base, com.golemlogix.blockentity.DistillationTowerBlockEntity.class);
             helper.assertTrue(tower.blood().isEmpty(), "the blood is distilled: " + tower.blood().getAmount());
             var whole = helper.getBlockEntity(jarAt, com.golemlogix.blockentity.CryoJarBlockEntity.class);
-            int expect = (int) Math.floor(100 * com.golemlogix.config.GolemConfig.DISTILL_SOURCE_PER_MB.get() * (1 + com.golemlogix.config.GolemConfig.GIGA_SOURCE_BONUS.get() / 100.0));
-            // the core drinks some of it meanwhile, so the amount is checked loosely and the bonus on its own: the window's rate
+            int expect = (int) Math.floor(100 * com.golemlogix.config.GolemConfig.DISTILL_SOURCE_PER_MB.get());
+            // the core drinks some of it meanwhile, so the amount is checked loosely and the window's rate has no Giga Jar bonus
             helper.assertTrue(whole.available() > expect - 60 && whole.available() <= expect, "the Giga Jar far away got it: " + whole.available() + " of " + expect);
             int shown = tower.menuData().get(2), plain = (int) Math.round(tower.rate() * com.golemlogix.config.GolemConfig.DISTILL_SOURCE_PER_MB.get() * 10);
-            helper.assertTrue(shown > plain, "with the derrick's bonus: " + shown / 10.0 + " Source a second, without it " + plain / 10.0);
+            helper.assertTrue(shown == plain, "Giga Jar must not grant distillation bonus: " + shown / 10.0 + " vs " + plain / 10.0);
             helper.assertTrue(helper.getBlockEntity(lone, com.golemlogix.blockentity.CryoJarBlockEntity.class).available() == 0, "the lone jar on the network did not");
             helper.succeed();
         });

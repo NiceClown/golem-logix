@@ -1,6 +1,7 @@
 package com.golemlogix.integration.jade;
 
 import com.golemlogix.GolemLogixMod;
+import com.golemlogix.blockentity.AtlasCoreBlockEntity;
 import com.golemlogix.blockentity.PipeBlockEntity;
 import com.golemlogix.blocks.AtlasConduitBlock;
 import com.golemlogix.blocks.AtlasCoreBlock;
@@ -10,6 +11,7 @@ import com.golemlogix.blocks.SnowPipeBlock;
 import com.golemlogix.system.ChannelCalculation;
 import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.GolemNode;
+import com.golemlogix.system.SourceDiscount;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -78,6 +80,12 @@ public enum ChannelProvider implements IBlockComponentProvider {
             t.putInt("netUsed", net.channelsUsed());
             t.putInt("netMax", net.channelCapacity());
             t.putBoolean("tower", net.isTower());
+            int gigaDiscount = net.sourceDiscountPercent();
+            int reactorBonus = net.channelBonusPercent();
+            t.putInt("gigaDiscount", gigaDiscount);
+            t.putInt("reactorBonus", reactorBonus);
+            t.putInt("spsHundredths", net.hasCore()
+                    ? SourceDiscount.effectiveCostHundredths(AtlasCoreBlockEntity.powerCost(net), gigaDiscount) : 0);
             data.put(TAG, t);
         }
 
@@ -129,11 +137,18 @@ public enum ChannelProvider implements IBlockComponentProvider {
         if (block instanceof CableBushingBlock) {
             describeBushing(tooltip, t, core, used, max);
         } else if (block instanceof ChannelExpanderBlock) {
-            describeExpander(tooltip, core, used, max);
+            describeExpander(tooltip, t, core, used, max);
         } else if (block instanceof SnowPipeBlock) {
-            describePipe(tooltip, core, used, max);
+            describePipe(tooltip, t, core, used, max);
         } else {
             describeDevice(tooltip, t, core, used, max);
+        }
+    }
+
+    private static void appendReactorBoost(ITooltip tooltip, CompoundTag t) {
+        int bonus = t.getIntOr("reactorBonus", 0);
+        if (bonus > 0) {
+            tooltip.add(Component.translatable("jade.golem_logix.reactor_boost", bonus).withStyle(ChatFormatting.LIGHT_PURPLE));
         }
     }
 
@@ -144,23 +159,26 @@ public enum ChannelProvider implements IBlockComponentProvider {
         }
         tooltip.add(Component.translatable("jade.golem_logix.line", used, max));
         tooltip.add(Component.translatable("jade.golem_logix.network", t.getIntOr("netUsed", 0), t.getIntOr("netMax", 0)));
+        appendReactorBoost(tooltip, t);
     }
 
-    private static void describeExpander(ITooltip tooltip, boolean core, int used, int max) {
+    private static void describeExpander(ITooltip tooltip, CompoundTag t, boolean core, int used, int max) {
         if (!core) {
             tooltip.add(Component.translatable("jade.golem_logix.device.no_core").withStyle(ChatFormatting.RED));
         } else if (max <= 0) {
             tooltip.add(Component.translatable("jade.golem_logix.expander.closed").withStyle(ChatFormatting.GRAY));
         } else {
             tooltip.add(Component.translatable("jade.golem_logix.expander", used, max));
+            appendReactorBoost(tooltip, t);
         }
     }
 
-    private static void describePipe(ITooltip tooltip, boolean core, int used, int max) {
+    private static void describePipe(ITooltip tooltip, CompoundTag t, boolean core, int used, int max) {
         if (!core) {
             tooltip.add(Component.translatable("jade.golem_logix.device.no_core").withStyle(ChatFormatting.RED));
         } else {
             tooltip.add(channels(used, max));
+            appendReactorBoost(tooltip, t);
         }
     }
 

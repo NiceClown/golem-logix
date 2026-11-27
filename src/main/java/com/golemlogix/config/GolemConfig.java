@@ -29,10 +29,12 @@ public final class GolemConfig {
     public static final ModConfigSpec.IntValue BUS_MAX_MILLIS_PER_TICK;
     public static final ModConfigSpec.IntValue CRAFT_MAX_MILLIS_PER_TICK;
     public static final ModConfigSpec.IntValue LOCAL_WIRELESS_RANGE;
+    public static final ModConfigSpec.IntValue LOCAL_TELEGRAPH_RANGE;
     public static final ModConfigSpec.IntValue CRYO_JAR_CAPACITY;
     public static final ModConfigSpec.IntValue CRYO_JAR_GIGA_BONUS;
     public static final ModConfigSpec.IntValue CRYO_JAR_SUPER_BONUS;
-    public static final ModConfigSpec.IntValue GIGA_SOURCE_BONUS;
+    public static final ModConfigSpec.IntValue GIGA_SOURCE_DISCOUNT;
+    public static final ModConfigSpec.IntValue REACTOR_CHANNEL_BONUS;
     public static final ModConfigSpec.IntValue DISTILL_RATE;
     public static final ModConfigSpec.DoubleValue DISTILL_SOURCE_PER_MB;
     public static final ModConfigSpec.IntValue DISTILL_COPROCESSOR_BONUS;
@@ -44,6 +46,25 @@ public final class GolemConfig {
     public static final ModConfigSpec.IntValue MIXER_ICE_TICKS;
     public static final ModConfigSpec.BooleanValue TYPEWRITER_DING;
     public static final ModConfigSpec.BooleanValue MONITOR_BLOCKED_TICK;
+    public static final ModConfigSpec.DoubleValue VIS_CONDENSER_DRAIN_PER_SEC;
+    public static final ModConfigSpec.DoubleValue VIS_CONDENSER_SOURCE_PER_VIS;
+    public static final ModConfigSpec.IntValue VIS_CONDENSER_HYSTERESIS_PERCENT;
+    public static final ModConfigSpec.IntValue VIS_CONDENSER_HYSTERESIS_EXACT;
+    public static final ModConfigSpec.IntValue VIS_CONDENSER_LOW_VIS_PERCENT;
+    public static final ModConfigSpec.DoubleValue VIS_CONDENSER_LOW_VIS_FLUX;
+    public static final ModConfigSpec.ConfigValue<String> CAULDRON_PRIMARY_ASPECT;
+    public static final ModConfigSpec.ConfigValue<String> CAULDRON_COOLANT_ASPECT;
+    public static final ModConfigSpec.IntValue CAULDRON_PRIMARY_COST;
+    public static final ModConfigSpec.IntValue CAULDRON_COOLANT_COST;
+    public static final ModConfigSpec.IntValue CAULDRON_SOURCE_PER_REACTION;
+    public static final ModConfigSpec.DoubleValue CAULDRON_BASE_SPEED;
+    public static final ModConfigSpec.DoubleValue CAULDRON_COPROCESSOR_BONUS;
+    public static final ModConfigSpec.IntValue CAULDRON_ICE_CHARGE;
+    public static final ModConfigSpec.IntValue CAULDRON_PACKED_ICE_CHARGE;
+    public static final ModConfigSpec.IntValue CAULDRON_BLUE_ICE_CHARGE;
+    public static final ModConfigSpec.IntValue CAULDRON_BOIL_GRACE_TICKS;
+    public static final ModConfigSpec.IntValue CAULDRON_BOIL_INTERVAL_TICKS;
+    public static final ModConfigSpec.DoubleValue CAULDRON_BOIL_FLUX;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -107,7 +128,9 @@ public final class GolemConfig {
 
         b.push("wireless");
         LOCAL_WIRELESS_RANGE = b.comment("Range in blocks of a local-tier Portable Chronometer.")
-                .defineInRange("localWirelessRange", 200, 1, 30000000);
+                .defineInRange("localWirelessRange", 64, 1, 30000000);
+        LOCAL_TELEGRAPH_RANGE = b.comment("Range in blocks of a local-tier Cryo-Source Telegraph link.")
+                .defineInRange("localTelegraphRange", 200, 1, 30000000);
         b.pop();
 
         b.push("distillation");
@@ -117,8 +140,10 @@ public final class GolemConfig {
                 .defineInRange("cryoJarGigaBonus", 10, 0, 1000);
         CRYO_JAR_SUPER_BONUS = b.comment("Extra Source nine jars joined into an Antigravity Reactor hold (percent of what the nine hold alone).")
                 .defineInRange("cryoJarSuperBonus", 20, 0, 1000);
-        GIGA_SOURCE_BONUS = b.comment("Extra Source towers make (percent) on a network with at least one Giga Jar, or right beside one.")
-                .defineInRange("gigaSourceBonus", 7, 0, 1000);
+        GIGA_SOURCE_DISCOUNT = b.comment("Source consumption discount (percent) across a network with at least one Giga Jar (applies once per network, non-stacking).")
+                .defineInRange("gigaSourceDiscount", 7, 0, 100);
+        REACTOR_CHANNEL_BONUS = b.comment("Extra channel capacity (percent) across a network with at least one Antigravity Reactor (applies once per network, non-stacking).")
+                .defineInRange("reactorChannelBonus", 25, 0, 1000);
         DISTILL_RATE = b.comment("Blood (mB) a Cryo-Distillation Tower distils every second.")
                 .defineInRange("distillRate", 20, 1, 100000);
         DISTILL_COPROCESSOR_BONUS = b.comment("Extra blood (mB a second) each Compressed Co-Processor in the tower distils.")
@@ -149,6 +174,47 @@ public final class GolemConfig {
                 .define("typewriterDing", true);
         MONITOR_BLOCKED_TICK = b.comment("Recipe Monitor plays a soft tick while a crafting job is blocked.")
                 .define("monitorBlockedTick", true);
+        b.pop();
+
+        b.push("thaumaturge");
+        VIS_CONDENSER_DRAIN_PER_SEC = b.comment("Vis drained per second from the chunk aura by the Vis Condenser.")
+                .defineInRange("visCondenserDrainPerSec", 1.0D, 0.05D, 100.0D);
+        VIS_CONDENSER_SOURCE_PER_VIS = b.comment("Cryo-Source generated by the Vis Condenser per 1 Vis drained.")
+                .defineInRange("visCondenserSourcePerVis", 15.0D, 0.1D, 1000.0D);
+        VIS_CONDENSER_HYSTERESIS_PERCENT = b.comment("Extra percent of chunk base Vis required above the percent floor before the Vis Condenser resumes.")
+                .defineInRange("visCondenserHysteresisPercent", 5, 0, 50);
+        VIS_CONDENSER_HYSTERESIS_EXACT = b.comment("Extra Vis required above the exact Vis floor before the Vis Condenser resumes.")
+                .defineInRange("visCondenserHysteresisExact", 5, 0, 200);
+        VIS_CONDENSER_LOW_VIS_PERCENT = b.comment("Percent of chunk base Vis at or below which draining Vis with the Vis Condenser emits Flux.")
+                .defineInRange("visCondenserLowVisPercent", 10, 0, 50);
+        VIS_CONDENSER_LOW_VIS_FLUX = b.comment("Flux released per 1 Vis drained when the Vis Condenser operates at or below the low-Vis threshold.")
+                .defineInRange("visCondenserLowVisFlux", 0.05D, 0.0D, 5.0D);
+        CAULDRON_PRIMARY_ASPECT = b.comment("Aspect ID consumed on the left nozzle of the Essentia Cryo-Cauldron.")
+                .define("cauldronPrimaryAspect", "thaumaturge:auram");
+        CAULDRON_COOLANT_ASPECT = b.comment("Aspect ID consumed on the right nozzle of the Essentia Cryo-Cauldron.")
+                .define("cauldronCoolantAspect", "thaumaturge:gelum");
+        CAULDRON_PRIMARY_COST = b.comment("Units of primary aspect (Auram) consumed per Essentia Cryo-Cauldron reaction.")
+                .defineInRange("cauldronPrimaryCost", 1, 1, 64);
+        CAULDRON_COOLANT_COST = b.comment("Units of coolant aspect (Gelum) consumed per Essentia Cryo-Cauldron reaction.")
+                .defineInRange("cauldronCoolantCost", 2, 1, 64);
+        CAULDRON_SOURCE_PER_REACTION = b.comment("Cryo-Source produced per Essentia Cryo-Cauldron reaction.")
+                .defineInRange("cauldronSourcePerReaction", 160, 1, 10000);
+        CAULDRON_BASE_SPEED = b.comment("Base Essentia Cryo-Cauldron reactions per second without Compressed Co-Processors.")
+                .defineInRange("cauldronBaseSpeed", 0.25D, 0.05D, 50.0D);
+        CAULDRON_COPROCESSOR_BONUS = b.comment("Extra reactions per second per Compressed Co-Processor in the Essentia Cryo-Cauldron.")
+                .defineInRange("cauldronCoprocessorBonus", 0.125D, 0.0D, 50.0D);
+        CAULDRON_ICE_CHARGE = b.comment("Source cooled by one normal Ice block under the Essentia Cryo-Cauldron before melting to Water.")
+                .defineInRange("cauldronIceCharge", 1000, 10, 1000000);
+        CAULDRON_PACKED_ICE_CHARGE = b.comment("Source cooled by one Packed Ice block under the Essentia Cryo-Cauldron before degrading to Ice.")
+                .defineInRange("cauldronPackedIceCharge", 3000, 10, 1000000);
+        CAULDRON_BLUE_ICE_CHARGE = b.comment("Source cooled by one Blue Ice block under the Essentia Cryo-Cauldron before degrading to Packed Ice.")
+                .defineInRange("cauldronBlueIceCharge", 9000, 10, 1000000);
+        CAULDRON_BOIL_GRACE_TICKS = b.comment("Grace ticks before uncooled or Gelum-starved Auram starts boiling off into Flux.")
+                .defineInRange("cauldronBoilGraceTicks", 40, 0, 1200);
+        CAULDRON_BOIL_INTERVAL_TICKS = b.comment("Ticks between Flux boil-off events once the grace period expires.")
+                .defineInRange("cauldronBoilIntervalTicks", 40, 5, 1200);
+        CAULDRON_BOIL_FLUX = b.comment("Flux released into the chunk aura per Essentia Cryo-Cauldron boil-off tick.")
+                .defineInRange("cauldronBoilFlux", 0.5D, 0.0D, 20.0D);
         b.pop();
 
         SPEC = b.build();

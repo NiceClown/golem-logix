@@ -125,7 +125,7 @@ public final class JarMerge {
             whole.putAll((int) Math.min(total, capacity(into)));
         }
         sync(level, cells);
-        GolemNetwork.nodesChanged(level, corner);
+        notifyNetwork(level, cells);
     }
 
     /**
@@ -179,7 +179,15 @@ public final class JarMerge {
             level.scheduleTick(cell, level.getBlockState(cell).getBlock(), 1);
         }
         sync(level, stay);
-        GolemNetwork.nodesChanged(level, corner);
+        notifyNetwork(level, cells(corner, form.width()));
+    }
+
+    /** Notifies networks adjacent to any lower or upper block of the joined/parted footprint so channels and bonuses refresh immediately. */
+    private static void notifyNetwork(ServerLevel level, List<BlockPos> footprint) {
+        for (BlockPos cell : footprint) {
+            GolemNetwork.nodesChanged(level, cell);
+            GolemNetwork.nodesChanged(level, cell.above());
+        }
     }
 
     /** Only the state changes: its neighbours have nothing to learn from it. */

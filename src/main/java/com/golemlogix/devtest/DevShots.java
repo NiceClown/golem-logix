@@ -109,7 +109,7 @@ public final class DevShots {
         }
         Minecraft mc = Minecraft.getInstance();
         tick++;
-        DevFilm.clientTick();
+        DevFilm.clientTick(mc);
         if (!optionsApplied) {
             applyOptions(mc);
         }
@@ -1047,6 +1047,16 @@ public final class DevShots {
                     return true;
                 };
             }
+            case "jeicat": {
+                // jeicat <id> : open a JEI recipe category tab directly for visual verification
+                String id = t[1];
+                return mc -> {
+                    keepScreen = true;
+                    boolean ok = com.golemlogix.integration.jei.GolemLogixJeiPlugin.showCategory(id);
+                    log((ok ? "OK" : "ERR") + " jeicat " + id);
+                    return true;
+                };
+            }
             case "useon": {
                 // useon x y z [face]: right-click the block with the held item (a reagent onto an apparatus, a tablet into a brazier)
                 int x = Integer.parseInt(t[1]), y = Integer.parseInt(t[2]), z = Integer.parseInt(t[3]);
@@ -1153,6 +1163,31 @@ public final class DevShots {
                 };
             case "filmwait":
                 return mc -> DevFilm.done();
+            case "waitwave": {
+                // waitwave x y z shelf worker : wait until the idle snowman at (shelf, worker) enters the outward-waving activity (2)
+                BlockPos at = new BlockPos(Integer.parseInt(t[1]), Integer.parseInt(t[2]), Integer.parseInt(t[3]));
+                int shelf = Integer.parseInt(t[4]);
+                int worker = Integer.parseInt(t[5]);
+                long seed = at.asLong() + shelf * 7919L;
+                float offset = (float) Math.floorMod(seed * 31L + worker * 977L, 1000L) / 1000f;
+                return mc -> {
+                    if (mc.level == null) {
+                        return false;
+                    }
+                    float time = (mc.level.getGameTime() % 72000L);
+                    float tt = time + offset * 400f;
+                    long window = (long) Math.floor(tt / 120f);
+                    long nextWindow = window + 1L;
+                    long hNext = seed * 6364136223846793005L + worker * 1442695040888963407L + nextWindow * 0x9E3779B97F4A7C15L;
+                    int nextActivity = (int) Math.floorMod(hNext >>> 33, 4L);
+                    float local = tt - window * 120f;
+                    if (nextActivity == 2 && local >= 82f && local <= 88f) {
+                        log("waitwave caught pre-wave at time=" + time + " nextWindow=" + nextWindow + " local=" + String.format(Locale.ROOT, "%.1f", local));
+                        return true;
+                    }
+                    return false;
+                };
+            }
             case "craftbench": {
                 var bench = DevBench.craftBench(t, DevShots::log);
                 return bench::test;

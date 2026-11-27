@@ -513,6 +513,12 @@ public final class CopperGolemPuppet {
                 }
                 if (maxU > 10.5f / 64f && minU < 17.5f / 64f && maxV > 11.5f / 64f && minV < 14.5f / 64f) {
                     System.arraycopy(buf, v * 8, out, outVerts * 8, 4 * 8);
+                    for (int k = 0; k < 4; k++) {
+                        int dst = (outVerts + k) * 8;
+                        out[dst] += out[dst + 5] * 0.012f;
+                        out[dst + 1] += out[dst + 6] * 0.012f;
+                        out[dst + 2] += out[dst + 7] * 0.012f;
+                    }
                     outVerts += 4;
                 }
             }

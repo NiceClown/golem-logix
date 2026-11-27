@@ -1,6 +1,7 @@
 package com.golemlogix.system;
 
 import com.golemlogix.blockentity.TelegraphBlockEntity;
+import com.golemlogix.config.GolemConfig;
 import com.golemlogix.items.PortableChronometerItem;
 import com.golemlogix.items.TelegraphLinkCardItem;
 import net.minecraft.core.BlockPos;
@@ -174,7 +175,8 @@ public final class TelegraphLinks {
         }
         int tier = Math.max(t.rangeTier(), host.rangeTier());
         BlockPos p = t.getBlockPos();
-        if (!PortableChronometerItem.inRange(tier, level, new Vec3(p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5), hostLevel, hostPos)) {
+        if (!PortableChronometerItem.inRange(tier, level, new Vec3(p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5),
+                hostLevel, hostPos, GolemConfig.LOCAL_TELEGRAPH_RANGE.get())) {
             return new Resolved(Status.OUT_OF_RANGE, host);
         }
         return new Resolved(Status.LINKED, host);

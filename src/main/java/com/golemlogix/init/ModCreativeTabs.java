@@ -48,6 +48,11 @@ public class ModCreativeTabs {
                         output.accept(ModBlocks.CRYO_SOURCE_JAR.get());
                         output.accept(ModBlocks.CRYO_DISTILLATION_TOWER.get());
                         output.accept(ModBlocks.CRYO_MIXER.get());
+                        if (com.golemlogix.integration.thaumaturge.ThaumaturgeCompat.isLoaded()) {
+                            output.accept(ModBlocks.VIS_CONDENSER.get());
+                            output.accept(ModItems.HOLLOW_GOLEM_HEAD.get());
+                            output.accept(ModBlocks.ESSENTIA_CAULDRON.get());
+                        }
                         output.accept(ModBlocks.MANA_SATURATOR.get());
                         output.accept(ModItems.FORGE_HAMMER.get());
 

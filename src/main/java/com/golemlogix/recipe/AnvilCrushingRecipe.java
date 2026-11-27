@@ -51,14 +51,15 @@ import java.util.Set;
  * </pre>
  */
 public record AnvilCrushingRecipe(HolderSet<EntityType<?>> entity, List<String> entityIdContains, float minHealth, float maxHealth,
-                                  ItemStackTemplate resultTemplate, Optional<Item> icon) implements Recipe<AnvilCrushingRecipe.Golem> {
+                                  ItemStackTemplate resultTemplate, Optional<Item> icon, float bonusChance) implements Recipe<AnvilCrushingRecipe.Golem> {
     public static final MapCodec<AnvilCrushingRecipe> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             RegistryCodecs.homogeneousList(Registries.ENTITY_TYPE).fieldOf("entity").forGetter(AnvilCrushingRecipe::entity),
             Codec.STRING.listOf().optionalFieldOf("entity_id_contains", List.of()).forGetter(AnvilCrushingRecipe::entityIdContains),
             Codec.floatRange(0f, 1024f).optionalFieldOf("min_health", 0.5f).forGetter(AnvilCrushingRecipe::minHealth),
             Codec.floatRange(0f, 1024f).fieldOf("max_health").forGetter(AnvilCrushingRecipe::maxHealth),
             ItemStackTemplate.CODEC.fieldOf("result").forGetter(AnvilCrushingRecipe::resultTemplate),
-            BuiltInRegistries.ITEM.byNameCodec().optionalFieldOf("icon").forGetter(AnvilCrushingRecipe::icon)
+            BuiltInRegistries.ITEM.byNameCodec().optionalFieldOf("icon").forGetter(AnvilCrushingRecipe::icon),
+            Codec.floatRange(0f, 1f).optionalFieldOf("bonus_chance", 0f).forGetter(AnvilCrushingRecipe::bonusChance)
     ).apply(i, AnvilCrushingRecipe::new));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, AnvilCrushingRecipe> STREAM_CODEC = StreamCodec.composite(
@@ -68,6 +69,7 @@ public record AnvilCrushingRecipe(HolderSet<EntityType<?>> entity, List<String> 
             ByteBufCodecs.FLOAT, AnvilCrushingRecipe::maxHealth,
             ItemStackTemplate.STREAM_CODEC, AnvilCrushingRecipe::resultTemplate,
             ByteBufCodecs.optional(ByteBufCodecs.registry(Registries.ITEM)), AnvilCrushingRecipe::icon,
+            ByteBufCodecs.FLOAT, AnvilCrushingRecipe::bonusChance,
             AnvilCrushingRecipe::new);
 
     /** The golem under the anvil (the ritual matches its kind; the health window is checked by the handler). */
@@ -92,6 +94,15 @@ public record AnvilCrushingRecipe(HolderSet<EntityType<?>> entity, List<String> 
     /** What the ritual makes (a fresh stack: recipes keep templates, items get their components only after loading). */
     public ItemStack result() {
         return resultTemplate.create();
+    }
+
+    /** Rolls the ritual drop, adding +1 bonus item with probability {@link #bonusChance}. */
+    public ItemStack rollResult(net.minecraft.util.RandomSource random) {
+        ItemStack out = result();
+        if (bonusChance > 0f && random.nextFloat() < bonusChance) {
+            out.grow(1);
+        }
+        return out;
     }
 
     /** The ritual for this entity's kind (whatever its health), or null. */

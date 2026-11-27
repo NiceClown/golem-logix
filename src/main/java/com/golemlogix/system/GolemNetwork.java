@@ -12,6 +12,7 @@ import com.golemlogix.blockentity.SecurityTerminalBlockEntity;
 import com.golemlogix.blocks.CableBushingBlock;
 import com.golemlogix.blocks.ChannelExpanderBlock;
 import com.golemlogix.blocks.JarForm;
+import com.golemlogix.config.GolemConfig;
 import com.golemlogix.crafting.CraftingCpu;
 import com.golemlogix.crafting.CraftingJob;
 import com.golemlogix.crafting.CraftingPlan;
@@ -129,6 +130,9 @@ public final class GolemNetwork {
     final List<BusBlockEntity> buses = new ArrayList<>();
     final List<CraftingCpu> cpus = new ArrayList<>();
     final List<SourceHelper.Supplier> sources = new ArrayList<>();
+    int gigaJars;
+    int reactors;
+    private final SourceDiscount fallbackDiscount = new SourceDiscount();
     int resonators;
     @Nullable
     SecurityTerminalBlockEntity security;
@@ -402,6 +406,45 @@ public final class GolemNetwork {
 
     public List<SourceHelper.Supplier> sources() {
         return sources;
+    }
+
+    /** At least one 2x2 Giga Jar is connected to the network: grants a non-stacking Source consumption discount. */
+    public boolean hasGigaJar() {
+        return gigaJars > 0;
+    }
+
+    /** Distinct Giga Jars connected to this network (storage stacks; the discount does not). */
+    public int gigaJarCount() {
+        return gigaJars;
+    }
+
+    /** At least one 3x3 Antigravity Reactor is connected to the network: grants a non-stacking channel capacity boost. */
+    public boolean hasReactor() {
+        return reactors > 0;
+    }
+
+    /** Distinct Antigravity Reactors connected to this network (storage stacks; the channel bonus does not). */
+    public int reactorCount() {
+        return reactors;
+    }
+
+    /** Active non-stacking Source consumption discount percent (0 when no Giga Jar is connected). */
+    public int sourceDiscountPercent() {
+        return SourceDiscount.discountPercent(hasGigaJar(), GolemConfig.GIGA_SOURCE_DISCOUNT.get());
+    }
+
+    /** Active non-stacking channel capacity bonus percent (0 when no Antigravity Reactor is connected). */
+    public int channelBonusPercent() {
+        return ChannelCalculation.bonusPercent(hasReactor(), GolemConfig.REACTOR_CHANNEL_BONUS.get());
+    }
+
+    /** Scales a base channel limit by this network's active Reactor channel bonus. */
+    public int scaleChannels(int base) {
+        return ChannelCalculation.scale(base, channelBonusPercent());
+    }
+
+    SourceDiscount sourceDiscount() {
+        return core != null ? core.sourceDiscount() : fallbackDiscount;
     }
 
     /** An Eternal Frost Resonator stands next to the network: the Chronometers of this network do not need charging. */

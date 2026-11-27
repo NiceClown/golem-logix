@@ -3,6 +3,7 @@ package com.golemlogix.network;
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.ManaSaturatorBlockEntity;
 import com.golemlogix.items.ForgeHammerItem;
+import com.golemlogix.system.EndRodRitual;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -47,10 +48,24 @@ public record AnvilStrikePayload(BlockPos pos) implements CustomPacketPayload {
     /** The strike and a message to the player above the hotbar. */
     public static void strike(ServerPlayer player, ManaSaturatorBlockEntity anvil, ItemStack hammer) {
         switch (anvil.strike(player.level(), anvil.getBlockPos(), player, hammer)) {
-            case HIT -> player.sendOverlayMessage(Component.translatable("message.golem_logix.anvil.hit",
-                    anvil.manualHits(), ManaSaturatorBlockEntity.MANUAL_HITS));
+            case HIT -> {
+                if (anvil.rodStage() != EndRodRitual.NONE) {
+                    player.sendOverlayMessage(Component.translatable("message.golem_logix.rod_ritual.strike",
+                            anvil.manualHits(), EndRodRitual.hitsForStage(anvil.rodStage()), anvil.rodTotalHits(), EndRodRitual.TOTAL_HITS));
+                } else {
+                    player.sendOverlayMessage(Component.translatable("message.golem_logix.anvil.hit",
+                            anvil.manualHits(), ManaSaturatorBlockEntity.MANUAL_HITS));
+                }
+            }
             case DONE -> player.sendOverlayMessage(Component.translatable("message.golem_logix.anvil.done",
                     anvil.anvilItem().getCount(), anvil.anvilItem().getHoverName()));
+            case ROD_PHASE_DONE -> player.sendOverlayMessage(anvil.rodStatusPrompt().withStyle(ChatFormatting.AQUA));
+            case ROD_DONE -> player.sendOverlayMessage(Component.translatable("message.golem_logix.rod_ritual.complete",
+                    anvil.anvilItem().getHoverName()).withStyle(ChatFormatting.LIGHT_PURPLE));
+            case NEED_ICE -> player.sendOverlayMessage(Component.translatable(
+                    "message.golem_logix.rod_ritual.need_ice." + EndRodRitual.requiredIceTier(anvil.rodStage()))
+                    .withStyle(ChatFormatting.RED));
+            case WAIT_REAGENT -> player.sendOverlayMessage(anvil.rodStatusPrompt().withStyle(ChatFormatting.YELLOW));
             case NO_SOURCE -> player.sendOverlayMessage(Component.translatable("message.golem_logix.anvil.no_source",
                     ForgeHammerItem.STRIKE_COST).withStyle(ChatFormatting.RED));
             case NOTHING -> player.sendOverlayMessage(Component.translatable("message.golem_logix.anvil.empty"));

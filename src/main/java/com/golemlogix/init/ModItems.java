@@ -55,6 +55,10 @@ public class ModItems {
     public static final DeferredItem<ModItemWithTooltip> INTERDIMENSIONAL_OCCULT_MATRIX = item("interdimensional_occult_matrix",
             () -> new ModItemWithTooltip("tooltip.golem_logix.interdimensional_occult_matrix", props().stacksTo(16)));
 
+    /** Thaumaturge Crucible craft: hollowed Iron Golem skull used to assemble the Essentia Cryo-Cauldron. */
+    public static final DeferredItem<ModItemWithTooltip> HOLLOW_GOLEM_HEAD = item("hollow_golem_head",
+            () -> new ModItemWithTooltip("tooltip.golem_logix.hollow_golem_head", props().stacksTo(16)));
+
     // Guide Book / Occult Grimoire
     public static final DeferredItem<GuideBookItem> GUIDE_BOOK = item("guide_book",
             () -> new GuideBookItem(props().stacksTo(1)));

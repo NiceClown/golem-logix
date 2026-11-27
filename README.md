@@ -7,8 +7,9 @@ The 1.21.1 backport lives in the branch [`mc-1.21.1`](https://github.com/NiceClo
 A Refined Storage / AE2 style storage network built from brass, copper, glass and ice instead of circuits: a multiblock
 **Atlas Array** powers the network, **cassette cabinets** store items and fluids, **frost pipes** carry the channels (watch the
 snowmen run inside them), **buses** move items between chests and the network, **terminals** give access, and a **cryo calculator**
-crafts things automatically from punch-card patterns. The whole network runs on **Source**: from Ars Nouveau jars, or distilled
-from Neo Vitae blood by the **Cryo-Distillation Tower** into **Cryo-Source Jars** (merging into **Giga Jars** and **Antigravity Reactors**; without either mod
+crafts things automatically from punch-card patterns. The whole network runs on **Source**: from Ars Nouveau jars, distilled
+from Neo Vitae blood by the **Cryo-Distillation Tower**, or condensed from **Thaumaturge** chunk Vis and Essentia via the
+**Vis Condenser** and **Essentia Cryo-Cauldron** into **Cryo-Source Jars** (merging into **Giga Jars** and **Antigravity Reactors**; without any of those mods
 it simply runs for free); the late-game **Eternal Frost Resonator** keeps your Portable Chronometers charged through the aether.
 
 Everything comes with an illustrated, searchable **guide book** (Russian and English) that remembers the page you left it on. Its whole text can be read here too, without the game: [docs/guidebook](docs/guidebook/en_us.md).
@@ -18,8 +19,15 @@ Everything comes with an illustrated, searchable **guide book** (Russian and Eng
 - **Atlas Core and Array** — the network grows with what stands under its core: the core alone gives 8 channels (through its bottom
   face), a starter tower (two conduits and a Cable Bushing under it) 16, and the whole Atlas Array, a 3x3x4 multiblock with five
   bushings at the base, a 64-channel line per bushing (320 total); Channel and Quantum Channel Expanders in the walls raise every
-  line (up to 1600).
+  line (up to 1600, or up to 2000 with an Antigravity Reactor).
   The guide book can project ghost blocks showing what to place where (`Y` confirms, `N` cancels).
+- **Cryo-Distillation & Cryo-Source Jars** - the **Cryo-Distillation Tower** distills Neo Vitae blood into **Cryo-Source Jars** (10 000 Source),
+  which automatically merge into **2x2 Giga Jars** (44 000 Source, non-stacking **-7%** network Source consumption discount) and
+  **3x3 Antigravity Reactors** (108 000 Source, non-stacking **+25%** network channel capacity boost: e.g. 16 -> 20, 64 -> 80, 128 -> 160,
+  320 -> 400, up to 2000). Extra Giga Jars and Reactors still stack Source storage, and both network bonuses apply independently.
+- **Thaumaturge Integration (Vis Condenser & Essentia Cryo-Cauldron)** - full optional integration with **Thaumaturge** (plus custom Thaumaturge aspects for all Golem Logix items):
+  - **Vis Condenser** - early two-block brass-and-frost tower where a goggled copper golem drains chunk Vis (1 Vis/s -> 15 Source/s) into adjacent jars and networked Giga Jars / Reactors, with configurable `%` or exact `Vis` stop floor + hysteresis to avoid Flux (<10% Vis emits Flux) and redstone pause.
+  - **Essentia Cryo-Cauldron** - craft a **Hollow Golem Head** in a Thaumaturge Crucible (`Flattened Iron Core` + `20 Vacuos` + `20 Gelum` + `15 Auram`, no research gate) to build a two-block iron-skull cauldron staffed by an Archmage copper golem. Pipes `Auram` on the left and `Gelum` on the right (`1 Auram + 2 Gelum / 4s -> 160 Source`, `40 Source/s` base with 0 Flux, up to 28 Compressed Co-Processors -> 600 Source/s) over **Ice** underneath (`Blue Ice -> Packed Ice -> Ice -> Water`, easily automated with a Mason's Formation Bus). Missing Ice or Gelum triggers a 2 s grace window before Flux boil-off; redstone pauses safely.
 - **Drive Cabinet (2x2)** — one item, four blocks, **10 cassette slots** with a priority setting. Behind the glass every disk is a
   cassette with a colored label (color = capacity) and fill LEDs, reels spin and tape winds while the network is powered, copper
   archivist golems carry crates along the shelves.
@@ -38,7 +46,7 @@ Everything comes with an illustrated, searchable **guide book** (Russian and Eng
   The faces are alive: the vacuum turbine turns, the injector's dot blinks, the periscope's ender eye looks around.
   Upgrade slots: up to 28 Compressed Co-Processors (self-pacing, up to 128 items/tick), an Autocraft Module (the export bus orders what is missing), a Redstone Module and a
   Fuzzy Card (filters take the same item with any components, or any item of a tag chosen on the filter with a middle-click). Server admins can inspect bus load with `/golemlogix_buses`.
-- **Golem buses** — Mason's Formation Bus (a copper golem fused into a copper block sets blocks from the network down in front)
+- **Golem buses** - Mason's Formation Bus (a copper golem fused into a copper block sets blocks from the network down in front, with a **Replace / Respect fluids** toggle for automating melted Ice under Essentia Cryo-Cauldrons)
   and Hewer's Annihilation Bus (an iron golem in a brass niche mines the block in front into the network, or right-clicks it,
   with the tool you give it or the strength of every iron tool; clicker-like settings and allow / deny filters).
 - **Redstone control** for buses, periscopes, pattern providers, calculators and the Mana Saturator: ignore / with signal / without
@@ -84,7 +92,7 @@ Everything comes with an illustrated, searchable **guide book** (Russian and Eng
 
 - Minecraft 26.1.2, NeoForge 26.1.2.x (tested with 26.1.2.122), Java 25
 - Copper golems and copper golem statues are the game's own: nothing else is needed for the rituals and the Punch Card Catalog
-- Optional: Neo Vitae (Essentia Vitae for the Cryo-Distillation Tower and the Cryo-Source Jar), Curios (a Chronometer slot), JEI,
+- Optional: **Thaumaturge** (Vis Condenser, Hollow Golem Head Crucible recipe, Essentia Cryo-Cauldron, Cryo-Source Jars, and full item aspects), **Neo Vitae** (Essentia Vitae for the Cryo-Distillation Tower and the Cryo-Source Jar), Curios (a Chronometer slot), JEI,
   Jade. Ars Nouveau (Source, the Dispel method, Source Gems in the Saturator, Blue Ice imbuement) and Create (mixer and press
   recipes, the Co-Processor assembly line) have no 26.1.2 builds yet: their integrations and recipes are in the mod and wake up
   once they are ported
@@ -104,7 +112,7 @@ Put `golem_logix-<version>.jar` into the `mods` folder (client and server). On a
 
 ```
 gradlew build              # build/libs/golem_logix-26.1.2-2.1.5.jar (JAVA_HOME must point at JDK 25)
-gradlew runGameTestServer  # 251 game tests on a real server with Neo Vitae (add -PtestMods for JEI, Jade, Curios; -PnoVitae to omit Neo Vitae)
+gradlew runGameTestServer  # game tests on a real server with Neo Vitae & Thaumaturge (add -PtestMods for JEI, Jade, Curios; -PnoVitae or -PnoThaumaturge to omit them)
 ```
 
 Art (textures and block models) is generated by code: compile `tools/*.java` (except `Audit.java`) and run `ArtForge` from the
@@ -122,7 +130,8 @@ The rituals are data, so a modpack can change or add them with a data pack or Ku
 - Tags: `golem_logix:copper_golems` (entity types that count as copper golems, `minecraft:copper_golem` by default),
   `golem_logix:copper_golem_statues` (blocks for the Punch Card Catalog, the game's statues by default), `golem_logix:iron_plates` (the Forge Hammer's centre: the Flattened Iron Core and any `c:plates/iron`).
 - Fluid tag `golem_logix:cryo_distillable`: the blood the Cryo-Distillation Tower turns into Source (Essentia Vitae by default; add
-  another mod's blood to use it). The rate and the jar size are in the config (`distillation`).
+  another mod's blood to use it). The rate, jar sizes, and Giga Jar / Reactor network bonuses are in the config (`distillation`).
+- Thaumaturge balance (`[thaumaturge]` in `golem_logix-common.toml`): Vis Condenser drain rate, Source/Vis conversion, hysteresis, low-Vis Flux threshold, Essentia Cryo-Cauldron aspect IDs/costs, Ice tier charges, Co-Processor bonus, and Flux boil-off settings; item aspects live in `data/thaumaturge/data_maps/item/base_aspects.json`.
 
 The defaults live in `data/golem_logix/recipe/saturator` and `data/golem_logix/recipe/anvil_crushing`. Ingredients use the
 26.1 format: an item id, a `#tag` or a list of ids.

@@ -303,7 +303,20 @@ public final class GolemGameTestRegistry {
             new Test("olddiskrecountsonbayload", GolemGameTestsExtra::oldDiskRecountsOnBayLoad, 80, 0),
             new Test("noplanwithoutfreecalculator", GolemGameTestsExtra::noPlanWithoutFreeCalculator, 100, 0),
             new Test("channelcountersyncstoclient", GolemGameTestsExtra::channelCounterSyncsToClient, 100, 0),
-            new Test("plasmatemperlootingdrops", GolemGameTestsExtra::plasmaTemperLootingDrops, 140, 0)
+            new Test("plasmatemperlootingdrops", GolemGameTestsExtra::plasmaTemperLootingDrops, 140, 0),
+            // Thaumaturge integration (dual-mode: WITH and WITHOUT Thaumaturge)
+            new Test("thaumformationbusfluidtoggle", ThaumaturgeIntegrationTests::formationBusFluidToggle, 140, 0),
+            new Test("thaumsoftdepandsourcerequired", ThaumaturgeIntegrationTests::softDepAndSourceRequired, 60, 0),
+            new Test("thaumviscondenserdrainjarsfloorsandflux", ThaumaturgeIntegrationTests::visCondenserDrainJarsFloorsAndFlux, 240, 0),
+            new Test("thaumcauldronsidedplumbingandphials", ThaumaturgeIntegrationTests::cauldronSidedPlumbingAndPhials, 140, 0),
+            new Test("thaumcauldronbrewingicemeltingandcoprocessors", ThaumaturgeIntegrationTests::cauldronBrewingIceMeltingAndCoprocessors, 640, 0),
+            new Test("thaumcauldronformationbusautomation", ThaumaturgeIntegrationTests::cauldronFormationBusAutomation, 220, 0),
+            new Test("thaumcauldronboiloffgraceandredstone", ThaumaturgeIntegrationTests::cauldronBoilOffGraceAndRedstone, 220, 0),
+            new Test("thaumcruciblerecipeanditemaspects", ThaumaturgeIntegrationTests::crucibleRecipeAndItemAspects, 40, 0),
+            // 2.3.0 Economy & End Rod ritual tests
+            new Test("irongolemanvilbonuschance", BalanceAndRitualTests::ironGolemAnvilBonusChance, 40, 0),
+            new Test("endrodthreephaseritual", BalanceAndRitualTests::endRodThreePhaseRitual, 400, 0),
+            new Test("chronometervstelegraphrange", BalanceAndRitualTests::chronometerVsTelegraphRange, 40, 0)
     );
 
     private GolemGameTestRegistry() {

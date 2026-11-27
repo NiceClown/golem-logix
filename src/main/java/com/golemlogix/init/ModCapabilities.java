@@ -56,5 +56,7 @@ public final class ModCapabilities {
         event.registerBlockEntity(Capabilities.Fluid.BLOCK, ModBlockEntities.COPPER_TANK.get(), (be, side) -> be.tank());
         event.registerItem(Capabilities.Fluid.ITEM, (stack, access) -> new com.golemlogix.items.CopperTankItem.Contents(access),
                 ModBlocks.COPPER_TANK.get().asItem());
+        // Thaumaturge Essentia capabilities for the Essentia Cryo-Cauldron (only when Thaumaturge is loaded)
+        com.golemlogix.integration.thaumaturge.ThaumaturgeCompat.registerCapabilities(event);
     }
 }

@@ -6,6 +6,8 @@
 
 Available for **Minecraft 26.1.2** (`NeoForge 26.1.2.x`, Java 25) and backported to **Minecraft 1.21.1** (`NeoForge 21.1.x`, Java 21).
 
+[![Join the Golem Logix Discord](https://media.forgecdn.net/attachments/description/1735911/description_7e3c4489-7ccc-497d-81f6-a737df9ea2bb.png)](https://discord.gg/qJ8fvNzFkA)
+
 ---
 
 ## What is it?
@@ -17,7 +19,7 @@ Golem Logix gives you a full logistics network:
 - **Buses & automation:** import, export, periscope storage, Mason's Formation, Hewer's Annihilation, and Golem Interfaces.
 - **Terminals:** analog CRT terminals, crafting terminals, and wireless Portable Chronometers.
 - **Autocrafting:** punch-card patterns, Cryo-Calculators, Cryo-Mainframes, Order Ledgers, and Recipe Monitors.
-- **Magic-Powered Source & Cryo-Distillation:** powered by magical Source — **Neo Vitae** blood distilled into Cryo-Source Jars, Giga Jars, and Antigravity Reactors (required on 26.1.2; optional on 1.21.1), or **Ars Nouveau** Source jars (required on 1.21.1; built-in integration activates automatically once ported to 26.1.2).
+- **Magic-Powered Source, Cryo-Distillation & Thaumaturge:** powered by magical Source - **Neo Vitae** blood distilled into Cryo-Source Jars, Giga Jars, and Antigravity Reactors, **Thaumaturge** chunk Vis & Essentia condensed via the **Vis Condenser** and **Essentia Cryo-Cauldron** (with full Thaumaturge item aspects and Crucible crafting), or **Ars Nouveau** Source jars (required on 1.21.1; built-in integration activates automatically once ported to 26.1.2).
 
 Everything is steampunk-and-frost: polished copper, CRT screens, vacuum tubes, violet runes, nixie counters, and animated golems everywhere.
 
@@ -27,7 +29,7 @@ Everything is steampunk-and-frost: polished copper, CRT screens, vacuum tubes, v
 
 - **Three core stages:** the **Atlas Core** alone runs 8 channels through its bottom face; a starter tower (conduits + bushing) gives 16; the full **3×3×4 Atlas Array** features animated iron Atlants carrying the core on their shoulders.
 - **Channels:** five Cable Bushings at the base give 5 lines × 64 = **320 channels**.
-- **Expanders:** Channel Expanders and Quantum Channel Expanders in the walls raise capacity up to **1,600 channels**.
+- **Expanders:** Channel Expanders and Quantum Channel Expanders in the walls raise capacity up to **1,600 channels** (or **2,000** with an Antigravity Reactor).
 - **Ghost projection:** the in-game grimoire projects ghost blocks showing what to place where (`Y` confirms, `N` cancels).
 
 ![Atlas Array](https://media.forgecdn.net/attachments/description/1735911/description_c37a6066-36b0-4c33-920c-2a4a281ee979.gif)
@@ -78,7 +80,7 @@ Everything is steampunk-and-frost: polished copper, CRT screens, vacuum tubes, v
 
 ### Buses & Interfaces
 
-- **Vacuum Import Bus**, **Injector Export Bus**, **Periscope Storage Bus**, **Mason's Formation Bus** (places blocks), and **Hewer's Annihilation Bus** (breaks/interacts with blocks using a held tool or iron-tier strength; upgradeable with **Plasma Temper** for Netherite-tier harvesting plus +1 Fortune and +1 Looting).
+- **Vacuum Import Bus**, **Injector Export Bus**, **Periscope Storage Bus**, **Mason's Formation Bus** (places blocks, with a **Replace / Respect fluids** toggle for re-freezing melted Ice under Essentia Cryo-Cauldrons), and **Hewer's Annihilation Bus** (breaks/interacts with blocks using a held tool or iron-tier strength; upgradeable with **Plasma Temper** for Netherite-tier harvesting plus +1 Fortune and +1 Looting).
 - **Upgrades & Pacing:** buses hold up to **28 Compressed Co-Processors** in a single stack slot (up to 128 items/tick), plus Autocraft Modules, Redstone Modules (`Ignore`, `High`, `Low`, `Pulse`), and Fuzzy Cards (match any NBT/components or a chosen tag). Self-pacing buses sleep when idle and admins can monitor or cap server impact with `busMaxMillisPerTick` and `/golemlogix_buses`.
 
 ![Vacuum Import and Injector Export Buses](https://media.forgecdn.net/attachments/description/1735911/description_cbc7e9a5-cfca-4aab-9029-5b6e493a5db7.gif)
@@ -139,7 +141,7 @@ Everything is steampunk-and-frost: polished copper, CRT screens, vacuum tubes, v
 
 ![Mana Saturator](https://media.forgecdn.net/attachments/description/1735911/description_1fa44607-e18a-45aa-8cb0-68c17fb09d4c.gif)
 
-- **Cryo-Distillation Tower & Cryo-Source Jars:** distills Essentia Vitae (or any `#golem_logix:cryo_distillable` fluid) into Source stored in Cryo-Source Jars, which automatically merge into **2×2 Giga Jars** (+7% tower bonus) and **3×3 Antigravity Reactors**.
+- **Cryo-Distillation Tower & Cryo-Source Jars:** distills Essentia Vitae (or any `#golem_logix:cryo_distillable` fluid) into Source stored in Cryo-Source Jars, which automatically merge into **2×2 Giga Jars** (non-stacking -7% network Source consumption discount) and **3×3 Antigravity Reactors** (non-stacking +25% network channel capacity boost, e.g. 64 -> 80, 128 -> 160). Extra Giga Jars and Reactors still stack Source storage, and both bonuses work independently.
 
 ![Cryo-Distillation Tower and Cryo-Source Jars](https://media.forgecdn.net/attachments/description/1735911/description_2e8fd469-236d-4aad-946f-c3bb97306cb8.gif)
 
@@ -149,9 +151,14 @@ Everything is steampunk-and-frost: polished copper, CRT screens, vacuum tubes, v
 
 ![Cryo-Mixer](https://media.forgecdn.net/attachments/description/1735911/description_dd70b3e9-c4ed-41ce-bb7c-82ccf8903ff8.gif)
 
+- **Thaumaturge Integration (Vis Condenser & Essentia Cryo-Cauldron):**
+  - **Vis Condenser:** early two-block aura condenser where a goggled copper golem pulls ambient chunk Vis (`1 Vis/s -> 15 Source/s`) into adjacent Cryo-Source Jars and networked Giga Jars / Reactors, complete with a live brass manometer, configurable `%` / exact `Vis` stop floor + hysteresis, redstone pause, and `<10%` low-Vis Flux risk.
+  - **Essentia Cryo-Cauldron:** forge a **Hollow Golem Head** in a Thaumaturge Crucible (`Flattened Iron Core` + `20 Vacuos` + `20 Gelum` + `15 Auram`, no research gate) to assemble a two-block iron-skull cauldron tended by an Archmage copper golem. Pipes `Auram` on the left and `Gelum` on the right (`1 Auram + 2 Gelum -> 40 Source`, 0 Flux, up to 28 Compressed Co-Processors) over **Ice** (`Blue Ice -> Packed Ice -> Ice -> Water`, easily automated with a Mason's Formation Bus); missing Ice or Gelum triggers Flux boil-off after a 2 s grace window unless paused by redstone.
+  - Full Thaumaturge aspect coverage (`base_aspects.json`) for all Golem Logix items and blocks.
+
 ### Mod Integrations & Guide Book
 
-- **Magic Power Dependencies:** **Neo Vitae** (blood distillation via the Cryo-Distillation Tower — **required on 26.1.2**, optional on 1.21.1) and **Ars Nouveau** (Source jars, Dispel rituals, Saturator Source Gems, and Blue Ice imbuement — **required on 1.21.1**, built-in and activates automatically once ported to 26.1.2).
+- **Magic Power Integrations:** **Neo Vitae** (blood distillation via the Cryo-Distillation Tower), **Thaumaturge** (Vis Condenser, Hollow Golem Head Crucible recipe, Essentia Cryo-Cauldron, Cryo-Source Jars, and full item aspects - optional on 26.1.2), and **Ars Nouveau** (Source jars, Dispel rituals, Saturator Source Gems, and Blue Ice imbuement - **required on 1.21.1**, built-in and activates automatically once ported to 26.1.2).
 - **Optional Integrations:** **Copper Age Backport** `0.1.5+` (recommended on 1.21.1 for early copper golems & statues; vanilla on 26.1.2), **Create** (Mixer, Press, and Sequential Assembly recipes on 1.21.1; built-in for 26.1.2 once ported), **Curios** (dedicated Portable Chronometer slot), **JEI**, and **Jade**.
 - **Occult Grimoire of Logistics:** built-in illustrated, searchable research map with multiblock checklists and ghost projections in **English and Russian**.
 
@@ -160,7 +167,8 @@ Everything is steampunk-and-frost: polished copper, CRT screens, vacuum tubes, v
 Golem Logix is powered exclusively by magic mods — each Minecraft version requires its primary magic power mod on CurseForge:
 
 - **Minecraft 26.1.2:**
-    - **Required:** NeoForge `26.1.2.x`, Java `25`, and **Neo Vitae** (provides *Essentia Vitae* for the Cryo-Distillation Tower & Cryo-Source Jars).
+    - **Recommended Magic Power (at least one):** **Neo Vitae** (provides *Essentia Vitae* for the Cryo-Distillation Tower & Cryo-Source Jars) or **Thaumaturge** (unlocks the Vis Condenser, Essentia Cryo-Cauldron, Crucible recipe, Cryo-Source Jars, and item aspects). *(Golem Logix also runs standalone in Free Mode without either.)*
+    - **Required:** NeoForge `26.1.2.x`, Java `25`.
     - **Optional:** Curios, JEI, Jade. *(Copper golems & statues are vanilla on 26.1.2; Ars Nouveau and Create integrations are already built in and activate automatically once released for 26.1.2.)*
 - **Minecraft 1.21.1:**
     - **Required:** NeoForge `21.1.x`, Java `21`, and **Ars Nouveau** (provides Source jars, Dispel rituals, Saturator Source Gems, and Blue Ice imbuement).
@@ -176,4 +184,4 @@ Install on both client and server.
 
 ---
 
-*Licensed under MIT. Source code and issue tracker on [GitHub](https://github.com/NiceClown/golem-logix).*
+*Licensed under MIT. Source code and issue tracker on [GitHub](https://github.com/NiceClown/golem-logix) · Join our [Discord](https://discord.gg/qJ8fvNzFkA).*

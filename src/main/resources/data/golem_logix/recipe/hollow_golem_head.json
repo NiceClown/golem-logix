@@ -1,0 +1,27 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "thaumaturge"
+    }
+  ],
+  "type": "thaumaturge:crucible",
+  "catalyst": "golem_logix:flattened_iron_core",
+  "aspects": [
+    {
+      "aspect": "thaumaturge:vacuos",
+      "amount": 20
+    },
+    {
+      "aspect": "thaumaturge:gelum",
+      "amount": 20
+    },
+    {
+      "aspect": "thaumaturge:auram",
+      "amount": 15
+    }
+  ],
+  "result": {
+    "id": "golem_logix:hollow_golem_head"
+  }
+}

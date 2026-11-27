@@ -1,7 +1,6 @@
 package com.golemlogix.blockentity;
 
 import com.golemlogix.blocks.DistillationTowerBlock;
-import com.golemlogix.blocks.JarForm;
 import com.golemlogix.config.GolemConfig;
 import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.init.ModTags;
@@ -73,7 +72,6 @@ public class DistillationTowerBlockEntity extends BlockEntity {
     /** Status: 0 = no blood, 1 = working, 2 = no jar with room. */
     private int status;
     private double carry;
-    private boolean bonus;
     private boolean working;
     private long lastWork = -100;
     private boolean dirty;
@@ -163,9 +161,6 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         }
         double perMb = GolemConfig.DISTILL_SOURCE_PER_MB.get();
         int budget = Math.max(1, rate() * PERIOD / 20);
-        boolean pump = pumpBonus(onNetwork);
-        bonus = pump;
-        perMb *= pump ? 1 + GolemConfig.GIGA_SOURCE_BONUS.get() / 100.0 : 1;
 
         long roomAll = SourceHelper.fillAround(level, cells, Integer.MAX_VALUE, true);
         for (CryoJarBlockEntity jar : joined) {
@@ -257,25 +252,6 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         return far;
     }
 
-    /** True when a Giga Jar stands on any touching network or directly beside the tower. */
-    private boolean pumpBonus(List<CryoJarBlockEntity> joined) {
-        for (CryoJarBlockEntity jar : joined) {
-            if (jar.form() == JarForm.GIGA) {
-                return true;
-            }
-        }
-        for (BlockPos cell : cells) {
-            for (Direction d : BlockEntities.DIRECTIONS) {
-                BlockPos p = cell.relative(d);
-                if (!cells.contains(p) && level.isLoaded(p)
-                        && level.getBlockEntity(p) instanceof CryoJarBlockEntity j && j.form() == JarForm.GIGA) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
     public UpgradeContainer getUpgrades() {
         return upgrades;
     }
@@ -289,6 +265,14 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         return GolemConfig.DISTILL_RATE.get() + GolemConfig.DISTILL_COPROCESSOR_BONUS.get() * upgrades.count(UpgradeType.SPEED);
     }
 
+    public double sourcePerSecond() {
+        return rate() * GolemConfig.DISTILL_SOURCE_PER_MB.get();
+    }
+
+    public int status() {
+        return tank.getAmountAsInt(0) <= 0 ? 0 : status;
+    }
+
     public ContainerData menuData() {
         return new ContainerData() {
             @Override
@@ -296,9 +280,8 @@ public class DistillationTowerBlockEntity extends BlockEntity {
                 return switch (index) {
                     case 0 -> tank.getAmountAsInt(0);
                     case 1 -> rate();
-                    case 2 -> (int) Math.round(rate() * GolemConfig.DISTILL_SOURCE_PER_MB.get()
-                            * (bonus ? 1 + GolemConfig.GIGA_SOURCE_BONUS.get() / 100.0 : 1) * 10);
-                    case 3 -> tank.getAmountAsInt(0) <= 0 ? 0 : status;
+                    case 2 -> (int) Math.round(sourcePerSecond() * 10);
+                    case 3 -> status();
                     case 4 -> upgrades.count(UpgradeType.SPEED);
                     case 5 -> capacity();
                     default -> 0;

@@ -1,0 +1,27 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "thaumaturge"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "B": "thaumaturge:ingot_brass",
+    "M": "golem_logix:flattened_copper_matrix",
+    "T": "thaumaturge:tube",
+    "H": "golem_logix:hollow_golem_head",
+    "F": "golem_logix:flattened_cryo_substrate",
+    "J": "thaumaturge:jar_normal"
+  },
+  "pattern": [
+    "BMB",
+    "THT",
+    "FJF"
+  ],
+  "result": {
+    "count": 1,
+    "id": "golem_logix:essentia_cryo_cauldron"
+  }
+}

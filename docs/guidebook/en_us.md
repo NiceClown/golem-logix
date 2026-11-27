@@ -41,7 +41,7 @@ If you want the road from zero to your first terminal, open **Quick start**.
 
 #### Standalone Free Mode
 
-&6Neither **Ars Nouveau** nor **Neo Vitae** is installed.&r Golem Logix has no hard dependencies and runs completely on its own.
+&6Neither **Ars Nouveau**, **Neo Vitae**, nor **Thaumaturge** is installed.&r Golem Logix has no hard dependencies and runs completely on its own.
 
 Because there is nowhere to draw **Source** in survival, **Free Mode** is active automatically: the Atlas Core, Mana Saturator, Forge Hammer, Cryo-Calculators, Cryo-Mixer and Chronometer work without Source jars.
 
@@ -49,11 +49,13 @@ Because there is nowhere to draw **Source** in survival, **Free Mode** is active
 
 For the intended progression, **installing at least one of these mods is strongly recommended**:
 
-- **Ars Nouveau** — Source Jars, apparatus recipes, Saturator gems and the Dispel ritual.
+- **Ars Nouveau** - Source Jars, apparatus recipes, Saturator gems and the Dispel ritual.
 
-- **Neo Vitae** — blood **Cryo-Distillation**, **Cryo-Source Jars**, **Giga Jars** and the **Reactor**.
+- **Neo Vitae** - blood **Cryo-Distillation**, **Cryo-Source Jars**, **Giga Jars** and the **Reactor**.
 
-*Add either mod later: the world switches to Source on its own.*
+- **Thaumaturge** - chunk aura **Vis Condenser**, **Essentia Cryo-Cauldron**, **Cryo-Source Jars**, **Giga Jars** and the **Reactor**.
+
+*Add any of these mods later: the world switches to Source on its own.*
 
 ### Source - the only energy
 <!-- {"id": "source", "icon": "golem_logix:creative_source_jar", "x": 1, "y": 0, "parents": ["intro"]} -->
@@ -61,17 +63,17 @@ For the intended progression, **installing at least one of these mods is strongl
 #### Free Mode Active
 <!-- {"when": "no_source_mod"} -->
 
-&6Neither **Ars Nouveau** nor **Neo Vitae** was found in this world.&r
+&6Neither **Ars Nouveau**, **Neo Vitae**, nor **Thaumaturge** was found in this world.&r
 
 With nowhere to get **Source** in survival, Golem Logix runs in **Free Mode**: the Atlas Core, Mana Saturator, Forge Hammer, calculators and Chronometer need no Source at all.
 
-**Installing Ars Nouveau or Neo Vitae is strongly recommended** to unlock the intended magical energy logistics, rituals and Source multiblocks.
+**Installing Ars Nouveau, Neo Vitae, or Thaumaturge is strongly recommended** to unlock the intended magical energy logistics, rituals and Source multiblocks.
 
 #### Powering the network
 
-There is no RF or FE here: the network runs on magical **Source** - the same power that flows in runes, blood and gems. A source can be:
+There is no RF or FE here: the network runs on magical **Source** - the same power that flows in runes, blood, aura and gems. A source can be:
 
-- a **Cryo-Source Jar**: a Cryo-Distillation Tower fills it with Source frozen out of blood (Neo Vitae, see “Cryo-Distillation”),
+- a **Cryo-Source Jar**: filled by a **Cryo-Distillation Tower** from Neo Vitae blood (see “Cryo-Distillation”), or by a **Vis Condenser** / **Essentia Cryo-Cauldron** from Thaumaturge Vis and Essentia,
 
 - a Source Jar from Ars Nouveau (or any of its machines holding Source),
 
@@ -93,7 +95,9 @@ An infinite source never runs dry. When Source runs out the core goes dark and t
 
 Every autocrafting step costs **2 Source** too.
 
-*If the world has neither Neo Vitae nor Ars Nouveau, there is nowhere to get Source: then the network, the Saturator, the hammer and the Chronometer work for free.*
+Connecting a **Giga Jar** to the network cuts all network Source consumption by **7%** (once per network; extra Giga Jars add storage only).
+
+*If the world has none of Neo Vitae, Thaumaturge, or Ars Nouveau, there is nowhere to get Source: then the network, the Saturator, the hammer and the Chronometer work for free.*
 
 ### Quick start
 <!-- {"id": "quickstart", "icon": "golem_logix:analog_terminal", "x": 2, "y": 0, "parents": ["source"], "gold": true} -->
@@ -116,7 +120,7 @@ The first network takes **4 cores and 6 matrices**.
 
 The network runs on **Source** alone. Put a supply against any block of the network:
 
-- a **Cryo-Source Jar** - the Cryo-Distillation Tower fills it from Neo Vitae blood,
+- a **Cryo-Source Jar** - filled by the Cryo-Distillation Tower (Neo Vitae) or by the Vis Condenser / Essentia Cryo-Cauldron (Thaumaturge),
 
 - an Ars Nouveau Source Jar,
 
@@ -124,7 +128,7 @@ The network runs on **Source** alone. Put a supply against any block of the netw
 
 The core takes 1 Source a second, plus 1/4 per channel in use.
 
-*No Neo Vitae or Ars Nouveau in the pack: it runs free.*
+*No Neo Vitae, Thaumaturge, or Ars Nouveau in the pack: it runs free.*
 
 #### The first network
 
@@ -184,6 +188,16 @@ Rune jars are not the only keepers of Source. It flows in the blood of the livin
 The network cannot drink such power: living chaos would melt the frozen runes. So the blood is **frozen out**. In the Cryo-Distillation Tower the snow golems' cold takes its warmth and turmoil away, and pure, still **Cryo-Source** settles at the bottom of the column.
 
 *Ice does not ask whose blood it was. It only makes it quiet.*
+
+#### Thin aura, hollow iron
+
+Ambient **Vis** in the air is thin and restless. A copper golem with a brass antenna can comb wild threads out of the chunk early on, yet the tower drinks faster than the moon replenishes the sky - push the aura past **10%** and the strained air tears into **Flux**.
+
+Workshop alchemists found a sterner answer in the boiling **Crucible**. Steep a **Flattened Iron Core** in **Vacuos**, **Gelum**, and **Auram**, and the plate swells back into an Iron Golem's head with every trace of mind and will scoured hollow - a dead iron skull-cauldron that never cracks under boiling aura.
+
+Perched on its brass rim, an Archmage **Copper Golem** stirs **Auram** and **Gelum** together over a block of **Ice** to condense pure, motionless **Cryo-Source**. The reaction's heat steadily melts the ice underneath into water, inviting a **Mason's Formation Bus** to slide fresh ice back into place before the brew can boil over.
+
+*An empty head remembers no loyalty - only how to hold the cold.*
 
 #### About this grimoire
 
@@ -261,8 +275,8 @@ Two blocks high. Right-click it to see how much Source it holds; a comparator re
 Source is kept in jars, and jars grow:
 
 - **Jar**: 10 000 Source. Stands against the tower, and against the network to feed it.
-- **Giga Jar**: 4 jars, 44 000 Source. A derrick; towers yield more.
-- **Antigravity Reactor**: 9 jars, 108 000 Source. The largest store.
+- **Giga Jar**: 4 jars, 44 000 Source. A derrick; cuts network Source consumption by **7%**.
+- **Antigravity Reactor**: 9 jars, 108 000 Source. The largest store; raises network channels by **25%**.
 
 #### Joining jars
 
@@ -280,13 +294,90 @@ Break any jar and the whole comes apart: the jars left share its Source out, as 
 
 #### The Giga Jar's derrick
 
-While at least one Giga Jar is on the network, or right beside the tower, towers make **7% more Source** from the same blood. One is enough, more add nothing, and a reactor does not count: keep one derrick working even when you have reactors.
+While at least one **Giga Jar** touches the network, all network Source consumption drops by **7%** - core upkeep, autocrafting steps, a networked Mana Saturator and Liquid Cryo-Source alike (small costs keep their full 7% savings over time).
+
+The discount applies **once per network**: extra Giga Jars do not stack the discount, though you can connect as many as you like for Source storage. An Antigravity Reactor does not replace it - keep a Giga Jar on the network even alongside reactors.
+
+#### The Reactor's field
+
+While at least one **Antigravity Reactor** touches the network, every channel limit in the network rises by **25%**: basic pipes and device chains carry **20** channels instead of 16, dense pipes, telegraphs and base bushing lines carry **80** instead of 64 (128 becomes **160**, a full array rises from 320 to **400**, up to **2000** with 8 quantum expanders).
+
+The boost applies **once per network**: extra reactors do not stack the channel bonus, though you can connect any number of them for storage. A Giga Jar and a Reactor work side by side, granting both bonuses independently.
 
 #### Anywhere on the network
 
 A Giga Jar and a reactor need only touch the network. **A tower touching the network pours into them wherever they are**, through the pipes, so put them where your base looks best.
 
 A lone jar does not do this: a tower fills it only by standing against it.
+
+### Vis Condenser
+<!-- {"id": "vis_condenser", "icon": "golem_logix:vis_condenser", "x": 2, "y": -1, "parents": ["source"], "requires": "thaumaturge"} -->
+
+#### Source from the aura
+
+The **Vis Condenser** is the early Thaumaturge bridge into Golem Logix. Standing two blocks tall, its copper golem wears brass goggles and sweeps a Vis antenna beneath rotating armillary rings, combing raw **Vis** out of the chunk aura and freezing it into **Cryo-Source**.
+
+Every second it drains **1 Vis** from the chunk and condenses **15 Source**, pouring it into **Cryo-Source Jars** (or Ars Nouveau jars) touching either block, and into any **Giga Jar** or **Antigravity Reactor** connected to the same network.
+
+*Watch the live brass manometer on the plinth: its needle tracks the chunk's Vis against its base aura.*
+
+#### Threshold, hysteresis and Flux
+
+Right-click the condenser to open its control dial. Because a chunk regenerates Vis slowly, you can set a **stop floor** so the machine rests before exhausting the air:
+
+- **Percentage mode (`%`)**: stops at **0-95%** of the chunk's base Vis (default **25%**) and stays paused until the aura recovers by **+5%** above the floor.
+
+- **Exact mode (`Vis`)**: stops at **0-500 Vis** and resumes once the aura rises **+5 Vis** above the floor. Lowering the threshold below current Vis resumes immediately.
+
+The red arc marks **10% Vis**. If you push the floor below **10%**, draining strains the aura and emits **Flux** into the chunk. A **redstone signal** pauses the condenser cleanly.
+
+<!-- {"type": "crafting", "recipe": "golem_logix:vis_condenser"} -->
+
+Two blocks high: an Arcane Stone plinth with a copper matrix, a frosted glass condenser, Salis Mundus focus and gold armillary rings.
+
+<!-- {"type": "crafting", "recipe": "golem_logix:cryo_source_jar"} -->
+
+Stores **10 000 Source** beside the condenser or cauldron and feeds any touching network block. Four in a **2x2** square merge into a **Giga Jar** (**44 000 Source**, non-stacking **-7%** network Source consumption); nine in a **3x3** square form an **Antigravity Reactor** (**108 000 Source**, non-stacking **+25%** network channels). Networked Giga Jars and Reactors receive Source from anywhere on the same network.
+
+### Essentia Cryo-Cauldron
+<!-- {"id": "essentia_cauldron", "icon": "golem_logix:essentia_cryo_cauldron", "x": 2, "y": -2, "parents": ["vis_condenser"], "requires": "thaumaturge", "gold": true} -->
+
+#### Hollow Golem Head
+<!-- {"type": "ritual", "station": "thaumaturge:crucible", "inputs": ["golem_logix:flattened_iron_core"], "outputs": ["golem_logix:hollow_golem_head"]} -->
+
+> 20 Vacuos, 20 Gelum, 15 Auram (no research gate).
+
+To scale beyond thin chunk Vis, forge a **Hollow Golem Head** in a boiling **Crucible**: drop a **Flattened Iron Core** into **20 Vacuos**, **20 Gelum**, and **15 Auram**. The scoured iron skull becomes the indestructible vessel of the Essentia Cryo-Cauldron.
+
+<!-- {"type": "crafting", "recipe": "golem_logix:essentia_cryo_cauldron"} -->
+
+Two blocks high: an Iron Golem head vessel lined with Alchemical Brass, dual Essentia tubes, a Warded Jar heat-sink and an Archmage Copper Golem perched on the rim.
+
+#### Sided Essentia and brewing
+
+Connect Thaumaturge Essentia tubes to the lower block's side nozzles (facing the front of the cauldron):
+
+- **Left nozzle**: pulls only **Auram** Essentia (suction 128, buffer 64).
+
+- **Right nozzle**: pulls only **Gelum** Essentia (suction 128, buffer 64). Swapped aspects are rejected; right-clicking with filled **Essentia Phials** also tops up the matching tank.
+
+With **Ice** underneath, the Archmage stirs **1 Auram + 2 Gelum** every 4 seconds into **160 Source** at **0 Flux** (base 0.25 reactions/s = **40 Source/s**), pouring into adjacent jars and networked **Giga Jars** / **Antigravity Reactors**.
+
+Up to **28 Compressed Co-Processors** fit in its upgrade slot (+0.125 reactions/s each, up to **600 Source/s**).
+
+#### Ice cooling and automation
+
+The reaction sheds heat into the block directly **underneath** the cauldron, slowly degrading it as Source is produced:
+
+- **Blue Ice** (**9 000 Source**) -> degrades to **Packed Ice**;
+
+- **Packed Ice** (**3 000 Source**) -> degrades to **Ice**;
+
+- **Ice** (**1 000 Source**) -> melts into **Water**.
+
+Point a **Mason's Formation Bus** at the space below with **Replace fluids** enabled (default) and Ice in its filter: the moment Ice melts to Water, the bus replaces it automatically.
+
+**Flux boil-off**: if Ice or **Gelum** runs dry while **Auram** sits inside, the Archmage panics after a **2-second (40-tick)** grace window and boils **1 Auram** into **Flux** every 2 seconds. A **redstone signal** pauses suction, brewing, and boil-off safely with **0 Flux**.
 
 ## Golem Rituals
 <!-- {"id": "rituals", "icon": "golem_logix:flattened_iron_core", "color": "e0b04a"} -->
@@ -310,7 +401,7 @@ The anvil must fall onto the golem from at least one block above its head.
 
 > A golem with 1-4 HP (out of 100).
 
-Cores go into the Atlas Core, casings, Atlants and calculators.
+Cores go into the Atlas Core, casings, Atlants and calculators. Each crush also has a **33% chance** to yield a **second** core.
 
 To bring 100 HP down to four, a harming potion, lava or a long fall helps.
 
@@ -350,6 +441,8 @@ Strike with the **Forge Hammer**: left-click the anvil. A strike takes **100 Sou
 By hand you get **one** plate. The multiblock around the anvil is its upgrade: the forging golem makes two plates and works on its own.
 
 Right-click with an empty hand takes the result (or the blank back).
+
+*Need an End Rod before reaching the End? The unformed anvil can forge one through the [Cryo-Forging ritual](end_rod_ritual).*
 
 #### Materials list
 <!-- {"type": "checklist", "variant": "saturator"} -->
@@ -435,7 +528,34 @@ The hammer runs on **Source** from its own charge (up to **4000**), like the Por
 
 **Left-click the anvil** to strike (100 Source; does not break the anvil).
 
-*Without Neo Vitae or Ars Nouveau in the world, the hammer strikes for free.*
+*Without Neo Vitae, Thaumaturge, or Ars Nouveau in the world, the hammer strikes for free.*
+
+### End Rod Cryo-Forging
+<!-- {"id": "end_rod_ritual", "icon": "minecraft:end_rod", "x": 1, "y": 2, "parents": ["hammer", "saturator"], "gold": true} -->
+
+#### Setup and total cost
+
+An expensive pre-End ritual on an **unassembled Mana Saturator anvil**: turns a block of diamond, chorus-free catalyst reagents and deep frost into one **End Rod**, letting you assemble the full Saturator before slaying the Ender Dragon.
+
+Clear the multiblock around the anvil, place **4 Blue Ice blocks** on all four horizontal sides (**N, S, E, W**) touching it, and charge a **Forge Hammer** to **4 000 Source** (**40 strikes** at 100 Source each).
+
+Total items consumed: **1 Block of Diamond**, **2 Eyes of Ender**, **2 Ghast Tears**, and **1 Netherite Ingot**.
+
+#### Three forging phases
+
+- **Phase 1:** Right-click the empty anvil with a **Block of Diamond**, then strike **15 times** with **Blue Ice** on all 4 sides (Blue Ice degrades to **Packed Ice**).
+
+- **Phase 2:** Right-click the anvil with **2 Eyes of Ender**, then strike **15 times** with **Packed Ice** or colder on all 4 sides (Packed Ice degrades to **Ice**).
+
+- **Phase 3:** Feed **2 Ghast Tears** and **1 Netherite Ingot** in any order, then strike **10 times** with **Ice** or colder on all 4 sides.
+
+On the last strike the four Ice blocks melt to **Water** and an **End Rod** rests on the anvil.
+
+#### Ice rules and cancelling
+
+You can inspect live phase progress, inserted reagents, and missing ice tier via **Jade** or right-clicking the anvil.
+
+To abort mid-ritual and reclaim the diamond block and every inserted reagent, press **Shift + Right-Click** with an empty hand.
 
 ### Source Gems in the Saturator
 <!-- {"id": "saturator_gems", "icon": "ars_nouveau:source_gem", "x": 2, "y": 1, "parents": ["saturator"], "requires": "ars_nouveau"} -->
@@ -845,6 +965,8 @@ The expander must be **built into the wall**: the array is checked as a whole. I
 
 Pipes still limit their own stretches: to pass more than 64 channels through one bushing, run several pipes from it or use dense pipes.
 
+An **Antigravity Reactor** on the network raises every line, pipe and exit limit by **25%** (64 -> 80, 128 -> 160, 320 -> 400, up to 2000 total; once per network).
+
 ### Cable Bushings and lines
 <!-- {"id": "array_bushings", "icon": "golem_logix:cable_bushing", "x": 2, "y": -1, "parents": ["array_tower"]} -->
 
@@ -952,6 +1074,8 @@ A channel has four limits:
 - **Devices** - a device passes on 16, like a basic pipe.
 
 A device that gets no channel stays **silent**: the terminal reports “no free channels”.
+
+*An Antigravity Reactor on the network raises all four limits by 25% (once per network: 16 -> 20, 64 -> 80, 320 -> 400).*
 
 #### Who gets a channel first
 
@@ -1100,7 +1224,7 @@ The digits glow on **both sides** of the tubes, so it reads from the front and f
 
 - leading zeros stay dark; with no core or no Source every tube goes out.
 
-**Right-click** switches to the **capacity** of that spot (in nixie orange) and back: 16 for a basic pipe or a device, 64 for a dense pipe.
+**Right-click** switches to the **capacity** of that spot (in nixie orange) and back: 16 for a basic pipe or a device, 64 for a dense pipe (20 and 80 with an Antigravity Reactor).
 
 ### Pipe Plugs
 <!-- {"id": "net_plugs", "icon": "golem_logix:pipe_plug", "x": 2, "y": -1, "parents": ["net_pipes"]} -->
@@ -1597,6 +1721,8 @@ A whole copper block with a **copper golem fused into its front**. It takes the 
 - Upgrades as on the Export Bus: an **Autocraft Module** orders a block the network lacks, a **Redstone Module**, a **Fuzzy Card**.
 
 - The **order** button on the left: **in order** (the first filter slot the network has), **round robin** (slot after slot) or **at random**.
+
+- The **fluids** button on the left: **replace fluids** (default - places blocks into water and other replaceable fluids, ideal for replacing melted Ice under an Essentia Cryo-Cauldron) or **respect fluids** (places only into dry air and dry replaceable blocks, leaving water and lava untouched).
 
 *Fused into its casing, the golem can never leave its post - which is why it lays blocks truer than any mason.*
 
@@ -2347,7 +2473,7 @@ The chronometer runs on its own store of **Source** (up to 10,000): opening the 
 
 If an **Eternal Frost Source Resonator** is attached to the network, the watch never needs charging again: the resonator sends it Source through the aether wherever you are.
 
-*If the world has no way to get Source (neither Neo Vitae nor Ars Nouveau), no charge is needed at all.*
+*If the world has no way to get Source (none of Neo Vitae, Thaumaturge, or Ars Nouveau), no charge is needed at all.*
 
 #### Hotkey
 
@@ -2363,7 +2489,7 @@ If an **Eternal Frost Source Resonator** is attached to the network, the watch n
 
 | Tier | Range |
 |---|---|
-| Local | 200 blocks, same world |
+| Local | 64 blocks, same world |
 | Dimension | anywhere in the same world |
 | Cross-dimension | across any dimensions |
 

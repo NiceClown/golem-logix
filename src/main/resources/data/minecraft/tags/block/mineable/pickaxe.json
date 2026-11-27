@@ -41,6 +41,8 @@
     "golem_logix:stock_manometer",
     "golem_logix:stock_requester",
     "golem_logix:cryo_diode",
-    "golem_logix:security_terminal"
+    "golem_logix:security_terminal",
+    "golem_logix:vis_condenser",
+    "golem_logix:essentia_cryo_cauldron"
   ]
 }

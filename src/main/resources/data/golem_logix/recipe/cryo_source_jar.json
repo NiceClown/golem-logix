@@ -1,8 +1,17 @@
 {
   "neoforge:conditions": [
     {
-      "type": "neoforge:mod_loaded",
-      "modid": "neovitae"
+      "type": "neoforge:or",
+      "values": [
+        {
+          "type": "neoforge:mod_loaded",
+          "modid": "neovitae"
+        },
+        {
+          "type": "neoforge:mod_loaded",
+          "modid": "thaumaturge"
+        }
+      ]
     }
   ],
   "type": "minecraft:crafting_shaped",

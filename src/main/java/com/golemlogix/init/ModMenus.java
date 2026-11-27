@@ -45,6 +45,12 @@ public class ModMenus {
     public static final Supplier<MenuType<com.golemlogix.menu.CryoMixerMenu>> CRYO_MIXER =
             MENUS.register("cryo_mixer", () -> IMenuTypeExtension.create(com.golemlogix.menu.CryoMixerMenu::fromNetwork));
 
+    public static final Supplier<MenuType<VisCondenserMenu>> VIS_CONDENSER =
+            MENUS.register("vis_condenser", () -> IMenuTypeExtension.create(VisCondenserMenu::fromNetwork));
+
+    public static final Supplier<MenuType<EssentiaCauldronMenu>> ESSENTIA_CAULDRON =
+            MENUS.register("essentia_cryo_cauldron", () -> IMenuTypeExtension.create(EssentiaCauldronMenu::fromNetwork));
+
     public static final Supplier<MenuType<CardCatalogMenu>> CARD_CATALOG =
             MENUS.register("punch_card_catalog", () -> IMenuTypeExtension.create(CardCatalogMenu::fromNetwork));
 

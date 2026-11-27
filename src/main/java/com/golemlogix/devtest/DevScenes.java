@@ -44,6 +44,195 @@ final class DevScenes {
                 refresh(level, base.above(3));
                 log.accept("array built, core " + base.above(3));
             }
+            case "arraygrad" -> {
+                // arraygrad x y z : full Atlas Array with mixed Ice Conduit / Blue Expander / Quantum Expander pillars for 2.2.2 smooth gradients
+                BlockPos base = pos(a, 0);
+                for (AtlasBlueprint.Cell c : AtlasBlueprint.cells(AtlasBlueprint.Variant.FULL)) {
+                    level.setBlock(base.offset(c.dx(), c.dy(), c.dz()), c.state(), 3);
+                }
+                int[][] edges = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}};
+                for (int[] e : edges) {
+                    level.setBlock(base.offset(e[0], 0, e[1]), ModBlocks.ATLAS_CONDUIT.get().defaultBlockState(), 3);
+                    level.setBlock(base.offset(e[0], 1, e[1]), ModBlocks.CHANNEL_EXPANDER.get().defaultBlockState(), 3);
+                    level.setBlock(base.offset(e[0], 2, e[1]), ModBlocks.QUANTUM_CHANNEL_EXPANDER.get().defaultBlockState(), 3);
+                }
+                level.setBlock(base.below(), ModBlocks.CREATIVE_SOURCE_JAR.get().defaultBlockState(), 3);
+                com.golemlogix.system.AtlasStructure.dress(level, base.above(3), true);
+                refresh(level, base.above(3));
+                log.accept("arraygrad built, core " + base.above(3));
+            }
+            case "jar" -> {
+                // jar x y z facing <1|2|3> [fill]: place Cryo-Source Jar (1), 2x2 Giga Jar (2), or 3x3 Antigravity Reactor (3)
+                BlockPos base = pos(a, 0);
+                net.minecraft.core.Direction facing = net.minecraft.core.Direction.byName(a[3]);
+                int size = Integer.parseInt(a[4]);
+                int fill = a.length > 5 ? Integer.parseInt(a[5]) : 25000;
+                for (int dx = 0; dx < size; dx++) {
+                    for (int dz = 0; dz < size; dz++) {
+                        com.golemlogix.blocks.CryoJarBlock.place(level, base.offset(dx, 0, dz), facing, ModBlocks.CRYO_SOURCE_JAR.get());
+                    }
+                }
+                if (size > 1) {
+                    com.golemlogix.system.JarMerge.scan(level, base);
+                }
+                if (level.getBlockEntity(base) instanceof com.golemlogix.blockentity.CryoJarBlockEntity je) {
+                    je.fill(fill, false);
+                }
+                log.accept("jar size=" + size + " at " + base + " facing " + facing);
+            }
+            case "distill" -> {
+                // distill x y z facing [bloodMb]: place Cryo-Distillation Tower with coprocessors and Essentia Vitae
+                BlockPos base = pos(a, 0);
+                net.minecraft.core.Direction facing = net.minecraft.core.Direction.byName(a[3]);
+                int blood = a.length > 4 ? Integer.parseInt(a[4]) : 8000;
+                com.golemlogix.blocks.DistillationTowerBlock.place(level, base, facing, ModBlocks.CRYO_DISTILLATION_TOWER.get());
+                if (level.getBlockEntity(base) instanceof com.golemlogix.blockentity.DistillationTowerBlockEntity te) {
+                    for (int i = 0; i < te.getUpgrades().getContainerSize(); i++) {
+                        te.getUpgrades().setItem(i, new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get()));
+                    }
+                }
+                var vitae = net.minecraft.core.registries.BuiltInRegistries.FLUID.getValue(net.minecraft.resources.Identifier.parse("neovitae:essentia_vitae_source"));
+                var fh = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.Fluid.BLOCK, base, net.minecraft.core.Direction.UP);
+                if (fh != null && vitae != net.minecraft.world.level.material.Fluids.EMPTY) {
+                    com.golemlogix.system.Transfers.insertFluid(fh, new net.neoforged.neoforge.fluids.FluidStack(vitae, blood), false);
+                }
+                log.accept("distill tower built at " + base);
+            }
+            case "mixer" -> {
+                // mixer x y z facing: place Cryo-Mixer filled with water + Liquid Cryo-Source
+                BlockPos base = pos(a, 0);
+                net.minecraft.core.Direction facing = net.minecraft.core.Direction.byName(a[3]);
+                com.golemlogix.blocks.CryoMixerBlock.place(level, base, facing, ModBlocks.CRYO_MIXER.get());
+                var fh = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.Fluid.BLOCK, base, net.minecraft.core.Direction.UP);
+                if (fh != null) {
+                    com.golemlogix.system.Transfers.insertFluid(fh, new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.WATER, 4000), false);
+                    com.golemlogix.system.Transfers.insertFluid(fh, com.golemlogix.system.CryoSource.stack(4000), false);
+                }
+                log.accept("mixer built at " + base);
+            }
+            case "viscondenser" -> {
+                // viscondenser x y z facing [thresholdPct]: place Vis Condenser with adjacent Cryo-Source Jar behind it
+                BlockPos base = pos(a, 0);
+                net.minecraft.core.Direction facing = net.minecraft.core.Direction.byName(a[3]);
+                com.golemlogix.blocks.VisCondenserBlock.place(level, base, facing, ModBlocks.VIS_CONDENSER.get());
+                if (level.getBlockEntity(base) instanceof com.golemlogix.blockentity.VisCondenserBlockEntity vc) {
+                    if (a.length > 4) {
+                        vc.setMode(com.golemlogix.blockentity.VisCondenserBlockEntity.MODE_PERCENT);
+                        vc.setThreshold(Integer.parseInt(a[4]));
+                    }
+                }
+                log.accept("viscondenser built at " + base + " facing " + facing);
+            }
+            case "cauldron" -> {
+                // cauldron x y z facing [auram] [gelum] [blue|packed|ice|water]: place Essentia Cryo-Cauldron over cooling block
+                BlockPos base = pos(a, 0);
+                net.minecraft.core.Direction facing = net.minecraft.core.Direction.byName(a[3]);
+                int auram = a.length > 4 ? Integer.parseInt(a[4]) : 48;
+                int gelum = a.length > 5 ? Integer.parseInt(a[5]) : 48;
+                String cool = a.length > 6 ? a[6] : "blue";
+                BlockState below = switch (cool) {
+                    case "packed" -> Blocks.PACKED_ICE.defaultBlockState();
+                    case "ice" -> Blocks.ICE.defaultBlockState();
+                    case "water" -> Blocks.WATER.defaultBlockState();
+                    default -> Blocks.BLUE_ICE.defaultBlockState();
+                };
+                level.setBlock(base.below(), below, 3);
+                com.golemlogix.blocks.EssentiaCauldronBlock.place(level, base, facing, ModBlocks.ESSENTIA_CAULDRON.get());
+                if (level.getBlockEntity(base) instanceof com.golemlogix.blockentity.EssentiaCauldronBlockEntity ec) {
+                    ec.addPrimary(auram, false);
+                    ec.addCoolant(gelum, false);
+                    ec.getUpgrades().setItem(0, new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get(), 4));
+                }
+                log.accept("cauldron built at " + base + " facing " + facing + " auram=" + auram + " gelum=" + gelum + " cool=" + cool);
+            }
+            case "thaumshowcase" -> {
+                // thaumshowcase x y z: compact visual-QA showcase with active Vis Condenser, brewing Essentia Cryo-Cauldron
+                // (Blue Ice below + Thaumaturge tubes on left/right + connected Cryo-Source Jars), and boil-off Cauldron!
+                BlockPos o = pos(a, 0);
+                net.minecraft.core.Direction facing = net.minecraft.core.Direction.NORTH;
+                for (int dx = -4; dx <= 12; dx++) {
+                    for (int dz = -4; dz <= 6; dz++) {
+                        level.setBlock(o.offset(dx, -1, dz), Blocks.SMOOTH_STONE.defaultBlockState(), 2);
+                        for (int dy = 0; dy <= 5; dy++) {
+                            level.setBlock(o.offset(dx, dy, dz), Blocks.AIR.defaultBlockState(), 2);
+                        }
+                    }
+                }
+                // 1. Active Vis Condenser at o+(0,0,0) with Cryo-Source Jar to viewer's left at o+(1,0,0)
+                com.golemlogix.blocks.VisCondenserBlock.place(level, o, facing, ModBlocks.VIS_CONDENSER.get());
+                com.golemlogix.blocks.CryoJarBlock.place(level, o.offset(1, 0, 0), facing, ModBlocks.CRYO_SOURCE_JAR.get());
+                if (level.getBlockEntity(o.offset(1, 0, 0)) instanceof com.golemlogix.blockentity.CryoJarBlockEntity je) {
+                    je.fill(3800, false);
+                }
+                if (level.getBlockEntity(o) instanceof com.golemlogix.blockentity.VisCondenserBlockEntity vc) {
+                    vc.setMode(com.golemlogix.blockentity.VisCondenserBlockEntity.MODE_PERCENT);
+                    vc.setThreshold(25);
+                }
+
+                // 2. Actively brewing Essentia Cryo-Cauldron at o+(5,0,0) on Blue Ice, Cryo Jar behind (cleanly piped)
+                BlockPos cp = o.offset(5, 0, 0);
+                level.setBlock(cp.below(), Blocks.BLUE_ICE.defaultBlockState(), 3);
+                com.golemlogix.blocks.EssentiaCauldronBlock.place(level, cp, facing, ModBlocks.ESSENTIA_CAULDRON.get());
+                com.golemlogix.blocks.CryoJarBlock.place(level, cp.offset(0, 0, 1), facing, ModBlocks.CRYO_SOURCE_JAR.get());
+                if (level.getBlockEntity(cp.offset(0, 0, 1)) instanceof com.golemlogix.blockentity.CryoJarBlockEntity je) {
+                    je.fill(4200, false);
+                }
+                if (level.getBlockEntity(cp) instanceof com.golemlogix.blockentity.EssentiaCauldronBlockEntity ec) {
+                    ec.addPrimary(64, false);
+                    ec.addCoolant(64, false);
+                    ec.getUpgrades().setItem(0, new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get(), 2));
+                }
+
+                // 3. Boil-off Essentia Cryo-Cauldron at o+(9,0,0) over melted Water (Auram only -> Archmage panic!)
+                BlockPos bp = o.offset(9, 0, 0);
+                level.setBlock(bp.below(), Blocks.WATER.defaultBlockState(), 3);
+                com.golemlogix.blocks.EssentiaCauldronBlock.place(level, bp, facing, ModBlocks.ESSENTIA_CAULDRON.get());
+                if (level.getBlockEntity(bp) instanceof com.golemlogix.blockentity.EssentiaCauldronBlockEntity ec) {
+                    ec.addPrimary(48, false);
+                }
+                log.accept("thaumshowcase built at " + o);
+            }
+            case "manometer" -> {
+                // manometer x y z facing item threshold
+                BlockPos at = pos(a, 0);
+                net.minecraft.core.Direction facing = net.minecraft.core.Direction.byName(a[3]);
+                level.setBlock(at, ModBlocks.STOCK_MANOMETER.get().defaultBlockState()
+                        .setValue(com.golemlogix.blocks.StockManometerBlock.FACING, facing), 3);
+                if (level.getBlockEntity(at) instanceof com.golemlogix.blockentity.StockManometerBlockEntity be) {
+                    var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(net.minecraft.resources.Identifier.parse(a[4]));
+                    be.getFilter().setItem(0, new ItemStack(item));
+                    be.setThreshold(Integer.parseInt(a[5]));
+                    be.setMode(com.golemlogix.blockentity.StockManometerBlockEntity.MODE_ABOVE);
+                }
+                log.accept("manometer at " + at);
+            }
+            case "requester" -> {
+                // requester x y z facing item keepAmount
+                BlockPos at = pos(a, 0);
+                net.minecraft.core.Direction facing = net.minecraft.core.Direction.byName(a[3]);
+                level.setBlock(at, ModBlocks.STOCK_REQUESTER.get().defaultBlockState()
+                        .setValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING, facing), 3);
+                if (level.getBlockEntity(at) instanceof com.golemlogix.blockentity.StockRequesterBlockEntity be) {
+                    var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(net.minecraft.resources.Identifier.parse(a[4]));
+                    ItemStack ghost = new ItemStack(item);
+                    ghost.set(com.golemlogix.init.ModDataComponents.KEEP_AMOUNT.get(), Integer.parseInt(a[5]));
+                    be.getFilters().setItem(0, ghost);
+                }
+                log.accept("requester at " + at);
+            }
+            case "security" -> {
+                // security x y z facing
+                BlockPos at = pos(a, 0);
+                net.minecraft.core.Direction facing = net.minecraft.core.Direction.byName(a[3]);
+                level.setBlock(at, ModBlocks.SECURITY_TERMINAL.get().defaultBlockState()
+                        .setValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING, facing), 3);
+                if (level.getBlockEntity(at) instanceof com.golemlogix.blockentity.SecurityTerminalBlockEntity be) {
+                    be.setOwner(player);
+                    be.getCards().setItem(0, com.golemlogix.items.IdentityPunchCardItem.of(
+                            player.getUUID(), player.getScoreboardName(), com.golemlogix.security.SecurityPermission.ALL));
+                }
+                log.accept("security at " + at);
+            }
             case "time" -> log.accept("gameTime=" + level.getGameTime());
             case "gearaudit" -> {
                 for (var item : net.minecraft.core.registries.BuiltInRegistries.ITEM) {

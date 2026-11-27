@@ -16,5 +16,6 @@ public record AnvilCrushRecipe(
         ItemStack output,
         @Nullable EntityType<?> entity,
         float minHealth,
-        float maxHealth
+        float maxHealth,
+        float bonusChance
 ) {}

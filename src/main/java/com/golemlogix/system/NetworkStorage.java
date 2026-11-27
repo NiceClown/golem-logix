@@ -1265,17 +1265,19 @@ final class NetworkStorage {
             return 0;
         }
         long per = GolemConfig.CRYO_SOURCE_COST.get();
-        if (per <= 0 || !SourceHelper.sourceRequired() || net.hasInfiniteSource()) {
+        int discount = net.sourceDiscountPercent();
+        if (per <= 0 || discount >= 100 || !SourceHelper.sourceRequired() || net.hasInfiniteSource()) {
             return Integer.MAX_VALUE;
         }
-        return availableSource(net) / per;
+        long maxBase = net.sourceDiscount().maxAffordableBase(availableSource(net), discount);
+        return maxBase / per;
     }
 
     /** Makes Liquid Cryo-Source from the network's Source (all of the amount that the Source covers). */
     private static FluidStack extractCryoSource(GolemNetwork net, int amount, boolean simulate) {
         int n = (int) Math.min(amount, cryoSourceAvailable(net));
         long per = GolemConfig.CRYO_SOURCE_COST.get();
-        if (per > 0 && SourceHelper.sourceRequired() && !net.hasInfiniteSource()) {
+        if (per > 0 && net.sourceDiscountPercent() < 100 && SourceHelper.sourceRequired() && !net.hasInfiniteSource()) {
             // consumeSource takes an int, so never hand out more mB than an int cost can pay for
             n = (int) Math.min(n, Integer.MAX_VALUE / per);
         }
@@ -1289,23 +1291,38 @@ final class NetworkStorage {
     }
 
     static boolean hasSource(GolemNetwork net, int amount) {
-        return amount <= 0 || !SourceHelper.sourceRequired() || net.hasInfiniteSource()
-                || availableSource(net) >= amount;
+        if (amount <= 0 || !SourceHelper.sourceRequired() || net.hasInfiniteSource()) {
+            return true;
+        }
+        int discount = net.sourceDiscountPercent();
+        int needed = net.sourceDiscount().previewDrain(amount, discount);
+        return availableSource(net) >= needed;
     }
 
     static boolean consumeSource(GolemNetwork net, int amount) {
         if (amount <= 0 || !SourceHelper.sourceRequired() || net.hasInfiniteSource()) {
             return true;
         }
-        if (availableSource(net) < amount) {
+        int discount = net.sourceDiscountPercent();
+        SourceDiscount meter = net.sourceDiscount();
+        int needed = meter.previewDrain(amount, discount);
+        if (availableSource(net) < needed) {
             return false;
         }
-        int left = amount;
+        int left = needed;
         for (SourceHelper.Supplier s : net.sources) {
-            left -= s.drain(left);
             if (left <= 0) {
                 break;
             }
+            left -= s.drain(left);
+        }
+        if (left > 0) {
+            return false;
+        }
+        int creditBefore = meter.creditHundredths();
+        meter.charge(amount, discount);
+        if (net.core != null && meter.creditHundredths() != creditBefore) {
+            net.core.setChanged();
         }
         return true;
     }
