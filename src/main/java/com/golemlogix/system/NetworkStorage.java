@@ -23,6 +23,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.item.WorldlyContainerWrapper;
 import net.neoforged.neoforge.transfer.resource.Resource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 
@@ -504,67 +505,141 @@ final class NetworkStorage {
 
     // ------------------------------------------------------------- externals
 
-    private record ExternalSlot(GlobalPos target, int slot) {
-    }
-
-    /** Tracks already-counted fluid tanks on shared targets without collapsing independent sided tanks at index 0. */
-    static final class FluidTankSeen {
+    /**
+     * Tracks already-counted storage slots/tanks on shared targets without collapsing independent sided handlers at
+     * identical local indices. Uses O(1) owner identity + slot first (keyed by physical {@link WorldlyContainer} slot
+     * when backed by a {@link WorldlyContainerWrapper}, else handler identity + local slot), then a rolled-back
+     * transactional probe on same-resource candidates sharing a canonical target.
+     */
+    static final class ResourceSlotSeen<R extends Resource> {
         private static final class HandlerSlot {
-            final ResourceHandler<FluidResource> handler;
+            final Object owner;
             final int slot;
 
-            HandlerSlot(ResourceHandler<FluidResource> handler, int slot) {
-                this.handler = handler;
+            HandlerSlot(Object owner, int slot) {
+                this.owner = owner;
                 this.slot = slot;
             }
 
             @Override
             public boolean equals(Object o) {
-                return o instanceof HandlerSlot hs && hs.handler == handler && hs.slot == slot;
+                return o instanceof HandlerSlot hs && hs.owner == owner && hs.slot == slot;
             }
 
             @Override
             public int hashCode() {
-                return System.identityHashCode(handler) * 31 + slot;
+                return System.identityHashCode(owner) * 31 + slot;
             }
         }
 
-        private record TankSnapshot(ResourceHandler<FluidResource> handler, int slot, FluidResource resource, int amount) {
+        private record SlotSnapshot<R extends Resource>(
+                ResourceHandler<R> handler, int slot, R resource, int amount, @Nullable Object physicalOwner) {
         }
 
         private final Set<HandlerSlot> seenIdentity = new HashSet<>();
-        private final Map<GlobalPos, List<TankSnapshot>> byTarget = new HashMap<>();
+        private final Map<GlobalPos, List<SlotSnapshot<R>>> byTarget = new HashMap<>();
 
-        boolean markNew(GlobalPos canon, ResourceHandler<FluidResource> h, int slot, FluidResource r, int amt) {
-            if (!seenIdentity.add(new HandlerSlot(h, slot))) {
+        boolean markNew(GlobalPos canon, ResourceHandler<R> h, int slot, R r, int amt) {
+            return markNew(canon, h, slot, r, amt, null, slot);
+        }
+
+        boolean markNew(GlobalPos canon, ResourceHandler<R> h, int slot, R r, int amt,
+                        @Nullable Object physicalOwner, int physicalSlot) {
+            Object idOwner = physicalOwner != null ? physicalOwner : h;
+            int idSlot = physicalOwner != null ? physicalSlot : slot;
+            if (!seenIdentity.add(new HandlerSlot(idOwner, idSlot))) {
                 return false;
             }
-            List<TankSnapshot> prevs = byTarget.computeIfAbsent(canon, k -> new ArrayList<>(2));
+            List<SlotSnapshot<R>> prevs = byTarget.computeIfAbsent(canon, k -> new ArrayList<>(2));
             boolean hasCandidate = false;
-            for (TankSnapshot prev : prevs) {
-                if (prev.handler != h && prev.resource.equals(r)) {
+            for (SlotSnapshot<R> prev : prevs) {
+                if (isCandidate(prev, h, r, physicalOwner)) {
                     hasCandidate = true;
                     break;
                 }
             }
-            if (hasCandidate) {
-                try (Transaction tx = Transaction.openRoot()) {
-                    int got = h.extract(slot, r, 1, tx);
-                    if (got == 0) {
-                        got = h.extract(slot, r, amt, tx);
-                    }
-                    if (got > 0) {
-                        for (TankSnapshot prev : prevs) {
-                            if (prev.handler != h && prev.resource.equals(r)
-                                    && prev.handler.getAmountAsInt(prev.slot) < prev.amount) {
-                                return false;
-                            }
+            if (hasCandidate && isAliased(prevs, h, slot, r, amt, physicalOwner)) {
+                return false;
+            }
+            prevs.add(new SlotSnapshot<>(h, slot, r, amt, physicalOwner));
+            return true;
+        }
+
+        private static <R extends Resource> boolean isCandidate(
+                SlotSnapshot<R> prev, ResourceHandler<R> h, R r, @Nullable Object physicalOwner) {
+            return prev.handler != h
+                    && (physicalOwner == null || prev.physicalOwner != physicalOwner)
+                    && prev.resource.equals(r);
+        }
+
+        private boolean isAliased(List<SlotSnapshot<R>> prevs, ResourceHandler<R> h, int slot, R r, int amt,
+                                  @Nullable Object physicalOwner) {
+            try (Transaction tx = Transaction.openRoot()) {
+                // Probe 1: extract from (h, slot)
+                if (probeExtract(h, slot, r, amt, tx) > 0) {
+                    for (SlotSnapshot<R> prev : prevs) {
+                        if (isCandidate(prev, h, r, physicalOwner)
+                                && prev.handler.getAmountAsInt(prev.slot) < prev.amount) {
+                            return true;
                         }
+                    }
+                    return false;
+                }
+                // Probe 2: insert fallback when extract is forbidden (e.g. insert-only wrappers)
+                if (probeInsert(h, slot, r, amt, tx) > 0) {
+                    for (SlotSnapshot<R> prev : prevs) {
+                        if (isCandidate(prev, h, r, physicalOwner)
+                                && prev.handler.getAmountAsInt(prev.slot) > prev.amount) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+                // Probe 3: (h, slot) is neither extractable nor insertable; probe each candidate prev instead
+                for (SlotSnapshot<R> prev : prevs) {
+                    if (!isCandidate(prev, h, r, physicalOwner)) {
+                        continue;
+                    }
+                    try (Transaction sub = Transaction.open(tx)) {
+                        if (probeExtract(prev.handler, prev.slot, r, prev.amount, sub) > 0) {
+                            if (h.getAmountAsInt(slot) < amt) {
+                                return true;
+                            }
+                            continue;
+                        }
+                        if (probeInsert(prev.handler, prev.slot, r, prev.amount, sub) > 0) {
+                            if (h.getAmountAsInt(slot) > amt) {
+                                return true;
+                            }
+                            continue;
+                        }
+                    }
+                    // shortcut: two 100%-full un-extractable handlers at identical slot & amount cannot be distinguished transactionally
+                    if (prev.slot == slot && prev.amount == amt) {
+                        return true;
                     }
                 }
             }
-            prevs.add(new TankSnapshot(h, slot, r, amt));
-            return true;
+            return false;
+        }
+
+        private int probeExtract(ResourceHandler<R> h, int slot, R r, int amt, Transaction tx) {
+            int got = h.extract(slot, r, 1, tx);
+            if (got == 0 && amt > 1) {
+                got = h.extract(slot, r, amt, tx);
+            }
+            return got;
+        }
+
+        private int probeInsert(ResourceHandler<R> h, int slot, R r, int amt, Transaction tx) {
+            int put = h.insert(slot, r, 1, tx);
+            if (put == 0) {
+                int room = (int) Math.min(Integer.MAX_VALUE, Math.max(0L, h.getCapacityAsLong(slot, r) - amt));
+                if (room > 1) {
+                    put = h.insert(slot, r, room, tx);
+                }
+            }
+            return put;
         }
     }
 
@@ -668,12 +743,17 @@ final class NetworkStorage {
         return shared.contains(c) ? c : null;
     }
 
+    private record WorldlyView(WorldlyContainer container, int[] slots) {
+    }
+
     @Nullable
-    private static int[] worldlySlots(GolemNetwork.External ex, int handlerSize) {
-        if (ex.level().isLoaded(ex.target()) && ex.level().getBlockEntity(ex.target()) instanceof WorldlyContainer wc) {
+    private static WorldlyView worldlyView(GolemNetwork.External ex, ResourceHandler<ItemResource> h) {
+        if (h instanceof WorldlyContainerWrapper
+                && ex.level().isLoaded(ex.target())
+                && ex.level().getBlockEntity(ex.target()) instanceof WorldlyContainer wc) {
             int[] slots = wc.getSlotsForFace(ex.face());
-            if (slots.length == handlerSize) {
-                return slots;
+            if (slots.length == h.size()) {
+                return new WorldlyView(wc, slots);
             }
         }
         return null;
@@ -787,21 +867,23 @@ final class NetworkStorage {
             }
         }
         Set<GlobalPos> shared = sharedTargetSet(net.externals);
-        Set<ExternalSlot> seenSlots = shared != null ? new HashSet<>() : null;
+        ResourceSlotSeen<ItemResource> seenSlots = shared != null ? new ResourceSlotSeen<>() : null;
         for (GolemNetwork.External ex : net.externals) {
             ResourceHandler<ItemResource> h = itemHandler(ex);
             if (h == null) {
                 continue;
             }
             GlobalPos canon = sharedCanonical(shared, ex);
-            int[] faceSlots = canon != null ? worldlySlots(ex, h.size()) : null;
+            WorldlyView worldly = canon != null ? worldlyView(ex, h) : null;
             for (int i = 0; i < h.size(); i++) {
                 ItemResource r = h.getResource(i);
                 int amt = h.getAmountAsInt(i);
                 if (!r.isEmpty() && amt > 0) {
                     ItemStack s = r.toStack(1);
                     if (mayExtract(ex, s)
-                            && (canon == null || seenSlots.add(new ExternalSlot(canon, faceSlots != null ? faceSlots[i] : i)))) {
+                            && (canon == null || seenSlots.markNew(canon, h, i, r, amt,
+                                    worldly != null ? worldly.container() : null,
+                                    worldly != null ? worldly.slots()[i] : i))) {
                         all.merge(ItemKey.ofSingleOwned(s), (long) amt, Long::sum);
                     }
                 }
@@ -836,7 +918,7 @@ final class NetworkStorage {
         }
         ItemResource want = ItemResource.of(key.stack());
         Set<GlobalPos> shared = sharedTargetSet(net.externals);
-        Set<ExternalSlot> seenSlots = shared != null ? new HashSet<>() : null;
+        ResourceSlotSeen<ItemResource> seenSlots = shared != null ? new ResourceSlotSeen<>() : null;
         for (GolemNetwork.External ex : net.externals) {
             if (!mayExtract(ex, key.stack())) {
                 continue;
@@ -846,11 +928,13 @@ final class NetworkStorage {
                 continue;
             }
             GlobalPos canon = sharedCanonical(shared, ex);
-            int[] faceSlots = canon != null ? worldlySlots(ex, h.size()) : null;
+            WorldlyView worldly = canon != null ? worldlyView(ex, h) : null;
             for (int i = 0; i < h.size(); i++) {
                 int amt = h.getAmountAsInt(i);
                 if (amt > 0 && h.getResource(i).equals(want)
-                        && (canon == null || seenSlots.add(new ExternalSlot(canon, faceSlots != null ? faceSlots[i] : i)))) {
+                        && (canon == null || seenSlots.markNew(canon, h, i, want, amt,
+                                worldly != null ? worldly.container() : null,
+                                worldly != null ? worldly.slots()[i] : i))) {
                     n += amt;
                 }
             }
@@ -1128,8 +1212,6 @@ final class NetworkStorage {
 
         // General path with external periscopes: interleave disk extraction and external extraction per priority tier
         ItemResource want = ItemResource.of(template);
-        Set<GlobalPos> shared = simulate ? sharedTargetSet(net.externals) : null;
-        Map<ExternalSlot, Integer> simRemaining = shared != null ? new HashMap<>() : null;
         Transaction tx = null;
         boolean txModified = false;
         try {
@@ -1188,34 +1270,17 @@ final class NetworkStorage {
                     if (h == null) {
                         continue;
                     }
-                    GlobalPos canon = sharedCanonical(shared, ex);
-                    int[] faceSlots = canon != null ? worldlySlots(ex, h.size()) : null;
                     for (int i = 0; i < h.size() && left > 0; i++) {
                         ItemResource r = h.getResource(i);
                         int amt = h.getAmountAsInt(i);
                         if (amt > 0 && r.equals(want)) {
-                            ExternalSlot slotKey = null;
-                            int avail = amt;
-                            if (canon != null) {
-                                slotKey = new ExternalSlot(canon, faceSlots != null ? faceSlots[i] : i);
-                                Integer tracked = simRemaining.get(slotKey);
-                                if (tracked != null) {
-                                    avail = Math.min(avail, tracked);
-                                }
-                            }
-                            if (avail <= 0) {
-                                continue;
-                            }
                             if (tx == null) {
                                 tx = Transaction.openRoot();
                             }
-                            int got = h.extract(i, r, Math.min(left, avail), tx);
+                            int got = h.extract(i, r, Math.min(left, amt), tx);
                             if (got > 0) {
                                 left -= got;
                                 txModified = true;
-                                if (canon != null) {
-                                    simRemaining.put(slotKey, Math.max(0, avail - got));
-                                }
                             }
                         }
                     }
@@ -1284,7 +1349,7 @@ final class NetworkStorage {
             }
         }
         Set<GlobalPos> shared = sharedTargetSet(net.externals);
-        FluidTankSeen seenTanks = shared != null ? new FluidTankSeen() : null;
+        ResourceSlotSeen<FluidResource> seenTanks = shared != null ? new ResourceSlotSeen<>() : null;
         for (GolemNetwork.External ex : net.externals) {
             ResourceHandler<FluidResource> h = fluidHandler(ex);
             if (h == null) {
@@ -1523,7 +1588,7 @@ final class NetworkStorage {
         }
         FluidResource want = FluidResource.of(fluid);
         Set<GlobalPos> shared = sharedTargetSet(net.externals);
-        FluidTankSeen seenTanks = shared != null ? new FluidTankSeen() : null;
+        ResourceSlotSeen<FluidResource> seenTanks = shared != null ? new ResourceSlotSeen<>() : null;
         for (GolemNetwork.External ex : net.externals) {
             if (!mayExtract(ex, fluid)) {
                 continue;

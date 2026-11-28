@@ -276,8 +276,15 @@ final class NetworkCrafting {
                 if (rest.isEmpty()) {
                     break;
                 }
-                if (!cpu.isRemoved() && cpu.getJob() != null && cpu.getJob().hasInFlight(provider, key)) {
-                    rest = cpu.absorb(rest, provider);
+                CraftingJob job = cpu.isRemoved() ? null : cpu.getJob();
+                long own = job == null ? 0L : job.inFlightAmount(provider, key);
+                if (own > 0) {
+                    int cap = (int) Math.min(rest.getCount(), own);
+                    ItemStack leftover = cpu.absorb(rest.copyWithCount(cap), provider);
+                    int taken = cap - leftover.getCount();
+                    if (taken > 0) {
+                        rest = rest.copyWithCount(rest.getCount() - taken);
+                    }
                 }
             }
         }
@@ -304,8 +311,11 @@ final class NetworkCrafting {
                 if (taken >= fluid.getAmount()) {
                     break;
                 }
-                if (!cpu.isRemoved() && cpu.getJob() != null && cpu.getJob().hasInFlight(provider, key)) {
-                    taken += cpu.absorbFluid(fluid.copyWithAmount(fluid.getAmount() - taken), provider);
+                CraftingJob job = cpu.isRemoved() ? null : cpu.getJob();
+                long own = job == null ? 0L : job.inFlightAmount(provider, key);
+                if (own > 0) {
+                    int cap = (int) Math.min(fluid.getAmount() - taken, own);
+                    taken += cpu.absorbFluid(fluid.copyWithAmount(cap), provider);
                 }
             }
         }

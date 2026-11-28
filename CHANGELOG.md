@@ -1,13 +1,13 @@
 # Changelog
 
-## 2.3.3 (26.1.2) - Autocrafting Batch Tracking, Multiblock Storage & Fluid Fixes
+## 2.3.3 (26.1.2) - Autocrafting Batch Tracking, Multiblock Storage & Sided Machine Fixes
 
 - **Autocrafting & Storage Fixes:**
-  - **Blocking Pattern Providers:** when multiple Pattern Providers in "wait for output" mode run the same recipe in parallel, returning a result through a specific provider now frees that provider's own batch first instead of releasing another waiting provider early.
-  - **Cryo-Mixer & Multiblock Periscopes:** connecting two Periscope Storage Buses to both halves of a Cryo-Mixer (or multiple parts of a Cryo-Distillation Tower or Mana Saturator) no longer doubles the visible stock or misleads autocrafting plans.
-  - **Multi-Tank Sided Machines:** machines exposing separate fluid tanks on different faces of the same block now report each tank's fluid amount accurately instead of merging them into one, while shared tanks (such as Copper Tanks) still avoid double counting.
+  - **Blocking Pattern Providers:** when multiple calculators or blocking Pattern Providers run the same recipe in parallel, returning a batch through a shared provider now settles every job waiting on that provider first instead of prematurely releasing another waiting machine.
+  - **Cryo-Mixer & Multiblock Periscopes:** connecting two Periscope Storage Buses to both halves of a Cryo-Mixer (or multiple parts of a Cryo-Distillation Tower or Mana Saturator) no longer doubles the reported stock or misleads autocrafting plans.
+  - **Sided Machines & Multi-Tank Blocks:** machines exposing separate item inventories or independent fluid tanks on different faces of the same block now report and extract all slots and tanks accurately instead of hiding half the stock, while shared containers and shared fluid tanks (including insert-only input ports) still avoid double counting.
 - **Performance:**
-  - **Faster Storage Scans:** networks with multiple Periscopes on separate containers now skip per-slot deduplication work, applying it only to storages shared by two or more Periscopes.
+  - **Faster Storage Scans:** networks with multiple Periscope Storage Buses pointing to separate containers now skip per-slot deduplication work entirely, applying it only to storages shared by two or more Periscopes.
 
 ## 2.3.2 (26.1.2) - Client Startup Hotfix, Double Chest & Cross-Dimension Fixes
 

@@ -22,6 +22,7 @@ import com.golemlogix.crafting.CraftingJob;
 import com.golemlogix.data.PatternData;
 import com.golemlogix.init.ModBlocks;
 import com.golemlogix.init.ModItems;
+import com.golemlogix.items.FluidGhostItem;
 import com.golemlogix.items.IdentityPunchCardItem;
 import com.golemlogix.menu.CalculatorMenu;
 import com.golemlogix.menu.CryoMixerMenu;
@@ -33,6 +34,7 @@ import com.golemlogix.network.TerminalActionPayload;
 import com.golemlogix.security.SecurityPermission;
 import com.golemlogix.system.Fuzzy;
 import com.golemlogix.system.GolemNetwork;
+import com.golemlogix.system.Ingredients;
 import com.golemlogix.system.ItemKey;
 import com.golemlogix.system.SourceHelper;
 import com.golemlogix.upgrade.UpgradeSpec;
@@ -61,6 +63,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.DirectionalBlock;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.entity.BrewingStandBlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.entity.FurnaceBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -710,6 +713,25 @@ public final class AuditRegressionTests {
             helper.assertTrue(nf.insertItem(new ItemStack(Items.COAL, 192), true).getCount() == 64,
                     "Furnace TOP + SIDE must leave 64 remainder from 192 coal (max 128 across 2 slots)");
             helper.assertTrue(furnace.isEmpty(), "Furnace sim insert left furnace empty");
+
+            // 6. Vanilla Brewing Stand UP (local 0 -> slot 3) + DOWN (local 3 -> slot 3) with full 64/64 Nether Wart:
+            // unextractable and full across both faces must still collapse to 64 via physical WorldlyContainer slot.
+            BlockPos brewPos = new BlockPos(2, 2, 4);
+            helper.setBlock(brewPos, Blocks.BREWING_STAND.defaultBlockState());
+            periscope(helper, new BlockPos(2, 1, 4), Direction.UP);
+            put(helper, new BlockPos(3, 3, 4), ModBlocks.BASIC_SNOW_PIPE.get());
+            periscope(helper, new BlockPos(2, 3, 4), Direction.DOWN);
+            BrewingStandBlockEntity brew = helper.getBlockEntity(brewPos, BrewingStandBlockEntity.class);
+            brew.setItem(3, new ItemStack(Items.NETHER_WART, 64));
+
+            GolemNetwork nb = GolemNetwork.refresh(level, helper.absolutePos(ORIGIN));
+            ItemKey wartKey = ItemKey.of(new ItemStack(Items.NETHER_WART));
+            helper.assertTrue(nb.listItems().getOrDefault(wartKey, 0L) == 64L,
+                    "Brewing Stand UP+DOWN with 64 Nether Wart must report 64 in listItems, got "
+                            + nb.listItems().getOrDefault(wartKey, 0L));
+            helper.assertTrue(nb.itemCountOf(wartKey) == 64L,
+                    "Brewing Stand UP+DOWN with 64 Nether Wart must report 64 in itemCountOf, got "
+                            + nb.itemCountOf(wartKey));
             helper.succeed();
         });
     }
@@ -937,6 +959,186 @@ public final class AuditRegressionTests {
             helper.assertTrue(listedWater == 1000L, "listFluids must report 1000 mB water, got " + listedWater);
             helper.assertTrue(n.extractFluid(new FluidStack(Fluids.WATER, 2000), 2000, true).getAmount() == 1000,
                     "sim extractFluid(2000) from shared Copper Tank must return 1000 mB");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * Multi-CPU shared-provider batch return: when CPU 1 awaits Provider 1 + Provider 2 and CPU 2 also awaits Provider 1,
+     * a 2-unit batch returning through Provider 1 must settle 1 for CPU 1 (Provider 1) and 1 for CPU 2 (Provider 1),
+     * freeing Provider 1 while keeping Provider 2 busy — for both items and fluids — while still allowing a single CPU
+     * with no competing CPU to spill excess onto its own second provider.
+     */
+    public static void auditSharedProviderMultiCpuReturnDoesNotUnlockOther(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        var level = helper.getLevel();
+        helper.getBlockEntity(bay, CopperDriveBayBlockEntity.class).getContainer()
+                .setItem(1, new ItemStack(ModItems.FLUID_DISK_4K.get()));
+
+        BlockPos cpuAPos = CPU;
+        BlockPos cpuBPos = TERM;
+        BlockPos prov1Pos = PROV;
+        BlockPos prov2Pos = BUS_OUT;
+        helper.setBlock(cpuAPos, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(cpuBPos, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(prov1Pos, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        helper.setBlock(prov2Pos, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        BlockPos chest1Pos = prov1Pos.east();
+        BlockPos chest2Pos = prov2Pos.north();
+        helper.setBlock(chest1Pos, Blocks.CHEST);
+        helper.setBlock(chest2Pos, Blocks.CHEST);
+
+        PatternData smeltIron = new PatternData(false,
+                List.of(new ItemStack(Items.RAW_IRON)), List.of(new ItemStack(Items.IRON_INGOT)));
+        PatternData meltIce = new PatternData(false,
+                List.of(new ItemStack(Items.ICE)),
+                List.of(FluidGhostItem.of(new FluidStack(Fluids.WATER, 1000))));
+        PatternProviderBlockEntity p1 = helper.getBlockEntity(prov1Pos, PatternProviderBlockEntity.class);
+        PatternProviderBlockEntity p2 = helper.getBlockEntity(prov2Pos, PatternProviderBlockEntity.class);
+        p1.getContainer().setItem(0, card(smeltIron));
+        p1.getContainer().setItem(1, card(meltIce));
+        p2.getContainer().setItem(0, card(smeltIron));
+        p2.getContainer().setItem(1, card(meltIce));
+        p1.setBlocking(true);
+        p2.setBlocking(true);
+
+        BlockPos absP1 = helper.absolutePos(prov1Pos);
+        GlobalPos gp1 = GlobalPos.of(level.dimension(), absP1);
+        GlobalPos gp2 = GlobalPos.of(level.dimension(), helper.absolutePos(prov2Pos));
+        ItemKey ingotKey = ItemKey.of(new ItemStack(Items.IRON_INGOT));
+        ItemKey waterKey = Ingredients.fluidKey(new FluidStack(Fluids.WATER, 1));
+        CryoCalculatorBlockEntity calcA = helper.getBlockEntity(cpuAPos, CryoCalculatorBlockEntity.class);
+        CryoCalculatorBlockEntity calcB = helper.getBlockEntity(cpuBPos, CryoCalculatorBlockEntity.class);
+        CryoCalculatorBlockEntity[] order = new CryoCalculatorBlockEntity[2];
+
+        // --- Phase 1: Items (multi-CPU shared P1 + separate P2) ---
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = GolemNetwork.refresh(level, absP1);
+            n.insertItem(new ItemStack(Items.RAW_IRON, 3), false);
+            var started = n.startCrafting(Map.of(ingotKey, 2L), null, null);
+            helper.assertTrue(started.type() == GolemNetwork.StartType.STARTED, "CPU 1 item craft started");
+            order[0] = calcA.isIdle() ? calcB : calcA;
+            order[1] = order[0] == calcA ? calcB : calcA;
+            helper.assertTrue(!order[0].isIdle() && order[1].isIdle(), "exactly CPU 1 holds job 1");
+        });
+
+        helper.runAfterDelay(25, () -> {
+            GolemNetwork n = GolemNetwork.get(level, absP1);
+            CraftingJob job1 = order[0].getJob();
+            helper.assertTrue(job1 != null && job1.inFlightAmount(gp1, ingotKey) == 1L && job1.inFlightAmount(gp2, ingotKey) == 1L,
+                    "CPU 1 must wait on 1 ingot from P1 and 1 from P2");
+            helper.assertTrue(n.providerBusy(gp1) && n.providerBusy(gp2), "both providers busy for CPU 1");
+
+            // Allow CPU 2 to also dispatch 1 batch through shared P1 while P2 remains blocking
+            p1.setBlocking(false);
+            var started2 = n.startCrafting(Map.of(ingotKey, 1L), null, null);
+            helper.assertTrue(started2.type() == GolemNetwork.StartType.STARTED, "CPU 2 item craft started");
+        });
+
+        helper.runAfterDelay(45, () -> {
+            p1.setBlocking(true);
+            CraftingJob job1 = order[0].getJob();
+            CraftingJob job2 = order[1].getJob();
+            ChestBlockEntity c1 = helper.getBlockEntity(chest1Pos, ChestBlockEntity.class);
+            ChestBlockEntity c2 = helper.getBlockEntity(chest2Pos, ChestBlockEntity.class);
+            helper.assertTrue(job1 != null && job1.inFlightAmount(gp1, ingotKey) == 1L && job1.inFlightAmount(gp2, ingotKey) == 1L,
+                    "CPU 1 still awaits 1 on P1 and 1 on P2");
+            helper.assertTrue(job2 != null && job2.inFlightAmount(gp1, ingotKey) == 1L && job2.inFlightAmount(gp2, ingotKey) == 0L,
+                    "CPU 2 awaits 1 on shared P1 only");
+            helper.assertTrue(c1.countItem(Items.RAW_IRON) == 2 && c2.countItem(Items.RAW_IRON) == 1,
+                    "P1 received 2 batches and P2 received 1 batch, got c1=" + c1.countItem(Items.RAW_IRON) + " c2=" + c2.countItem(Items.RAW_IRON));
+
+            // Returning 2 ingots in one stack through P1 must give 1 to CPU 1 (P1) and 1 to CPU 2 (P1)
+            p1.getReturns().setItem(0, new ItemStack(Items.IRON_INGOT, 2));
+        });
+
+        helper.runAfterDelay(65, () -> {
+            GolemNetwork n = GolemNetwork.get(level, absP1);
+            helper.assertTrue(!n.providerBusy(gp1), "P1 must be freed after returning both CPUs' item batches");
+            helper.assertTrue(n.providerBusy(gp2), "P2 must STAY busy — CPU 1 must not spill P1's 2nd ingot onto P2");
+            helper.assertTrue(order[1].isIdle(), "CPU 2 must complete after P1 returns its batch");
+            CraftingJob job1 = order[0].getJob();
+            helper.assertTrue(job1 != null && job1.inFlightAmount(gp1, ingotKey) == 0L && job1.inFlightAmount(gp2, ingotKey) == 1L,
+                    "CPU 1 must still wait solely on P2");
+
+            p2.getReturns().setItem(0, new ItemStack(Items.IRON_INGOT, 1));
+        });
+
+        // --- Phase 2: Fluids (multi-CPU shared P1 + separate P2) ---
+        helper.runAfterDelay(85, () -> {
+            GolemNetwork n = GolemNetwork.get(level, absP1);
+            helper.assertTrue(order[0].isIdle() && order[1].isIdle() && !n.providerBusy(gp1) && !n.providerBusy(gp2),
+                    "both CPUs and providers idle after item phase");
+            helper.assertTrue(n.itemCountOf(ingotKey) == 3L, "all 3 ingots stored, got " + n.itemCountOf(ingotKey));
+
+            n.insertItem(new ItemStack(Items.ICE, 3), false);
+            var started = n.startCrafting(Map.of(waterKey, 2000L), null, null);
+            helper.assertTrue(started.type() == GolemNetwork.StartType.STARTED, "CPU 1 fluid craft started");
+            order[0] = calcA.isIdle() ? calcB : calcA;
+            order[1] = order[0] == calcA ? calcB : calcA;
+        });
+
+        helper.runAfterDelay(105, () -> {
+            GolemNetwork n = GolemNetwork.get(level, absP1);
+            CraftingJob job1 = order[0].getJob();
+            helper.assertTrue(job1 != null && job1.inFlightAmount(gp1, waterKey) == 1000L && job1.inFlightAmount(gp2, waterKey) == 1000L,
+                    "CPU 1 must wait on 1000 mB from P1 and 1000 mB from P2");
+            p1.setBlocking(false);
+            var started2 = n.startCrafting(Map.of(waterKey, 1000L), null, null);
+            helper.assertTrue(started2.type() == GolemNetwork.StartType.STARTED, "CPU 2 fluid craft started");
+        });
+
+        helper.runAfterDelay(125, () -> {
+            p1.setBlocking(true);
+            CraftingJob job2 = order[1].getJob();
+            helper.assertTrue(job2 != null && job2.inFlightAmount(gp1, waterKey) == 1000L && job2.inFlightAmount(gp2, waterKey) == 0L,
+                    "CPU 2 awaits 1000 mB on shared P1 only");
+            try (Transaction tx = Transaction.openRoot()) {
+                int put = p1.fluidResources().insert(FluidResource.of(Fluids.WATER), 2000, tx);
+                helper.assertTrue(put == 2000, "inserted 2000 mB water into P1 return tank");
+                tx.commit();
+            }
+        });
+
+        helper.runAfterDelay(145, () -> {
+            GolemNetwork n = GolemNetwork.get(level, absP1);
+            helper.assertTrue(!n.providerBusy(gp1), "P1 must be freed after returning both CPUs' fluid batches");
+            helper.assertTrue(n.providerBusy(gp2), "P2 must STAY busy — CPU 1 must not spill P1's 2nd 1000 mB onto P2");
+            helper.assertTrue(order[1].isIdle(), "CPU 2 must complete after P1 returns its fluid batch");
+            CraftingJob job1 = order[0].getJob();
+            helper.assertTrue(job1 != null && job1.inFlightAmount(gp1, waterKey) == 0L && job1.inFlightAmount(gp2, waterKey) == 1000L,
+                    "CPU 1 must still wait solely on P2 fluid");
+
+            try (Transaction tx = Transaction.openRoot()) {
+                int put = p2.fluidResources().insert(FluidResource.of(Fluids.WATER), 1000, tx);
+                helper.assertTrue(put == 1000, "inserted final 1000 mB water into P2 return tank");
+                tx.commit();
+            }
+        });
+
+        // --- Phase 3: Single CPU with 2 providers — 2-ingot return from P1 still spills via Pass 2 to complete ---
+        helper.runAfterDelay(165, () -> {
+            GolemNetwork n = GolemNetwork.get(level, absP1);
+            helper.assertTrue(order[0].isIdle() && order[1].isIdle() && !n.providerBusy(gp1) && !n.providerBusy(gp2),
+                    "both CPUs and providers idle after fluid phase");
+            helper.assertTrue(n.fluidCountOf(Fluids.WATER) == 3000L, "all 3000 mB water stored, got " + n.fluidCountOf(Fluids.WATER));
+
+            n.insertItem(new ItemStack(Items.RAW_IRON, 2), false);
+            var started = n.startCrafting(Map.of(ingotKey, 2L), null, null);
+            helper.assertTrue(started.type() == GolemNetwork.StartType.STARTED, "single-CPU 2-provider spill craft started");
+        });
+
+        helper.runAfterDelay(185, () -> {
+            GolemNetwork n = GolemNetwork.get(level, absP1);
+            helper.assertTrue(n.providerBusy(gp1) && n.providerBusy(gp2), "single CPU awaits both P1 and P2");
+            p1.getReturns().setItem(0, new ItemStack(Items.IRON_INGOT, 2));
+        });
+
+        helper.runAfterDelay(205, () -> {
+            GolemNetwork n = GolemNetwork.get(level, absP1);
+            helper.assertTrue(!n.providerBusy(gp1) && !n.providerBusy(gp2), "Pass 1 + Pass 2 settle both P1 and P2 for lone CPU");
+            helper.assertTrue(calcA.isIdle() && calcB.isIdle(), "lone CPU finished cleanly");
+            helper.assertTrue(n.itemCountOf(ingotKey) == 5L, "total 5 ingots stored, got " + n.itemCountOf(ingotKey));
             helper.succeed();
         });
     }

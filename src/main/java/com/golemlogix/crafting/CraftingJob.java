@@ -254,12 +254,18 @@ public class CraftingJob {
 
     /** Whether this job is currently waiting on a result for a specific item from the given provider. */
     public boolean hasInFlight(GlobalPos provider, ItemKey key) {
+        return inFlightAmount(provider, key) > 0;
+    }
+
+    /** How much of {@code key} this job is still waiting for from the given provider. */
+    public long inFlightAmount(GlobalPos provider, ItemKey key) {
+        long total = 0;
         for (InFlight f : inFlight) {
-            if (provider.equals(f.provider) && f.left.getOrDefault(key, 0L) > 0) {
-                return true;
+            if (provider.equals(f.provider)) {
+                total += f.left.getOrDefault(key, 0L);
             }
         }
-        return false;
+        return total;
     }
 
     // ----------------------------------------------------------------- absorb
