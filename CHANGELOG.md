@@ -7,7 +7,7 @@
   - **Cryo-Mixer & Multiblock Periscopes:** connecting two Periscope Storage Buses to both halves of a Cryo-Mixer (or multiple parts of a Cryo-Distillation Tower or Mana Saturator) no longer doubles the reported stock or misleads autocrafting plans.
   - **Sided Machines & Multi-Tank Blocks:** machines exposing separate item inventories or independent fluid tanks on different faces of the same block now report and extract all slots and tanks accurately instead of hiding half the stock, while shared containers and shared fluid tanks (including insert-only input ports) still avoid double counting.
 - **Performance:**
-  - **Faster Storage Scans:** networks with multiple Periscope Storage Buses pointing to separate containers now skip per-slot deduplication work entirely, applying it only to storages shared by two or more Periscopes.
+  - **Faster Storage Scans:** networks with multiple Periscope Storage Buses pointing to separate containers now skip per-slot deduplication work entirely, and large multi-thousand-slot storages shared by multiple Periscopes now scan in linear time instead of slowing down as slot counts grow.
 
 ## 2.3.2 (26.1.2) - Client Startup Hotfix, Double Chest & Cross-Dimension Fixes
 

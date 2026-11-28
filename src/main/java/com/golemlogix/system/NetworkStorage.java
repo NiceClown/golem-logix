@@ -536,8 +536,113 @@ final class NetworkStorage {
                 ResourceHandler<R> handler, int slot, R resource, int amount, @Nullable Object physicalOwner) {
         }
 
+        private static final class ResourceBucket<R extends Resource> {
+            final List<SlotSnapshot<R>> slots = new ArrayList<>(2);
+            @Nullable
+            ResourceHandler<R> singleHandler;
+            @Nullable
+            Object singlePhysicalOwner;
+            int probeCursor;
+
+            ResourceBucket(SlotSnapshot<R> first) {
+                this.singleHandler = first.handler;
+                this.singlePhysicalOwner = first.physicalOwner;
+                this.slots.add(first);
+            }
+
+            boolean hasCandidate(ResourceHandler<R> h, @Nullable Object physicalOwner) {
+                if (singleHandler != null) {
+                    return singleHandler != h
+                            && (physicalOwner == null || singlePhysicalOwner != physicalOwner);
+                }
+                if (physicalOwner == null) {
+                    return true;
+                }
+                if (singlePhysicalOwner != null) {
+                    return singlePhysicalOwner != physicalOwner;
+                }
+                for (int i = 0, n = slots.size(); i < n; i++) {
+                    if (isCandidate(slots.get(i), h, physicalOwner)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            void add(SlotSnapshot<R> snap) {
+                if (singleHandler != snap.handler) {
+                    singleHandler = null;
+                }
+                if (singlePhysicalOwner != snap.physicalOwner) {
+                    singlePhysicalOwner = null;
+                }
+                slots.add(snap);
+            }
+        }
+
+        private static final class TargetBucket<R extends Resource> {
+            @Nullable
+            ResourceHandler<R> singleHandler;
+            @Nullable
+            Object singlePhysicalOwner;
+            @Nullable
+            List<SlotSnapshot<R>> firstSlots;
+            @Nullable
+            Map<R, ResourceBucket<R>> byResource;
+
+            TargetBucket(SlotSnapshot<R> first) {
+                this.singleHandler = first.handler;
+                this.singlePhysicalOwner = first.physicalOwner;
+                this.firstSlots = new ArrayList<>(2);
+                this.firstSlots.add(first);
+            }
+
+            boolean tryAppendSameOwner(ResourceHandler<R> h, int slot, R r, int amt, @Nullable Object physicalOwner) {
+                if (byResource != null) {
+                    return false;
+                }
+                if (singleHandler != null && singleHandler == h) {
+                    if (singlePhysicalOwner != physicalOwner) {
+                        singlePhysicalOwner = null;
+                    }
+                    firstSlots.add(new SlotSnapshot<>(h, slot, r, amt, physicalOwner));
+                    return true;
+                }
+                if (singlePhysicalOwner != null && singlePhysicalOwner == physicalOwner) {
+                    singleHandler = null;
+                    firstSlots.add(new SlotSnapshot<>(h, slot, r, amt, physicalOwner));
+                    return true;
+                }
+                return false;
+            }
+
+            Map<R, ResourceBucket<R>> indexByResource() {
+                Map<R, ResourceBucket<R>> map = byResource;
+                if (map != null) {
+                    return map;
+                }
+                List<SlotSnapshot<R>> slots = firstSlots;
+                int size = slots != null ? slots.size() : 0;
+                map = HashMap.newHashMap(Math.max(4, size));
+                if (slots != null) {
+                    for (int i = 0; i < size; i++) {
+                        SlotSnapshot<R> s = slots.get(i);
+                        ResourceBucket<R> rb = map.get(s.resource);
+                        if (rb == null) {
+                            map.put(s.resource, new ResourceBucket<>(s));
+                        } else {
+                            rb.add(s);
+                        }
+                    }
+                    firstSlots = null;
+                }
+                byResource = map;
+                return map;
+            }
+        }
+
         private final Set<HandlerSlot> seenIdentity = new HashSet<>();
-        private final Map<GlobalPos, List<SlotSnapshot<R>>> byTarget = new HashMap<>();
+        private final Map<GlobalPos, TargetBucket<R>> byTarget = new HashMap<>();
 
         boolean markNew(GlobalPos canon, ResourceHandler<R> h, int slot, R r, int amt) {
             return markNew(canon, h, slot, r, amt, null, slot);
@@ -550,36 +655,50 @@ final class NetworkStorage {
             if (!seenIdentity.add(new HandlerSlot(idOwner, idSlot))) {
                 return false;
             }
-            List<SlotSnapshot<R>> prevs = byTarget.computeIfAbsent(canon, k -> new ArrayList<>(2));
-            boolean hasCandidate = false;
-            for (SlotSnapshot<R> prev : prevs) {
-                if (isCandidate(prev, h, r, physicalOwner)) {
-                    hasCandidate = true;
-                    break;
-                }
+            TargetBucket<R> bucket = byTarget.get(canon);
+            if (bucket == null) {
+                byTarget.put(canon, new TargetBucket<>(new SlotSnapshot<>(h, slot, r, amt, physicalOwner)));
+                return true;
             }
-            if (hasCandidate && isAliased(prevs, h, slot, r, amt, physicalOwner)) {
+            if (bucket.tryAppendSameOwner(h, slot, r, amt, physicalOwner)) {
+                return true;
+            }
+            Map<R, ResourceBucket<R>> byResource = bucket.indexByResource();
+            ResourceBucket<R> group = byResource.get(r);
+            if (group == null) {
+                byResource.put(r, new ResourceBucket<>(new SlotSnapshot<>(h, slot, r, amt, physicalOwner)));
+                return true;
+            }
+            if (group.hasCandidate(h, physicalOwner) && isAliased(group, h, slot, r, amt, physicalOwner)) {
                 return false;
             }
-            prevs.add(new SlotSnapshot<>(h, slot, r, amt, physicalOwner));
+            group.add(new SlotSnapshot<>(h, slot, r, amt, physicalOwner));
             return true;
         }
 
         private static <R extends Resource> boolean isCandidate(
-                SlotSnapshot<R> prev, ResourceHandler<R> h, R r, @Nullable Object physicalOwner) {
+                SlotSnapshot<R> prev, ResourceHandler<R> h, @Nullable Object physicalOwner) {
             return prev.handler != h
-                    && (physicalOwner == null || prev.physicalOwner != physicalOwner)
-                    && prev.resource.equals(r);
+                    && (physicalOwner == null || prev.physicalOwner != physicalOwner);
         }
 
-        private boolean isAliased(List<SlotSnapshot<R>> prevs, ResourceHandler<R> h, int slot, R r, int amt,
+        private boolean isAliased(ResourceBucket<R> group, ResourceHandler<R> h, int slot, R r, int amt,
                                   @Nullable Object physicalOwner) {
+            List<SlotSnapshot<R>> prevs = group.slots;
+            int n = prevs.size();
+            int start = group.probeCursor;
             try (Transaction tx = Transaction.openRoot()) {
                 // Probe 1: extract from (h, slot)
                 if (probeExtract(h, slot, r, amt, tx) > 0) {
-                    for (SlotSnapshot<R> prev : prevs) {
-                        if (isCandidate(prev, h, r, physicalOwner)
+                    for (int k = 0; k < n; k++) {
+                        int idx = start + k;
+                        if (idx >= n) {
+                            idx -= n;
+                        }
+                        SlotSnapshot<R> prev = prevs.get(idx);
+                        if (isCandidate(prev, h, physicalOwner)
                                 && prev.handler.getAmountAsInt(prev.slot) < prev.amount) {
+                            group.probeCursor = idx + 1 < n ? idx + 1 : 0;
                             return true;
                         }
                     }
@@ -587,28 +706,41 @@ final class NetworkStorage {
                 }
                 // Probe 2: insert fallback when extract is forbidden (e.g. insert-only wrappers)
                 if (probeInsert(h, slot, r, amt, tx) > 0) {
-                    for (SlotSnapshot<R> prev : prevs) {
-                        if (isCandidate(prev, h, r, physicalOwner)
+                    for (int k = 0; k < n; k++) {
+                        int idx = start + k;
+                        if (idx >= n) {
+                            idx -= n;
+                        }
+                        SlotSnapshot<R> prev = prevs.get(idx);
+                        if (isCandidate(prev, h, physicalOwner)
                                 && prev.handler.getAmountAsInt(prev.slot) > prev.amount) {
+                            group.probeCursor = idx + 1 < n ? idx + 1 : 0;
                             return true;
                         }
                     }
                     return false;
                 }
                 // Probe 3: (h, slot) is neither extractable nor insertable; probe each candidate prev instead
-                for (SlotSnapshot<R> prev : prevs) {
-                    if (!isCandidate(prev, h, r, physicalOwner)) {
+                for (int k = 0; k < n; k++) {
+                    int idx = start + k;
+                    if (idx >= n) {
+                        idx -= n;
+                    }
+                    SlotSnapshot<R> prev = prevs.get(idx);
+                    if (!isCandidate(prev, h, physicalOwner)) {
                         continue;
                     }
                     try (Transaction sub = Transaction.open(tx)) {
                         if (probeExtract(prev.handler, prev.slot, r, prev.amount, sub) > 0) {
                             if (h.getAmountAsInt(slot) < amt) {
+                                group.probeCursor = idx + 1 < n ? idx + 1 : 0;
                                 return true;
                             }
                             continue;
                         }
                         if (probeInsert(prev.handler, prev.slot, r, prev.amount, sub) > 0) {
                             if (h.getAmountAsInt(slot) > amt) {
+                                group.probeCursor = idx + 1 < n ? idx + 1 : 0;
                                 return true;
                             }
                             continue;
@@ -616,6 +748,7 @@ final class NetworkStorage {
                     }
                     // shortcut: two 100%-full un-extractable handlers at identical slot & amount cannot be distinguished transactionally
                     if (prev.slot == slot && prev.amount == amt) {
+                        group.probeCursor = idx + 1 < n ? idx + 1 : 0;
                         return true;
                     }
                 }
