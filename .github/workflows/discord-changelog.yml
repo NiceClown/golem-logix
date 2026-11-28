@@ -36,7 +36,7 @@ jobs:
           import urllib.error
           import urllib.request
 
-          webhook = os.environ.get("DISCORD_CHANGELOG_WEBHOOK", "").strip()
+          webhook = os.environ.get("DISCORD_CHANGELOG_WEBHOOK", "").strip().lstrip("\ufeff\u200b")
           if not webhook:
               print("ERROR: DISCORD_CHANGELOG_WEBHOOK secret is not set.", file=sys.stderr)
               sys.exit(1)
