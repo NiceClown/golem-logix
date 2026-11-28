@@ -23,6 +23,7 @@ import com.golemlogix.system.ItemKey;
 import com.golemlogix.upgrade.RedstoneMode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
@@ -312,7 +313,8 @@ public final class GolemGameTestsBackport10 {
             helper.runAfterDelay(15, () -> {
                 int totalInChests = westChest.countItem(Items.RAW_IRON) + eastChest.countItem(Items.RAW_IRON);
                 helper.assertTrue(totalInChests == 1, "blocking mode: exactly 1 portion pushed while awaiting result (got " + totalInChests + ")");
-                helper.assertTrue(n.providerBusy(helper.absolutePos(PROV)), "provider is busy awaiting machine output");
+                helper.assertTrue(n.providerBusy(GlobalPos.of(helper.getLevel().dimension(), helper.absolutePos(PROV))),
+                        "provider is busy awaiting machine output");
 
                 // Machine finishes portion 1 and returns Iron Ingot into the network
                 n.insertFromMachine(new ItemStack(Items.IRON_INGOT));

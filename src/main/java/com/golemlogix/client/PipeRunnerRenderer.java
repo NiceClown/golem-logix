@@ -5,6 +5,7 @@ import com.golemlogix.client.render.Baked;
 import com.golemlogix.client.render.PixelMesh;
 import com.golemlogix.init.ModItems;
 import com.golemlogix.system.GolemNetwork;
+import com.google.common.base.Suppliers;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
@@ -32,6 +33,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import static com.golemlogix.client.SnowPipeRenderer.DIRS;
 import static com.golemlogix.client.SnowPipeRenderer.renderBlockBox;
@@ -127,13 +129,13 @@ final class PipeRunnerRenderer {
         drawBakedBox(pose, buffers, mesh, x, y, z, size, size, size, light);
     }
 
-    private static final List<ItemStack> FLUID_BUCKETS = List.of(
+    private static final Supplier<List<ItemStack>> FLUID_BUCKETS = Suppliers.memoize(() -> List.of(
             new ItemStack(Items.WATER_BUCKET),
             new ItemStack(Items.LAVA_BUCKET),
             new ItemStack(Items.MILK_BUCKET)
-    );
+    ));
 
-    private static final List<ItemStack> FALLBACK_ITEMS = List.of(
+    private static final Supplier<List<ItemStack>> FALLBACK_ITEMS = Suppliers.memoize(() -> List.of(
             new ItemStack(ModItems.COPPER_PUNCH_CARD.get()),
             new ItemStack(ModItems.FLATTENED_COPPER_MATRIX.get()),
             new ItemStack(ModItems.FLATTENED_IRON_CORE.get()),
@@ -154,7 +156,7 @@ final class PipeRunnerRenderer {
             new ItemStack(Items.CLOCK),
             new ItemStack(Items.GOLD_INGOT),
             new ItemStack(Items.IRON_INGOT)
-    );
+    ));
 
     private static final class CargoPool {
         long expireTime = 0;
@@ -464,13 +466,15 @@ final class PipeRunnerRenderer {
             if (netFluids != null && !netFluids.isEmpty()) {
                 return netFluids.get(Math.floorMod(cargoId / 10, netFluids.size()));
             }
-            return FLUID_BUCKETS.get(Math.floorMod(cargoId / 10, FLUID_BUCKETS.size()));
+            List<ItemStack> buckets = FLUID_BUCKETS.get();
+            return buckets.get(Math.floorMod(cargoId / 10, buckets.size()));
         }
 
         if (netItems != null && !netItems.isEmpty()) {
             return netItems.get(Math.floorMod(cargoId, netItems.size()));
         }
-        return FALLBACK_ITEMS.get(Math.floorMod(cargoId, FALLBACK_ITEMS.size()));
+        List<ItemStack> fallback = FALLBACK_ITEMS.get();
+        return fallback.get(Math.floorMod(cargoId, fallback.size()));
     }
 
     private static CargoPool sampleCargoPool(Level level, BlockPos pos, long now) {

@@ -14,6 +14,7 @@ import com.golemlogix.upgrade.UpgradeSpec;
 import com.golemlogix.upgrade.UpgradeType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -161,7 +162,7 @@ public class StockManometerBlockEntity extends BlockEntity {
                 : FluidStack.EMPTY;
 
         if (be.upgrades.count(UpgradeType.CRAFTING) > 0) {
-            boolean running = isCraftRunning(net, pos, ghost, key, isFluid, fluid, fuzzy);
+            boolean running = isCraftRunning(level, net, pos, ghost, key, isFluid, fluid, fuzzy);
             be.updateSignal(level, pos, state, running ? 15 : 0, be.stockCount, running);
             return;
         }
@@ -169,9 +170,9 @@ public class StockManometerBlockEntity extends BlockEntity {
         be.updateSignal(level, pos, state, be.computeSignal(stock), stock, false);
     }
 
-    private static boolean isCraftRunning(GolemNetwork net, BlockPos pos, ItemStack ghost, ItemKey key,
+    private static boolean isCraftRunning(Level level, GolemNetwork net, BlockPos pos, ItemStack ghost, ItemKey key,
                                           boolean isFluid, FluidStack fluid, boolean fuzzy) {
-        if (!fuzzy && net.busCraftPending(pos, key)) {
+        if (!fuzzy && net.busCraftPending(GlobalPos.of(level.dimension(), pos), key)) {
             return true;
         }
         for (CraftingCpu cpu : net.cpus()) {

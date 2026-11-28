@@ -8,6 +8,7 @@ import com.golemlogix.crafting.CraftingPlan;
 import com.golemlogix.crafting.CraftingPlanner;
 import com.golemlogix.data.PatternData;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.world.Containers;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -114,7 +115,7 @@ final class NetworkCrafting {
     }
 
     static GolemNetwork.StartResult startCrafting(GolemNetwork net, Map<ItemKey, Long> targets,
-                                                  @Nullable UUID requester, @Nullable BlockPos bus) {
+                                                  @Nullable UUID requester, @Nullable GlobalPos bus) {
         if (!net.isOnline()) {
             return new GolemNetwork.StartResult(GolemNetwork.StartType.OFFLINE, null);
         }
@@ -128,24 +129,23 @@ final class NetworkCrafting {
         }
         // A device's order: no plan without a free calculator, and none yet if it has just failed
         long now = net.level.getGameTime();
-        var dim = net.level.dimension();
         if (bus != null) {
             if (freeCpu(net) == null) {
                 return new GolemNetwork.StartResult(GolemNetwork.StartType.NO_CPU, null);
             }
-            if (OrderBackoff.waiting(dim, bus, targets.keySet(), now, net.networkEpoch())) {
+            if (OrderBackoff.waiting(bus.dimension(), bus.pos(), targets.keySet(), now, net.networkEpoch())) {
                 return new GolemNetwork.StartResult(GolemNetwork.StartType.MISSING, null);
             }
         }
         CraftingPlan plan = CraftingPlanner.plan(net, targets);
         if (!plan.missing().isEmpty()) {
             if (bus != null) {
-                OrderBackoff.failed(dim, bus, targets.keySet(), now, net.networkEpoch());
+                OrderBackoff.failed(bus.dimension(), bus.pos(), targets.keySet(), now, net.networkEpoch());
             }
             return new GolemNetwork.StartResult(GolemNetwork.StartType.MISSING, plan);
         }
         if (bus != null) {
-            OrderBackoff.succeeded(dim, bus, targets.keySet());
+            OrderBackoff.succeeded(bus.dimension(), bus.pos(), targets.keySet());
         }
         if (plan.steps().isEmpty()) {
             return new GolemNetwork.StartResult(GolemNetwork.StartType.NO_PATTERN, plan);
@@ -239,7 +239,7 @@ final class NetworkCrafting {
         return n;
     }
 
-    static boolean providerBusy(GolemNetwork net, BlockPos provider) {
+    static boolean providerBusy(GolemNetwork net, GlobalPos provider) {
         for (CraftingCpu cpu : net.cpus) {
             if (!cpu.isRemoved() && cpu.getJob() != null && cpu.getJob().hasInFlight(provider)) {
                 return true;
@@ -248,7 +248,7 @@ final class NetworkCrafting {
         return false;
     }
 
-    static boolean busCraftPending(GolemNetwork net, BlockPos bus, ItemKey key) {
+    static boolean busCraftPending(GolemNetwork net, GlobalPos bus, ItemKey key) {
         for (CraftingCpu cpu : net.cpus) {
             CraftingJob job = cpu.isRemoved() ? null : cpu.getJob();
             if (job != null && bus.equals(job.requesterBus()) && job.targets().containsKey(key)) {

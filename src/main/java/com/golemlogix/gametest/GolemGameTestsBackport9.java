@@ -22,6 +22,7 @@ import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.ItemKey;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
@@ -270,7 +271,7 @@ public class GolemGameTestsBackport9 {
     public static void failedOrdersWait(GameTestHelper helper) {
         BlockPos bay = hugeRig(helper);
         ItemKey plank = ItemKey.of(new ItemStack(Items.OAK_PLANKS));
-        BlockPos device = helper.absolutePos(BUS_OUT);
+        GlobalPos device = GlobalPos.of(helper.getLevel().dimension(), helper.absolutePos(BUS_OUT));
         java.util.Map<ItemKey, Long> order = java.util.Map.of(plank, 4L);
         helper.runAfterDelay(5, () -> {
             GolemNetwork n = net(helper, bay);

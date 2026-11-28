@@ -34,6 +34,7 @@ import com.golemlogix.upgrade.UpgradeSpec;
 import com.golemlogix.upgrade.UpgradeType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -447,7 +448,8 @@ public final class GolemGameTestsBackport12 {
             helper.assertTrue(r1.type() == GolemNetwork.StartType.STARTED, "first job occupies the only calculator");
             helper.assertTrue(n.freeCpu() == null, "no free calculator left");
 
-            var busOrder = n.startCrafting(Map.of(goldIngot, 1L), null, helper.absolutePos(GolemGameTests.BUS_OUT));
+            var busOrder = n.startCrafting(Map.of(goldIngot, 1L), null,
+                    GlobalPos.of(helper.getLevel().dimension(), helper.absolutePos(GolemGameTests.BUS_OUT)));
             helper.assertTrue(busOrder.type() == GolemNetwork.StartType.NO_CPU && busOrder.plan() == null,
                     "bus order returns NO_CPU without planning when no calculator is free");
             var playerOrder = n.startCrafting(goldIngot, 1);

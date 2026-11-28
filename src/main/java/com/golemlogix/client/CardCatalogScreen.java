@@ -3,6 +3,7 @@ package com.golemlogix.client;
 import com.golemlogix.blockentity.CardCatalogBlockEntity;
 import com.golemlogix.init.ModBlocks;
 import com.golemlogix.menu.CardCatalogMenu;
+import com.google.common.base.Suppliers;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -12,13 +13,14 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * Punch Card Catalog window: a scrolling row of punch cards with a scroll bar and search by recipe result.
  * Places beyond the capacity are locked (a grate); on the right are the Redstone Module and the Pattern Provider slot.
  */
 public class CardCatalogScreen extends ScrollSearchScreen<CardCatalogMenu> {
-    private static final ItemStack PROVIDER = new ItemStack(ModBlocks.PATTERN_PROVIDER.get());
+    private static final Supplier<ItemStack> PROVIDER = Suppliers.memoize(() -> new ItemStack(ModBlocks.PATTERN_PROVIDER.get()));
     private static final List<Component> TIP_NOT_FOUND = List.of(
             Component.translatable("gui.golem_logix.catalog.not_found").withStyle(ChatFormatting.GRAY));
     private static final List<Component> TIP_LOCKED = List.of(
@@ -91,7 +93,7 @@ public class CardCatalogScreen extends ScrollSearchScreen<CardCatalogMenu> {
         Slot p = menu.slots.get(menu.providerSlot());
         if (!p.hasItem()) {
             int x = leftPos + p.x, y = topPos + p.y;
-            g.renderItem(PROVIDER, x, y);
+            g.renderItem(PROVIDER.get(), x, y);
             g.pose().pushPose();
             g.pose().translate(0, 0, 300);
             g.fill(x, y, x + 16, y + 16, 0xA8241A12);

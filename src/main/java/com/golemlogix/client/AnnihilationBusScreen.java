@@ -2,6 +2,7 @@ package com.golemlogix.client;
 
 import com.golemlogix.blockentity.AnnihilationBusBlockEntity;
 import com.golemlogix.menu.AnnihilationBusMenu;
+import com.google.common.base.Suppliers;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -9,15 +10,17 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
+import java.util.function.Supplier;
+
 /** Annihilation Bus: the filter grid, the tool slot beside it, the click settings in the column on the left. */
 public class AnnihilationBusScreen extends GolemScreen<AnnihilationBusMenu> {
-    private static final ItemStack ICON_LEVER = new ItemStack(Items.LEVER);
-    private static final ItemStack ICON_SWORD = new ItemStack(Items.IRON_SWORD);
-    private static final ItemStack ICON_PICKAXE = new ItemStack(Items.IRON_PICKAXE);
-    private static final ItemStack ICON_BOOTS = new ItemStack(Items.LEATHER_BOOTS);
-    private static final ItemStack ICON_BARRIER = new ItemStack(Items.BARRIER);
-    private static final ItemStack ICON_PAPER = new ItemStack(Items.PAPER);
-    private static final ItemStack ICON_WHEAT = new ItemStack(Items.WHEAT);
+    private static final Supplier<ItemStack> ICON_LEVER = Suppliers.memoize(() -> new ItemStack(Items.LEVER));
+    private static final Supplier<ItemStack> ICON_SWORD = Suppliers.memoize(() -> new ItemStack(Items.IRON_SWORD));
+    private static final Supplier<ItemStack> ICON_PICKAXE = Suppliers.memoize(() -> new ItemStack(Items.IRON_PICKAXE));
+    private static final Supplier<ItemStack> ICON_BOOTS = Suppliers.memoize(() -> new ItemStack(Items.LEATHER_BOOTS));
+    private static final Supplier<ItemStack> ICON_BARRIER = Suppliers.memoize(() -> new ItemStack(Items.BARRIER));
+    private static final Supplier<ItemStack> ICON_PAPER = Suppliers.memoize(() -> new ItemStack(Items.PAPER));
+    private static final Supplier<ItemStack> ICON_WHEAT = Suppliers.memoize(() -> new ItemStack(Items.WHEAT));
 
     public AnnihilationBusScreen(AnnihilationBusMenu menu, Inventory inv, Component title) {
         super(menu, inv, title, AnnihilationBusMenu.IMAGE_WIDTH, AnnihilationBusMenu.IMAGE_HEIGHT);
@@ -28,15 +31,15 @@ public class AnnihilationBusScreen extends GolemScreen<AnnihilationBusMenu> {
         super.init();
         addRedstoneButton(menu::redstoneMode);
         setting(() -> switch (menu.mode()) {
-                    case AnnihilationBusBlockEntity.RIGHT -> ICON_LEVER;
-                    case AnnihilationBusBlockEntity.ATTACK -> ICON_SWORD;
-                    default -> ICON_PICKAXE;
+                    case AnnihilationBusBlockEntity.RIGHT -> ICON_LEVER.get();
+                    case AnnihilationBusBlockEntity.ATTACK -> ICON_SWORD.get();
+                    default -> ICON_PICKAXE.get();
                 }, "click", this::mode, () -> true, AnnihilationBusMenu.BUTTON_CLICK);
-        setting(() -> ICON_BOOTS, "sneak", () -> menu.sneak() ? "on" : "off", menu::sneak,
+        setting(ICON_BOOTS, "sneak", () -> menu.sneak() ? "on" : "off", menu::sneak,
                 AnnihilationBusMenu.BUTTON_SNEAK);
-        setting(() -> menu.denyList() ? ICON_BARRIER : ICON_PAPER, "list", () -> menu.denyList() ? "deny" : "allow",
+        setting(() -> menu.denyList() ? ICON_BARRIER.get() : ICON_PAPER.get(), "list", () -> menu.denyList() ? "deny" : "allow",
                 menu::denyList, AnnihilationBusMenu.BUTTON_LIST);
-        setting(() -> ICON_WHEAT, "grown", () -> menu.grownOnly() ? "on" : "off", menu::grownOnly,
+        setting(ICON_WHEAT, "grown", () -> menu.grownOnly() ? "on" : "off", menu::grownOnly,
                 AnnihilationBusMenu.BUTTON_GROWN);
     }
 
@@ -78,7 +81,7 @@ public class AnnihilationBusScreen extends GolemScreen<AnnihilationBusMenu> {
     protected void renderOverlay(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
         if (!menu.getSlot(AnnihilationBusMenu.TOOL_SLOT_INDEX).hasItem()) {
             int x = leftPos + AnnihilationBusMenu.TOOL_X, y = topPos + AnnihilationBusMenu.TOOL_Y;
-            g.renderItem(menu.mode() == AnnihilationBusBlockEntity.ATTACK ? ICON_SWORD : ICON_PICKAXE, x, y);
+            g.renderItem(menu.mode() == AnnihilationBusBlockEntity.ATTACK ? ICON_SWORD.get() : ICON_PICKAXE.get(), x, y);
             g.pose().pushPose();
             g.pose().translate(0, 0, 300);
             g.fill(x, y, x + 16, y + 16, 0xA8241A12);

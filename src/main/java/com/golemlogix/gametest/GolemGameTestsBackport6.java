@@ -18,6 +18,7 @@ import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.ItemKey;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
@@ -281,7 +282,8 @@ public class GolemGameTestsBackport6 {
         helper.runAfterDelay(15, () -> {
             GolemNetwork n = net(helper, bay);
             ItemKey key = ItemKey.of(new ItemStack(Items.OAK_PLANKS));
-            helper.assertTrue(n.busCraftPending(helper.absolutePos(reqPos), key), "busCraftPending is true for the requested item");
+            helper.assertTrue(n.busCraftPending(GlobalPos.of(helper.getLevel().dimension(), helper.absolutePos(reqPos)), key),
+                    "busCraftPending is true for the requested item");
             int activeJobs = 0;
             for (com.golemlogix.crafting.CraftingCpu cpu : n.cpus()) {
                 if (!cpu.isIdle() && cpu.getJob() != null && cpu.getJob().targets().containsKey(key)) {

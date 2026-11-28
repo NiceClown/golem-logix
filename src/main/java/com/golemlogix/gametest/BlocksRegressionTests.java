@@ -25,6 +25,7 @@ import com.golemlogix.recipe.CopperTankJoinRecipe;
 import com.golemlogix.security.SecurityPermission;
 import com.golemlogix.system.Fuzzy;
 import com.golemlogix.system.GolemNetwork;
+import com.golemlogix.system.SourceHelper;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -493,9 +494,20 @@ public final class BlocksRegressionTests {
         for (String name : core) {
             helper.assertTrue(recipes.byKey(id(name)).isPresent(), "missing or invalid recipe: " + name);
         }
-        if (net.neoforged.fml.ModList.get().isLoaded("neovitae")) {
-            for (String name : new String[]{"cryo_distillation_tower", "cryo_source_jar"}) {
-                helper.assertTrue(recipes.byKey(id(name)).isPresent(), "missing or invalid neovitae recipe: " + name);
+        if (SourceHelper.distillationAvailable()) {
+            helper.assertTrue(recipes.byKey(id("cryo_distillation_tower")).isPresent(),
+                    "missing or invalid recipe: cryo_distillation_tower");
+            helper.assertTrue(recipes.byKey(id("cryo_source_jar")).isPresent(),
+                    "missing or invalid recipe: cryo_source_jar");
+        } else {
+            helper.assertTrue(recipes.byKey(id("cryo_distillation_tower")).isEmpty(),
+                    "cryo_distillation_tower recipe must be gated off without distillation mod");
+            if (SourceHelper.thaumaturgeLoaded()) {
+                helper.assertTrue(recipes.byKey(id("cryo_source_jar")).isPresent(),
+                        "missing or invalid thaumaturge recipe: cryo_source_jar");
+            } else {
+                helper.assertTrue(recipes.byKey(id("cryo_source_jar")).isEmpty(),
+                        "cryo_source_jar recipe must be gated off in standalone mode");
             }
         }
         helper.succeed();

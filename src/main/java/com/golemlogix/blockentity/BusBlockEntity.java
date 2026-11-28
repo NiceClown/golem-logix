@@ -18,6 +18,7 @@ import com.golemlogix.upgrade.UpgradeSpec;
 import com.golemlogix.upgrade.UpgradeType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -546,7 +547,7 @@ public class BusBlockEntity extends BlockEntity {
             if (nothingInNetwork && upgrades.has(UpgradeType.CRAFTING)) {
                 ItemKey key = ItemKey.of(want);
                 if (ItemHandlerHelper.insertItemStacked(items, want, true).isEmpty()
-                        && net.canCraft(key) && !net.busCraftPending(worldPosition, key)) {
+                        && net.canCraft(key) && !net.busCraftPending(GlobalPos.of(level.dimension(), worldPosition), key)) {
                     if (toCraft == null) {
                         toCraft = new LinkedHashMap<>();
                     }
@@ -686,8 +687,9 @@ public class BusBlockEntity extends BlockEntity {
             return;
         }
         lastCraftRequest = now;
+        GlobalPos bus = GlobalPos.of(level.dimension(), worldPosition);
         for (Map.Entry<ItemKey, Long> e : toCraft.entrySet()) {
-            if (BlockEntities.requestCraft(net, worldPosition, e.getKey(), e.getValue()).type() == GolemNetwork.StartType.NO_CPU) {
+            if (BlockEntities.requestCraft(net, bus, e.getKey(), e.getValue()).type() == GolemNetwork.StartType.NO_CPU) {
                 break;
             }
         }

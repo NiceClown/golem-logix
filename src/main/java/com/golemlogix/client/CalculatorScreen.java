@@ -5,16 +5,18 @@ import com.golemlogix.init.ModBlocks;
 import com.golemlogix.init.ModItems;
 import com.golemlogix.menu.CalculatorMenu;
 import com.golemlogix.network.CalculatorStatusPayload;
+import com.google.common.base.Suppliers;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Locale;
+import java.util.function.Supplier;
 
 public class CalculatorScreen extends GolemScreen<CalculatorMenu> {
-    private static final ItemStack ICON_COPROCESSOR = new ItemStack(ModBlocks.COOLING_COPROCESSOR.get());
-    private static final ItemStack ICON_COMPRESSED = new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get());
+    private static final Supplier<ItemStack> ICON_COPROCESSOR = Suppliers.memoize(() -> new ItemStack(ModBlocks.COOLING_COPROCESSOR.get()));
+    private static final Supplier<ItemStack> ICON_COMPRESSED = Suppliers.memoize(() -> new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get()));
 
     public CalculatorScreen(CalculatorMenu menu, Inventory inv, Component title) {
         super(menu, inv, title, CalculatorMenu.IMAGE_WIDTH, CalculatorMenu.IMAGE_HEIGHT);
@@ -120,8 +122,8 @@ public class CalculatorScreen extends GolemScreen<CalculatorMenu> {
                 / com.golemlogix.blockentity.CryoCalculatorBlockEntity.WORKERS_PER_COMPRESSED);
         int color = s.online() ? GolemGui.PARCHMENT : GolemGui.RED;
         int px = leftPos + 10, py = topPos + 100;
-        px = smallIcon(g, ICON_COPROCESSOR, px, py, "" + s.coprocessors(), color);
-        smallIcon(g, ICON_COMPRESSED, px + 6, py, "" + compressed, color);
+        px = smallIcon(g, ICON_COPROCESSOR.get(), px, py, "" + s.coprocessors(), color);
+        smallIcon(g, ICON_COMPRESSED.get(), px + 6, py, "" + compressed, color);
         Component steps = Component.translatable("gui.golem_logix.calc.steps", s.workers());
         g.drawString(font, steps, leftPos + 166 - font.width(steps), py + 1, color, false);
 

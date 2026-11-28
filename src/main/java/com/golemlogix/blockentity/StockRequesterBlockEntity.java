@@ -8,6 +8,7 @@ import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.Ingredients;
 import com.golemlogix.system.ItemKey;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -122,7 +123,8 @@ public class StockRequesterBlockEntity extends BlockEntity {
         if (stock >= target) {
             return STATUS_OK;
         }
-        if (net.busCraftPending(pos, key)) {
+        GlobalPos bus = GlobalPos.of((level != null ? level : net.level()).dimension(), pos);
+        if (net.busCraftPending(bus, key)) {
             return STATUS_CRAFTING;
         }
         if (!net.canCraft(key)) {
@@ -132,7 +134,7 @@ public class StockRequesterBlockEntity extends BlockEntity {
             return STATUS_CRAFTING;
         }
         long batch = Math.min(target - stock, Ingredients.isFluid(key) ? 16_000 : 64);
-        GolemNetwork.StartType result = BlockEntities.requestCraft(net, pos, key, batch).type();
+        GolemNetwork.StartType result = BlockEntities.requestCraft(net, bus, key, batch).type();
         return switch (result) {
             case STARTED -> STATUS_CRAFTING;
             case MISSING, RESERVE_FAILED -> STATUS_MISSING_INGREDIENTS;

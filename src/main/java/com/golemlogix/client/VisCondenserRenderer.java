@@ -174,15 +174,21 @@ public class VisCondenserRenderer implements BlockEntityRenderer<VisCondenserBlo
 
     /** Picks a clear side for the cantilevered upper balcony: right (-X), left (+X), or back (+Z), avoiding front manometer. */
     private static float balconyTurn(Level level, BlockPos pos, Direction facing) {
-        Direction[] order = {facing.getCounterClockWise(), facing.getClockWise(), facing.getOpposite()};
-        float[] turns = {0f, 180f, 90f};
-        for (int i = 0; i < order.length; i++) {
-            SIDE_PROBE.set(pos.getX() + order[i].getStepX(), pos.getY() + 1, pos.getZ() + order[i].getStepZ());
-            if (level.getBlockState(SIDE_PROBE).getCollisionShape(level, SIDE_PROBE).isEmpty()) {
-                return turns[i];
-            }
+        if (isSideClear(level, pos, facing.getCounterClockWise())) {
+            return 0f;
+        }
+        if (isSideClear(level, pos, facing.getClockWise())) {
+            return 180f;
+        }
+        if (isSideClear(level, pos, facing.getOpposite())) {
+            return 90f;
         }
         return 0f;
+    }
+
+    private static boolean isSideClear(Level level, BlockPos pos, Direction side) {
+        SIDE_PROBE.set(pos.getX() + side.getStepX(), pos.getY() + 1, pos.getZ() + side.getStepZ());
+        return level.getBlockState(SIDE_PROBE).getCollisionShape(level, SIDE_PROBE).isEmpty();
     }
 
     private static void renderRunes(VertexConsumer vc, PoseStack.Pose p, int status, boolean danger, boolean floorPaused,

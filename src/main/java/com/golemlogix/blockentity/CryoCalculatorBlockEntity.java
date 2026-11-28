@@ -419,9 +419,19 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements CraftingCp
     }
 
     @Override
+    public void setLevel(Level level) {
+        super.setLevel(level);
+        if (job != null && level != null) {
+            job.resolveLegacyDimension(level.dimension());
+        }
+    }
+
+    @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        job = tag.contains("Job") ? CraftingJob.load(tag.getCompound("Job"), registries) : null;
+        job = tag.contains("Job")
+                ? CraftingJob.load(tag.getCompound("Job"), registries, level == null ? null : level.dimension())
+                : null;
         upgrades.fromTag(tag.getList("Upgrades", Tag.TAG_COMPOUND), registries);
         redstone.load(tag);
     }

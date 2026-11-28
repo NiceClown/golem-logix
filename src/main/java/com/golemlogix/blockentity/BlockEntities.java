@@ -6,6 +6,7 @@ import com.golemlogix.system.ItemKey;
 import com.golemlogix.upgrade.RedstoneControl;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -137,7 +138,7 @@ final class BlockEntities {
     }
 
     /** Orders a single target from a device/bus using an unmodifiable singleton target map. */
-    static GolemNetwork.StartResult requestCraft(GolemNetwork net, BlockPos busPos, ItemKey key, long amount) {
+    static GolemNetwork.StartResult requestCraft(GolemNetwork net, GlobalPos busPos, ItemKey key, long amount) {
         return net.startCrafting(Map.of(key, amount), null, busPos);
     }
 

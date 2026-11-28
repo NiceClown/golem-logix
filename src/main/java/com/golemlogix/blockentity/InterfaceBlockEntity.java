@@ -14,6 +14,7 @@ import com.golemlogix.upgrade.UpgradeContainer;
 import com.golemlogix.upgrade.UpgradeSpec;
 import com.golemlogix.upgrade.UpgradeType;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -720,7 +721,8 @@ public class InterfaceBlockEntity extends BlockEntity {
     private Map<ItemKey, Long> queueMissingCraft(GolemNetwork net, ItemStack plain, int need,
                                                  @Nullable Map<ItemKey, Long> toCraft) {
         ItemKey key = ItemKey.of(plain);
-        if (upgrades.has(UpgradeType.CRAFTING) && net.canCraft(key) && !net.busCraftPending(worldPosition, key)) {
+        GlobalPos bus = GlobalPos.of((level != null ? level : net.level()).dimension(), worldPosition);
+        if (upgrades.has(UpgradeType.CRAFTING) && net.canCraft(key) && !net.busCraftPending(bus, key)) {
             if (toCraft == null) {
                 toCraft = new LinkedHashMap<>();
             }
@@ -735,8 +737,9 @@ public class InterfaceBlockEntity extends BlockEntity {
             return;
         }
         lastCraftRequest = now;
+        GlobalPos bus = GlobalPos.of(level.dimension(), worldPosition);
         for (Map.Entry<ItemKey, Long> e : toCraft.entrySet()) {
-            if (BlockEntities.requestCraft(net, worldPosition, e.getKey(), e.getValue()).type() == GolemNetwork.StartType.NO_CPU) {
+            if (BlockEntities.requestCraft(net, bus, e.getKey(), e.getValue()).type() == GolemNetwork.StartType.NO_CPU) {
                 break;
             }
         }

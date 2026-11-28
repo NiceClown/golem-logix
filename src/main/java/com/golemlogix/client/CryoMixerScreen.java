@@ -3,6 +3,7 @@ package com.golemlogix.client;
 import com.golemlogix.blockentity.CryoMixerBlockEntity;
 import com.golemlogix.init.ModItems;
 import com.golemlogix.menu.CryoMixerMenu;
+import com.google.common.base.Suppliers;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -10,6 +11,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 import java.util.Locale;
+import java.util.function.Supplier;
 
 /**
  * Cryo-Mixer window: on the left the two flasks (water blue, Cryo-Source icy cyan, filling from the bottom), on the right what the
@@ -19,9 +21,9 @@ import java.util.Locale;
 public class CryoMixerScreen extends GolemScreen<CryoMixerMenu> {
     private static final int WATER = 0xFF2A62B4, WATER_LIGHT = 0xFF62A0E6, CRYO = 0xFF38C8D6, CRYO_LIGHT = 0xFFB8F4FA;
     private static final int TANK_Y = 18, TANK_H = 58;
-    private static final ItemStack COPROCESSOR = new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get());
-    private static final ItemStack ICON_HOPPER = new ItemStack(Items.HOPPER);
-    private static final ItemStack ICON_CHEST = new ItemStack(Items.CHEST);
+    private static final Supplier<ItemStack> COPROCESSOR = Suppliers.memoize(() -> new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get()));
+    private static final Supplier<ItemStack> ICON_HOPPER = Suppliers.memoize(() -> new ItemStack(Items.HOPPER));
+    private static final Supplier<ItemStack> ICON_CHEST = Suppliers.memoize(() -> new ItemStack(Items.CHEST));
 
     public CryoMixerScreen(CryoMixerMenu menu, Inventory inv, Component title) {
         super(menu, inv, title, CryoMixerMenu.IMAGE_WIDTH, CryoMixerMenu.IMAGE_HEIGHT);
@@ -35,7 +37,7 @@ public class CryoMixerScreen extends GolemScreen<CryoMixerMenu> {
                 () -> Component.translatable("gui.golem_logix.mixer.mode_tip"), () -> false,
                 b -> menuButton(CryoMixerMenu.BUTTON_MODE)));
         // auto-output: a hopper hands the blocks out (to a Pattern Provider first), a chest keeps them in the tray
-        addSideButton(() -> menu.autoOutput() ? ICON_HOPPER : ICON_CHEST,
+        addSideButton(() -> menu.autoOutput() ? ICON_HOPPER.get() : ICON_CHEST.get(),
                 () -> Component.translatable("gui.golem_logix.auto_output.title").append("\n")
                         .append(Component.translatable(menu.autoOutput() ? "gui.golem_logix.auto_output.on" : "gui.golem_logix.auto_output.off")
                                 .withStyle(net.minecraft.ChatFormatting.AQUA)).append("\n")
@@ -87,7 +89,7 @@ public class CryoMixerScreen extends GolemScreen<CryoMixerMenu> {
         g.pose().pushPose();
         g.pose().translate(x, y + 20, 0);
         g.pose().scale(0.625f, 0.625f, 1);
-        g.renderItem(COPROCESSOR, 0, 0);
+        g.renderItem(COPROCESSOR.get(), 0, 0);
         g.pose().popPose();
         fitted(g, Component.translatable("gui.golem_logix.tower.coprocessors", menu.coprocessors(), com.golemlogix.upgrade.UpgradeSpec.MIXER.maxSpeed()), x + 12, y + 21, right - x - 12, 0xFFA89880);
         int status = menu.status();

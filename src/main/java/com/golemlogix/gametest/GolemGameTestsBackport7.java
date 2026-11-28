@@ -25,6 +25,7 @@ import com.golemlogix.system.ItemKey;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
@@ -356,7 +357,8 @@ public class GolemGameTestsBackport7 {
 
             // a plan with 1 execution (4 planks)
             CraftingPlan plan1 = CraftingPlanner.plan(network, planksKey, 4);
-            var smallJob = new CraftingJob(plan1, Map.of()).requestedBy(null, BUS_OUT);
+            GlobalPos busPos = GlobalPos.of(helper.getLevel().dimension(), BUS_OUT);
+            var smallJob = new CraftingJob(plan1, Map.of()).requestedBy(null, busPos);
             helper.assertTrue(!CryoCalculatorBlockEntity.dings(smallJob), "small bus job (< 16 executions, requester == null) must not ding");
 
             // a plan with a player requester
@@ -366,7 +368,7 @@ public class GolemGameTestsBackport7 {
 
             // a plan with 20 executions
             CraftingPlan plan20 = CraftingPlanner.plan(network, planksKey, 80);
-            var largeJob = new CraftingJob(plan20, Map.of()).requestedBy(null, BUS_OUT);
+            var largeJob = new CraftingJob(plan20, Map.of()).requestedBy(null, busPos);
             CompoundTag tag = largeJob.save(helper.getLevel().registryAccess());
             tag.putLong("Done", 16L);
             var loadedLargeJob = CraftingJob.load(tag, helper.getLevel().registryAccess());
