@@ -966,4 +966,105 @@ public final class CoreRegressionTests {
             helper.succeed();
         });
     }
+
+    /**
+     * When CPU 1 waits on shared Provider 1 and separate Provider 2 while CPU 2 also waits on Provider 1,
+     * returning 2 ingots in one stack through Provider 1 must settle both CPUs' Provider 1 batches instead of
+     * letting CPU 1 absorb both ingots and unlock Provider 2 early while Provider 1 stays busy.
+     */
+    @GameTest(template = T, timeoutTicks = 120)
+    public static void coreSharedProviderMultiCpuReturnDoesNotUnlockOther(GameTestHelper helper) {
+        var level = helper.getLevel();
+        BlockPos bushing = buildTinyNetwork(helper);
+        BlockPos pipe1 = bushing.south();
+        BlockPos pipe2 = pipe1.south();
+        BlockPos cpuAPos = pipe1.west();
+        BlockPos cpuBPos = pipe2.south();
+        BlockPos p1Pos = bushing.west();
+        BlockPos p2Pos = bushing.north();
+        BlockPos c1Pos = p1Pos.west();
+        BlockPos c2Pos = p2Pos.north();
+
+        helper.setBlock(pipe1, ModBlocks.BASIC_SNOW_PIPE.get());
+        helper.setBlock(pipe2, ModBlocks.BASIC_SNOW_PIPE.get());
+        helper.setBlock(cpuAPos, ModBlocks.CRYO_CALCULATOR.get());
+        helper.setBlock(cpuBPos, ModBlocks.CRYO_CALCULATOR.get());
+        helper.setBlock(p1Pos, ModBlocks.PATTERN_PROVIDER.get());
+        helper.setBlock(p2Pos, ModBlocks.PATTERN_PROVIDER.get());
+        helper.setBlock(c1Pos, Blocks.CHEST);
+        helper.setBlock(c2Pos, Blocks.CHEST);
+
+        PatternData smeltIron = new PatternData(false,
+                List.of(new ItemStack(Items.RAW_IRON)), List.of(new ItemStack(Items.IRON_INGOT)));
+        PatternProviderBlockEntity p1 = (PatternProviderBlockEntity) helper.getBlockEntity(p1Pos);
+        PatternProviderBlockEntity p2 = (PatternProviderBlockEntity) helper.getBlockEntity(p2Pos);
+        p1.getContainer().setItem(0, card(smeltIron));
+        p2.getContainer().setItem(0, card(smeltIron));
+        p1.setBlocking(true);
+        p2.setBlocking(true);
+
+        GlobalPos gp1 = GlobalPos.of(level.dimension(), helper.absolutePos(p1Pos));
+        GlobalPos gp2 = GlobalPos.of(level.dimension(), helper.absolutePos(p2Pos));
+        ItemKey ingot = ItemKey.of(new ItemStack(Items.IRON_INGOT));
+        CryoCalculatorBlockEntity[] cpus = new CryoCalculatorBlockEntity[2];
+
+        // Start CPU 1 (2x iron) so it dispatches 1 batch through P1 and 1 batch through P2
+        helper.runAfterDelay(10, () -> {
+            GolemNetwork net = GolemNetwork.refresh(level, helper.absolutePos(bushing));
+            net.insertItem(new ItemStack(Items.RAW_IRON, 2), false);
+            var start1 = net.startCrafting(Map.of(ingot, 2L), null, null);
+            helper.assertTrue(start1.type() == GolemNetwork.StartType.STARTED, "CPU 1 job started: " + start1.type());
+            CryoCalculatorBlockEntity calcA = (CryoCalculatorBlockEntity) helper.getBlockEntity(cpuAPos);
+            CryoCalculatorBlockEntity calcB = (CryoCalculatorBlockEntity) helper.getBlockEntity(cpuBPos);
+            cpus[0] = calcA.getJob() != null ? calcA : calcB;
+            cpus[1] = cpus[0] == calcA ? calcB : calcA;
+            helper.assertTrue(cpus[0].getJob() != null && cpus[1].isIdle(), "Job 1 on first CPU, second CPU idle");
+        });
+
+        // Once CPU 1 has 1 in-flight on P1 + 1 on P2, dispatch CPU 2's 1x iron through shared P1
+        helper.runAfterDelay(30, () -> {
+            GolemNetwork net = GolemNetwork.get(level, helper.absolutePos(bushing));
+            CraftingJob job1 = cpus[0].getJob();
+            helper.assertTrue(job1 != null && job1.inFlightAmount(gp1, ingot) == 1L && job1.inFlightAmount(gp2, ingot) == 1L,
+                    "CPU 1 must wait on 1 ingot from P1 and 1 from P2");
+            p1.setBlocking(false);
+            net.insertItem(new ItemStack(Items.RAW_IRON, 1), false);
+            var start2 = net.startCrafting(Map.of(ingot, 1L), null, null);
+            helper.assertTrue(start2.type() == GolemNetwork.StartType.STARTED, "CPU 2 job started: " + start2.type());
+            helper.assertTrue(cpus[1].getJob() != null, "Job 2 assigned to second CPU");
+        });
+
+        // Both providers blocking during return; push 2 iron_ingot in one stack into P1's return slot
+        helper.runAfterDelay(50, () -> {
+            CraftingJob job1 = cpus[0].getJob();
+            CraftingJob job2 = cpus[1].getJob();
+            helper.assertTrue(job1 != null && job1.inFlightAmount(gp1, ingot) == 1L && job1.inFlightAmount(gp2, ingot) == 1L,
+                    "CPU 1 still waiting on P1(1) + P2(1)");
+            helper.assertTrue(job2 != null && job2.inFlightAmount(gp1, ingot) == 1L && !job2.hasInFlight(gp2),
+                    "CPU 2 waiting only on P1(1)");
+            p1.setBlocking(true);
+            p1.getReturns().setItem(0, new ItemStack(Items.IRON_INGOT, 2));
+        });
+
+        // After flush: P1 must be free, P2 still busy, CPU 2 done/idle, CPU 1 still waiting on P2
+        helper.runAfterDelay(75, () -> {
+            GolemNetwork net = GolemNetwork.get(level, helper.absolutePos(bushing));
+            helper.assertTrue(p1.getReturns().isEmpty(), "P1 return slot flushed");
+            helper.assertTrue(!net.providerBusy(gp1), "shared P1 must be free after returning both batches");
+            helper.assertTrue(net.providerBusy(gp2), "separate P2 must remain busy for CPU 1");
+            helper.assertTrue(cpus[1].isIdle(), "CPU 2 must finish and become idle");
+            CraftingJob job1 = cpus[0].getJob();
+            helper.assertTrue(job1 != null && !job1.hasInFlight(gp1) && job1.inFlightAmount(gp2, ingot) == 1L,
+                    "CPU 1 must settle P1 and keep waiting on P2");
+            helper.assertTrue(net.itemCountOf(ingot) == 1L, "CPU 2 delivered 1 ingot, got " + net.itemCountOf(ingot));
+            p2.getReturns().setItem(0, new ItemStack(Items.IRON_INGOT, 1));
+        });
+
+        helper.runAfterDelay(100, () -> {
+            GolemNetwork net = GolemNetwork.get(level, helper.absolutePos(bushing));
+            helper.assertTrue(!net.providerBusy(gp2) && cpus[0].isIdle(), "P2 free and CPU 1 done after final return");
+            helper.assertTrue(net.itemCountOf(ingot) == 3L, "all 3 ingots stored, got " + net.itemCountOf(ingot));
+            helper.succeed();
+        });
+    }
 }
