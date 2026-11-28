@@ -28,8 +28,8 @@ import javax.annotation.Nullable;
 
 /**
  * GameTests verifying {@link NetworkStorage.ResourceSlotSeen} against live NeoForge {@link FluidStacksResourceHandler}s
- * and {@link ItemStacksResourceHandler}s: independent sided handlers at local index 0 stay distinct, while identical or
- * aliased wrapper handlers (including insert-only and full insert-only wrappers) collapse without mutating backing state.
+ * and {@link ItemStacksResourceHandler}s: independent sided handlers stay distinct in O(N) even with 4,096 identical
+ * slots, while identical, reversed-order, or insert-only aliased wrappers collapse without mutating backing state.
  */
 public final class NetworkStorageGameTests {
     private NetworkStorageGameTests() {
@@ -45,48 +45,57 @@ public final class NetworkStorageGameTests {
         tankNorth.set(0, water, 1000);
         tankSouth.set(0, water, 1000);
 
-        NetworkStorage.ResourceSlotSeen<FluidResource> seenIndependent = new NetworkStorage.ResourceSlotSeen<>();
         int totalIndependent = 0;
-        if (seenIndependent.markNew(sharedPos, tankNorth, 0, water, 1000)) {
-            totalIndependent += tankNorth.getAmountAsInt(0);
-        }
-        if (seenIndependent.markNew(sharedPos, tankSouth, 0, water, 1000)) {
-            totalIndependent += tankSouth.getAmountAsInt(0);
+        try (NetworkStorage.ResourceSlotSeen<FluidResource> seen = new NetworkStorage.ResourceSlotSeen<>()) {
+            int a = tankNorth.getAmountAsInt(0);
+            if (a > 0 && seen.markNew(sharedPos, tankNorth, 0, water, a)) {
+                totalIndependent += a;
+            }
+            int b = tankSouth.getAmountAsInt(0);
+            if (b > 0 && seen.markNew(sharedPos, tankSouth, 0, water, b)) {
+                totalIndependent += b;
+            }
         }
         helper.assertTrue(totalIndependent == 2000,
                 "two independent sided tanks at index 0 must sum to 2000 mB, got " + totalIndependent);
         helper.assertTrue(tankNorth.getAmountAsInt(0) == 1000 && tankSouth.getAmountAsInt(0) == 1000,
-                "rollback probe must leave both independent tanks untouched at 1000 mB");
+                "rollback must leave both independent tanks untouched at 1000 mB");
 
         // 2. Same handler instance on two faces -> O(1) dedup -> 1000 mB
-        NetworkStorage.ResourceSlotSeen<FluidResource> seenSame = new NetworkStorage.ResourceSlotSeen<>();
         int totalSame = 0;
-        if (seenSame.markNew(sharedPos, tankNorth, 0, water, 1000)) {
-            totalSame += tankNorth.getAmountAsInt(0);
-        }
-        if (seenSame.markNew(sharedPos, tankNorth, 0, water, 1000)) {
-            totalSame += tankNorth.getAmountAsInt(0);
+        try (NetworkStorage.ResourceSlotSeen<FluidResource> seen = new NetworkStorage.ResourceSlotSeen<>()) {
+            int a = tankNorth.getAmountAsInt(0);
+            if (a > 0 && seen.markNew(sharedPos, tankNorth, 0, water, a, null, 0, false)) {
+                totalSame += a;
+            }
+            int b = tankNorth.getAmountAsInt(0);
+            if (b > 0 && seen.markNew(sharedPos, tankNorth, 0, water, b, null, 0, false)) {
+                totalSame += b;
+            }
         }
         helper.assertTrue(totalSame == 1000, "same handler on two faces must collapse to 1000 mB, got " + totalSame);
 
-        // 3. Two distinct wrapper instances over ONE shared backing tank -> transactional probe detects alias -> 1000 mB
+        // 3. Two distinct wrapper instances over ONE shared backing tank -> 1000 mB
         FluidStacksResourceHandler backing = new FluidStacksResourceHandler(1, 4000);
         backing.set(0, water, 1000);
         ResourceHandler<FluidResource> wrapNorth = wrap(backing);
         ResourceHandler<FluidResource> wrapSouth = wrap(backing);
 
-        NetworkStorage.ResourceSlotSeen<FluidResource> seenAliased = new NetworkStorage.ResourceSlotSeen<>();
         int totalAliased = 0;
-        if (seenAliased.markNew(sharedPos, wrapNorth, 0, water, 1000)) {
-            totalAliased += wrapNorth.getAmountAsInt(0);
-        }
-        if (seenAliased.markNew(sharedPos, wrapSouth, 0, water, 1000)) {
-            totalAliased += wrapSouth.getAmountAsInt(0);
+        try (NetworkStorage.ResourceSlotSeen<FluidResource> seen = new NetworkStorage.ResourceSlotSeen<>()) {
+            int a = wrapNorth.getAmountAsInt(0);
+            if (a > 0 && seen.markNew(sharedPos, wrapNorth, 0, water, a)) {
+                totalAliased += a;
+            }
+            int b = wrapSouth.getAmountAsInt(0);
+            if (b > 0 && seen.markNew(sharedPos, wrapSouth, 0, water, b)) {
+                totalAliased += b;
+            }
         }
         helper.assertTrue(totalAliased == 1000,
                 "distinct wrappers over one backing tank must collapse to 1000 mB, got " + totalAliased);
         helper.assertTrue(backing.getAmountAsInt(0) == 1000,
-                "rollback probe must leave aliased backing tank untouched at 1000 mB");
+                "rollback must leave aliased backing tank untouched at 1000 mB");
 
         // 4. Verify live Transaction drain across both independent tanks yields 2000 mB matching counted total
         int drained;
@@ -109,18 +118,21 @@ public final class NetworkStorageGameTests {
         invNorth.set(0, iron, 8);
         invSouth.set(0, iron, 8);
 
-        NetworkStorage.ResourceSlotSeen<ItemResource> seenItems = new NetworkStorage.ResourceSlotSeen<>();
         int totalItems = 0;
-        if (seenItems.markNew(sharedPos, invNorth, 0, iron, 8)) {
-            totalItems += invNorth.getAmountAsInt(0);
-        }
-        if (seenItems.markNew(sharedPos, invSouth, 0, iron, 8)) {
-            totalItems += invSouth.getAmountAsInt(0);
+        try (NetworkStorage.ResourceSlotSeen<ItemResource> seen = new NetworkStorage.ResourceSlotSeen<>()) {
+            int a = invNorth.getAmountAsInt(0);
+            if (a > 0 && seen.markNew(sharedPos, invNorth, 0, iron, a)) {
+                totalItems += a;
+            }
+            int b = invSouth.getAmountAsInt(0);
+            if (b > 0 && seen.markNew(sharedPos, invSouth, 0, iron, b)) {
+                totalItems += b;
+            }
         }
         helper.assertTrue(totalItems == 16,
                 "two independent sided item handlers at slot 0 must sum to 16, got " + totalItems);
         helper.assertTrue(invNorth.getAmountAsInt(0) == 8 && invSouth.getAmountAsInt(0) == 8,
-                "item dedup probe must leave both independent inventories untouched at 8");
+                "item dedup must leave both independent inventories untouched at 8");
 
         int extractedItems;
         try (Transaction tx = Transaction.openRoot()) {
@@ -134,13 +146,16 @@ public final class NetworkStorageGameTests {
         sharedInv.set(0, iron, 8);
         ResourceHandler<ItemResource> itemWrapA = wrap(sharedInv);
         ResourceHandler<ItemResource> itemWrapB = wrap(sharedInv);
-        NetworkStorage.ResourceSlotSeen<ItemResource> seenSharedItems = new NetworkStorage.ResourceSlotSeen<>();
         int aliasedItems = 0;
-        if (seenSharedItems.markNew(sharedPos, itemWrapA, 0, iron, 8)) {
-            aliasedItems += itemWrapA.getAmountAsInt(0);
-        }
-        if (seenSharedItems.markNew(sharedPos, itemWrapB, 0, iron, 8)) {
-            aliasedItems += itemWrapB.getAmountAsInt(0);
+        try (NetworkStorage.ResourceSlotSeen<ItemResource> seen = new NetworkStorage.ResourceSlotSeen<>()) {
+            int a = itemWrapA.getAmountAsInt(0);
+            if (a > 0 && seen.markNew(sharedPos, itemWrapA, 0, iron, a)) {
+                aliasedItems += a;
+            }
+            int b = itemWrapB.getAmountAsInt(0);
+            if (b > 0 && seen.markNew(sharedPos, itemWrapB, 0, iron, b)) {
+                aliasedItems += b;
+            }
         }
         helper.assertTrue(aliasedItems == 8 && sharedInv.getAmountAsInt(0) == 8,
                 "distinct wrappers over one item handler must collapse to 8 and stay untouched, got " + aliasedItems);
@@ -150,13 +165,16 @@ public final class NetworkStorageGameTests {
         partialTank.set(0, water, 1000);
         ResourceHandler<FluidResource> partialNorth = Transfers.insertOnly(partialTank);
         ResourceHandler<FluidResource> partialSouth = Transfers.insertOnly(partialTank);
-        NetworkStorage.ResourceSlotSeen<FluidResource> seenPartialInsertOnly = new NetworkStorage.ResourceSlotSeen<>();
         int partialTotal = 0;
-        if (seenPartialInsertOnly.markNew(sharedPos, partialNorth, 0, water, 1000)) {
-            partialTotal += partialNorth.getAmountAsInt(0);
-        }
-        if (seenPartialInsertOnly.markNew(sharedPos, partialSouth, 0, water, 1000)) {
-            partialTotal += partialSouth.getAmountAsInt(0);
+        try (NetworkStorage.ResourceSlotSeen<FluidResource> seen = new NetworkStorage.ResourceSlotSeen<>()) {
+            int a = partialNorth.getAmountAsInt(0);
+            if (a > 0 && seen.markNew(sharedPos, partialNorth, 0, water, a)) {
+                partialTotal += a;
+            }
+            int b = partialSouth.getAmountAsInt(0);
+            if (b > 0 && seen.markNew(sharedPos, partialSouth, 0, water, b)) {
+                partialTotal += b;
+            }
         }
         helper.assertTrue(partialTotal == 1000 && partialTank.getAmountAsInt(0) == 1000,
                 "two insertOnly wrappers over one 1000/4000 mB tank must count 1000 mB and stay untouched, got " + partialTotal);
@@ -166,13 +184,16 @@ public final class NetworkStorageGameTests {
         fullTank.set(0, water, 1000);
         ResourceHandler<FluidResource> fullNorth = Transfers.insertOnly(fullTank);
         ResourceHandler<FluidResource> fullSouth = Transfers.insertOnly(fullTank);
-        NetworkStorage.ResourceSlotSeen<FluidResource> seenFullInsertOnly = new NetworkStorage.ResourceSlotSeen<>();
         int fullTotal = 0;
-        if (seenFullInsertOnly.markNew(sharedPos, fullNorth, 0, water, 1000)) {
-            fullTotal += fullNorth.getAmountAsInt(0);
-        }
-        if (seenFullInsertOnly.markNew(sharedPos, fullSouth, 0, water, 1000)) {
-            fullTotal += fullSouth.getAmountAsInt(0);
+        try (NetworkStorage.ResourceSlotSeen<FluidResource> seen = new NetworkStorage.ResourceSlotSeen<>()) {
+            int a = fullNorth.getAmountAsInt(0);
+            if (a > 0 && seen.markNew(sharedPos, fullNorth, 0, water, a)) {
+                fullTotal += a;
+            }
+            int b = fullSouth.getAmountAsInt(0);
+            if (b > 0 && seen.markNew(sharedPos, fullSouth, 0, water, b)) {
+                fullTotal += b;
+            }
         }
         helper.assertTrue(fullTotal == 1000 && fullTank.getAmountAsInt(0) == 1000,
                 "two insertOnly wrappers over one full 1000/1000 mB tank must count 1000 mB and stay untouched, got " + fullTotal);
@@ -184,31 +205,49 @@ public final class NetworkStorageGameTests {
         indTankB.set(0, water, 1000);
         ResourceHandler<FluidResource> indInsertA = Transfers.insertOnly(indTankA);
         ResourceHandler<FluidResource> indInsertB = Transfers.insertOnly(indTankB);
-        NetworkStorage.ResourceSlotSeen<FluidResource> seenIndInsertOnly = new NetworkStorage.ResourceSlotSeen<>();
         int indInsertTotal = 0;
-        if (seenIndInsertOnly.markNew(sharedPos, indInsertA, 0, water, 1000)) {
-            indInsertTotal += indInsertA.getAmountAsInt(0);
-        }
-        if (seenIndInsertOnly.markNew(sharedPos, indInsertB, 0, water, 1000)) {
-            indInsertTotal += indInsertB.getAmountAsInt(0);
+        try (NetworkStorage.ResourceSlotSeen<FluidResource> seen = new NetworkStorage.ResourceSlotSeen<>()) {
+            int a = indInsertA.getAmountAsInt(0);
+            if (a > 0 && seen.markNew(sharedPos, indInsertA, 0, water, a)) {
+                indInsertTotal += a;
+            }
+            int b = indInsertB.getAmountAsInt(0);
+            if (b > 0 && seen.markNew(sharedPos, indInsertB, 0, water, b)) {
+                indInsertTotal += b;
+            }
         }
         helper.assertTrue(indInsertTotal == 2000
                         && indTankA.getAmountAsInt(0) == 1000 && indTankB.getAmountAsInt(0) == 1000,
                 "two independent insertOnly 1000/4000 mB tanks must sum to 2000 mB and stay untouched, got " + indInsertTotal);
 
-        // 6. Reverse probe: normal wrapper first + full insertOnly wrapper second over ONE 1000/1000 mB tank -> 1000 mB
+        // 6. Mixed normal + full insertOnly (both orders!) over ONE 1000/1000 mB tank -> 1000 mB
         ResourceHandler<FluidResource> fullNormal = wrap(fullTank);
         ResourceHandler<FluidResource> fullInsertOnly = Transfers.insertOnly(fullTank);
-        NetworkStorage.ResourceSlotSeen<FluidResource> seenMixedFull = new NetworkStorage.ResourceSlotSeen<>();
-        int mixedFullTotal = 0;
-        if (seenMixedFull.markNew(sharedPos, fullNormal, 0, water, 1000)) {
-            mixedFullTotal += fullNormal.getAmountAsInt(0);
+        int mixedNormalFirst = 0;
+        try (NetworkStorage.ResourceSlotSeen<FluidResource> seen = new NetworkStorage.ResourceSlotSeen<>()) {
+            int a = fullNormal.getAmountAsInt(0);
+            if (a > 0 && seen.markNew(sharedPos, fullNormal, 0, water, a)) {
+                mixedNormalFirst += a;
+            }
+            int b = fullInsertOnly.getAmountAsInt(0);
+            if (b > 0 && seen.markNew(sharedPos, fullInsertOnly, 0, water, b)) {
+                mixedNormalFirst += b;
+            }
         }
-        if (seenMixedFull.markNew(sharedPos, fullInsertOnly, 0, water, 1000)) {
-            mixedFullTotal += fullInsertOnly.getAmountAsInt(0);
+        int mixedInsertFirst = 0;
+        try (NetworkStorage.ResourceSlotSeen<FluidResource> seen = new NetworkStorage.ResourceSlotSeen<>()) {
+            int a = fullInsertOnly.getAmountAsInt(0);
+            if (a > 0 && seen.markNew(sharedPos, fullInsertOnly, 0, water, a)) {
+                mixedInsertFirst += a;
+            }
+            int b = fullNormal.getAmountAsInt(0);
+            if (b > 0 && seen.markNew(sharedPos, fullNormal, 0, water, b)) {
+                mixedInsertFirst += b;
+            }
         }
-        helper.assertTrue(mixedFullTotal == 1000 && fullTank.getAmountAsInt(0) == 1000,
-                "normal + full insertOnly wrappers over one 1000/1000 mB tank must count 1000 mB, got " + mixedFullTotal);
+        helper.assertTrue(mixedNormalFirst == 1000 && mixedInsertFirst == 1000 && fullTank.getAmountAsInt(0) == 1000,
+                "mixed normal + full insertOnly over one 1000/1000 mB tank must count 1000 mB in both orders, got "
+                        + mixedNormalFirst + " / " + mixedInsertFirst);
 
         // 7. Vanilla Brewing Stand UP (local 0 -> phys 3) + DOWN (local 3 -> phys 3) with full 64/64 Nether Wart -> 64
         ItemResource wart = ItemResource.of(Items.NETHER_WART);
@@ -218,20 +257,21 @@ public final class NetworkStorageGameTests {
         WorldlyContainerWrapper brewDown = new WorldlyContainerWrapper(brew, Direction.DOWN);
         int[] upSlots = brew.getSlotsForFace(Direction.UP);
         int[] downSlots = brew.getSlotsForFace(Direction.DOWN);
-        NetworkStorage.ResourceSlotSeen<ItemResource> seenBrew = new NetworkStorage.ResourceSlotSeen<>();
         int brewTotal = 0;
-        for (int i = 0; i < brewUp.size(); i++) {
-            int amt = brewUp.getAmountAsInt(i);
-            if (amt > 0 && brewUp.getResource(i).equals(wart)
-                    && seenBrew.markNew(sharedPos, brewUp, i, wart, amt, brew, upSlots[i])) {
-                brewTotal += amt;
+        try (NetworkStorage.ResourceSlotSeen<ItemResource> seen = new NetworkStorage.ResourceSlotSeen<>()) {
+            for (int i = 0; i < brewUp.size(); i++) {
+                int amt = brewUp.getAmountAsInt(i);
+                if (amt > 0 && brewUp.getResource(i).equals(wart)
+                        && seen.markNew(sharedPos, brewUp, i, wart, amt, brew, upSlots[i], false)) {
+                    brewTotal += amt;
+                }
             }
-        }
-        for (int i = 0; i < brewDown.size(); i++) {
-            int amt = brewDown.getAmountAsInt(i);
-            if (amt > 0 && brewDown.getResource(i).equals(wart)
-                    && seenBrew.markNew(sharedPos, brewDown, i, wart, amt, brew, downSlots[i])) {
-                brewTotal += amt;
+            for (int i = 0; i < brewDown.size(); i++) {
+                int amt = brewDown.getAmountAsInt(i);
+                if (amt > 0 && brewDown.getResource(i).equals(wart)
+                        && seen.markNew(sharedPos, brewDown, i, wart, amt, brew, downSlots[i], false)) {
+                    brewTotal += amt;
+                }
             }
         }
         helper.assertTrue(brewTotal == 64 && brew.getItem(3).getCount() == 64,
@@ -242,171 +282,160 @@ public final class NetworkStorageGameTests {
                 new ItemStack(Items.IRON_INGOT, 64), new ItemStack(Items.IRON_INGOT, 64));
         WorldlyContainerWrapper lockedNorth = new WorldlyContainerWrapper(lockedSided, Direction.NORTH);
         WorldlyContainerWrapper lockedSouth = new WorldlyContainerWrapper(lockedSided, Direction.SOUTH);
-        NetworkStorage.ResourceSlotSeen<ItemResource> seenLocked = new NetworkStorage.ResourceSlotSeen<>();
         int lockedTotal = 0;
-        if (seenLocked.markNew(sharedPos, lockedNorth, 0, iron, 64,
-                lockedSided, lockedSided.getSlotsForFace(Direction.NORTH)[0])) {
-            lockedTotal += lockedNorth.getAmountAsInt(0);
-        }
-        if (seenLocked.markNew(sharedPos, lockedSouth, 0, iron, 64,
-                lockedSided, lockedSided.getSlotsForFace(Direction.SOUTH)[0])) {
-            lockedTotal += lockedSouth.getAmountAsInt(0);
+        try (NetworkStorage.ResourceSlotSeen<ItemResource> seen = new NetworkStorage.ResourceSlotSeen<>()) {
+            int a = lockedNorth.getAmountAsInt(0);
+            if (a > 0 && seen.markNew(sharedPos, lockedNorth, 0, iron, a,
+                    lockedSided, lockedSided.getSlotsForFace(Direction.NORTH)[0], false)) {
+                lockedTotal += a;
+            }
+            int b = lockedSouth.getAmountAsInt(0);
+            if (b > 0 && seen.markNew(sharedPos, lockedSouth, 0, iron, b,
+                    lockedSided, lockedSided.getSlotsForFace(Direction.SOUTH)[0], false)) {
+                lockedTotal += b;
+            }
         }
         helper.assertTrue(lockedTotal == 128
                         && lockedSided.getItem(0).getCount() == 64 && lockedSided.getItem(1).getCount() == 64,
                 "unextractable WorldlyContainer with distinct physical slots {0} and {1} at 64/64 must sum to 128, got " + lockedTotal);
 
-        // 9. Large 4,096-slot storages across 2 Periscope handlers (same-handler, distinct-wrapper distinct items,
-        //    distinct-wrapper repeated items, independent distinct items): exact counts and strictly O(N) probe reads
+        // 9. Large 4,096-slot storages: strictly O(N) with ZERO cross-handler candidate reads across all layouts!
         final int largeSlots = 4096;
         ItemStacksResourceHandler largeDistinct = new ItemStacksResourceHandler(largeSlots);
-        ItemStacksResourceHandler largeDistinctInd = new ItemStacksResourceHandler(largeSlots);
-        ItemStacksResourceHandler largeRepeated = new ItemStacksResourceHandler(largeSlots);
+        ItemStacksResourceHandler largeRepeatedA = new ItemStacksResourceHandler(largeSlots);
+        ItemStacksResourceHandler largeRepeatedB = new ItemStacksResourceHandler(largeSlots);
         for (int i = 0; i < largeSlots; i++) {
             ItemStack unique = new ItemStack(Items.IRON_INGOT);
             unique.set(DataComponents.CUSTOM_NAME, Component.literal("s" + i));
-            ItemResource res = ItemResource.of(unique);
-            largeDistinct.set(i, res, 3);
-            largeDistinctInd.set(i, res, 3);
-            largeRepeated.set(i, iron, 5);
+            largeDistinct.set(i, ItemResource.of(unique), 3);
+            largeRepeatedA.set(i, iron, 8);
+            largeRepeatedB.set(i, iron, 8);
         }
 
         // 9a. Same-handler across 2 Periscopes (4,096 distinct items) -> 12,288, zero probe reads
         int[] sameReads = new int[1];
         ResourceHandler<ItemResource> sameHandler = wrap(largeDistinct, sameReads);
-        NetworkStorage.ResourceSlotSeen<ItemResource> seenLargeSame = new NetworkStorage.ResourceSlotSeen<>();
         long largeSameTotal = 0;
-        for (int pass = 0; pass < 2; pass++) {
-            for (int i = 0; i < largeSlots; i++) {
-                ItemResource r = largeDistinct.getResource(i);
-                int amt = largeDistinct.getAmountAsInt(i);
-                if (seenLargeSame.markNew(sharedPos, sameHandler, i, r, amt)) {
-                    largeSameTotal += amt;
+        try (NetworkStorage.ResourceSlotSeen<ItemResource> seen = new NetworkStorage.ResourceSlotSeen<>()) {
+            for (int pass = 0; pass < 2; pass++) {
+                for (int i = 0; i < largeSlots; i++) {
+                    ItemResource r = largeDistinct.getResource(i);
+                    int amt = largeDistinct.getAmountAsInt(i);
+                    if (amt > 0 && seen.markNew(sharedPos, sameHandler, i, r, amt, null, i, false)) {
+                        largeSameTotal += amt;
+                    }
                 }
             }
         }
         helper.assertTrue(largeSameTotal == largeSlots * 3L && sameReads[0] == 0,
-                "4,096-slot same-handler must count " + (largeSlots * 3L) + " with 0 probe reads, got "
+                "4,096-slot same-handler must count " + (largeSlots * 3L) + " with 0 reads, got "
                         + largeSameTotal + " / " + sameReads[0]);
 
-        // 9b. Distinct aliased wrappers over 4,096 distinct items -> 12,288, 1 probe read per slot (O(N))
-        int[] distReads = new int[1];
-        ResourceHandler<ItemResource> distWrapA = wrap(largeDistinct, distReads);
-        ResourceHandler<ItemResource> distWrapB = wrap(largeDistinct);
-        NetworkStorage.ResourceSlotSeen<ItemResource> seenLargeDist = new NetworkStorage.ResourceSlotSeen<>();
-        long largeDistTotal = 0;
-        for (int i = 0; i < largeSlots; i++) {
-            ItemResource r = largeDistinct.getResource(i);
-            int amt = largeDistinct.getAmountAsInt(i);
-            if (seenLargeDist.markNew(sharedPos, distWrapA, i, r, amt)) {
-                largeDistTotal += amt;
+        // 9b. Reviewer Case 1: TWO INDEPENDENT 4,096-slot inventories filled with identical iron ingots -> 65,536,
+        //     ZERO cross-handler reads on handler A during handler B (eliminating 16,777,216 O(N^2) reads!)
+        int[] indRepReadsA = new int[1];
+        ResourceHandler<ItemResource> indRepWrapA = wrap(largeRepeatedA, indRepReadsA);
+        ResourceHandler<ItemResource> indRepWrapB = wrap(largeRepeatedB);
+        long indRepTotal = 0;
+        try (NetworkStorage.ResourceSlotSeen<ItemResource> seen = new NetworkStorage.ResourceSlotSeen<>()) {
+            for (int i = 0; i < largeSlots; i++) {
+                int amt = indRepWrapA.getAmountAsInt(i);
+                if (amt > 0 && seen.markNew(sharedPos, indRepWrapA, i, iron, amt)) {
+                    indRepTotal += amt;
+                }
             }
-        }
-        for (int i = 0; i < largeSlots; i++) {
-            ItemResource r = largeDistinct.getResource(i);
-            int amt = largeDistinct.getAmountAsInt(i);
-            if (seenLargeDist.markNew(sharedPos, distWrapB, i, r, amt)) {
-                largeDistTotal += amt;
+            int readsAfterA = indRepReadsA[0];
+            for (int i = 0; i < largeSlots; i++) {
+                int amt = indRepWrapB.getAmountAsInt(i);
+                if (amt > 0 && seen.markNew(sharedPos, indRepWrapB, i, iron, amt)) {
+                    indRepTotal += amt;
+                }
             }
+            helper.assertTrue(indRepReadsA[0] == readsAfterA,
+                    "independent 4,096-slot identical-item pass B must do 0 reads on handler A, did "
+                            + (indRepReadsA[0] - readsAfterA));
         }
-        helper.assertTrue(largeDistTotal == largeSlots * 3L
-                        && distReads[0] == largeSlots
-                        && largeDistinct.getAmountAsInt(largeSlots - 1) == 3,
-                "4,096-slot aliased distinct-item wrappers must count " + (largeSlots * 3L)
-                        + " with O(N) probe reads (" + largeSlots + "), got " + largeDistTotal + " / " + distReads[0]);
+        helper.assertTrue(indRepTotal == largeSlots * 16L
+                        && largeRepeatedA.getAmountAsInt(largeSlots - 1) == 8
+                        && largeRepeatedB.getAmountAsInt(largeSlots - 1) == 8,
+                "two independent 4,096-slot iron inventories must sum to " + (largeSlots * 16L)
+                        + " and stay untouched, got " + indRepTotal);
 
-        // 9c. Distinct aliased wrappers over 4,096 repeated items -> 20,480, 1 probe read per slot (O(N))
-        int[] repReads = new int[1];
-        ResourceHandler<ItemResource> repWrapA = wrap(largeRepeated, repReads);
-        ResourceHandler<ItemResource> repWrapB = wrap(largeRepeated);
-        NetworkStorage.ResourceSlotSeen<ItemResource> seenLargeRep = new NetworkStorage.ResourceSlotSeen<>();
-        long largeRepTotal = 0;
-        for (int i = 0; i < largeSlots; i++) {
-            int amt = largeRepeated.getAmountAsInt(i);
-            if (seenLargeRep.markNew(sharedPos, repWrapA, i, iron, amt)) {
-                largeRepTotal += amt;
+        // 9c. Reviewer Case 2: TWO ALIASED wrappers over ONE 4,096-slot iron inventory in REVERSE slot order -> 32,768,
+        //     ZERO cross-handler reads on handler A during handler B!
+        int[] revReadsA = new int[1];
+        ResourceHandler<ItemResource> revWrapA = wrap(largeRepeatedA, revReadsA);
+        ResourceHandler<ItemResource> revWrapB = reversedWrap(largeRepeatedA);
+        long revTotal = 0;
+        try (NetworkStorage.ResourceSlotSeen<ItemResource> seen = new NetworkStorage.ResourceSlotSeen<>()) {
+            for (int i = 0; i < largeSlots; i++) {
+                int amt = revWrapA.getAmountAsInt(i);
+                if (amt > 0 && seen.markNew(sharedPos, revWrapA, i, iron, amt)) {
+                    revTotal += amt;
+                }
             }
-        }
-        for (int i = 0; i < largeSlots; i++) {
-            int amt = largeRepeated.getAmountAsInt(i);
-            if (seenLargeRep.markNew(sharedPos, repWrapB, i, iron, amt)) {
-                largeRepTotal += amt;
+            int readsAfterA = revReadsA[0];
+            for (int i = 0; i < largeSlots; i++) {
+                int amt = revWrapB.getAmountAsInt(i);
+                if (amt > 0 && seen.markNew(sharedPos, revWrapB, i, iron, amt)) {
+                    revTotal += amt;
+                }
             }
+            helper.assertTrue(revReadsA[0] == readsAfterA,
+                    "reversed-order aliased 4,096-slot pass B must do 0 reads on handler A, did "
+                            + (revReadsA[0] - readsAfterA));
         }
-        helper.assertTrue(largeRepTotal == largeSlots * 5L
-                        && repReads[0] == largeSlots
-                        && largeRepeated.getAmountAsInt(largeSlots - 1) == 5,
-                "4,096-slot aliased repeated-item wrappers must count " + (largeSlots * 5L)
-                        + " with O(N) probe reads (" + largeSlots + "), got " + largeRepTotal + " / " + repReads[0]);
+        helper.assertTrue(revTotal == largeSlots * 8L && largeRepeatedA.getAmountAsInt(0) == 8
+                        && largeRepeatedA.getAmountAsInt(largeSlots - 1) == 8,
+                "reversed-order aliased 4,096-slot wrappers must count " + (largeSlots * 8L)
+                        + " and stay untouched, got " + revTotal);
 
-        // 9d. Two independent 4,096-slot handlers over distinct items -> 24,576, 1 probe read per slot (O(N))
-        int[] indReads = new int[1];
-        ResourceHandler<ItemResource> indWrapA = wrap(largeDistinct, indReads);
-        ResourceHandler<ItemResource> indWrapB = wrap(largeDistinctInd);
-        NetworkStorage.ResourceSlotSeen<ItemResource> seenLargeInd = new NetworkStorage.ResourceSlotSeen<>();
-        long largeIndTotal = 0;
-        for (int i = 0; i < largeSlots; i++) {
-            ItemResource r = largeDistinct.getResource(i);
-            int amt = largeDistinct.getAmountAsInt(i);
-            if (seenLargeInd.markNew(sharedPos, indWrapA, i, r, amt)) {
-                largeIndTotal += amt;
+        // 9d. Capped-extract aliased wrappers (extract capped to 1 < amt 8) -> falls back to probe -> 8, untouched
+        ItemStacksResourceHandler cappedBacking = new ItemStacksResourceHandler(1);
+        cappedBacking.set(0, iron, 8);
+        ResourceHandler<ItemResource> cappedA = cappedExtractWrap(cappedBacking, 1);
+        ResourceHandler<ItemResource> cappedB = cappedExtractWrap(cappedBacking, 1);
+        int cappedTotal = 0;
+        try (NetworkStorage.ResourceSlotSeen<ItemResource> seen = new NetworkStorage.ResourceSlotSeen<>()) {
+            int a = cappedA.getAmountAsInt(0);
+            if (a > 0 && seen.markNew(sharedPos, cappedA, 0, iron, a)) {
+                cappedTotal += a;
+            }
+            int b = cappedB.getAmountAsInt(0);
+            if (b > 0 && seen.markNew(sharedPos, cappedB, 0, iron, b)) {
+                cappedTotal += b;
             }
         }
-        for (int i = 0; i < largeSlots; i++) {
-            ItemResource r = largeDistinctInd.getResource(i);
-            int amt = largeDistinctInd.getAmountAsInt(i);
-            if (seenLargeInd.markNew(sharedPos, indWrapB, i, r, amt)) {
-                largeIndTotal += amt;
-            }
-        }
-        helper.assertTrue(largeIndTotal == largeSlots * 6L
-                        && indReads[0] == largeSlots
-                        && largeDistinct.getAmountAsInt(largeSlots - 1) == 3
-                        && largeDistinctInd.getAmountAsInt(largeSlots - 1) == 3,
-                "two independent 4,096-slot distinct-item handlers must sum to " + (largeSlots * 6L)
-                        + " with O(N) probe reads (" + largeSlots + "), got " + largeIndTotal + " / " + indReads[0]);
+        helper.assertTrue(cappedTotal == 8 && cappedBacking.getAmountAsInt(0) == 8,
+                "capped-extract aliased wrappers must collapse to 8 and restore 8, got " + cappedTotal);
 
-        // 9e. Disjoint-resource handlers (1 iron vs 4,096 gold) and same-physicalOwner -> 3rd non-worldly wrapper
-        ItemResource gold = ItemResource.of(Items.GOLD_INGOT);
-        ItemStacksResourceHandler oneIron = new ItemStacksResourceHandler(1);
-        oneIron.set(0, iron, 1);
-        ItemStacksResourceHandler manyGold = new ItemStacksResourceHandler(largeSlots);
-        for (int i = 0; i < largeSlots; i++) {
-            manyGold.set(i, gold, 2);
-        }
-        int[] disjointReads = new int[1];
-        ResourceHandler<ItemResource> oneIronWrap = wrap(oneIron, disjointReads);
-        ResourceHandler<ItemResource> manyGoldWrap = wrap(manyGold, disjointReads);
-        NetworkStorage.ResourceSlotSeen<ItemResource> seenDisjoint = new NetworkStorage.ResourceSlotSeen<>();
-        long disjointTotal = seenDisjoint.markNew(sharedPos, oneIronWrap, 0, iron, 1) ? 1 : 0;
-        for (int i = 0; i < largeSlots; i++) {
-            if (seenDisjoint.markNew(sharedPos, manyGoldWrap, i, gold, 2)) {
-                disjointTotal += 2;
-            }
-        }
-        helper.assertTrue(disjointTotal == 1L + largeSlots * 2L && disjointReads[0] == 0,
-                "disjoint-resource 1 vs 4,096 handlers must sum to " + (1L + largeSlots * 2L)
-                        + " with 0 probe reads, got " + disjointTotal + " / " + disjointReads[0]);
-
+        // 9e. Same-physicalOwner two faces + 3rd non-worldly wrapper aliasing both slots -> 8 total
         ItemStacksResourceHandler physBacking = new ItemStacksResourceHandler(2);
         physBacking.set(0, iron, 4);
         physBacking.set(1, iron, 4);
         Object physOwner = new Object();
-        int[] physReadsA = new int[1];
-        int[] physReadsB = new int[1];
-        ResourceHandler<ItemResource> physFaceA = wrap(physBacking, physReadsA);
-        ResourceHandler<ItemResource> physFaceB = wrap(physBacking, physReadsB);
+        ResourceHandler<ItemResource> physFaceA = wrap(physBacking);
+        ResourceHandler<ItemResource> physFaceB = wrap(physBacking);
         ResourceHandler<ItemResource> nonWorldlyWrap = wrap(physBacking);
-        NetworkStorage.ResourceSlotSeen<ItemResource> seenPhysMixed = new NetworkStorage.ResourceSlotSeen<>();
-        boolean keptA = seenPhysMixed.markNew(sharedPos, physFaceA, 0, iron, 4, physOwner, 0);
-        boolean keptB = seenPhysMixed.markNew(sharedPos, physFaceB, 1, iron, 4, physOwner, 1);
-        int readsBeforeThird = physReadsA[0] + physReadsB[0];
-        boolean dup0 = seenPhysMixed.markNew(sharedPos, nonWorldlyWrap, 0, iron, 4);
-        boolean dup1 = seenPhysMixed.markNew(sharedPos, nonWorldlyWrap, 1, iron, 4);
-        helper.assertTrue(keptA && keptB && readsBeforeThird == 0 && !dup0 && !dup1
-                        && physReadsA[0] == 1 && physReadsB[0] == 1
-                        && physBacking.getAmountAsInt(0) == 4 && physBacking.getAmountAsInt(1) == 4,
-                "same-physicalOwner faces must skip probes until a 3rd non-worldly wrapper aliases both slots");
+        int physTotal = 0;
+        try (NetworkStorage.ResourceSlotSeen<ItemResource> seen = new NetworkStorage.ResourceSlotSeen<>()) {
+            int a = physFaceA.getAmountAsInt(0);
+            if (a > 0 && seen.markNew(sharedPos, physFaceA, 0, iron, a, physOwner, 0, true)) {
+                physTotal += a;
+            }
+            int b = physFaceB.getAmountAsInt(1);
+            if (b > 0 && seen.markNew(sharedPos, physFaceB, 1, iron, b, physOwner, 1, true)) {
+                physTotal += b;
+            }
+            for (int i = 0; i < 2; i++) {
+                int c = nonWorldlyWrap.getAmountAsInt(i);
+                if (c > 0 && seen.markNew(sharedPos, nonWorldlyWrap, i, iron, c)) {
+                    physTotal += c;
+                }
+            }
+        }
+        helper.assertTrue(physTotal == 8 && physBacking.getAmountAsInt(0) == 4 && physBacking.getAmountAsInt(1) == 4,
+                "same-physicalOwner faces + 3rd non-worldly alias must count 8 and stay untouched, got " + physTotal);
 
         helper.succeed();
     }
@@ -523,6 +552,88 @@ public final class NetworkStorageGameTests {
             @Override
             public int extract(int index, R resource, int amount, TransactionContext tx) {
                 return delegate.extract(index, resource, amount, tx);
+            }
+        };
+    }
+
+    private static <R extends Resource> ResourceHandler<R> reversedWrap(ResourceHandler<R> delegate) {
+        return new ResourceHandler<>() {
+            private int map(int index) {
+                return delegate.size() - 1 - index;
+            }
+
+            @Override
+            public int size() {
+                return delegate.size();
+            }
+
+            @Override
+            public R getResource(int index) {
+                return delegate.getResource(map(index));
+            }
+
+            @Override
+            public long getAmountAsLong(int index) {
+                return delegate.getAmountAsLong(map(index));
+            }
+
+            @Override
+            public long getCapacityAsLong(int index, R resource) {
+                return delegate.getCapacityAsLong(map(index), resource);
+            }
+
+            @Override
+            public boolean isValid(int index, R resource) {
+                return delegate.isValid(map(index), resource);
+            }
+
+            @Override
+            public int insert(int index, R resource, int amount, TransactionContext tx) {
+                return delegate.insert(map(index), resource, amount, tx);
+            }
+
+            @Override
+            public int extract(int index, R resource, int amount, TransactionContext tx) {
+                return delegate.extract(map(index), resource, amount, tx);
+            }
+        };
+    }
+
+    private static <R extends Resource> ResourceHandler<R> cappedExtractWrap(ResourceHandler<R> delegate, int maxPerCall) {
+        return new ResourceHandler<>() {
+            @Override
+            public int size() {
+                return delegate.size();
+            }
+
+            @Override
+            public R getResource(int index) {
+                return delegate.getResource(index);
+            }
+
+            @Override
+            public long getAmountAsLong(int index) {
+                return delegate.getAmountAsLong(index);
+            }
+
+            @Override
+            public long getCapacityAsLong(int index, R resource) {
+                return delegate.getCapacityAsLong(index, resource);
+            }
+
+            @Override
+            public boolean isValid(int index, R resource) {
+                return delegate.isValid(index, resource);
+            }
+
+            @Override
+            public int insert(int index, R resource, int amount, TransactionContext tx) {
+                return delegate.insert(index, resource, amount, tx);
+            }
+
+            @Override
+            public int extract(int index, R resource, int amount, TransactionContext tx) {
+                return delegate.extract(index, resource, Math.min(amount, maxPerCall), tx);
             }
         };
     }
