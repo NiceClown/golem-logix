@@ -1,6 +1,9 @@
 package com.golemlogix.system;
 
 import com.golemlogix.blockentity.CopperDriveBayBlockEntity;
+import com.golemlogix.blocks.CryoMixerBlock;
+import com.golemlogix.blocks.DistillationTowerBlock;
+import com.golemlogix.blocks.SaturatorPartBlock;
 import com.golemlogix.config.GolemConfig;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -9,6 +12,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.WorldlyContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.ChestType;
@@ -20,9 +24,11 @@ import net.neoforged.neoforge.items.IItemHandler;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -516,26 +522,62 @@ final class NetworkStorage {
 
     // ------------------------------------------------------------- externals
 
-    /** Identifies one slot or tank of a canonical external storage (deduplicating double chests &amp; shared single chests). */
+    /** Identifies one slot of a canonical external item storage (deduplicating double chests &amp; shared multiblocks). */
     private record ExternalSlotKey(GlobalPos storage, int slot) {
     }
 
     /**
-     * Canonical storage position for an external target: both halves of a vanilla double chest resolve to the lesser
-     * BlockPos; all other blocks resolve to their own position (also deduplicating multiple Periscopes on one block).
+     * Identifies one fluid tank by handler reference identity + tank index so two independent sided tanks at local
+     * index 0 on the same block are not merged, while shared handlers (Copper Tank, Cryo-Mixer, Distillation Tower) are.
+     * shortcut: 1.21.1 IFluidHandler has no rollback transaction to detect distinct wrapper objects over one backing tank.
+     */
+    static final class FluidTankKey {
+        final IFluidHandler handler;
+        final int tank;
+
+        FluidTankKey(IFluidHandler handler, int tank) {
+            this.handler = handler;
+            this.tank = tank;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof FluidTankKey k && k.handler == handler && k.tank == tank;
+        }
+
+        @Override
+        public int hashCode() {
+            return System.identityHashCode(handler) * 31 + tank;
+        }
+    }
+
+    /**
+     * Canonical storage position for an external target: multi-block machines (Cryo-Mixer, Cryo-Distillation Tower,
+     * Mana Saturator) resolve to their base/controller; both halves of a vanilla double chest resolve to the lesser
+     * BlockPos; all other blocks resolve to their own position.
      */
     static BlockPos canonicalStoragePos(Level level, BlockPos pos) {
         if (!level.isLoaded(pos)) {
             return pos.immutable();
         }
         BlockState state = level.getBlockState(pos);
-        if (state.getBlock() instanceof ChestBlock && state.hasProperty(ChestBlock.TYPE)) {
+        Block block = state.getBlock();
+        if (block instanceof CryoMixerBlock) {
+            return CryoMixerBlock.baseOf(pos, state).immutable();
+        }
+        if (block instanceof DistillationTowerBlock) {
+            return DistillationTowerBlock.baseOf(pos, state).immutable();
+        }
+        if (block instanceof SaturatorPartBlock) {
+            return SaturatorPartBlock.controllerOf(pos, state).immutable();
+        }
+        if (block instanceof ChestBlock && state.hasProperty(ChestBlock.TYPE)) {
             ChestType type = state.getValue(ChestBlock.TYPE);
             if (type != ChestType.SINGLE) {
                 BlockPos other = pos.relative(ChestBlock.getConnectedDirection(state));
                 if (level.isLoaded(other)) {
                     BlockState otherState = level.getBlockState(other);
-                    if (otherState.is(state.getBlock())
+                    if (otherState.is(block)
                             && otherState.hasProperty(ChestBlock.TYPE)
                             && otherState.getValue(ChestBlock.TYPE) == type.getOpposite()
                             && otherState.getValue(ChestBlock.FACING) == state.getValue(ChestBlock.FACING)) {
@@ -549,6 +591,50 @@ final class NetworkStorage {
 
     static GlobalPos canonicalStorageKey(Level level, BlockPos pos) {
         return GlobalPos.of(level.dimension(), canonicalStoragePos(level, pos));
+    }
+
+    /**
+     * Returns the set of canonical targets referenced by 2+ periscopes, or {@code null} when every periscope points to
+     * a distinct storage (skipping per-slot dedup allocations on single-path storages).
+     */
+    @Nullable
+    private static Set<GlobalPos> sharedStorageKeys(List<GolemNetwork.External> externals) {
+        int n = externals.size();
+        if (n <= 1) {
+            return null;
+        }
+        if (n == 2) {
+            GolemNetwork.External a = externals.get(0);
+            GolemNetwork.External b = externals.get(1);
+            if (a.level() != b.level()) {
+                return null;
+            }
+            BlockPos pa = canonicalStoragePos(a.level(), a.target());
+            BlockPos pb = canonicalStoragePos(b.level(), b.target());
+            return pa.equals(pb) ? Set.of(GlobalPos.of(a.level().dimension(), pa)) : null;
+        }
+        Set<GlobalPos> seen = new HashSet<>(n * 2);
+        Set<GlobalPos> dups = null;
+        for (int i = 0; i < n; i++) {
+            GolemNetwork.External ex = externals.get(i);
+            GlobalPos c = canonicalStorageKey(ex.level(), ex.target());
+            if (!seen.add(c)) {
+                if (dups == null) {
+                    dups = new HashSet<>();
+                }
+                dups.add(c);
+            }
+        }
+        return dups;
+    }
+
+    @Nullable
+    private static GlobalPos sharedCanonical(@Nullable Set<GlobalPos> shared, GolemNetwork.External ex) {
+        if (shared == null) {
+            return null;
+        }
+        GlobalPos c = canonicalStorageKey(ex.level(), ex.target());
+        return shared.contains(c) ? c : null;
     }
 
     /** Maps sided handler-local slot indices to real container slot indices on WorldlyContainer targets (e.g. Furnace). */
@@ -574,7 +660,8 @@ final class NetworkStorage {
         if (ex.target().equals(skipTarget)) {
             return true;
         }
-        return ex.target().distManhattan(skipTarget) == 1
+        // Max Manhattan span across any Golem Logix capability multiblock (3x3x3 Mana Saturator = 6)
+        return ex.target().distManhattan(skipTarget) <= 6
                 && canonicalStoragePos(ex.level(), ex.target()).equals(canonicalStoragePos(net.level, skipTarget));
     }
 
@@ -670,18 +757,19 @@ final class NetworkStorage {
                 all.merge(e.getKey(), (long) e.getValue(), Long::sum);
             }
         }
-        Set<ExternalSlotKey> seenSlots = net.externals.size() > 1 ? new HashSet<>() : null;
+        Set<GlobalPos> shared = sharedStorageKeys(net.externals);
+        Set<ExternalSlotKey> seenSlots = shared != null ? new HashSet<>() : null;
         for (GolemNetwork.External ex : net.externals) {
             IItemHandler h = itemHandler(ex);
             if (h == null) {
                 continue;
             }
-            GlobalPos storageKey = seenSlots != null ? canonicalStorageKey(ex.level(), ex.target()) : null;
-            int[] faceSlots = seenSlots != null ? worldlySlots(ex, h) : null;
+            GlobalPos storageKey = sharedCanonical(shared, ex);
+            int[] faceSlots = storageKey != null ? worldlySlots(ex, h) : null;
             for (int i = 0; i < h.getSlots(); i++) {
                 ItemStack s = h.getStackInSlot(i);
                 if (!s.isEmpty() && mayExtract(ex, s)) {
-                    if (seenSlots != null && !seenSlots.add(new ExternalSlotKey(storageKey, realSlot(faceSlots, i)))) {
+                    if (storageKey != null && !seenSlots.add(new ExternalSlotKey(storageKey, realSlot(faceSlots, i)))) {
                         continue;
                     }
                     all.merge(ItemKey.of(s), (long) s.getCount(), Long::sum);
@@ -715,7 +803,8 @@ final class NetworkStorage {
         if (net.externals.isEmpty()) {
             return n;
         }
-        Set<ExternalSlotKey> seenSlots = net.externals.size() > 1 ? new HashSet<>() : null;
+        Set<GlobalPos> shared = sharedStorageKeys(net.externals);
+        Set<ExternalSlotKey> seenSlots = shared != null ? new HashSet<>() : null;
         for (GolemNetwork.External ex : net.externals) {
             if (!mayExtract(ex, key.stack())) {
                 continue;
@@ -724,12 +813,12 @@ final class NetworkStorage {
             if (h == null) {
                 continue;
             }
-            GlobalPos storageKey = seenSlots != null ? canonicalStorageKey(ex.level(), ex.target()) : null;
-            int[] faceSlots = seenSlots != null ? worldlySlots(ex, h) : null;
+            GlobalPos storageKey = sharedCanonical(shared, ex);
+            int[] faceSlots = storageKey != null ? worldlySlots(ex, h) : null;
             for (int i = 0; i < h.getSlots(); i++) {
                 ItemStack s = h.getStackInSlot(i);
                 if (!s.isEmpty() && key.matches(s)) {
-                    if (seenSlots != null && !seenSlots.add(new ExternalSlotKey(storageKey, realSlot(faceSlots, i)))) {
+                    if (storageKey != null && !seenSlots.add(new ExternalSlotKey(storageKey, realSlot(faceSlots, i)))) {
                         continue;
                     }
                     n += s.getCount();
@@ -793,7 +882,7 @@ final class NetworkStorage {
                 }
             }
             if (!remaining.isEmpty()) {
-                remaining = insertIntoExternals(net, tier, remaining, false, skipTarget, null);
+                remaining = insertIntoExternals(net, tier, remaining, false, skipTarget, null, null);
             }
             if (remaining.isEmpty()) {
                 break;
@@ -860,18 +949,20 @@ final class NetworkStorage {
             }
         }
         // Disks are already counted above; check external containers one by one (deduplicating shared canonical slots)
-        Set<ExternalSlotKey> simInsertedSlots = net.externals.size() > 1 ? new HashSet<>() : null;
+        Set<GlobalPos> shared = sharedStorageKeys(net.externals);
+        Set<ExternalSlotKey> simInsertedSlots = shared != null ? new HashSet<>() : null;
         for (Tier tier : idx.tiersHigh) {
             if (remaining.isEmpty()) {
                 break;
             }
-            remaining = insertIntoExternals(net, tier, remaining, true, skipTarget, simInsertedSlots);
+            remaining = insertIntoExternals(net, tier, remaining, true, skipTarget, shared, simInsertedSlots);
         }
         return remaining;
     }
 
     private static ItemStack insertIntoExternals(GolemNetwork net, Tier tier, ItemStack remaining,
                                                  boolean simulate, @Nullable BlockPos skipTarget,
+                                                 @Nullable Set<GlobalPos> shared,
                                                  @Nullable Set<ExternalSlotKey> simInsertedSlots) {
         for (GolemNetwork.External ex : tier.exts) {
             if (remaining.isEmpty()) {
@@ -884,11 +975,11 @@ final class NetworkStorage {
             if (h == null || !mayInsert(ex, remaining)) {
                 continue;
             }
-            GlobalPos storageKey = simInsertedSlots != null ? canonicalStorageKey(ex.level(), ex.target()) : null;
-            int[] faceSlots = simInsertedSlots != null ? worldlySlots(ex, h) : null;
+            GlobalPos storageKey = sharedCanonical(shared, ex);
+            int[] faceSlots = storageKey != null ? worldlySlots(ex, h) : null;
             for (int i = 0; i < h.getSlots() && !remaining.isEmpty(); i++) {
                 ExternalSlotKey slotKey = null;
-                if (simInsertedSlots != null) {
+                if (storageKey != null) {
                     slotKey = new ExternalSlotKey(storageKey, realSlot(faceSlots, i));
                     if (simInsertedSlots.contains(slotKey)) {
                         continue;
@@ -896,7 +987,7 @@ final class NetworkStorage {
                 }
                 int before = remaining.getCount();
                 remaining = h.insertItem(i, remaining, simulate);
-                if (simInsertedSlots != null && remaining.getCount() < before) {
+                if (storageKey != null && remaining.getCount() < before) {
                     simInsertedSlots.add(slotKey);
                 }
             }
@@ -996,7 +1087,8 @@ final class NetworkStorage {
         }
 
         // General path with external periscopes: interleave disk extraction and external extraction per priority tier
-        Map<ExternalSlotKey, Integer> simTaken = simulate && net.externals.size() > 1 ? new HashMap<>() : null;
+        Set<GlobalPos> shared = simulate ? sharedStorageKeys(net.externals) : null;
+        Map<ExternalSlotKey, Integer> simTaken = shared != null ? new HashMap<>() : null;
         for (Tier tier : idx.tiersLow) {
             if (left <= 0) {
                 break;
@@ -1052,15 +1144,15 @@ final class NetworkStorage {
                 if (h == null) {
                     continue;
                 }
-                GlobalPos storageKey = simTaken != null ? canonicalStorageKey(ex.level(), ex.target()) : null;
-                int[] faceSlots = simTaken != null ? worldlySlots(ex, h) : null;
+                GlobalPos storageKey = sharedCanonical(shared, ex);
+                int[] faceSlots = storageKey != null ? worldlySlots(ex, h) : null;
                 for (int i = 0; i < h.getSlots() && left > 0; i++) {
                     ItemStack s = h.getStackInSlot(i);
                     if (!s.isEmpty() && ItemStack.isSameItemSameComponents(s, template)) {
                         int avail = s.getCount();
                         ExternalSlotKey slotKey = null;
                         int prevTaken = 0;
-                        if (simTaken != null) {
+                        if (storageKey != null) {
                             slotKey = new ExternalSlotKey(storageKey, realSlot(faceSlots, i));
                             prevTaken = simTaken.getOrDefault(slotKey, 0);
                             avail -= prevTaken;
@@ -1071,7 +1163,7 @@ final class NetworkStorage {
                         ItemStack got = h.extractItem(i, Math.min(left, avail), simulate);
                         int gotCount = got.getCount();
                         left -= gotCount;
-                        if (simTaken != null && gotCount > 0) {
+                        if (storageKey != null && gotCount > 0) {
                             simTaken.put(slotKey, prevTaken + gotCount);
                         }
                     }
@@ -1132,18 +1224,19 @@ final class NetworkStorage {
                 }
             }
         }
-        Set<ExternalSlotKey> seenTanks = net.externals.size() > 1 ? new HashSet<>() : null;
+        Set<GlobalPos> shared = sharedStorageKeys(net.externals);
+        Set<FluidTankKey> seenTanks = shared != null ? new HashSet<>() : null;
         for (GolemNetwork.External ex : net.externals) {
             IFluidHandler h = fluidHandler(ex);
             if (h == null) {
                 continue;
             }
-            GlobalPos storageKey = seenTanks != null ? canonicalStorageKey(ex.level(), ex.target()) : null;
+            boolean checkDedup = sharedCanonical(shared, ex) != null;
             for (int i = 0; i < h.getTanks(); i++) {
                 FluidStack f = h.getFluidInTank(i);
                 // Liquid Cryo-Source in a tank behind a periscope is not network stock: the network makes its own from Source
                 if (!f.isEmpty() && !CryoSource.is(f) && mayExtract(ex, f)) {
-                    if (seenTanks != null && !seenTanks.add(new ExternalSlotKey(storageKey, i))) {
+                    if (checkDedup && !seenTanks.add(new FluidTankKey(h, i))) {
                         continue;
                     }
                     if (totals != null) {
@@ -1212,7 +1305,8 @@ final class NetworkStorage {
             }
         }
         Set<CopperDriveBayBlockEntity> touched = null;
-        Set<GlobalPos> simFilledTargets = simulate && net.externals.size() > 1 ? new HashSet<>() : null;
+        Set<GlobalPos> shared = simulate ? sharedStorageKeys(net.externals) : null;
+        Set<IFluidHandler> simFilledHandlers = shared != null ? Collections.newSetFromMap(new IdentityHashMap<>()) : null;
         IFluidHandler.FluidAction action = simulate ? IFluidHandler.FluidAction.SIMULATE : IFluidHandler.FluidAction.EXECUTE;
         for (Tier tier : idx.tiersHigh) {
             if (left <= 0) {
@@ -1249,14 +1343,14 @@ final class NetworkStorage {
                 if (h == null || !mayInsert(ex, input)) {
                     continue;
                 }
-                GlobalPos storageKey = simFilledTargets != null ? canonicalStorageKey(ex.level(), ex.target()) : null;
-                if (simFilledTargets != null && simFilledTargets.contains(storageKey)) {
+                boolean checkDedup = sharedCanonical(shared, ex) != null;
+                if (checkDedup && simFilledHandlers.contains(h)) {
                     continue;
                 }
                 int filled = h.fill(input.copyWithAmount(left), action);
                 left -= filled;
-                if (simFilledTargets != null && filled > 0) {
-                    simFilledTargets.add(storageKey);
+                if (checkDedup && filled > 0) {
+                    simFilledHandlers.add(h);
                 }
             }
         }
@@ -1280,7 +1374,8 @@ final class NetworkStorage {
         DiskIndex idx = index(net, st);
         int left = amount;
         Set<CopperDriveBayBlockEntity> touched = null;
-        Map<GlobalPos, Integer> simDrained = simulate && net.externals.size() > 1 ? new HashMap<>() : null;
+        Set<GlobalPos> shared = simulate ? sharedStorageKeys(net.externals) : null;
+        Map<IFluidHandler, Integer> simDrained = shared != null ? new IdentityHashMap<>() : null;
         IFluidHandler.FluidAction action = simulate ? IFluidHandler.FluidAction.SIMULATE : IFluidHandler.FluidAction.EXECUTE;
         for (Tier tier : idx.tiersLow) {
             if (left <= 0) {
@@ -1312,15 +1407,14 @@ final class NetworkStorage {
                 if (h == null) {
                     continue;
                 }
-                if (simDrained != null) {
-                    GlobalPos storageKey = canonicalStorageKey(ex.level(), ex.target());
-                    int already = simDrained.getOrDefault(storageKey, 0);
+                if (sharedCanonical(shared, ex) != null) {
+                    int already = simDrained.getOrDefault(h, 0);
                     int ask = (int) Math.min((long) left + already, Integer.MAX_VALUE);
                     int totalDrainable = h.drain(template.copyWithAmount(ask), action).getAmount();
                     int extra = Math.max(0, Math.min(left, totalDrainable - already));
                     if (extra > 0) {
                         left -= extra;
-                        simDrained.put(storageKey, already + extra);
+                        simDrained.put(h, already + extra);
                     }
                 } else {
                     FluidStack got = h.drain(template.copyWithAmount(left), action);
@@ -1353,7 +1447,8 @@ final class NetworkStorage {
         if (net.externals.isEmpty()) {
             return n;
         }
-        Set<ExternalSlotKey> seenTanks = net.externals.size() > 1 ? new HashSet<>() : null;
+        Set<GlobalPos> shared = sharedStorageKeys(net.externals);
+        Set<FluidTankKey> seenTanks = shared != null ? new HashSet<>() : null;
         for (GolemNetwork.External ex : net.externals) {
             if (!mayExtract(ex, fluid)) {
                 continue;
@@ -1362,11 +1457,11 @@ final class NetworkStorage {
             if (h == null) {
                 continue;
             }
-            GlobalPos storageKey = seenTanks != null ? canonicalStorageKey(ex.level(), ex.target()) : null;
+            boolean checkDedup = sharedCanonical(shared, ex) != null;
             for (int i = 0; i < h.getTanks(); i++) {
                 FluidStack f = h.getFluidInTank(i);
                 if (!f.isEmpty() && FluidStack.isSameFluidSameComponents(f, fluid)) {
-                    if (seenTanks != null && !seenTanks.add(new ExternalSlotKey(storageKey, i))) {
+                    if (checkDedup && !seenTanks.add(new FluidTankKey(h, i))) {
                         continue;
                     }
                     n += f.getAmount();

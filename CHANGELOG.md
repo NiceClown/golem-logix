@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.3.3 (1.21.1) - Autocrafting Batch Tracking, Multiblock Storage & Fluid Fixes
+
+- **Autocrafting & Storage Fixes:**
+  - **Blocking Pattern Providers:** when multiple Pattern Providers in "wait for output" mode run the same recipe in parallel, returning a result through a specific provider now frees that provider's own batch first instead of releasing another waiting provider early.
+  - **Cryo-Mixer & Multiblock Periscopes:** connecting two Periscope Storage Buses to both halves of a Cryo-Mixer (or multiple parts of a Cryo-Distillation Tower or Mana Saturator) no longer doubles the visible stock or misleads autocrafting plans.
+  - **Multi-Tank Sided Machines:** machines exposing separate fluid tanks on different faces of the same block now report each tank's fluid amount accurately instead of merging them into one, while shared tanks (such as Copper Tanks) still avoid double counting.
+- **Performance:**
+  - **Faster Storage Scans:** networks with multiple Periscopes on separate containers now skip per-slot deduplication work, applying it only to storages shared by two or more Periscopes.
+
 ## 2.3.2 (1.21.1) - Client Startup Hotfix, Double Chest & Cross-Dimension Fixes
 
 - **Client Startup Crash Fix:**
