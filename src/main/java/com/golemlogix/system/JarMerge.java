@@ -128,6 +128,24 @@ public final class JarMerge {
         notifyNetwork(level, cells);
     }
 
+    /** Resets an orphaned member jar back to SINGLE, syncs clients/network, and schedules a rescan. */
+    public static void detach(ServerLevel level, BlockPos lower) {
+        if (!level.isLoaded(lower)) {
+            return;
+        }
+        if (level.getBlockEntity(lower) instanceof CryoJarBlockEntity jar) {
+            jar.setController(null);
+        }
+        setForm(level, lower, JarForm.SINGLE);
+        List<BlockPos> single = List.of(lower);
+        sync(level, single);
+        notifyNetwork(level, single);
+        BlockState s = level.getBlockState(lower);
+        if (s.getBlock() instanceof CryoJarBlock) {
+            level.scheduleTick(lower, s.getBlock(), 1);
+        }
+    }
+
     /**
      * Takes a whole apart: its Source is shared out among the jars that stay, as far as they hold it, and they look again for a whole
      * to join. removed: the jar being broken, if one is (it has no share: a jar in the hand holds nothing).
@@ -148,7 +166,10 @@ public final class JarMerge {
         int total = whole.takeAll();
         List<BlockPos> stay = new ArrayList<>();
         for (BlockPos cell : cells(corner, form.width())) {
-            if (!cell.equals(removed) && level.isLoaded(cell) && level.getBlockEntity(cell) instanceof CryoJarBlockEntity) {
+            if (!cell.equals(removed) && level.isLoaded(cell)
+                    && level.getBlockEntity(cell) instanceof CryoJarBlockEntity jar
+                    && !jar.isRemoved() && jar.isLower()
+                    && (cell.equals(corner) || corner.equals(jar.controller()))) {
                 stay.add(cell);
             }
         }
@@ -192,10 +213,10 @@ public final class JarMerge {
 
     /** Only the state changes: its neighbours have nothing to learn from it. */
     private static void setForm(ServerLevel level, BlockPos lower, JarForm form) {
-        if (!level.isLoaded(lower)) {
-            return;
-        }
         for (BlockPos p : new BlockPos[]{lower, lower.above()}) {
+            if (!level.isLoaded(p)) {
+                continue;
+            }
             BlockState s = level.getBlockState(p);
             if (s.getBlock() instanceof CryoJarBlock && s.getValue(CryoJarBlock.FORM) != form) {
                 level.setBlock(p, s.setValue(CryoJarBlock.FORM, form), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);

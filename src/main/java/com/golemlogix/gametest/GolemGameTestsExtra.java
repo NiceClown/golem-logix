@@ -4148,11 +4148,14 @@ public final class GolemGameTestsExtra {
         ItemStack blessedSword = AnnihilationBusBlockEntity.temperedHand(plainSword, Blocks.AIR.defaultBlockState(), reg);
         helper.assertTrue(net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(looting, blessedSword) >= 1,
                 "temperedHand grants Looting >= I");
+        var fortune = reg.lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.FORTUNE);
         ItemStack silkSword = plainSword.copy();
         silkSword.enchant(silk, 1);
-        helper.assertTrue(net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(looting,
-                AnnihilationBusBlockEntity.temperedHand(silkSword, Blocks.AIR.defaultBlockState(), reg)) == 0,
-                "temperedHand respects Silk Touch / Looting mutual exclusion");
+        ItemStack temperedSilk = AnnihilationBusBlockEntity.temperedHand(silkSword, Blocks.AIR.defaultBlockState(), reg);
+        helper.assertTrue(net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(fortune, temperedSilk) == 0,
+                "temperedHand respects Silk Touch / Fortune mutual exclusion");
+        helper.assertTrue(net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(looting, temperedSilk) >= 1,
+                "temperedHand still grants Looting alongside Silk Touch");
 
         BlockPos bay = baseNetwork(helper);
         BlockPos bus = BUS_OUT, front = BUS_OUT.north();

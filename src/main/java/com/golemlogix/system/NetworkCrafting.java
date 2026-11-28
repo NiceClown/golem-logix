@@ -190,9 +190,9 @@ final class NetworkCrafting {
 
     /** Returns partially reserved ingredients to storage; drops any items that no longer fit so nothing is voided. */
     private static void rollbackReserved(GolemNetwork net, CraftingCpu cpu, Map<ItemKey, Long> reserved) {
-        boolean cpuLocal = net.contains(net.level, cpu.cpuPos());
-        Level dropLevel = cpuLocal ? net.level : net.coreLevel;
-        BlockPos dropPos = cpuLocal ? cpu.cpuPos() : net.corePos;
+        Level cpuLevel = cpu.cpuLevel();
+        Level dropLevel = cpuLevel != null ? cpuLevel : net.coreLevel;
+        BlockPos dropPos = cpuLevel != null ? cpu.cpuPos() : net.corePos;
         for (Map.Entry<ItemKey, Long> r : reserved.entrySet()) {
             long leftover = giveBack(net, r.getKey(), r.getValue());
             if (leftover > 0 && !Ingredients.isFluid(r.getKey()) && dropLevel != null && dropPos != null) {

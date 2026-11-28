@@ -1,10 +1,14 @@
 package com.golemlogix.blockentity;
 
+import com.golemlogix.blocks.SecurityTerminalBlock;
+import com.golemlogix.menu.GolemMenu;
+import com.golemlogix.system.GolemNode;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 import java.util.function.Predicate;
@@ -40,8 +44,13 @@ public class OwnedContainer extends ListeningContainer {
         if (owner.isRemoved() || owner.getLevel() != player.level()) {
             return false;
         }
-        return player.distanceToSqr(owner.getBlockPos().getX() + 0.5, owner.getBlockPos().getY() + 0.5,
-                owner.getBlockPos().getZ() + 0.5) <= 64.0;
+        if (player.distanceToSqr(owner.getBlockPos().getX() + 0.5, owner.getBlockPos().getY() + 0.5,
+                owner.getBlockPos().getZ() + 0.5) > 64.0) {
+            return false;
+        }
+        Block block = owner.getBlockState().getBlock();
+        return !(block instanceof GolemNode) || block instanceof SecurityTerminalBlock
+                || GolemMenu.hasBuildPermission(player, owner.getLevel(), owner.getBlockPos());
     }
 
     @Override

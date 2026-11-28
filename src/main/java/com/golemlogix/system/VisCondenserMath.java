@@ -55,9 +55,9 @@ public final class VisCondenserMath {
         return currentVis > newFloor;
     }
 
-    /** True when chunk Vis is at or below the low-Vis danger percent of chunk base. */
+    /** True when chunk Vis is below the low-Vis danger percent of chunk base. */
     public static boolean isLowVis(double vis, int base, int lowVisPercent) {
-        return base > 0 && lowVisPercent > 0 && vis <= base * (lowVisPercent / 100.0);
+        return base > 0 && lowVisPercent > 0 && vis < base * (lowVisPercent / 100.0) - 1e-3;
     }
 
     /** Flux emitted for draining {@code drainedVis} ending at {@code visAfterDrain}. Zero above the low-Vis threshold. */

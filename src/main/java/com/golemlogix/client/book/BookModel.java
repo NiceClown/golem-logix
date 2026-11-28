@@ -99,11 +99,19 @@ public final class BookModel {
             if (showAll) {
                 return true;
             }
-            // an entry about another mod's integration is shown only when that mod is installed (or when none are, for free_mode)
+            // an entry about another mod's integration is shown only when that mod (or any |-separated mod) is installed (or none, for free_mode)
             if (!requires.isEmpty()) {
-                boolean met = "no_source_mod".equals(requires)
-                        ? !com.golemlogix.system.SourceHelper.hasSourceProviderMod()
-                        : net.neoforged.fml.ModList.get().isLoaded(requires);
+                boolean met = false;
+                if ("no_source_mod".equals(requires)) {
+                    met = !com.golemlogix.system.SourceHelper.hasSourceProviderMod();
+                } else {
+                    for (String mod : requires.split("\\|")) {
+                        if (!mod.isEmpty() && net.neoforged.fml.ModList.get().isLoaded(mod)) {
+                            met = true;
+                            break;
+                        }
+                    }
+                }
                 if (!met) {
                     return false;
                 }

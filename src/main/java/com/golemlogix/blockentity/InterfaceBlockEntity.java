@@ -649,7 +649,8 @@ public class InterfaceBlockEntity extends BlockEntity {
                 stockUnsatisfied = true;
                 continue;
             }
-            int need = wanted(i) - have.getCount();
+            int target = have.isEmpty() ? wanted(i) : Math.min(wanted(i), have.getMaxStackSize());
+            int need = target - have.getCount();
             if (need <= 0) {
                 continue;
             }
@@ -692,7 +693,7 @@ public class InterfaceBlockEntity extends BlockEntity {
             return 0;
         }
         int excess = cfg.isEmpty() || isFluidSlot(slot) || !Fuzzy.matches(cfg, have, fuzzy)
-                ? have.getCount() : have.getCount() - wanted(slot);
+                ? have.getCount() : have.getCount() - Math.min(wanted(slot), have.getMaxStackSize());
         if (excess <= 0) {
             return 0;
         }
@@ -710,7 +711,8 @@ public class InterfaceBlockEntity extends BlockEntity {
 
     private static ItemStack extractFirstFuzzy(GolemNetwork net, ItemStack cfg, Set<ItemKey> netKeys, int ask) {
         for (ItemKey k : Fuzzy.candidates(cfg, netKeys, true)) {
-            ItemStack got = net.extractItem(k.toStack(1), ask, false);
+            int limit = Math.min(ask, Math.max(1, k.stack().getMaxStackSize()));
+            ItemStack got = net.extractItem(k.toStack(1), limit, false);
             if (!got.isEmpty()) {
                 return got;
             }

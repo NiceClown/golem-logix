@@ -153,6 +153,6 @@ public class CalculatorMenu extends GolemMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return stillValid(access, player, ModBlocks.CRYO_CALCULATOR.get());
+        return stillValidNetwork(access, player, ModBlocks.CRYO_CALCULATOR.get());
     }
 }

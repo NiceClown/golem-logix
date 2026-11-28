@@ -2940,7 +2940,15 @@ public class GolemGameTests {
                         String id = e.get("id").getAsString();
                         // an entry about another mod's integration names that mod's items: they exist only when it is installed
                         String requires = e.has("requires") ? e.get("requires").getAsString() : "";
-                        boolean items = requires.isEmpty() || "no_source_mod".equals(requires) || net.neoforged.fml.ModList.get().isLoaded(requires);
+                        boolean items = requires.isEmpty() || "no_source_mod".equals(requires);
+                        if (!items) {
+                            for (String mod : requires.split("\\|")) {
+                                if (!mod.isEmpty() && net.neoforged.fml.ModList.get().isLoaded(mod)) {
+                                    items = true;
+                                    break;
+                                }
+                            }
+                        }
                         if (items) {
                             checkItem(helper, e.get("icon").getAsString(), id);
                         }
@@ -4760,16 +4768,16 @@ public class GolemGameTests {
         helper.assertTrue(net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(fortune, sword) == 1
                 && net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(looting, sword) == 1,
                 "a sword comes out with Fortune I and Looting I too");
-        // Looting and Silk Touch cannot live together: a tool that keeps the block keeps Silk Touch and does not get Looting
+        // Fortune and Silk Touch cannot live together: a tool with Silk Touch keeps Silk Touch, skips Fortune, and still gets Looting
         ItemStack silk = new ItemStack(Items.IRON_PICKAXE);
         silk.enchant(silkTouch, 1);
         ItemStack silkHand = com.golemlogix.blockentity.AnnihilationBusBlockEntity.temperedHand(silk, Blocks.STONE.defaultBlockState(), reg);
         helper.assertTrue(net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(silkTouch, silkHand) == 1,
                 "Silk Touch stays");
-        helper.assertTrue(net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(looting, silkHand) == 0,
-                "and Looting does not come with it");
-        helper.assertTrue(net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(fortune, silkHand) == 1,
-                "but Fortune does");
+        helper.assertTrue(net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(fortune, silkHand) == 0,
+                "and Fortune does not come with it");
+        helper.assertTrue(net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(looting, silkHand) == 1,
+                "but Looting does");
         ItemStack rich = new ItemStack(Items.IRON_PICKAXE);
         rich.enchant(fortune, 3);
         helper.assertTrue(net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(fortune,

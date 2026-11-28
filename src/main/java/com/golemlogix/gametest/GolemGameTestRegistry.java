@@ -316,7 +316,15 @@ public final class GolemGameTestRegistry {
             // 2.3.0 Economy & End Rod ritual tests
             new Test("irongolemanvilbonuschance", BalanceAndRitualTests::ironGolemAnvilBonusChance, 40, 0),
             new Test("endrodthreephaseritual", BalanceAndRitualTests::endRodThreePhaseRitual, 400, 0),
-            new Test("chronometervstelegraphrange", BalanceAndRitualTests::chronometerVsTelegraphRange, 40, 0)
+            new Test("chronometervstelegraphrange", BalanceAndRitualTests::chronometerVsTelegraphRange, 40, 0),
+            // Audit regression tests
+            new Test("auditsecuritytakeoverandmenurevocation", AuditRegressionTests::auditSecurityTakeoverAndMenuRevocation, 120, 0),
+            new Test("auditinterfacefuzzybucketsnooverstack", AuditRegressionTests::auditInterfaceFuzzyBucketsNoOverstack, 120, 0),
+            new Test("auditcryodiodeparalleldedupandsidewaysblocked", AuditRegressionTests::auditCryoDiodeParallelDedupAndSidewaysBlocked, 100, 0),
+            new Test("auditterminalfluidsextractonlynovoid", AuditRegressionTests::auditTerminalFluidsExtractOnlyNoVoid, 100, 0),
+            new Test("auditterminalshiftclickcapsatonestack", AuditRegressionTests::auditTerminalShiftClickCapsAtOneStack, 100, 0),
+            new Test("auditcryojarintegritydetachesorphan", AuditRegressionTests::auditCryoJarIntegrityDetachesOrphan, 100, 0),
+            new Test("auditcontainerdata32bitunpacking", AuditRegressionTests::auditContainerData32BitUnpacking, 60, 0)
     );
 
     private GolemGameTestRegistry() {
@@ -332,9 +340,17 @@ public final class GolemGameTestRegistry {
 
     private static void registerTests(RegisterGameTestsEvent event) {
         Holder<TestEnvironmentDefinition<?>> env = event.registerEnvironment(id("default"), new TestEnvironmentDefinition.AllOf(List.of()));
+        // Flux-polluting Thaumaturge tests run in separate batches so they can never share a 16x16 chunk with zero-Flux assertions
+        Holder<TestEnvironmentDefinition<?>> fluxCondenserEnv = event.registerEnvironment(id("thaum_flux_condenser"), new TestEnvironmentDefinition.AllOf(List.of()));
+        Holder<TestEnvironmentDefinition<?>> fluxBoilEnv = event.registerEnvironment(id("thaum_flux_boiloff"), new TestEnvironmentDefinition.AllOf(List.of()));
         for (Test t : TESTS) {
+            Holder<TestEnvironmentDefinition<?>> targetEnv = switch (t.name()) {
+                case "thaumviscondenserdrainjarsfloorsandflux" -> fluxCondenserEnv;
+                case "thaumcauldronboiloffgraceandredstone" -> fluxBoilEnv;
+                default -> env;
+            };
             ResourceKey<Consumer<GameTestHelper>> fn = ResourceKey.create(Registries.TEST_FUNCTION, id(t.name()));
-            event.registerTest(id(t.name()), new FunctionGameTestInstance(fn, new TestData<>(env, id("empty"), t.maxTicks(), t.setupTicks(), true)));
+            event.registerTest(id(t.name()), new FunctionGameTestInstance(fn, new TestData<>(targetEnv, id("empty"), t.maxTicks(), t.setupTicks(), true)));
         }
     }
 

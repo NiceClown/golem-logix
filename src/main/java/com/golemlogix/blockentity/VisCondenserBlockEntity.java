@@ -67,10 +67,12 @@ public class VisCondenserBlockEntity extends BlockEntity {
     private int sentMode = -1;
     private int sentStatus = -1;
     private boolean sentLowVis;
+    private int sentLowVisPercent = -1;
 
     // Client-synced visual state (read by VisCondenserRenderer)
     public float clientVis, clientFlux;
-    public int clientBase, clientThreshold = DEFAULT_THRESHOLD_PERCENT, clientMode = MODE_PERCENT, clientStatus = STATUS_FLOOR_PAUSED;
+    public int clientBase, clientThreshold = DEFAULT_THRESHOLD_PERCENT, clientMode = MODE_PERCENT,
+            clientStatus = STATUS_FLOOR_PAUSED, clientLowVisPercent = 10;
     public boolean clientLowVisWarning;
     public float work, workPrev, phase, phasePrev, needle, needlePrev;
 
@@ -206,6 +208,9 @@ public class VisCondenserBlockEntity extends BlockEntity {
                 lowVisWarning = false;
                 dirty = true;
             }
+            if ((now + worldPosition.asLong()) % PERIOD == 0) {
+                refreshAuraCache();
+            }
         } else if ((now + worldPosition.asLong()) % PERIOD == 0) {
             condense(now);
         }
@@ -333,8 +338,10 @@ public class VisCondenserBlockEntity extends BlockEntity {
         int visTenths = Math.round(cachedVis * 10f);
         int fluxTenths = Math.round(cachedFlux * 10f);
         int th = threshold();
+        int lowPct = GolemConfig.VIS_CONDENSER_LOW_VIS_PERCENT.get();
         if (visTenths != sentVisTenths || cachedBase != sentBase || fluxTenths != sentFluxTenths
-                || th != sentThreshold || mode != sentMode || status != sentStatus || lowVisWarning != sentLowVis) {
+                || th != sentThreshold || mode != sentMode || status != sentStatus
+                || lowVisWarning != sentLowVis || lowPct != sentLowVisPercent) {
             sentVisTenths = visTenths;
             sentBase = cachedBase;
             sentFluxTenths = fluxTenths;
@@ -342,6 +349,7 @@ public class VisCondenserBlockEntity extends BlockEntity {
             sentMode = mode;
             sentStatus = status;
             sentLowVis = lowVisWarning;
+            sentLowVisPercent = lowPct;
             lastSync = now;
             BlockEntities.sendUpdate(this);
         }
@@ -353,13 +361,24 @@ public class VisCondenserBlockEntity extends BlockEntity {
             public int get(int index) {
                 return switch (index) {
                     case 0 -> Math.round(chunkVis() * 10f);
-                    case 1 -> chunkBase();
-                    case 2 -> Math.round(chunkFlux() * 10f);
+                    case 1 -> {
+                        if (!auraInitialized && level != null && !level.isClientSide() && ThaumaturgeCompat.isLoaded()) {
+                            refreshAuraCache();
+                        }
+                        yield level != null && level.isClientSide() ? clientBase : cachedBase;
+                    }
+                    case 2 -> {
+                        if (!auraInitialized && level != null && !level.isClientSide() && ThaumaturgeCompat.isLoaded()) {
+                            refreshAuraCache();
+                        }
+                        yield Math.round((level != null && level.isClientSide() ? clientFlux : cachedFlux) * 10f);
+                    }
                     case 3 -> threshold();
                     case 4 -> mode;
                     case 5 -> status;
                     case 6 -> (int) Math.round(sourcePerSecond() * 10.0);
                     case 7 -> (lowVisWarning ? 1 : 0) | (pausedByFloor ? 2 : 0) | (redstonePowered ? 4 : 0);
+                    case 8 -> GolemConfig.VIS_CONDENSER_LOW_VIS_PERCENT.get();
                     default -> 0;
                 };
             }
@@ -375,7 +394,7 @@ public class VisCondenserBlockEntity extends BlockEntity {
 
             @Override
             public int getCount() {
-                return 8;
+                return 9;
             }
         };
     }
@@ -428,6 +447,7 @@ public class VisCondenserBlockEntity extends BlockEntity {
         tag.putInt("Mode", mode);
         tag.putInt("Status", status);
         tag.putBoolean("LowVis", lowVisWarning);
+        tag.putInt("LowVisPct", GolemConfig.VIS_CONDENSER_LOW_VIS_PERCENT.get());
         return tag;
     }
 
@@ -439,6 +459,7 @@ public class VisCondenserBlockEntity extends BlockEntity {
         clientMode = tag.getIntOr("Mode", MODE_PERCENT);
         clientStatus = tag.getIntOr("Status", STATUS_FLOOR_PAUSED);
         clientLowVisWarning = tag.getBooleanOr("LowVis", false);
+        clientLowVisPercent = tag.getIntOr("LowVisPct", 10);
     }
 
     @Override

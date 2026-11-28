@@ -195,6 +195,14 @@ public class RecipeMonitorMenu extends GolemMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return stillValid(access, player, ModBlocks.RECIPE_MONITOR.get());
+        return stillValid(access, player, ModBlocks.RECIPE_MONITOR.get())
+                && access.evaluate((lvl, p) -> {
+                    if (lvl.isClientSide() || !lvl.isLoaded(p)) {
+                        return true;
+                    }
+                    GolemNetwork net = GolemNetwork.get(lvl, p);
+                    return net.hasPermission(player, SecurityPermission.CRAFT)
+                            || net.hasPermission(player, SecurityPermission.BUILD);
+                }, true);
     }
 }

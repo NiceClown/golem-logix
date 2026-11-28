@@ -10,6 +10,7 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
@@ -37,7 +38,7 @@ public class CryoJarBlockEntity extends BlockEntity implements SourceHelper.Supp
         super(ModBlockEntities.CRYO_JAR.get(), pos, state);
     }
 
-    private boolean isLower() {
+    public boolean isLower() {
         BlockState s = getBlockState();
         return !s.hasProperty(CryoJarBlock.HALF) || s.getValue(CryoJarBlock.HALF) == DoubleBlockHalf.LOWER;
     }
@@ -133,6 +134,10 @@ public class CryoJarBlockEntity extends BlockEntity implements SourceHelper.Supp
 
     public void serverTick() {
         long now = level.getGameTime();
+        if (isLower() && form() != JarForm.SINGLE && level instanceof ServerLevel sl
+                && (now + worldPosition.asLong()) % 20 == 0 && checkIntegrity(sl)) {
+            return;
+        }
         if (!dirty || now - lastSync < 10) {
             return;
         }
@@ -146,6 +151,36 @@ public class CryoJarBlockEntity extends BlockEntity implements SourceHelper.Supp
             BlockEntities.sendUpdate(this);
             updateComparators();
         }
+    }
+
+    /** Re-validates merged multiblocks across chunk boundaries without force-loading unloaded chunks. */
+    private boolean checkIntegrity(ServerLevel sl) {
+        JarForm f = form();
+        if (isController()) {
+            for (BlockPos cell : JarMerge.cells(worldPosition, f.width())) {
+                if (!sl.isLoaded(cell)) {
+                    continue;
+                }
+                if (!(sl.getBlockEntity(cell) instanceof CryoJarBlockEntity jar) || jar.isRemoved()
+                        || !jar.isLower() || jar.form() != f || !worldPosition.equals(jar.controller())) {
+                    JarMerge.apart(sl, worldPosition, null);
+                    return true;
+                }
+            }
+            return false;
+        }
+        if (controller == null) {
+            JarMerge.detach(sl, worldPosition);
+            return true;
+        }
+        if (sl.isLoaded(controller)) {
+            if (!(sl.getBlockEntity(controller) instanceof CryoJarBlockEntity c) || c.isRemoved()
+                    || !c.isLower() || !c.isController() || c.form() != f) {
+                JarMerge.detach(sl, worldPosition);
+                return true;
+            }
+        }
+        return false;
     }
 
     private void updateComparators() {

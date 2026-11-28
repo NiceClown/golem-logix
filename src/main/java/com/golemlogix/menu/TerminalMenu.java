@@ -118,6 +118,7 @@ public class TerminalMenu extends GolemMenu {
     private final CraftingContainer craftSlots;
     private final ResultContainer resultSlots = new ResultContainer();
     private final Player player;
+    private boolean updatingGrid;
 
     // --- client side
     private final ArrayList<TerminalListPayload.Entry> clientEntryList = new ArrayList<>();
@@ -436,6 +437,17 @@ public class TerminalMenu extends GolemMenu {
         drainGrid(sp, net, true, true);
     }
 
+    /** Runs a batch of crafting-grid mutations without re-running recipe lookup on every slot change. */
+    private void withUpdatingGrid(Runnable action) {
+        boolean prev = updatingGrid;
+        updatingGrid = true;
+        try {
+            action.run();
+        } finally {
+            updatingGrid = prev;
+        }
+    }
+
     /**
      * A recipe from JEI ("+"): the grid contents go back to the network, then every cell is filled with the first ingredient option
      * that is in the network (or, if not, in the player's inventory). max = by full stacks, otherwise one each.
@@ -449,14 +461,16 @@ public class TerminalMenu extends GolemMenu {
         // returning items from the grid requires INSERT; pulling ingredients requires EXTRACT
         boolean canInsert = netOnline && net.hasPermission(sp, SecurityPermission.INSERT);
         boolean canExtract = netOnline && net.hasPermission(sp, SecurityPermission.EXTRACT);
-        drainGrid(sp, net, canInsert, false);
+        withUpdatingGrid(() -> {
+            drainGrid(sp, net, canInsert, false);
 
-        Inventory inv = sp.getInventory();
-        for (int i = 0; i < Math.min(9, options.size()); i++) {
-            fillGridSlot(i, options.get(i), max, net, canExtract, inv);
-        }
-        inv.setChanged();
-        slotsChanged(craftSlots);
+            Inventory inv = sp.getInventory();
+            for (int i = 0; i < Math.min(9, options.size()); i++) {
+                fillGridSlot(i, options.get(i), max, net, canExtract, inv);
+            }
+            inv.setChanged();
+        });
+        updateCraftResult();
         sync.markDirty();
     }
 
@@ -532,17 +546,24 @@ public class TerminalMenu extends GolemMenu {
             for (int i = 0; i < 9; i++) {
                 before[i] = craftSlots.getItem(i).copy();
             }
-            super.onTake(player, stack);
-            refillGrid(before);
+            withUpdatingGrid(() -> {
+                super.onTake(player, stack);
+                refillGrid(before);
+            });
+            updateCraftResult();
         }
     }
 
     @Override
     public void slotsChanged(Container container) {
         // as with the vanilla crafting table: super is not called, otherwise every grid change forces a broadcast
-        if (!crafting || container != craftSlots) {
+        if (!crafting || container != craftSlots || updatingGrid) {
             return;
         }
+        updateCraftResult();
+    }
+
+    private void updateCraftResult() {
         Level level = player.level();
         if (level.isClientSide() || !(player instanceof ServerPlayer sp)) {
             return;
@@ -744,22 +765,11 @@ public class TerminalMenu extends GolemMenu {
         if (slot == null || !slot.hasItem() || slot instanceof LockedSlot) {
             return ItemStack.EMPTY;
         }
+        if (crafting && index == 0) {
+            return quickMoveCraftResult(player, slot);
+        }
         ItemStack stack = slot.getItem();
         ItemStack copy = stack.copy();
-
-        if (crafting && index == 0) {
-            // as in the crafting table: the result moves to the inventory, the outer loop repeats until it runs out
-            stack.getItem().onCraftedBy(stack, player);
-            if (!this.moveItemStackTo(stack, playerStart, playerEnd, true)) {
-                return ItemStack.EMPTY;
-            }
-            slot.onQuickCraft(stack, copy);
-            ItemStack result = finishQuickMove(slot, stack, copy, player);
-            if (!result.isEmpty()) {
-                player.drop(stack, false);
-            }
-            return result;
-        }
         if (crafting && index >= 1 && index < 10) {
             if (!quickMoveFromGrid(player, slot, stack)) {
                 return ItemStack.EMPTY;
@@ -770,6 +780,41 @@ public class TerminalMenu extends GolemMenu {
             return ItemStack.EMPTY;
         }
         return finishQuickMove(slot, stack, copy, player);
+    }
+
+    /** Shift-click on the crafting result crafts at most one full stack so network refill cannot stall a tick. */
+    private ItemStack quickMoveCraftResult(Player player, Slot slot) {
+        ItemStack first = slot.getItem().copy();
+        int limit = first.getMaxStackSize();
+        int crafted = 0;
+        while (slot.hasItem()) {
+            ItemStack stack = slot.getItem();
+            if (crafted > 0 && (!ItemStack.isSameItemSameComponents(stack, first) || crafted + stack.getCount() > limit)) {
+                break;
+            }
+            ItemStack copy = stack.copy();
+            stack.getItem().onCraftedBy(stack, player);
+            if (!this.moveItemStackTo(stack, playerStart, playerEnd, true)) {
+                break;
+            }
+            int moved = copy.getCount() - stack.getCount();
+            if (moved <= 0) {
+                break;
+            }
+            crafted += moved;
+            slot.onQuickCraft(stack, copy);
+            if (stack.isEmpty()) {
+                slot.setByPlayer(ItemStack.EMPTY);
+            } else {
+                slot.setChanged();
+            }
+            slot.onTake(player, stack);
+            if (!stack.isEmpty()) {
+                player.drop(stack, false);
+                break;
+            }
+        }
+        return ItemStack.EMPTY;
     }
 
     private boolean quickMoveFromGrid(Player player, Slot slot, ItemStack stack) {

@@ -16,6 +16,7 @@ import net.minecraft.world.inventory.SimpleContainerData;
 public class VisCondenserMenu extends GolemMenu {
     public static final int IMAGE_WIDTH = 176;
     public static final int IMAGE_HEIGHT = 182;
+    public static final int DATA_COUNT = 9;
 
     public static final int BUTTON_MODE = 1;
     public static final int BUTTON_MINUS_10 = 2;
@@ -29,7 +30,7 @@ public class VisCondenserMenu extends GolemMenu {
     private final ContainerData data;
 
     public static VisCondenserMenu fromNetwork(int id, Inventory inv, RegistryFriendlyByteBuf buf) {
-        return new VisCondenserMenu(id, inv, new SimpleContainerData(8), ContainerLevelAccess.NULL);
+        return new VisCondenserMenu(id, inv, new SimpleContainerData(DATA_COUNT), ContainerLevelAccess.NULL);
     }
 
     public VisCondenserMenu(int id, Inventory inv, ContainerData data, ContainerLevelAccess access) {
@@ -82,6 +83,10 @@ public class VisCondenserMenu extends GolemMenu {
 
     public boolean redstonePowered() {
         return (data.get(7) & 4) != 0;
+    }
+
+    public int lowVisPercent() {
+        return data.get(8);
     }
 
     @Override

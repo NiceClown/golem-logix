@@ -448,6 +448,6 @@ public class CardCatalogMenu extends GolemMenu implements ScrollableMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return (be == null || be.formed()) && stillValid(access, player, ModBlocks.CARD_CATALOG.get());
+        return (be == null || be.formed()) && stillValidNetwork(access, player, ModBlocks.CARD_CATALOG.get());
     }
 }

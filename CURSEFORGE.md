@@ -152,7 +152,7 @@ Everything is steampunk-and-frost: polished copper, CRT screens, vacuum tubes, v
 ![Cryo-Mixer](https://media.forgecdn.net/attachments/description/1735911/description_dd70b3e9-c4ed-41ce-bb7c-82ccf8903ff8.gif)
 
 - **Thaumaturge Integration (Vis Condenser & Essentia Cryo-Cauldron):**
-  - **Vis Condenser:** early two-block aura condenser where a goggled copper golem pulls ambient chunk Vis (`1 Vis/s -> 15 Source/s`) into adjacent Cryo-Source Jars and networked Giga Jars / Reactors, complete with a live brass manometer, configurable `%` / exact `Vis` stop floor + hysteresis, redstone pause, and `<10%` low-Vis Flux risk.
+  - **Vis Condenser:** early two-block aura condenser where a goggled copper golem pulls ambient chunk Vis (`6 Vis/s -> 15 Source/s`) into adjacent Cryo-Source Jars and networked Giga Jars / Reactors, complete with a live brass manometer, configurable `%` / exact `Vis` stop floor + hysteresis, redstone pause, and `<10%` low-Vis Flux risk.
   - **Essentia Cryo-Cauldron:** forge a **Hollow Golem Head** in a Thaumaturge Crucible (`Flattened Iron Core` + `20 Vacuos` + `20 Gelum` + `15 Auram`, no research gate) to assemble a two-block iron-skull cauldron tended by an Archmage copper golem. Pipes `Auram` on the left and `Gelum` on the right (`1 Auram + 2 Gelum -> 40 Source`, 0 Flux, up to 28 Compressed Co-Processors) over **Ice** (`Blue Ice -> Packed Ice -> Ice -> Water`, easily automated with a Mason's Formation Bus); missing Ice or Gelum triggers Flux boil-off after a 2 s grace window unless paused by redstone.
   - Full Thaumaturge aspect coverage (`base_aspects.json`) for all Golem Logix items and blocks.
 

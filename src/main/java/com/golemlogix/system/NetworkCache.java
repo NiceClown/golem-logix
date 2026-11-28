@@ -160,10 +160,6 @@ final class NetworkCache {
         serverVersion++;
     }
 
-    static void forgetClient() {
-        CLIENT_CACHE.clear();
-    }
-
     /**
      * LevelCache values hold GolemNetwork instances which strongly reference their Level key, so WeakHashMap alone cannot
      * collect unloaded levels. Evicting on LevelEvent.Unload prevents leaking worlds across disconnects and dimension switches.
@@ -177,6 +173,10 @@ final class NetworkCache {
         } else {
             SERVER_CACHE.remove(unloaded);
             CHANGED.remove(unloaded);
+            for (LevelCache cache : SERVER_CACHE.values()) {
+                cache.byPos.clear();
+            }
+            serverVersion++;
         }
     }
 

@@ -351,7 +351,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
                 idleSteps = 0;
                 redstone.allows(hasRedstone, powered, true);
                 stopMining();
-            } else {
+            } else if (now >= sleepUntil) {
                 // network full (or cannot harvest): avoid running Block.getDrops every tick until space frees or retry elapses
                 nextBreakTry = now + 10;
                 fullStorageEpoch = GolemNetwork.storageEpoch();
@@ -386,7 +386,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
                 return false;
             }
             ItemKey best = null;
-            for (ItemKey k : net.listItems().keySet()) {
+            for (ItemKey k : net.listItemsShared().keySet()) {
                 ItemStack s = k.stack();
                 if (s.is(refill.getItem()) && (best == null || s.getDamageValue() < best.stack().getDamageValue())) {
                     best = k;
@@ -492,7 +492,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         return p;
     }
 
-    /** Breaks the block with {@code with}; drops go into the network. Returns false if drops would not all fit. */
+    /** Breaks the block with {@code with}; drops go into the network. Returns false if drops would not fit or the break failed. */
     private boolean breakBlock(ServerLevel level, GolemNetwork net, BlockPos pos, BlockPos target, Direction facing, BlockState state,
                                ItemStack with) {
         boolean temper = tempered();
@@ -510,13 +510,19 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
                 }
             }
             ItemStack before = hand.copy();
-            level.levelEvent(2001, target, Block.getId(state));
+            boolean broken;
             breaking = this;
             try {
-                p.gameMode.destroyBlock(target);
+                broken = p.gameMode.destroyBlock(target);
             } finally {
                 breaking = null;
             }
+            if (!broken) {
+                stopMining();
+                sleep(level.getGameTime());
+                return false;
+            }
+            level.levelEvent(2001, target, Block.getId(state));
             if (own) {
                 tool.setInternal(AnnihilationTools.unworn(before, p.getMainHandItem(), temper));
             }

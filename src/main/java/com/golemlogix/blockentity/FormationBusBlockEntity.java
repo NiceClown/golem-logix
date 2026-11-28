@@ -213,7 +213,7 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
     /** Extracts one placeable filtered block from the network; with Autocraft Module, orders missing blocks. */
     private ItemStack take(ServerLevel level, GolemNetwork net, BlockPos target, Direction facing) {
         boolean fuzzy = upgrades.has(UpgradeType.FUZZY);
-        Set<ItemKey> netKeys = fuzzy ? net.listItems().keySet() : Set.of();
+        Set<ItemKey> netKeys = fuzzy ? net.listItemsShared().keySet() : Set.of();
         orderMissing(level, net);
         BlockEntities.fillSlotOrder(slotOrder, order, next, level.getRandom());
         for (int i : slotOrder) {

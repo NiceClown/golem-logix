@@ -50,7 +50,18 @@ final class TerminalFluids {
         if (fits <= 0) {
             return;
         }
-        FluidStack extracted = net.extractFluid(fluid, fits, false);
+        FluidStack avail = net.extractFluid(fluid, fits, true);
+        if (avail.isEmpty()) {
+            return;
+        }
+        int willTake;
+        try (Transaction simTx2 = Transaction.openRoot()) {
+            willTake = handler.insert(FluidResource.of(avail), avail.getAmount(), simTx2);
+        }
+        if (willTake <= 0) {
+            return;
+        }
+        FluidStack extracted = net.extractFluid(fluid, willTake, false);
         if (extracted.isEmpty()) {
             return;
         }

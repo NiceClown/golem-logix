@@ -88,12 +88,12 @@ public class PeriscopeStorageBusBlock extends DirectionalBlock implements com.go
         }
     }
 
-    /** A redstone signal nearby may have switched the storage on or off: the network is rescanned without the cache. */
+    /** A redstone signal nearby may have switched the storage on or off: the network is rescanned only when it actually changed. */
     @Override
     protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, @Nullable net.minecraft.world.level.redstone.Orientation orientation, boolean moving) {
         super.neighborChanged(state, level, pos, block, orientation, moving);
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof PeriscopeBlockEntity be
-                && be.getUpgrades().has(com.golemlogix.upgrade.UpgradeType.REDSTONE)) {
+                && be.checkStorageEnabledChanged()) {
             com.golemlogix.system.GolemNetwork.clearCache();
         }
     }

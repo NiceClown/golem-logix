@@ -52,6 +52,8 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
     public static final int ICON_X = 9, GRID_X = 30, GRID_Y = 20;
     public static final int SCROLL_X = GRID_X + COLS * 18 + 4, INFO_Y = GRID_Y + ROWS * 18 + 3;
     public static final int DATA_ROW = 0, DATA_SIZE = 1;
+    /** Minimum ticks between filter-driven layout rebuilds so packet spam coalesces in broadcastChanges(). */
+    private static final int FILTER_COOLDOWN = 4;
 
     /** A layout row: a category header or a row of slots (count = how many slots in it are active). */
     public record RowInfo(boolean header, ItemStack icon, Component title, int count) {
@@ -73,6 +75,9 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
     private int row = 0;
     private String filter = "";
     private int rebuildIn = 0;
+    private boolean filterDirty = false;
+    private int pendingRow = 0;
+    private long lastFilterBuildTick = Long.MIN_VALUE;
     // client
     private List<RowInfo> clientRows = List.of();
     public int clientVersion = 0;
@@ -444,11 +449,24 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
         if (level == null) {
             return;
         }
+        int requested = Math.max(0, newRow);
         if (!newFilter.equals(filter)) {
             filter = newFilter;
+            long now = level.getGameTime();
+            if (lastFilterBuildTick != Long.MIN_VALUE && now - lastFilterBuildTick < FILTER_COOLDOWN) {
+                filterDirty = true;
+                pendingRow = requested;
+                return;
+            }
+            lastFilterBuildTick = now;
+            filterDirty = false;
+            rebuildIn = 20;
             entries = build();
+        } else if (filterDirty) {
+            pendingRow = requested;
+            return;
         }
-        row = Math.max(0, Math.min(maxRow(), newRow));
+        row = Math.min(maxRow(), requested);
         sendLayout();
     }
 
@@ -480,12 +498,21 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
 
     @Override
     public void broadcastChanges() {
-        if (level != null && --rebuildIn <= 0) {
-            // providers appear and disappear, cards get moved: the layout is rebuilt once a second
-            rebuildIn = 20;
-            entries = build();
-            row = Math.max(0, Math.min(maxRow(), row));
-            sendLayout();
+        if (level != null) {
+            long now = level.getGameTime();
+            boolean cooldownElapsed = lastFilterBuildTick == Long.MIN_VALUE || now - lastFilterBuildTick >= FILTER_COOLDOWN;
+            if (--rebuildIn <= 0 || (filterDirty && cooldownElapsed)) {
+                // providers appear and disappear, cards get moved: rebuild once a second or when a throttled filter is due
+                rebuildIn = 20;
+                entries = build();
+                if (filterDirty) {
+                    filterDirty = false;
+                    lastFilterBuildTick = now;
+                    row = pendingRow;
+                }
+                row = Math.max(0, Math.min(maxRow(), row));
+                sendLayout();
+            }
         }
         super.broadcastChanges();
     }

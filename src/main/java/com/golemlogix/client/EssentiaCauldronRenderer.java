@@ -196,15 +196,15 @@ public class EssentiaCauldronRenderer extends LegacyBer<EssentiaCauldronBlockEnt
                                             boolean boilOff, float time) {
         TextureAtlasSprite glowSprite = sprite(GLOW);
         float pulse = 0.80f + 0.20f * Mth.sin(time * (boilOff ? 0.45f : 0.14f));
-        // Viewer's LEFT (+X, facing.getClockWise()): AURAM VIOLET sight-ring (proud slightly on front bevel too!)
+        // Viewer's LEFT (+X, facing.getClockWise()): AURAM VIOLET sight-ring centered at Y=8, Z=8 (aligned with Thaumaturge tubes)
         float auramBright = auram > 0 ? (0.72f + 0.28f * Math.min(1f, auram / 32f)) * pulse : 0.45f;
         int auramCol = scaledRgb(boilOff ? 0xF038FF : 0xC462FF, auramBright);
-        box(vc, p, 14.85f, 7.20f, 6.60f, 16.12f, 9.80f, 9.40f, glowSprite, auramCol, LightCoordsUtil.FULL_BRIGHT);
+        box(vc, p, 14.95f, 6.25f, 6.25f, 15.80f, 9.75f, 9.75f, glowSprite, auramCol, LightCoordsUtil.FULL_BRIGHT);
 
-        // Viewer's RIGHT (-X, facing.getCounterClockWise()): GELUM ICY CYAN sight-ring
+        // Viewer's RIGHT (-X, facing.getCounterClockWise()): GELUM ICY CYAN sight-ring centered at Y=8, Z=8
         float gelumBright = gelum > 0 ? (0.72f + 0.28f * Math.min(1f, gelum / 32f)) * pulse : 0.45f;
         int gelumCol = scaledRgb(0x4EF4FF, gelumBright);
-        box(vc, p, -0.12f, 7.20f, 6.60f, 1.15f, 9.80f, 9.40f, glowSprite, gelumCol, LightCoordsUtil.FULL_BRIGHT);
+        box(vc, p, 0.20f, 6.25f, 6.25f, 1.05f, 9.75f, 9.75f, glowSprite, gelumCol, LightCoordsUtil.FULL_BRIGHT);
     }
 
     private static void renderEyeGlints(VertexConsumer vc, PoseStack.Pose p, boolean brewing, boolean boilOff,
@@ -454,19 +454,21 @@ public class EssentiaCauldronRenderer extends LegacyBer<EssentiaCauldronBlockEnt
             box(vc, p, 14.95f, 16.7f, t - 0.4f, 15.18f, 17.5f, t + 0.4f, darkSprite, WHITE, 0);
         }
 
-        // 5. Left (+X, Auram) & Right (-X, Gelum) brass Essentia suction nozzle housings centered at Y = 8.5, Z = 8.0
+        // 5. Left (+X, Auram) & Right (-X, Gelum) brass Essentia suction nozzle couplings centered at Y = 8.0, Z = 8.0 (flush with Thaumaturge 5..11 tube flange)
         // +X nozzle (viewer's LEFT -> Auram)
-        box(vc, p, 14.2f, 6.3f, 5.8f, 15.1f, 10.7f, 10.2f, brassSprite, 0xFFD8B05C, 0);
-        box(vc, p, 15.1f, 6.75f, 6.25f, 16.15f, 7.25f, 9.75f, brassSprite, LIGHT_BRASS, 0);
-        box(vc, p, 15.1f, 9.75f, 6.25f, 16.15f, 10.25f, 9.75f, brassSprite, LIGHT_BRASS, 0);
-        box(vc, p, 15.1f, 7.25f, 6.25f, 16.15f, 9.75f, 6.75f, brassSprite, LIGHT_BRASS, 0);
-        box(vc, p, 15.1f, 7.25f, 9.25f, 16.15f, 9.75f, 9.75f, brassSprite, LIGHT_BRASS, 0);
+        box(vc, p, 14.25f, 5.2f, 5.2f, 15.05f, 10.8f, 10.8f, brassSprite, 0xFFD8B05C, 0);
+        box(vc, p, 15.05f, 5.65f, 5.65f, 15.70f, 6.30f, 10.35f, brassSprite, LIGHT_BRASS, 0);
+        box(vc, p, 15.05f, 9.70f, 5.65f, 15.70f, 10.35f, 10.35f, brassSprite, LIGHT_BRASS, 0);
+        box(vc, p, 15.05f, 6.30f, 5.65f, 15.70f, 9.70f, 6.30f, brassSprite, LIGHT_BRASS, 0);
+        box(vc, p, 15.05f, 6.30f, 9.70f, 15.70f, 9.70f, 10.35f, brassSprite, LIGHT_BRASS, 0);
+        box(vc, p, 15.70f, 5.3f, 5.3f, 16.02f, 10.7f, 10.7f, brassSprite, LIGHT_BRASS, 0);
         // -X nozzle (viewer's RIGHT -> Gelum)
-        box(vc, p, 0.9f, 6.3f, 5.8f, 1.8f, 10.7f, 10.2f, brassSprite, 0xFFD8B05C, 0);
-        box(vc, p, -0.15f, 6.75f, 6.25f, 0.9f, 7.25f, 9.75f, brassSprite, LIGHT_BRASS, 0);
-        box(vc, p, -0.15f, 9.75f, 6.25f, 0.9f, 10.25f, 9.75f, brassSprite, LIGHT_BRASS, 0);
-        box(vc, p, -0.15f, 7.25f, 6.25f, 0.9f, 9.75f, 6.75f, brassSprite, LIGHT_BRASS, 0);
-        box(vc, p, -0.15f, 7.25f, 9.25f, 0.9f, 9.75f, 9.75f, brassSprite, LIGHT_BRASS, 0);
+        box(vc, p, 0.95f, 5.2f, 5.2f, 1.75f, 10.8f, 10.8f, brassSprite, 0xFFD8B05C, 0);
+        box(vc, p, 0.30f, 5.65f, 5.65f, 0.95f, 6.30f, 10.35f, brassSprite, LIGHT_BRASS, 0);
+        box(vc, p, 0.30f, 9.70f, 5.65f, 0.95f, 10.35f, 10.35f, brassSprite, LIGHT_BRASS, 0);
+        box(vc, p, 0.30f, 6.30f, 5.65f, 0.95f, 9.70f, 6.30f, brassSprite, LIGHT_BRASS, 0);
+        box(vc, p, 0.30f, 6.30f, 9.70f, 0.95f, 9.70f, 10.35f, brassSprite, LIGHT_BRASS, 0);
+        box(vc, p, -0.02f, 5.3f, 5.3f, 0.30f, 10.7f, 10.7f, brassSprite, LIGHT_BRASS, 0);
     }
 
     private static void bakeFrostRing(VertexConsumer vc, PoseStack pose) {

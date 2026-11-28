@@ -7,7 +7,10 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.saveddata.SavedData;
@@ -176,6 +179,7 @@ public class DiskStore extends SavedData {
     }
 
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
+        RegistryOps<Tag> ops = provider.createSerializationContext(NbtOps.INSTANCE);
         ListTag list = new ListTag();
         for (Map.Entry<UUID, Disk> e : disks.entrySet()) {
             Disk disk = e.getValue();
@@ -186,15 +190,32 @@ public class DiskStore extends SavedData {
             t.store("Id", UUIDUtil.CODEC, e.getKey());
             ListTag items = new ListTag();
             for (Map.Entry<ItemKey, Integer> it : disk.items.entrySet()) {
-                CompoundTag c = new CompoundTag();
-                c.put("Item", NbtBridge.saveItem(it.getKey().toStack(1), provider));
-                c.putInt("Count", it.getValue());
-                items.add(c);
+                try {
+                    ItemStack stack = it.getKey().toStack(1);
+                    ItemStack.CODEC.encodeStart(ops, stack)
+                            .resultOrPartial(err -> GolemLogixMod.LOGGER.error(
+                                    "Golem Logix: failed to save item {} on disk {}: {}", stack.getItem(), e.getKey(), err))
+                            .ifPresent(encoded -> {
+                                CompoundTag c = new CompoundTag();
+                                c.put("Item", encoded);
+                                c.putInt("Count", it.getValue());
+                                items.add(c);
+                            });
+                } catch (RuntimeException ex) {
+                    GolemLogixMod.LOGGER.error("Golem Logix: failed to save item on disk {}", e.getKey(), ex);
+                }
             }
             t.put("Items", items);
             ListTag fluids = new ListTag();
             for (FluidStack f : disk.fluids) {
-                fluids.add(NbtBridge.saveFluid(f, provider));
+                try {
+                    FluidStack.CODEC.encodeStart(ops, f)
+                            .resultOrPartial(err -> GolemLogixMod.LOGGER.error(
+                                    "Golem Logix: failed to save fluid {} on disk {}: {}", f.getFluid(), e.getKey(), err))
+                            .ifPresent(fluids::add);
+                } catch (RuntimeException ex) {
+                    GolemLogixMod.LOGGER.error("Golem Logix: failed to save fluid on disk {}", e.getKey(), ex);
+                }
             }
             t.put("Fluids", fluids);
             list.add(t);

@@ -136,9 +136,14 @@ public final class AtlasStructure {
                     } else if (state.getBlock() instanceof ChannelExpanderBlock && formed && cell(dx, dz) == Cell.EDGE && (dy == 1 || dy == 2)) {
                         Direction outer = dx != 0 ? (dx < 0 ? Direction.WEST : Direction.EAST) : (dz < 0 ? Direction.NORTH : Direction.SOUTH);
                         BlockPos outerPos = pos.relative(outer);
-                        BlockState outerState = level.getBlockState(outerPos);
-                        boolean pipe = !(outerState.getBlock() instanceof AtlasPart)
-                                && GolemNode.linked(level, pos, state, outerPos, outerState, outer);
+                        boolean pipe;
+                        if (level.isLoaded(outerPos)) {
+                            BlockState outerState = level.getBlockState(outerPos);
+                            pipe = !(outerState.getBlock() instanceof AtlasPart)
+                                    && GolemNode.linked(level, pos, state, outerPos, outerState, outer);
+                        } else {
+                            pipe = state.getValue(ChannelExpanderBlock.PIPE);
+                        }
                         want = state.setValue(ChannelExpanderBlock.FORMED, true)
                                 .setValue(ChannelExpanderBlock.FACING, outer)
                                 .setValue(ChannelExpanderBlock.UP, AtlasConduitBlock.isPillar(level.getBlockState(pos.above())))

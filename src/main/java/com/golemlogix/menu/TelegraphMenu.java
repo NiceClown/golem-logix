@@ -180,6 +180,6 @@ public class TelegraphMenu extends GolemMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return stillValid(access, player, ModBlocks.CRYO_SOURCE_TELEGRAPH.get());
+        return stillValidNetwork(access, player, ModBlocks.CRYO_SOURCE_TELEGRAPH.get());
     }
 }

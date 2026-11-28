@@ -1,5 +1,6 @@
 package com.golemlogix.menu;
 
+import com.golemlogix.blockentity.DistillationTowerBlockEntity;
 import com.golemlogix.init.ModBlocks;
 import com.golemlogix.init.ModMenus;
 import com.golemlogix.upgrade.UpgradeSpec;
@@ -24,8 +25,8 @@ public class DistillationTowerMenu extends GolemMenu {
     private final ContainerData data;
 
     public static DistillationTowerMenu fromNetwork(int id, Inventory inv, RegistryFriendlyByteBuf buf) {
-        return new DistillationTowerMenu(id, inv, new SimpleContainer(UpgradeSpec.DISTILLATION.slots()), new SimpleContainerData(6),
-                ContainerLevelAccess.NULL);
+        return new DistillationTowerMenu(id, inv, new SimpleContainer(UpgradeSpec.DISTILLATION.slots()),
+                new SimpleContainerData(DistillationTowerBlockEntity.DATA_COUNT), ContainerLevelAccess.NULL);
     }
 
     public DistillationTowerMenu(int id, Inventory inv, Container upgrades, ContainerData data, ContainerLevelAccess access) {
@@ -47,12 +48,12 @@ public class DistillationTowerMenu extends GolemMenu {
 
     /** mB of blood a second. */
     public int rate() {
-        return data.get(1);
+        return getInt32(data, 1, 6);
     }
 
     /** Source a second. */
     public double sourcePerSecond() {
-        return data.get(2) / 10.0;
+        return getInt32(data, 2, 7) / 10.0;
     }
 
     /** 0 = no blood, 1 = working, 2 = no jar with room. */

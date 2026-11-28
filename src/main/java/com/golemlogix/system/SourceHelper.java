@@ -36,6 +36,27 @@ public class SourceHelper {
     private static Method canAcceptMethod = null;
     private static volatile boolean checkedArsNouveau = false;
 
+    private record TileCaps(boolean overridesRemove, boolean overridesAdd) {
+    }
+
+    private static final ClassValue<TileCaps> TILE_CAPS = new ClassValue<>() {
+        @Override
+        protected TileCaps computeValue(Class<?> type) {
+            return new TileCaps(overrides2Arg(type, "removeSource"), overrides2Arg(type, "addSource"));
+        }
+    };
+
+    private static boolean overrides2Arg(Class<?> type, String name) {
+        if (sourceTileClass == null) {
+            return false;
+        }
+        try {
+            return type.getMethod(name, int.class, boolean.class).getDeclaringClass() != sourceTileClass;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
     private static void initArsNouveau() {
         if (checkedArsNouveau) {
             return;
@@ -100,6 +121,19 @@ public class SourceHelper {
 
         /** Takes up to amount, returns what was taken. */
         int drain(int amount);
+
+        /** Collects the underlying physical leaf suppliers reachable through this supplier. */
+        default void collectLeafSuppliers(Set<Supplier> out) {
+            out.add(this);
+        }
+
+        /** Drains up to amount from leaf suppliers not yet in visited, marking each drained leaf visited. */
+        default int drainUnique(int amount, Set<Supplier> visited) {
+            if (amount <= 0 || !visited.add(this)) {
+                return 0;
+            }
+            return drain(amount);
+        }
     }
 
     private static final class InfiniteSupplier implements Supplier {
@@ -142,7 +176,10 @@ public class SourceHelper {
                 if (!(boolean) canProvideMethod.invoke(be)) {
                     return 0;
                 }
-                return (int) getSourceMethod.invoke(be);
+                if (TILE_CAPS.get(be.getClass()).overridesRemove()) {
+                    return Math.max(0, (int) removeSourceMethod.invoke(be, Integer.MAX_VALUE, true));
+                }
+                return Math.max(0, (int) getSourceMethod.invoke(be));
             } catch (Throwable t) {
                 return 0;
             }
@@ -158,11 +195,26 @@ public class SourceHelper {
                 return 0;
             }
             try {
+                if (TILE_CAPS.get(be.getClass()).overridesRemove()) {
+                    return Math.max(0, Math.min(take, (int) removeSourceMethod.invoke(be, take, false)));
+                }
+                int before = (int) getSourceMethod.invoke(be);
                 removeSourceMethod.invoke(be, take, false);
-                return take;
+                int after = (int) getSourceMethod.invoke(be);
+                return Math.max(0, Math.min(take, before - after));
             } catch (Throwable t) {
                 return 0;
             }
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            return this == o || (o instanceof ArsSupplier other && this.be == other.be);
+        }
+
+        @Override
+        public int hashCode() {
+            return System.identityHashCode(be);
         }
     }
 
@@ -243,20 +295,25 @@ public class SourceHelper {
             return jar.fill(amount, simulate);
         }
         initArsNouveau();
-        if (be == null || sourceTileClass == null || !sourceTileClass.isInstance(be)) {
+        if (be == null || be.isRemoved() || sourceTileClass == null || !sourceTileClass.isInstance(be)) {
             return 0;
         }
         try {
             if (!(boolean) canAcceptMethod.invoke(be)) {
                 return 0;
             }
+            if (TILE_CAPS.get(be.getClass()).overridesAdd()) {
+                return Math.max(0, Math.min(amount, (int) addSourceMethod.invoke(be, amount, simulate)));
+            }
             int max = (int) getMaxSourceMethod.invoke(be);
             int cur = (int) getSourceMethod.invoke(be);
             int add = Math.max(0, Math.min(amount, max - cur));
-            if (add > 0 && !simulate) {
-                addSourceMethod.invoke(be, add, false);
+            if (add <= 0 || simulate) {
+                return add;
             }
-            return add;
+            addSourceMethod.invoke(be, add, false);
+            int after = (int) getSourceMethod.invoke(be);
+            return Math.max(0, Math.min(add, after - cur));
         } catch (Throwable ignored) {
             return 0;
         }

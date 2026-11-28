@@ -45,6 +45,7 @@ import java.util.List;
  */
 public class CryoMixerBlockEntity extends BlockEntity {
     public static final int WATER_TANK = 8000, CRYO_TANK = 4000;
+    public static final int DATA_COUNT = 11;
     /** Status values shown in the GUI. */
     public static final int WORKING = 1, NO_WATER = 2, NO_CRYO = 3, TRAY_FULL = 4, PAUSED = 5;
 
@@ -287,13 +288,15 @@ public class CryoMixerBlockEntity extends BlockEntity {
                 return switch (index) {
                     case 0 -> water.getAmountAsInt(0);
                     case 1 -> cryo.getAmountAsInt(0);
-                    case 2 -> progress;
-                    case 3 -> ticksPerBlock();
+                    case 2 -> progress & 0xFFFF;
+                    case 3 -> ticksPerBlock() & 0xFFFF;
                     case 4 -> mode.ordinal();
                     case 5 -> status;
                     case 6 -> upgrades.count(UpgradeType.SPEED);
                     case 7 -> redstone.mode().ordinal();
                     case 8 -> autoOutput ? 1 : 0;
+                    case 9 -> progress >>> 16;
+                    case 10 -> ticksPerBlock() >>> 16;
                     default -> 0;
                 };
             }
@@ -313,7 +316,7 @@ public class CryoMixerBlockEntity extends BlockEntity {
 
             @Override
             public int getCount() {
-                return 9;
+                return DATA_COUNT;
             }
         };
     }

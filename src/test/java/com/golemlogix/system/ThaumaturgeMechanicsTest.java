@@ -74,19 +74,20 @@ class ThaumaturgeMechanicsTest {
 
     @Test
     void visCondenserLowVisFluxTriggerAndSafeZeroFlux() {
-        // Base=200, lowVisPercent=10 -> danger zone <= 20.0 Vis
+        // Base=200, lowVisPercent=10 -> danger zone strictly below 20.0 Vis (with 1e-3 rounding tolerance)
         assertFalse(VisCondenserMath.isLowVis(20.1, 200, 10));
-        assertTrue(VisCondenserMath.isLowVis(20.0, 200, 10));
+        assertFalse(VisCondenserMath.isLowVis(20.0, 200, 10));
+        assertTrue(VisCondenserMath.isLowVis(19.99, 200, 10));
         assertTrue(VisCondenserMath.isLowVis(5.0, 200, 10));
         assertFalse(VisCondenserMath.isLowVis(5.0, 0, 10));
         assertFalse(VisCondenserMath.isLowVis(5.0, 200, 0));
 
-        // Safe zone (>10%): zero Flux emitted
+        // Safe zone (>=10%): zero Flux emitted
         assertEquals(0.0, VisCondenserMath.fluxForDrain(0.5, 25.0, 200, 10, 0.05), 1e-9);
-        assertEquals(0.0, VisCondenserMath.fluxForDrain(0.5, 20.01, 200, 10, 0.05), 1e-9);
+        assertEquals(0.0, VisCondenserMath.fluxForDrain(0.5, 20.0, 200, 10, 0.05), 1e-9);
 
-        // Danger zone (<=10%): emits 0.05 * drainedVis Flux
-        assertEquals(0.025, VisCondenserMath.fluxForDrain(0.5, 20.0, 200, 10, 0.05), 1e-9);
+        // Danger zone (<10%): emits 0.05 * drainedVis Flux
+        assertEquals(0.025, VisCondenserMath.fluxForDrain(0.5, 19.9, 200, 10, 0.05), 1e-9);
         assertEquals(0.05, VisCondenserMath.fluxForDrain(1.0, 10.0, 200, 10, 0.05), 1e-9);
 
         // Zero drain or zero flux rate -> zero Flux

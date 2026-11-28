@@ -1,9 +1,27 @@
 package com.golemlogix;
 
+import com.golemlogix.blockentity.SecurityTerminalBlockEntity;
+import com.golemlogix.blocks.AnalogTerminalBlock;
+import com.golemlogix.blocks.CraftingTerminalBlock;
+import com.golemlogix.blocks.CryoDiodeBlock;
+import com.golemlogix.blocks.RecipeMonitorBlock;
+import com.golemlogix.blocks.SecurityTerminalBlock;
 import com.golemlogix.config.GolemConfig;
 import com.golemlogix.init.*;
+import com.golemlogix.security.SecurityPermission;
+import com.golemlogix.system.AtlasPart;
 import com.golemlogix.system.GolemNetwork;
+import com.golemlogix.system.GolemNode;
 import com.mojang.logging.LogUtils;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -11,11 +29,18 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import org.slf4j.Logger;
+
+import java.util.ArrayDeque;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.Set;
 
 @Mod(GolemLogixMod.MOD_ID)
 public class GolemLogixMod {
@@ -113,47 +138,165 @@ public class GolemLogixMod {
          * (its window then checks each action). The Security Terminal itself checks its owner.
          */
         @SubscribeEvent
-        public static void onUseBlock(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock event) {
+        public static void onUseBlock(PlayerInteractEvent.RightClickBlock event) {
             if (!(event.getLevel() instanceof Level level) || level.isClientSide()) {
                 return;
             }
-            net.minecraft.core.BlockPos pos = event.getPos();
-            net.minecraft.world.level.block.Block block = level.getBlockState(pos).getBlock();
-            if (!(block instanceof com.golemlogix.system.GolemNode) || block instanceof com.golemlogix.blocks.SecurityTerminalBlock) {
+            BlockPos pos = event.getPos();
+            Block block = level.getBlockState(pos).getBlock();
+            if (!(block instanceof GolemNode) || block instanceof SecurityTerminalBlock) {
                 return;
             }
             GolemNetwork gnet = GolemNetwork.get(level, pos);
             if (!gnet.hasSecurityTerminal()) {
                 return;
             }
-            var player = event.getEntity();
-            boolean allowed = block instanceof com.golemlogix.blocks.AnalogTerminalBlock || block instanceof com.golemlogix.blocks.CraftingTerminalBlock
-                    ? gnet.hasPermission(player, com.golemlogix.security.SecurityPermission.INSERT) || gnet.hasPermission(player, com.golemlogix.security.SecurityPermission.EXTRACT)
-                    || gnet.hasPermission(player, com.golemlogix.security.SecurityPermission.CRAFT)
-                    : gnet.hasPermission(player, com.golemlogix.security.SecurityPermission.BUILD);
+            Player player = event.getEntity();
+            boolean allowed;
+            if (block instanceof AnalogTerminalBlock || block instanceof CraftingTerminalBlock) {
+                allowed = gnet.hasPermission(player, SecurityPermission.INSERT)
+                        || gnet.hasPermission(player, SecurityPermission.EXTRACT)
+                        || gnet.hasPermission(player, SecurityPermission.CRAFT);
+            } else if (block instanceof RecipeMonitorBlock) {
+                allowed = gnet.hasPermission(player, SecurityPermission.CRAFT)
+                        || gnet.hasPermission(player, SecurityPermission.BUILD);
+            } else {
+                allowed = gnet.hasPermission(player, SecurityPermission.BUILD);
+            }
             if (!allowed) {
                 event.setCanceled(true);
-                event.setCancellationResult(net.minecraft.world.InteractionResult.FAIL);
-                if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
-                    sp.sendOverlayMessage(net.minecraft.network.chat.Component.translatable("message.golem_logix.security_denied"));
+                event.setCancellationResult(InteractionResult.FAIL);
+                denySecurity(player);
+            }
+        }
+
+        @SubscribeEvent
+        public static void onBlockPlace(BlockEvent.EntityPlaceEvent event) {
+            if (!(event.getLevel() instanceof Level level) || level.isClientSide()
+                    || !(event.getEntity() instanceof Player player)) {
+                return;
+            }
+            BlockState placedState = event.getPlacedBlock();
+            Block placedBlock = placedState.getBlock();
+            if (!(placedBlock instanceof GolemNode) && !(placedBlock instanceof AtlasPart)) {
+                return;
+            }
+            BlockPos pos = event.getPos();
+            Set<GolemNetwork> networks = Collections.newSetFromMap(new IdentityHashMap<>());
+            if (placedBlock instanceof GolemNode) {
+                for (Direction dir : Direction.values()) {
+                    BlockPos next = pos.relative(dir);
+                    if (!level.isLoaded(next)) {
+                        continue;
+                    }
+                    BlockState nextState = level.getBlockState(next);
+                    if (nextState.getBlock() instanceof GolemNode
+                            && (GolemNode.linked(level, pos, placedState, next, nextState, dir)
+                            || placedBlock instanceof CryoDiodeBlock)) {
+                        networks.add(GolemNetwork.get(level, next));
+                    }
+                }
+            }
+            if (placedBlock instanceof AtlasPart) {
+                collectAtlasPartNetworks(level, pos, networks);
+            }
+            boolean placingSecurity = placedBlock instanceof SecurityTerminalBlock;
+            for (GolemNetwork gnet : networks) {
+                if (placingSecurity) {
+                    for (SecurityTerminalBlockEntity sec : gnet.securityTerminals()) {
+                        if (!sec.isRemoved()
+                                && !(sec.getLevel() == level && sec.getBlockPos().equals(pos))
+                                && !sec.isOwner(player) && !player.canUseGameMasterBlocks()) {
+                            event.setCanceled(true);
+                            denySecurity(player);
+                            return;
+                        }
+                    }
+                } else if (gnet.hasSecurityTerminal() && !gnet.hasPermission(player, SecurityPermission.BUILD)) {
+                    event.setCanceled(true);
+                    denySecurity(player);
+                    return;
                 }
             }
         }
 
         @SubscribeEvent
-        public static void onBlockBreak(net.neoforged.neoforge.event.level.block.BreakBlockEvent event) {
-            if (event.getLevel() instanceof Level level && !level.isClientSide()) {
-                net.minecraft.core.BlockPos pos = event.getPos();
-                net.minecraft.world.level.block.state.BlockState state = event.getState();
-                if (state.getBlock() instanceof com.golemlogix.system.GolemNode) {
-                    GolemNetwork gnet = GolemNetwork.get(level, pos);
-                    if (gnet.hasSecurityTerminal() && !gnet.hasPermission(event.getPlayer(), com.golemlogix.security.SecurityPermission.BUILD)) {
+        public static void onBlockBreak(BreakBlockEvent event) {
+            if (!(event.getLevel() instanceof Level level) || level.isClientSide()) {
+                return;
+            }
+            Player player = event.getPlayer();
+            if (player == null) {
+                return;
+            }
+            BlockPos pos = event.getPos();
+            Block block = event.getState().getBlock();
+            if (block instanceof SecurityTerminalBlock) {
+                if (level.getBlockEntity(pos) instanceof SecurityTerminalBlockEntity sec
+                        && sec.getOwnerId() != null && !sec.isOwner(player) && !player.canUseGameMasterBlocks()) {
+                    event.setCanceled(true);
+                    denySecurity(player);
+                    return;
+                }
+                GolemNetwork gnet = GolemNetwork.get(level, pos);
+                for (SecurityTerminalBlockEntity other : gnet.securityTerminals()) {
+                    if (!other.isRemoved()
+                            && !(other.getLevel() == level && other.getBlockPos().equals(pos))
+                            && !other.hasPermission(player, SecurityPermission.BUILD)) {
                         event.setCanceled(true);
-                        if (event.getPlayer() instanceof net.minecraft.server.level.ServerPlayer sp) {
-                            sp.sendOverlayMessage(net.minecraft.network.chat.Component.translatable("message.golem_logix.security_denied"));
-                        }
+                        denySecurity(player);
+                        return;
                     }
                 }
+                return;
+            }
+            if (block instanceof GolemNode) {
+                GolemNetwork gnet = GolemNetwork.get(level, pos);
+                if (gnet.hasSecurityTerminal() && !gnet.hasPermission(player, SecurityPermission.BUILD)) {
+                    event.setCanceled(true);
+                    denySecurity(player);
+                    return;
+                }
+            }
+            if (block instanceof AtlasPart) {
+                Set<GolemNetwork> networks = Collections.newSetFromMap(new IdentityHashMap<>());
+                collectAtlasPartNetworks(level, pos, networks);
+                for (GolemNetwork gnet : networks) {
+                    if (gnet.hasSecurityTerminal() && !gnet.hasPermission(player, SecurityPermission.BUILD)) {
+                        event.setCanceled(true);
+                        denySecurity(player);
+                        return;
+                    }
+                }
+            }
+        }
+
+        private static void collectAtlasPartNetworks(Level level, BlockPos start, Set<GolemNetwork> out) {
+            ArrayDeque<BlockPos> queue = new ArrayDeque<>();
+            Set<BlockPos> visited = new HashSet<>();
+            queue.add(start);
+            visited.add(start);
+            while (!queue.isEmpty()) {
+                BlockPos cur = queue.poll();
+                if (!cur.equals(start) && level.getBlockState(cur).getBlock() instanceof GolemNode) {
+                    out.add(GolemNetwork.get(level, cur));
+                }
+                for (Direction dir : Direction.values()) {
+                    BlockPos next = cur.relative(dir);
+                    if (visited.size() > 36 || visited.contains(next) || !level.isLoaded(next)) {
+                        continue;
+                    }
+                    if (level.getBlockState(next).getBlock() instanceof AtlasPart) {
+                        visited.add(next);
+                        queue.add(next);
+                    }
+                }
+            }
+        }
+
+        private static void denySecurity(Player player) {
+            if (player instanceof ServerPlayer sp) {
+                sp.sendOverlayMessage(Component.translatable("message.golem_logix.security_denied"));
             }
         }
     }

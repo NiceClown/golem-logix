@@ -23,6 +23,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -1253,9 +1254,16 @@ final class NetworkStorage {
     // --------------------------------------------------------- Source & Cryo
 
     private static long availableSource(GolemNetwork net) {
-        long total = 0;
+        if (net.sources.isEmpty()) {
+            return 0;
+        }
+        Set<SourceHelper.Supplier> leaves = new LinkedHashSet<>();
         for (SourceHelper.Supplier s : net.sources) {
-            total += s.available();
+            s.collectLeafSuppliers(leaves);
+        }
+        long total = 0;
+        for (SourceHelper.Supplier leaf : leaves) {
+            total += leaf.available();
         }
         return total;
     }
@@ -1310,11 +1318,12 @@ final class NetworkStorage {
             return false;
         }
         int left = needed;
+        Set<SourceHelper.Supplier> visited = new LinkedHashSet<>();
         for (SourceHelper.Supplier s : net.sources) {
             if (left <= 0) {
                 break;
             }
-            left -= s.drain(left);
+            left -= s.drainUnique(left, visited);
         }
         if (left > 0) {
             return false;

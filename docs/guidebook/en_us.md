@@ -268,7 +268,7 @@ Three blocks high: a rune plinth, a glass column with the coil, a brass head und
 Two blocks high. Right-click it to see how much Source it holds; a comparator reads its level.
 
 ### Cryo-Source Jars
-<!-- {"id": "src_jars", "icon": "golem_logix:cryo_source_jar", "x": 1, "y": -2, "parents": ["distillation"], "requires": "neovitae", "gold": true} -->
+<!-- {"id": "src_jars", "icon": "golem_logix:cryo_source_jar", "x": 2, "y": 1, "parents": ["source"], "requires": "neovitae|thaumaturge", "gold": true} -->
 
 #### Three sizes
 
@@ -317,7 +317,7 @@ A lone jar does not do this: a tower fills it only by standing against it.
 
 The **Vis Condenser** is the early Thaumaturge bridge into Golem Logix. Standing two blocks tall, its copper golem wears brass goggles and sweeps a Vis antenna beneath rotating armillary rings, combing raw **Vis** out of the chunk aura and freezing it into **Cryo-Source**.
 
-Every second it drains **1 Vis** from the chunk and condenses **15 Source**, pouring it into **Cryo-Source Jars** (or Ars Nouveau jars) touching either block, and into any **Giga Jar** or **Antigravity Reactor** connected to the same network.
+Every second it drains **6 Vis** from the chunk (faster than ambient regeneration and neighbor chunk diffusion) and condenses **15 Source**, pouring it into **Cryo-Source Jars** (or Ars Nouveau jars) touching either block, and into any **Giga Jar** or **Antigravity Reactor** connected to the same network.
 
 *Watch the live brass manometer on the plinth: its needle tracks the chunk's Vis against its base aura.*
 

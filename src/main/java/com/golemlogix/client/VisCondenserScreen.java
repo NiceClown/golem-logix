@@ -72,10 +72,13 @@ public class VisCondenserScreen extends GolemScreen<VisCondenserMenu> {
             g.fill(tx, by + BAR_H - 4, tx + 1, by + BAR_H - 1, GolemGui.BRASS_DARK);
         }
 
-        // Red 10% Flux danger line
-        int redX = bx + 1 + (int) Math.round(innerW * 0.10);
-        g.fill(redX, by + 1, redX + 1, by + BAR_H - 1, 0xFFFF3838);
-        g.fill(redX - 1, by, redX + 2, by + 1, 0xFFFF3838);
+        // Red low-Vis Flux danger line
+        int lowPct = menu.lowVisPercent();
+        if (lowPct > 0) {
+            int redX = bx + 1 + (int) Math.round(innerW * Math.clamp(lowPct / 100.0, 0.0, 1.0));
+            g.fill(redX, by + 1, redX + 1, by + BAR_H - 1, 0xFFFF3838);
+            g.fill(redX - 1, by, redX + 2, by + 1, 0xFFFF3838);
+        }
 
         // Gold stop-floor threshold marker
         double floorFrac = menu.isPercentMode()

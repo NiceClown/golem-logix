@@ -3,15 +3,18 @@ package com.golemlogix.blockentity;
 import com.golemlogix.blocks.CryoDiodeBlock;
 import com.golemlogix.init.ModBlockEntities;
 import com.golemlogix.system.GolemNetwork;
+import com.golemlogix.system.GolemNode;
 import com.golemlogix.system.SourceHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 public class CryoDiodeBlockEntity extends BlockEntity {
@@ -79,7 +82,8 @@ public class CryoDiodeBlockEntity extends BlockEntity {
 
     @Nullable
     private GolemNetwork inletNetwork(BlockPos inletPos) {
-        if (!(level.getBlockState(inletPos).getBlock() instanceof com.golemlogix.system.GolemNode)) {
+        Block block = level.getBlockState(inletPos).getBlock();
+        if (!(block instanceof GolemNode) || block instanceof CryoDiodeBlock) {
             return null;
         }
         return GolemNetwork.get(level, inletPos);
@@ -105,31 +109,49 @@ public class CryoDiodeBlockEntity extends BlockEntity {
         }
 
         @Override
-        public int available() {
-            if (isRemoved() || level == null) return 0;
+        public void collectLeafSuppliers(Set<SourceHelper.Supplier> out) {
+            if (isRemoved() || level == null) return;
             Set<CryoDiodeBlockEntity> visiting = VISITING.get();
-            if (!visiting.add(CryoDiodeBlockEntity.this)) return 0;
+            if (!visiting.add(CryoDiodeBlockEntity.this)) return;
             try {
                 Direction facing = getFacing();
                 BlockPos inletPos = worldPosition.relative(facing.getOpposite());
-                if (!level.isLoaded(inletPos)) return 0;
+                if (!level.isLoaded(inletPos)) return;
                 SourceHelper.Supplier direct = directInlet(inletPos, facing);
-                if (direct != null) return direct.available();
-                GolemNetwork inletNet = inletNetwork(inletPos);
-                if (inletNet == null) return 0;
-                if (inletNet.hasInfiniteSource()) return Integer.MAX_VALUE;
-                long total = 0;
-                for (SourceHelper.Supplier s : inletNet.sources()) {
-                    total += s.available();
+                if (direct != null) {
+                    direct.collectLeafSuppliers(out);
+                    return;
                 }
-                return (int) Math.min(total, Integer.MAX_VALUE);
+                GolemNetwork inletNet = inletNetwork(inletPos);
+                if (inletNet != null) {
+                    for (SourceHelper.Supplier s : inletNet.sources()) {
+                        s.collectLeafSuppliers(out);
+                    }
+                }
             } finally {
                 visiting.remove(CryoDiodeBlockEntity.this);
             }
         }
 
         @Override
+        public int available() {
+            Set<SourceHelper.Supplier> leaves = new LinkedHashSet<>();
+            collectLeafSuppliers(leaves);
+            long total = 0;
+            for (SourceHelper.Supplier leaf : leaves) {
+                if (leaf.infinite()) return Integer.MAX_VALUE;
+                total += leaf.available();
+            }
+            return (int) Math.min(total, Integer.MAX_VALUE);
+        }
+
+        @Override
         public int drain(int amount) {
+            return drainUnique(amount, new LinkedHashSet<>());
+        }
+
+        @Override
+        public int drainUnique(int amount, Set<SourceHelper.Supplier> visited) {
             if (isRemoved() || level == null || amount <= 0) return 0;
             Set<CryoDiodeBlockEntity> visiting = VISITING.get();
             if (!visiting.add(CryoDiodeBlockEntity.this)) return 0;
@@ -139,7 +161,7 @@ public class CryoDiodeBlockEntity extends BlockEntity {
                 if (!level.isLoaded(inletPos)) return 0;
                 SourceHelper.Supplier direct = directInlet(inletPos, facing);
                 if (direct != null) {
-                    int got = direct.drain(amount);
+                    int got = direct.drainUnique(amount, visited);
                     if (got > 0) flowed();
                     return got;
                 }
@@ -151,7 +173,7 @@ public class CryoDiodeBlockEntity extends BlockEntity {
                 }
                 int taken = 0;
                 for (SourceHelper.Supplier s : inletNet.sources()) {
-                    int d = s.drain(amount - taken);
+                    int d = s.drainUnique(amount - taken, visited);
                     taken += d;
                     if (taken >= amount) break;
                 }

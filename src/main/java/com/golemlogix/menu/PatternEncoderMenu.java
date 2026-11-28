@@ -512,6 +512,6 @@ public class PatternEncoderMenu extends GolemMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return stillValid(access, player, ModBlocks.PATTERN_ENCODER.get());
+        return stillValidNetwork(access, player, ModBlocks.PATTERN_ENCODER.get());
     }
 }

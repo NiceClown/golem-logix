@@ -39,6 +39,7 @@ public class PeriscopeBlockEntity extends BlockEntity {
     private final OwnedContainer filters = new OwnedContainer(FILTER_SLOTS, this, s -> true);
     private int access = BOTH;
     private boolean denyList;
+    private byte lastStorageEnabled = -1;
     @Nullable
     private TargetCaps caps;
 
@@ -58,6 +59,7 @@ public class PeriscopeBlockEntity extends BlockEntity {
 
     private void invalidateNetwork() {
         if (level != null && !level.isClientSide()) {
+            storageEnabled();
             GolemNetwork.clearCache();
         }
     }
@@ -124,15 +126,36 @@ public class PeriscopeBlockEntity extends BlockEntity {
     }
 
     public boolean storageEnabled() {
+        boolean enabled = computeStorageEnabled();
+        if (level != null && !level.isClientSide()) {
+            lastStorageEnabled = (byte) (enabled ? 1 : 0);
+        }
+        return enabled;
+    }
+
+    private boolean computeStorageEnabled() {
         if (level == null || !upgrades.has(UpgradeType.REDSTONE)) {
             return true;
         }
+        RedstoneMode mode = redstone.mode();
+        if (mode != RedstoneMode.HIGH && mode != RedstoneMode.LOW) {
+            return true;
+        }
         boolean powered = level.hasNeighborSignal(worldPosition);
-        return switch (redstone.mode()) {
-            case HIGH -> powered;
-            case LOW -> !powered;
-            default -> true;
-        };
+        return mode == RedstoneMode.HIGH ? powered : !powered;
+    }
+
+    /** Updates cached redstone-gating state and returns true only when {@link #storageEnabled()} changed. */
+    public boolean checkStorageEnabledChanged() {
+        if (level == null || !upgrades.has(UpgradeType.REDSTONE)) {
+            return false;
+        }
+        byte now = (byte) (computeStorageEnabled() ? 1 : 0);
+        if (now == lastStorageEnabled) {
+            return false;
+        }
+        lastStorageEnabled = now;
+        return true;
     }
 
     /** Window data: 0 = priority, 1 = redstone mode, 2 = access (BOTH, INSERT_ONLY, EXTRACT_ONLY), 3 = deny list. */
@@ -189,6 +212,7 @@ public class PeriscopeBlockEntity extends BlockEntity {
         access = Math.floorMod(tag.getIntOr("Access", BOTH), 3);
         denyList = tag.getBooleanOr("DenyList", false);
         redstone.load(tag);
+        lastStorageEnabled = -1;
     }
 
     @Override
