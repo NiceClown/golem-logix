@@ -378,9 +378,8 @@ final class NetworkScanner {
         net.externals.removeIf(e -> !net.activeDevices.contains(new GolemNetwork.Node(e.level(), e.periscope())));
         net.providers.removeIf(p -> !net.activeDevices.contains(new GolemNetwork.Node(p.getLevel(), p.getBlockPos())));
         net.catalogs.removeIf(p -> !net.activeDevices.contains(new GolemNetwork.Node(p.getLevel(), p.getBlockPos())));
-        // Two periscopes on one chest must not double its contents
-        Set<GolemNetwork.Node> targets = new HashSet<>();
-        net.externals.removeIf(e -> !targets.add(new GolemNetwork.Node(e.level(), e.target())));
+        // Multiple periscopes targeting the same container or double-chest halves stay registered so each keeps its own
+        // filters, access mode, and priority; NetworkStorage deduplicates shared targets by canonical slot/storage.
     }
 
     /**

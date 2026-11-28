@@ -25,6 +25,7 @@ import com.golemlogix.items.FluidGhostItem;
 import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.Ingredients;
 import com.golemlogix.system.ItemKey;
+import com.golemlogix.system.SourceHelper;
 import com.golemlogix.system.Transfers;
 import com.golemlogix.upgrade.RedstoneMode;
 import com.golemlogix.upgrade.UpgradeType;
@@ -588,8 +589,12 @@ public final class BlockEntityRegressionTests {
 
         helper.runAfterDelay(235, () -> {
             AtlasCoreBlockEntity core = helper.getBlockEntity(CORE, AtlasCoreBlockEntity.class);
-            helper.assertTrue(!core.isPowered(), "core lost power");
-            helper.assertTrue(core.visualSyncCount() > syncs0[0], "power change synced visuals immediately");
+            if (SourceHelper.sourceRequired()) {
+                helper.assertTrue(!core.isPowered(), "core lost power");
+                helper.assertTrue(core.visualSyncCount() > syncs0[0], "power change synced visuals immediately");
+            } else {
+                helper.assertTrue(core.isPowered(), "core stays powered in Free Mode without source jar");
+            }
             helper.succeed();
         });
     }

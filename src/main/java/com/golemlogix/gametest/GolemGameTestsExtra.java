@@ -18,6 +18,7 @@ import com.golemlogix.upgrade.UpgradeSpec;
 import com.golemlogix.upgrade.UpgradeType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
@@ -1463,7 +1464,7 @@ public final class GolemGameTestsExtra {
         helper.runAfterDelay(15, () -> {
             GolemNetwork n = net(helper, bay);
             ItemKey key = ItemKey.of(new ItemStack(Items.OAK_PLANKS));
-            helper.assertTrue(n.busCraftPending(helper.absolutePos(reqPos), key), "busCraftPending is true for the requested item");
+            helper.assertTrue(n.busCraftPending(GlobalPos.of(helper.getLevel().dimension(), helper.absolutePos(reqPos)), key), "busCraftPending is true for the requested item");
             int activeJobs = 0;
             for (com.golemlogix.crafting.CraftingCpu cpu : n.cpus()) {
                 if (!cpu.isIdle() && cpu.getJob() != null && cpu.getJob().targets().containsKey(key)) {
@@ -1957,7 +1958,8 @@ public final class GolemGameTestsExtra {
 
             // Plan with 1 execution (4 planks)
             CraftingPlan plan1 = CraftingPlanner.plan(net, planksKey, 4);
-            var smallJob = new com.golemlogix.crafting.CraftingJob(plan1, Map.of()).requestedBy(null, BUS_OUT);
+            var busPos = GlobalPos.of(helper.getLevel().dimension(), BUS_OUT);
+            var smallJob = new com.golemlogix.crafting.CraftingJob(plan1, Map.of()).requestedBy(null, busPos);
             helper.assertTrue(!com.golemlogix.blockentity.CryoCalculatorBlockEntity.dings(smallJob), "small bus job (< 16 executions, requester == null) must not ding");
 
             // Plan with player requester
@@ -1967,7 +1969,7 @@ public final class GolemGameTestsExtra {
 
             // Plan with 20 executions
             CraftingPlan plan20 = CraftingPlanner.plan(net, planksKey, 80);
-            var largeJob = new com.golemlogix.crafting.CraftingJob(plan20, Map.of()).requestedBy(null, BUS_OUT);
+            var largeJob = new com.golemlogix.crafting.CraftingJob(plan20, Map.of()).requestedBy(null, busPos);
             CompoundTag tag = largeJob.save(helper.getLevel().registryAccess());
             tag.putLong("Done", 16L);
             var loadedLargeJob = com.golemlogix.crafting.CraftingJob.load(tag, helper.getLevel().registryAccess());
@@ -3106,7 +3108,7 @@ public final class GolemGameTestsExtra {
             helper.runAfterDelay(15, () -> {
                 int totalInChests = westChest.countItem(Items.RAW_IRON) + eastChest.countItem(Items.RAW_IRON);
                 helper.assertTrue(totalInChests == 1, "blocking mode: exactly 1 portion pushed while awaiting result (got " + totalInChests + ")");
-                helper.assertTrue(n.providerBusy(helper.absolutePos(PROV)), "provider is busy awaiting machine output");
+                helper.assertTrue(n.providerBusy(GlobalPos.of(helper.getLevel().dimension(), helper.absolutePos(PROV))), "provider is busy awaiting machine output");
 
                 // Machine finishes portion 1 and returns Iron Ingot into the network
                 n.insertFromMachine(new ItemStack(Items.IRON_INGOT));
@@ -3579,7 +3581,7 @@ public final class GolemGameTestsExtra {
         BlockPos bay = hugeRig(helper);
         BlockPos absBay = helper.absolutePos(bay);
         ItemKey plank = ItemKey.of(new ItemStack(Items.OAK_PLANKS));
-        BlockPos device = helper.absolutePos(BUS_OUT);
+        GlobalPos device = GlobalPos.of(helper.getLevel().dimension(), helper.absolutePos(BUS_OUT));
         java.util.Map<ItemKey, Long> order = java.util.Map.of(plank, 4L);
         helper.runAfterDelay(5, () -> {
             GolemNetwork n = GolemNetwork.get(helper.getLevel(), absBay);
@@ -4096,7 +4098,7 @@ public final class GolemGameTestsExtra {
             helper.assertTrue(r1.type() == GolemNetwork.StartType.STARTED, "first job occupies the only calculator");
             helper.assertTrue(n.freeCpu() == null, "no free calculator left");
 
-            var busOrder = n.startCrafting(Map.of(goldIngot, 1L), null, helper.absolutePos(BUS_OUT));
+            var busOrder = n.startCrafting(Map.of(goldIngot, 1L), null, GlobalPos.of(helper.getLevel().dimension(), helper.absolutePos(BUS_OUT)));
             helper.assertTrue(busOrder.type() == GolemNetwork.StartType.NO_CPU && busOrder.plan() == null,
                     "bus order returns NO_CPU without planning when no calculator is free");
             var playerOrder = n.startCrafting(goldIngot, 1);

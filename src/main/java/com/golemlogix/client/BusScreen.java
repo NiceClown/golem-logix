@@ -1,5 +1,6 @@
 package com.golemlogix.client;
 
+import com.google.common.base.Suppliers;
 import com.golemlogix.menu.BusMenu;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
@@ -7,17 +8,19 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
+import java.util.function.Supplier;
+
 public class BusScreen extends GolemScreen<BusMenu> {
-    private static final ItemStack ICON_BARRIER = new ItemStack(Items.BARRIER);
-    private static final ItemStack ICON_ITEM_FRAME = new ItemStack(Items.ITEM_FRAME);
-    private static final ItemStack ICON_HOPPER = new ItemStack(Items.HOPPER);
-    private static final ItemStack ICON_DROPPER = new ItemStack(Items.DROPPER);
-    private static final ItemStack ICON_CHEST = new ItemStack(Items.CHEST);
-    private static final ItemStack ICON_CLOCK = new ItemStack(Items.CLOCK);
-    private static final ItemStack ICON_ENDER_PEARL = new ItemStack(Items.ENDER_PEARL);
-    private static final ItemStack ICON_PAPER = new ItemStack(Items.PAPER);
-    private static final ItemStack ICON_WATER_BUCKET = new ItemStack(Items.WATER_BUCKET);
-    private static final ItemStack ICON_BUCKET = new ItemStack(Items.BUCKET);
+    private static final Supplier<ItemStack> ICON_BARRIER = Suppliers.memoize(() -> new ItemStack(Items.BARRIER));
+    private static final Supplier<ItemStack> ICON_ITEM_FRAME = Suppliers.memoize(() -> new ItemStack(Items.ITEM_FRAME));
+    private static final Supplier<ItemStack> ICON_HOPPER = Suppliers.memoize(() -> new ItemStack(Items.HOPPER));
+    private static final Supplier<ItemStack> ICON_DROPPER = Suppliers.memoize(() -> new ItemStack(Items.DROPPER));
+    private static final Supplier<ItemStack> ICON_CHEST = Suppliers.memoize(() -> new ItemStack(Items.CHEST));
+    private static final Supplier<ItemStack> ICON_CLOCK = Suppliers.memoize(() -> new ItemStack(Items.CLOCK));
+    private static final Supplier<ItemStack> ICON_ENDER_PEARL = Suppliers.memoize(() -> new ItemStack(Items.ENDER_PEARL));
+    private static final Supplier<ItemStack> ICON_PAPER = Suppliers.memoize(() -> new ItemStack(Items.PAPER));
+    private static final Supplier<ItemStack> ICON_WATER_BUCKET = Suppliers.memoize(() -> new ItemStack(Items.WATER_BUCKET));
+    private static final Supplier<ItemStack> ICON_BUCKET = Suppliers.memoize(() -> new ItemStack(Items.BUCKET));
 
     public BusScreen(BusMenu menu, Inventory inv, Component title) {
         super(menu, inv, title, BusMenu.IMAGE_WIDTH, BusMenu.IMAGE_HEIGHT);
@@ -32,7 +35,7 @@ public class BusScreen extends GolemScreen<BusMenu> {
         }
         addRedstoneButton(menu::redstoneMode);
         if (menu.hasList()) {
-            addSideButton(() -> menu.denyList() ? ICON_BARRIER : ICON_ITEM_FRAME,
+            addSideButton(() -> menu.denyList() ? ICON_BARRIER.get() : ICON_ITEM_FRAME.get(),
                     () -> {
                         String key = "gui.golem_logix.bus.list." + (menu.denyList() ? "deny" : "allow");
                         return Component.translatable("gui.golem_logix.bus.list").append("\n").append(Component.translatable(key))
@@ -42,9 +45,9 @@ public class BusScreen extends GolemScreen<BusMenu> {
         }
         if (menu.isPeriscope()) {
             addSideButton(() -> switch (menu.access()) {
-                        case com.golemlogix.blockentity.PeriscopeBlockEntity.INSERT_ONLY -> ICON_HOPPER;
-                        case com.golemlogix.blockentity.PeriscopeBlockEntity.EXTRACT_ONLY -> ICON_DROPPER;
-                        default -> ICON_CHEST;
+                        case com.golemlogix.blockentity.PeriscopeBlockEntity.INSERT_ONLY -> ICON_HOPPER.get();
+                        case com.golemlogix.blockentity.PeriscopeBlockEntity.EXTRACT_ONLY -> ICON_DROPPER.get();
+                        default -> ICON_CHEST.get();
                     },
                     () -> {
                         String key = "gui.golem_logix.bus.access." + switch (menu.access()) {
@@ -59,9 +62,9 @@ public class BusScreen extends GolemScreen<BusMenu> {
         }
         if (menu.hasOrder()) {
             addSideButton(() -> switch (menu.order()) {
-                        case com.golemlogix.blockentity.FormationBusBlockEntity.ROUND_ROBIN -> ICON_CLOCK;
-                        case com.golemlogix.blockentity.FormationBusBlockEntity.RANDOM -> ICON_ENDER_PEARL;
-                        default -> ICON_PAPER;
+                        case com.golemlogix.blockentity.FormationBusBlockEntity.ROUND_ROBIN -> ICON_CLOCK.get();
+                        case com.golemlogix.blockentity.FormationBusBlockEntity.RANDOM -> ICON_ENDER_PEARL.get();
+                        default -> ICON_PAPER.get();
                     },
                     () -> {
                         String key = "gui.golem_logix.bus.order." + switch (menu.order()) {
@@ -75,7 +78,7 @@ public class BusScreen extends GolemScreen<BusMenu> {
                     () -> true, () -> menu.order() != com.golemlogix.blockentity.FormationBusBlockEntity.IN_ORDER, BusMenu.BUTTON_ORDER);
         }
         if (menu.isFormation()) {
-            addSideButton(() -> menu.replaceFluids() ? ICON_WATER_BUCKET : ICON_BUCKET,
+            addSideButton(() -> menu.replaceFluids() ? ICON_WATER_BUCKET.get() : ICON_BUCKET.get(),
                     () -> {
                         String key = "gui.golem_logix.bus.fluids." + (menu.replaceFluids() ? "replace" : "keep");
                         return Component.translatable("gui.golem_logix.bus.fluids").append("\n").append(Component.translatable(key))

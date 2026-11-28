@@ -14,6 +14,7 @@ import com.golemlogix.upgrade.UpgradeSpec;
 import com.golemlogix.upgrade.UpgradeType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
@@ -271,13 +272,14 @@ public class FormationBusBlockEntity extends BlockEntity implements GolemPlaneBl
             if (asked == null) {
                 asked = new HashSet<>();
             }
+            GlobalPos busPos = GlobalPos.of(level.dimension(), worldPosition);
             if (!asked.add(key) || !net.extractItem(want, 1, true, null).isEmpty()
-                    || !net.canCraft(key) || net.busCraftPending(worldPosition, key)) {
+                    || !net.canCraft(key) || net.busCraftPending(busPos, key)) {
                 continue;
             }
             lastCraftRequest = now;
             for (long amount : ORDER_BATCHES) {
-                GolemNetwork.StartType r = BlockEntities.requestCraft(net, worldPosition, key, amount).type();
+                GolemNetwork.StartType r = BlockEntities.requestCraft(net, busPos, key, amount).type();
                 if (r == GolemNetwork.StartType.STARTED || r == GolemNetwork.StartType.NO_CPU) {
                     break;
                 }

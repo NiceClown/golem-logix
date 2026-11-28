@@ -11,11 +11,15 @@ import com.golemlogix.system.ItemKey;
 import com.golemlogix.system.NbtBridge;
 import com.golemlogix.system.Recipes;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.UUIDUtil;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtOps;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
@@ -72,11 +76,17 @@ public class CraftingJob {
 
     /** What is unloaded through one Provider and not back yet: what we still expect from it (for the wait-for-result mode). */
     public static final class InFlight {
-        public final BlockPos provider;
+        public final GlobalPos provider;
         public final Map<ItemKey, Long> left = new LinkedHashMap<>();
+        final boolean legacyDim;
 
-        InFlight(BlockPos provider) {
-            this.provider = provider.immutable();
+        InFlight(GlobalPos provider) {
+            this(provider, false);
+        }
+
+        InFlight(GlobalPos provider, boolean legacyDim) {
+            this.provider = GlobalPos.of(provider.dimension(), provider.pos().immutable());
+            this.legacyDim = legacyDim;
         }
     }
 
@@ -106,7 +116,9 @@ public class CraftingJob {
     private UUID requester;
     /** The export bus with an Autocraft Module that ordered this job (so it does not order again). */
     @Nullable
-    private BlockPos requesterBus;
+    private GlobalPos requesterBus;
+    /** True only when a pre-dimension legacy save loaded {@code requesterBus} before a level was attached. */
+    private boolean legacyBusDim;
     /** What is being made right now, for the mini model above the calculator. */
     @Nullable
     private ItemKey current;
@@ -125,9 +137,10 @@ public class CraftingJob {
     private CraftingJob() {
     }
 
-    public CraftingJob requestedBy(@Nullable UUID player, @Nullable BlockPos bus) {
+    public CraftingJob requestedBy(@Nullable UUID player, @Nullable GlobalPos bus) {
         this.requester = player;
-        this.requesterBus = bus == null ? null : bus.immutable();
+        this.requesterBus = bus == null ? null : GlobalPos.of(bus.dimension(), bus.pos().immutable());
+        this.legacyBusDim = false;
         return this;
     }
 
@@ -150,8 +163,24 @@ public class CraftingJob {
     }
 
     @Nullable
-    public BlockPos requesterBus() {
+    public GlobalPos requesterBus() {
         return requesterBus;
+    }
+
+    /** Rebinds any pre-dimension legacy entries loaded before the owning CPU had its level attached. */
+    public void resolveLegacyDimension(ResourceKey<Level> dimension) {
+        if (legacyBusDim && requesterBus != null) {
+            requesterBus = GlobalPos.of(dimension, requesterBus.pos());
+            legacyBusDim = false;
+        }
+        for (int i = 0; i < inFlight.size(); i++) {
+            InFlight old = inFlight.get(i);
+            if (old.legacyDim) {
+                InFlight rebound = new InFlight(GlobalPos.of(dimension, old.provider.pos()), false);
+                rebound.left.putAll(old.left);
+                inFlight.set(i, rebound);
+            }
+        }
     }
 
     /** What is being made now (the output of the last executed step), otherwise the main order. */
@@ -214,7 +243,7 @@ public class CraftingJob {
     }
 
     /** Whether there are portions unloaded by this Provider whose result has not come back yet. */
-    public boolean hasInFlight(BlockPos provider) {
+    public boolean hasInFlight(GlobalPos provider) {
         for (InFlight f : inFlight) {
             if (f.provider.equals(provider)) {
                 return true;
@@ -377,7 +406,7 @@ public class CraftingJob {
         Status why = Status.NO_MACHINE;
         for (PatternProviderBlockEntity p : candidates) {
             // Wait mode: until the result of the previous portion returns, no new one is loaded
-            if (p.isBlocking() && net.providerBusy(p.getBlockPos())) {
+            if (p.isBlocking() && net.providerBusy(providerPos(p, net.level()))) {
                 why = Status.WAITING_MACHINE;
                 continue;
             }
@@ -407,7 +436,7 @@ public class CraftingJob {
             add(inventory, back);
         }
         // One record per Provider however many portions are out: a job of millions must not bloat the save
-        InFlight f = inFlightOf(provider.getBlockPos());
+        InFlight f = inFlightOf(providerPos(provider, net.level()));
         for (Map.Entry<ItemKey, Integer> out : s.pattern.outputTotals().entrySet()) {
             awaiting.merge(out.getKey(), (long) out.getValue(), Long::sum);
             f.left.merge(out.getKey(), (long) out.getValue(), Long::sum);
@@ -442,7 +471,12 @@ public class CraftingJob {
         }
     }
 
-    private InFlight inFlightOf(BlockPos provider) {
+    private static GlobalPos providerPos(PatternProviderBlockEntity provider, Level fallbackLevel) {
+        Level lvl = provider.getLevel() != null ? provider.getLevel() : fallbackLevel;
+        return GlobalPos.of(lvl.dimension(), provider.getBlockPos());
+    }
+
+    private InFlight inFlightOf(GlobalPos provider) {
         for (InFlight f : inFlight) {
             if (f.provider.equals(provider)) {
                 return f;
@@ -642,7 +676,8 @@ public class CraftingJob {
             tag.store("Requester", UUIDUtil.CODEC, requester);
         }
         if (requesterBus != null) {
-            tag.putLong("RequesterBus", requesterBus.asLong());
+            tag.putLong("RequesterBus", requesterBus.pos().asLong());
+            tag.putString("RequesterBusDim", requesterBus.dimension().identifier().toString());
         }
 
         ListTag stepList = new ListTag();
@@ -660,7 +695,8 @@ public class CraftingJob {
         ListTag flights = new ListTag();
         for (InFlight f : inFlight) {
             CompoundTag t = new CompoundTag();
-            t.putLong("Provider", f.provider.asLong());
+            t.putLong("Provider", f.provider.pos().asLong());
+            t.putString("Dim", f.provider.dimension().identifier().toString());
             t.put("Left", saveMap(f.left, provider));
             flights.add(t);
         }
@@ -692,6 +728,12 @@ public class CraftingJob {
 
     @Nullable
     public static CraftingJob load(CompoundTag tag, HolderLookup.Provider provider) {
+        return load(tag, provider, null);
+    }
+
+    @Nullable
+    public static CraftingJob load(CompoundTag tag, HolderLookup.Provider provider,
+                                   @Nullable ResourceKey<Level> defaultDim) {
         CraftingJob job = new CraftingJob();
         loadMap(tag.getListOrEmpty("Targets"), job.targets, provider);
         if (job.targets.isEmpty()) {
@@ -709,8 +751,15 @@ public class CraftingJob {
             job.status = Status.RUNNING;
         }
         job.requester = tag.read("Requester", UUIDUtil.CODEC).orElse(null);
+        ResourceKey<Level> fallbackDim = defaultDim != null ? defaultDim : Level.OVERWORLD;
         if (tag.contains("RequesterBus")) {
-            job.requesterBus = BlockPos.of(tag.getLongOr("RequesterBus", 0L));
+            BlockPos busPos = BlockPos.of(tag.getLongOr("RequesterBus", 0L));
+            ResourceKey<Level> busDim = parseDim(tag.getStringOr("RequesterBusDim", ""));
+            if (busDim == null) {
+                busDim = fallbackDim;
+                job.legacyBusDim = defaultDim == null;
+            }
+            job.requesterBus = GlobalPos.of(busDim, busPos);
         }
         ListTag stepList = tag.getListOrEmpty("Steps");
         var ops = provider.createSerializationContext(NbtOps.INSTANCE);
@@ -724,12 +773,28 @@ public class CraftingJob {
         ListTag flights = tag.getListOrEmpty("InFlight");
         for (int i = 0; i < flights.size(); i++) {
             CompoundTag t = flights.getCompoundOrEmpty(i);
-            InFlight f = new InFlight(BlockPos.of(t.getLongOr("Provider", 0L)));
+            BlockPos provPos = BlockPos.of(t.getLongOr("Provider", 0L));
+            ResourceKey<Level> provDim = parseDim(t.getStringOr("Dim", ""));
+            boolean legacy = false;
+            if (provDim == null) {
+                provDim = fallbackDim;
+                legacy = defaultDim == null;
+            }
+            InFlight f = new InFlight(GlobalPos.of(provDim, provPos), legacy);
             loadMap(t.getListOrEmpty("Left"), f.left, provider);
             if (!f.left.isEmpty()) {
                 job.inFlight.add(f);
             }
         }
         return job;
+    }
+
+    @Nullable
+    static ResourceKey<Level> parseDim(String raw) {
+        if (raw.isEmpty()) {
+            return null;
+        }
+        Identifier id = Identifier.tryParse(raw);
+        return id == null ? null : ResourceKey.create(Registries.DIMENSION, id);
     }
 }

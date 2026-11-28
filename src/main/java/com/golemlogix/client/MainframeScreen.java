@@ -1,5 +1,6 @@
 package com.golemlogix.client;
 
+import com.google.common.base.Suppliers;
 import com.golemlogix.blockentity.CryoMainframeBlockEntity;
 import com.golemlogix.init.ModBlocks;
 import com.golemlogix.menu.MainframeMenu;
@@ -9,12 +10,14 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.function.Supplier;
+
 /**
  * Cryo-Mainframe window: two shelves of calculators (empty slots show a translucent calculator), with a summary below:
  * how many cores and how many are busy, steps per cycle per core and how many times the coprocessors count.
  */
 public class MainframeScreen extends GolemScreen<MainframeMenu> {
-    private static final ItemStack CALC = new ItemStack(ModBlocks.CRYO_CALCULATOR.get());
+    private static final Supplier<ItemStack> CALC = Suppliers.memoize(() -> new ItemStack(ModBlocks.CRYO_CALCULATOR.get()));
 
     public MainframeScreen(MainframeMenu menu, Inventory inv, Component title) {
         super(menu, inv, title, MainframeMenu.IMAGE_WIDTH, MainframeMenu.IMAGE_HEIGHT);
@@ -38,7 +41,7 @@ public class MainframeScreen extends GolemScreen<MainframeMenu> {
             Slot s = menu.slots.get(i);
             if (!s.hasItem()) {
                 int x = leftPos + s.x, y = topPos + s.y;
-                g.item(CALC, x, y);
+                g.item(CALC.get(), x, y);
                 g.fill(x, y, x + 16, y + 16, 0xA8241A12);
             }
         }

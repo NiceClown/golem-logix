@@ -4544,7 +4544,7 @@ public class GolemGameTests {
         });
         helper.runAfterDelay(80, () -> {
             helper.assertTrue(count(machineIn) == 1, "while waiting only the first batch is loaded, got " + count(machineIn));
-            helper.assertTrue(net(helper, bay).providerBusy(helper.absolutePos(PROV)), "the provider waits for the result");
+            helper.assertTrue(net(helper, bay).providerBusy(GlobalPos.of(helper.getLevel().dimension(), helper.absolutePos(PROV))), "the provider waits for the result");
             machineIn.clearContent();
             machineOut.setItem(0, new ItemStack(Items.IRON_INGOT));    // the "machine" has processed the first portion
         });

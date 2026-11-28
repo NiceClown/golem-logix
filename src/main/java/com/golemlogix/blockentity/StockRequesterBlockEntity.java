@@ -9,6 +9,7 @@ import com.golemlogix.system.Ingredients;
 import com.golemlogix.system.ItemKey;
 import com.golemlogix.system.StaleLight;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -78,9 +79,10 @@ public class StockRequesterBlockEntity extends BlockEntity {
 
         boolean changed = false;
         boolean noCpu = false;
+        GlobalPos self = GlobalPos.of(level.dimension(), pos);
         for (int i = 0; i < FILTER_SLOTS; i++) {
             int oldStatus = be.status[i];
-            int newStatus = be.evaluateSlot(net, pos, i, noCpu);
+            int newStatus = be.evaluateSlot(net, self, i, noCpu);
             if (newStatus < 0) {
                 noCpu = true;
                 newStatus = STATUS_CRAFTING;
@@ -111,7 +113,7 @@ public class StockRequesterBlockEntity extends BlockEntity {
     }
 
     /** Evaluates one filter slot; returns the new status, or {@code -1} to signal NO_CPU (stored as STATUS_CRAFTING). */
-    private int evaluateSlot(GolemNetwork net, BlockPos pos, int slot, boolean noCpu) {
+    private int evaluateSlot(GolemNetwork net, GlobalPos pos, int slot, boolean noCpu) {
         ItemStack ghost = filters.getItem(slot);
         if (ghost.isEmpty()) {
             return STATUS_OK;

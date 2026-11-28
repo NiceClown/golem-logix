@@ -392,7 +392,7 @@ public class EssentiaCauldronBlockEntity extends BlockEntity {
 
         boolean reacted = false;
         while (reactionProgress >= 1.0 && auram >= primaryCost && gelum >= coolantCost && iceTier > ICE_NONE) {
-            int room = SourceHelper.fillAroundAndNetworks(level, cells, sourcePerReaction, true);
+            int room = reacted ? SourceHelper.fillAroundAndNetworks(level, cells, sourcePerReaction, true) : initialRoom;
             if (room <= 0) {
                 reactionProgress = Math.min(reactionProgress, 1.0);
                 status = STATUS_NO_JAR;

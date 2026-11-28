@@ -1,5 +1,6 @@
 package com.golemlogix.client;
 
+import com.google.common.base.Suppliers;
 import com.golemlogix.crafting.CraftingJob;
 import com.golemlogix.init.ModBlocks;
 import com.golemlogix.menu.RecipeMonitorMenu;
@@ -15,6 +16,7 @@ import net.minecraft.world.item.ItemStack;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Supplier;
 
 /**
  * Recipe Monitor console: on the left all Cryo-Calculators of the network (what they make, progress, state), on the right details of the selected one:
@@ -26,9 +28,9 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
     private static final int LIST_X = 8, LIST_Y = 20, ROW_H = 22, ROWS = 8, LIST_W = 112;
     private static final int DX = 126;
 
-    private static final ItemStack ICON_MAINFRAME = new ItemStack(ModBlocks.CRYO_MAINFRAME.get());
-    private static final ItemStack ICON_CALCULATOR = new ItemStack(ModBlocks.CRYO_CALCULATOR.get());
-    private static final ItemStack ICON_COPROCESSOR = new ItemStack(ModBlocks.COOLING_COPROCESSOR.get());
+    private static final Supplier<ItemStack> ICON_MAINFRAME = Suppliers.memoize(() -> new ItemStack(ModBlocks.CRYO_MAINFRAME.get()));
+    private static final Supplier<ItemStack> ICON_CALCULATOR = Suppliers.memoize(() -> new ItemStack(ModBlocks.CRYO_CALCULATOR.get()));
+    private static final Supplier<ItemStack> ICON_COPROCESSOR = Suppliers.memoize(() -> new ItemStack(ModBlocks.COOLING_COPROCESSOR.get()));
     private static final Component LABEL_CANCEL = Component.translatable("gui.golem_logix.calc.cancel");
     private static final Component LABEL_WAITING = Component.translatable("gui.golem_logix.calc.waiting");
     private static final Component LABEL_NO_CPUS = Component.translatable("gui.golem_logix.monitor.no_cpus");
@@ -157,7 +159,7 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
         boolean idle = c.state() < 0;
         int color = idle ? 0xFF5C6B70 : CalculatorScreen.statusColor(CalculatorScreen.status(c.state()));
         g.fill(x + 1, y + 2, x + 3, y + ROW_H - 2, color);
-        ItemStack icon = idle ? (c.core() > 0 ? ICON_MAINFRAME : ICON_CALCULATOR)
+        ItemStack icon = idle ? (c.core() > 0 ? ICON_MAINFRAME.get() : ICON_CALCULATOR.get())
                 : !c.current().isEmpty() ? c.current() : c.targets().isEmpty() ? ItemStack.EMPTY : c.targets().get(0).item();
         g.item(icon, x + 5, y + 3);
         if (!idle) {
@@ -266,9 +268,10 @@ public class RecipeMonitorScreen extends GolemScreen<RecipeMonitorMenu> {
     }
 
     private void drawCoprocessors(GuiGraphicsExtractor g, String count, int x, int y, int mx, int my) {
-        g.item(ICON_COPROCESSOR, x, y);
+        ItemStack icon = ICON_COPROCESSOR.get();
+        g.item(icon, x, y);
         g.text(font, count, x + 17, y + 5, GolemGui.PARCHMENT, false);
-        recordHover(ICON_COPROCESSOR, x, y, mx, my);
+        recordHover(icon, x, y, mx, my);
     }
 
     private int stepGrid(GuiGraphicsExtractor g, List<MonitorPayload.Step> steps, int x, int y, int w, int maxRows, int mx, int my) {

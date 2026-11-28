@@ -55,9 +55,9 @@ public class ManaSaturatorRenderer extends LegacyBer<ManaSaturatorBlockEntity> {
     static final float ITEM_Z = 6.2f;
     private static final Quaternionf SCRATCH_FAN_QUAT = new Quaternionf();
     private static final PoseStack SCRATCH_FAN_POSE = new PoseStack();
-    private static final ItemStack ENDER_EYE = new ItemStack(Items.ENDER_EYE);
-    private static final ItemStack GHAST_TEAR = new ItemStack(Items.GHAST_TEAR);
-    private static final ItemStack NETHERITE_INGOT = new ItemStack(Items.NETHERITE_INGOT);
+    private static ItemStack orbitEye;
+    private static ItemStack orbitTear;
+    private static ItemStack orbitNetherite;
     private static BerBuffers.Baked fanMesh;
 
     private static BerBuffers.Baked fanMesh() {
@@ -328,15 +328,20 @@ public class ManaSaturatorRenderer extends LegacyBer<ManaSaturatorBlockEntity> {
 
             int totalOrbit = entity.rodEyes() + entity.rodTears() + entity.rodNetherite();
             if (totalOrbit > 0) {
+                if (orbitEye == null) {
+                    orbitEye = new ItemStack(Items.ENDER_EYE);
+                    orbitTear = new ItemStack(Items.GHAST_TEAR);
+                    orbitNetherite = new ItemStack(Items.NETHERITE_INGOT);
+                }
                 int idx = 0;
                 for (int i = 0; i < entity.rodEyes(); i++, idx++) {
-                    renderOrbitReagent(pose, buffers, level, light, time, idx, totalOrbit, ENDER_EYE);
+                    renderOrbitReagent(pose, buffers, level, light, time, idx, totalOrbit, orbitEye);
                 }
                 for (int i = 0; i < entity.rodTears(); i++, idx++) {
-                    renderOrbitReagent(pose, buffers, level, light, time, idx, totalOrbit, GHAST_TEAR);
+                    renderOrbitReagent(pose, buffers, level, light, time, idx, totalOrbit, orbitTear);
                 }
                 for (int i = 0; i < entity.rodNetherite(); i++, idx++) {
-                    renderOrbitReagent(pose, buffers, level, light, time, idx, totalOrbit, NETHERITE_INGOT);
+                    renderOrbitReagent(pose, buffers, level, light, time, idx, totalOrbit, orbitNetherite);
                 }
             }
             return;

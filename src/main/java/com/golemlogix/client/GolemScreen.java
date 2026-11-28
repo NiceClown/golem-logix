@@ -1,5 +1,6 @@
 package com.golemlogix.client;
 
+import com.google.common.base.Suppliers;
 import com.golemlogix.menu.GolemMenu;
 import com.golemlogix.menu.Priority;
 import com.golemlogix.upgrade.RedstoneMode;
@@ -24,10 +25,10 @@ import java.util.function.Supplier;
  * Base of the mod's screens: panel, background of all slots, labels; the upgrade column to the right of the window and settings buttons on the left.
  */
 public abstract class GolemScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> {
-    private static final ItemStack ICON_REDSTONE = new ItemStack(Items.REDSTONE);
-    private static final ItemStack ICON_REDSTONE_TORCH = new ItemStack(Items.REDSTONE_TORCH);
-    private static final ItemStack ICON_LEVER = new ItemStack(Items.LEVER);
-    private static final ItemStack ICON_REPEATER = new ItemStack(Items.REPEATER);
+    private static final Supplier<ItemStack> ICON_REDSTONE = Suppliers.memoize(() -> new ItemStack(Items.REDSTONE));
+    private static final Supplier<ItemStack> ICON_REDSTONE_TORCH = Suppliers.memoize(() -> new ItemStack(Items.REDSTONE_TORCH));
+    private static final Supplier<ItemStack> ICON_LEVER = Suppliers.memoize(() -> new ItemStack(Items.LEVER));
+    private static final Supplier<ItemStack> ICON_REPEATER = Suppliers.memoize(() -> new ItemStack(Items.REPEATER));
     private static final Component PRIORITY_LABEL = Component.translatable("gui.golem_logix.priority");
     private static final Component PRIORITY_RESET = Component.translatable("gui.golem_logix.priority.reset");
     private static final Component PRIORITY_TOOLTIP = Component.translatable("gui.golem_logix.priority.tooltip");
@@ -84,10 +85,10 @@ public abstract class GolemScreen<T extends AbstractContainerMenu> extends Abstr
     /** Redstone mode button: visible only when a Redstone Module sits in the upgrade slots. */
     protected void addRedstoneButton(Supplier<RedstoneMode> mode) {
         addSideButton(() -> switch (mode.get()) {
-                    case IGNORE -> ICON_REDSTONE;
-                    case HIGH -> ICON_REDSTONE_TORCH;
-                    case LOW -> ICON_LEVER;
-                    case PULSE -> ICON_REPEATER;
+                    case IGNORE -> ICON_REDSTONE.get();
+                    case HIGH -> ICON_REDSTONE_TORCH.get();
+                    case LOW -> ICON_LEVER.get();
+                    case PULSE -> ICON_REPEATER.get();
                 },
                 () -> Component.translatable("gui.golem_logix.redstone.title").append("\n")
                         .append(Component.translatable(mode.get().key())).append("\n")

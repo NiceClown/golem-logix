@@ -16,6 +16,7 @@ import com.golemlogix.upgrade.UpgradeType;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
@@ -418,11 +419,12 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
 
     private void order(ServerLevel level, GolemNetwork net, ItemKey key) {
         long now = level.getGameTime();
-        if (now - lastCraftRequest < CRAFT_REQUEST_COOLDOWN || !net.canCraft(key) || net.busCraftPending(worldPosition, key)) {
+        GlobalPos busPos = GlobalPos.of(level.dimension(), worldPosition);
+        if (now - lastCraftRequest < CRAFT_REQUEST_COOLDOWN || !net.canCraft(key) || net.busCraftPending(busPos, key)) {
             return;
         }
         lastCraftRequest = now;
-        BlockEntities.requestCraft(net, worldPosition, key, 1L);
+        BlockEntities.requestCraft(net, busPos, key, 1L);
     }
 
     private void sleep(long now) {

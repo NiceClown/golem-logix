@@ -1,5 +1,6 @@
 package com.golemlogix.client;
 
+import com.google.common.base.Suppliers;
 import com.golemlogix.blockentity.EssentiaCauldronBlockEntity;
 import com.golemlogix.init.ModItems;
 import com.golemlogix.menu.EssentiaCauldronMenu;
@@ -10,6 +11,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Locale;
+import java.util.function.Supplier;
 
 /**
  * Essentia Cryo-Cauldron window: dual vertical Essentia tanks on the left (Auram violet, Gelum icy cyan), live Source/s
@@ -19,7 +21,7 @@ public class EssentiaCauldronScreen extends GolemScreen<EssentiaCauldronMenu> {
     private static final int AURAM_COLOR = 0xFF7B38C8, AURAM_LIGHT = 0xFFD49CFF;
     private static final int GELUM_COLOR = 0xFF38C4DE, GELUM_LIGHT = 0xFFC2FAFF;
     private static final int TANK_Y = 18, TANK_H = 62;
-    private static final ItemStack COPROCESSOR = new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get());
+    private static final Supplier<ItemStack> COPROCESSOR = Suppliers.memoize(() -> new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get()));
 
     public EssentiaCauldronScreen(EssentiaCauldronMenu menu, Inventory inv, Component title) {
         super(menu, inv, title, EssentiaCauldronMenu.IMAGE_WIDTH, EssentiaCauldronMenu.IMAGE_HEIGHT);
@@ -78,7 +80,7 @@ public class EssentiaCauldronScreen extends GolemScreen<EssentiaCauldronMenu> {
         g.pose().pushMatrix();
         g.pose().translate(x, 31);
         g.pose().scale(0.625f, 0.625f);
-        g.item(COPROCESSOR, 0, 0);
+        g.item(COPROCESSOR.get(), 0, 0);
         g.pose().popMatrix();
         fitted(g, Component.translatable("gui.golem_logix.tower.coprocessors",
                 menu.coprocessors(), UpgradeSpec.ESSENTIA_CAULDRON.maxSpeed()), x + 12, 32, right - x - 12, 0xFFA89880);

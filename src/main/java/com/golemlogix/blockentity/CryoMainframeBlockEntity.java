@@ -639,14 +639,28 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         upgrades.fromTag(tag.getListOrEmpty("Upgrades"), registries);
         syncCores(false);
         ListTag jobs = tag.getListOrEmpty("Jobs");
+        var defaultDim = level != null ? level.dimension() : null;
         for (int i = 0; i < jobs.size(); i++) {
             CompoundTag e = jobs.getCompoundOrEmpty(i);
             int idx = e.getIntOr("Core", 0);
             if (idx >= 0 && idx < cores.size()) {
-                cores.get(idx).job = CraftingJob.load(e.getCompoundOrEmpty("Job"), registries);
+                cores.get(idx).job = CraftingJob.load(e.getCompoundOrEmpty("Job"), registries, defaultDim);
             }
         }
         redstone.load(tag);
+    }
+
+    @Override
+    public void setLevel(Level level) {
+        super.setLevel(level);
+        if (level != null) {
+            var dim = level.dimension();
+            for (Core c : cores) {
+                if (c.job != null) {
+                    c.job.resolveLegacyDimension(dim);
+                }
+            }
+        }
     }
 
     public void setVisualWorkForDev(boolean on, @Nullable String item0, @Nullable String item1) {

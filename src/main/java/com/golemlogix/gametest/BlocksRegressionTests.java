@@ -27,6 +27,7 @@ import com.golemlogix.security.SecurityPermission;
 import com.golemlogix.system.Fuzzy;
 import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.Recipes;
+import com.golemlogix.system.SourceHelper;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -507,8 +508,8 @@ public final class BlocksRegressionTests {
                 "chronometer_upgrade", "cooling_coprocessor",
                 "copper_disk_1k", "copper_disk_4k", "copper_disk_16k", "copper_disk_64k", "copper_disk_256k",
                 "copper_drive_bay", "copper_punch_card", "copper_tank", "copper_tank_join",
-                "crafting_terminal", "cryo_calculator", "cryo_diode", "cryo_distillation_tower",
-                "cryo_mainframe", "cryo_mixer", "cryo_source_jar", "cryo_source_telegraph",
+                "crafting_terminal", "cryo_calculator", "cryo_diode",
+                "cryo_mainframe", "cryo_mixer", "cryo_source_telegraph",
                 "dense_frost_pipe", "eternal_frost_resonator",
                 "fluid_disk_1k", "fluid_disk_4k", "fluid_disk_16k", "fluid_disk_64k", "fluid_disk_256k",
                 "forge_hammer", "formation_bus", "fuzzy_card", "golem_interface", "guide_book",
@@ -524,6 +525,14 @@ public final class BlocksRegressionTests {
         for (String name : core) {
             helper.assertTrue(recipes.byKey(Recipes.key(id(name))).isPresent(), "missing or invalid recipe: " + name);
         }
+        boolean distillAvailable = SourceHelper.distillationAvailable();
+        boolean distillPresent = recipes.byKey(Recipes.key(id("cryo_distillation_tower"))).isPresent();
+        helper.assertTrue(distillPresent == distillAvailable,
+                "cryo_distillation_tower recipe presence (" + distillPresent + ") must match distillationAvailable (" + distillAvailable + ")");
+        boolean jarExpected = distillAvailable || SourceHelper.thaumaturgeLoaded();
+        boolean jarPresent = recipes.byKey(Recipes.key(id("cryo_source_jar"))).isPresent();
+        helper.assertTrue(jarPresent == jarExpected,
+                "cryo_source_jar recipe presence (" + jarPresent + ") must match neovitae/thaumaturge availability (" + jarExpected + ")");
         helper.succeed();
     }
 }

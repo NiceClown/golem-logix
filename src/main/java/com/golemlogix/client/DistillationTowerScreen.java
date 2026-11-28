@@ -1,5 +1,6 @@
 package com.golemlogix.client;
 
+import com.google.common.base.Suppliers;
 import com.golemlogix.init.ModItems;
 import com.golemlogix.menu.DistillationTowerMenu;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -8,6 +9,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Locale;
+import java.util.function.Supplier;
 
 /**
  * Cryo-Distillation Tower window: on the left the blood column (dark red, filling from the bottom), on the right what the tower
@@ -16,7 +18,7 @@ import java.util.Locale;
  */
 public class DistillationTowerScreen extends GolemScreen<DistillationTowerMenu> {
     private static final int BLOOD = 0xFF8A1418, BLOOD_LIGHT = 0xFFC83A3A;
-    private static final ItemStack COPROCESSOR = new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get());
+    private static final Supplier<ItemStack> COPROCESSOR = Suppliers.memoize(() -> new ItemStack(ModItems.COMPRESSED_COPROCESSOR.get()));
 
     public DistillationTowerScreen(DistillationTowerMenu menu, Inventory inv, Component title) {
         super(menu, inv, title, DistillationTowerMenu.IMAGE_WIDTH, DistillationTowerMenu.IMAGE_HEIGHT);
@@ -52,7 +54,7 @@ public class DistillationTowerScreen extends GolemScreen<DistillationTowerMenu> 
         g.pose().pushMatrix();
         g.pose().translate(x, y + 33);
         g.pose().scale(0.625f, 0.625f);
-        g.item(COPROCESSOR, 0, 0);
+        g.item(COPROCESSOR.get(), 0, 0);
         g.pose().popMatrix();
         g.text(font, Component.translatable("gui.golem_logix.tower.coprocessors", menu.coprocessors(), com.golemlogix.upgrade.UpgradeSpec.DISTILLATION.maxSpeed()), x + 12, y + 34,
                 0xFFA89880, false);

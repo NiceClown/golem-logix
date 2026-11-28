@@ -1,5 +1,6 @@
 package com.golemlogix.client;
 
+import com.google.common.base.Suppliers;
 import com.golemlogix.blockentity.StockManometerBlockEntity;
 import com.golemlogix.items.FluidGhostItem;
 import com.golemlogix.menu.StockManometerMenu;
@@ -16,16 +17,18 @@ import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.function.Supplier;
+
 /**
  * Stock Manometer window: the ghost of what it watches, the mode as a side button (above the threshold / below it /
  * proportional), the threshold and an optional second one typed in (on below 500, off above 2 000), and a line that says in
  * words what the signal does, with the stock now. A fluid counts in mB.
  */
 public class StockManometerScreen extends GolemScreen<StockManometerMenu> {
-    private static final ItemStack ICON_ABOVE = new ItemStack(Items.REDSTONE_TORCH);
-    private static final ItemStack ICON_BELOW = new ItemStack(Items.LEVER);
-    private static final ItemStack ICON_ANALOG = new ItemStack(Items.COMPARATOR);
-    private static final ItemStack ICON_BARRIER = new ItemStack(Items.BARRIER);
+    private static final Supplier<ItemStack> ICON_ABOVE = Suppliers.memoize(() -> new ItemStack(Items.REDSTONE_TORCH));
+    private static final Supplier<ItemStack> ICON_BELOW = Suppliers.memoize(() -> new ItemStack(Items.LEVER));
+    private static final Supplier<ItemStack> ICON_ANALOG = Suppliers.memoize(() -> new ItemStack(Items.COMPARATOR));
+    private static final Supplier<ItemStack> ICON_BARRIER = Suppliers.memoize(() -> new ItemStack(Items.BARRIER));
     private static final Component LABEL_FULL = Component.translatable("gui.golem_logix.manometer.full");
     private static final Component LABEL_ON = Component.translatable("gui.golem_logix.manometer.on");
     private static final Component LABEL_OFF = Component.translatable("gui.golem_logix.manometer.off");
@@ -50,9 +53,9 @@ public class StockManometerScreen extends GolemScreen<StockManometerMenu> {
     protected void init() {
         super.init();
         addSideButton(() -> switch (menu.getMode()) {
-                    case StockManometerBlockEntity.MODE_BELOW -> ICON_BELOW;
-                    case StockManometerBlockEntity.MODE_ANALOG -> ICON_ANALOG;
-                    default -> ICON_ABOVE;
+                    case StockManometerBlockEntity.MODE_BELOW -> ICON_BELOW.get();
+                    case StockManometerBlockEntity.MODE_ANALOG -> ICON_ANALOG.get();
+                    default -> ICON_ABOVE.get();
                 },
                 () -> {
                     String key = "gui.golem_logix.manometer.mode." + modeName();
@@ -61,7 +64,7 @@ public class StockManometerScreen extends GolemScreen<StockManometerMenu> {
                 },
                 () -> true, () -> menu.getMode() != StockManometerBlockEntity.MODE_ABOVE, StockManometerMenu.BUTTON_MODE);
         for (net.minecraft.core.Direction side : net.minecraft.core.Direction.values()) {
-            addSideButton(() -> menu.getBridgeMode(side) == StockManometerBlockEntity.BRIDGE_OFF ? ICON_BARRIER : neighbourIcon(side),
+            addSideButton(() -> menu.getBridgeMode(side) == StockManometerBlockEntity.BRIDGE_OFF ? ICON_BARRIER.get() : neighbourIcon(side),
                     () -> bridgeTip(side), () -> !neighbour(side).isAir(), () -> bridged(side), StockManometerMenu.BUTTON_BRIDGE + side.ordinal());
         }
         sentLow = menu.getThreshold();

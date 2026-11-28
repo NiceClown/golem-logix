@@ -9,6 +9,7 @@ import com.golemlogix.blockentity.CryoMixerBlockEntity;
 import com.golemlogix.blockentity.DistillationTowerBlockEntity;
 import com.golemlogix.blockentity.EssentiaCauldronBlockEntity;
 import com.golemlogix.blockentity.InterfaceBlockEntity;
+import com.golemlogix.blockentity.PatternProviderBlockEntity;
 import com.golemlogix.blockentity.PeriscopeBlockEntity;
 import com.golemlogix.blockentity.SecurityTerminalBlockEntity;
 import com.golemlogix.blocks.CryoJarBlock;
@@ -17,6 +18,8 @@ import com.golemlogix.blocks.DistillationTowerBlock;
 import com.golemlogix.blocks.EssentiaCauldronBlock;
 import com.golemlogix.blocks.JarForm;
 import com.golemlogix.config.GolemConfig;
+import com.golemlogix.crafting.CraftingJob;
+import com.golemlogix.data.PatternData;
 import com.golemlogix.init.ModBlocks;
 import com.golemlogix.init.ModItems;
 import com.golemlogix.items.IdentityPunchCardItem;
@@ -37,6 +40,7 @@ import com.golemlogix.upgrade.UpgradeType;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
@@ -44,17 +48,22 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.ProblemReporter;
+import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.DirectionalBlock;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.entity.FurnaceBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.phys.BlockHitResult;
@@ -72,6 +81,8 @@ import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -544,5 +555,246 @@ public final class AuditRegressionTests {
             GolemConfig.MIXER_SNOW_TICKS.set(oldSnowTicks);
         }
         helper.succeed();
+    }
+
+    /**
+     * P1: Two Periscope Storage Buses on opposite halves of a vanilla double chest must not double-count stock or
+     * simulated extraction/insertion, while preserving each Periscope's own filters and access mode.
+     */
+    public static void auditDoubleChestPeriscopesNoDoubleCount(GameTestHelper helper) {
+        buildArray(helper, 0, 0);
+        powered(helper);
+        var level = helper.getLevel();
+
+        // Pipe run from east corner bushing (6,1,6) -> (7,1,6) & (7,1,7) -> two Periscopes facing EAST at (8,1,6) & (8,1,7)
+        put(helper, new BlockPos(7, 1, 6), ModBlocks.BASIC_SNOW_PIPE.get());
+        put(helper, new BlockPos(7, 1, 7), ModBlocks.BASIC_SNOW_PIPE.get());
+        BlockPos periAPos = new BlockPos(8, 1, 6);
+        BlockPos periBPos = new BlockPos(8, 1, 7);
+        periscope(helper, periAPos, Direction.EAST);
+        periscope(helper, periBPos, Direction.EAST);
+
+        // Vanilla double chest facing WEST: RIGHT at (9,1,6) connects SOUTH to LEFT at (9,1,7)
+        BlockPos chestRightPos = new BlockPos(9, 1, 6);
+        BlockPos chestLeftPos = new BlockPos(9, 1, 7);
+        helper.setBlock(chestRightPos, Blocks.CHEST.defaultBlockState()
+                .setValue(ChestBlock.FACING, Direction.WEST)
+                .setValue(ChestBlock.TYPE, ChestType.RIGHT));
+        helper.setBlock(chestLeftPos, Blocks.CHEST.defaultBlockState()
+                .setValue(ChestBlock.FACING, Direction.WEST)
+                .setValue(ChestBlock.TYPE, ChestType.LEFT));
+
+        BlockPos absChest = helper.absolutePos(chestRightPos);
+        Container dc = ChestBlock.getContainer((ChestBlock) Blocks.CHEST, level.getBlockState(absChest), level, absChest, true);
+        helper.assertTrue(dc != null && dc.getContainerSize() == 54,
+                "double chest must expose 54 combined slots, got " + (dc == null ? "null" : dc.getContainerSize()));
+        dc.setItem(0, new ItemStack(Items.DIAMOND, 20));
+        dc.setItem(30, new ItemStack(Items.IRON_INGOT, 15));
+
+        PeriscopeBlockEntity periA = helper.getBlockEntity(periAPos, PeriscopeBlockEntity.class);
+        PeriscopeBlockEntity periB = helper.getBlockEntity(periBPos, PeriscopeBlockEntity.class);
+        ItemKey diamondKey = ItemKey.of(new ItemStack(Items.DIAMOND));
+        ItemKey ironKey = ItemKey.of(new ItemStack(Items.IRON_INGOT));
+
+        helper.runAfterDelay(20, () -> {
+            GolemNetwork n = GolemNetwork.refresh(level, helper.absolutePos(ORIGIN));
+            helper.assertTrue(n.isOnline(), "network online");
+
+            // 1. Both Periscopes unfiltered: 20 diamonds + 15 iron counted once, not doubled
+            var listed = n.listItems();
+            helper.assertTrue(listed.getOrDefault(diamondKey, 0L) == 20L,
+                    "listItems must report 20 diamonds, got " + listed.getOrDefault(diamondKey, 0L));
+            helper.assertTrue(n.itemCountOf(diamondKey) == 20L,
+                    "itemCountOf must report 20 diamonds, got " + n.itemCountOf(diamondKey));
+            helper.assertTrue(n.itemCountOf(ironKey) == 15L,
+                    "itemCountOf must report 15 iron, got " + n.itemCountOf(ironKey));
+            ItemStack simExtract = n.extractItem(new ItemStack(Items.DIAMOND), 40, true);
+            helper.assertTrue(simExtract.getCount() == 20,
+                    "simulated extract(40) from 20-diamond double chest must return 20, got " + simExtract.getCount());
+            helper.assertTrue(dc.getItem(0).getCount() == 20, "simulated extract left chest untouched");
+
+            // 1b. skipTarget on either half skips BOTH halves of the double chest (no cross-half bus loop)
+            BlockPos absRight = helper.absolutePos(chestRightPos);
+            BlockPos absLeft = helper.absolutePos(chestLeftPos);
+            helper.assertTrue(n.extractItem(new ItemStack(Items.DIAMOND), 20, true, absRight).isEmpty(),
+                    "skipTarget on RIGHT half must skip both halves on extract");
+            helper.assertTrue(n.extractItem(new ItemStack(Items.DIAMOND), 20, true, absLeft).isEmpty(),
+                    "skipTarget on LEFT half must skip both halves on extract");
+            helper.assertTrue(n.insertItem(new ItemStack(Items.GOLD_INGOT, 5), true, absLeft).getCount() == 5,
+                    "skipTarget on LEFT half must skip both halves on insert");
+
+            // 1c. Real extract with BOTH Periscopes in BOTH mode takes exact 20 and empties stock
+            ItemStack realBoth = n.extractItem(new ItemStack(Items.DIAMOND), 40, false);
+            helper.assertTrue(realBoth.getCount() == 20 && dc.getItem(0).isEmpty() && n.itemCountOf(diamondKey) == 0L,
+                    "real extract(40) with both Periscopes in BOTH mode must take exact 20, got " + realBoth.getCount());
+            dc.setItem(0, new ItemStack(Items.DIAMOND, 20));
+
+            // 2. Simulated insert must not double-count free space across the two Periscopes
+            dc.clearContent();
+            for (int s = 0; s < 53; s++) {
+                dc.setItem(s, new ItemStack(Items.COBBLESTONE, 64));
+            }
+            ItemStack simInsertRem = n.insertItem(new ItemStack(Items.DIAMOND, 128), true);
+            helper.assertTrue(simInsertRem.getCount() == 64,
+                    "simulated insert(128) into 1-free-slot double chest must leave 64 remainder, got " + simInsertRem.getCount());
+            helper.assertTrue(dc.getItem(53).isEmpty(), "simulated insert left slot 53 empty");
+
+            // 3. Distinct per-Periscope filters: A allows diamonds, B allows iron -> both visible cleanly
+            dc.clearContent();
+            dc.setItem(0, new ItemStack(Items.DIAMOND, 20));
+            dc.setItem(30, new ItemStack(Items.IRON_INGOT, 15));
+            periA.getFilters().setItem(0, new ItemStack(Items.DIAMOND));
+            periB.getFilters().setItem(0, new ItemStack(Items.IRON_INGOT));
+
+            var filteredList = n.listItems();
+            helper.assertTrue(filteredList.getOrDefault(diamondKey, 0L) == 20L,
+                    "filtered listItems sees 20 diamonds via Periscope A, got " + filteredList.getOrDefault(diamondKey, 0L));
+            helper.assertTrue(filteredList.getOrDefault(ironKey, 0L) == 15L,
+                    "filtered listItems sees 15 iron via Periscope B, got " + filteredList.getOrDefault(ironKey, 0L));
+            helper.assertTrue(n.itemCountOf(diamondKey) == 20L && n.itemCountOf(ironKey) == 15L,
+                    "filtered itemCountOf sees both 20 diamonds and 15 iron");
+            helper.assertTrue(n.extractItem(new ItemStack(Items.DIAMOND), 40, true).getCount() == 20,
+                    "filtered sim extract sees 20 diamonds");
+            helper.assertTrue(n.extractItem(new ItemStack(Items.IRON_INGOT), 40, true).getCount() == 15,
+                    "filtered sim extract sees 15 iron");
+            helper.assertTrue(n.insertItem(new ItemStack(Items.GOLD_INGOT, 5), true).getCount() == 5,
+                    "unmatched gold rejected by both periscopes");
+
+            // 4. Distinct access modes: A = INSERT_ONLY, B = EXTRACT_ONLY on same double chest
+            periA.getFilters().clearContent();
+            periB.getFilters().clearContent();
+            periA.menuData().set(2, PeriscopeBlockEntity.INSERT_ONLY);
+            periB.menuData().set(2, PeriscopeBlockEntity.EXTRACT_ONLY);
+            helper.assertTrue(n.itemCountOf(diamondKey) == 20L,
+                    "EXTRACT_ONLY Periscope B still exposes 20 diamonds when Periscope A is INSERT_ONLY");
+            helper.assertTrue(n.insertItem(new ItemStack(Items.GOLD_INGOT, 5), true).isEmpty(),
+                    "INSERT_ONLY Periscope A accepts gold when Periscope B is EXTRACT_ONLY");
+            ItemStack realTaken = n.extractItem(new ItemStack(Items.DIAMOND), 40, false);
+            helper.assertTrue(realTaken.getCount() == 20 && n.itemCountOf(diamondKey) == 0L,
+                    "real extract takes exact 20 diamonds and empties stock");
+
+            // 5. WorldlyContainer (Furnace TOP + SIDE) multi-face Periscopes: distinct real slots (input 0 vs fuel 1)
+            // must NOT collide even though both sided handlers use local index 0, and both faces accept coal on sim insert.
+            periA.menuData().set(2, PeriscopeBlockEntity.EXTRACT_ONLY);
+            periB.menuData().set(2, PeriscopeBlockEntity.EXTRACT_ONLY);
+            BlockPos furnacePos = new BlockPos(3, 1, 2);
+            helper.setBlock(furnacePos, Blocks.FURNACE.defaultBlockState());
+            put(helper, new BlockPos(3, 1, 4), ModBlocks.BASIC_SNOW_PIPE.get());
+            put(helper, new BlockPos(3, 2, 4), ModBlocks.BASIC_SNOW_PIPE.get());
+            put(helper, new BlockPos(3, 2, 3), ModBlocks.BASIC_SNOW_PIPE.get());
+            periscope(helper, new BlockPos(3, 1, 3), Direction.NORTH);
+            periscope(helper, new BlockPos(3, 2, 2), Direction.DOWN);
+
+            FurnaceBlockEntity furnace = helper.getBlockEntity(furnacePos, FurnaceBlockEntity.class);
+            furnace.setItem(0, new ItemStack(Items.RAW_COPPER, 12));
+            furnace.setItem(1, new ItemStack(Items.COAL, 8));
+
+            GolemNetwork nf = GolemNetwork.refresh(level, helper.absolutePos(ORIGIN));
+            ItemKey rawCopperKey = ItemKey.of(new ItemStack(Items.RAW_COPPER));
+            ItemKey coalKey = ItemKey.of(new ItemStack(Items.COAL));
+            var furnaceList = nf.listItems();
+            helper.assertTrue(furnaceList.getOrDefault(rawCopperKey, 0L) == 12L
+                            && furnaceList.getOrDefault(coalKey, 0L) == 8L,
+                    "WorldlyContainer Furnace TOP+SIDE must expose both input (12 raw copper) and fuel (8 coal), got "
+                            + furnaceList.getOrDefault(rawCopperKey, 0L) + " / " + furnaceList.getOrDefault(coalKey, 0L));
+            helper.assertTrue(nf.itemCountOf(rawCopperKey) == 12L && nf.itemCountOf(coalKey) == 8L,
+                    "Furnace itemCountOf must not drop SIDE fuel due to local slot 0 collision");
+            helper.assertTrue(nf.extractItem(new ItemStack(Items.RAW_COPPER), 20, true).getCount() == 12
+                            && nf.extractItem(new ItemStack(Items.COAL), 20, true).getCount() == 8,
+                    "Furnace simulated extract sees exact input and fuel counts across faces");
+
+            furnace.clearContent();
+            helper.assertTrue(nf.insertItem(new ItemStack(Items.COAL, 128), true).isEmpty(),
+                    "Furnace TOP (input) + SIDE (fuel) must accept 128 coal across both faces on sim insert");
+            helper.assertTrue(nf.insertItem(new ItemStack(Items.COAL, 192), true).getCount() == 64,
+                    "Furnace TOP + SIDE must leave 64 remainder from 192 coal (max 128 across 2 slots)");
+            helper.assertTrue(furnace.isEmpty(), "Furnace sim insert left furnace empty");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * P2: Waiting Pattern Providers and pending bus craft orders are keyed by GlobalPos (dimension + BlockPos)
+     * so identical XYZ in different dimensions never collide, with backwards-compatible NBT persistence.
+     */
+    public static void auditCrossDimensionCraftingKeys(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        var level = helper.getLevel();
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(PROV, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        helper.setBlock(PROV.east(), Blocks.CHEST);
+
+        PatternProviderBlockEntity provider = helper.getBlockEntity(PROV, PatternProviderBlockEntity.class);
+        provider.getContainer().setItem(0, card(new PatternData(false,
+                List.of(new ItemStack(Items.RAW_IRON)), List.of(new ItemStack(Items.IRON_INGOT)))));
+        provider.setBlocking(true);
+
+        BlockPos sameBusPos = helper.absolutePos(BUS_OUT);
+        BlockPos absProv = helper.absolutePos(PROV);
+        ItemKey ingotKey = ItemKey.of(new ItemStack(Items.IRON_INGOT));
+
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.RAW_IRON, 2), false);
+            GlobalPos overworldBus = GlobalPos.of(level.dimension(), sameBusPos);
+            GlobalPos netherBus = GlobalPos.of(Level.NETHER, sameBusPos);
+            var started = n.startCrafting(Map.of(ingotKey, 2L), null, overworldBus);
+            helper.assertTrue(started.type() == GolemNetwork.StartType.STARTED, "craft started for overworld bus");
+            helper.assertTrue(n.busCraftPending(overworldBus, ingotKey), "overworld bus sees its own pending job");
+            helper.assertTrue(!n.busCraftPending(netherBus, ingotKey),
+                    "nether bus at identical XYZ must NOT collide with overworld bus pending job");
+        });
+
+        helper.runAfterDelay(35, () -> {
+            GolemNetwork n = net(helper, bay);
+            GlobalPos overworldProv = GlobalPos.of(level.dimension(), absProv);
+            GlobalPos netherProv = GlobalPos.of(Level.NETHER, absProv);
+            helper.assertTrue(n.providerBusy(overworldProv), "overworld blocking provider is busy awaiting result");
+            helper.assertTrue(!n.providerBusy(netherProv),
+                    "nether provider at identical XYZ must NOT collide with overworld busy provider");
+
+            CraftingJob job = helper.getBlockEntity(CPU, CryoCalculatorBlockEntity.class).getJob();
+            helper.assertTrue(job != null, "calculator holds active job");
+
+            // NBT round-trip preserves explicit dimensions for both requesterBus and InFlight providers
+            var registries = level.registryAccess();
+            CompoundTag tag = job.save(registries);
+            helper.assertTrue(level.dimension().identifier().toString().equals(tag.getStringOr("RequesterBusDim", "")),
+                    "saved RequesterBusDim matches level dimension");
+            var flights = tag.getListOrEmpty("InFlight");
+            helper.assertTrue(flights.size() == 1
+                            && level.dimension().identifier().toString().equals(flights.getCompoundOrEmpty(0).getStringOr("Dim", "")),
+                    "saved InFlight entry carries Dim");
+
+            tag.putString("RequesterBusDim", Level.NETHER.identifier().toString());
+            flights.getCompoundOrEmpty(0).putString("Dim", Level.END.identifier().toString());
+            CraftingJob crossDimLoaded = CraftingJob.load(tag, registries);
+            helper.assertTrue(crossDimLoaded != null, "cross-dim job loaded");
+            helper.assertTrue(GlobalPos.of(Level.NETHER, sameBusPos).equals(crossDimLoaded.requesterBus()),
+                    "loaded requesterBus preserves Nether dimension");
+            helper.assertTrue(crossDimLoaded.hasInFlight(GlobalPos.of(Level.END, absProv))
+                            && !crossDimLoaded.hasInFlight(overworldProv),
+                    "loaded InFlight preserves End dimension and does not match Overworld");
+
+            // Legacy pre-dimension save compatibility (missing RequesterBusDim and Dim)
+            CompoundTag legacyTag = tag.copy();
+            legacyTag.remove("RequesterBusDim");
+            legacyTag.getListOrEmpty("InFlight").getCompoundOrEmpty(0).remove("Dim");
+
+            CraftingJob legacyWithDim = CraftingJob.load(legacyTag, registries, Level.NETHER);
+            helper.assertTrue(legacyWithDim != null
+                            && GlobalPos.of(Level.NETHER, sameBusPos).equals(legacyWithDim.requesterBus())
+                            && legacyWithDim.hasInFlight(netherProv),
+                    "legacy NBT defaults both requesterBus and InFlight to provided level dimension");
+
+            CraftingJob legacyDeferred = CraftingJob.load(legacyTag, registries, null);
+            helper.assertTrue(legacyDeferred != null, "legacy NBT loads before setLevel");
+            legacyDeferred.resolveLegacyDimension(Level.END);
+            helper.assertTrue(GlobalPos.of(Level.END, sameBusPos).equals(legacyDeferred.requesterBus())
+                            && legacyDeferred.hasInFlight(GlobalPos.of(Level.END, absProv)),
+                    "resolveLegacyDimension rebinds legacy entries once CPU receives its level");
+
+            helper.succeed();
+        });
     }
 }

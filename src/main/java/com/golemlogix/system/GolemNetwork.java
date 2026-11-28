@@ -704,7 +704,7 @@ public final class GolemNetwork {
      * Plans and starts autocrafting of several items at once on the first free Cryo-Calculator.
      * requester = the player who gets the "ready" notification; bus = the export bus that ordered the craft itself.
      */
-    public StartResult startCrafting(Map<ItemKey, Long> targets, @Nullable UUID requester, @Nullable BlockPos bus) {
+    public StartResult startCrafting(Map<ItemKey, Long> targets, @Nullable UUID requester, @Nullable GlobalPos bus) {
         return NetworkCrafting.startCrafting(this, targets, requester, bus);
     }
 
@@ -726,12 +726,12 @@ public final class GolemNetwork {
     }
 
     /** The provider waits for the result of the previous portion (wait mode): some job has not received its output yet. */
-    public boolean providerBusy(BlockPos provider) {
+    public boolean providerBusy(GlobalPos provider) {
         return NetworkCrafting.providerBusy(this, provider);
     }
 
     /** A job ordered by this bus for this item is already running. */
-    public boolean busCraftPending(BlockPos bus, ItemKey key) {
+    public boolean busCraftPending(GlobalPos bus, ItemKey key) {
         return NetworkCrafting.busCraftPending(this, bus, key);
     }
 

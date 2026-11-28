@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.3.2 (26.1.2) - Client Startup Hotfix, Double Chest & Cross-Dimension Fixes
+
+- **Client Startup Crash Fix:**
+  - **Clean Client Boot:** fixed a crash during game startup where item visuals for the Mana Saturator (and device screens) were initialized before NeoForge finished binding item data.
+- **Storage & Autocrafting Fixes:**
+  - **Double Chest Periscopes:** connecting two Periscope Storage Buses to opposite halves of a vanilla double chest no longer doubles the reported stock or disrupts autocrafting reservations. Each Periscope still keeps its own filters, access mode, and priority.
+  - **Sided Machines:** placing multiple Periscopes on different faces of a sided machine (such as the top and side of a Furnace) now counts and transfers each face's slots accurately without collisions.
+  - **Cross-Dimension Autocrafting:** Pattern Providers and crafting buses sitting at identical coordinates in different dimensions linked via Cryo-Source Telegraph no longer block each other while waiting on crafting jobs. Existing worlds upgrade automatically.
+- **Performance:**
+  - **Essentia Cryo-Cauldron:** removed an extra storage scan on reaction completion ticks.
+  - **Client Rendering:** eliminated per-frame temporary allocations when rendering the animated Copper Golem on the Essentia Cryo-Cauldron and Vis Condenser.
+
 ## 2.3.1 (26.1.2) - Thaumaturge Polish, Multiplayer Security & Reliability Fixes
 
 - **Thaumaturge Polish & Balance:**

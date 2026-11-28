@@ -324,7 +324,9 @@ public final class GolemGameTestRegistry {
             new Test("auditterminalfluidsextractonlynovoid", AuditRegressionTests::auditTerminalFluidsExtractOnlyNoVoid, 100, 0),
             new Test("auditterminalshiftclickcapsatonestack", AuditRegressionTests::auditTerminalShiftClickCapsAtOneStack, 100, 0),
             new Test("auditcryojarintegritydetachesorphan", AuditRegressionTests::auditCryoJarIntegrityDetachesOrphan, 100, 0),
-            new Test("auditcontainerdata32bitunpacking", AuditRegressionTests::auditContainerData32BitUnpacking, 60, 0)
+            new Test("auditcontainerdata32bitunpacking", AuditRegressionTests::auditContainerData32BitUnpacking, 60, 0),
+            new Test("auditdoublechestperiscopesnodoublecount", AuditRegressionTests::auditDoubleChestPeriscopesNoDoubleCount, 100, 0),
+            new Test("auditcrossdimensioncraftingkeys", AuditRegressionTests::auditCrossDimensionCraftingKeys, 100, 0)
     );
 
     private GolemGameTestRegistry() {
