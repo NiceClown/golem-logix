@@ -18,6 +18,7 @@ import com.golemlogix.upgrade.UpgradeSpec;
 import com.golemlogix.upgrade.UpgradeType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.inventory.ContainerData;
@@ -217,13 +218,14 @@ public class PatternProviderBlockEntity extends BlockEntity {
         if (!net.isOnline() || !net.isDeviceActive(pos)) {
             return false;
         }
+        GlobalPos self = GlobalPos.of(level.dimension(), pos);
         boolean moved = false;
         for (int i = 0; i < RETURN_SLOTS; i++) {
             ItemStack in = returns.getItem(i);
             if (in.isEmpty()) {
                 continue;
             }
-            ItemStack leftover = net.insertFromMachine(in.copy());
+            ItemStack leftover = net.insertFromMachine(in.copy(), null, self);
             if (leftover.getCount() != in.getCount()) {
                 returns.setItem(i, leftover);
                 moved = true;
@@ -232,7 +234,7 @@ public class PatternProviderBlockEntity extends BlockEntity {
         for (int i = 0; i < RETURN_TANKS; i++) {
             FluidStack f = returnFluid(i);
             if (!f.isEmpty()) {
-                int n = net.insertFluidFromMachine(f.copy(), null);
+                int n = net.insertFluidFromMachine(f.copy(), null, self);
                 if (n > 0) {
                     int left = Math.max(0, f.getAmount() - n);
                     returnFluids.set(i, left == 0 ? FluidResource.EMPTY : FluidResource.of(f), left);

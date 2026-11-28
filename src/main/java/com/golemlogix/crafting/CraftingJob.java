@@ -252,26 +252,46 @@ public class CraftingJob {
         return false;
     }
 
+    /** Whether this job is currently waiting on a result for a specific item from the given provider. */
+    public boolean hasInFlight(GlobalPos provider, ItemKey key) {
+        for (InFlight f : inFlight) {
+            if (provider.equals(f.provider) && f.left.getOrDefault(key, 0L) > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // ----------------------------------------------------------------- absorb
 
     /** Takes from the incoming stack what the job is waiting for. Returns the rest. */
     public ItemStack absorb(ItemStack stack) {
+        return absorb(stack, null);
+    }
+
+    /** Takes from the incoming stack what the job is waiting for, settling {@code provider}'s own batch first. */
+    public ItemStack absorb(ItemStack stack, @Nullable GlobalPos provider) {
         if (awaiting.isEmpty() || stack.isEmpty()) {
             return stack;
         }
-        int take = absorbAmount(ItemKey.of(stack), stack.getCount());
+        int take = absorbAmount(ItemKey.of(stack), stack.getCount(), provider);
         return take == 0 ? stack : stack.copyWithCount(stack.getCount() - take);
     }
 
     /** Takes from an incoming fluid what the job is waiting for (a fluid output of a processing pattern). Returns the mB taken. */
     public int absorbFluid(FluidStack fluid) {
+        return absorbFluid(fluid, null);
+    }
+
+    /** Takes from an incoming fluid what the job is waiting for, settling {@code provider}'s own batch first. */
+    public int absorbFluid(FluidStack fluid, @Nullable GlobalPos provider) {
         if (awaiting.isEmpty() || fluid.isEmpty()) {
             return 0;
         }
-        return absorbAmount(Ingredients.fluidKey(fluid), fluid.getAmount());
+        return absorbAmount(Ingredients.fluidKey(fluid), fluid.getAmount(), provider);
     }
 
-    private int absorbAmount(ItemKey key, int available) {
+    private int absorbAmount(ItemKey key, int available, @Nullable GlobalPos provider) {
         long want = awaiting.getOrDefault(key, 0L);
         if (want <= 0) {
             return 0;
@@ -284,15 +304,27 @@ public class CraftingJob {
             awaiting.put(key, left);
         }
         inventory.merge(key, (long) take, Long::sum);
-        settleInFlight(key, take);
+        settleInFlight(key, take, provider);
         return take;
     }
 
-    /** A received result closes portions in order (first unloaded, first received). */
-    private void settleInFlight(ItemKey key, long amount) {
+    /** A received result closes the returning provider's own portions first, then remaining portions in FIFO order. */
+    private void settleInFlight(ItemKey key, long amount, @Nullable GlobalPos provider) {
+        if (provider != null) {
+            amount = settleInFlightPass(key, amount, provider);
+        }
+        if (amount > 0) {
+            settleInFlightPass(key, amount, null);
+        }
+    }
+
+    private long settleInFlightPass(ItemKey key, long amount, @Nullable GlobalPos onlyProvider) {
         Iterator<InFlight> it = inFlight.iterator();
         while (it.hasNext() && amount > 0) {
             InFlight f = it.next();
+            if (onlyProvider != null && !onlyProvider.equals(f.provider)) {
+                continue;
+            }
             long need = f.left.getOrDefault(key, 0L);
             if (need <= 0) {
                 continue;
@@ -308,6 +340,7 @@ public class CraftingJob {
                 it.remove();
             }
         }
+        return amount;
     }
 
     // ------------------------------------------------------------------- tick

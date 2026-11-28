@@ -223,11 +223,11 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         }
 
         @Override
-        public ItemStack absorb(ItemStack stack) {
+        public ItemStack absorb(ItemStack stack, @Nullable net.minecraft.core.GlobalPos provider) {
             if (job == null) {
                 return stack;
             }
-            ItemStack rest = job.absorb(stack);
+            ItemStack rest = job.absorb(stack, provider);
             if (rest.getCount() != stack.getCount()) {
                 setChanged();
             }
@@ -235,8 +235,8 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         }
 
         @Override
-        public int absorbFluid(FluidStack fluid) {
-            int n = job == null ? 0 : job.absorbFluid(fluid);
+        public int absorbFluid(FluidStack fluid, @Nullable net.minecraft.core.GlobalPos provider) {
+            int n = job == null ? 0 : job.absorbFluid(fluid, provider);
             if (n > 0) {
                 setChanged();
             }

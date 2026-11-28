@@ -61,6 +61,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.DirectionalBlock;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.entity.FurnaceBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.ChestType;
@@ -794,6 +795,148 @@ public final class AuditRegressionTests {
                             && legacyDeferred.hasInFlight(GlobalPos.of(Level.END, absProv)),
                     "resolveLegacyDimension rebinds legacy entries once CPU receives its level");
 
+            helper.succeed();
+        });
+    }
+
+    /**
+     * P1: When two blocking Pattern Providers both have an in-flight batch of the same item and a result returns
+     * through the second provider, the second provider's own batch settles first so provider 1 stays busy.
+     */
+    public static void auditProviderReturnSettlesOwnBatch(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        var level = helper.getLevel();
+        helper.setBlock(CPU, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        BlockPos prov1Pos = PROV;
+        BlockPos prov2Pos = BUS_OUT;
+        helper.setBlock(prov1Pos, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        helper.setBlock(prov2Pos, ModBlocks.PATTERN_PROVIDER.get().defaultBlockState());
+        BlockPos chest1Pos = prov1Pos.east();
+        BlockPos chest2Pos = prov2Pos.north();
+        helper.setBlock(chest1Pos, Blocks.CHEST);
+        helper.setBlock(chest2Pos, Blocks.CHEST);
+
+        PatternData smeltIron = new PatternData(false,
+                List.of(new ItemStack(Items.RAW_IRON)), List.of(new ItemStack(Items.IRON_INGOT)));
+        PatternProviderBlockEntity p1 = helper.getBlockEntity(prov1Pos, PatternProviderBlockEntity.class);
+        PatternProviderBlockEntity p2 = helper.getBlockEntity(prov2Pos, PatternProviderBlockEntity.class);
+        p1.getContainer().setItem(0, card(smeltIron));
+        p2.getContainer().setItem(0, card(smeltIron));
+        p1.setBlocking(true);
+        p2.setBlocking(true);
+
+        GlobalPos gp1 = GlobalPos.of(level.dimension(), helper.absolutePos(prov1Pos));
+        GlobalPos gp2 = GlobalPos.of(level.dimension(), helper.absolutePos(prov2Pos));
+        ItemKey ingotKey = ItemKey.of(new ItemStack(Items.IRON_INGOT));
+
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.RAW_IRON, 3), false);
+            var started = n.startCrafting(Map.of(ingotKey, 3L), null, null);
+            helper.assertTrue(started.type() == GolemNetwork.StartType.STARTED, "3x iron craft started");
+        });
+
+        helper.runAfterDelay(30, () -> {
+            GolemNetwork n = net(helper, bay);
+            ChestBlockEntity c1 = helper.getBlockEntity(chest1Pos, ChestBlockEntity.class);
+            ChestBlockEntity c2 = helper.getBlockEntity(chest2Pos, ChestBlockEntity.class);
+            helper.assertTrue(c1.countItem(Items.RAW_IRON) == 1 && c2.countItem(Items.RAW_IRON) == 1,
+                    "both providers pushed 1 raw iron each, got c1=" + c1.countItem(Items.RAW_IRON) + " c2=" + c2.countItem(Items.RAW_IRON));
+            helper.assertTrue(n.providerBusy(gp1) && n.providerBusy(gp2), "both blocking providers are busy");
+
+            // Return 1 iron ingot specifically through provider 2 -> provider 2 must be freed, NOT provider 1
+            p2.getReturns().setItem(0, new ItemStack(Items.IRON_INGOT, 1));
+        });
+
+        helper.runAfterDelay(65, () -> {
+            GolemNetwork n = net(helper, bay);
+            ChestBlockEntity c1 = helper.getBlockEntity(chest1Pos, ChestBlockEntity.class);
+            ChestBlockEntity c2 = helper.getBlockEntity(chest2Pos, ChestBlockEntity.class);
+            helper.assertTrue(c1.countItem(Items.RAW_IRON) == 1,
+                    "provider 1 must remain busy and NOT receive batch 3, c1=" + c1.countItem(Items.RAW_IRON));
+            helper.assertTrue(c2.countItem(Items.RAW_IRON) == 2,
+                    "provider 2 must settle its own batch and immediately accept batch 3, c2=" + c2.countItem(Items.RAW_IRON));
+            helper.assertTrue(n.providerBusy(gp1) && n.providerBusy(gp2), "both providers busy again (p1 original, p2 batch 3)");
+
+            // Return batch 3 through provider 2 -> provider 2 becomes free while provider 1 still waits
+            p2.getReturns().setItem(0, new ItemStack(Items.IRON_INGOT, 1));
+        });
+
+        helper.runAfterDelay(85, () -> {
+            GolemNetwork n = net(helper, bay);
+            helper.assertTrue(!n.providerBusy(gp2) && n.providerBusy(gp1),
+                    "after returning through p2, p2 must be free and p1 still busy");
+            p1.getReturns().setItem(0, new ItemStack(Items.IRON_INGOT, 1));
+        });
+
+        helper.runAfterDelay(105, () -> {
+            GolemNetwork n = net(helper, bay);
+            helper.assertTrue(!n.providerBusy(gp1) && !n.providerBusy(gp2), "both providers idle after final return");
+            helper.assertTrue(n.itemCountOf(ingotKey) == 3L, "all 3 iron ingots stored, got " + n.itemCountOf(ingotKey));
+            helper.succeed();
+        });
+    }
+
+    /**
+     * P2 + Perf: Two Periscopes on both halves of a Cryo-Mixer must not double-count its output tray; two Periscopes
+     * on two faces of one Copper Tank must not double-count water; two Periscopes on distinct chests take the fast path.
+     */
+    public static void auditCryoMixerAndSharedTankDedup(GameTestHelper helper) {
+        buildArray(helper, 0, 0);
+        powered(helper);
+        var level = helper.getLevel();
+
+        // East pipe branch: (7,1,6) -> Periscopes facing EAST at (8,1,6) and (8,2,6) targeting both halves of a Cryo-Mixer at (9,1,6)
+        put(helper, new BlockPos(7, 1, 6), ModBlocks.BASIC_SNOW_PIPE.get());
+        put(helper, new BlockPos(7, 2, 6), ModBlocks.BASIC_SNOW_PIPE.get());
+        periscope(helper, new BlockPos(8, 1, 6), Direction.EAST);
+        periscope(helper, new BlockPos(8, 2, 6), Direction.EAST);
+        BlockPos mixerBase = new BlockPos(9, 1, 6);
+        CryoMixerBlock.place(level, helper.absolutePos(mixerBase), Direction.NORTH, ModBlocks.CRYO_MIXER.get());
+        CryoMixerBlockEntity mixer = helper.getBlockEntity(mixerBase, CryoMixerBlockEntity.class);
+        mixer.getOutput().setItem(0, new ItemStack(Items.ICE, 20));
+
+        // North branch from NW corner bushing (4,1,4): Copper Tank at (3,1,2) with two Periscopes on SOUTH (3,1,3) and EAST (4,1,2)
+        put(helper, new BlockPos(3, 1, 4), ModBlocks.BASIC_SNOW_PIPE.get());
+        put(helper, new BlockPos(4, 1, 3), ModBlocks.BASIC_SNOW_PIPE.get());
+        periscope(helper, new BlockPos(3, 1, 3), Direction.NORTH);
+        periscope(helper, new BlockPos(4, 1, 2), Direction.WEST);
+        BlockPos tankPos = new BlockPos(3, 1, 2);
+        helper.setBlock(tankPos, ModBlocks.COPPER_TANK.get().defaultBlockState());
+        ResourceHandler<FluidResource> tankCap = level.getCapability(Capabilities.Fluid.BLOCK, helper.absolutePos(tankPos), Direction.UP);
+        helper.assertTrue(tankCap != null, "copper tank capability present");
+        try (Transaction tx = Transaction.openRoot()) {
+            helper.assertTrue(tankCap.insert(FluidResource.of(Fluids.WATER), 1000, tx) == 1000, "inserted 1000 mB water");
+            tx.commit();
+        }
+
+        ItemKey iceKey = ItemKey.of(new ItemStack(Items.ICE));
+        helper.runAfterDelay(20, () -> {
+            GolemNetwork n = GolemNetwork.refresh(level, helper.absolutePos(ORIGIN));
+            helper.assertTrue(n.isOnline(), "network online");
+
+            // Cryo-Mixer two halves: 20 ice visible, 20 sim-extractable, canonical skipTarget, 20 real-extractable
+            helper.assertTrue(n.listItems().getOrDefault(iceKey, 0L) == 20L,
+                    "Cryo-Mixer listItems must show 20 ice across both halves, got " + n.listItems().getOrDefault(iceKey, 0L));
+            helper.assertTrue(n.itemCountOf(iceKey) == 20L,
+                    "Cryo-Mixer itemCountOf must show 20 ice, got " + n.itemCountOf(iceKey));
+            helper.assertTrue(n.extractItem(new ItemStack(Items.ICE), 40, true).getCount() == 20,
+                    "Cryo-Mixer sim extract(40) must return 20");
+            helper.assertTrue(n.extractItem(new ItemStack(Items.ICE), 20, true, helper.absolutePos(mixerBase.above())).isEmpty(),
+                    "skipTarget on Cryo-Mixer top half must skip bottom half too");
+            helper.assertTrue(n.extractItem(new ItemStack(Items.ICE), 40, false).getCount() == 20
+                            && n.itemCountOf(iceKey) == 0L,
+                    "Cryo-Mixer real extract(40) takes exact 20 ice and empties tray");
+
+            // Shared Copper Tank on two faces: 1000 mB water, not 2000 mB
+            helper.assertTrue(n.fluidCountOf(Fluids.WATER) == 1000L,
+                    "shared Copper Tank must report 1000 mB water across 2 faces, got " + n.fluidCountOf(Fluids.WATER));
+            long listedWater = n.listFluids().stream()
+                    .filter(f -> f.getFluid() == Fluids.WATER)
+                    .mapToLong(FluidStack::getAmount).sum();
+            helper.assertTrue(listedWater == 1000L, "listFluids must report 1000 mB water, got " + listedWater);
+            helper.assertTrue(n.extractFluid(new FluidStack(Fluids.WATER, 2000), 2000, true).getAmount() == 1000,
+                    "sim extractFluid(2000) from shared Copper Tank must return 1000 mB");
             helper.succeed();
         });
     }

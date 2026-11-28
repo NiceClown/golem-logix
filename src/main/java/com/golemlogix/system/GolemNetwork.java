@@ -747,16 +747,26 @@ public final class GolemNetwork {
 
     /** Insertion from a machine: first satisfies active autocraft jobs, the rest goes to storage. */
     public ItemStack insertFromMachine(ItemStack stack) {
-        return NetworkCrafting.insertFromMachine(this, stack, null);
+        return NetworkCrafting.insertFromMachine(this, stack, null, null);
     }
 
     /** skipTarget = the container the items were just taken from (they are not put back into it). */
     public ItemStack insertFromMachine(ItemStack stack, @Nullable BlockPos skipTarget) {
-        return NetworkCrafting.insertFromMachine(this, stack, skipTarget);
+        return NetworkCrafting.insertFromMachine(this, stack, skipTarget, null);
+    }
+
+    /** Insertion from a specific Pattern Provider: settles its own waiting batch first. */
+    public ItemStack insertFromMachine(ItemStack stack, @Nullable BlockPos skipTarget, @Nullable GlobalPos provider) {
+        return NetworkCrafting.insertFromMachine(this, stack, skipTarget, provider);
     }
 
     /** Fluid from a machine: first satisfies waiting jobs, the rest goes into storage. Returns the mB taken. */
     public int insertFluidFromMachine(FluidStack fluid, @Nullable BlockPos skipTarget) {
-        return NetworkCrafting.insertFluidFromMachine(this, fluid, skipTarget);
+        return NetworkCrafting.insertFluidFromMachine(this, fluid, skipTarget, null);
+    }
+
+    /** Fluid from a specific Pattern Provider: settles its own waiting batch first. Returns the mB taken. */
+    public int insertFluidFromMachine(FluidStack fluid, @Nullable BlockPos skipTarget, @Nullable GlobalPos provider) {
+        return NetworkCrafting.insertFluidFromMachine(this, fluid, skipTarget, provider);
     }
 }

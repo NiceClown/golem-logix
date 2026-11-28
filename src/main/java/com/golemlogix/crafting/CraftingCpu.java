@@ -3,6 +3,7 @@ package com.golemlogix.crafting;
 import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.ItemKey;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -29,12 +30,22 @@ public interface CraftingCpu {
     long wants(ItemKey key);
 
     /** Accept a machine's result: returns what the job does not need. */
-    ItemStack absorb(ItemStack stack);
+    default ItemStack absorb(ItemStack stack) {
+        return absorb(stack, null);
+    }
+
+    /** Accept a machine's result, settling {@code provider}'s own waiting batch first when known. */
+    ItemStack absorb(ItemStack stack, @Nullable GlobalPos provider);
 
     /** Accept a fluid a machine gives back: returns the mB the job took. */
     default int absorbFluid(FluidStack fluid) {
+        return absorbFluid(fluid, null);
+    }
+
+    /** Accept a fluid a machine gives back, settling {@code provider}'s own waiting batch first when known. */
+    default int absorbFluid(FluidStack fluid, @Nullable GlobalPos provider) {
         CraftingJob job = getJob();
-        return job == null ? 0 : job.absorbFluid(fluid);
+        return job == null ? 0 : job.absorbFluid(fluid, provider);
     }
 
     /** The processor block was removed from the world (or the core disappeared together with its calculator in the mainframe). */

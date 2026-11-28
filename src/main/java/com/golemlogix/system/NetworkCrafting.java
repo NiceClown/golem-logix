@@ -267,30 +267,54 @@ final class NetworkCrafting {
         return (int) Math.min(n, Integer.MAX_VALUE);
     }
 
-    static ItemStack insertFromMachine(GolemNetwork net, ItemStack stack, @Nullable BlockPos skipTarget) {
+    static ItemStack insertFromMachine(GolemNetwork net, ItemStack stack, @Nullable BlockPos skipTarget,
+                                       @Nullable GlobalPos provider) {
         ItemStack rest = stack;
+        if (provider != null && !rest.isEmpty()) {
+            ItemKey key = ItemKey.of(rest);
+            for (CraftingCpu cpu : net.cpus) {
+                if (rest.isEmpty()) {
+                    break;
+                }
+                if (!cpu.isRemoved() && cpu.getJob() != null && cpu.getJob().hasInFlight(provider, key)) {
+                    rest = cpu.absorb(rest, provider);
+                }
+            }
+        }
         for (CraftingCpu cpu : net.cpus) {
             if (rest.isEmpty()) {
                 break;
             }
             if (!cpu.isRemoved()) {
-                rest = cpu.absorb(rest);
+                rest = cpu.absorb(rest, provider);
             }
         }
         return net.insertItem(rest, false, skipTarget);
     }
 
-    static int insertFluidFromMachine(GolemNetwork net, FluidStack fluid, @Nullable BlockPos skipTarget) {
+    static int insertFluidFromMachine(GolemNetwork net, FluidStack fluid, @Nullable BlockPos skipTarget,
+                                      @Nullable GlobalPos provider) {
         if (fluid.isEmpty()) {
             return 0;
         }
         int taken = 0;
+        if (provider != null) {
+            ItemKey key = Ingredients.fluidKey(fluid);
+            for (CraftingCpu cpu : net.cpus) {
+                if (taken >= fluid.getAmount()) {
+                    break;
+                }
+                if (!cpu.isRemoved() && cpu.getJob() != null && cpu.getJob().hasInFlight(provider, key)) {
+                    taken += cpu.absorbFluid(fluid.copyWithAmount(fluid.getAmount() - taken), provider);
+                }
+            }
+        }
         for (CraftingCpu cpu : net.cpus) {
             if (taken >= fluid.getAmount()) {
                 break;
             }
             if (!cpu.isRemoved()) {
-                taken += cpu.absorbFluid(fluid.copyWithAmount(fluid.getAmount() - taken));
+                taken += cpu.absorbFluid(fluid.copyWithAmount(fluid.getAmount() - taken), provider);
             }
         }
         return taken >= fluid.getAmount() ? taken
