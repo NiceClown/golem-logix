@@ -4,6 +4,7 @@ import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.ItemKey;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.Nullable;
 
@@ -42,6 +43,12 @@ public interface CraftingCpu {
     /** The block the processor stands in (for the channel, the monitor and tooltips). */
     BlockPos cpuPos();
 
+    /** The level the processor stands in (may differ from the network walk's starting level across a Telegraph). */
+    @Nullable
+    default Level cpuLevel() {
+        return null;
+    }
+
     /** Core number in the mainframe (1..), 0 for a standalone calculator. */
     default int core() {
         return 0;
@@ -60,6 +67,7 @@ public interface CraftingCpu {
 
     /** Whether it can take a job now: the block has a channel in this network. */
     default boolean canRun(GolemNetwork net) {
-        return net.isDeviceActive(cpuPos());
+        Level l = cpuLevel();
+        return l != null ? net.isDeviceActive(l, cpuPos()) : net.isDeviceActive(cpuPos());
     }
 }

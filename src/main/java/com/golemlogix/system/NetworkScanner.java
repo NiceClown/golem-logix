@@ -264,8 +264,8 @@ final class NetworkScanner {
         } else if (be instanceof CryoMainframeBlockEntity mainframe) {
             // Mainframe cores are separate processors, but they share one channel (the owner block's)
             net.cpus.addAll(mainframe.cores());
-        } else if (be instanceof SecurityTerminalBlockEntity sec && net.security == null) {
-            net.security = sec;
+        } else if (be instanceof SecurityTerminalBlockEntity sec && !net.securityTerminals.contains(sec)) {
+            net.securityTerminals.add(sec);
         }
         if (block instanceof PeriscopeStorageBusBlock) {
             Direction facing = state.getValue(PeriscopeStorageBusBlock.FACING);

@@ -38,6 +38,8 @@ public class PeriscopeBlockEntity extends BlockEntity {
     private final OwnedContainer filters = new OwnedContainer(FILTER_SLOTS, this, s -> true);
     private int access = BOTH;
     private boolean denyList;
+    /** Last observed server-side {@link #storageEnabled()} state (-1 = unknown, 0 = disabled, 1 = enabled). */
+    private int lastStorageEnabled = -1;
     @Nullable
     private TargetCaps caps;
 
@@ -57,6 +59,7 @@ public class PeriscopeBlockEntity extends BlockEntity {
 
     private void invalidateNetwork() {
         if (level != null && !level.isClientSide()) {
+            storageEnabled();
             GolemNetwork.clearCache();
         }
     }
@@ -123,15 +126,33 @@ public class PeriscopeBlockEntity extends BlockEntity {
     }
 
     public boolean storageEnabled() {
+        boolean enabled;
         if (level == null || !upgrades.has(UpgradeType.REDSTONE)) {
-            return true;
+            enabled = true;
+        } else {
+            boolean powered = level.hasNeighborSignal(worldPosition);
+            enabled = switch (redstone.mode()) {
+                case HIGH -> powered;
+                case LOW -> !powered;
+                default -> true;
+            };
         }
-        boolean powered = level.hasNeighborSignal(worldPosition);
-        return switch (redstone.mode()) {
-            case HIGH -> powered;
-            case LOW -> !powered;
-            default -> true;
-        };
+        if (level != null && !level.isClientSide()) {
+            lastStorageEnabled = enabled ? 1 : 0;
+        }
+        return enabled;
+    }
+
+    /** Invalidates the network cache only when a redstone-gated periscope actually flips enabled state. */
+    public void onNeighborChanged() {
+        if (level == null || level.isClientSide() || !upgrades.has(UpgradeType.REDSTONE)) {
+            return;
+        }
+        int prev = lastStorageEnabled;
+        boolean now = storageEnabled();
+        if (prev < 0 || (prev == 1) != now) {
+            invalidateNetwork();
+        }
     }
 
     /** Window data: 0 = priority, 1 = redstone mode, 2 = access (BOTH, INSERT_ONLY, EXTRACT_ONLY), 3 = deny list. */

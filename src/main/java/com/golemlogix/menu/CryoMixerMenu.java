@@ -32,8 +32,8 @@ public class CryoMixerMenu extends GolemMenu {
     private final ContainerData data;
 
     public static CryoMixerMenu fromNetwork(int id, Inventory inv, RegistryFriendlyByteBuf buf) {
-        return new CryoMixerMenu(id, inv, new SimpleContainer(1), new SimpleContainer(UpgradeSpec.MIXER.slots()), new SimpleContainerData(9),
-                null, ContainerLevelAccess.NULL);
+        return new CryoMixerMenu(id, inv, new SimpleContainer(1), new SimpleContainer(UpgradeSpec.MIXER.slots()),
+                new SimpleContainerData(CryoMixerBlockEntity.DATA_COUNT), null, ContainerLevelAccess.NULL);
     }
 
     public CryoMixerMenu(int id, Inventory inv, Container output, Container upgrades, ContainerData data,
@@ -63,11 +63,11 @@ public class CryoMixerMenu extends GolemMenu {
     }
 
     public int progress() {
-        return data.get(2);
+        return unpackInt(data, 2, 9);
     }
 
     public int ticksPerBlock() {
-        return Math.max(1, data.get(3));
+        return Math.max(1, unpackInt(data, 3, 10));
     }
 
     public CryoMixerBlockEntity.Mode mode() {

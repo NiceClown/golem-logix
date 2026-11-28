@@ -638,7 +638,8 @@ public class InterfaceBlockEntity extends BlockEntity {
                 stockUnsatisfied = true;
                 continue;
             }
-            int need = wanted(i) - have.getCount();
+            int target = have.isEmpty() ? wanted(i) : Math.min(wanted(i), have.getMaxStackSize());
+            int need = target - have.getCount();
             if (need <= 0) {
                 continue;
             }
@@ -648,7 +649,9 @@ public class InterfaceBlockEntity extends BlockEntity {
             }
             ItemStack plain = Fuzzy.plain(cfg).copyWithCount(1);
             int ask = Math.min(need, budget - moved);
-            ItemStack got = net.extractItem(have.isEmpty() ? plain : have.copyWithCount(1), ask, false);
+            ItemStack directTemplate = have.isEmpty() ? plain : have.copyWithCount(1);
+            int directAsk = Math.min(ask, directTemplate.getMaxStackSize());
+            ItemStack got = directAsk > 0 ? net.extractItem(directTemplate, directAsk, false) : ItemStack.EMPTY;
             if (got.isEmpty() && fuzzy && have.isEmpty()) {
                 if (netKeys == null) {
                     netKeys = net.listItemsShared().keySet();
@@ -660,6 +663,7 @@ public class InterfaceBlockEntity extends BlockEntity {
                 toCraft = queueMissingCraft(net, plain, need, toCraft);
                 continue;
             }
+            int effectiveTarget = Math.min(wanted(i), got.getMaxStackSize());
             if (have.isEmpty()) {
                 stock.setItem(i, got);
             } else {
@@ -667,7 +671,7 @@ public class InterfaceBlockEntity extends BlockEntity {
                 stock.setChanged();
             }
             moved += got.getCount();
-            if (got.getCount() < need) {
+            if (stock.getItem(i).getCount() < effectiveTarget) {
                 stockUnsatisfied = true;
             }
         }
@@ -680,8 +684,9 @@ public class InterfaceBlockEntity extends BlockEntity {
         if (have.isEmpty()) {
             return 0;
         }
+        int target = Math.min(wanted(slot), have.getMaxStackSize());
         int excess = cfg.isEmpty() || isFluidSlot(slot) || !Fuzzy.matches(cfg, have, fuzzy)
-                ? have.getCount() : have.getCount() - wanted(slot);
+                ? have.getCount() : have.getCount() - target;
         if (excess <= 0) {
             return 0;
         }
@@ -699,7 +704,11 @@ public class InterfaceBlockEntity extends BlockEntity {
 
     private static ItemStack extractFirstFuzzy(GolemNetwork net, ItemStack cfg, Set<ItemKey> netKeys, int ask) {
         for (ItemKey k : Fuzzy.candidates(cfg, netKeys, true)) {
-            ItemStack got = net.extractItem(k.toStack(1), ask, false);
+            int limit = Math.min(ask, k.stack().getMaxStackSize());
+            if (limit <= 0) {
+                continue;
+            }
+            ItemStack got = net.extractItem(k.toStack(1), limit, false);
             if (!got.isEmpty()) {
                 return got;
             }

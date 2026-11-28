@@ -67,4 +67,9 @@ public final class ThaumaturgeCompat {
                 ? ThaumaturgeBridge.interactPhial(stack, level, be, player, hand)
                 : ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
+
+    /** Refreshes visual pipe connections on loaded horizontal adjacent Thaumaturge essentia tubes; returns true once all 4 sides were loaded. */
+    public static boolean refreshAdjacentTubes(Level level, BlockPos cauldronPos) {
+        return !isLoaded() || ThaumaturgeBridge.refreshAdjacentTubes(level, cauldronPos);
+    }
 }

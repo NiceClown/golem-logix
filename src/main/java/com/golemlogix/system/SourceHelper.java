@@ -19,7 +19,9 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Universal Source helper: the mod's unlimited blocks (Creative Source Jar, Resonator)
@@ -35,6 +37,29 @@ public class SourceHelper {
     private static Method canProvideMethod = null;
     private static Method canAcceptMethod = null;
     private static volatile boolean checkedArsNouveau = false;
+    /** Whether a concrete ISourceTile class overrides 2-arg removeSource(int, boolean) / addSource(int, boolean). */
+    private static final Map<Class<?>, Boolean> OVERRIDES_REMOVE = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Boolean> OVERRIDES_ADD = new ConcurrentHashMap<>();
+
+    private static boolean overridesRemoveSource(Class<?> cls) {
+        return OVERRIDES_REMOVE.computeIfAbsent(cls, c -> {
+            try {
+                return c.getMethod("removeSource", int.class, boolean.class).getDeclaringClass() != sourceTileClass;
+            } catch (Throwable t) {
+                return false;
+            }
+        });
+    }
+
+    private static boolean overridesAddSource(Class<?> cls) {
+        return OVERRIDES_ADD.computeIfAbsent(cls, c -> {
+            try {
+                return c.getMethod("addSource", int.class, boolean.class).getDeclaringClass() != sourceTileClass;
+            } catch (Throwable t) {
+                return false;
+            }
+        });
+    }
 
     private static void initArsNouveau() {
         if (checkedArsNouveau) {
@@ -100,6 +125,16 @@ public class SourceHelper {
 
         /** Takes up to amount, returns what was taken. */
         int drain(int amount);
+
+        /** Collects the underlying leaf suppliers (flattening pass-throughs such as Cryo-Diodes) for deduplication. */
+        default void collectLeafSuppliers(Set<Supplier> out) {
+            out.add(this);
+        }
+
+        /** Drains up to amount from leaf suppliers not yet in {@code seen}, recording each drained leaf in {@code seen}. */
+        default int drainUnique(int amount, Set<Supplier> seen) {
+            return seen.add(this) ? drain(amount) : 0;
+        }
     }
 
     private static final class InfiniteSupplier implements Supplier {
@@ -142,7 +177,10 @@ public class SourceHelper {
                 if (!(boolean) canProvideMethod.invoke(be)) {
                     return 0;
                 }
-                return (int) getSourceMethod.invoke(be);
+                if (overridesRemoveSource(be.getClass())) {
+                    return Math.max(0, (int) removeSourceMethod.invoke(be, Integer.MAX_VALUE, true));
+                }
+                return Math.max(0, (int) getSourceMethod.invoke(be));
             } catch (Throwable t) {
                 return 0;
             }
@@ -153,16 +191,34 @@ public class SourceHelper {
             if (be.isRemoved() || amount <= 0) {
                 return 0;
             }
-            int take = Math.min(amount, available());
-            if (take <= 0) {
-                return 0;
-            }
             try {
+                if (!(boolean) canProvideMethod.invoke(be)) {
+                    return 0;
+                }
+                if (overridesRemoveSource(be.getClass())) {
+                    return Math.max(0, (int) removeSourceMethod.invoke(be, amount, false));
+                }
+                int before = (int) getSourceMethod.invoke(be);
+                int take = Math.min(amount, before);
+                if (take <= 0) {
+                    return 0;
+                }
                 removeSourceMethod.invoke(be, take, false);
-                return take;
+                int after = (int) getSourceMethod.invoke(be);
+                return Math.max(0, before - after);
             } catch (Throwable t) {
                 return 0;
             }
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            return this == o || (o instanceof ArsSupplier other && be == other.be);
+        }
+
+        @Override
+        public int hashCode() {
+            return System.identityHashCode(be);
         }
     }
 
@@ -250,13 +306,18 @@ public class SourceHelper {
             if (!(boolean) canAcceptMethod.invoke(be)) {
                 return 0;
             }
-            int max = (int) getMaxSourceMethod.invoke(be);
-            int cur = (int) getSourceMethod.invoke(be);
-            int add = Math.max(0, Math.min(amount, max - cur));
-            if (add > 0 && !simulate) {
-                addSourceMethod.invoke(be, add, false);
+            if (overridesAddSource(be.getClass())) {
+                return Math.max(0, (int) addSourceMethod.invoke(be, amount, simulate));
             }
-            return add;
+            int max = (int) getMaxSourceMethod.invoke(be);
+            int before = (int) getSourceMethod.invoke(be);
+            int add = Math.max(0, Math.min(amount, max - before));
+            if (add <= 0 || simulate) {
+                return add;
+            }
+            addSourceMethod.invoke(be, add, false);
+            int after = (int) getSourceMethod.invoke(be);
+            return Math.max(0, after - before);
         } catch (Throwable ignored) {
             return 0;
         }

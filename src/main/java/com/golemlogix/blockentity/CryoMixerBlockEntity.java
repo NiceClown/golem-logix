@@ -337,6 +337,8 @@ public class CryoMixerBlockEntity extends BlockEntity {
         setChanged();
     }
 
+    public static final int DATA_COUNT = 11;
+
     public ContainerData menuData() {
         return new ContainerData() {
             @Override
@@ -344,13 +346,15 @@ public class CryoMixerBlockEntity extends BlockEntity {
                 return switch (index) {
                     case 0 -> water.getFluidAmount();
                     case 1 -> cryo.getFluidAmount();
-                    case 2 -> progress;
-                    case 3 -> ticksPerBlock();
+                    case 2 -> progress & 0xFFFF;
+                    case 3 -> ticksPerBlock() & 0xFFFF;
                     case 4 -> mode.ordinal();
                     case 5 -> status;
                     case 6 -> upgrades.count(UpgradeType.SPEED);
                     case 7 -> redstone.mode().ordinal();
                     case 8 -> autoOutput ? 1 : 0;
+                    case 9 -> progress >>> 16;
+                    case 10 -> ticksPerBlock() >>> 16;
                     default -> 0;
                 };
             }
@@ -370,7 +374,7 @@ public class CryoMixerBlockEntity extends BlockEntity {
 
             @Override
             public int getCount() {
-                return 9;
+                return DATA_COUNT;
             }
         };
     }

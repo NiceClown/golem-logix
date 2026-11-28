@@ -154,8 +154,8 @@ public class VisCondenserRenderer implements BlockEntityRenderer<VisCondenserBlo
 
         // State-colored runes on the lower plinth
         renderRunes(vc, p, status, danger, floorPaused, work, time, light);
-        // Live brass Aura manometer dial with red 10% danger arc, gold floor pip, and animated needle
-        renderManometer(vc, pose, needle, be.clientThreshold, be.clientMode, be.clientBase, danger, light);
+        // Live brass Aura manometer dial with configured red danger arc, gold floor pip, and animated needle
+        renderManometer(vc, pose, needle, be.clientThreshold, be.clientMode, be.clientBase, be.clientLowVisPercent, danger, light);
         // Rotating top brass armillary rings + glowing Vis focus bead
         renderArmillary(vc, buffers, solid, baked, pose, phase, work, danger, time, lightTop);
         // Swirling luminous Vis crystal vortex inside the frost condenser
@@ -210,23 +210,27 @@ public class VisCondenserRenderer implements BlockEntityRenderer<VisCondenserBlo
     }
 
     private static void renderManometer(VertexConsumer vc, PoseStack pose, float needleFrac, int threshold, int mode, int base,
-                                        boolean danger, int light) {
+                                        int lowPct, boolean danger, int light) {
         PoseStack.Pose p = pose.last();
         TextureAtlasSprite glowSprite = sprite(GLOW);
         // Cream parchment dial face recessed inside brass bezel
         box(vc, p, DIAL_CX - 2.75f, DIAL_CY - 2.75f, DIAL_Z + 0.02f, DIAL_CX + 2.75f, DIAL_CY + 2.75f, DIAL_Z + 0.35f,
                 glowSprite, 0xFFEFE3C2, light);
 
-        // Red 10% Flux danger arc from -135 deg (0%) to -108 deg (10%) on the viewer's lower-left of the dial
-        int redCol = danger ? 0xFFFF2424 : 0xFFC82828;
-        int redLight = danger ? LightTexture.FULL_BRIGHT : light;
-        for (int i = 0; i < 4; i++) {
-            float deg = -135f + i * 9.5f;
-            float rad = deg * Mth.DEG_TO_RAD;
-            float sx = DIAL_CX - Mth.sin(rad) * 2.15f;
-            float sy = DIAL_CY + Mth.cos(rad) * 2.15f;
-            box(vc, p, sx - 0.32f, sy - 0.32f, DIAL_Z - 0.08f, sx + 0.32f, sy + 0.32f, DIAL_Z + 0.02f,
-                    glowSprite, redCol, redLight);
+        // Red Flux danger arc from -135 deg (0%) to configured low-Vis percent on the viewer's lower-left of the dial
+        if (lowPct > 0) {
+            float span = 270f * Mth.clamp(lowPct / 100f, 0f, 1f);
+            int steps = Math.max(2, (int) Math.ceil(span / 9f) + 1);
+            int redCol = danger ? 0xFFFF2424 : 0xFFC82828;
+            int redLight = danger ? LightTexture.FULL_BRIGHT : light;
+            for (int i = 0; i < steps; i++) {
+                float deg = -135f + span * i / (steps - 1);
+                float rad = deg * Mth.DEG_TO_RAD;
+                float sx = DIAL_CX - Mth.sin(rad) * 2.15f;
+                float sy = DIAL_CY + Mth.cos(rad) * 2.15f;
+                box(vc, p, sx - 0.32f, sy - 0.32f, DIAL_Z - 0.08f, sx + 0.32f, sy + 0.32f, DIAL_Z + 0.02f,
+                        glowSprite, redCol, redLight);
+            }
         }
 
         // Brass graduation ticks around the safe arc

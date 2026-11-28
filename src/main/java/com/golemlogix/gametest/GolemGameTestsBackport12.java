@@ -495,6 +495,7 @@ public final class GolemGameTestsBackport12 {
     @GameTest(template = T, timeoutTicks = 140)
     public static void plasmaTemperLootingDrops(GameTestHelper helper) {
         var reg = helper.getLevel().registryAccess();
+        var fortune = reg.lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.FORTUNE);
         var looting = reg.lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.LOOTING);
         var silk = reg.lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.SILK_TOUCH);
         ItemStack plainSword = new ItemStack(Items.IRON_SWORD);
@@ -503,9 +504,11 @@ public final class GolemGameTestsBackport12 {
                 "temperedHand grants Looting >= I");
         ItemStack silkSword = plainSword.copy();
         silkSword.enchant(silk, 1);
-        helper.assertTrue(EnchantmentHelper.getItemEnchantmentLevel(looting,
-                AnnihilationBusBlockEntity.temperedHand(silkSword, Blocks.AIR.defaultBlockState(), reg)) == 0,
-                "temperedHand respects Silk Touch / Looting mutual exclusion");
+        ItemStack blessedSilk = AnnihilationBusBlockEntity.temperedHand(silkSword, Blocks.AIR.defaultBlockState(), reg);
+        helper.assertTrue(EnchantmentHelper.getItemEnchantmentLevel(fortune, blessedSilk) == 0,
+                "temperedHand respects Silk Touch / Fortune mutual exclusion");
+        helper.assertTrue(EnchantmentHelper.getItemEnchantmentLevel(looting, blessedSilk) >= 1,
+                "temperedHand still grants Looting alongside Silk Touch");
 
         BlockPos bay = GolemGameTests.baseNetwork(helper);
         BlockPos bus = GolemGameTests.BUS_OUT, front = bus.north();

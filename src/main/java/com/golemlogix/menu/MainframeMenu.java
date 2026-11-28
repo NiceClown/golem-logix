@@ -119,6 +119,6 @@ public class MainframeMenu extends GolemMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return (be == null || be.formed()) && stillValid(access, player, ModBlocks.CRYO_MAINFRAME.get());
+        return (be == null || be.formed()) && stillValidNetwork(access, player, ModBlocks.CRYO_MAINFRAME.get());
     }
 }

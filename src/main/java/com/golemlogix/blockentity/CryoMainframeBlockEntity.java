@@ -258,6 +258,12 @@ public class CryoMainframeBlockEntity extends BlockEntity {
         }
 
         @Override
+        @Nullable
+        public Level cpuLevel() {
+            return level;
+        }
+
+        @Override
         public int core() {
             return index + 1;
         }
@@ -274,7 +280,7 @@ public class CryoMainframeBlockEntity extends BlockEntity {
 
         @Override
         public boolean canRun(GolemNetwork net) {
-            return formed() && net.isDeviceActive(worldPosition);
+            return formed() && CraftingCpu.super.canRun(net);
         }
     }
 

@@ -1243,8 +1243,15 @@ final class NetworkStorage {
     // --------------------------------------------------------- Source & Cryo
 
     private static long availableSource(GolemNetwork net) {
-        long total = 0;
+        if (net.sources.isEmpty()) {
+            return 0;
+        }
+        Set<SourceHelper.Supplier> leaves = new HashSet<>();
         for (SourceHelper.Supplier s : net.sources) {
+            s.collectLeafSuppliers(leaves);
+        }
+        long total = 0;
+        for (SourceHelper.Supplier s : leaves) {
             total += s.available();
         }
         return total;
@@ -1299,12 +1306,13 @@ final class NetworkStorage {
         if (availableSource(net) < needed) {
             return false;
         }
+        Set<SourceHelper.Supplier> seen = new HashSet<>();
         int left = needed;
         for (SourceHelper.Supplier s : net.sources) {
             if (left <= 0) {
                 break;
             }
-            left -= s.drain(left);
+            left -= s.drainUnique(left, seen);
         }
         if (left > 0) {
             return false;

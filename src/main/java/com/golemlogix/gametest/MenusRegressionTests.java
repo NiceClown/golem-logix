@@ -6,6 +6,8 @@ import com.golemlogix.blockentity.CardCatalogBlockEntity;
 import com.golemlogix.blockentity.CopperDriveBayBlockEntity;
 import com.golemlogix.blockentity.CopperTankBlockEntity;
 import com.golemlogix.blockentity.CryoMixerBlockEntity;
+import com.golemlogix.blockentity.DistillationTowerBlockEntity;
+import com.golemlogix.blockentity.EssentiaCauldronBlockEntity;
 import com.golemlogix.blockentity.InterfaceBlockEntity;
 import com.golemlogix.blockentity.PatternEncoderBlockEntity;
 import com.golemlogix.blockentity.SecurityTerminalBlockEntity;
@@ -16,6 +18,8 @@ import com.golemlogix.items.IdentityPunchCardItem;
 import com.golemlogix.menu.BusMenu;
 import com.golemlogix.menu.CardCatalogMenu;
 import com.golemlogix.menu.CryoMixerMenu;
+import com.golemlogix.menu.DistillationTowerMenu;
+import com.golemlogix.menu.EssentiaCauldronMenu;
 import com.golemlogix.menu.GolemMenu;
 import com.golemlogix.menu.InterfaceMenu;
 import com.golemlogix.menu.PatternEncoderMenu;
@@ -50,8 +54,10 @@ import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
@@ -643,5 +649,86 @@ public final class MenusRegressionTests {
 
             helper.succeed();
         });
+    }
+
+    /** Shift-clicking the Crafting Terminal result slot must craft at most one stack per click. */
+    @GameTest(template = T, timeoutTicks = 100)
+    public static void menusCraftingShiftClickCappedToOneStack(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        helper.setBlock(TERM, ModBlocks.CRAFTING_TERMINAL.get().defaultBlockState());
+        BlockPos absTerm = helper.absolutePos(TERM);
+        ServerPlayer player = fakePlayer(helper, "menus-shift-cap");
+
+        helper.runAfterDelay(10, () -> {
+            GolemNetwork n = net(helper, bay);
+            n.insertItem(new ItemStack(Items.OAK_LOG, 200), false);
+
+            TerminalMenu menu = new TerminalMenu(105, player.getInventory(), helper.getLevel(), absTerm, absTerm,
+                    ModBlocks.CRAFTING_TERMINAL.get(), true, false, 0);
+            menu.getSlot(1).set(new ItemStack(Items.OAK_LOG, 1));
+            helper.assertTrue(menu.getSlot(0).getItem().is(Items.OAK_PLANKS), "crafting grid outputs oak planks");
+
+            menu.clicked(0, 0, ClickType.QUICK_MOVE, player);
+
+            int planks = 0;
+            for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+                ItemStack s = player.getInventory().getItem(i);
+                if (s.is(Items.OAK_PLANKS)) {
+                    planks += s.getCount();
+                }
+            }
+            helper.assertTrue(planks == 64, "shift-click capped to 1 stack (64 planks), got " + planks);
+            long logsLeft = n.itemCountOf(ItemKey.of(new ItemStack(Items.OAK_LOG))) + menu.getSlot(1).getItem().getCount();
+            helper.assertTrue(logsLeft == 185, "exactly 16 logs consumed (201 - 16 = 185 left), got " + logsLeft);
+            helper.succeed();
+        });
+    }
+
+    /** ContainerData 32-bit unpacking preserves values above 32767 (including bit-15 set) without signed short truncation. */
+    @GameTest(template = T, timeoutTicks = 40)
+    public static void menusContainerData32BitUnpacking(GameTestHelper helper) {
+        ServerPlayer player = testPlayer(helper);
+
+        // DistillationTowerMenu: rate (slots 1/6) and sourceTenths (slots 2/7)
+        SimpleContainerData towerData = new SimpleContainerData(DistillationTowerBlockEntity.DATA_COUNT);
+        int rateVal = 100_000;
+        int towerTenths = 1_234_567;
+        towerData.set(1, (short) (rateVal & 0xFFFF));
+        towerData.set(6, (short) (rateVal >>> 16));
+        towerData.set(2, (short) (towerTenths & 0xFFFF));
+        towerData.set(7, (short) (towerTenths >>> 16));
+        DistillationTowerMenu towerMenu = new DistillationTowerMenu(106, player.getInventory(),
+                new SimpleContainer(com.golemlogix.upgrade.UpgradeSpec.DISTILLATION.slots()),
+                towerData, ContainerLevelAccess.NULL);
+        helper.assertTrue(towerMenu.rate() == rateVal, "tower rate unpacked >32767: " + towerMenu.rate());
+        helper.assertTrue(Math.abs(towerMenu.sourcePerSecond() - 123456.7) < 0.01,
+                "tower sourcePerSecond unpacked >32767: " + towerMenu.sourcePerSecond());
+
+        // EssentiaCauldronMenu: sourceTenths (slots 4/8) with low 16 bits having sign bit set (400000 = 0x0006_1A80, test 40000 = 0x9C40 too)
+        SimpleContainerData cauldronData = new SimpleContainerData(EssentiaCauldronBlockEntity.DATA_COUNT);
+        int cauldronTenths = 40_000; // 0x9C40 -> signed short -25536
+        cauldronData.set(4, (short) (cauldronTenths & 0xFFFF));
+        cauldronData.set(8, (short) (cauldronTenths >>> 16));
+        EssentiaCauldronMenu cauldronMenu = new EssentiaCauldronMenu(107, player.getInventory(),
+                new SimpleContainer(com.golemlogix.upgrade.UpgradeSpec.ESSENTIA_CAULDRON.slots()),
+                cauldronData, ContainerLevelAccess.NULL);
+        helper.assertTrue(Math.abs(cauldronMenu.sourcePerSecond() - 4000.0) < 0.01,
+                "cauldron sourcePerSecond unpacked signed-short-negative low bits: " + cauldronMenu.sourcePerSecond());
+
+        // CryoMixerMenu: progress (slots 2/9) and ticksPerBlock (slots 3/10)
+        SimpleContainerData mixerData = new SimpleContainerData(CryoMixerBlockEntity.DATA_COUNT);
+        int progressVal = 40_000;
+        int ticksVal = 70_000;
+        mixerData.set(2, (short) (progressVal & 0xFFFF));
+        mixerData.set(9, (short) (progressVal >>> 16));
+        mixerData.set(3, (short) (ticksVal & 0xFFFF));
+        mixerData.set(10, (short) (ticksVal >>> 16));
+        CryoMixerMenu mixerMenu = new CryoMixerMenu(108, player.getInventory(), new SimpleContainer(1),
+                new SimpleContainer(com.golemlogix.upgrade.UpgradeSpec.MIXER.slots()),
+                mixerData, null, ContainerLevelAccess.NULL);
+        helper.assertTrue(mixerMenu.progress() == progressVal, "mixer progress unpacked >32767: " + mixerMenu.progress());
+        helper.assertTrue(mixerMenu.ticksPerBlock() == ticksVal, "mixer ticksPerBlock unpacked >32767: " + mixerMenu.ticksPerBlock());
+
+        helper.succeed();
     }
 }

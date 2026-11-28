@@ -340,7 +340,7 @@ public class CraftingJob {
         }
 
         boolean allStepsIssued = allStepsIssued();
-        updateStatus(net, allStepsIssued, blocked, budget, outOfTime);
+        updateStatus(net, allStepsIssued, blocked, budget, workers, outOfTime);
         starved = budget <= 0 && !allStepsIssued;
         CraftLoad.ran(System.nanoTime() - started);
     }
@@ -426,13 +426,15 @@ public class CraftingJob {
     }
 
     private void updateStatus(GolemNetwork net, boolean allStepsIssued, @Nullable Status blocked,
-                              int budget, boolean outOfTime) {
+                              int budget, int workers, boolean outOfTime) {
         if (allStepsIssued && awaiting.isEmpty()) {
             deliver(net);
         } else if (blocked != null && budget > 0 && !outOfTime) {
             status = blocked;
         } else if (!awaiting.isEmpty() && budget > 0 && !outOfTime) {
             status = Status.WAITING_MACHINE;
+        } else if (!allStepsIssued && awaiting.isEmpty() && blocked == null && budget == workers && !outOfTime) {
+            status = Status.INVALID_PATTERN;
         } else {
             status = Status.RUNNING;
         }

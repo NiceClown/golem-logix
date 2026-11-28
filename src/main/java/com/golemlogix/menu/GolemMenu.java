@@ -20,10 +20,13 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -372,11 +375,33 @@ public abstract class GolemMenu extends AbstractContainerMenu {
     }
 
     /** Server-side BUILD check for network-device menus when a Security Terminal is present on the network. */
-    protected static boolean hasBuildPermission(Player player, @Nullable Level level, @Nullable BlockPos pos) {
+    public static boolean hasBuildPermission(Player player, @Nullable Level level, @Nullable BlockPos pos) {
         if (level == null || pos == null || level.isClientSide() || !level.isLoaded(pos)) {
             return true;
         }
         return GolemNetwork.get(level, pos).hasPermission(player, SecurityPermission.BUILD);
+    }
+
+    /** Checks block validity/reach plus live network BUILD permission for menus backed by {@link ContainerLevelAccess}. */
+    protected static boolean stillValidNetwork(ContainerLevelAccess access, Player player, Block block) {
+        return stillValidNetwork(access, player, block, false);
+    }
+
+    /** Checks block validity/reach plus live network permission (BUILD, or CRAFT | BUILD when {@code allowCraft} is true). */
+    protected static boolean stillValidNetwork(ContainerLevelAccess access, Player player, Block block, boolean allowCraft) {
+        return stillValid(access, player, block) && access.evaluate((level, pos) -> {
+            if (level.isClientSide() || !level.isLoaded(pos)) {
+                return true;
+            }
+            GolemNetwork net = GolemNetwork.get(level, pos);
+            return net.hasPermission(player, SecurityPermission.BUILD)
+                    || (allowCraft && net.hasPermission(player, SecurityPermission.CRAFT));
+        }, true);
+    }
+
+    /** Reconstructs a 32-bit int split across two 16-bit {@link ContainerData} slots (low, high). */
+    protected static int unpackInt(ContainerData data, int lo, int hi) {
+        return (data.get(lo) & 0xFFFF) | ((data.get(hi) & 0xFFFF) << 16);
     }
 
     /** Upper bound on fluid ghost amounts (1 000 buckets in mB) to prevent overflow in crafting calculations. */

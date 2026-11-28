@@ -195,6 +195,6 @@ public class RecipeMonitorMenu extends GolemMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return stillValid(access, player, ModBlocks.RECIPE_MONITOR.get());
+        return stillValidNetwork(access, player, ModBlocks.RECIPE_MONITOR.get(), true);
     }
 }

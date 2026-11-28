@@ -90,13 +90,12 @@ public class PeriscopeStorageBusBlock extends DirectionalBlock implements GolemN
         super.onRemove(state, level, pos, newState, isMoving);
     }
 
-    /** A redstone signal nearby may have switched the storage on or off: the network is rescanned without the cache. */
+    /** A redstone signal nearby may have switched the storage on or off: invalidate only if effective state flipped. */
     @Override
     protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean moving) {
         super.neighborChanged(state, level, pos, block, fromPos, moving);
-        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof PeriscopeBlockEntity be
-                && be.getUpgrades().has(com.golemlogix.upgrade.UpgradeType.REDSTONE)) {
-            com.golemlogix.system.GolemNetwork.clearCache();
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof PeriscopeBlockEntity be) {
+            be.onNeighborChanged();
         }
     }
 

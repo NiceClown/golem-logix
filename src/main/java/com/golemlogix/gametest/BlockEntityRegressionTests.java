@@ -17,12 +17,14 @@ import com.golemlogix.blockentity.StockManometerBlockEntity;
 import com.golemlogix.blocks.CryoJarBlock;
 import com.golemlogix.blocks.CryoMixerBlock;
 import com.golemlogix.blocks.DistillationTowerBlock;
+import com.golemlogix.blocks.JarForm;
 import com.golemlogix.blocks.PeriscopeStorageBusBlock;
 import com.golemlogix.data.PatternData;
 import com.golemlogix.init.ModBlocks;
 import com.golemlogix.init.ModDataComponents;
 import com.golemlogix.init.ModItems;
 import com.golemlogix.items.FluidGhostItem;
+import com.golemlogix.system.Fuzzy;
 import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.Ingredients;
 import com.golemlogix.system.ItemKey;
@@ -30,11 +32,15 @@ import com.golemlogix.upgrade.RedstoneMode;
 import com.golemlogix.upgrade.UpgradeType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -552,6 +558,100 @@ public final class BlockEntityRegressionTests {
             drive.setPriority(5);
             GolemNetwork n3 = GolemNetwork.get(level, absBay);
             helper.assertTrue(n3 != n2, "bay priority change invalidated network cache immediately");
+            helper.succeed();
+        });
+    }
+
+    /** Interface with Fuzzy Card + #c:buckets tag filter must never overstack maxStackSize=1 water_bucket above 1. */
+    @GameTest(template = T, timeoutTicks = 160)
+    public static void beregInterfaceFuzzyBucketsNoOverstack(GameTestHelper helper) {
+        BlockPos bay = baseNetwork(helper);
+        put(helper, BUS_OUT, ModBlocks.GOLEM_INTERFACE.get());
+        InterfaceBlockEntity itf = (InterfaceBlockEntity) helper.getBlockEntity(BUS_OUT);
+        itf.getUpgrades().setItem(itf.getUpgrades().spec().slotOf(UpgradeType.FUZZY),
+                new ItemStack(ModItems.FUZZY_CARD.get()));
+        var bucketsTag = TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("c", "buckets"));
+        ItemStack bucketFilter = Fuzzy.withTag(new ItemStack(Items.BUCKET), bucketsTag);
+        itf.setSlot(0, bucketFilter, 16);
+
+        ItemKey waterBucketKey = ItemKey.of(new ItemStack(Items.WATER_BUCKET));
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork n = net(helper, bay);
+            for (int i = 0; i < 10; i++) {
+                n.insertItem(new ItemStack(Items.WATER_BUCKET), false);
+            }
+        });
+
+        helper.runAfterDelay(45, () -> {
+            ItemStack stocked = itf.getStock().getItem(0);
+            helper.assertTrue(stocked.is(Items.WATER_BUCKET) && stocked.getCount() == 1,
+                    "water_bucket must be capped to maxStackSize=1, got " + stocked);
+            helper.assertTrue(net(helper, bay).itemCountOf(waterBucketKey) == 9,
+                    "9 water buckets remain in storage, got " + net(helper, bay).itemCountOf(waterBucketKey));
+            // Pre-existing overstack in stock slot (e.g. legacy save) must be trimmed back to 1 and excess returned to network
+            itf.getStock().getItem(0).setCount(4);
+            itf.wakeStock();
+        });
+
+        helper.runAfterDelay(85, () -> {
+            ItemStack stocked = itf.getStock().getItem(0);
+            helper.assertTrue(stocked.is(Items.WATER_BUCKET) && stocked.getCount() == 1,
+                    "overstacked water_bucket trimmed back to 1, got " + stocked);
+            helper.assertTrue(net(helper, bay).itemCountOf(waterBucketKey) == 12,
+                    "3 excess water buckets returned to network (9 + 3 = 12), got " + net(helper, bay).itemCountOf(waterBucketKey));
+            helper.succeed();
+        });
+    }
+
+    /** Periodic Cryo-Jar integrity check disassembles mismatched controller footprints and detaches orphaned non-controllers. */
+    @GameTest(template = T, timeoutTicks = 120)
+    public static void beregCryoJarIntegrityValidation(GameTestHelper helper) {
+        var level = helper.getLevel();
+        BlockPos cornerA = new BlockPos(2, 1, 2);
+        BlockPos cornerB = new BlockPos(7, 1, 2);
+        for (int dx = 0; dx < 2; dx++) {
+            for (int dz = 0; dz < 2; dz++) {
+                CryoJarBlock.place(level, helper.absolutePos(cornerA.offset(dx, 0, dz)), Direction.SOUTH, ModBlocks.CRYO_SOURCE_JAR.get());
+                CryoJarBlock.place(level, helper.absolutePos(cornerB.offset(dx, 0, dz)), Direction.SOUTH, ModBlocks.CRYO_SOURCE_JAR.get());
+            }
+        }
+
+        helper.runAfterDelay(10, () -> {
+            CryoJarBlockEntity ctrlA = (CryoJarBlockEntity) helper.getBlockEntity(cornerA);
+            CryoJarBlockEntity partA = (CryoJarBlockEntity) helper.getBlockEntity(cornerA.east());
+            CryoJarBlockEntity ctrlB = (CryoJarBlockEntity) helper.getBlockEntity(cornerB);
+            CryoJarBlockEntity orphanB = (CryoJarBlockEntity) helper.getBlockEntity(cornerB.east());
+            helper.assertTrue(ctrlA.form() == JarForm.GIGA && ctrlB.form() == JarForm.GIGA, "both 2x2 Giga Jars formed");
+            ctrlA.putAll(2000);
+
+            // Simulate cell broken while controller chunk was unloaded (skip onRemove apart() by clearing controller ref first)
+            partA.setController(null);
+            level.setBlock(helper.absolutePos(cornerA.east()), Blocks.STONE.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+            helper.assertTrue(ctrlA.form() == JarForm.GIGA, "controller still GIGA before periodic integrity tick");
+
+            // Simulate controller broken while non-controller chunk was unloaded
+            ctrlB.setController(null);
+            level.setBlock(helper.absolutePos(cornerB), Blocks.STONE.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+            helper.assertTrue(orphanB.form() == JarForm.GIGA, "non-controller still GIGA before periodic integrity tick");
+        });
+
+        helper.runAfterDelay(40, () -> {
+            // Case A: controller saw missing cell and parted remaining 3 jars, preserving all 2000 Source
+            int totalA = 0;
+            for (BlockPos rel : List.of(cornerA, cornerA.south(), cornerA.offset(1, 0, 1))) {
+                CryoJarBlockEntity j = (CryoJarBlockEntity) helper.getBlockEntity(rel);
+                helper.assertTrue(j.form() == JarForm.SINGLE && j.controller() == null,
+                        "remaining Giga Jar A cell reset to SINGLE at " + rel);
+                totalA += j.available();
+            }
+            helper.assertTrue(totalA == 2000, "parted Giga Jar A preserved 2000 Source, got " + totalA);
+
+            // Case B: orphaned non-controllers saw missing controller and detached to SINGLE
+            for (BlockPos rel : List.of(cornerB.east(), cornerB.south(), cornerB.offset(1, 0, 1))) {
+                CryoJarBlockEntity j = (CryoJarBlockEntity) helper.getBlockEntity(rel);
+                helper.assertTrue(j.form() == JarForm.SINGLE && j.controller() == null,
+                        "orphaned Giga Jar B cell detached to SINGLE at " + rel);
+            }
             helper.succeed();
         });
     }

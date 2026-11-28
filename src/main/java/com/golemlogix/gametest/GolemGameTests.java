@@ -2280,7 +2280,15 @@ public class GolemGameTests {
                         String id = e.get("id").getAsString();
                         // an entry about another mod's integration names that mod's items: they exist only when it is installed
                         String requires = e.has("requires") ? e.get("requires").getAsString() : "";
-                        boolean items = requires.isEmpty() || "no_source_mod".equals(requires) || net.neoforged.fml.ModList.get().isLoaded(requires);
+                        boolean items = requires.isEmpty() || "no_source_mod".equals(requires);
+                        if (!items) {
+                            for (String mod : requires.split("\\|")) {
+                                if (!mod.isEmpty() && net.neoforged.fml.ModList.get().isLoaded(mod)) {
+                                    items = true;
+                                    break;
+                                }
+                            }
+                        }
                         if (items) {
                             checkItem(helper, e.get("icon").getAsString(), id);
                         }

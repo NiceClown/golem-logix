@@ -148,7 +148,9 @@ public final class JarMerge {
         int total = whole.takeAll();
         List<BlockPos> stay = new ArrayList<>();
         for (BlockPos cell : cells(corner, form.width())) {
-            if (!cell.equals(removed) && level.isLoaded(cell) && level.getBlockEntity(cell) instanceof CryoJarBlockEntity) {
+            if (!cell.equals(removed) && level.isLoaded(cell)
+                    && level.getBlockEntity(cell) instanceof CryoJarBlockEntity jar
+                    && (cell.equals(corner) || corner.equals(jar.controller()))) {
                 stay.add(cell);
             }
         }
@@ -180,6 +182,15 @@ public final class JarMerge {
         }
         sync(level, stay);
         notifyNetwork(level, cells(corner, form.width()));
+    }
+
+    /** Resets an orphaned non-controller jar back to SINGLE without force-loading chunks, then checks if it can re-merge. */
+    public static void resetSingle(ServerLevel level, BlockPos lower, CryoJarBlockEntity jar) {
+        jar.setController(null);
+        setForm(level, lower, JarForm.SINGLE);
+        sync(level, List.of(lower));
+        notifyNetwork(level, List.of(lower));
+        scan(level, lower);
     }
 
     /** Notifies networks adjacent to any lower or upper block of the joined/parted footprint so channels and bonuses refresh immediately. */

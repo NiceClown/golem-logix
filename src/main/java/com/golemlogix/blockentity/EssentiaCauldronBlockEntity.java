@@ -66,7 +66,7 @@ public class EssentiaCauldronBlockEntity extends BlockEntity {
     private int sourceCarry;
     private int status = STATUS_NO_AURAM;
     private long contentRevision;
-    private boolean dirty;
+    private boolean tubesRefreshed;
     private long lastSync = -100;
 
     // Last broadcast quantized visual state
@@ -222,12 +222,6 @@ public class EssentiaCauldronBlockEntity extends BlockEntity {
         BlockEntities.dropContainers(level, worldPosition, upgrades);
     }
 
-    @Override
-    public void setChanged() {
-        dirty = true;
-        super.setChanged();
-    }
-
     private static int detectIceTier(BlockState state) {
         if (state.is(Blocks.BLUE_ICE)) {
             return ICE_BLUE;
@@ -281,6 +275,9 @@ public class EssentiaCauldronBlockEntity extends BlockEntity {
 
     public void serverTick() {
         long now = level.getGameTime();
+        if (!tubesRefreshed) {
+            tubesRefreshed = ThaumaturgeCompat.refreshAdjacentTubes(level, worldPosition);
+        }
         syncIceBelow();
         if (!ThaumaturgeCompat.isLoaded()) {
             status = STATUS_NO_THAUMATURGE;
@@ -330,10 +327,7 @@ public class EssentiaCauldronBlockEntity extends BlockEntity {
                 GolemConfig.CAULDRON_BOIL_GRACE_TICKS.get(),
                 GolemConfig.CAULDRON_BOIL_INTERVAL_TICKS.get());
         boilTimer = boil.nextTimer();
-        if (boilOff != boil.boiling()) {
-            boilOff = boil.boiling();
-            dirty = true;
-        }
+        boilOff = boil.boiling();
         if (boil.emitFlux() && auram > 0) {
             auram = Math.max(0, auram - 1);
             contentRevision++;
@@ -429,10 +423,9 @@ public class EssentiaCauldronBlockEntity extends BlockEntity {
     }
 
     private void syncIfNeeded(long now) {
-        if (!dirty && now - lastSync < 5) {
+        if (now - lastSync < 5) {
             return;
         }
-        dirty = false;
         int icePct = Math.round(iceFill() * 100f);
         if (auram != sentAuram || gelum != sentGelum || iceTier != sentIceTier
                 || Math.abs(icePct - sentIcePct) >= 2 || (icePct == 0) != (sentIcePct == 0)
@@ -448,6 +441,12 @@ public class EssentiaCauldronBlockEntity extends BlockEntity {
         }
     }
 
+    public static final int DATA_COUNT = 9;
+
+    private int sourceTenths() {
+        return (int) Math.clamp(Math.round(sourcePerSecond() * 10.0), 0L, Integer.MAX_VALUE);
+    }
+
     public ContainerData menuData() {
         return new ContainerData() {
             @Override
@@ -457,10 +456,11 @@ public class EssentiaCauldronBlockEntity extends BlockEntity {
                     case 1 -> gelum;
                     case 2 -> iceTier;
                     case 3 -> Math.round(iceFill() * 100f);
-                    case 4 -> (int) Math.round(sourcePerSecond() * 10.0);
+                    case 4 -> sourceTenths() & 0xFFFF;
                     case 5 -> status;
                     case 6 -> upgrades.count(UpgradeType.SPEED);
                     case 7 -> boilOff ? 1 : 0;
+                    case 8 -> sourceTenths() >>> 16;
                     default -> 0;
                 };
             }
@@ -471,7 +471,7 @@ public class EssentiaCauldronBlockEntity extends BlockEntity {
 
             @Override
             public int getCount() {
-                return 8;
+                return DATA_COUNT;
             }
         };
     }

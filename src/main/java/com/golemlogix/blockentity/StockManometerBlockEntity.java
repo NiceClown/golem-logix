@@ -210,7 +210,7 @@ public class StockManometerBlockEntity extends BlockEntity {
 
     private static long countFuzzyItem(GolemNetwork net, ItemStack ghost) {
         long total = 0;
-        for (var entry : net.listItems().entrySet()) {
+        for (var entry : net.listItemsShared().entrySet()) {
             if (!Ingredients.isFluid(entry.getKey()) && Fuzzy.matches(ghost, entry.getKey().stack(), true)) {
                 total += entry.getValue();
             }

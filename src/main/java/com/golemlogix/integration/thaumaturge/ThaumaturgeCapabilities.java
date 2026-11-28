@@ -62,7 +62,12 @@ final class ThaumaturgeCapabilities {
 
     static void register(RegisterCapabilitiesEvent event) {
         event.registerBlockEntity(EssentiaCapabilities.TRANSPORT, ModBlockEntities.ESSENTIA_CAULDRON.get(),
-                (be, side) -> new CauldronTransport(be));
+                (be, side) -> {
+                    if (side != null && side != be.primarySide() && side != be.coolantSide()) {
+                        return null;
+                    }
+                    return new CauldronTransport(be);
+                });
         event.registerBlockEntity(EssentiaCapabilities.STORAGE, ModBlockEntities.ESSENTIA_CAULDRON.get(),
                 (be, side) -> {
                     if (side != null && side != be.primarySide() && side != be.coolantSide()) {

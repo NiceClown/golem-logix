@@ -26,7 +26,7 @@ public class EssentiaCauldronMenu extends GolemMenu {
 
     public static EssentiaCauldronMenu fromNetwork(int id, Inventory inv, RegistryFriendlyByteBuf buf) {
         return new EssentiaCauldronMenu(id, inv, new SimpleContainer(UpgradeSpec.ESSENTIA_CAULDRON.slots()),
-                new SimpleContainerData(8), ContainerLevelAccess.NULL);
+                new SimpleContainerData(EssentiaCauldronBlockEntity.DATA_COUNT), ContainerLevelAccess.NULL);
     }
 
     public EssentiaCauldronMenu(int id, Inventory inv, Container upgrades, ContainerData data, ContainerLevelAccess access) {
@@ -59,7 +59,7 @@ public class EssentiaCauldronMenu extends GolemMenu {
     }
 
     public double sourcePerSecond() {
-        return data.get(4) / 10.0;
+        return unpackInt(data, 4, 8) / 10.0;
     }
 
     public int status() {

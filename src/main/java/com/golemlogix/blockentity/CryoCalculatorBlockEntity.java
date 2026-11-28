@@ -110,6 +110,12 @@ public class CryoCalculatorBlockEntity extends BlockEntity implements CraftingCp
     }
 
     @Override
+    @Nullable
+    public Level cpuLevel() {
+        return level;
+    }
+
+    @Override
     public int getCoprocessors() {
         return coprocessors;
     }

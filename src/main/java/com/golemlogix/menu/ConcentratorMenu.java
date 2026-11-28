@@ -52,6 +52,8 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
     public static final int ICON_X = 9, GRID_X = 30, GRID_Y = 20;
     public static final int SCROLL_X = GRID_X + COLS * 18 + 4, INFO_Y = GRID_Y + ROWS * 18 + 3;
     public static final int DATA_ROW = 0, DATA_SIZE = 1;
+    private static final long PERIODIC_REBUILD_TICKS = 20;
+    private static final long FILTER_REBUILD_TICKS = 4;
 
     /** A layout row: a category header or a row of slots (count = how many slots in it are active). */
     public record RowInfo(boolean header, ItemStack icon, Component title, int count) {
@@ -71,8 +73,12 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
     private List<Entry> entries = List.of();
     private List<String> sentKeys = List.of();
     private int row = 0;
+    private int pendingRow = 0;
     private String filter = "";
-    private int rebuildIn = 0;
+    private boolean filterDirty = false;
+    private boolean layoutSent = false;
+    private long nextPeriodicRebuildTick = Long.MIN_VALUE;
+    private long nextFilterRebuildTick = Long.MIN_VALUE;
     // client
     private List<RowInfo> clientRows = List.of();
     public int clientVersion = 0;
@@ -114,6 +120,7 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
         }
         if (level != null) {
             entries = build();
+            nextPeriodicRebuildTick = level.getGameTime() + PERIODIC_REBUILD_TICKS;
         }
     }
 
@@ -444,11 +451,32 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
         if (level == null) {
             return;
         }
+        pendingRow = newRow;
         if (!newFilter.equals(filter)) {
             filter = newFilter;
-            entries = build();
+            long now = level.getGameTime();
+            if (now >= nextFilterRebuildTick) {
+                rebuild(now, true);
+            } else {
+                filterDirty = true;
+                row = Math.max(0, Math.min(maxRow(), newRow));
+            }
+            return;
         }
         row = Math.max(0, Math.min(maxRow(), newRow));
+    }
+
+    private void rebuild(long now, boolean fromFilter) {
+        entries = build();
+        nextPeriodicRebuildTick = now + PERIODIC_REBUILD_TICKS;
+        if (fromFilter) {
+            nextFilterRebuildTick = now + FILTER_REBUILD_TICKS;
+            filterDirty = false;
+            row = Math.max(0, Math.min(maxRow(), pendingRow));
+        } else {
+            row = Math.max(0, Math.min(maxRow(), row));
+        }
+        layoutSent = true;
         sendLayout();
     }
 
@@ -480,12 +508,17 @@ public class ConcentratorMenu extends GolemMenu implements ScrollableMenu {
 
     @Override
     public void broadcastChanges() {
-        if (level != null && --rebuildIn <= 0) {
-            // providers appear and disappear, cards get moved: the layout is rebuilt once a second
-            rebuildIn = 20;
-            entries = build();
-            row = Math.max(0, Math.min(maxRow(), row));
-            sendLayout();
+        if (level != null) {
+            long now = level.getGameTime();
+            if (filterDirty && now >= nextFilterRebuildTick) {
+                rebuild(now, true);
+            } else if (now >= nextPeriodicRebuildTick) {
+                // providers appear and disappear, cards get moved: the layout is rebuilt once a second
+                rebuild(now, false);
+            } else if (!layoutSent) {
+                layoutSent = true;
+                sendLayout();
+            }
         }
         super.broadcastChanges();
     }

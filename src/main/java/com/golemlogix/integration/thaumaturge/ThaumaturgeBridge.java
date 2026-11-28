@@ -13,6 +13,7 @@ import com.leclowndu93150.thaumaturge.api.essentia.EssentiaTransferFeedback;
 import com.leclowndu93150.thaumaturge.api.essentia.IEssentiaItemStorage;
 import com.leclowndu93150.thaumaturge.api.essentia.IEssentiaTransport;
 import com.leclowndu93150.thaumaturge.api.essentia.ItemEssentiaTransferResult;
+import com.leclowndu93150.thaumaturge.content.essentia.tube.BlockEssentiaTransport;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -163,7 +164,9 @@ final class ThaumaturgeBridge {
             if (!isPrimary && !isCoolant) {
                 continue;
             }
-            int space = isPrimary ? be.addPrimary(entry.amount(), true) : be.addCoolant(entry.amount(), true);
+            int space = level.isClientSide()
+                    ? Math.min(entry.amount(), Math.max(0, EssentiaCauldronBlockEntity.TANK_CAPACITY - (isPrimary ? be.clientAuram : be.clientGelum)))
+                    : (isPrimary ? be.addPrimary(entry.amount(), true) : be.addCoolant(entry.amount(), true));
             if (space <= 0) {
                 return ItemInteractionResult.CONSUME;
             }
@@ -194,5 +197,36 @@ final class ThaumaturgeBridge {
             return ItemInteractionResult.sidedSuccess(false);
         }
         return ItemInteractionResult.CONSUME;
+    }
+
+    /** Recomputes visual connections on any loaded horizontal adjacent Thaumaturge essentia tubes; returns true once all neighbors and their surrounding cells are loaded. */
+    static boolean refreshAdjacentTubes(Level level, BlockPos cauldronPos) {
+        if (level == null || level.isClientSide()) {
+            return false;
+        }
+        boolean allLoaded = true;
+        for (Direction dir : Direction.Plane.HORIZONTAL) {
+            BlockPos neighbor = cauldronPos.relative(dir);
+            if (!level.isLoaded(neighbor)) {
+                allLoaded = false;
+                continue;
+            }
+            if (!(level.getBlockState(neighbor).getBlock() instanceof BlockEssentiaTransport)) {
+                continue;
+            }
+            boolean neighborReady = true;
+            for (Direction d : Direction.values()) {
+                if (!level.isLoaded(neighbor.relative(d))) {
+                    neighborReady = false;
+                    break;
+                }
+            }
+            if (neighborReady) {
+                BlockEssentiaTransport.refreshConnections(level, neighbor);
+            } else {
+                allLoaded = false;
+            }
+        }
+        return allLoaded;
     }
 }

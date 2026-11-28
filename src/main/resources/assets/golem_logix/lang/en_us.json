@@ -758,7 +758,7 @@
   "jade.golem_logix.vis_condenser.floor_pct": "Stop floor: %s%%",
   "jade.golem_logix.vis_condenser.floor_vis": "Stop floor: %s Vis",
   "jade.golem_logix.vis_condenser.rate": "Output: %s Source/s",
-  "jei.golem_logix.info.vis_condenser": "Early Thaumaturge Source generator. Drains 1 Vis/s from the chunk aura into 15 Source/s for adjacent Cryo-Source Jars (or Ars Nouveau jars) and networked Giga Jars / Antigravity Reactors. Set a stop floor (% of base or exact Vis) with +5 hysteresis so the chunk recovers cleanly. Draining below 10% chunk Vis emits Flux; a redstone signal pauses it.",
+  "jei.golem_logix.info.vis_condenser": "Early Thaumaturge Source generator. Drains 6 Vis/s from the chunk aura into 15 Source/s for adjacent Cryo-Source Jars (or Ars Nouveau jars) and networked Giga Jars / Antigravity Reactors. Because it drains faster than ambient recovery and neighbor diffusion, set a stop floor (% of base or exact Vis) with +5 hysteresis so the chunk recovers cleanly. Draining below 10% chunk Vis emits Flux; a redstone signal pauses it.",
   "gui.golem_logix.cauldron.auram_tip": "Auram (left tube): %s / %s",
   "gui.golem_logix.cauldron.gelum_tip": "Gelum (right tube): %s / %s",
   "gui.golem_logix.cauldron.ice.0": "No Ice below!",

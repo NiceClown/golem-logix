@@ -25,11 +25,13 @@ public class VisCondenserMenu extends GolemMenu {
     public static final int BUTTON_PLUS_5 = 6;
     public static final int BUTTON_PLUS_10 = 7;
 
+    public static final int DATA_COUNT = 9;
+
     private final ContainerLevelAccess access;
     private final ContainerData data;
 
     public static VisCondenserMenu fromNetwork(int id, Inventory inv, RegistryFriendlyByteBuf buf) {
-        return new VisCondenserMenu(id, inv, new SimpleContainerData(8), ContainerLevelAccess.NULL);
+        return new VisCondenserMenu(id, inv, new SimpleContainerData(DATA_COUNT), ContainerLevelAccess.NULL);
     }
 
     public VisCondenserMenu(int id, Inventory inv, ContainerData data, ContainerLevelAccess access) {
@@ -82,6 +84,10 @@ public class VisCondenserMenu extends GolemMenu {
 
     public boolean redstonePowered() {
         return (data.get(7) & 4) != 0;
+    }
+
+    public int lowVisPercent() {
+        return data.get(8);
     }
 
     @Override

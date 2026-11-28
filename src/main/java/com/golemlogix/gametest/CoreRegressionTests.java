@@ -3,10 +3,14 @@ package com.golemlogix.gametest;
 import com.golemlogix.GolemLogixMod;
 import com.golemlogix.blockentity.BusBlockEntity;
 import com.golemlogix.blockentity.CopperDriveBayBlockEntity;
+import com.golemlogix.blockentity.CryoCalculatorBlockEntity;
+import com.golemlogix.blockentity.CryoJarBlockEntity;
 import com.golemlogix.blockentity.PatternProviderBlockEntity;
+import com.golemlogix.blockentity.SecurityTerminalBlockEntity;
 import com.golemlogix.blockentity.TelegraphBlockEntity;
 import com.golemlogix.blocks.CopperDriveBayBlock;
 import com.golemlogix.blocks.CryoDiodeBlock;
+import com.golemlogix.blocks.CryoJarBlock;
 import com.golemlogix.blocks.MainframePartBlock;
 import com.golemlogix.blocks.TelegraphBlock;
 import com.golemlogix.crafting.CraftingPlan;
@@ -15,13 +19,20 @@ import com.golemlogix.data.PatternData;
 import com.golemlogix.init.ModBlocks;
 import com.golemlogix.init.ModDataComponents;
 import com.golemlogix.init.ModItems;
+import com.golemlogix.items.IdentityPunchCardItem;
 import com.golemlogix.items.TelegraphLinkCardItem;
+import com.golemlogix.menu.CalculatorMenu;
+import com.golemlogix.menu.DriveBayMenu;
+import com.golemlogix.menu.RecipeMonitorMenu;
+import com.golemlogix.security.SecurityPermission;
 import com.golemlogix.system.DiskStorage;
 import com.golemlogix.system.GolemNetwork;
 import com.golemlogix.system.ItemKey;
 import com.golemlogix.system.MainframeStructure;
+import com.golemlogix.system.SourceHelper;
 import com.golemlogix.system.TelegraphLinks;
 import com.golemlogix.upgrade.UpgradeSpec;
+import com.mojang.authlib.GameProfile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
@@ -29,12 +40,23 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DirectionalBlock;
+import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.common.util.BlockSnapshot;
+import net.neoforged.neoforge.common.util.FakePlayerFactory;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
@@ -365,6 +387,190 @@ public final class CoreRegressionTests {
                     "same-tick disk removal must invalidate listItemsForPlanning");
             helper.assertTrue(net.listItemsShared().getOrDefault(gold, 0L) == 0L,
                     "same-tick disk removal must invalidate listItemsShared");
+            helper.succeed();
+        });
+    }
+
+    private static ServerPlayer fakePlayer(GameTestHelper helper, String name) {
+        return FakePlayerFactory.get(helper.getLevel(), new GameProfile(UUID.randomUUID(), name));
+    }
+
+    private static boolean postPlace(GameTestHelper helper, BlockPos relPos, BlockState placed, BlockPos relAgainst, ServerPlayer player) {
+        var level = helper.getLevel();
+        BlockPos absPos = helper.absolutePos(relPos);
+        BlockSnapshot snap = BlockSnapshot.create(level.dimension(), level, absPos);
+        level.setBlock(absPos, placed, 3);
+        var evt = new BlockEvent.EntityPlaceEvent(snap, helper.getBlockState(relAgainst), player);
+        NeoForge.EVENT_BUS.post(evt);
+        level.setBlock(absPos, Blocks.AIR.defaultBlockState(), 3);
+        return evt.isCanceled();
+    }
+
+    /**
+     * Multi-terminal intersection, placement/break protection (GolemNode, SecurityTerminalBlock, AtlasCasingBlock),
+     * RecipeMonitor CRAFT right-click access, and live BUILD/CRAFT revocation closing stillValid on device menus.
+     */
+    @GameTest(template = T, timeoutTicks = 120)
+    public static void coreSecurityHardeningAndLiveMenus(GameTestHelper helper) {
+        GolemGameTests.buildArray(helper, 0, 0);
+        GolemGameTests.powered(helper);
+        BlockPos bay = GolemGameTests.BAY;
+        GolemGameTests.putBay(helper, bay);
+
+        BlockPos secPosA = GolemGameTests.BUS_OUT;
+        BlockPos calcPos = GolemGameTests.TERM;
+        BlockPos monPos = GolemGameTests.BUS_IN;
+        helper.setBlock(secPosA, ModBlocks.SECURITY_TERMINAL.get().defaultBlockState()
+                .setValue(HorizontalDirectionalBlock.FACING, Direction.NORTH));
+        helper.setBlock(calcPos, ModBlocks.CRYO_CALCULATOR.get().defaultBlockState());
+        helper.setBlock(monPos, ModBlocks.RECIPE_MONITOR.get().defaultBlockState());
+
+        ServerPlayer ownerA = fakePlayer(helper, "sec-owner-a");
+        ServerPlayer ownerB = fakePlayer(helper, "sec-owner-b");
+        ServerPlayer builder = fakePlayer(helper, "sec-builder");
+        ServerPlayer crafter = fakePlayer(helper, "sec-crafter");
+        ServerPlayer extractor = fakePlayer(helper, "sec-extractor");
+        ServerPlayer stranger = fakePlayer(helper, "sec-stranger");
+
+        SecurityTerminalBlockEntity secA = (SecurityTerminalBlockEntity) helper.getBlockEntity(secPosA);
+        secA.setOwner(ownerA);
+        secA.getCards().setItem(0, IdentityPunchCardItem.of(builder.getUUID(), "sec-builder", SecurityPermission.BUILD.mask));
+        secA.getCards().setItem(1, IdentityPunchCardItem.of(crafter.getUUID(), "sec-crafter", SecurityPermission.CRAFT.mask));
+        secA.getCards().setItem(2, IdentityPunchCardItem.of(extractor.getUUID(), "sec-extractor", SecurityPermission.EXTRACT.mask));
+
+        helper.runAfterDelay(10, () -> {
+            var level = helper.getLevel();
+            BlockPos absSecA = helper.absolutePos(secPosA);
+            BlockPos absCalc = helper.absolutePos(calcPos);
+            BlockPos absMon = helper.absolutePos(monPos);
+            BlockPos absBay = helper.absolutePos(bay);
+            // Position players within reach of devices for stillValid checks
+            builder.setPos(absBay.getX() + 0.5, absBay.getY(), absBay.getZ() + 0.5);
+            crafter.setPos(absMon.getX() + 0.5, absMon.getY(), absMon.getZ() + 0.5);
+
+            // 1. Placement checks: untrusted pipe denied, BUILD pipe allowed, non-owner BUILD SecurityTerminal denied, owner allowed
+            BlockPos placeSpot = secPosA.north();
+            helper.assertTrue(postPlace(helper, placeSpot, ModBlocks.BASIC_SNOW_PIPE.get().defaultBlockState(), secPosA, stranger),
+                    "stranger cannot place GolemNode adjacent to secured network");
+            helper.assertTrue(!postPlace(helper, placeSpot, ModBlocks.BASIC_SNOW_PIPE.get().defaultBlockState(), secPosA, builder),
+                    "player with BUILD can place GolemNode adjacent to secured network");
+            helper.assertTrue(postPlace(helper, placeSpot, ModBlocks.SECURITY_TERMINAL.get().defaultBlockState(), secPosA, builder),
+                    "non-owner with BUILD cannot place SecurityTerminal onto secured network");
+            helper.assertTrue(!postPlace(helper, placeSpot, ModBlocks.SECURITY_TERMINAL.get().defaultBlockState(), secPosA, ownerA),
+                    "owner can place second SecurityTerminal onto secured network");
+
+            // 2. Break checks: non-owner with BUILD cannot break SecurityTerminal; stranger cannot break AtlasCasingBlock
+            var breakSecBuilder = new BlockEvent.BreakEvent(level, absSecA, level.getBlockState(absSecA), builder);
+            NeoForge.EVENT_BUS.post(breakSecBuilder);
+            helper.assertTrue(breakSecBuilder.isCanceled(), "non-owner with BUILD cannot break SecurityTerminal");
+            var breakSecOwner = new BlockEvent.BreakEvent(level, absSecA, level.getBlockState(absSecA), ownerA);
+            NeoForge.EVENT_BUS.post(breakSecOwner);
+            helper.assertTrue(!breakSecOwner.isCanceled(), "owner can break SecurityTerminal");
+
+            BlockPos casingRel = GolemGameTests.ORIGIN.offset(1, 3, 1); // top corner AtlasCasingBlock (pure AtlasPart)
+            BlockPos absCasing = helper.absolutePos(casingRel);
+            var breakCasingStranger = new BlockEvent.BreakEvent(level, absCasing, level.getBlockState(absCasing), stranger);
+            NeoForge.EVENT_BUS.post(breakCasingStranger);
+            helper.assertTrue(breakCasingStranger.isCanceled(), "stranger cannot break AtlasCasingBlock of secured Atlas Array");
+
+            // 3. RecipeMonitorBlock right-click allows CRAFT, denies EXTRACT-only
+            BlockHitResult monHit = new BlockHitResult(Vec3.atCenterOf(absMon), Direction.UP, absMon, false);
+            var useMonCraft = new PlayerInteractEvent.RightClickBlock(crafter, InteractionHand.MAIN_HAND, absMon, monHit);
+            NeoForge.EVENT_BUS.post(useMonCraft);
+            helper.assertTrue(!useMonCraft.isCanceled(), "CRAFT-only player can open RecipeMonitorBlock");
+            var useMonExtract = new PlayerInteractEvent.RightClickBlock(extractor, InteractionHand.MAIN_HAND, absMon, monHit);
+            NeoForge.EVENT_BUS.post(useMonExtract);
+            helper.assertTrue(useMonExtract.isCanceled(), "EXTRACT-only player cannot open RecipeMonitorBlock");
+
+            // 4. Live BUILD / CRAFT revocation closes stillValid on open device menus
+            CopperDriveBayBlockEntity bayBe = (CopperDriveBayBlockEntity) helper.getBlockEntity(bay);
+            CryoCalculatorBlockEntity calcBe = (CryoCalculatorBlockEntity) helper.getBlockEntity(calcPos);
+            DriveBayMenu bayMenu = new DriveBayMenu(201, builder.getInventory(), bayBe.getContainer(), bayBe.priorityData());
+            CalculatorMenu calcMenu = new CalculatorMenu(202, builder.getInventory(), calcBe, calcBe.getUpgrades(),
+                    calcBe.menuData(), ContainerLevelAccess.create(level, absCalc));
+            RecipeMonitorMenu monMenu = new RecipeMonitorMenu(203, crafter.getInventory(), level, absMon,
+                    ContainerLevelAccess.create(level, absMon));
+
+            helper.assertTrue(bayMenu.stillValid(builder), "DriveBayMenu valid with BUILD");
+            helper.assertTrue(calcMenu.stillValid(builder), "CalculatorMenu valid with BUILD");
+            helper.assertTrue(monMenu.stillValid(crafter), "RecipeMonitorMenu valid with CRAFT");
+
+            secA.togglePermission(0, SecurityPermission.BUILD);
+            secA.togglePermission(1, SecurityPermission.CRAFT);
+            helper.assertTrue(!bayMenu.stillValid(builder), "DriveBayMenu closes immediately on BUILD revocation");
+            helper.assertTrue(!calcMenu.stillValid(builder), "CalculatorMenu closes immediately on BUILD revocation");
+            helper.assertTrue(!monMenu.stillValid(crafter), "RecipeMonitorMenu closes immediately on CRAFT revocation");
+
+            // Restore builder BUILD on secA and add a second terminal owned by ownerB: intersection must deny builder until granted on both
+            secA.togglePermission(0, SecurityPermission.BUILD);
+            BlockPos secPosB = secPosA.north();
+            helper.setBlock(secPosB, ModBlocks.SECURITY_TERMINAL.get().defaultBlockState()
+                    .setValue(HorizontalDirectionalBlock.FACING, Direction.NORTH));
+            SecurityTerminalBlockEntity secB = (SecurityTerminalBlockEntity) helper.getBlockEntity(secPosB);
+            secB.setOwner(ownerB);
+
+            GolemNetwork twoTermNet = GolemNetwork.refresh(level, absBay);
+            helper.assertTrue(twoTermNet.securityTerminals().size() == 2, "network tracks both security terminals");
+            helper.assertTrue(!twoTermNet.hasPermission(builder, SecurityPermission.BUILD),
+                    "intersection denies player allowed on only one of two security terminals");
+            secB.getCards().setItem(0, IdentityPunchCardItem.of(builder.getUUID(), "sec-builder", SecurityPermission.BUILD.mask));
+            helper.assertTrue(twoTermNet.hasPermission(builder, SecurityPermission.BUILD),
+                    "intersection allows player granted BUILD on both security terminals");
+
+            helper.succeed();
+        });
+    }
+
+    /**
+     * Parallel Cryo-Diodes sharing one upstream jar must deduplicate Source (no 2x count / no voiding),
+     * and sideways / backwards Cryo-Diodes at an inlet must not leak Source.
+     */
+    @GameTest(template = T, timeoutTicks = 80)
+    public static void coreParallelAndSidewaysCryoDiodes(GameTestHelper helper) {
+        var level = helper.getLevel();
+        // Network A with a single Cryo-Source Jar holding 100 Source
+        BlockPos jarA = new BlockPos(2, 2, 3);
+        CryoJarBlock.place(level, helper.absolutePos(jarA), Direction.SOUTH, ModBlocks.CRYO_SOURCE_JAR.get());
+        CryoJarBlockEntity jarBeA = (CryoJarBlockEntity) helper.getBlockEntity(jarA);
+        jarBeA.putAll(100);
+        helper.setBlock(new BlockPos(3, 2, 3), ModBlocks.BASIC_SNOW_PIPE.get());
+        helper.setBlock(new BlockPos(3, 2, 4), ModBlocks.BASIC_SNOW_PIPE.get());
+        helper.setBlock(new BlockPos(3, 2, 5), ModBlocks.BASIC_SNOW_PIPE.get());
+
+        // Two parallel EAST-facing diodes from Net A -> Net B
+        helper.setBlock(new BlockPos(4, 2, 3), ModBlocks.CRYO_DIODE.get().defaultBlockState().setValue(CryoDiodeBlock.FACING, Direction.EAST));
+        helper.setBlock(new BlockPos(4, 2, 5), ModBlocks.CRYO_DIODE.get().defaultBlockState().setValue(CryoDiodeBlock.FACING, Direction.EAST));
+        helper.setBlock(new BlockPos(5, 2, 3), ModBlocks.BASIC_SNOW_PIPE.get());
+        helper.setBlock(new BlockPos(5, 2, 4), ModBlocks.BASIC_SNOW_PIPE.get());
+        helper.setBlock(new BlockPos(5, 2, 5), ModBlocks.BASIC_SNOW_PIPE.get());
+
+        // Sideways diode (NORTH) touching a 500-Source jar on its WEST side, placed at the WEST inlet of an EAST diode -> Net C
+        BlockPos jarC = new BlockPos(2, 2, 8);
+        CryoJarBlock.place(level, helper.absolutePos(jarC), Direction.SOUTH, ModBlocks.CRYO_SOURCE_JAR.get());
+        ((CryoJarBlockEntity) helper.getBlockEntity(jarC)).putAll(500);
+        helper.setBlock(new BlockPos(3, 2, 8), ModBlocks.CRYO_DIODE.get().defaultBlockState().setValue(CryoDiodeBlock.FACING, Direction.NORTH));
+        helper.setBlock(new BlockPos(4, 2, 8), ModBlocks.CRYO_DIODE.get().defaultBlockState().setValue(CryoDiodeBlock.FACING, Direction.EAST));
+        BlockPos netCPipe = new BlockPos(5, 2, 8);
+        helper.setBlock(netCPipe, ModBlocks.BASIC_SNOW_PIPE.get());
+
+        helper.runAfterDelay(5, () -> {
+            GolemNetwork netB = GolemNetwork.scan(level, helper.absolutePos(new BlockPos(5, 2, 4)));
+            helper.assertTrue(netB.sources().size() == 2, "Net B sees 2 parallel diode suppliers, got " + netB.sources().size());
+            if (SourceHelper.sourceRequired()) {
+                helper.assertTrue(netB.hasSource(100), "Net B can draw up to 100 Source from shared jar");
+                helper.assertTrue(!netB.hasSource(101), "Parallel diodes must NOT double-count shared 100-Source jar");
+                helper.assertTrue(!netB.consumeSource(150), "consumeSource(150) fails cleanly when only 100 exists");
+                helper.assertTrue(jarBeA.available() == 100, "failed consumeSource must not void jar Source, left=" + jarBeA.available());
+                helper.assertTrue(netB.consumeSource(80), "consumeSource(80) succeeds");
+                helper.assertTrue(jarBeA.available() == 20, "shared jar retains 20 Source after draining 80, got " + jarBeA.available());
+            }
+
+            GolemNetwork netC = GolemNetwork.scan(level, helper.absolutePos(netCPipe));
+            int leaked = 0;
+            for (SourceHelper.Supplier s : netC.sources()) {
+                leaked += s.available();
+            }
+            helper.assertTrue(leaked == 0, "sideways diode at inlet must supply 0 Source, leaked=" + leaked);
             helper.succeed();
         });
     }

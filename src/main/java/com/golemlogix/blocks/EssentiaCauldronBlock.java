@@ -102,6 +102,9 @@ public class EssentiaCauldronBlock extends Block implements EntityBlock {
     /** Places both halves of the cauldron (commands, tests). */
     public static void place(Level level, BlockPos base, Direction facing, Block block) {
         VerticalMultiblock.placeAll(level, base, facing, block, FACING, SECTION, HEIGHT);
+        if (!level.isClientSide()) {
+            ThaumaturgeCompat.refreshAdjacentTubes(level, base);
+        }
     }
 
     @Nullable
@@ -114,8 +117,20 @@ public class EssentiaCauldronBlock extends Block implements EntityBlock {
     }
 
     @Override
+    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean movedByPiston) {
+        super.onPlace(state, level, pos, oldState, movedByPiston);
+        if (!level.isClientSide() && state.getValue(SECTION) == 0 && oldState.is(this)) {
+            level.invalidateCapabilities(pos);
+            ThaumaturgeCompat.refreshAdjacentTubes(level, pos);
+        }
+    }
+
+    @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
         VerticalMultiblock.placeAbove(level, pos, state, SECTION, HEIGHT);
+        if (!level.isClientSide()) {
+            ThaumaturgeCompat.refreshAdjacentTubes(level, pos);
+        }
     }
 
     @Override

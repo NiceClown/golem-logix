@@ -345,7 +345,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
             level.destroyBlockProgress(fakeId(), target, progress >= 1f ? 9 : (int) (progress * 10f));
         }
         if (progress >= 1f && (now >= nextBreakTry || fullStorageEpoch != GolemNetwork.storageEpoch())) {
-            if (breakBlock(level, net, pos, target, facing, front, with)) {
+            if (breakBlock(level, net, pos, target, facing, front, with, now)) {
                 idleSteps = 0;
                 redstone.allows(hasRedstone, powered, true);
                 stopMining();
@@ -384,7 +384,7 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
                 return false;
             }
             ItemKey best = null;
-            for (ItemKey k : net.listItems().keySet()) {
+            for (ItemKey k : net.listItemsShared().keySet()) {
                 ItemStack s = k.stack();
                 if (s.is(refill.getItem()) && (best == null || s.getDamageValue() < best.stack().getDamageValue())) {
                     best = k;
@@ -490,14 +490,15 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
         return p;
     }
 
-    /** Breaks the block with {@code with}; drops go into the network. Returns false if drops would not all fit. */
+    /** Breaks the block with {@code with}; drops go into the network. Returns false if drops would not all fit or breaking was denied. */
     private boolean breakBlock(ServerLevel level, GolemNetwork net, BlockPos pos, BlockPos target, Direction facing, BlockState state,
-                               ItemStack with) {
+                               ItemStack with, long now) {
         boolean temper = tempered();
         boolean own = !tool.getItem(0).isEmpty() && !temper;
         ItemStack hand = temper ? AnnihilationTools.temperedHand(with, state, level.registryAccess())
                 : own ? tool.getItem(0) : with.copy();
         FakePlayer p = golem(level, pos, facing, hand);
+        boolean broken = false;
         try {
             if (state.requiresCorrectToolForDrops() && !hand.isCorrectToolForDrops(state)) {
                 return false;
@@ -508,22 +509,29 @@ public class AnnihilationBusBlockEntity extends BlockEntity implements GolemPlan
                 }
             }
             ItemStack before = hand.copy();
-            level.levelEvent(2001, target, Block.getId(state));
             breaking = this;
             try {
-                p.gameMode.destroyBlock(target);
+                broken = p.gameMode.destroyBlock(target);
             } finally {
                 breaking = null;
             }
-            if (own) {
-                tool.setInternal(AnnihilationTools.unworn(before, p.getMainHandItem(), temper));
+            if (broken) {
+                level.levelEvent(2001, target, Block.getId(state));
+                if (own) {
+                    tool.setInternal(AnnihilationTools.unworn(before, p.getMainHandItem(), temper));
+                }
+            } else {
+                stopMining();
+                sleep(now);
             }
         } finally {
             p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
             p.setShiftKeyDown(false);
         }
-        sweep(level, net, new AABB(target).inflate(0.25));
-        return true;
+        if (broken) {
+            sweep(level, net, new AABB(target).inflate(0.25));
+        }
+        return broken;
     }
 
     /** Right click: uses the slotted item (or empty hand) on the block; harvested items go into the network. */

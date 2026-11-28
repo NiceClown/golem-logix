@@ -200,6 +200,8 @@ public final class ThaumaturgeIntegrationTests {
         float[] startVis = {0f};
         int[] sourceAfterFloorPause = {0};
         int[] sourceBeforeRedstone = {0};
+        float[] visBeforeRedstone = {0f};
+        float[] redstoneTargetVis = {0f};
 
         helper.runAfterDelay(5, () -> {
             CryoJarBlockEntity giga = be(helper, gigaCorner, CryoJarBlockEntity.class);
@@ -284,7 +286,12 @@ public final class ThaumaturgeIntegrationTests {
 
             CryoJarBlockEntity giga = be(helper, gigaCorner, CryoJarBlockEntity.class);
             sourceBeforeRedstone[0] = giga.available();
+            visBeforeRedstone[0] = vc.getUpdateTag(level.registryAccess()).getFloat("Vis");
+            redstoneTargetVis[0] = visBeforeRedstone[0] > baseHolder[0] * 0.55f
+                    ? baseHolder[0] * 0.25f
+                    : baseHolder[0] * 0.85f;
             helper.setBlock(redstonePos, Blocks.REDSTONE_BLOCK);
+            ThaumApi.setVisArea(level, absCond, redstoneTargetVis[0]);
         });
 
         helper.runAfterDelay(160, () -> {
@@ -294,15 +301,20 @@ public final class ThaumaturgeIntegrationTests {
                     "redstone pauses Vis Condenser, status=" + vc.status());
             helper.assertTrue(giga.available() <= sourceBeforeRedstone[0],
                     "no Source generated while redstone-paused");
+            float syncedVis = vc.getUpdateTag(level.registryAccess()).getFloat("Vis");
+            helper.assertTrue(Math.abs(syncedVis - visBeforeRedstone[0]) > 2.0f
+                            && Math.abs(syncedVis - redstoneTargetVis[0]) < Math.max(5.0f, baseHolder[0] * 0.1f),
+                    "redstone-paused Vis Condenser still updates synced Vis for manometer: before="
+                            + visBeforeRedstone[0] + " target=" + redstoneTargetVis[0] + " got=" + syncedVis);
             helper.setBlock(redstonePos, Blocks.AIR);
 
             vc.setMode(VisCondenserBlockEntity.MODE_PERCENT);
             vc.setThreshold(0);
             ThaumApi.clearFlux(level, absCond);
-            ThaumApi.setVisArea(level, absCond, Math.max(2.0f, baseHolder[0] * 0.08f));
+            ThaumApi.setVisArea(level, absCond, Math.max(8.0f, baseHolder[0] * 0.095f));
         });
 
-        helper.runAfterDelay(195, () -> {
+        helper.runAfterDelay(176, () -> {
             VisCondenserBlockEntity vc = be(helper, condPos, VisCondenserBlockEntity.class);
             float flux = ThaumApi.getFlux(level, absCond);
             helper.assertTrue(flux > 0.001f, "draining below 10% Vis must pollute chunk with Flux, got " + flux);
@@ -337,6 +349,17 @@ public final class ThaumaturgeIntegrationTests {
         ThaumApi.placeTube(level, helper.absolutePos(leftTube));
         ThaumApi.placeAndFillJar(level, helper.absolutePos(rightTube.below()), "thaumaturge:auram", 32);
         ThaumApi.placeTube(level, helper.absolutePos(rightTube));
+        ThaumApi.assertTubeConnected(helper, level, helper.absolutePos(leftTube), left.getOpposite(), true);
+        ThaumApi.assertTubeConnected(helper, level, helper.absolutePos(rightTube), right.getOpposite(), true);
+
+        BlockPos preCaul = new BlockPos(5, 2, 2);
+        BlockPos preLeftTube = preCaul.relative(left);
+        BlockPos preRightTube = preCaul.relative(right);
+        ThaumApi.placeTube(level, helper.absolutePos(preLeftTube));
+        ThaumApi.placeTube(level, helper.absolutePos(preRightTube));
+        EssentiaCauldronBlock.place(level, helper.absolutePos(preCaul), facing, ModBlocks.ESSENTIA_CAULDRON.get());
+        ThaumApi.assertTubeConnected(helper, level, helper.absolutePos(preLeftTube), left.getOpposite(), true);
+        ThaumApi.assertTubeConnected(helper, level, helper.absolutePos(preRightTube), right.getOpposite(), true);
 
         helper.runAfterDelay(30, () -> {
             EssentiaCauldronBlockEntity be = be(helper, caulPos, EssentiaCauldronBlockEntity.class);
@@ -713,6 +736,14 @@ public final class ThaumaturgeIntegrationTests {
         static void placeTube(Level level, BlockPos absPos) {
             Block tubeBlock = BuiltInRegistries.BLOCK.get(ResourceLocation.parse("thaumaturge:tube"));
             level.setBlock(absPos, tubeBlock.defaultBlockState(), Block.UPDATE_ALL);
+            com.leclowndu93150.thaumaturge.content.essentia.tube.BlockEssentiaTransport.refreshConnectionsAround(level, absPos);
+        }
+
+        static void assertTubeConnected(GameTestHelper helper, Level level, BlockPos absTubePos, Direction dir, boolean expected) {
+            var prop = com.leclowndu93150.thaumaturge.content.essentia.tube.BlockEssentiaTransport.propertyFor(dir);
+            boolean actual = level.getBlockState(absTubePos).getValue(prop);
+            helper.assertTrue(actual == expected,
+                    "tube at " + absTubePos + " connection " + dir + " expected=" + expected + " actual=" + actual);
         }
 
         static int jarAmount(Level level, BlockPos absPos, String aspectId) {

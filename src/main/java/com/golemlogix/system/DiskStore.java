@@ -148,18 +148,38 @@ public class DiskStore extends SavedData {
             t.put("Id", NbtUtils.createUUID(e.getKey()));
             ListTag items = new ListTag();
             for (Map.Entry<ItemKey, Integer> it : disk.items.entrySet()) {
-                CompoundTag c = new CompoundTag();
-                c.put("Item", it.getKey().toStack(1).save(provider));
-                c.putInt("Count", it.getValue());
-                items.add(c);
+                try {
+                    ItemStack one = it.getKey().toStack(1);
+                    if (one.isEmpty()) {
+                        continue;
+                    }
+                    Tag encoded = one.save(provider);
+                    CompoundTag c = new CompoundTag();
+                    c.put("Item", encoded);
+                    c.putInt("Count", it.getValue());
+                    items.add(c);
+                } catch (Exception ex) {
+                    GolemLogixMod.LOGGER.error("Failed to save item {} (x{}) on disk {}; skipping entry",
+                            it.getKey().stack().getItem(), it.getValue(), e.getKey(), ex);
+                }
             }
             t.put("Items", items);
             ListTag fluids = new ListTag();
             for (FluidStack f : disk.fluids) {
-                fluids.add(f.save(provider));
+                try {
+                    if (f.isEmpty()) {
+                        continue;
+                    }
+                    fluids.add(f.save(provider));
+                } catch (Exception ex) {
+                    GolemLogixMod.LOGGER.error("Failed to save fluid {} ({} mB) on disk {}; skipping entry",
+                            f.getFluid(), f.getAmount(), e.getKey(), ex);
+                }
             }
             t.put("Fluids", fluids);
-            list.add(t);
+            if (!items.isEmpty() || !fluids.isEmpty()) {
+                list.add(t);
+            }
         }
         tag.put("Disks", list);
         return tag;

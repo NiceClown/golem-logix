@@ -23,7 +23,7 @@ final class ThaumaturgeCauldronBlock extends EssentiaCauldronBlock implements IE
         Direction facing = state.getValue(FACING);
         Direction left = primarySide(facing);
         Direction right = coolantSide(facing);
-        Vec3 center = new Vec3(base.getX() + 0.5, base.getY() + 0.53, base.getZ() + 0.5);
+        Vec3 center = new Vec3(base.getX() + 0.5, base.getY() + 0.5, base.getZ() + 0.5);
         Vec3 leftAnchor = center.add(left.getStepX() * 0.5, 0.0, left.getStepZ() * 0.5);
         Vec3 rightAnchor = center.add(right.getStepX() * 0.5, 0.0, right.getStepZ() * 0.5);
         boolean useLeft = otherEnd == null || otherEnd.distanceToSqr(leftAnchor) <= otherEnd.distanceToSqr(rightAnchor);

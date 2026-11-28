@@ -141,19 +141,19 @@ final class AnnihilationTools {
         return blessed(hand, registries);
     }
 
-    /** Adds +1 Fortune (and +1 Looting unless Silk Touch is present) to the swung copy. */
+    /** Adds +1 Looting (and +1 Fortune unless Silk Touch is present) to the swung copy. */
     static ItemStack blessed(ItemStack hand, HolderLookup.Provider registries) {
         var lookup = registries.lookupOrThrow(Registries.ENCHANTMENT);
         var fortune = lookup.getOrThrow(Enchantments.FORTUNE);
         var looting = lookup.getOrThrow(Enchantments.LOOTING);
         var silkTouch = lookup.getOrThrow(Enchantments.SILK_TOUCH);
-        // Looting and Silk Touch cannot coexist on one item
+        // Fortune and Silk Touch cannot coexist on one item
         boolean keepsBlock = EnchantmentHelper.getItemEnchantmentLevel(silkTouch, hand) > 0;
         EnchantmentHelper.updateEnchantments(hand, m -> {
-            m.set(fortune, m.getLevel(fortune) + 1);
             if (!keepsBlock) {
-                m.set(looting, m.getLevel(looting) + 1);
+                m.set(fortune, m.getLevel(fortune) + 1);
             }
+            m.set(looting, m.getLevel(looting) + 1);
         });
         return hand;
     }

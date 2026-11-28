@@ -134,8 +134,7 @@ public final class GolemNetwork {
     int reactors;
     private final SourceDiscount fallbackDiscount = new SourceDiscount();
     int resonators;
-    @Nullable
-    SecurityTerminalBlockEntity security;
+    final List<SecurityTerminalBlockEntity> securityTerminals = new ArrayList<>();
     /** Blocks next to the nodes that the network uses (Source jars, resonators, containers behind periscopes), with their block. */
     final Map<Node, Block> peripherals = new HashMap<>();
     /** Telegraph links inside this network (each pair counted once): every one of them costs Source. */
@@ -233,11 +232,6 @@ public final class GolemNetwork {
     /** The server stopped: nothing of its levels is kept. */
     public static void forgetAll() {
         NetworkCache.forgetAll();
-    }
-
-    /** Client left a world: drop cached client-side networks so their Level instances can be collected. */
-    public static void forgetClient() {
-        NetworkCache.forgetClient();
     }
 
     @SubscribeEvent
@@ -509,23 +503,32 @@ public final class GolemNetwork {
         return null;
     }
 
-    @Nullable
-    public SecurityTerminalBlockEntity security() {
-        return security;
+    public List<SecurityTerminalBlockEntity> securityTerminals() {
+        return securityTerminals;
     }
 
     public boolean hasSecurityTerminal() {
-        return security != null && !security.isRemoved();
+        for (SecurityTerminalBlockEntity sec : securityTerminals) {
+            if (!sec.isRemoved()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public boolean hasPermission(@Nullable Player player, SecurityPermission perm) {
-        if (!hasSecurityTerminal() || player == null) {
+        if (player == null) {
             return true;
         }
         if (player.isCreative() && player.canUseGameMasterBlocks()) {
             return true;
         }
-        return security.hasPermission(player, perm);
+        for (SecurityTerminalBlockEntity sec : securityTerminals) {
+            if (!sec.isRemoved() && !sec.hasPermission(player, perm)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Nullable

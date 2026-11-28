@@ -297,17 +297,25 @@ public class DistillationTowerBlockEntity extends BlockEntity {
         return tank.isEmpty() ? 0 : status;
     }
 
+    public static final int DATA_COUNT = 8;
+
+    private int sourceTenths() {
+        return (int) Math.clamp(Math.round(sourcePerSecond() * 10.0), 0L, Integer.MAX_VALUE);
+    }
+
     public ContainerData menuData() {
         return new ContainerData() {
             @Override
             public int get(int index) {
                 return switch (index) {
                     case 0 -> tank.getFluidAmount();
-                    case 1 -> rate();
-                    case 2 -> (int) Math.round(sourcePerSecond() * 10);
+                    case 1 -> rate() & 0xFFFF;
+                    case 2 -> sourceTenths() & 0xFFFF;
                     case 3 -> status();
                     case 4 -> upgrades.count(UpgradeType.SPEED);
                     case 5 -> capacity();
+                    case 6 -> rate() >>> 16;
+                    case 7 -> sourceTenths() >>> 16;
                     default -> 0;
                 };
             }
@@ -318,7 +326,7 @@ public class DistillationTowerBlockEntity extends BlockEntity {
 
             @Override
             public int getCount() {
-                return 6;
+                return DATA_COUNT;
             }
         };
     }

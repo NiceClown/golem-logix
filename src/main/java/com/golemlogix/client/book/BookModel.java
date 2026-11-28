@@ -66,7 +66,7 @@ public final class BookModel {
          * first anvil plate (the Dispel method).
          */
         public final String secret;
-        /** Mod id the entry is about (its integration): the entry is hidden without that mod; empty = always. */
+        /** Mod id (or |-separated mod ids) the entry is about: shown when any listed mod is installed; empty = always. */
         public final String requires;
         public Category category;
         /** Title in lower case, for search without per-frame lowercasing. */
@@ -101,9 +101,17 @@ public final class BookModel {
             }
             // an entry about another mod's integration is shown only when that mod is installed (or when none are, for free_mode)
             if (!requires.isEmpty()) {
-                boolean met = "no_source_mod".equals(requires)
-                        ? !com.golemlogix.system.SourceHelper.hasSourceProviderMod()
-                        : net.neoforged.fml.ModList.get().isLoaded(requires);
+                boolean met = false;
+                if ("no_source_mod".equals(requires)) {
+                    met = !com.golemlogix.system.SourceHelper.hasSourceProviderMod();
+                } else {
+                    for (String mod : requires.split("\\|")) {
+                        if (!mod.isEmpty() && net.neoforged.fml.ModList.get().isLoaded(mod)) {
+                            met = true;
+                            break;
+                        }
+                    }
+                }
                 if (!met) {
                     return false;
                 }

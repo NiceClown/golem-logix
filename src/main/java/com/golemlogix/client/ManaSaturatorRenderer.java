@@ -28,6 +28,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -58,6 +59,9 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
     static final float ITEM_Z = 6.2f;
     private static final Quaternionf SCRATCH_FAN_QUAT = new Quaternionf();
     private static final PoseStack SCRATCH_FAN_POSE = new PoseStack();
+    private static final ItemStack ORBIT_ENDER_EYE = new ItemStack(Items.ENDER_EYE);
+    private static final ItemStack ORBIT_GHAST_TEAR = new ItemStack(Items.GHAST_TEAR);
+    private static final ItemStack ORBIT_NETHERITE_INGOT = new ItemStack(Items.NETHERITE_INGOT);
     private static Baked fanMesh;
 
     public static void clearBaked() {
@@ -337,16 +341,13 @@ public class ManaSaturatorRenderer implements BlockEntityRenderer<ManaSaturatorB
             if (totalOrbit > 0) {
                 int idx = 0;
                 for (int i = 0; i < entity.rodEyes(); i++, idx++) {
-                    renderOrbitReagent(pose, buffers, level, light, time, idx, totalOrbit,
-                            new ItemStack(net.minecraft.world.item.Items.ENDER_EYE));
+                    renderOrbitReagent(pose, buffers, level, light, time, idx, totalOrbit, ORBIT_ENDER_EYE);
                 }
                 for (int i = 0; i < entity.rodTears(); i++, idx++) {
-                    renderOrbitReagent(pose, buffers, level, light, time, idx, totalOrbit,
-                            new ItemStack(net.minecraft.world.item.Items.GHAST_TEAR));
+                    renderOrbitReagent(pose, buffers, level, light, time, idx, totalOrbit, ORBIT_GHAST_TEAR);
                 }
                 for (int i = 0; i < entity.rodNetherite(); i++, idx++) {
-                    renderOrbitReagent(pose, buffers, level, light, time, idx, totalOrbit,
-                            new ItemStack(net.minecraft.world.item.Items.NETHERITE_INGOT));
+                    renderOrbitReagent(pose, buffers, level, light, time, idx, totalOrbit, ORBIT_NETHERITE_INGOT);
                 }
             }
             return;

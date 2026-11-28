@@ -1,5 +1,30 @@
 # Changelog
 
+## 2.3.1 (1.21.1) - Thaumaturge Polish, Multiplayer Security & Reliability Fixes
+
+- **Thaumaturge Polish & Balance:**
+  - **Vis Condenser Rebalance:** increased chunk Aura drain from `1 Vis/s` to `6 Vis/s` (still producing `15 Source/s` at `2.5 Source` per Vis), so chunks genuinely deplete instead of self-sustaining forever.
+  - **Safe 10% Stop Floor:** setting the Vis Condenser's stop floor right at `10%` no longer emits Flux or flashes a red danger warning.
+  - **Live Manometer & Config-Aware Danger Zone:** the 3D brass manometer needle now keeps tracking chunk Vis recovery while paused by Redstone, and the red Flux danger marker in both the GUI and the 3D dial now follows your configured threshold.
+  - **Essentia Cryo-Cauldron Tube Docking:** Essentia Tubes now connect cleanly and flush to the cauldron's side nozzles on placement and chunk reload, with aligned Essentia stream ports and accurate full-tank phial feedback.
+  - **Guide Book:** the Cryo-Source Jars, Giga Jar, and Antigravity Reactor chapter is now visible whenever Thaumaturge is installed, even without Neo Vitae.
+- **Multiplayer Security Hardening:**
+  - **Stronger Security Terminals:** unauthorized players can no longer attach pipes, export buses, or rogue Security Terminals to a secured network, break Atlas Array casings or Atlants, or break a Security Terminal without being its owner (or an operator). Networks with multiple Security Terminals now enforce all of them together.
+  - **Live Permission Revocation:** revoking a player's Build access now immediately closes already-open network device menus.
+  - **Recipe Monitor Access:** players with Craft permission (even without Build) can now open and manage crafting jobs in the Recipe Monitor.
+- **Source, Multiblocks & Autocrafting Fixes:**
+  - **Ars Nouveau Compatibility:** fixed an infinite Source exploit when drawing from Ars Nouveau Imbuement Chambers, and fixed Source generators silently losing output when placed next to Ars Nouveau Sourcelinks.
+  - **Cross-Dimension Autocrafting:** ordering crafts across a cross-dimension Cryo-Source Telegraph now properly finds Crafting CPUs in the other dimension instead of reporting "No CPU".
+  - **Chunk-Border Giga Jars & Reactors:** large Cryo-Source Jars now re-check their structure periodically without force-loading unloaded chunks, preventing orphaned jars or 1x1 Reactor exploits across chunk borders.
+  - **Cryo-Diode Fixes:** parallel Cryo-Diodes (or a jar shared with a Diode) no longer double-count or lose Source on large draws, and adjacent Diodes no longer leak Source sideways or backwards.
+  - **Outdated Crafting Patterns:** if a modpack update changes a crafting table recipe's output, running jobs now report an invalid pattern instead of hanging forever.
+- **Devices, Menus & Server Performance:**
+  - **Golem Interface Fuzzy Stocking:** fuzzy tag filters (such as buckets or foods) now respect each item's real stack size instead of overstacking non-stackable items like water buckets.
+  - **Plasma Temper Enchantments:** fixed Silk Touch tools on the Annihilation Bus accidentally getting Fortune while missing Looting; Silk Touch now properly excludes Fortune while still receiving `+1` Looting.
+  - **Annihilation Bus on Protected Blocks:** facing a claimed or protected block no longer loops endlessly with break sounds and particles.
+  - **Smooth Crafting Terminal Shift-Click:** Shift-clicking the crafting result no longer causes server lag spikes in large modpacks (capped at one stack crafted per click).
+  - **Server Stability & Performance:** fixed Essentia Cryo-Cauldron client sync packets firing too frequently, stopped chunk-border Atlas Arrays and Essentia Cauldrons from force-loading adjacent chunks, prevented Redstone-upgraded Periscopes from clearing network caches on unrelated neighbor updates, fixed memory retention when Telegraph-linked dimensions unload, isolated corrupted third-party items when saving storage disks so one bad item never breaks disk saves, throttled rapid search changes in the Schematic Concentrator, and fixed machine GUI numbers overflowing under very high config multipliers.
+
 ## 2.3.0 (1.21.1) - Deep Thaumaturge Integration & Large Jar Network Rework
 
 - **Deep Thaumaturge Integration (Optional Soft Dependency):**
